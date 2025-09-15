@@ -1,5 +1,5 @@
 resource "openstack_networking_secgroup_v2" "controlplane" {
-  name = "${var.naming_prefix}-controlplane"
+  name = "${var.naming_prefix}controlplane"
 }
 
 resource "openstack_networking_secgroup_rule_v2" "controlplane_ipv4" {
@@ -46,7 +46,7 @@ resource "openstack_networking_secgroup_rule_v2" "controlplane_ipv6" {
 }
 
 resource "openstack_networking_secgroup_v2" "master" {
-  name = "${var.naming_prefix}-master"
+  name = "${var.naming_prefix}master"
 }
 
 resource "openstack_networking_secgroup_rule_v2" "kube_api_ipv4" {
@@ -136,7 +136,7 @@ resource "openstack_networking_secgroup_rule_v2" "vrrp_ipv6_2" {
 }
 
 resource "openstack_networking_secgroup_v2" "worker" {
-  name = "${var.naming_prefix}-worker"
+  name = "${var.naming_prefix}worker"
 }
 
 resource "openstack_networking_secgroup_rule_v2" "worker_ipv4" {
@@ -163,7 +163,7 @@ resource "openstack_networking_secgroup_rule_v2" "worker_ipv6" {
 
 resource "openstack_networking_secgroup_v2" "worker_windows" {
   count = var.worker_count_windows > 0 ? 1 : 0
-  name = "${var.naming_prefix}-worker-windows"
+  name = "${var.naming_prefix}worker-windows"
 }
 
 resource "openstack_networking_secgroup_rule_v2" "worker_windows_nodeport_ipv4" {

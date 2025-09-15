@@ -23,7 +23,7 @@ resource "openstack_networking_secgroup_rule_v2" "bastion_ipv6" {
 }
 
 resource "openstack_compute_instance_v2" "bastion" {
-  name              = "${var.naming_prefix}-bastion"
+  name              = "${var.naming_prefix}bastion"
   config_drive      = true
   flavor_name       = var.flavor_bastion
   image_id          = var.image_id

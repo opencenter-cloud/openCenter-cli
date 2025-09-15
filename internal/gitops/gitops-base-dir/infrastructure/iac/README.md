@@ -20,7 +20,10 @@ The deployment node could be your laptop or an existing Linux VM.
   - [GitOps Workflow](#gitops-workflow)
     - [Initialize the new cluster OpenTofu files](#initialize-the-new-cluster-opentofu-files)
     - [Configure the OpenTofu files](#configure-the-opentofu-files)
+    - [Create application credentials](#create-application-credentials)
     - [Export credentials](#export-credentials)
+      - [Option 1 - Application credentials](#option-1---application-credentials)
+      - [Option 2 - Username and API Key](#option-2---username-and-api-key)
   - [Deploy Cluster](#deploy-cluster)
   - [Use the cluster](#use-the-cluster)
     - [Kubeconfig](#kubeconfig)
@@ -207,9 +210,46 @@ locals {
 }
 ```
 
+### Create application credentials
+Click on UserCenter > Application Credentials > Create Application Credentials
+- Set a unique name
+- Set an expiration. Empty doesnt expire.
+- Roles
+-  - load-balancer_member
+- - reader
+- - member
+- - network_member
+- - heat_stack_user
+- - creator
+Leave Unrestricted unchecked.
+Add a Description with the purpose of the credentials.
+
+This will download a json file with credentials:
+```json
+{
+  "id": "f07a1d5ff5254c0b9cda848353169891",
+  "description": null,
+  "project_id": "4c07654c099f59021ac0166a84648742",
+  "expires_at": null,
+  "secret": "REDACTED"
+}
+```
+
 ### Export credentials
 
-Export the openstack and S3 credentials
+#### Option 1 - Application credentials
+Export the openstack user and S3 credentials
+```
+
+export TF_VAR_application_credential_id='longidstring'
+export TF_VAR_application_credential_secret='securesecret'
+export AWS_ACCESS_KEY_ID=<KEY>
+export AWS_SECRET_ACCESS_KEY=<KEY>
+```
+
+#### Option 2 - Username and API Key
+
+Export the openstack user and S3 credentials
 ```
 
 export TF_VAR_openstack_user_password='api-key'
@@ -294,13 +334,15 @@ ansible-playbook -f 10 -b upgrade-cluster.yml -e "@../inventory/k8s_hardening.ym
 ### Commit to Git
 We want to make sure we commit and exclude the correct files to the repository
 
-Files need encryption. Generated from the cluster hardening.
+Files need encryption. Generated from the cluster hardening and CA certs.
 
 `inventory/credentials/kube_encrypt_token.creds`
 
 `inventory/credentials/kubeadm_certificate_key.creds`
 
+There is a fix in place so that if we run cluster operations without the files present in the directory structure, the playbook will grab a copy from the masters to avoid creating a new one and drift. But we still need a process where we pull the files from a store and place them in the directory structure before making changes in the cluster
 
+https://github.com/kubernetes-sigs/kubespray/pull/4255
 
 ## Save the SSH Keys to PasswordSafe
 The files `id_rsa` and `id_rsa.pub` need to be saved to the customer's password safe in https://passwordsafe.corp.rackspace.com/projects/32616

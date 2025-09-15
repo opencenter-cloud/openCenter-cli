@@ -10,5 +10,7 @@ provider "openstack" {
   user_name    = var.openstack_user_name
   user_domain_name = var.openstack_user_domain_name
   project_domain_name = var.openstack_project_domain_name
+  application_credential_id = var.application_credential_id
+  application_credential_secret = var.application_credential_secret
 }
 

@@ -15,6 +15,16 @@ variable "ansible_inventory_enabled"{
   default = false
 }
 
+variable "application_credential_id" {
+  type    = string
+  default = ""
+}
+
+variable "application_credential_secret" {
+  type    = string
+  default = ""
+}
+
 variable "audit_max_age" {
   type    = number
   default = 10

@@ -1,0 +1,14 @@
+[master]
+{{- range $i, $e := until (int .IAC.Counts.master) }}
+test-master-{{ $i }}
+{{- end }}
+
+[worker]
+{{- range $i, $e := until (int .IAC.Counts.worker) }}
+test-worker-{{ $i }}
+{{- end }}
+
+[win_worker]
+{{- range $i, $e := until (int .IAC.Counts.worker_windows) }}
+test-win-worker-{{ $i }}
+{{- end }}

@@ -1,0 +1,43 @@
+{{- /*
+  OpenTofu main.tf template
+  Supports local and s3 backends based on .OpenTofu.Backend.
+*/ -}}
+
+terraform {
+  required_version = ">= 1.6.0"
+
+  {{- $bt := .OpenTofu.Backend.Type | lower }}
+  backend "{{ if eq $bt "" }}local{{ else }}{{ $bt }}{{ end }}" {
+    {{- if or (eq $bt "") (eq $bt "local") }}
+    path = "{{ .OpenTofu.Backend.Local.Path }}"
+    {{- else if eq $bt "s3" }}
+    bucket = "{{ .OpenTofu.Backend.S3.Bucket }}"
+    key    = "{{ .OpenTofu.Backend.S3.Key }}"
+    region = "{{ .OpenTofu.Backend.S3.Region }}"
+    {{- if .OpenCenter.AWSAccessKey }}
+    access_key = "{{ .OpenCenter.AWSAccessKey }}"
+    {{- end }}
+    {{- if .OpenCenter.AWSSecretAccessKey }}
+    secret_key = "{{ .OpenCenter.AWSSecretAccessKey }}"
+    {{- end }}
+    {{- if .OpenTofu.Backend.S3.Endpoint }}
+    endpoint = "{{ .OpenTofu.Backend.S3.Endpoint }}"
+    {{- end }}
+    {{- if .OpenTofu.Backend.S3.Profile }}
+    profile = "{{ .OpenTofu.Backend.S3.Profile }}"
+    {{- end }}
+    {{- if .OpenTofu.Backend.S3.Encrypt }}
+    encrypt = true
+    {{- end }}
+    {{- end }}
+  }
+}
+
+# Example root module content; adjust as needed later.
+locals {
+  cluster_name = "{{ .ClusterName }}"
+}
+
+output "cluster_name" {
+  value = local.cluster_name
+}

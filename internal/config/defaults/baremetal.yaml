@@ -1,0 +1,74 @@
+locals:
+  cluster_name: "dev-cluster"
+  naming_prefix: 'local.cluster_name'
+  kubernetes_version: "1.30.4"
+  master_nodes: []
+  worker_nodes: []
+  ssh_user: "ubuntu"
+  ssh_private_key_file: ""
+  ssh_authorized_keys: []
+  ansible_user: "ubuntu"
+  ansible_become: true
+  network_plugin: "calico"
+  pod_subnet: "192.168.0.0/16"
+  service_subnet: "10.96.0.0/12"
+  cluster_dns: "10.96.0.10"
+  cluster_domain: "cluster.local"
+  kube_api_port: 6443
+  kube_api_anonymous_auth: false
+  allow_workloads_on_master: false
+  ingress_enabled: true
+  ingress_controller: "nginx"
+  load_balancer_type: "metallb"
+  metallb_ip_range: ""
+  cert_manager_enabled: false
+  monitoring_enabled: false
+  logging_enabled: false
+  backup_enabled: false
+  ntp_servers: ["pool.ntp.org"]
+  timezone: "UTC"
+  container_runtime: "containerd"
+  kubelet_config: {}
+  kube_proxy_config: {}
+  etcd_backup_enabled: false
+  etcd_backup_schedule: "0 2 * * *"
+
+modules:
+  baremetal-inventory:
+    source: "github.com/rackerlabs/openCenter.git//install/iac/infra/baremetal?ref=main"
+    cluster_name: 'local.cluster_name'
+    master_nodes: 'local.master_nodes'
+    worker_nodes: 'local.worker_nodes'
+    ssh_user: 'local.ssh_user'
+    ssh_private_key_file: 'local.ssh_private_key_file'
+    ssh_authorized_keys: 'local.ssh_authorized_keys'
+    ansible_user: 'local.ansible_user'
+    ansible_become: 'local.ansible_become'
+  kubespray-cluster:
+    source: "github.com/rackerlabs/openCenter.git//install/iac/kubespray?ref=main"
+    cluster_name: 'local.cluster_name'
+    master_nodes: 'local.master_nodes'
+    worker_nodes: 'local.worker_nodes'
+    kubernetes_version: 'local.kubernetes_version'
+    network_plugin: 'local.network_plugin'
+    pod_subnet: 'local.pod_subnet'
+    service_subnet: 'local.service_subnet'
+    cluster_dns: 'local.cluster_dns'
+    cluster_domain: 'local.cluster_domain'
+    ssh_user: 'local.ssh_user'
+    kube_api_port: 'local.kube_api_port'
+    allow_workloads_on_master: 'local.allow_workloads_on_master'
+    container_runtime: 'local.container_runtime'
+    kubelet_config: 'local.kubelet_config'
+    kube_proxy_config: 'local.kube_proxy_config'
+    ingress_enabled: 'local.ingress_enabled'
+    ingress_controller: 'local.ingress_controller'
+    load_balancer_type: 'local.load_balancer_type'
+    metallb_ip_range: 'local.metallb_ip_range'
+    cert_manager_enabled: 'local.cert_manager_enabled'
+    monitoring_enabled: 'local.monitoring_enabled'
+    logging_enabled: 'local.logging_enabled'
+    etcd_backup_enabled: 'local.etcd_backup_enabled'
+    etcd_backup_schedule: 'local.etcd_backup_schedule'
+    ntp_servers: 'local.ntp_servers'
+    timezone: 'local.timezone'

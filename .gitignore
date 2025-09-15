@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.egg-info/
+.Python
+build/
+dist/
+venv/
+.env
+.pytest_cache/
+htmlcov/
+.tox/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+override.tf
+override_*.tf
+*.tfvars
+*.tfvars.json
+.terraformrc
+terraform.rc
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Thumbnails
+._*
+# Spotlight files
+.Spotlight-V100
+# Temporary files
+.Trashes
+Icon?
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.xcscmblueprint
+.xcscmblueprint
+*.xccheckout
+# Finder
+.localized
+
+# Linux
+# Temporary files
+*~
+.#*
+*.swp
+*.bak
+*.tmp
+
+# 
+applications/overlays
+
+
+# openCenter repo specific
+/bin/
+/tools/
+/vendor/
+godoc.log
+.env
+gitea/
+.gitea_admin_token
+.gitea_newuser_token
+testdata/
+tests/features/steps/tmp/

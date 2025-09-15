@@ -1,0 +1,77 @@
+[tools]
+golang = "1.24"
+kubectl = "1.34"
+kind = "0.30"
+helm = "3.18"
+
+[env]
+# Override the default config directory via environment for reproducible tests
+OPENCENTER_CONFIG_DIR = "./testdata/config"
+
+[tasks]
+# Build the openCenter binary
+build = "go build -o bin/openCenter"
+
+# Build the openCenter binary
+tidy = "go mod tidy"
+
+# Format all files to golang standards
+fmt = "gofmt -w ."
+
+# Run BDD tests via go test
+test = "go test ./internal/..."
+
+# Run BDD tests via godog CLI (optional)
+godog = "go test ./... -v args --godog.tags=~@wip --godog.paths=tests/features"
+
+# Run only @wip scenarios for focused development
+godog-wip = "go test ./... -v args --godog.tags=@wip --godog.paths=tests/features"
+
+# Detect failing scenarios and tag them with @wip
+tag-wip-failures = "python3 hack/tag_wip_failures.py"
+
+# Generate the cluster JSON schema into the schema directory
+schema = "./bin/openCenter cluster schema  --pretty --out schema/cluster.schema.json"
+
+# Convenience tasks for validation
+validate = "./bin/openCenter cluster validate"
+
+# Preflight task for preflight
+preflight = "./bin/openCenter cluster preflight"
+
+# Generate and view documentation
+doc = "go doc ./..."
+doc-serve = "go run golang.org/x/pkgsite/cmd/pkgsite@latest"
+
+lint = [
+  "echo Linting...",
+  "bin/golangci-lint run ./..."
+]
+
+gitea-setup = [
+  "echo Starting gitea...",
+  "./hack/gitea-local/setup-gitea.sh"
+]
+
+gitea-configure = [
+  "echo Starting gitea...",
+  "./hack/gitea-local/configure-gitea-user-tokens.sh"
+]
+
+# Start and configure local Gitea for testing (setup → configure)
+gitea-up = [
+  "mise run gitea-setup",
+  "mise run gitea-configure"
+]
+
+gitea-cleanup = [
+  "echo Cleaning up local git...",
+  "./hack/gitea-local/setup-gitea.sh destroy -y",
+  "rm -f .gitea_admin_token .gitea_newuser_token .gitea_newuser_id_ed25519 .gitea_newuser_id_ed25519.pub"
+]
+
+clean = [
+  "echo Cleaning up...",
+  "rm -rf testdata",
+  "rm -rf bin"
+]

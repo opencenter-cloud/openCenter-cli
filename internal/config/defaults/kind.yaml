@@ -1,0 +1,49 @@
+locals:
+  cluster_name: "dev-cluster"
+  naming_prefix: 'local.cluster_name'
+  kubernetes_version: "1.30.4"
+  node_count: 3
+  worker_count: 2
+  control_plane_count: 1
+  kind_config_file: "kind-config.yaml"
+  kubeconfig_path: "${path.root}/kubeconfig"
+  registry_enabled: false
+  registry_name: "kind-registry"
+  registry_port: 5001
+  ingress_enabled: true
+  ingress_controller: "nginx"
+  load_balancer_enabled: false
+  extra_mounts: []
+  port_mappings: []
+  feature_gates: {}
+  runtime_config: {}
+  audit_policy_enabled: false
+  service_subnet: "10.96.0.0/16"
+  pod_subnet: "10.244.0.0/16"
+  disable_default_cni: false
+  networking_disable_default_cni: false
+  api_server_address: "127.0.0.1"
+  api_server_port: 6443
+
+modules:
+  kind-cluster:
+    source: "github.com/rackerlabs/openCenter.git//install/iac/infra/kind?ref=main"
+    cluster_name: 'local.cluster_name'
+    kubernetes_version: 'local.kubernetes_version'
+    worker_count: 'local.worker_count'
+    control_plane_count: 'local.control_plane_count'
+    kubeconfig_path: 'local.kubeconfig_path'
+    registry_enabled: 'local.registry_enabled'
+    registry_name: 'local.registry_name'
+    registry_port: 'local.registry_port'
+    ingress_enabled: 'local.ingress_enabled'
+    ingress_controller: 'local.ingress_controller'
+    service_subnet: 'local.service_subnet'
+    pod_subnet: 'local.pod_subnet'
+    api_server_address: 'local.api_server_address'
+    api_server_port: 'local.api_server_port'
+    extra_mounts: 'local.extra_mounts'
+    port_mappings: 'local.port_mappings'
+    feature_gates: 'local.feature_gates'
+    runtime_config: 'local.runtime_config'
+    disable_default_cni: 'local.disable_default_cni'

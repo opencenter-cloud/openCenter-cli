@@ -76,3 +76,4 @@ gitea/
 .gitea_newuser_token
 testdata/
 tests/features/steps/tmp/
+.mygitignore

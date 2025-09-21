@@ -39,7 +39,6 @@ import (
 // See docs/ARCHITECTURE.md for a complete description of the data model.
 type Config struct {
     ClusterName   string       `yaml:"cluster_name" json:"cluster_name"`
-    Template      string       `yaml:"template,omitempty" json:"template,omitempty"`
     NamingPrefix  string       `yaml:"naming_prefix,omitempty" json:"naming_prefix,omitempty"`
     Cluster       ClusterMeta  `yaml:"cluster,omitempty" json:"cluster,omitempty"`
     GitOps        GitOpsConfig `yaml:"gitops" json:"gitops"`
@@ -217,117 +216,7 @@ type Secrets struct {
     SopsAgeKeyFile string `yaml:"sops_age_key_file" json:"sops_age_key_file"`
 }
 
-// getTemplateIACYAML returns the appropriate IaC YAML content based on template type
-func getTemplateIACYAML(template string) string {
-    switch strings.ToLower(strings.TrimSpace(template)) {
-    case "kind":
-        return kindIACYAML
-    case "vmware", "vsphere":
-        return vmwareIACYAML
-    case "baremetal", "bare-metal", "metal":
-        return baremetalIACYAML
-    case "talos":
-        return talosIACYAML
-    case "openstack", "":
-        return openstackIACYAML
-    default:
-        // Default to OpenStack for unknown templates
-        return openstackIACYAML
-    }
-}
 
-// defaultConfigWithTemplate returns a Config pre-populated with template-specific
-// default values. This function can be used to initialise new cluster configurations
-// with different infrastructure templates.
-func defaultConfigWithTemplate(name, template string) Config {
-    cfg := Config{
-        ClusterName:  name,
-        Template:     template,
-        NamingPrefix: "",
-        Cluster: ClusterMeta{},
-        GitOps: GitOpsConfig{
-            GitDir: "",
-            GitURL: "",
-            GitBranch: "",
-            Flux: GitOpsFlux{},
-        },
-        OpenCenter: OpenCenter{
-            AWSAccessKey:       "",
-            AWSSecretAccessKey: "",
-        },
-        OpenTofu: OpenTofu{
-            Enabled: true,
-            Path:    "opentofu",
-            Backend: TofuBackend{
-                Type: "local",
-                Local: TofuLocal{Path: "terraform.tfstate"},
-            },
-        },
-        Ansible: Ansible{
-            Enabled: true,
-            Path:    "ansible",
-            Inventory: "",
-            Playbooks: []string{},
-        },
-        IAC: func() IAC {
-            // Seed structured IaC from template-specific defaults
-            iac := IAC{MainTF: ""}
-            var seed struct {
-                Locals  map[string]any `yaml:"locals"`
-                Modules map[string]any `yaml:"modules"`
-            }
-            templateYAML := getTemplateIACYAML(template)
-            if err := yaml.Unmarshal([]byte(templateYAML), &seed); err == nil {
-                iac.Main = seed.Locals
-                iac.Modules = seed.Modules
-            }
-            return iac
-        }(),
-        Cloud: func() Cloud {
-            // Set cloud provider based on template
-            provider := "openstack"
-            switch strings.ToLower(strings.TrimSpace(template)) {
-            case "kind":
-                provider = "local"
-            case "vmware", "vsphere":
-                provider = "vmware"
-            case "baremetal", "bare-metal", "metal":
-                provider = "baremetal"
-            case "talos":
-                provider = "talos"
-            }
-
-            return Cloud{
-                Provider: provider,
-                OpenStack: OpenStackCloud{
-                    AuthURL:          "",
-                    Insecure:         false,
-                    Region:           "",
-                    UserName:         "",
-                    UserPassword:     "",
-                    AdminPassword:    "",
-                    ProjectDomainName: "",
-                    UserDomainName:    "",
-                    TenantName:        "",
-                    AvailabilityZone:  "",
-                    FloatingIPPool:    "",
-                    RouterExternalNetworkID: "",
-                    DisableBastion:    false,
-                    CA:               "",
-                    ExternalNetwork:   "",
-                    UseOctavia:        false,
-                    VRRPIP:            "",
-                },
-                AWS: AWSCloud{
-                    PrivateSubnets: []string{},
-                    PublicSubnets:  []string{},
-                },
-            }
-        }(),
-        Secrets: Secrets{},
-    }
-    return cfg
-}
 
 // defaultConfig returns a Config pre-populated with the default
 // values defined in the specification. This function can be used to
@@ -335,14 +224,22 @@ func defaultConfigWithTemplate(name, template string) Config {
 func defaultConfig(name string) Config {
     cfg := Config{
         ClusterName:  name,
-        Template:     "openstack", // Default template for backward compatibility
         NamingPrefix: "",
-        Cluster: ClusterMeta{},
+        Cluster: ClusterMeta{
+            Name:   name,
+            Env:    "dev",
+            Region: "us-east-1",
+            Status: "pending",
+        },
         GitOps: GitOpsConfig{
-            GitDir: "",
-            GitURL: "",
-            GitBranch: "",
-            Flux: GitOpsFlux{},
+            GitDir:    "",
+            GitURL:    "",
+            GitSSHKey: "",
+            GitBranch: "main",
+            Flux: GitOpsFlux{
+                Interval: "1m",
+                Prune:    true,
+            },
         },
         OpenCenter: OpenCenter{
             AWSAccessKey:       "",
@@ -353,28 +250,28 @@ func defaultConfig(name string) Config {
             Path:    "opentofu",
             Backend: TofuBackend{
                 Type: "local",
-                Local: TofuLocal{Path: "terraform.tfstate"},
+                Local: TofuLocal{
+                    Path: "terraform.tfstate",
+                },
+                S3: TofuS3{
+                    Bucket:   "",
+                    Key:      "",
+                    Region:   "",
+                    Endpoint: "",
+                    Profile:  "",
+                    Encrypt:  false,
+                },
             },
         },
         Ansible: Ansible{
-            Enabled: true,
-            Path:    "ansible",
-            Inventory: "",
-            Playbooks: []string{},
+            Enabled:   true,
+            Path:      "ansible",
+            Inventory: "inventory.yml",
+            Playbooks: []string{
+                "site.yml",
+            },
         },
-        IAC: func() IAC {
-            // Seed structured IaC from embedded defaults
-            iac := IAC{MainTF: ""}
-            var seed struct {
-                Locals  map[string]any `yaml:"locals"`
-                Modules map[string]any `yaml:"modules"`
-            }
-            if err := yaml.Unmarshal([]byte(defaultIACYAML), &seed); err == nil {
-                iac.Main = seed.Locals
-                iac.Modules = seed.Modules
-            }
-            return iac
-        }(),
+        IAC: IAC{},
         Cloud: Cloud{
             Provider: "openstack",
             OpenStack: OpenStackCloud{
@@ -387,8 +284,8 @@ func defaultConfig(name string) Config {
                 ProjectDomainName: "",
                 UserDomainName:    "",
                 TenantName:        "",
-                AvailabilityZone:  "",
-                FloatingIPPool:    "",
+                AvailabilityZone:  "nova",
+                FloatingIPPool:    "public",
                 RouterExternalNetworkID: "",
                 DisableBastion:    false,
                 CA:               "",
@@ -397,11 +294,16 @@ func defaultConfig(name string) Config {
                 VRRPIP:            "",
             },
             AWS: AWSCloud{
+                Profile:        "",
+                Region:         "us-east-1",
+                VPCID:          "",
                 PrivateSubnets: []string{},
                 PublicSubnets:  []string{},
             },
         },
-        Secrets: Secrets{},
+        Secrets: Secrets{
+            SopsAgeKeyFile: "",
+        },
     }
     return cfg
 }
@@ -417,17 +319,6 @@ func NewDefault(name string) Config {
     return defaultConfig(name)
 }
 
-// NewDefaultWithTemplate returns a Config initialized with template-specific default values.
-//
-// Inputs:
-//   - name: The name of the cluster.
-//   - template: The cluster template type (openstack, kind, vmware, baremetal).
-//
-// Outputs:
-//   - Config: A new Config object with template-specific default values.
-func NewDefaultWithTemplate(name, template string) Config {
-    return defaultConfigWithTemplate(name, template)
-}
 
 // ResolveConfigDir resolves the configuration directory based on the OPENCENTER_CONFIG_DIR
 // environment variable. If the variable is not set, it falls back to the user's

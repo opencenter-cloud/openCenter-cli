@@ -1,0 +1,432 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "ansible": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "inventory": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "playbooks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "cloud": {
+      "properties": {
+        "aws": {
+          "properties": {
+            "private_subnets": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "profile": {
+              "type": "string"
+            },
+            "public_subnets": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "region": {
+              "type": "string"
+            },
+            "vpc_id": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "openstack": {
+          "properties": {
+            "admin_password": {
+              "type": "string"
+            },
+            "application_credential_id": {
+              "type": "string"
+            },
+            "application_credential_secret": {
+              "type": "string"
+            },
+            "auth_url": {
+              "type": "string"
+            },
+            "availability_zone": {
+              "type": "string"
+            },
+            "ca": {
+              "type": "string"
+            },
+            "disable_bastion": {
+              "type": "boolean"
+            },
+            "external_network": {
+              "type": "string"
+            },
+            "floatingip_pool": {
+              "type": "string"
+            },
+            "insecure": {
+              "type": "boolean"
+            },
+            "project_domain_name": {
+              "type": "string"
+            },
+            "region": {
+              "type": "string"
+            },
+            "router_external_network_id": {
+              "type": "string"
+            },
+            "tenant_name": {
+              "type": "string"
+            },
+            "use_octavia": {
+              "type": "boolean"
+            },
+            "user_domain_name": {
+              "type": "string"
+            },
+            "user_name": {
+              "type": "string"
+            },
+            "user_password": {
+              "type": "string"
+            },
+            "vrrp_ip": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "provider": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "cluster": {
+      "properties": {
+        "env": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "cluster_name": {
+      "type": "string"
+    },
+    "gitops": {
+      "properties": {
+        "flux": {
+          "properties": {
+            "interval": {
+              "type": "string"
+            },
+            "prune": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "git_branch": {
+          "type": "string"
+        },
+        "git_dir": {
+          "type": "string"
+        },
+        "git_ssh_key": {
+          "type": "string"
+        },
+        "git_ssh_pub": {
+          "type": "string"
+        },
+        "git_url": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "iac": {
+      "additionalProperties": false,
+      "description": "Infrastructure-as-code inputs for main.tf (locals as main, and modules)",
+      "properties": {
+        "main": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "modules": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "opencenter": {
+      "properties": {
+        "cluster": {
+          "properties": {
+            "aws_access_key": {
+              "type": "string"
+            },
+            "aws_secret_access_key": {
+              "type": "string"
+            },
+            "cluster_name": {
+              "type": "string"
+            },
+            "k8s_api_port_acl": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "kubernetes": {
+              "properties": {
+                "dns_zone_name": {
+                  "type": "string"
+                },
+                "flavor_bastion": {
+                  "type": "string"
+                },
+                "flavor_master": {
+                  "type": "string"
+                },
+                "flavor_worker": {
+                  "type": "string"
+                },
+                "loadbalancer_provider": {
+                  "type": "string"
+                },
+                "master_count": {
+                  "type": "integer"
+                },
+                "network_plugin": {
+                  "properties": {
+                    "calico": {
+                      "properties": {
+                        "calico_interface_autodetect": {
+                          "type": "string"
+                        },
+                        "cni_iface": {
+                          "type": "string"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                },
+                "oidc": {
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "kube_oidc_ca_file": {
+                      "type": "string"
+                    },
+                    "kube_oidc_client_id": {
+                      "type": "string"
+                    },
+                    "kube_oidc_groups_claim": {
+                      "type": "string"
+                    },
+                    "kube_oidc_groups_prefix": {
+                      "type": "string"
+                    },
+                    "kube_oidc_url": {
+                      "type": "string"
+                    },
+                    "kube_oidc_username_claim": {
+                      "type": "string"
+                    },
+                    "kube_oidc_username_prefix": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "subnet_pods": {
+                  "type": "string"
+                },
+                "subnet_services": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "windows_workers": {
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "windows_admin_password": {
+                      "type": "string"
+                    },
+                    "windows_user": {
+                      "type": "string"
+                    },
+                    "worker_node_bfv_size_windows": {
+                      "type": "integer"
+                    },
+                    "worker_node_bfv_type_windows": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "worker_count": {
+                  "type": "integer"
+                },
+                "worker_count_windows": {
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "ssh_authorized_keys": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "gitops": {
+          "properties": {
+            "git_dir": {
+              "type": "string"
+            },
+            "git_ssh_key": {
+              "type": "string"
+            },
+            "git_ssh_pub": {
+              "type": "string"
+            },
+            "git_url": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "managed-service": {
+          "properties": {
+            "alert-manager": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "services": {
+          "properties": {
+            "cert-manager": {
+              "type": "boolean"
+            },
+            "gateway": {
+              "type": "boolean"
+            },
+            "gateway-api": {
+              "type": "boolean"
+            },
+            "keycloak": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "opentofu": {
+      "properties": {
+        "backend": {
+          "properties": {
+            "local": {
+              "properties": {
+                "path": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "s3": {
+              "properties": {
+                "bucket": {
+                  "type": "string"
+                },
+                "encrypt": {
+                  "type": "boolean"
+                },
+                "endpoint": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "profile": {
+                  "type": "string"
+                },
+                "region": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "secrets": {
+      "properties": {
+        "sops_age_key_file": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "cluster_name"
+  ],
+  "title": "openCenter Cluster Configuration",
+  "type": "object"
+}

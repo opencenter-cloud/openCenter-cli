@@ -26,6 +26,7 @@ import (
     "github.com/rackerlabs/openCenter/internal/config"
     "github.com/rackerlabs/openCenter/internal/util"
     "github.com/spf13/cobra"
+    "gopkg.in/yaml.v3"
 )
 
 // setField sets a field in a struct using a dot-notation path.
@@ -124,6 +125,49 @@ func setReflectValue(field reflect.Value, value string) error {
 	return nil
 }
 
+// setMapField sets a field in a map using dot-notation path, similar to setField but for maps
+func setMapField(obj map[string]any, path string, value string) error {
+	parts := strings.Split(path, ".")
+	current := obj
+
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			// Last part, set the value
+			current[part] = convertStringValue(value)
+			return nil
+		}
+
+		// Navigate deeper
+		if next, exists := current[part]; exists {
+			if nextMap, ok := next.(map[string]any); ok {
+				current = nextMap
+			} else {
+				return fmt.Errorf("field '%s' is not a map, cannot traverse further", part)
+			}
+		} else {
+			// Create new map
+			newMap := make(map[string]any)
+			current[part] = newMap
+			current = newMap
+		}
+	}
+	return nil
+}
+
+// convertStringValue converts a string to the appropriate type (string, int, bool)
+func convertStringValue(value string) any {
+	// Try to parse as bool
+	if b, err := strconv.ParseBool(value); err == nil {
+		return b
+	}
+	// Try to parse as int
+	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
+		return i
+	}
+	// Default to string
+	return value
+}
+
 func newClusterInitCmd() *cobra.Command {
     cmd := &cobra.Command{
         Use:   "init <name>",
@@ -136,11 +180,25 @@ func newClusterInitCmd() *cobra.Command {
             // name is required as a positional argument (initial seed)
             name := args[0]
 
-            // Get template flag
-            template, _ := cmd.Flags().GetString("template")
-            cfg := config.NewDefaultWithTemplate(name, template)
+            // Generate configuration from schema (excluding iac section)
+            schemaYAML, err := config.GenerateDefaultFromSchema(name)
+            if err != nil {
+                return fmt.Errorf("failed to generate config from schema: %w", err)
+            }
 
-			// Apply overrides from flags.
+            // Parse the schema-generated YAML into a map for manipulation
+            var configMap map[string]any
+            if err := yaml.Unmarshal(schemaYAML, &configMap); err != nil {
+                return fmt.Errorf("failed to parse schema-generated config: %w", err)
+            }
+
+            // For validation and SOPS key generation, we still need a Config struct
+            cfg := config.Config{}
+            if err := yaml.Unmarshal(schemaYAML, &cfg); err != nil {
+                return fmt.Errorf("failed to parse schema-generated config to struct: %w", err)
+            }
+
+			// Apply overrides from flags to the config struct (for validation) and map (for output)
             // We parse os.Args manually here because cobra does not support
 			// unknown flags in a way that allows us to capture them.
 			// FParseErrWhitelist.UnknownFlags = true makes cobra ignore them,
@@ -156,6 +214,10 @@ func newClusterInitCmd() *cobra.Command {
 						}
 						if err := setField(&cfg, key, value); err != nil {
 							return fmt.Errorf("error setting config from flag '%s': %w", key, err)
+						}
+						// Also apply to the map for final output
+						if err := setMapField(configMap, key, value); err != nil {
+							return fmt.Errorf("error setting config map from flag '%s': %w", key, err)
 						}
 					}
 				}
@@ -198,17 +260,27 @@ func newClusterInitCmd() *cobra.Command {
                 }
             }
 
-            // Unless --full-schema is provided, filter out IaC keys whose values reference
-            // Terraform locals (contain the substring "local.") to keep the generated
-            // YAML concise for first-time users.
-            fullSchema, _ := cmd.Flags().GetBool("full-schema")
-            outCfg := cfg
-            if !fullSchema {
-                pruneIacLocals(&outCfg)
+            // Update the map with any SOPS key changes from the struct
+            if cfg.Secrets.SopsAgeKeyFile != "" {
+                if secretsMap, ok := configMap["secrets"].(map[string]any); ok {
+                    secretsMap["sops_age_key_file"] = cfg.Secrets.SopsAgeKeyFile
+                }
             }
 
-            if err := config.Save(outCfg); err != nil {
+            // Convert the map to YAML for final output
+            finalYAML, err := yaml.Marshal(configMap)
+            if err != nil {
+                return fmt.Errorf("failed to marshal final config: %w", err)
+            }
+
+            // Save the YAML file directly
+            path, err := config.ConfigPath(cfg.ClusterName)
+            if err != nil {
                 return err
+            }
+
+            if err := os.WriteFile(path, finalYAML, 0o600); err != nil {
+                return fmt.Errorf("failed to write config file: %w", err)
             }
             fmt.Fprintf(cmd.OutOrStdout(), "Created cluster configuration %s\n", cfg.ClusterName)
             return nil
@@ -217,8 +289,6 @@ func newClusterInitCmd() *cobra.Command {
     cmd.Flags().Bool("strict", false, "fail if required values are missing")
     cmd.Flags().Bool("force", false, "overwrite existing file")
     cmd.Flags().Bool("no-sops-keygen", false, "do not auto-generate a SOPS age key when secrets.sops_age_key_file is unset")
-    cmd.Flags().Bool("full-schema", false, "include all default keys, including values referencing Terraform locals")
-    cmd.Flags().StringP("template", "t", "openstack", "cluster template type: -t openstack, --template=kind, --template=vmware, --template=baremetal, --template=talos")
     return cmd
 }
 
@@ -249,58 +319,3 @@ func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
     return nil
 }
 
-// pruneIacLocals removes entries from cfg.IAC.Main and cfg.IAC.Modules whose
-// values are strings containing the substring "local.". This keeps the
-// generated YAML concise by omitting attributes that simply mirror Terraform
-// locals. Non-string values are preserved. Nested maps in modules are pruned
-// recursively.
-func pruneIacLocals(cfg *config.Config) {
-    // Prune iac.main (locals)
-    if cfg.IAC.Main != nil {
-        for k, v := range cfg.IAC.Main {
-            if isStringLocalRef(v) {
-                delete(cfg.IAC.Main, k)
-            }
-        }
-    }
-    // Prune iac.modules
-    if cfg.IAC.Modules != nil {
-        for modName, attrs := range cfg.IAC.Modules {
-            if m, ok := attrs.(map[string]any); ok {
-                cfg.IAC.Modules[modName] = pruneMapLocalRefs(m)
-            }
-        }
-    }
-}
-
-// pruneMapLocalRefs returns a copy of m without keys whose values are strings
-// containing "local.". If a value is a nested map, it is pruned recursively.
-func pruneMapLocalRefs(m map[string]any) map[string]any {
-    out := make(map[string]any, len(m))
-    for k, v := range m {
-        if isStringLocalRef(v) {
-            continue
-        }
-        if child, ok := v.(map[string]any); ok {
-            pruned := pruneMapLocalRefs(child)
-            if len(pruned) == 0 {
-                // Skip empty nested map
-                continue
-            }
-            out[k] = pruned
-            continue
-        }
-        out[k] = v
-    }
-    return out
-}
-
-// isStringLocalRef reports whether v is a string containing the substring
-// "local.". Non-strings return false.
-func isStringLocalRef(v any) bool {
-    s, ok := v.(string)
-    if !ok {
-        return false
-    }
-    return strings.Contains(s, "local.")
-}

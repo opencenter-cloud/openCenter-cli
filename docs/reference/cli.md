@@ -145,7 +145,7 @@ openCenter cluster info [name] [flags]
 
 ### `openCenter cluster init <name>`
 
-Initializes a new cluster configuration file with default values. The command is non-interactive and requires a cluster name.
+Initializes a new cluster configuration file with default values. The command is non-interactive and requires a cluster name. Uses the OpenStack template by default.
 
 **Usage**
 ```bash
@@ -155,11 +155,9 @@ openCenter cluster init <name> [flags]
 **Flags**
 | Flag | Description |
 | --- | --- |
-| `-t, --template <type>` | Cluster template type: `openstack` (default), `kind`, `vmware`, `baremetal`, `talos`. Each template provides infrastructure-specific default configurations. |
 | `--force` | Overwrite the configuration file if it already exists. |
 | `--strict`| Fail the command if the resulting configuration is not valid. |
 | `--no-sops-keygen` | Do not auto-generate a SOPS age key when `secrets.sops_age_key_file` is unset. |
-| `--full-schema` | Include all default keys in the generated YAML, including values that reference Terraform locals. Without this flag, entries whose values contain `local.` are omitted for brevity. |
 
 **Dynamic Flags**
 
@@ -174,7 +172,6 @@ The `init` command accepts additional flags to override any field in the configu
 - Optional SOPS key generation: if `secrets.sops_age_key_file` is empty and `--no-sops-keygen` is not set, generate an Age key at `<config-dir>/sops/age/keys/<name>-key.txt` (0600) and set the field.
 - Save configuration: write `<config-dir>/<name>.yaml` with 0600 permissions.
 - Output: print `Created cluster configuration <name>` on success.
-  - By default, the generated YAML omits `iac.main` and `iac.modules` entries whose values include `local.` references. Pass `--full-schema` to include them.
 
 **Outcomes**
 - A new config file exists at `<config-dir>/<name>.yaml` populated with defaults plus any overrides.
@@ -184,27 +181,10 @@ The `init` command accepts additional flags to override any field in the configu
 
 **Examples**
 ```bash
-# Create a new OpenStack cluster (default template)
+# Create a new OpenStack cluster
 ./openCenter cluster init my-cluster \
   --gitops.git_dir=/tmp/my-cluster \
   --gitops.git_url=git@github.com:my-org/my-cluster.git
-
-# Create a local Kind cluster for development
-./openCenter cluster init dev-cluster --template=kind \
-  --gitops.git_dir=/tmp/dev-cluster
-
-# Create a VMware vSphere cluster
-./openCenter cluster init prod-cluster -t vmware \
-  --gitops.git_dir=/tmp/prod-cluster \
-  --gitops.git_url=git@github.com:my-org/prod-cluster.git
-
-# Create a bare metal cluster
-./openCenter cluster init baremetal-cluster --template=baremetal \
-  --gitops.git_dir=/tmp/baremetal-cluster
-
-# Create a Talos cluster for secure, minimal Kubernetes
-./openCenter cluster init talos-cluster --template=talos \
-  --gitops.git_dir=/tmp/talos-cluster
 
 # Create without auto-generating a SOPS key
 ./openCenter cluster init my-cluster --no-sops-keygen

@@ -11,18 +11,3 @@ var defaultMainTF string
 //go:embed defaults/openstack.yaml
 var defaultIACYAML string
 
-// Template-specific IaC defaults for different cluster types
-//go:embed defaults/openstack.yaml
-var openstackIACYAML string
-
-//go:embed defaults/kind.yaml
-var kindIACYAML string
-
-//go:embed defaults/vmware.yaml
-var vmwareIACYAML string
-
-//go:embed defaults/baremetal.yaml
-var baremetalIACYAML string
-
-//go:embed defaults/talos.yaml
-var talosIACYAML string

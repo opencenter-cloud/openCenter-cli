@@ -15,6 +15,8 @@ package cmd
 
 import (
     "fmt"
+    "os"
+    "path/filepath"
 
     "github.com/rackerlabs/openCenter/internal/config"
     "github.com/spf13/cobra"
@@ -31,9 +33,9 @@ import (
 // Returns:
 //   - *cobra.Command: A pointer to the configured `validate` command.
 func newClusterValidateCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "validate [name]",
-		Short: "Validate cluster configuration invariants",
+		Short: "Validate cluster configuration invariants and optionally generate complete config",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
@@ -60,8 +62,35 @@ func newClusterValidateCmd() *cobra.Command {
 				}
 				return fmt.Errorf("validation failed")
 			}
+
+			// Generate debug config if requested or if OPENCENTER_DEBUG environment variable exists
+			generateDebug, _ := cmd.Flags().GetBool("generate-debug-config")
+			if generateDebug || os.Getenv("OPENCENTER_DEBUG") != "" {
+				// Determine output directory
+				outputDir, _ := cmd.Flags().GetString("output-dir")
+				if outputDir == "" {
+					// Use GitOps directory if available, otherwise current directory
+					if cfg.GitOps.GitDir != "" {
+						outputDir = cfg.GitOps.GitDir
+					} else {
+						outputDir = "."
+					}
+				}
+
+				if err := config.SaveDebugConfig(cfg.ClusterName, outputDir); err != nil {
+					return fmt.Errorf("failed to save debug config: %w", err)
+				}
+				debugPath := filepath.Join(outputDir, ".openCenter.yaml")
+				fmt.Fprintf(cmd.OutOrStdout(), "Debug config saved to %s\n", debugPath)
+			}
+
 			fmt.Fprintln(cmd.OutOrStdout(), "Validation successful.")
 			return nil
 		},
 	}
+
+	cmd.Flags().Bool("generate-debug-config", false, "generate complete openCenter.yaml config for debugging")
+	cmd.Flags().String("output-dir", "", "directory to save debug config (defaults to GitOps directory or current directory)")
+
+	return cmd
 }

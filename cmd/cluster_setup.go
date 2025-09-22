@@ -27,16 +27,11 @@ import (
 )
 
 func newClusterSetupCmd() *cobra.Command {
-    // validatedCfg will be populated during PreRunE after a successful validation
-    // and then consumed by RunE. This guarantees validation happens before any
-    // side-effecting setup work.
-    var validatedCfg config.Config
-
     cmd := &cobra.Command{
         Use:   "setup [name]",
         Short: "Setup GitOps directory (copy or render templates and initialise git)",
         Args:  cobra.MaximumNArgs(1),
-        PreRunE: func(cmd *cobra.Command, args []string) error {
+        RunE: func(cmd *cobra.Command, args []string) error {
             // Resolve cluster name
             var name string
             if len(args) > 0 {
@@ -51,24 +46,12 @@ func newClusterSetupCmd() *cobra.Command {
                     return fmt.Errorf("no active cluster; specify name")
                 }
             }
-            // Load configuration
+
+            // Load configuration (validation should be done separately via 'cluster validate')
             cfg, err := config.Load(name)
             if err != nil {
                 return err
             }
-            // Validate configuration FIRST
-            if errs := config.Validate(cfg); len(errs) > 0 {
-                for _, e := range errs {
-                    fmt.Fprintln(cmd.ErrOrStderr(), e)
-                }
-                return fmt.Errorf("validation failed")
-            }
-            validatedCfg = cfg
-            return nil
-        },
-        RunE: func(cmd *cobra.Command, args []string) error {
-            // Use cfg that has already been validated in PreRunE
-            cfg := validatedCfg
 
             // Flags
             render, _ := cmd.Flags().GetBool("render")
@@ -103,13 +86,6 @@ func newClusterSetupCmd() *cobra.Command {
                 return fmt.Errorf("failed to provision opentofu: %w", err)
             }
 
-            // Generate debug config if OPENCENTER_DEBUG environment variable exists
-            if os.Getenv("OPENCENTER_DEBUG") != "" {
-                if err := config.SaveDebugConfig(cfg.ClusterName, cfg.GitOps.GitDir); err != nil {
-                    return fmt.Errorf("failed to save debug config: %w", err)
-                }
-                fmt.Fprintln(cmd.OutOrStdout(), "Debug config saved to .openCenter.yaml")
-            }
             // Ansible provisioning removed with legacy templates.
             // Write .opencenter marker
             markerPath := filepath.Join(cfg.GitOps.GitDir, ".opencenter")

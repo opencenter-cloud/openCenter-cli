@@ -11,6 +11,11 @@ OPENCENTER_CONFIG_DIR = "./testdata/config"
 # When true deubg logs are set to true and other artifacts are created to help trouble shoot or verify functionality
 OPENCENTER_DEBUG = true
 
+# Enable podman support for KIND utility
+KIND_EXPERIMENTAL_PROVIDER = "podman" 
+
+CONTAINER_RUNTIME = "podman" 
+
 [tasks]
 # Build the openCenter binary
 build = "go build -o bin/openCenter"
@@ -72,6 +77,27 @@ gitea-cleanup = [
   "./hack/gitea-local/setup-gitea.sh destroy -y",
   "rm -f .gitea_admin_token .gitea_newuser_token .gitea_newuser_id_ed25519 .gitea_newuser_id_ed25519.pub"
 ]
+
+# Create a kind cluster with no CNI and experimental podman support
+kind-cluster-no-cni = """
+echo "Creating kind cluster with no CNI and podman support..."
+cat <<EOF | KIND_EXPERIMENTAL_PROVIDER=podman kind create cluster --name opencenter-dev --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  disableDefaultCNI: true
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/12"
+nodes:
+- role: control-plane
+- role: worker
+- role: worker
+- role: worker
+EOF
+echo "Exporting kubeconfig for kind cluster..."
+KIND_EXPERIMENTAL_PROVIDER=podman kind export kubeconfig --name opencenter-dev
+echo "Cluster created successfully! Nodes will show NotReady until CNI is installed."
+"""
 
 clean = [
   "echo Cleaning up...",

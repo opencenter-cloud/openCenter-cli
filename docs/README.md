@@ -39,3 +39,5 @@ These documents provide a deeper understanding of `openCenter`'s design and arch
 
 *   [**Architecture**](./explanation/architecture.md): A high-level overview of the components and data flow within `openCenter`.
 *   [**Design Rationale**](./explanation/rationale.md): An explanation of the key design decisions behind the project.
+
+    

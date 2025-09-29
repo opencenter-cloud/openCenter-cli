@@ -28,17 +28,19 @@ import (
 // CopyBase copies or renders embedded files from gitops-base-dir into the target directory
 // specified by cfg.GitOps().GitDir.
 //
-// When render is true, files ending with .tmpl are processed as Go text/templates
-// with sprig functions available, and the cluster configuration is bound to the
-// template under the dot context. The .tmpl extension is stripped from the
-// destination filename.
+// Files ending with .tpl are always rendered with the cluster configuration bound
+// under the dot context and the .tpl suffix stripped from the destination path.
+// When render is true, .tmpl files are rendered using the same rules. When render
+// is false, .tmpl files are copied verbatim (extension preserved) to allow manual
+// customization workflows.
 //
 // Non-template files are copied as-is. The directory structure under gitops-base-dir/
 // is preserved. The target directory is created if it does not exist.
 //
 // Inputs:
 //   - cfg: The cluster configuration.
-//   - render: If true, template files will be rendered; otherwise, they will be copied.
+//   - render: If true, both .tpl and .tmpl files render; if false, only .tpl
+//     files render while .tmpl files are copied as-is for manual editing.
 //
 // Outputs:
 //   - error: An error if one occurred during the copy or render operation.
@@ -64,17 +66,20 @@ func CopyBase(cfg config.Config, render bool) error {
 			return err
 		}
 		dst := filepath.Join(target, rel)
-		// If template file and render flag set, process template
-		if strings.HasSuffix(d.Name(), ".tmpl") || strings.HasSuffix(d.Name(), ".tpl") {
-			// Strip template extension
-			if strings.HasSuffix(d.Name(), ".tmpl") {
-				dst = strings.TrimSuffix(dst, ".tmpl")
-			} else {
-				dst = strings.TrimSuffix(dst, ".tpl")
-			}
-			if render {
+		name := d.Name()
+		isTpl := strings.HasSuffix(name, ".tpl")
+		isTmpl := strings.HasSuffix(name, ".tmpl")
+		if isTpl || isTmpl {
+			shouldRender := render || isTpl
+			if shouldRender {
+				if isTpl {
+					dst = strings.TrimSuffix(dst, ".tpl")
+				} else {
+					dst = strings.TrimSuffix(dst, ".tmpl")
+				}
 				return renderTemplate(path, dst, cfg)
 			}
+			return copyFile(path, dst)
 		}
 		// Copy file as-is
 		return copyFile(path, dst)

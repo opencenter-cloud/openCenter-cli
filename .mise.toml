@@ -115,7 +115,7 @@ clean = [
 # - Any schema-related default generation logic
 schema-verify = [
   "echo === Building project ===",
-  "mise build",
+  "mise run build",
   "echo === Testing schema generation ===",
   "./bin/openCenter cluster schema --pretty > new-schema.json && echo 'Schema generated successfully' || echo 'FAILED: Schema generation'",
   "echo === Testing cluster init with new schema ===",
@@ -125,9 +125,9 @@ schema-verify = [
   "echo === Testing validation ===",
   "unset OPENCENTER_DEBUG && OPENCENTER_CONFIG_DIR=./testdata/config ./bin/openCenter cluster validate test-verify && echo 'Validation successful' || echo 'FAILED: Validation'",
   "echo === Running unit tests ===",
-  "mise test && echo 'Unit tests passed' || echo 'WARNING: Unit tests failed - may need test updates for schema changes'",
+  "mise run test && echo 'Unit tests passed' || echo 'WARNING: Unit tests failed - may need test updates for schema changes'",
   "echo === Running BDD tests ===",
-  "mise godog && echo 'BDD tests passed' || echo 'WARNING: BDD tests failed - may need test updates for schema changes'",
+  "mise run godog && echo 'BDD tests passed' || echo 'WARNING: BDD tests failed - may need test updates for schema changes'",
   "echo === Comparing with reference schema ===",
   "if [ -f testdata/schema.yaml ]; then echo 'Reference schema found - manual comparison recommended:'; echo 'Run: diff testdata/schema.yaml testdata/config/test-verify.yaml'; else echo 'No reference schema found at testdata/schema.yaml'; fi",
   "echo === Schema verification results ===",

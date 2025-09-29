@@ -16,6 +16,7 @@ package gitops
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rackerlabs/openCenter/internal/config"
@@ -47,4 +48,50 @@ func TestCopyBase(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("files in dst: %v", files)
+}
+
+func TestRenderInfrastructureClusterRendersConfigValues(t *testing.T) {
+	dst := t.TempDir()
+	cfg := config.NewDefault("render-test")
+	cfg.OpenCenter.Cluster.ClusterName = "render-test"
+	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.Cluster.Kubernetes.Version = "9.9.9"
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://auth.example.local/v3/"
+
+	if err := RenderInfrastructureCluster(cfg); err != nil {
+		t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
+	}
+
+	mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
+	data, err := os.ReadFile(mainTF)
+	if err != nil {
+		t.Fatalf("failed to read rendered main.tf: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, cfg.OpenCenter.Cluster.Kubernetes.Version) {
+		t.Fatalf("rendered main.tf missing kubernetes version %q\ncontent:\n%s", cfg.OpenCenter.Cluster.Kubernetes.Version, content)
+	}
+	if !strings.Contains(content, cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL) {
+		t.Fatalf("rendered main.tf missing auth_url %q\ncontent:\n%s", cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL, content)
+	}
+}
+
+func TestRenderClusterAppsRendersClusterName(t *testing.T) {
+	dst := t.TempDir()
+	cfg := config.NewDefault("cluster-apps")
+	cfg.OpenCenter.Cluster.ClusterName = "cluster-apps"
+	cfg.OpenCenter.GitOps.GitDir = dst
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps returned error: %v", err)
+	}
+
+	sourcesFile := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "managed-services", "fluxcd", "sources.yaml")
+	data, err := os.ReadFile(sourcesFile)
+	if err != nil {
+		t.Fatalf("failed to read rendered sources.yaml: %v", err)
+	}
+	if !strings.Contains(string(data), cfg.ClusterName()) {
+		t.Fatalf("rendered sources.yaml missing cluster name %q\ncontent:\n%s", cfg.ClusterName(), string(data))
+	}
 }

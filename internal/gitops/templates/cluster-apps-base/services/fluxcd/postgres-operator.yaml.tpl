@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -48,7 +43,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .Values.cluster.name }}/services/postgres-operator
+  path: ./applications/overlays/{{ .ClusterName }}/services/postgres-operator
   targetNamespace: postgres-operator
   prune: true
   wait: true

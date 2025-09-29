@@ -1,8 +1,4 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
+---
 # Keycloak Custom Resource patch configuration
 # Defines a highly available Keycloak deployment with PostgreSQL backend
 apiVersion: k8s.keycloak.org/v2alpha1
@@ -12,7 +8,7 @@ metadata:
   namespace: keycloak
 spec:
   # Deployment configuration
-  startOptimized: false # Start in {{ .Values.environment }} mode (not optimized for production)
+  startOptimized: false # Start in {{ .ClusterName }} mode (not optimized for production)
   #startOptimized: true                             # RECOMMENDED: Enable for production performance
   instances: 3 # High availability with 3 replicas
   image: quay.io/keycloak/keycloak:26.3.0 # Keycloak version 26.3.0
@@ -43,14 +39,14 @@ spec:
 
   # Hostname and proxy configuration
   hostname:
-    hostname: https://auth.{{ .Values.cluster.name }}.k8s.opencenter.cloud # Public hostname with HTTPS
+    hostname: https://auth.{{ .ClusterName }}.k8s.opencenter.cloud # Public hostname with HTTPS
     strict: false
     backchannelDynamic: false # Enable dynamic backchannel URLs
 
   # Additional Keycloak server options
   additionalOptions:
     - name: hostname-url
-      value: "https://auth.{{ .Values.cluster.name }}.k8s.opencenter.cloud/"
+      value: "https://auth.{{ .ClusterName }}.k8s.opencenter.cloud/"
     - name: metrics-enabled # Enable Prometheus metrics
       value: "true"
     - name: spi-connections-http-client-default-connection-timeout-millis # HTTP client timeout

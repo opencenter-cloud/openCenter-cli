@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
@@ -20,4 +15,4 @@ spec:
     - repository:
         name: opencenter-keycloak
       fromPath: applications/base/services/keycloak
-      toPath: applications/overlays/{{ .Values.cluster.name }}/services/base/keycloak/
+      toPath: applications/overlays/{{ .ClusterName }}/services/base/keycloak/

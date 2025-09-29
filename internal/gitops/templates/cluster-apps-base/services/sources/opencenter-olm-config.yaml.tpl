@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
@@ -20,4 +15,4 @@ spec:
     - repository:
         name: opencenter-olm
       fromPath: applications/base/services/olm
-      toPath: applications/overlays/{{ .Values.cluster.name }}/services/base/olm/
+      toPath: applications/overlays/{{ .ClusterName }}/services/base/olm/

@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -11,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1m
-  path: ./applications/overlays/{{ .Values.cluster.name }}/managed-services/sources
+  path: ./applications/overlays/{{ .ClusterName }}/managed-services/sources
   prune: true
   sourceRef:
     kind: GitRepository

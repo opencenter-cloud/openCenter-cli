@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -19,7 +14,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: opencenter-olm-config
-  path: ./applications/overlays/{{ .Values.cluster.name }}/services/olm
+  path: ./applications/overlays/{{ .ClusterName }}/services/olm
   prune: true
   wait: true
   commonMetadata:

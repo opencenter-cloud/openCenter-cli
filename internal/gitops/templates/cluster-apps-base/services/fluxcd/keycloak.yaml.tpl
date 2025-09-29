@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -24,7 +19,7 @@ spec:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: ./applications/overlays/{{ .Values.cluster.name }}/services/keycloak/00-postgres
+  path: ./applications/overlays/{{ .ClusterName }}/services/keycloak/00-postgres
   targetNamespace: keycloak
   prune: true
   wait: true
@@ -56,7 +51,7 @@ spec:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: ./applications/overlays/{{ .Values.cluster.name }}/services/keycloak/10-operator
+  path: ./applications/overlays/{{ .ClusterName }}/services/keycloak/10-operator
   targetNamespace: keycloak
   prune: true
   healthChecks:
@@ -96,7 +91,7 @@ spec:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: ./applications/overlays/{{ .Values.cluster.name }}/services/keycloak/20-keycloak
+  path: ./applications/overlays/{{ .ClusterName }}/services/keycloak/20-keycloak
   targetNamespace: keycloak
   prune: true
   wait: true

@@ -52,7 +52,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .Values.cluster.name }}/services/weave-gitops
+  path: ./applications/overlays/{{ .ClusterName }}/services/weave-gitops
   targetNamespace: flux-system
   prune: true
   wait: true

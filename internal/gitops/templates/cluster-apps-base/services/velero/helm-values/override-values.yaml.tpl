@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 credentials:
   existingSecret: "velero-s3-credentials"
@@ -10,12 +5,12 @@ configuration:
   backupStorageLocation:
     - name: oc-s3
       default: true
-      bucket: {{ Values.cluster.name }}-backups
+      bucket: {{ .ClusterName }}-backups
       provider: aws
 
       objectStorage:
-        bucket: {{ Values.cluster.name }}-backups
-        prefix: {{ .Values.backup.prefix }}
+        bucket: {{ .ClusterName }}-backups
+        prefix: {{ .ClusterName }}
 
       config:
         region: us-west-2
@@ -43,7 +38,7 @@ configuration:
         # allowing the source volume to be deleted (EXPERIMENTAL)
         # requires the "enable_force_upload" Cinder option to be enabled on the server
         method: snapshot
-        # optional resource readiness timeouts in Golang time format: https://pkg.go.{{ .Values.environment }}/time#ParseDuration
+        # optional resource readiness timeouts in Golang time format: https://pkg.go.{{ .ClusterName }}/time#ParseDuration
         # (default: 5m)
         volumeTimeout: 5m
         snapshotTimeout: 5m

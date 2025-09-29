@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -11,7 +6,7 @@ metadata:
   namespace: observability
 spec:
   hostnames:
-    - "grafana.{{ .Values.cluster.name }}.k8s.opencenter.cloud"
+    - "grafana.{{ .ClusterName }}.k8s.opencenter.cloud"
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway

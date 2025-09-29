@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
@@ -10,14 +5,14 @@ metadata:
   name: rmpk-gateway
   namespace: rackspace-system
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-{{ Values.cluster.name }}
+    cert-manager.io/cluster-issuer: letsencrypt-{{ .ClusterName }}
 spec:
   gatewayClassName: eg
   listeners:
     - name: keycloak-https
       port: 443
       protocol: HTTPS
-      hostname: auth.{{ .Values.cluster.name }}.k8s.opencenter.cloud
+      hostname: auth.{{ .ClusterName }}.k8s.opencenter.cloud
       allowedRoutes:
         namespaces:
           from: All
@@ -30,7 +25,7 @@ spec:
     - name: gitops-https
       port: 443
       protocol: HTTPS
-      hostname: gitops.{{ .Values.cluster.name }}.k8s.opencenter.cloud
+      hostname: gitops.{{ .ClusterName }}.k8s.opencenter.cloud
       allowedRoutes:
         namespaces:
           from: All
@@ -43,7 +38,7 @@ spec:
     - name: headlamp-https
       port: 443
       protocol: HTTPS
-      hostname: headlamp.{{ .Values.cluster.name }}.k8s.opencenter.cloud
+      hostname: headlamp.{{ .ClusterName }}.k8s.opencenter.cloud
       allowedRoutes:
         namespaces:
           from: All
@@ -56,7 +51,7 @@ spec:
     - name: prometheus-https
       port: 443
       protocol: HTTPS
-      hostname: prometheus.{{ .Values.cluster.name }}.k8s.opencenter.cloud
+      hostname: prometheus.{{ .ClusterName }}.k8s.opencenter.cloud
       allowedRoutes:
         namespaces:
           from: All
@@ -69,7 +64,7 @@ spec:
     - name: alertmanager-https
       port: 443
       protocol: HTTPS
-      hostname: alertmanager.{{ .Values.cluster.name }}.k8s.opencenter.cloud
+      hostname: alertmanager.{{ .ClusterName }}.k8s.opencenter.cloud
       allowedRoutes:
         namespaces:
           from: All
@@ -82,7 +77,7 @@ spec:
     - name: grafana-https
       port: 443
       protocol: HTTPS
-      hostname: grafana.{{ .Values.cluster.name }}.k8s.opencenter.cloud
+      hostname: grafana.{{ .ClusterName }}.k8s.opencenter.cloud
       allowedRoutes:
         namespaces:
           from: All

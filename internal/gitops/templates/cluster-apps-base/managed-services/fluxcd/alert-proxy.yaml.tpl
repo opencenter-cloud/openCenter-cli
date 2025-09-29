@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -24,7 +19,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  path: ./applications/overlays/{{ .Values.cluster.name }}/managed-services/alert-proxy
+  path: ./applications/overlays/{{ .ClusterName }}/managed-services/alert-proxy
   targetNamespace: rackspace
   prune: true
   wait: true

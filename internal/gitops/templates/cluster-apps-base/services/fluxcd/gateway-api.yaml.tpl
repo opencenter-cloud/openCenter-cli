@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -51,7 +46,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .Values.cluster.name }}/services/gateway-api
+  path: ./applications/overlays/{{ .ClusterName }}/services/gateway-api
   targetNamespace: envoy-gateway-system
   prune: true
   wait: true

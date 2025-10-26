@@ -970,7 +970,7 @@ func Validate(cfg Config) []string {
 	useOctavia := false
 	vrrpIP := ""
 	vrrpEnabled := false
-	// Fallback to reading iac.networking from the YAML on disk if not set
+	// Fallback to reading networking from the YAML on disk if not set
 	if vrrpIP == "" || !useOctavia {
 		// Attempt to locate YAML file and parse minimal fields
 		// Ignore errors silently; this is a best-effort compatibility shim.
@@ -979,16 +979,28 @@ func Validate(cfg Config) []string {
 			if data, rerr := os.ReadFile(path); rerr == nil {
 				var raw map[string]any
 				if yerr := yaml.Unmarshal(data, &raw); yerr == nil {
-					// iac.networking.use_octavia
+					// Check top-level networking section first
+					if netw, ok := raw["networking"].(map[string]any); ok {
+						if uo, ok := netw["use_octavia"].(bool); ok {
+							useOctavia = uo
+						}
+						if ve, ok := netw["vrrp_enabled"].(bool); ok {
+							vrrpEnabled = ve
+						}
+						if v, ok := netw["vrrp_ip"].(string); ok && strings.TrimSpace(v) != "" {
+							vrrpIP = strings.TrimSpace(v)
+						}
+					}
+					// Fallback to iac.networking for backward compatibility
 					if iac, ok := raw["iac"].(map[string]any); ok {
 						if netw, ok := iac["networking"].(map[string]any); ok {
-							if uo, ok := netw["use_octavia"].(bool); ok {
+							if uo, ok := netw["use_octavia"].(bool); ok && !useOctavia {
 								useOctavia = uo
 							}
-							if ve, ok := netw["vrrp_enabled"].(bool); ok {
+							if ve, ok := netw["vrrp_enabled"].(bool); ok && !vrrpEnabled {
 								vrrpEnabled = ve
 							}
-							if v, ok := netw["vrrp_ip"].(string); ok && strings.TrimSpace(v) != "" {
+							if v, ok := netw["vrrp_ip"].(string); ok && strings.TrimSpace(v) != "" && vrrpIP == "" {
 								vrrpIP = strings.TrimSpace(v)
 							}
 						}

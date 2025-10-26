@@ -1,0 +1,9 @@
+[submodule "third-party/openCenter-customer-app-example"]
+	path = third-party/openCenter-customer-app-example
+	url = git@github.com:rackerlabs/openCenter-customer-app-example.git
+[submodule "third-party/openCenter-gitops-base"]
+	path = third-party/openCenter-gitops-base
+	url = git@github.com:rackerlabs/openCenter-gitops-base.git
+[submodule "third-party/000001-customer-git-repo"]
+	path = third-party/000001-customer-git-repo
+	url = git@github.com:rpc-environments/5918681-computacenter-united-states-inc.git

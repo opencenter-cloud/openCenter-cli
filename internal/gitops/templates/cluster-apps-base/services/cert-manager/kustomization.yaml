@@ -14,3 +14,4 @@ secretGenerator:
     files: [override.yaml=helm-values/override-values.yaml]
     options:
       disableNameSuffixHash: true
+

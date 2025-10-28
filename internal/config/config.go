@@ -649,7 +649,140 @@ func Load(name string) (Config, error) {
 	if unmarshalErr := yaml.Unmarshal(data, &cfg); unmarshalErr != nil {
 		return Config{}, fmt.Errorf("failed to parse YAML: %w", unmarshalErr)
 	}
+	
+	// Populate IAC field from defaults and user configuration
+	if err := populateIAC(&cfg); err != nil {
+		return Config{}, fmt.Errorf("failed to populate IAC: %w", err)
+	}
+	
 	return cfg, nil
+}
+
+// populateIAC populates the IAC field from default YAML data and user configuration.
+// It merges the default IAC structure with values from the user's configuration.
+func populateIAC(cfg *Config) error {
+	// Parse the default IAC YAML structure
+	var defaultIAC struct {
+		Locals  map[string]any `yaml:"locals"`
+		Modules map[string]any `yaml:"modules"`
+	}
+	
+	if err := yaml.Unmarshal([]byte(defaultIACYAML), &defaultIAC); err != nil {
+		return fmt.Errorf("failed to parse default IAC YAML: %w", err)
+	}
+	
+	// Initialize IAC field
+	cfg.IAC = IAC{
+		Main:    make(map[string]any),
+		Modules: make(map[string]any),
+	}
+	
+	// Copy default locals to IAC.Main
+	for k, v := range defaultIAC.Locals {
+		cfg.IAC.Main[k] = v
+	}
+	
+	// Copy default modules to IAC.Modules
+	for k, v := range defaultIAC.Modules {
+		cfg.IAC.Modules[k] = v
+	}
+	
+	// Override with user configuration values
+	if err := mergeUserConfigIntoIAC(cfg); err != nil {
+		return fmt.Errorf("failed to merge user config into IAC: %w", err)
+	}
+	
+	return nil
+}
+
+// mergeUserConfigIntoIAC merges user configuration values into the IAC structure.
+func mergeUserConfigIntoIAC(cfg *Config) error {
+	// Map user configuration to IAC locals
+	if cfg.OpenCenter.Cluster.ClusterName != "" {
+		cfg.IAC.Main["cluster_name"] = cfg.OpenCenter.Cluster.ClusterName
+	}
+	
+	// Map OpenStack configuration
+	if cfg.OpenCenter.Infrastructure.Provider == "openstack" {
+		os := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
+		if os.AuthURL != "" {
+			cfg.IAC.Main["openstack_auth_url"] = os.AuthURL
+		}
+		if os.Region != "" {
+			cfg.IAC.Main["openstack_region"] = os.Region
+		}
+		if os.TenantName != "" {
+			cfg.IAC.Main["openstack_tenant_name"] = os.TenantName
+		}
+		if os.Domain != "" {
+			cfg.IAC.Main["openstack_project_domain_name"] = os.Domain
+			cfg.IAC.Main["openstack_user_domain_name"] = os.Domain
+		}
+		cfg.IAC.Main["openstack_insecure"] = os.Insecure
+		if os.ApplicationCredentialID != "" {
+			cfg.IAC.Main["openstack_user_name"] = os.ApplicationCredentialID
+		}
+		if os.ApplicationCredentialSecret != "" {
+			cfg.IAC.Main["openstack_user_password"] = os.ApplicationCredentialSecret
+		}
+		if os.FloatingNetworkId != "" {
+			cfg.IAC.Main["router_external_network_id"] = os.FloatingNetworkId
+		}
+	}
+	
+	// Map Kubernetes configuration
+	k8s := cfg.OpenCenter.Cluster.Kubernetes
+	if k8s.Version != "" {
+		cfg.IAC.Main["kubernetes_version"] = k8s.Version
+	}
+	if k8s.MasterCount > 0 {
+		cfg.IAC.Main["master_count"] = k8s.MasterCount
+	}
+	if k8s.WorkerCount > 0 {
+		cfg.IAC.Main["worker_count"] = k8s.WorkerCount
+	}
+	if k8s.WorkerCountWindows > 0 {
+		cfg.IAC.Main["worker_count_windows"] = k8s.WorkerCountWindows
+	}
+	if k8s.FlavorBastion != "" {
+		cfg.IAC.Main["flavor_bastion"] = k8s.FlavorBastion
+	}
+	if k8s.FlavorMaster != "" {
+		cfg.IAC.Main["flavor_master"] = k8s.FlavorMaster
+	}
+	if k8s.FlavorWorker != "" {
+		cfg.IAC.Main["flavor_worker"] = k8s.FlavorWorker
+	}
+	if k8s.SubnetPods != "" {
+		cfg.IAC.Main["subnet_pods"] = k8s.SubnetPods
+	}
+	if k8s.SubnetServices != "" {
+		cfg.IAC.Main["subnet_services"] = k8s.SubnetServices
+	}
+	if k8s.LoadbalancerProvider != "" {
+		cfg.IAC.Main["loadbalancer_provider"] = k8s.LoadbalancerProvider
+	}
+	if k8s.DNSZoneName != "" {
+		cfg.IAC.Main["dns_zone_name"] = k8s.DNSZoneName
+	}
+	
+	// Map network plugin configuration
+	if k8s.NetworkPlugin.Calico.Enabled {
+		cfg.IAC.Main["network_plugin"] = "calico"
+		if k8s.NetworkPlugin.Calico.CNIIface != "" {
+			cfg.IAC.Main["cni_iface"] = k8s.NetworkPlugin.Calico.CNIIface
+		}
+		if k8s.NetworkPlugin.Calico.CalicoInterfaceAutodetect != "" {
+			cfg.IAC.Main["calico_interface_autodetect"] = k8s.NetworkPlugin.Calico.CalicoInterfaceAutodetect
+		}
+	}
+	
+	// Map SSH authorized keys
+	if len(cfg.OpenCenter.Cluster.SSHAuthorizedKeys) > 0 {
+		cfg.IAC.Main["ssh_authorized_keys"] = cfg.OpenCenter.Cluster.SSHAuthorizedKeys
+	}
+	
+	return nil
 }
 
 // GenerateCompleteConfig generates a complete configuration by merging schema defaults

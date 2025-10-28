@@ -95,3 +95,70 @@ func TestRenderClusterAppsRendersClusterName(t *testing.T) {
 		t.Fatalf("rendered sources.yaml missing cluster name %q\ncontent:\n%s", cfg.ClusterName(), string(data))
 	}
 }
+
+func TestRenderClusterAppsSkipsDisabledServices(t *testing.T) {
+	dst := t.TempDir()
+	cfg := config.NewDefault("disabled-services-test")
+	cfg.OpenCenter.Cluster.ClusterName = "disabled-services-test"
+	cfg.OpenCenter.GitOps.GitDir = dst
+
+	// Disable some services
+	cfg.OpenCenter.Services["cert-manager"] = config.ServiceCfg{Enabled: false}
+	cfg.OpenCenter.Services["velero"] = config.ServiceCfg{Enabled: false}
+	cfg.OpenCenter.ManagedService["alert-proxy"] = config.ServiceCfg{Enabled: false}
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps returned error: %v", err)
+	}
+
+	// Check that disabled service directories are not created
+	certManagerDir := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "cert-manager")
+	if _, err := os.Stat(certManagerDir); !os.IsNotExist(err) {
+		t.Errorf("disabled cert-manager service directory should not exist: %s", certManagerDir)
+	}
+
+	veleroDir := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "velero")
+	if _, err := os.Stat(veleroDir); !os.IsNotExist(err) {
+		t.Errorf("disabled velero service directory should not exist: %s", veleroDir)
+	}
+
+	alertProxyDir := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "managed-services", "alert-proxy")
+	if _, err := os.Stat(alertProxyDir); !os.IsNotExist(err) {
+		t.Errorf("disabled alert-proxy managed service directory should not exist: %s", alertProxyDir)
+	}
+
+	// Check that enabled services are still created
+	sourcesDir := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "sources")
+	if _, err := os.Stat(sourcesDir); os.IsNotExist(err) {
+		t.Errorf("enabled sources service directory should exist: %s", sourcesDir)
+	}
+
+	// Check that the fluxcd kustomization files reflect the disabled services
+	servicesKustomization := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "fluxcd", "kustomization.yaml")
+	data, err := os.ReadFile(servicesKustomization)
+	if err != nil {
+		t.Fatalf("failed to read services fluxcd kustomization.yaml: %v", err)
+	}
+	content := string(data)
+	if strings.Contains(content, "./cert-manager.yaml") {
+		t.Errorf("disabled cert-manager should not be in services fluxcd kustomization.yaml")
+	}
+	if strings.Contains(content, "./velero.yaml") {
+		t.Errorf("disabled velero should not be in services fluxcd kustomization.yaml")
+	}
+
+	// Check that managed services kustomization reflects disabled alert-proxy
+	managedServicesKustomization := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "managed-services", "fluxcd", "kustomization.yaml")
+	data, err = os.ReadFile(managedServicesKustomization)
+	if err != nil {
+		t.Fatalf("failed to read managed-services fluxcd kustomization.yaml: %v", err)
+	}
+	content = string(data)
+	if strings.Contains(content, "./alert-proxy.yaml") {
+		t.Errorf("disabled alert-proxy should not be in managed-services fluxcd kustomization.yaml")
+	}
+	// Since all managed services are disabled, sources.yaml should also not be included
+	if strings.Contains(content, "./sources.yaml") {
+		t.Errorf("sources.yaml should not be included when all managed services are disabled")
+	}
+}

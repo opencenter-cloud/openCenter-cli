@@ -139,9 +139,34 @@ func copyFile(src, dst string) error {
 	return os.WriteFile(dst, data, 0o644)
 }
 
+// shouldSkipFile determines if a file should be skipped based on service configuration.
+// It checks if the file belongs to a disabled service or managed service.
+func shouldSkipFile(relPath string, cfg config.Config) bool {
+	pathParts := strings.Split(relPath, string(filepath.Separator))
+	
+	// Skip files in disabled services directories
+	if len(pathParts) >= 2 && pathParts[0] == "services" {
+		serviceName := pathParts[1]
+		if service, exists := cfg.OpenCenter.Services[serviceName]; exists && !service.Enabled {
+			return true
+		}
+	}
+	
+	// Skip files in disabled managed services directories
+	if len(pathParts) >= 2 && pathParts[0] == "managed-services" {
+		serviceName := pathParts[1]
+		if service, exists := cfg.OpenCenter.ManagedService[serviceName]; exists && !service.Enabled {
+			return true
+		}
+	}
+	
+	return false
+}
+
 // RenderClusterApps renders cluster-apps-base template to applications/overlays/<cluster-name>/
 // This function processes all files in the cluster-apps-base template directory,
 // renders .tmpl files with the cluster configuration, and copies others as-is.
+// It skips directories for disabled services and managed services.
 func RenderClusterApps(cfg config.Config) error {
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
@@ -167,6 +192,11 @@ func RenderClusterApps(cfg config.Config) error {
 		rel, err := filepath.Rel("templates/cluster-apps-base", path)
 		if err != nil {
 			return err
+		}
+
+		// Skip files for disabled services
+		if shouldSkipFile(rel, cfg) {
+			return nil
 		}
 
 		dst := filepath.Join(target, rel)

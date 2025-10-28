@@ -54,7 +54,13 @@ func newClusterRenderCmd() *cobra.Command {
 				return err
 			}
 			if err := gitops.CopyBase(cfg, true); err != nil {
-				return fmt.Errorf("failed to render templates: %w", err)
+				return fmt.Errorf("failed to render base templates: %w", err)
+			}
+			if err := gitops.RenderClusterApps(cfg); err != nil {
+				return fmt.Errorf("failed to render cluster apps templates: %w", err)
+			}
+			if err := gitops.RenderInfrastructureCluster(cfg); err != nil {
+				return fmt.Errorf("failed to render infrastructure cluster templates: %w", err)
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), "Render complete.")
 			return nil

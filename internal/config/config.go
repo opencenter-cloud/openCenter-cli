@@ -223,11 +223,13 @@ type Infrastructure struct {
 
 // ServiceCfg captures the on/off toggle plus optional metadata for a service.
 type ServiceCfg struct {
-	Enabled  bool   `yaml:"enabled" json:"enabled"`
-	Email    string `yaml:"email,omitempty" json:"email,omitempty"`
-	Region   string `yaml:"region,omitempty" json:"region,omitempty"`
-	S3Host   string `yaml:"s3_host,omitempty" json:"s3_host,omitempty"`
-	S3Region string `yaml:"s3_region,omitempty" json:"s3_region,omitempty"`
+	Enabled           bool   `yaml:"enabled" json:"enabled"`
+	Email             string `yaml:"email,omitempty" json:"email,omitempty"`
+	Region            string `yaml:"region,omitempty" json:"region,omitempty"`
+	S3Host            string `yaml:"s3_host,omitempty" json:"s3_host,omitempty"`
+	S3Region          string `yaml:"s3_region,omitempty" json:"s3_region,omitempty"`
+	AWSAccessKey      string `yaml:"aws_access_key,omitempty" json:"aws_access_key,omitempty"`
+	AWSSecretAccessKey string `yaml:"aws_secret_access_key,omitempty" json:"aws_secret_access_key,omitempty"`
 }
 
 // CloudConfig represents the cloud configuration within opencenter
@@ -460,7 +462,7 @@ func defaultConfig(name string) Config {
 			Services: map[string]ServiceCfg{
 				"calico":                {Enabled: true},
 				"cert-manager":          {Enabled: true, Email: "mpk-support@rackspace.com", Region: "us-east-1"},
-				"etcd-backup":           {Enabled: true, S3Host: "https://swift.api.dfw3.rackspacecloud.com", S3Region: "DFW3"},
+				"etcd-backup":           {Enabled: true, S3Host: "https://swift.api.dfw3.rackspacecloud.com", S3Region: "DFW3", AWSAccessKey: "", AWSSecretAccessKey: ""},
 				"external-snapshotter":  {Enabled: true},
 				"fluxcd":                {Enabled: true},
 				"gateway":               {Enabled: true},

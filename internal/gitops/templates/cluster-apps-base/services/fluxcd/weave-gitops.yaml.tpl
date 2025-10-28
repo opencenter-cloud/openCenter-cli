@@ -65,3 +65,4 @@ spec:
       app.kubernetes.io/part-of: weave-gitops
       app.kubernetes.io/managed-by: flux
       opencenter/managed-by: opencenter
+      opencenter/tech-status: preview

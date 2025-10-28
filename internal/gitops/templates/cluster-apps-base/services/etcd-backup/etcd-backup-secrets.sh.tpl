@@ -1,8 +1,8 @@
 kubectl --namespace etcd-backup \
 create secret generic etcd-backup-secrets \
 --type Opaque \
---from-literal=ACCESS_KEY="{{( index .OpenCenter.Services "etcd-backup").AWSAccessKey }}" \
---from-literal=SECRET_KEY="{{( index .OpenCenter.Services "etcd-backup").AWSSecretAccessKey }}" \
+--from-literal=ACCESS_KEY="{{(index .OpenCenter.Services "etcd-backup").AWSAccessKey }}" \
+--from-literal=SECRET_KEY="{{(index .OpenCenter.Services "etcd-backup").AWSSecretAccessKey }}" \
 --from-literal=S3_HOST="{{ (index .OpenCenter.Services "etcd-backup").S3Host }}" \
 --from-literal=S3_REGION="{{ (index .OpenCenter.Services "etcd-backup").S3Region }}" \
 --from-literal=ETCDCTL_API="3" \

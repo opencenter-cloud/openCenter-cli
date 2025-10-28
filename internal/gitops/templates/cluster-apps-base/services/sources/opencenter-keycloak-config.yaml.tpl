@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 15m
-  url: ssh://git@github.com/rpc-environments/5918681-computacenter-united-states-inc.git
+  url:  {{ .OpenCenter.GitOps.GitURL }}
   ref:
     branch: main
   secretRef:

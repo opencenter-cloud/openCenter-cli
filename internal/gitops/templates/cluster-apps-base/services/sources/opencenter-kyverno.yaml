@@ -8,6 +8,6 @@ spec:
   interval: 15m
   url: ssh://git@github.com/rackerlabs/openCenter-gitops-base.git
   ref:
-    branch: oidc-support
+    branch: main
   secretRef:
     name: opencenter-base

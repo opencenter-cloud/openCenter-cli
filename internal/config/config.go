@@ -223,13 +223,18 @@ type Infrastructure struct {
 
 // ServiceCfg captures the on/off toggle plus optional metadata for a service.
 type ServiceCfg struct {
-	Enabled           bool   `yaml:"enabled" json:"enabled"`
-	Email             string `yaml:"email,omitempty" json:"email,omitempty"`
-	Region            string `yaml:"region,omitempty" json:"region,omitempty"`
-	S3Host            string `yaml:"s3_host,omitempty" json:"s3_host,omitempty"`
-	S3Region          string `yaml:"s3_region,omitempty" json:"s3_region,omitempty"`
-	AWSAccessKey      string `yaml:"aws_access_key,omitempty" json:"aws_access_key,omitempty"`
-	AWSSecretAccessKey string `yaml:"aws_secret_access_key,omitempty" json:"aws_secret_access_key,omitempty"`
+	Enabled              bool   `yaml:"enabled" json:"enabled"`
+	Email                string `yaml:"email,omitempty" json:"email,omitempty"`
+	Region               string `yaml:"region,omitempty" json:"region,omitempty"`
+	S3Host               string `yaml:"s3_host,omitempty" json:"s3_host,omitempty"`
+	S3Region             string `yaml:"s3_region,omitempty" json:"s3_region,omitempty"`
+	AWSAccessKey         string `yaml:"aws_access_key,omitempty" json:"aws_access_key,omitempty"`
+	AWSSecretAccessKey   string `yaml:"aws_secret_access_key,omitempty" json:"aws_secret_access_key,omitempty"`
+	// Alert-proxy specific fields
+	CoreDeviceId         string `yaml:"core_device_id,omitempty" json:"core_device_id,omitempty"`
+	AccountServiceToken  string `yaml:"account_service_token,omitempty" json:"account_service_token,omitempty"`
+	AlertManagerBaseUrl  string `yaml:"alert_manager_base_url,omitempty" json:"alert_manager_base_url,omitempty"`
+	CoreAccountNumber    string `yaml:"core_account_number,omitempty" json:"core_account_number,omitempty"`
 }
 
 // CloudConfig represents the cloud configuration within opencenter
@@ -354,6 +359,10 @@ type SimplifiedOpenStackCloud struct {
 	Region                      string `yaml:"region" json:"region"`
 	ApplicationCredentialID     string `yaml:"application_credential_id" json:"application_credential_id"`
 	ApplicationCredentialSecret string `yaml:"application_credential_secret" json:"application_credential_secret"`
+	Domain                      string `yaml:"domain" json:"domain"`
+	TenantName                  string `yaml:"tenant_name" json:"tenant_name"`
+	FloatingNetworkId           string `yaml:"floating_network_id" json:"floating_network_id"`
+	SubnetId                    string `yaml:"subnet_id" json:"subnet_id"`
 }
 
 // SimplifiedAWSCloud represents the AWS configuration
@@ -387,6 +396,10 @@ func defaultConfig(name string) Config {
 						Region:                      "",
 						ApplicationCredentialID:     "",
 						ApplicationCredentialSecret: "",
+						Domain:                      "Default",
+						TenantName:                  "",
+						FloatingNetworkId:           "",
+						SubnetId:                    "",
 					},
 				},
 			},
@@ -456,7 +469,11 @@ func defaultConfig(name string) Config {
 			},
 			ManagedService: map[string]ServiceCfg{
 				"alert-proxy": {
-					Enabled: true,
+					Enabled:             true,
+					CoreDeviceId:        "",
+					AccountServiceToken: "",
+					AlertManagerBaseUrl: "",
+					CoreAccountNumber:   "",
 				},
 			},
 			Services: map[string]ServiceCfg{

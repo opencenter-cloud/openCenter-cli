@@ -1,426 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
-    "ansible": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "inventory": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string"
-        },
-        "playbooks": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
-    },
-    "cloud": {
-      "properties": {
-        "aws": {
-          "properties": {
-            "private_subnets": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "profile": {
-              "type": "string"
-            },
-            "public_subnets": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "region": {
-              "type": "string"
-            },
-            "vpc_id": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "openstack": {
-          "properties": {
-            "admin_password": {
-              "type": "string"
-            },
-            "application_credential_id": {
-              "type": "string"
-            },
-            "application_credential_secret": {
-              "type": "string"
-            },
-            "auth_url": {
-              "type": "string"
-            },
-            "availability_zone": {
-              "type": "string"
-            },
-            "ca": {
-              "type": "string"
-            },
-            "disable_bastion": {
-              "type": "boolean"
-            },
-            "external_network": {
-              "type": "string"
-            },
-            "floatingip_pool": {
-              "type": "string"
-            },
-            "insecure": {
-              "type": "boolean"
-            },
-            "project_domain_name": {
-              "type": "string"
-            },
-            "region": {
-              "type": "string"
-            },
-            "router_external_network_id": {
-              "type": "string"
-            },
-            "tenant_name": {
-              "type": "string"
-            },
-            "use_octavia": {
-              "type": "boolean"
-            },
-            "user_domain_name": {
-              "type": "string"
-            },
-            "user_name": {
-              "type": "string"
-            },
-            "user_password": {
-              "type": "string"
-            },
-            "vrrp_ip": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "provider": {
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "cluster": {
-      "properties": {
-        "env": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "gitops": {
-      "properties": {
-        "flux": {
-          "properties": {
-            "interval": {
-              "type": "string"
-            },
-            "prune": {
-              "type": "boolean"
-            }
-          },
-          "type": "object"
-        },
-        "git_branch": {
-          "type": "string"
-        },
-        "git_dir": {
-          "type": "string"
-        },
-        "git_ssh_key": {
-          "type": "string"
-        },
-        "git_ssh_pub": {
-          "type": "string"
-        },
-        "git_url": {
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "iac": {
-      "additionalProperties": false,
-      "description": "Infrastructure-as-code inputs for main.tf (locals as main, and modules)",
-      "properties": {
-        "main": {
-          "additionalProperties": true,
-          "properties": {
-            "availability_zone": {
-              "type": "string"
-            },
-            "ca_certificates": {
-              "type": "string"
-            },
-            "calico_encapsulation_type": {
-              "type": "string"
-            },
-            "calico_interface_autodetect": {
-              "type": "string"
-            },
-            "calico_interface_autodetect_cidr": {
-              "type": "string"
-            },
-            "calico_nat_outgoing": {
-              "type": "boolean"
-            },
-            "cluster_name": {
-              "type": "string"
-            },
-            "cni_iface": {
-              "type": "string"
-            },
-            "deploy_cluster": {
-              "type": "boolean"
-            },
-            "dns_nameservers": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "flavor_bastion": {
-              "type": "string"
-            },
-            "flavor_master": {
-              "type": "string"
-            },
-            "flavor_worker": {
-              "type": "string"
-            },
-            "floatingip_pool": {
-              "type": "string"
-            },
-            "image_id": {
-              "type": "string"
-            },
-            "image_id_windows": {
-              "type": "string"
-            },
-            "k8s_api_port": {
-              "type": "integer"
-            },
-            "k8s_hardening_enabled": {
-              "type": "boolean"
-            },
-            "kube_pod_security_exemptions_namespaces": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "kube_vip_enabled": {
-              "type": "boolean"
-            },
-            "kubelet_rotate_server_certificates": {
-              "type": "boolean"
-            },
-            "kubernetes_version": {
-              "type": "string"
-            },
-            "kubespray_version": {
-              "type": "string"
-            },
-            "loadbalancer_provider": {
-              "type": "string"
-            },
-            "master_count": {
-              "type": "integer"
-            },
-            "mtu": {
-              "type": "string"
-            },
-            "network_plugin": {
-              "type": "string"
-            },
-            "network_provider": {
-              "type": "string"
-            },
-            "node_master": {
-              "type": "string"
-            },
-            "node_worker": {
-              "type": "string"
-            },
-            "node_worker_windows": {
-              "type": "string"
-            },
-            "openstack_admin_password": {
-              "type": "string"
-            },
-            "openstack_auth_url": {
-              "type": "string"
-            },
-            "openstack_ca": {
-              "type": "string"
-            },
-            "openstack_insecure": {
-              "type": "boolean"
-            },
-            "openstack_project_domain_name": {
-              "type": "string"
-            },
-            "openstack_region": {
-              "type": "string"
-            },
-            "openstack_tenant_name": {
-              "type": "string"
-            },
-            "openstack_user_domain_name": {
-              "type": "string"
-            },
-            "openstack_user_password": {
-              "type": "string"
-            },
-            "os_hardening_enabled": {
-              "type": "boolean"
-            },
-            "router_external_network_id": {
-              "type": "string"
-            },
-            "ssh_authorized_keys": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "ssh_user": {
-              "type": "string"
-            },
-            "subnet_nodes": {
-              "type": "string"
-            },
-            "subnet_pods": {
-              "type": "string"
-            },
-            "subnet_services": {
-              "type": "string"
-            },
-            "ub_version": {
-              "type": "string"
-            },
-            "use_designate": {
-              "type": "boolean"
-            },
-            "use_octavia": {
-              "type": "boolean"
-            },
-            "vlan_id": {
-              "type": "string"
-            },
-            "vrrp_enabled": {
-              "type": "boolean"
-            },
-            "worker_count": {
-              "type": "integer"
-            },
-            "worker_count_windows": {
-              "type": "integer"
-            },
-            "worker_node_bfv_destination_type": {
-              "type": "string"
-            },
-            "worker_node_bfv_source_type": {
-              "type": "string"
-            },
-            "worker_node_bfv_volume_size": {
-              "type": "integer"
-            },
-            "worker_node_bfv_volume_type": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
-        "modules": {
-          "additionalProperties": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "properties": {
-            "calico": {
-              "additionalProperties": true,
-              "properties": {
-                "k8s_internal_ip": {
-                  "type": "string"
-                },
-                "source": {
-                  "type": "string"
-                },
-                "windows_dataplane": {
-                  "type": "string"
-                }
-              },
-              "type": "object"
-            },
-            "kubespray-cluster": {
-              "additionalProperties": true,
-              "properties": {
-                "address_bastion": {
-                  "type": "string"
-                },
-                "k8s_api_ip": {
-                  "type": "string"
-                },
-                "master_nodes": {
-                  "type": "string"
-                },
-                "source": {
-                  "type": "string"
-                },
-                "windows_nodes": {
-                  "type": "string"
-                },
-                "worker_nodes": {
-                  "type": "string"
-                }
-              },
-              "type": "object"
-            },
-            "openstack-nova": {
-              "additionalProperties": true,
-              "properties": {
-                "network_id": {
-                  "type": "string"
-                },
-                "source": {
-                  "type": "string"
-                }
-              },
-              "type": "object"
-            }
-          },
-          "type": "object"
-        }
-      },
-      "type": "object"
-    },
     "opencenter": {
       "properties": {
         "cluster": {
@@ -469,6 +49,31 @@
                         },
                         "cni_iface": {
                           "type": "string"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "cilium": {
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "kubeProxyReplacement": {
+                          "type": "boolean"
+                        },
+                        "operator_enabled": {
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "kube-ovn": {
+                      "properties": {
+                        "cilium_integration": {
+                          "type": "boolean"
                         },
                         "enabled": {
                           "type": "boolean"
@@ -557,6 +162,20 @@
         },
         "gitops": {
           "properties": {
+            "flux": {
+              "properties": {
+                "interval": {
+                  "type": "string"
+                },
+                "prune": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "git_branch": {
+              "type": "string"
+            },
             "git_dir": {
               "type": "string"
             },
@@ -572,27 +191,335 @@
           },
           "type": "object"
         },
-        "managed-service": {
+        "infrastructure": {
           "properties": {
-            "alert-manager": {
-              "type": "boolean"
+            "cloud": {
+              "properties": {
+                "aws": {
+                  "properties": {
+                    "private_subnets": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "profile": {
+                      "type": "string"
+                    },
+                    "public_subnets": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "region": {
+                      "type": "string"
+                    },
+                    "vpc_id": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "openstack": {
+                  "properties": {
+                    "application_credential_id": {
+                      "type": "string"
+                    },
+                    "application_credential_secret": {
+                      "type": "string"
+                    },
+                    "auth_url": {
+                      "type": "string"
+                    },
+                    "insecure": {
+                      "type": "boolean"
+                    },
+                    "region": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "provider": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "managed-service": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          },
+          "properties": {
+            "alert-proxy": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
             }
           },
           "type": "object"
         },
         "services": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          },
           "properties": {
+            "calico": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
             "cert-manager": {
-              "type": "boolean"
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "etcd-backup": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "external-snapshotter": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "fluxcd": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
             },
             "gateway": {
-              "type": "boolean"
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
             },
             "gateway-api": {
-              "type": "boolean"
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "headlamp": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
             },
             "keycloak": {
-              "type": "boolean"
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "kube-prometheus-stack": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "kyverno": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "olm": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "openstack-ccm": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "openstack-csi": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "postgres-operator": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "rbac-manager": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "sources": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "velero": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "weave-gitops": {
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
             }
           },
           "type": "object"
@@ -650,6 +577,10 @@
       },
       "type": "object"
     },
+    "overrides": {
+      "additionalProperties": true,
+      "type": "object"
+    },
     "secrets": {
       "properties": {
         "sops_age_key_file": {
@@ -659,7 +590,6 @@
       "type": "object"
     }
   },
-  "required": [],
   "title": "openCenter Cluster Configuration",
   "type": "object"
 }

@@ -461,7 +461,7 @@ func defaultConfig(name string) Config {
 			},
 			Services: map[string]ServiceCfg{
 				"calico":                {Enabled: true},
-				"cert-manager":          {Enabled: true, Email: "mpk-support@rackspace.com", Region: "us-east-1"},
+				"cert-manager":          {Enabled: true, Email: "mpk-support@rackspace.com", Region: "us-east-1", AWSAccessKey: "", AWSSecretAccessKey: ""},
 				"etcd-backup":           {Enabled: true, S3Host: "https://swift.api.dfw3.rackspacecloud.com", S3Region: "DFW3", AWSAccessKey: "", AWSSecretAccessKey: ""},
 				"external-snapshotter":  {Enabled: true},
 				"fluxcd":                {Enabled: true},

@@ -7,7 +7,7 @@ resources:
   - "./rackspace-selfsigned-ca.yaml"
   - "./rackspace-ca-issuer.yaml"
   - "./opencenter-aws-credentials-secret.yaml"
-  - "./letsencrypt-opencenter.yaml"
+  - "./letsencrypt-{{ .ClusterName }}.yaml"
 secretGenerator:
   - name: cert-manager-values-override
     type: Opaque

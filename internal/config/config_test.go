@@ -14,10 +14,13 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestConfig(t *testing.T) {
@@ -131,5 +134,511 @@ func TestResolveConfigDir(t *testing.T) {
 	absExpected, _ := filepath.Abs(testDir)
 	if dir != absExpected {
 		t.Errorf("expected config dir %s, but got %s", absExpected, dir)
+	}
+}
+func TestConfigPath(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+	path, err := ConfigPath("test-cluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := filepath.Join(dir, "test-cluster.yaml")
+	if path != expected {
+		t.Errorf("expected path %s, got %s", expected, path)
+	}
+}
+
+func TestConfigHelperMethods(t *testing.T) {
+	cfg := NewDefault("test-cluster")
+
+	// Test ClusterName method
+	if cfg.ClusterName() != "test-cluster" {
+		t.Errorf("expected cluster name 'test-cluster', got %s", cfg.ClusterName())
+	}
+
+	// Test GitOps method
+	gitops := cfg.GitOps()
+	if gitops.GitBranch != "main" {
+		t.Errorf("expected git branch 'main', got %s", gitops.GitBranch)
+	}
+}
+
+func TestConfigToJSON(t *testing.T) {
+	cfg := NewDefault("test-cluster")
+	cfg.OpenCenter.GitOps.GitDir = "test-dir"
+
+	jsonData, err := cfg.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify it's valid JSON by unmarshaling
+	var result map[string]any
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		t.Fatalf("generated JSON is invalid: %v", err)
+	}
+
+	// Check that some expected fields are present
+	if result["opencenter"] == nil {
+		t.Error("expected 'opencenter' field in JSON output")
+	}
+	if result["opentofu"] == nil {
+		t.Error("expected 'opentofu' field in JSON output")
+	}
+	if result["secrets"] == nil {
+		t.Error("expected 'secrets' field in JSON output")
+	}
+}
+
+func TestSaveWithEmptyClusterName(t *testing.T) {
+	cfg := NewDefault("")
+	cfg.OpenCenter.Cluster.ClusterName = ""
+
+	err := Save(cfg)
+	if err == nil {
+		t.Error("expected error when saving config with empty cluster name")
+	}
+	if err.Error() != "cluster_name must not be empty" {
+		t.Errorf("unexpected error message: %s", err.Error())
+	}
+}
+
+func TestLoadNonExistentConfig(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+	_, err := Load("nonexistent")
+	if err == nil {
+		t.Error("expected error when loading non-existent config")
+	}
+}
+
+func TestValidateExtended(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupConfig func() Config
+		expectErrs  []string
+	}{
+		{
+			name: "missing cluster name",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Cluster.ClusterName = ""
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				return cfg
+			},
+			expectErrs: []string{"opencenter.cluster.cluster_name must be set"},
+		},
+		{
+			name: "missing git dir",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = ""
+				return cfg
+			},
+			expectErrs: []string{"opencenter.gitops.git_dir must be set"},
+		},
+		{
+			name: "opentofu enabled without path",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenTofu.Enabled = true
+				cfg.OpenTofu.Path = ""
+				return cfg
+			},
+			expectErrs: []string{"opentofu.path must be set when opentofu.enabled=true"},
+		},
+		{
+			name: "s3 backend without credentials",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenTofu.Enabled = true
+				cfg.OpenTofu.Backend.Type = "s3"
+				cfg.OpenTofu.Backend.S3.Bucket = "test-bucket"
+				cfg.OpenTofu.Backend.S3.Key = "test.tfstate"
+				cfg.OpenTofu.Backend.S3.Region = "us-east-1"
+				cfg.OpenCenter.Cluster.AWSAccessKey = ""
+				cfg.OpenCenter.Cluster.AWSSecretAccessKey = ""
+				return cfg
+			},
+			expectErrs: []string{"opencenter.cluster.aws_access_key and opencenter.cluster.aws_secret_access_key must be set when opentofu.backend.type=s3"},
+		},
+		{
+			name: "s3 backend missing bucket info",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenTofu.Enabled = true
+				cfg.OpenTofu.Backend.Type = "s3"
+				cfg.OpenTofu.Backend.S3.Bucket = ""
+				// Provide AWS credentials to avoid that validation error
+				cfg.OpenCenter.Cluster.AWSAccessKey = "AKIA..."
+				cfg.OpenCenter.Cluster.AWSSecretAccessKey = "secret"
+				return cfg
+			},
+			expectErrs: []string{"opentofu.backend.s3 requires bucket, key, and region"},
+		},
+		{
+			name: "invalid backend type",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenTofu.Enabled = true
+				cfg.OpenTofu.Backend.Type = "invalid"
+				return cfg
+			},
+			expectErrs: []string{"opentofu.backend.type must be 'local' or 's3'"},
+		},
+		{
+			name: "local backend without path",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenTofu.Enabled = true
+				cfg.OpenTofu.Backend.Type = "local"
+				cfg.OpenTofu.Backend.Local.Path = ""
+				return cfg
+			},
+			expectErrs: []string{"opentofu.backend.local.path must be set for local backend"},
+		},
+		{
+			name: "valid config",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				return cfg
+			},
+			expectErrs: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.setupConfig()
+			errs := Validate(cfg)
+
+			if len(errs) != len(tt.expectErrs) {
+				t.Errorf("expected %d errors, got %d: %v", len(tt.expectErrs), len(errs), errs)
+				return
+			}
+
+			for i, expectedErr := range tt.expectErrs {
+				if i >= len(errs) || errs[i] != expectedErr {
+					t.Errorf("expected error %q, got %q", expectedErr, errs[i])
+				}
+			}
+		})
+	}
+}
+
+func TestListEmptyDirectory(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+	names, err := List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != 0 {
+		t.Errorf("expected empty list, got %v", names)
+	}
+}
+
+func TestListMultipleConfigs(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+	// Create multiple config files
+	configs := []string{"cluster-a", "cluster-b", "cluster-c"}
+	for _, name := range configs {
+		cfg := NewDefault(name)
+		cfg.OpenCenter.GitOps.GitDir = "test-dir"
+		if err := Save(cfg); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Create a non-yaml file that should be ignored
+	nonYamlFile := filepath.Join(dir, "not-a-config.txt")
+	if err := os.WriteFile(nonYamlFile, []byte("test"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	names, err := List()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(names) != 3 {
+		t.Errorf("expected 3 configs, got %d: %v", len(names), names)
+	}
+
+	// Verify sorting
+	expected := []string{"cluster-a", "cluster-b", "cluster-c"}
+	for i, name := range names {
+		if name != expected[i] {
+			t.Errorf("expected %s at position %d, got %s", expected[i], i, name)
+		}
+	}
+}
+
+func TestActiveClusterOperations(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+	// Test getting active when no active cluster is set
+	active, err := GetActive()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if active != "" {
+		t.Errorf("expected empty active cluster, got %s", active)
+	}
+
+	// Test setting active cluster
+	if err := SetActive("test-cluster"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Test getting active cluster
+	active, err = GetActive()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if active != "test-cluster" {
+		t.Errorf("expected active cluster 'test-cluster', got %s", active)
+	}
+
+	// Test clearing active cluster
+	if err := SetActive(""); err != nil {
+		t.Fatal(err)
+	}
+
+	active, err = GetActive()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if active != "" {
+		t.Errorf("expected empty active cluster after clearing, got %s", active)
+	}
+}
+
+func TestSaveDebugConfig(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+	// Create a test config
+	cfg := NewDefault("test-cluster")
+	cfg.OpenCenter.GitOps.GitDir = "test-dir"
+	if err := Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	// Test saving debug config
+	gitDir := filepath.Join(dir, "git-repo")
+	err := SaveDebugConfig("test-cluster", gitDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify debug config file was created
+	debugPath := filepath.Join(gitDir, ".openCenter.yaml")
+	if _, err := os.Stat(debugPath); os.IsNotExist(err) {
+		t.Error("debug config file was not created")
+	}
+
+	// Verify content is valid YAML
+	content, err := os.ReadFile(debugPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var result map[string]any
+	if err := yaml.Unmarshal(content, &result); err != nil {
+		t.Fatalf("debug config is not valid YAML: %v", err)
+	}
+}
+
+func TestSaveDebugConfigEmptyGitDir(t *testing.T) {
+	err := SaveDebugConfig("test", "")
+	if err == nil {
+		t.Error("expected error when git directory is empty")
+	}
+	if err.Error() != "git directory is empty" {
+		t.Errorf("unexpected error message: %s", err.Error())
+	}
+}
+
+func TestGenerateCompleteConfig(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+	// Create a test config
+	cfg := NewDefault("test-cluster")
+	cfg.OpenCenter.GitOps.GitDir = "test-dir"
+	if err := Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	// Test generating complete config
+	complete, err := GenerateCompleteConfig("test-cluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if complete.ClusterName() != "test-cluster" {
+		t.Errorf("expected cluster name 'test-cluster', got %s", complete.ClusterName())
+	}
+}
+
+func TestGenerateCompleteConfigYAML(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+	// Create a test config
+	cfg := NewDefault("test-cluster")
+	cfg.OpenCenter.GitOps.GitDir = "test-dir"
+	if err := Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	// Test generating complete config YAML
+	yamlData, err := GenerateCompleteConfigYAML("test-cluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify it's valid YAML
+	var result map[string]any
+	if err := yaml.Unmarshal(yamlData, &result); err != nil {
+		t.Fatalf("generated YAML is invalid: %v", err)
+	}
+
+	// Check that expected fields are present
+	if result["opencenter"] == nil {
+		t.Error("expected 'opencenter' field in YAML output")
+	}
+}
+
+func TestMergeYAMLMaps(t *testing.T) {
+	base := map[string]any{
+		"key1": "base_value1",
+		"key2": map[string]any{
+			"nested1": "base_nested1",
+			"nested2": "base_nested2",
+		},
+		"key3": "base_value3",
+	}
+
+	override := map[string]any{
+		"key1": "override_value1",
+		"key2": map[string]any{
+			"nested1": "override_nested1",
+			"nested3": "override_nested3",
+		},
+		"key4": "override_value4",
+	}
+
+	result := mergeYAMLMaps(base, override)
+
+	// Check that override values take precedence
+	if result["key1"] != "override_value1" {
+		t.Errorf("expected key1 to be overridden, got %v", result["key1"])
+	}
+
+	// Check that new keys are added
+	if result["key4"] != "override_value4" {
+		t.Errorf("expected key4 to be added, got %v", result["key4"])
+	}
+
+	// Check that base-only keys are preserved
+	if result["key3"] != "base_value3" {
+		t.Errorf("expected key3 to be preserved, got %v", result["key3"])
+	}
+
+	// Check nested map merging
+	nested, ok := result["key2"].(map[string]any)
+	if !ok {
+		t.Fatal("expected key2 to be a map")
+	}
+
+	if nested["nested1"] != "override_nested1" {
+		t.Errorf("expected nested1 to be overridden, got %v", nested["nested1"])
+	}
+
+	if nested["nested2"] != "base_nested2" {
+		t.Errorf("expected nested2 to be preserved, got %v", nested["nested2"])
+	}
+
+	if nested["nested3"] != "override_nested3" {
+		t.Errorf("expected nested3 to be added, got %v", nested["nested3"])
+	}
+}
+
+func TestSortStrings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name:     "already sorted",
+			input:    []string{"a", "b", "c"},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			name:     "reverse order",
+			input:    []string{"c", "b", "a"},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			name:     "random order",
+			input:    []string{"b", "a", "d", "c"},
+			expected: []string{"a", "b", "c", "d"},
+		},
+		{
+			name:     "single element",
+			input:    []string{"a"},
+			expected: []string{"a"},
+		},
+		{
+			name:     "empty slice",
+			input:    []string{},
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Make a copy to avoid modifying the test data
+			input := make([]string, len(tt.input))
+			copy(input, tt.input)
+
+			sortStrings(input)
+
+			if len(input) != len(tt.expected) {
+				t.Errorf("expected length %d, got %d", len(tt.expected), len(input))
+				return
+			}
+
+			for i, expected := range tt.expected {
+				if input[i] != expected {
+					t.Errorf("at position %d: expected %s, got %s", i, expected, input[i])
+				}
+			}
+		})
 	}
 }

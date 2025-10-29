@@ -148,9 +148,11 @@ func TestGitIntegrator_CreateCommitMessage(t *testing.T) {
 	encryptor := NewEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tempDir, encryptor)
 
-	cfg := &config.ClusterConfig{
-		Metadata: config.ConfigMetadata{
-			Name: "test-cluster",
+	cfg := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Cluster: config.ClusterConfig{
+				ClusterName: "test-cluster",
+			},
 		},
 	}
 
@@ -254,14 +256,14 @@ func TestGitIntegrator_MockGitOperations(t *testing.T) {
 	integrator := NewGitIntegrator(tempDir, encryptor)
 
 	// Test configuration validation
-	cfg := &config.ClusterConfig{
-		Spec: config.ClusterConfigSpec{
-			Provider: "openstack",
-			SOPS: config.SOPSConfig{
-				Age: config.AgeConfig{
-					PublicKey: "age1test123",
-				},
+	cfg := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Infrastructure: config.Infrastructure{
+				Provider: "openstack",
 			},
+		},
+		Secrets: config.Secrets{
+			SopsAgeKeyFile: "age1test123",
 		},
 	}
 
@@ -281,14 +283,14 @@ func TestGitIntegrator_EncryptFilesForCommit(t *testing.T) {
 	encryptor := NewEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tempDir, encryptor)
 
-	cfg := &config.ClusterConfig{
-		Spec: config.ClusterConfigSpec{
-			Provider: "openstack",
-			SOPS: config.SOPSConfig{
-				Age: config.AgeConfig{
-					PublicKey: "age1ql3vwyqfpvucvyz6x04chxtsm9l3f24tqq5pkq9jz4mk7ccvqxrqsqg5z5",
-				},
+	cfg := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Infrastructure: config.Infrastructure{
+				Provider: "openstack",
 			},
+		},
+		Secrets: config.Secrets{
+			SopsAgeKeyFile: "age1ql3vwyqfpvucvyz6x04chxtsm9l3f24tqq5pkq9jz4mk7ccvqxrqsqg5z5",
 		},
 	}
 
@@ -330,9 +332,11 @@ func TestGitIntegrator_StageEncryptedFiles(t *testing.T) {
 	encryptor := NewEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tempDir, encryptor)
 
-	cfg := &config.ClusterConfig{
-		Spec: config.ClusterConfigSpec{
-			Provider: "kind",
+	cfg := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Infrastructure: config.Infrastructure{
+				Provider: "kind",
+			},
 		},
 	}
 
@@ -441,17 +445,17 @@ func TestGitIntegrator_FileOperations(t *testing.T) {
 	encryptor := NewEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tempDir, encryptor)
 
-	cfg := &config.ClusterConfig{
-		Metadata: config.ConfigMetadata{
-			Name: "test-cluster",
-		},
-		Spec: config.ClusterConfigSpec{
-			Provider: "vsphere",
-			SOPS: config.SOPSConfig{
-				Age: config.AgeConfig{
-					PublicKey: "age1test123",
-				},
+	cfg := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Cluster: config.ClusterConfig{
+				ClusterName: "test-cluster",
 			},
+			Infrastructure: config.Infrastructure{
+				Provider: "vsphere",
+			},
+		},
+		Secrets: config.Secrets{
+			SopsAgeKeyFile: "age1test123",
 		},
 	}
 

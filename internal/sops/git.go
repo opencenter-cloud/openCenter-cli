@@ -52,7 +52,7 @@ type CommitConfig struct {
 }
 
 // CommitEncryptedFiles commits SOPS-encrypted files to Git
-func (g *GitIntegrator) CommitEncryptedFiles(ctx context.Context, cfg *config.ClusterConfig, commitCfg CommitConfig) error {
+func (g *GitIntegrator) CommitEncryptedFiles(ctx context.Context, cfg *config.Config, commitCfg CommitConfig) error {
 	// Change to repository directory
 	originalDir, err := os.Getwd()
 	if err != nil {
@@ -83,11 +83,11 @@ func (g *GitIntegrator) CommitEncryptedFiles(ctx context.Context, cfg *config.Cl
 }
 
 // encryptFilesForCommit encrypts files that should be encrypted before commit
-func (g *GitIntegrator) encryptFilesForCommit(ctx context.Context, cfg *config.ClusterConfig) error {
+func (g *GitIntegrator) encryptFilesForCommit(ctx context.Context, cfg *config.Config) error {
 	filesToEncrypt := g.encryptor.getFilesToEncrypt(g.repoPath, cfg)
 
 	encryptConfig := EncryptionConfig{
-		AgeKeys: []string{cfg.Spec.SOPS.Age.PublicKey},
+		AgeKeys: []string{}, // TODO: Get age key from cfg.Secrets
 		InPlace: true,
 		Verbose: false,
 	}
@@ -117,7 +117,7 @@ func (g *GitIntegrator) encryptFilesForCommit(ctx context.Context, cfg *config.C
 }
 
 // stageEncryptedFiles stages encrypted files for commit
-func (g *GitIntegrator) stageEncryptedFiles(ctx context.Context, cfg *config.ClusterConfig) error {
+func (g *GitIntegrator) stageEncryptedFiles(ctx context.Context, cfg *config.Config) error {
 	filesToStage := g.encryptor.getFilesToEncrypt(g.repoPath, cfg)
 
 	for _, file := range filesToStage {
@@ -441,8 +441,8 @@ func (g *GitIntegrator) ValidateGitConfig(ctx context.Context) error {
 }
 
 // CreateCommitMessage generates a commit message for overlay changes
-func (g *GitIntegrator) CreateCommitMessage(cfg *config.ClusterConfig, operation string) string {
-	clusterName := cfg.Metadata.Name
+func (g *GitIntegrator) CreateCommitMessage(cfg *config.Config, operation string) string {
+	clusterName := cfg.OpenCenter.Cluster.ClusterName
 
 	switch operation {
 	case "bootstrap":

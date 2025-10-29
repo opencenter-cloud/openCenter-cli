@@ -3,9 +3,9 @@ locals {
   cluster_name                            = "{{ .OpenCenter.Cluster.ClusterName }}"
   # Prefix to add to Openstack resource names
   naming_prefix                           = "${local.cluster_name}-"
-  openstack_auth_url                      = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL | default "https://keystone.api.dfw3.rackspacecloud.com/v3/" }}"
+  openstack_auth_url                      = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL | default "https://keystone.api.sjc3.rackspacecloud.com/v3/" }}"
   openstack_insecure                      = {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Insecure | default false }}
-  openstack_region                        = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.Region | default "DFW3" }}"
+  openstack_region                        = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.Region | default "SJC3" }}"
   availability_zone                       = "{{ .IAC.Main.availability_zone | default "az1" }}"
   openstack_user_name                     = "{{ .IAC.Main.openstack_user_name | default "" }}"
   openstack_user_password                 = "{{ .IAC.Main.openstack_user_password | default "" }}"
@@ -13,19 +13,19 @@ locals {
   application_credential_secret           = var.os_application_credential_secret
   openstack_project_domain_name           = "{{ .IAC.Main.openstack_project_domain_name | default "rackspace_cloud_domain" }}"
   openstack_user_domain_name              = "{{ .IAC.Main.openstack_user_domain_name | default "rackspace_cloud_domain" }}"
-  openstack_tenant_name                   = "{{ .IAC.Main.openstack_tenant_name | default "33d34083-ef71-464f-9d09-4b545f64baaf" }}"
+  openstack_tenant_name                   = "{{ .IAC.Main.openstack_tenant_name | default "f2823901-4194-40c7-9dc4-d56d2105e81a" }}"
   floatingip_pool                         = "{{ .IAC.Main.floatingip_pool | default "PUBLICNET" }}"
-  router_external_network_id              = "{{ .IAC.Main.router_external_network_id | default "82be3711-cd97-4f7c-8bbd-59f5524a949e" }}"
+  router_external_network_id              = "{{ .IAC.Main.router_external_network_id | default "723f8fa2-dbf7-4cec-8d5f-017e62c12f79" }}"
   # VLAN settings
   vlan_id                                 = "{{ .IAC.Main.vlan_id | default "" }}"
   mtu                                     = "{{ .IAC.Main.mtu | default "" }}"
   network_provider                        = "{{ .IAC.Main.network_provider | default "physnet1" }}"
-  #CIDR that the openstack VMs will use for K8s nodes - using default since not in new schema
-  subnet_nodes                            = "{{ .IAC.Main.subnet_nodes | default "10.0.4.0/22" }}"
+  #CIDR that the openstack VMs will use for K8s nodes
+  subnet_nodes                            = "{{ .IAC.Main.subnet_nodes | default "10.2.128.0/22" }}"
   subnet_nodes_oct                       = join(".", slice(split(".", split("/", local.subnet_nodes)[0]), 0, 3))
   #Leave some IPs free for the VRRP IP and the MetalLB Range
   allocation_pool_start                   = "${local.subnet_nodes_oct}.50"
-  allocation_pool_end                     = "{{ .IAC.Main.allocation_pool_end | default "10.0.7.254" }}"
+  allocation_pool_end                     = "{{ .IAC.Main.allocation_pool_end | default "10.2.131.254" }}"
   # vrrp_ip Must be an IP from subnet_nodes and will be used as the internal Kubernetes API VIP.
   vrrp_ip                                 = "${local.subnet_nodes_oct}.10"
   #CIDR that will be used by kubernetes pods. Not an openstack network.
@@ -40,14 +40,14 @@ locals {
   # Creates a DNS record using the LB floating IP and dns_zone_name
   use_designate                           = {{ .IAC.Main.use_designate | default false }}
   # dns_zone_name is the dns zone to create if use_designate is true
-  dns_zone_name                           = "{{ .OpenCenter.Cluster.Kubernetes.DNSZoneName | default "dev.attcontroller.com" }}"
+  dns_zone_name                           = "{{ .OpenCenter.Cluster.Kubernetes.DNSZoneName | default "gdo.prod.sjc3.k8s.opencenter.cloud" }}"
   # DNS servers to configure on the nodes
   dns_nameservers                         = {{ if .IAC.Main.dns_nameservers }}[{{ range $i, $dns := .IAC.Main.dns_nameservers }}{{if $i}}, {{end}}"{{ $dns }}"{{ end }}]{{ else }}["1.1.1.1","8.8.8.8"]{{ end }}
   ntp_servers                             = {{ if .IAC.Main.ntp_servers }}[{{ range $i, $ntp := .IAC.Main.ntp_servers }}{{if $i}}, {{end}}"{{ $ntp }}"{{ end }}]{{ else }}["time.dfw3.rackspace.com","time2.dfw3.rackspace.com"]{{ end }}
-  image_id                                = "{{ .IAC.Main.image_id | default "ec458631-309a-4b7d-846c-cd2ccc601137" }}"
-  image_id_windows                        = "{{ .IAC.Main.image_id_windows | default "" }}"
+  image_id                                = "{{ .IAC.Main.image_id | default "799dcf97-3656-4361-8187-13ab1b295e33" }}"
+  image_id_windows                        = "{{ .IAC.Main.image_id_windows | default "a2083759-f341-445b-b717-dafb5e31fa6b" }}"
   k8s_api_port                            = {{ .IAC.Main.k8s_api_port | default 443 }}
-  k8s_api_port_acl                        = {{ if .OpenCenter.Cluster.K8sAPIPortACL }}[{{ range $i, $acl := .OpenCenter.Cluster.K8sAPIPortACL }}{{if $i}}, {{end}}"{{ $acl }}"{{ end }}]{{ else }}["146.20.2.10/32","172.99.99.10/32","134.213.179.10/32","161.47.0.10/32","134.213.178.10/32","119.9.122.10/32","119.9.148.10/32","63.131.145.180/32","78.136.22.232/32"]{{ end }}
+  k8s_api_port_acl                        = {{ if .OpenCenter.Cluster.K8sAPIPortACL }}[{{ range $i, $acl := .OpenCenter.Cluster.K8sAPIPortACL }}{{if $i}}, {{end}}"{{ $acl }}"{{ end }}]{{ else }}["0.0.0.0/0"]{{ end }}
   worker_count                            = {{ .OpenCenter.Cluster.Kubernetes.WorkerCount | default 4 }}
   worker_count_windows                    = {{ .OpenCenter.Cluster.Kubernetes.WorkerCountWindows | default 0 }}
   # Enter 1 or 3 masters.
@@ -60,17 +60,19 @@ locals {
   node_worker_windows                     = "{{ .IAC.Main.node_worker_windows | default "win" }}"
   ub_version                              = "{{ .IAC.Main.ub_version | default "24" }}"
   #FLEX Flavor Settings ==========================
-  flavor_bastion                          = "{{ .OpenCenter.Cluster.Kubernetes.FlavorBastion | default "gp.5.2.2" }}"
-  flavor_master                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorMaster | default "gp.5.4.4" }}"
-  flavor_worker                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorWorker | default "gp.5.4.8" }}"
+  flavor_bastion                          = "{{ .OpenCenter.Cluster.Kubernetes.FlavorBastion | default "gp.0.2.2" }}"
+  flavor_master                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorMaster | default "gp.0.4.8" }}"
+  flavor_worker                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorWorker | default "gp.0.4.16" }}"
   flavor_worker_windows                   = "{{ .IAC.Main.flavor_worker_windows | default "gp.5.4.16" }}"
 
-  worker_node_bfv_volume_size             = {{ .IAC.Main.worker_node_bfv_volume_size | default 20 }}
+  worker_node_bfv_volume_size             = {{ .IAC.Main.worker_node_bfv_volume_size | default 100 }}
   worker_node_bfv_destination_type        = "{{ .IAC.Main.worker_node_bfv_destination_type | default "volume" }}"
   worker_node_bfv_source_type             = "{{ .IAC.Main.worker_node_bfv_source_type | default "image" }}"
-  worker_node_bfv_volume_type             = "{{ .IAC.Main.worker_node_bfv_volume_type | default "Standard" }}"
+  worker_node_bfv_volume_type             = "{{ .IAC.Main.worker_node_bfv_volume_type | default "HA-Performance" }}"
 
   additional_block_devices_worker = {{ if .IAC.Main.additional_block_devices_worker }}[{{ range $i, $device := .IAC.Main.additional_block_devices_worker }}{{if $i}}, {{end}}{{ $device }}{{ end }}]{{ else }}[]{{ end }}
+
+  additional_server_pools_worker = {{ if .IAC.Main.additional_server_pools_worker }}[{{ range $i, $pool := .IAC.Main.additional_server_pools_worker }}{{if $i}}, {{end}}{{ $pool }}{{ end }}]{{ else }}[]{{ end }}
 
   # ====================================
   #ca_certificates add CA certificates to server's trusts. Good for trusting internal private Certificate Authorities.
@@ -88,7 +90,7 @@ locals {
   #Hardening
   k8s_hardening_enabled                   = {{ .IAC.Main.k8s_hardening_enabled | default true }}
   kube_pod_security_exemptions_namespaces = {{ if .IAC.Main.kube_pod_security_exemptions_namespaces }}[{{ range $i, $ns := .IAC.Main.kube_pod_security_exemptions_namespaces }}{{if $i}}, {{end}}"{{ $ns }}"{{ end }}]{{ else }}["trivy-temp"]{{ end }}
-  kubelet_rotate_server_certificates      = {{ .IAC.Main.kubelet_rotate_server_certificates | default true }}
+  kubelet_rotate_server_certificates      = {{ .IAC.Main.kubelet_rotate_server_certificates | default false }}
   os_hardening_enabled                    = {{ .IAC.Main.os_hardening_enabled | default true }}
 
   #OIDC Settings
@@ -116,12 +118,15 @@ locals {
   windows_admin_password                  = "{{ .OpenCenter.Cluster.Kubernetes.WindowsWorkers.WindowsAdminPassword }}"
   worker_node_bfv_size_windows            = {{ .OpenCenter.Cluster.Kubernetes.WindowsWorkers.WorkerNodeBFVSizeWindows | default 0 }}
   worker_node_bfv_type_windows            = "{{ .OpenCenter.Cluster.Kubernetes.WindowsWorkers.WorkerNodeBFVTypeWindows | default "local" }}"
+  additional_server_pools_worker_windows = {{ if .IAC.Main.additional_server_pools_worker_windows }}[{{ range $i, $pool := .IAC.Main.additional_server_pools_worker_windows }}{{if $i}}, {{end}}{{ $pool }}{{ end }}]{{ else }}[]{{ end }}
 }
 
 module "openstack-nova" {
   source = "{{ (index .IAC.Modules "openstack-nova").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/cloud/openstack/openstack-nova?ref=worker-server-group" }}"
   availability_zone             = local.availability_zone
   additional_block_devices_worker      = local.additional_block_devices_worker
+  additional_server_pools_worker_windows = local.additional_server_pools_worker_windows
+  additional_server_pools_worker = local.additional_server_pools_worker
   application_credential_id     = local.application_credential_id
   application_credential_secret = local.application_credential_secret
   ca_certificates               = local.ca_certificates
@@ -174,20 +179,16 @@ module "openstack-nova" {
   node_worker                  = local.node_worker
   node_worker_windows          = local.node_worker_windows
   ub_version                   = local.ub_version
-  windows_admin_password       = local.windows_admin_password
-  windows_user                 = local.windows_user
 
   worker_node_bfv_volume_size = local.worker_node_bfv_volume_size
   worker_node_bfv_destination_type = local.worker_node_bfv_destination_type
   worker_node_bfv_source_type = local.worker_node_bfv_source_type
   worker_node_bfv_volume_type = local.worker_node_bfv_volume_type
-  worker_node_bfv_type_windows = local.worker_node_bfv_type_windows
-  worker_node_bfv_size_windows = local.worker_node_bfv_size_windows
   wn_server_group_affinity = {{ if .IAC.Main.wn_server_group_affinity }}[{{ range $i, $affinity := .IAC.Main.wn_server_group_affinity }}{{if $i}}, {{end}}"{{ $affinity }}"{{ end }}]{{ else }}["anti-affinity"]{{ end }}
 }
 
 module "kubespray-cluster" {
-  source = "{{ (index .IAC.Modules "kubespray-cluster").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/provider/kubespray?ref=main" }}"
+  source = "{{ (index .IAC.Modules "kubespray-cluster").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/provider/kubespray?ref=worker-server-group" }}"
   address_bastion                         = module.openstack-nova.bastion_floating_ip
   cluster_name                            = local.cluster_name
   cni_iface                               = local.cni_iface
@@ -206,13 +207,23 @@ module "kubespray-cluster" {
   kube_vip_enabled                        = local.kube_vip_enabled
   kube_pod_security_exemptions_namespaces = local.kube_pod_security_exemptions_namespaces
   kubelet_rotate_server_certificates      = local.kubelet_rotate_server_certificates
-  worker_nodes                            = module.openstack-nova.worker_nodes
+  worker_nodes = concat(
+    module.openstack-nova.worker_nodes,
+    flatten([
+      for pool_name, pool_nodes in module.openstack-nova.additional_worker_pools_nodes : pool_nodes
+    ])
+  )
   k8s_api_ip                              = module.openstack-nova.k8s_api_ip
   k8s_api_port                            = local.k8s_api_port
   k8s_internal_ip                         = module.openstack-nova.k8s_internal_ip
   vrrp_ip                                 = local.vrrp_ip
   vrrp_enabled                            = local.vrrp_enabled
-  windows_nodes                           = module.openstack-nova.windows_nodes
+  windows_nodes = concat(
+    module.openstack-nova.windows_nodes,
+    flatten([
+      for pool_name, pool_nodes in module.openstack-nova.additional_worker_pools_windows_nodes : pool_nodes
+    ])
+  )
   use_octavia                             = local.use_octavia
   kube_oidc_auth_enabled                  = local.kube_oidc_auth_enabled
   kube_oidc_url                           = local.kube_oidc_url
@@ -226,7 +237,7 @@ module "kubespray-cluster" {
 
 
 module "calico" {
-  source = "{{ (index .IAC.Modules "calico").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/cni/calico?ref=main" }}"
+  source = "{{ (index .IAC.Modules "calico").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/cni/calico?ref=worker-server-group" }}"
 
   calico_interface_autodetect      = local.calico_interface_autodetect
   calico_encapsulation_type        = local.calico_encapsulation_type

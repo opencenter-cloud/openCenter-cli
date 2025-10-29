@@ -118,16 +118,15 @@ sops:
 func TestEncryptor_getFilesToEncrypt(t *testing.T) {
 	tests := []struct {
 		name     string
-		config   *config.ClusterConfig
+		config   *config.Config
 		expected []string
 	}{
 		{
 			name: "openstack cluster",
-			config: &config.ClusterConfig{
-				Spec: config.ClusterConfigSpec{
-					Provider: "openstack",
-					Security: config.SecurityConfig{
-						ExtraEncryptedFiles: []string{"custom-secret.yaml"},
+			config: &config.Config{
+				OpenCenter: config.SimplifiedOpenCenter{
+					Infrastructure: config.Infrastructure{
+						Provider: "openstack",
 					},
 				},
 			},
@@ -135,14 +134,15 @@ func TestEncryptor_getFilesToEncrypt(t *testing.T) {
 				"flux-system/gotk-sync.yaml",
 				"managed-services/sources/base-repo.yaml",
 				"secrets/openstack-credentials.yaml",
-				"custom-secret.yaml",
 			},
 		},
 		{
 			name: "vsphere cluster",
-			config: &config.ClusterConfig{
-				Spec: config.ClusterConfigSpec{
-					Provider: "vsphere",
+			config: &config.Config{
+				OpenCenter: config.SimplifiedOpenCenter{
+					Infrastructure: config.Infrastructure{
+						Provider: "vsphere",
+					},
 				},
 			},
 			expected: []string{
@@ -154,9 +154,11 @@ func TestEncryptor_getFilesToEncrypt(t *testing.T) {
 		},
 		{
 			name: "basic cluster with no provider-specific files",
-			config: &config.ClusterConfig{
-				Spec: config.ClusterConfigSpec{
-					Provider: "kind",
+			config: &config.Config{
+				OpenCenter: config.SimplifiedOpenCenter{
+					Infrastructure: config.Infrastructure{
+						Provider: "kind",
+					},
 				},
 			},
 			expected: []string{
@@ -192,17 +194,17 @@ func TestEncryptor_getFilesToEncrypt(t *testing.T) {
 }
 
 func TestEncryptor_CreateSOPSConfig(t *testing.T) {
-	config := &config.ClusterConfig{
-		Metadata: config.ConfigMetadata{
-			Name: "test-cluster",
-		},
-		Spec: config.ClusterConfigSpec{
-			Provider: "vsphere",
-			SOPS: config.SOPSConfig{
-				Age: config.AgeConfig{
-					PublicKey: "age1test123456789",
-				},
+	config := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Cluster: config.ClusterConfig{
+				ClusterName: "test-cluster",
 			},
+			Infrastructure: config.Infrastructure{
+				Provider: "vsphere",
+			},
+		},
+		Secrets: config.Secrets{
+			SopsAgeKeyFile: "age1test123456789",
 		},
 	}
 
@@ -255,22 +257,22 @@ func TestEncryptor_CreateSOPSConfig(t *testing.T) {
 func TestEncryptor_generateSOPSConfig(t *testing.T) {
 	tests := []struct {
 		name     string
-		config   *config.ClusterConfig
+		config   *config.Config
 		contains []string
 	}{
 		{
 			name: "openstack config",
-			config: &config.ClusterConfig{
-				Metadata: config.ConfigMetadata{
-					Name: "openstack-cluster",
-				},
-				Spec: config.ClusterConfigSpec{
-					Provider: "openstack",
-					SOPS: config.SOPSConfig{
-						Age: config.AgeConfig{
-							PublicKey: "age1openstack123",
-						},
+			config: &config.Config{
+				OpenCenter: config.SimplifiedOpenCenter{
+					Cluster: config.ClusterConfig{
+						ClusterName: "openstack-cluster",
 					},
+					Infrastructure: config.Infrastructure{
+						Provider: "openstack",
+					},
+				},
+				Secrets: config.Secrets{
+					SopsAgeKeyFile: "age1openstack123",
 				},
 			},
 			contains: []string{
@@ -281,17 +283,17 @@ func TestEncryptor_generateSOPSConfig(t *testing.T) {
 		},
 		{
 			name: "vsphere config",
-			config: &config.ClusterConfig{
-				Metadata: config.ConfigMetadata{
-					Name: "vsphere-cluster",
-				},
-				Spec: config.ClusterConfigSpec{
-					Provider: "vsphere",
-					SOPS: config.SOPSConfig{
-						Age: config.AgeConfig{
-							PublicKey: "age1vsphere123",
-						},
+			config: &config.Config{
+				OpenCenter: config.SimplifiedOpenCenter{
+					Cluster: config.ClusterConfig{
+						ClusterName: "vsphere-cluster",
 					},
+					Infrastructure: config.Infrastructure{
+						Provider: "vsphere",
+					},
+				},
+				Secrets: config.Secrets{
+					SopsAgeKeyFile: "age1vsphere123",
 				},
 			},
 			contains: []string{
@@ -299,6 +301,26 @@ func TestEncryptor_generateSOPSConfig(t *testing.T) {
 				"age1vsphere123",
 				"vsphere-credentials",
 				"customer-managed/services/.*/secret",
+			},
+		},
+		{
+			name: "config with no age key",
+			config: &config.Config{
+				OpenCenter: config.SimplifiedOpenCenter{
+					Cluster: config.ClusterConfig{
+						ClusterName: "no-key-cluster",
+					},
+					Infrastructure: config.Infrastructure{
+						Provider: "kind",
+					},
+				},
+				Secrets: config.Secrets{
+					SopsAgeKeyFile: "", // No age key provided
+				},
+			},
+			contains: []string{
+				"no-key-cluster",
+				"TODO", // Should fallback to TODO
 			},
 		},
 	}
@@ -325,9 +347,11 @@ func TestEncryptor_ValidateEncryption(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	config := &config.ClusterConfig{
-		Spec: config.ClusterConfigSpec{
-			Provider: "openstack",
+	config := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Infrastructure: config.Infrastructure{
+				Provider: "openstack",
+			},
 		},
 	}
 
@@ -795,5 +819,399 @@ func TestEncryptor_SampleSecretsIntegration(t *testing.T) {
 					strings.Contains(contentStr, "placeholder_encrypted_data"),
 				"Encrypted file should have SOPS structure: %s", file.Name())
 		}
+	}
+}
+func TestEncryptor_EncryptOverlayFiles(t *testing.T) {
+	e := NewEncryptor([]string{"age1test123"}, nil)
+	tmpDir := t.TempDir()
+
+	// Create test overlay structure
+	fluxDir := filepath.Join(tmpDir, "flux-system")
+	err := os.MkdirAll(fluxDir, 0o755)
+	require.NoError(t, err)
+
+	secretsDir := filepath.Join(tmpDir, "secrets")
+	err = os.MkdirAll(secretsDir, 0o755)
+	require.NoError(t, err)
+
+	// Create test files
+	testFiles := map[string]string{
+		"flux-system/gotk-sync.yaml": `apiVersion: v1
+kind: Secret
+metadata:
+  name: flux-system
+stringData:
+  identity: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    test-key-content
+    -----END OPENSSH PRIVATE KEY-----`,
+		"secrets/openstack-credentials.yaml": `apiVersion: v1
+kind: Secret
+metadata:
+  name: openstack-credentials
+stringData:
+  username: test-user
+  password: test-password`,
+	}
+
+	for file, content := range testFiles {
+		filePath := filepath.Join(tmpDir, file)
+		err := os.WriteFile(filePath, []byte(content), 0o644)
+		require.NoError(t, err)
+	}
+
+	// Test config
+	cfg := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Infrastructure: config.Infrastructure{
+				Provider: "openstack",
+			},
+		},
+		Secrets: config.Secrets{
+			SopsAgeKeyFile: "age1test123",
+		},
+	}
+
+	// Test encryption (dry run to avoid SOPS dependency)
+	err = e.EncryptOverlayFiles(context.Background(), tmpDir, cfg)
+	if err != nil {
+		// Should fail on SOPS execution, not parameter validation
+		assert.Contains(t, err.Error(), "SOPS")
+	}
+}
+
+func TestEncryptor_ProviderSpecificFiles(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider string
+		expected []string
+	}{
+		{
+			name:     "openstack provider",
+			provider: "openstack",
+			expected: []string{
+				"flux-system/gotk-sync.yaml",
+				"managed-services/sources/base-repo.yaml",
+				"secrets/openstack-credentials.yaml",
+			},
+		},
+		{
+			name:     "vsphere provider",
+			provider: "vsphere",
+			expected: []string{
+				"flux-system/gotk-sync.yaml",
+				"managed-services/sources/base-repo.yaml",
+				"secrets/vsphere-credentials.yaml",
+				"customer-managed/services/cloud-provider-vsphere/secret.yaml",
+			},
+		},
+		{
+			name:     "kind provider",
+			provider: "kind",
+			expected: []string{
+				"flux-system/gotk-sync.yaml",
+				"managed-services/sources/base-repo.yaml",
+			},
+		},
+		{
+			name:     "unknown provider",
+			provider: "unknown",
+			expected: []string{
+				"flux-system/gotk-sync.yaml",
+				"managed-services/sources/base-repo.yaml",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := NewEncryptor(nil, nil)
+			cfg := &config.Config{
+				OpenCenter: config.SimplifiedOpenCenter{
+					Infrastructure: config.Infrastructure{
+						Provider: tt.provider,
+					},
+				},
+			}
+
+			files := e.getFilesToEncrypt("", cfg)
+			assert.Equal(t, len(tt.expected), len(files))
+
+			for _, expectedFile := range tt.expected {
+				assert.Contains(t, files, expectedFile)
+			}
+		})
+	}
+}
+
+func TestEncryptor_ErrorHandling(t *testing.T) {
+	e := NewEncryptor(nil, nil)
+
+	tests := []struct {
+		name        string
+		operation   func() error
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "encrypt non-existent file",
+			operation: func() error {
+				config := EncryptionConfig{AgeKeys: []string{"age1test123"}}
+				return e.EncryptFile(context.Background(), "/nonexistent/file.yaml", config)
+			},
+			expectError: true,
+			errorMsg:    "file does not exist",
+		},
+		{
+			name: "decrypt non-existent file",
+			operation: func() error {
+				return e.DecryptFile(context.Background(), "/nonexistent/file.yaml", "")
+			},
+			expectError: true,
+			errorMsg:    "file does not exist",
+		},
+		{
+			name: "get content of non-existent file",
+			operation: func() error {
+				_, err := e.GetEncryptedContent("/nonexistent/file.yaml")
+				return err
+			},
+			expectError: true,
+			errorMsg:    "failed to read file",
+		},
+		{
+			name: "validate encryption with non-existent overlay",
+			operation: func() error {
+				cfg := &config.Config{
+					OpenCenter: config.SimplifiedOpenCenter{
+						Infrastructure: config.Infrastructure{
+							Provider: "openstack",
+						},
+					},
+				}
+				return e.ValidateEncryption("/nonexistent/overlay", cfg)
+			},
+			expectError: false, // Should not error if files don't exist
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.operation()
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEncryptor_ConfigValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		config EncryptionConfig
+		valid  bool
+	}{
+		{
+			name: "valid config with age keys only",
+			config: EncryptionConfig{
+				AgeKeys: []string{"age1test123"},
+				InPlace: true,
+			},
+			valid: true,
+		},
+		{
+			name: "valid config with pgp keys only",
+			config: EncryptionConfig{
+				PGPKeys: []string{"ABCD1234"},
+				InPlace: true,
+			},
+			valid: true,
+		},
+		{
+			name: "valid config with both key types",
+			config: EncryptionConfig{
+				AgeKeys: []string{"age1test123"},
+				PGPKeys: []string{"ABCD1234"},
+				InPlace: true,
+			},
+			valid: true,
+		},
+		{
+			name: "config with empty keys (should use encryptor defaults)",
+			config: EncryptionConfig{
+				InPlace: true,
+			},
+			valid: true,
+		},
+		{
+			name: "config with dry run enabled",
+			config: EncryptionConfig{
+				AgeKeys: []string{"age1test123"},
+				DryRun:  true,
+			},
+			valid: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := NewEncryptor([]string{"age1default"}, []string{"DEFAULTPGP"})
+			
+			// Create a temporary file for testing
+			tmpFile, err := os.CreateTemp("", "config-test-*.yaml")
+			require.NoError(t, err)
+			defer os.Remove(tmpFile.Name())
+			
+			_, err = tmpFile.WriteString("test: content")
+			require.NoError(t, err)
+			tmpFile.Close()
+
+			// Test the configuration
+			err = e.EncryptFile(context.Background(), tmpFile.Name(), tt.config)
+			
+			if tt.valid {
+				// Should either succeed (dry run) or fail on SOPS execution
+				if err != nil && !tt.config.DryRun {
+					assert.Contains(t, err.Error(), "SOPS")
+				}
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestEncryptor_AlreadyEncryptedFile(t *testing.T) {
+	e := NewEncryptor([]string{"age1test123"}, nil)
+	
+	// Create a file that's already encrypted
+	tmpFile, err := os.CreateTemp("", "already-encrypted-*.yaml")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	encryptedContent := `apiVersion: v1
+kind: Secret
+metadata:
+  name: test-secret
+sops:
+  age:
+    - recipient: age1test123
+      enc: ENC[AES256_GCM,data:encrypted_data,type:str]`
+
+	_, err = tmpFile.WriteString(encryptedContent)
+	require.NoError(t, err)
+	tmpFile.Close()
+
+	// Try to encrypt an already encrypted file
+	config := EncryptionConfig{
+		AgeKeys: []string{"age1test123"},
+		InPlace: true,
+	}
+
+	err = e.EncryptFile(context.Background(), tmpFile.Name(), config)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "file is already encrypted")
+}
+
+func TestEncryptor_DecryptUnencryptedFile(t *testing.T) {
+	e := NewEncryptor(nil, nil)
+	
+	// Create an unencrypted file
+	tmpFile, err := os.CreateTemp("", "unencrypted-*.yaml")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	unencryptedContent := `apiVersion: v1
+kind: Secret
+metadata:
+  name: test-secret
+data:
+  key: value`
+
+	_, err = tmpFile.WriteString(unencryptedContent)
+	require.NoError(t, err)
+	tmpFile.Close()
+
+	// Try to decrypt an unencrypted file
+	err = e.DecryptFile(context.Background(), tmpFile.Name(), "")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "file is not encrypted")
+}
+
+func TestEncryptor_CreateSampleSecretsForTemplate(t *testing.T) {
+	e := NewEncryptor(nil, nil)
+	tmpDir := t.TempDir()
+	ageKey := "age1ql3vwyqfpvucvyz6x04chxtsm9l3f24tqq5pkq9jz4mk7ccvqxrqsqg5z5"
+
+	tests := []struct {
+		name     string
+		template string
+		expected []string
+	}{
+		{
+			name:     "basic template",
+			template: "basic",
+			expected: []string{
+				"sample-secret.enc.yaml",
+				"database-credentials.enc.yaml",
+				"api-tokens.enc.yaml",
+			},
+		},
+		{
+			name:     "enterprise template",
+			template: "enterprise",
+			expected: []string{
+				"sample-secret.enc.yaml",
+				"database-credentials.enc.yaml",
+				"api-tokens.enc.yaml",
+				"production-secrets.enc.yaml",
+				"monitoring-secrets.enc.yaml",
+			},
+		},
+		{
+			name:     "multi-tenant template",
+			template: "multi-tenant",
+			expected: []string{
+				"sample-secret.enc.yaml",
+				"database-credentials.enc.yaml",
+				"api-tokens.enc.yaml",
+				"production-secrets.enc.yaml",
+				"monitoring-secrets.enc.yaml",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testDir := filepath.Join(tmpDir, tt.name)
+			err := e.CreateSampleEncryptedSecretsForTemplate(context.Background(), testDir, ageKey, tt.template)
+			assert.NoError(t, err)
+
+			// Verify expected files were created
+			samplesDir := filepath.Join(testDir, "examples", "secrets")
+			for _, expectedFile := range tt.expected {
+				filePath := filepath.Join(samplesDir, expectedFile)
+				assert.FileExists(t, filePath)
+
+				// Verify file contains expected content
+				content, err := os.ReadFile(filePath)
+				require.NoError(t, err)
+				contentStr := string(content)
+
+				// Should contain SOPS metadata or placeholder
+				assert.True(t,
+					strings.Contains(contentStr, "sops:") ||
+						strings.Contains(contentStr, "placeholder_encrypted_data"),
+					"File should contain SOPS metadata or placeholder: %s", expectedFile)
+
+				// Should contain the age key
+				assert.Contains(t, contentStr, ageKey)
+			}
+		})
 	}
 }

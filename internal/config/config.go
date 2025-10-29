@@ -391,14 +391,14 @@ func defaultConfig(name string) Config {
 						PublicSubnets:  []string{},
 					},
 					OpenStack: SimplifiedOpenStackCloud{
-						AuthURL:                     "",
+						AuthURL:                     "https://keystone.api.sjc3.rackspacecloud.com/v3/",
 						Insecure:                    false,
-						Region:                      "",
+						Region:                      "SJC3",
 						ApplicationCredentialID:     "",
 						ApplicationCredentialSecret: "",
 						Domain:                      "Default",
-						TenantName:                  "",
-						FloatingNetworkId:           "",
+						TenantName:                  "f2823901-4194-40c7-9dc4-d56d2105e81a",
+						FloatingNetworkId:           "723f8fa2-dbf7-4cec-8d5f-017e62c12f79",
 						SubnetId:                    "",
 					},
 				},
@@ -407,17 +407,17 @@ func defaultConfig(name string) Config {
 				ClusterName:        name,
 				AWSAccessKey:       "",
 				AWSSecretAccessKey: "",
-				K8sAPIPortACL:      []string{""},
-				SSHAuthorizedKeys:  []string{""},
+				K8sAPIPortACL:      []string{"0.0.0.0/0"},
+				SSHAuthorizedKeys:  []string{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDogzEullM89m//Vd8IGPERto2DotXnUCKGH6II1Vk/klEuDVqXx9kCb981XJKh8mU15bfJVdE4h078q/shK9EIcPMRKSQSMs2LkgF/1yUeVYPNYiIBph6CaqjIxKHy1kYxw3KUTIh8IIl1M4t5fc5c49Gr3QuDpeMN4Z/wrbR1DceIbFDiVxYNeyJWfOdowKgTn4AKh0n1xtg6/XLin3cCstpvfUJUKm0WOcmn3+DHK6cBNqNAMKdtxgnGwlY4MfizJOZE30Y7hwPqXUjOgLgB2vybcdcMpUvw9e8HopogOFQnVwwmlc9/7ZKPCaCKRBEC38IV82CJ6+/eePIMriPF migu4903@MNF0TUDV30"},
 				Kubernetes: KubernetesConfig{
 					Version:              "1.32.8",
-					FlavorBastion:        "gp.5.2.2",
-					FlavorMaster:         "gp.5.4.4",
-					FlavorWorker:         "gp.5.4.8",
+					FlavorBastion:        "gp.0.2.2",
+					FlavorMaster:         "gp.0.4.8",
+					FlavorWorker:         "gp.0.4.16",
 					SubnetPods:           "10.42.0.0/16",
 					SubnetServices:       "10.43.0.0/16",
 					LoadbalancerProvider: "ovn",
-					DNSZoneName:          "",
+					DNSZoneName:          "gdo.prod.sjc3.k8s.opencenter.cloud",
 					MasterCount:          3,
 					WorkerCount:          4,
 					WorkerCountWindows:   0,
@@ -507,16 +507,21 @@ func defaultConfig(name string) Config {
 					Path: "terraform.tfstate",
 				},
 				S3: SimplifiedTofuS3{
-					Bucket: "",
-					Key:    "",
-					Region: "",
+					Bucket: "1270657-rackspace-gdo",
+					Key:    "gdo.prod.sjc3/tfstate/terraform.tfstate",
+					Region: "us-west-2",
 				},
 			},
 		},
 		Secrets: Secrets{
 			SopsAgeKeyFile: "",
 		},
-		IAC: IAC{
+	}
+	
+	// Populate IAC field from defaults
+	if err := populateIAC(&cfg); err != nil {
+		// If IAC population fails, return config with minimal IAC structure
+		cfg.IAC = IAC{
 			Main: map[string]any{
 				"cluster_name":    name,
 				"master_count":    3,
@@ -535,8 +540,9 @@ func defaultConfig(name string) Config {
 					"source": "",
 				},
 			},
-		},
+		}
 	}
+	
 	return cfg
 }
 

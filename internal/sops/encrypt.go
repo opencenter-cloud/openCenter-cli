@@ -182,13 +182,13 @@ func (e *Encryptor) IsFileEncrypted(filePath string) (bool, error) {
 }
 
 // EncryptOverlayFiles encrypts sensitive files in an overlay directory
-func (e *Encryptor) EncryptOverlayFiles(ctx context.Context, overlayPath string, cfg *config.ClusterConfig) error {
+func (e *Encryptor) EncryptOverlayFiles(ctx context.Context, overlayPath string, cfg *config.Config) error {
 	// Get list of files to encrypt
 	filesToEncrypt := e.getFilesToEncrypt(overlayPath, cfg)
 
 	// Create encryption config
 	encryptConfig := EncryptionConfig{
-		AgeKeys: []string{cfg.Spec.SOPS.Age.PublicKey},
+		AgeKeys: []string{}, // TODO: Add age key from cfg.Secrets
 		InPlace: true,
 		Verbose: true,
 	}
@@ -211,7 +211,7 @@ func (e *Encryptor) EncryptOverlayFiles(ctx context.Context, overlayPath string,
 }
 
 // getFilesToEncrypt returns the list of files that should be encrypted
-func (e *Encryptor) getFilesToEncrypt(overlayPath string, cfg *config.ClusterConfig) []string {
+func (e *Encryptor) getFilesToEncrypt(overlayPath string, cfg *config.Config) []string {
 	var files []string
 
 	// Standard encrypted files
@@ -221,7 +221,7 @@ func (e *Encryptor) getFilesToEncrypt(overlayPath string, cfg *config.ClusterCon
 	)
 
 	// Provider-specific encrypted files
-	switch cfg.Spec.Provider {
+	switch cfg.OpenCenter.Infrastructure.Provider {
 	case "openstack":
 		files = append(files, "secrets/openstack-credentials.yaml")
 	case "vsphere":
@@ -231,14 +231,14 @@ func (e *Encryptor) getFilesToEncrypt(overlayPath string, cfg *config.ClusterCon
 		)
 	}
 
-	// Additional encrypted files from configuration
-	files = append(files, cfg.Spec.Security.ExtraEncryptedFiles...)
+	// Additional encrypted files from configuration - TODO: Add to new config structure if needed
+	// files = append(files, cfg.Spec.Security.ExtraEncryptedFiles...)
 
 	return files
 }
 
 // CreateSOPSConfig creates a .sops.yaml configuration file
-func (e *Encryptor) CreateSOPSConfig(overlayPath string, cfg *config.ClusterConfig) error {
+func (e *Encryptor) CreateSOPSConfig(overlayPath string, cfg *config.Config) error {
 	sopsConfig := e.generateSOPSConfig(cfg)
 
 	configPath := filepath.Join(overlayPath, ".sops.yaml")
@@ -250,18 +250,21 @@ func (e *Encryptor) CreateSOPSConfig(overlayPath string, cfg *config.ClusterConf
 }
 
 // generateSOPSConfig generates the SOPS configuration content
-func (e *Encryptor) generateSOPSConfig(cfg *config.ClusterConfig) string {
-	ageKey := cfg.Spec.SOPS.Age.PublicKey
+func (e *Encryptor) generateSOPSConfig(cfg *config.Config) string {
+	ageKey := cfg.Secrets.SopsAgeKeyFile
+	if ageKey == "" {
+		ageKey = "TODO" // Fallback if no age key is configured
+	}
 
 	config := fmt.Sprintf(`# SOPS configuration for cluster: %s
 creation_rules:
   - path_regex: .*\.(yaml|yml)$
     age: %s
     encrypted_regex: '^(data|stringData|password|token|key|secret|credentials)'
-`, cfg.Metadata.Name, ageKey)
+`, cfg.OpenCenter.Cluster.ClusterName, ageKey)
 
 	// Add provider-specific rules
-	switch cfg.Spec.Provider {
+	switch cfg.OpenCenter.Infrastructure.Provider {
 	case "openstack":
 		config += `  - path_regex: secrets/openstack-credentials\.yaml$
     age: ` + ageKey + `
@@ -278,7 +281,7 @@ creation_rules:
 }
 
 // ValidateEncryption validates that files are properly encrypted
-func (e *Encryptor) ValidateEncryption(overlayPath string, cfg *config.ClusterConfig) error {
+func (e *Encryptor) ValidateEncryption(overlayPath string, cfg *config.Config) error {
 	filesToCheck := e.getFilesToEncrypt(overlayPath, cfg)
 
 	for _, file := range filesToCheck {

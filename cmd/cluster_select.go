@@ -21,7 +21,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/rackerlabs/openCenter/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 

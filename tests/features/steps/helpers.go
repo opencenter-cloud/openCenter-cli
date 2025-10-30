@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
-	"github.com/rackerlabs/openCenter/internal/config"
-	"github.com/rackerlabs/openCenter/internal/util"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/util"
 	yaml "gopkg.in/yaml.v3"
 	"regexp"
 )

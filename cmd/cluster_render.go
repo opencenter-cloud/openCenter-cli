@@ -16,8 +16,8 @@ package cmd
 import (
     "fmt"
 
-    "github.com/rackerlabs/openCenter/internal/config"
-    "github.com/rackerlabs/openCenter/internal/gitops"
+    "github.com/rackerlabs/openCenter-cli/internal/config"
+    "github.com/rackerlabs/openCenter-cli/internal/gitops"
     "github.com/spf13/cobra"
 )
 

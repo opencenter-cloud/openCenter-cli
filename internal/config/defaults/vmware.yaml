@@ -36,7 +36,7 @@ locals:
 
 modules:
   vsphere-vm:
-    source: "github.com/rackerlabs/openCenter.git//install/iac/infra/vsphere?ref=main"
+    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/infra/vsphere?ref=main"
     vcenter_server: "local.vcenter_server"
     vcenter_user: "local.vcenter_user"
     vcenter_password: "local.vcenter_password"
@@ -62,7 +62,7 @@ modules:
     timezone: "local.timezone"
     ntp_servers: "local.ntp_servers"
   kubespray-cluster:
-    source: "github.com/rackerlabs/openCenter.git//install/iac/kubespray?ref=main"
+    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/kubespray?ref=main"
     cluster_name: "local.cluster_name"
     master_nodes: "module.vsphere-vm.master_nodes"
     worker_nodes: "module.vsphere-vm.worker_nodes"

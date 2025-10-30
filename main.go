@@ -16,7 +16,7 @@ package main
 import (
 	"os"
 
-	"github.com/rackerlabs/openCenter/cmd"
+	"github.com/rackerlabs/openCenter-cli/cmd"
 )
 
 var version = "0.0.1"

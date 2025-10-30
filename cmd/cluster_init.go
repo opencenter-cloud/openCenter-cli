@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rackerlabs/openCenter/internal/config"
-	"github.com/rackerlabs/openCenter/internal/util"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/util"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

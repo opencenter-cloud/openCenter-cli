@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	icfg "github.com/rackerlabs/openCenter/internal/config"
+	icfg "github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 

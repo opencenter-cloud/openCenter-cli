@@ -6,7 +6,7 @@ import (
     "strings"
 
     "github.com/spf13/cobra"
-    "github.com/rackerlabs/openCenter/internal/plugins"
+    "github.com/rackerlabs/openCenter-cli/internal/plugins"
 )
 
 func newPluginsCmd() *cobra.Command {

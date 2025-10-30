@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rackerlabs/openCenter/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
 )
 
 func TestProvisionProviderFile(t *testing.T) {

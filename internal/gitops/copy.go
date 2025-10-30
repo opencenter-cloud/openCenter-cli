@@ -22,7 +22,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/rackerlabs/openCenter/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
 )
 
 // CopyBase copies or renders embedded files from gitops-base-dir into the target directory

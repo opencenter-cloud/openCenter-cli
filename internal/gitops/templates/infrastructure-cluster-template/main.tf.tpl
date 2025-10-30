@@ -122,7 +122,7 @@ locals {
 }
 
 module "openstack-nova" {
-  source = "{{ (index .IAC.Modules "openstack-nova").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/cloud/openstack/openstack-nova?ref=worker-server-group" }}"
+  source = "{{ (index .IAC.Modules "openstack-nova").source | default "github.com/rackerlabs/openCenter-cli-gitops-base.git//iac/cloud/openstack/openstack-nova?ref=worker-server-group" }}"
   availability_zone             = local.availability_zone
   additional_block_devices_worker      = local.additional_block_devices_worker
   additional_server_pools_worker_windows = local.additional_server_pools_worker_windows
@@ -188,7 +188,7 @@ module "openstack-nova" {
 }
 
 module "kubespray-cluster" {
-  source = "{{ (index .IAC.Modules "kubespray-cluster").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/provider/kubespray?ref=worker-server-group" }}"
+  source = "{{ (index .IAC.Modules "kubespray-cluster").source | default "github.com/rackerlabs/openCenter-cli-gitops-base.git//iac/provider/kubespray?ref=worker-server-group" }}"
   address_bastion                         = module.openstack-nova.bastion_floating_ip
   cluster_name                            = local.cluster_name
   cni_iface                               = local.cni_iface
@@ -237,7 +237,7 @@ module "kubespray-cluster" {
 
 
 module "calico" {
-  source = "{{ (index .IAC.Modules "calico").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/cni/calico?ref=worker-server-group" }}"
+  source = "{{ (index .IAC.Modules "calico").source | default "github.com/rackerlabs/openCenter-cli-gitops-base.git//iac/cni/calico?ref=worker-server-group" }}"
 
   calico_interface_autodetect      = local.calico_interface_autodetect
   calico_encapsulation_type        = local.calico_encapsulation_type

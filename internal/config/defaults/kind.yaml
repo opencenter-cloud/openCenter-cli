@@ -27,7 +27,7 @@ locals:
 
 modules:
   kind-cluster:
-    source: "github.com/rackerlabs/openCenter.git//install/iac/infra/kind?ref=main"
+    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/infra/kind?ref=main"
     cluster_name: "local.cluster_name"
     kubernetes_version: "local.kubernetes_version"
     worker_count: "local.worker_count"

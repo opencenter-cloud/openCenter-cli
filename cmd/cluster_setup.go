@@ -19,10 +19,10 @@ import (
     "os/exec"
     "path/filepath"
 
-    "github.com/rackerlabs/openCenter/internal/config"
-    "github.com/rackerlabs/openCenter/internal/gitops"
+    "github.com/rackerlabs/openCenter-cli/internal/config"
+    "github.com/rackerlabs/openCenter-cli/internal/gitops"
     // main.tf rendering is handled in tofu.Provision now
-    "github.com/rackerlabs/openCenter/internal/tofu"
+    "github.com/rackerlabs/openCenter-cli/internal/tofu"
     "github.com/spf13/cobra"
 )
 

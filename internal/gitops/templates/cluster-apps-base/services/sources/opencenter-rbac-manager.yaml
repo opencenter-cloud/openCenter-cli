@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 15m
-  url: ssh://git@github.com/rackerlabs/openCenter-gitops-base.git
+  url: ssh://git@github.com/rackerlabs/openCenter-cli-gitops-base.git
   ref:
     branch: oidc-support
   secretRef:

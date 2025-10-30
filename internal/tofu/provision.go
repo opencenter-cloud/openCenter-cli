@@ -5,8 +5,8 @@ import (
     "os"
     "path/filepath"
 
-    "github.com/rackerlabs/openCenter/internal/config"
-    "github.com/rackerlabs/openCenter/internal/provision"
+    "github.com/rackerlabs/openCenter-cli/internal/config"
+    "github.com/rackerlabs/openCenter-cli/internal/provision"
 )
 
 // Provision generates OpenTofu backend/provider configuration for the cluster.

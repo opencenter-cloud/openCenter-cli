@@ -19,8 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rackerlabs/openCenter/internal/config"
-	"github.com/rackerlabs/openCenter/internal/provision"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/provision"
 )
 
 // Provision generates Ansible files from templates. It creates the

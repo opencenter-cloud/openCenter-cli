@@ -24,6 +24,51 @@ import (
 // cluster configuration structure. The schema mirrors the structure emitted by
 // defaultConfig / cluster init so IDE integrations stay in sync with runtime.
 func GenerateSchema(pretty bool) ([]byte, error) {
+	// Base service schema for services that only need enabled flag
+	baseServiceSchema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"enabled": map[string]any{"type": "boolean"},
+		},
+		"additionalProperties": false,
+	}
+
+	// Cert-manager specific schema
+	certManagerSchema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"enabled":              map[string]any{"type": "boolean"},
+			"email":                map[string]any{"type": "string"},
+			"region":               map[string]any{"type": "string"},
+			"aws_access_key":       map[string]any{"type": "string"},
+			"aws_secret_access_key": map[string]any{"type": "string"},
+		},
+		"additionalProperties": false,
+	}
+
+	// Calico specific schema (for services section, not network plugin)
+	calicoServiceSchema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"enabled": map[string]any{"type": "boolean"},
+		},
+		"additionalProperties": false,
+	}
+
+	// Etcd-backup specific schema
+	etcdBackupSchema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"enabled":              map[string]any{"type": "boolean"},
+			"s3_host":              map[string]any{"type": "string"},
+			"s3_region":            map[string]any{"type": "string"},
+			"aws_access_key":       map[string]any{"type": "string"},
+			"aws_secret_access_key": map[string]any{"type": "string"},
+		},
+		"additionalProperties": false,
+	}
+
+	// Generic service schema for services with all possible fields
 	serviceSchema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -180,25 +225,25 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 	services := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"calico":                serviceSchema,
-			"cert-manager":          serviceSchema,
-			"etcd-backup":           serviceSchema,
-			"external-snapshotter":  serviceSchema,
-			"fluxcd":                serviceSchema,
-			"gateway":               serviceSchema,
-			"gateway-api":           serviceSchema,
-			"headlamp":              serviceSchema,
-			"keycloak":              serviceSchema,
-			"kube-prometheus-stack": serviceSchema,
-			"kyverno":               serviceSchema,
-			"olm":                   serviceSchema,
-			"openstack-ccm":         serviceSchema,
-			"openstack-csi":         serviceSchema,
-			"postgres-operator":     serviceSchema,
-			"rbac-manager":          serviceSchema,
-			"sources":               serviceSchema,
-			"velero":                serviceSchema,
-			"weave-gitops":          serviceSchema,
+			"calico":                calicoServiceSchema,
+			"cert-manager":          certManagerSchema,
+			"etcd-backup":           etcdBackupSchema,
+			"external-snapshotter":  baseServiceSchema,
+			"fluxcd":                baseServiceSchema,
+			"gateway":               baseServiceSchema,
+			"gateway-api":           baseServiceSchema,
+			"headlamp":              baseServiceSchema,
+			"keycloak":              baseServiceSchema,
+			"kube-prometheus-stack": baseServiceSchema,
+			"kyverno":               baseServiceSchema,
+			"olm":                   baseServiceSchema,
+			"openstack-ccm":         baseServiceSchema,
+			"openstack-csi":         baseServiceSchema,
+			"postgres-operator":     baseServiceSchema,
+			"rbac-manager":          baseServiceSchema,
+			"sources":               baseServiceSchema,
+			"velero":                baseServiceSchema,
+			"weave-gitops":          baseServiceSchema,
 		},
 		"additionalProperties": serviceSchema,
 	}

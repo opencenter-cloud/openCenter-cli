@@ -344,26 +344,8 @@
             "calico": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -385,12 +367,6 @@
                 },
                 "region": {
                   "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -404,14 +380,8 @@
                 "aws_secret_access_key": {
                   "type": "string"
                 },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
                 },
                 "s3_host": {
                   "type": "string"
@@ -425,26 +395,8 @@
             "external-snapshotter": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -452,26 +404,8 @@
             "fluxcd": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -479,26 +413,8 @@
             "gateway": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -506,26 +422,8 @@
             "gateway-api": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -533,26 +431,8 @@
             "headlamp": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -560,26 +440,8 @@
             "keycloak": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -587,26 +449,8 @@
             "kube-prometheus-stack": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -614,26 +458,8 @@
             "kyverno": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -641,26 +467,8 @@
             "olm": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -668,26 +476,8 @@
             "openstack-ccm": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -695,26 +485,8 @@
             "openstack-csi": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -722,26 +494,8 @@
             "postgres-operator": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -749,26 +503,8 @@
             "rbac-manager": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -776,26 +512,8 @@
             "sources": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -803,26 +521,8 @@
             "velero": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"
@@ -830,26 +530,8 @@
             "weave-gitops": {
               "additionalProperties": false,
               "properties": {
-                "aws_access_key": {
-                  "type": "string"
-                },
-                "aws_secret_access_key": {
-                  "type": "string"
-                },
-                "email": {
-                  "type": "string"
-                },
                 "enabled": {
                   "type": "boolean"
-                },
-                "region": {
-                  "type": "string"
-                },
-                "s3_host": {
-                  "type": "string"
-                },
-                "s3_region": {
-                  "type": "string"
                 }
               },
               "type": "object"

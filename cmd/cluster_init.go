@@ -237,13 +237,20 @@ func newClusterInitCmd() *cobra.Command {
 
 			// Handle --force
 			force, _ := cmd.Flags().GetBool("force")
-			if !force {
-				// Check if cluster directory exists instead of just the config file
-				clusterDir, err := config.ClusterDirectoryPath(name)
-				if err == nil {
-					if _, err := os.Stat(clusterDir); err == nil {
-						return fmt.Errorf("cluster configuration directory '%s' already exists, use --force to overwrite", name)
-					}
+			clusterDir, err := config.ClusterDirectoryPath(name)
+			if err != nil {
+				return fmt.Errorf("failed to get cluster directory path: %w", err)
+			}
+			
+			// Check if cluster directory exists
+			if _, err := os.Stat(clusterDir); err == nil {
+				if !force {
+					return fmt.Errorf("cluster configuration directory '%s' already exists, use --force to overwrite", name)
+				}
+				
+				// Force flag is set, perform cleanup and overwrite
+				if err := cleanupClusterDirectory(clusterDir); err != nil {
+					return fmt.Errorf("failed to cleanup existing cluster directory: %w", err)
 				}
 			}
 
@@ -303,6 +310,16 @@ func newClusterInitCmd() *cobra.Command {
 	cmd.Flags().Bool("force", false, "overwrite existing file")
 	cmd.Flags().Bool("no-sops-keygen", false, "do not auto-generate a SOPS age key when secrets.sops_age_key_file is unset")
 	return cmd
+}
+
+// cleanupClusterDirectory removes the existing cluster directory and all its contents
+// to prepare for overwriting with new configuration when --force flag is used.
+func cleanupClusterDirectory(clusterDir string) error {
+	// Remove the entire cluster directory and all its contents
+	if err := os.RemoveAll(clusterDir); err != nil {
+		return fmt.Errorf("failed to remove existing cluster directory %s: %w", clusterDir, err)
+	}
+	return nil
 }
 
 // generateDefaultSOPSKey creates an age key file under the cluster-specific secrets directory

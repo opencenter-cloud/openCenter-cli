@@ -704,6 +704,19 @@ func ClusterSecretsPath(name string) (string, error) {
 //   - string: The absolute path to the configuration file.
 //   - error: An error if one occurred.
 func ConfigPath(name string) (string, error) {
+	// Try organization-aware path first
+	cliConfigManager, err := NewConfigManager("")
+	if err == nil {
+		pathResolver := NewPathResolver(cliConfigManager)
+		if orgAwarePath, orgErr := pathResolver.OrganizationAwareConfigPath(name); orgErr == nil {
+			// Check if the organization-aware config file exists
+			if _, statErr := os.Stat(orgAwarePath); statErr == nil {
+				return orgAwarePath, nil
+			}
+		}
+	}
+	
+	// Fall back to legacy path for backward compatibility
 	clusterDir, err := ClusterDirectoryPath(name)
 	if err != nil {
 		return "", err

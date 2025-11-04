@@ -67,6 +67,7 @@ func Execute(version string) error {
 
     // Register subcommands
     rootCmd.AddCommand(newClusterCmd())
+    rootCmd.AddCommand(newConfigCmd())
     rootCmd.AddCommand(newSecretsCmd())
     rootCmd.AddCommand(newSOPSCmd())
     rootCmd.AddCommand(newPluginsCmd())

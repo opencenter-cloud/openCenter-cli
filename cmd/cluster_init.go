@@ -238,10 +238,11 @@ func newClusterInitCmd() *cobra.Command {
 			// Handle --force
 			force, _ := cmd.Flags().GetBool("force")
 			if !force {
-				path, err := config.ConfigPath(name)
+				// Check if cluster directory exists instead of just the config file
+				clusterDir, err := config.ClusterDirectoryPath(name)
 				if err == nil {
-					if _, err := os.Stat(path); err == nil {
-						return fmt.Errorf("cluster configuration %s already exists, use --force to overwrite", name)
+					if _, err := os.Stat(clusterDir); err == nil {
+						return fmt.Errorf("cluster configuration directory '%s' already exists, use --force to overwrite", name)
 					}
 				}
 			}
@@ -284,16 +285,17 @@ func newClusterInitCmd() *cobra.Command {
 				return fmt.Errorf("failed to marshal final config: %w", err)
 			}
 
-			// Save the YAML file directly
+			// Get the config path (this will create the cluster directory structure)
 			path, err := config.ConfigPath(name)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get config path: %w", err)
 			}
 
+			// Write the config file with proper permissions (0600 for files)
 			if err := os.WriteFile(path, finalYAML, 0o600); err != nil {
 				return fmt.Errorf("failed to write config file: %w", err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Created cluster configuration %s\n", name)
+			fmt.Fprintf(cmd.OutOrStdout(), "Created cluster configuration directory and file for %s\n", name)
 			return nil
 		},
 	}
@@ -303,29 +305,37 @@ func newClusterInitCmd() *cobra.Command {
 	return cmd
 }
 
-// generateDefaultSOPSKey creates an age key file under the config directory
-// at sops/age/keys/<cluster>-key.txt and updates cfg.Secrets.SopsAgeKeyFile
+// generateDefaultSOPSKey creates an age key file under the cluster-specific secrets directory
+// at <cluster-dir>/secrets/age/keys/<cluster>-key.txt and updates cfg.Secrets.SopsAgeKeyFile
 // to point to the generated file. The key is a placeholder that starts with
 // AGE-SECRET-KEY-1 followed by random bytes; file perms are 0600.
 func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
-	dir, err := config.ResolveConfigDir()
+	// Get the cluster-specific secrets directory path
+	secretsDir, err := config.ClusterSecretsPath(cluster)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get cluster secrets path: %w", err)
 	}
-	rel := filepath.Join("sops", "age", "keys", fmt.Sprintf("%s-key.txt", cluster))
-	out := filepath.Join(dir, rel)
-	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
-		return err
+	
+	// Create the secrets directory with proper permissions (0755 for directories)
+	if err := os.MkdirAll(secretsDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create cluster secrets directory: %w", err)
 	}
-	// generate a key
+	
+	// Generate the key file path
+	keyFile := filepath.Join(secretsDir, fmt.Sprintf("%s-key.txt", cluster))
+	
+	// Generate a key
 	var b [32]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		return err
+		return fmt.Errorf("failed to generate random key: %w", err)
 	}
 	key := fmt.Sprintf("AGE-SECRET-KEY-1%s\n", hex.EncodeToString(b[:]))
-	if err := os.WriteFile(out, []byte(key), 0o600); err != nil {
-		return err
+	
+	// Write the key file with proper permissions (0600 for files)
+	if err := os.WriteFile(keyFile, []byte(key), 0o600); err != nil {
+		return fmt.Errorf("failed to write SOPS key file: %w", err)
 	}
-	cfg.Secrets.SopsAgeKeyFile = out
+	
+	cfg.Secrets.SopsAgeKeyFile = keyFile
 	return nil
 }

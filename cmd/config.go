@@ -60,10 +60,17 @@ func newConfigViewCmd() *cobra.Command {
 This shows the complete configuration including logging, paths, behavior, and defaults.
 Values are displayed after merging with defaults and expanding environment variables.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Create config manager
-			cm, err := config.NewConfigManager("")
-			if err != nil {
-				return fmt.Errorf("failed to load configuration: %w", err)
+			// Use global config manager if available, otherwise create a new one
+			var cm *config.ConfigManager
+			var err error
+			
+			if globalCM := GetConfigManager(); globalCM != nil {
+				cm = globalCM
+			} else {
+				cm, err = config.NewConfigManager("")
+				if err != nil {
+					return fmt.Errorf("failed to load configuration: %w", err)
+				}
 			}
 
 			// Get current configuration
@@ -161,10 +168,17 @@ an error will be returned.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 
-			// Create config manager
-			cm, err := config.NewConfigManager("")
-			if err != nil {
-				return fmt.Errorf("failed to load configuration: %w", err)
+			// Use global config manager if available, otherwise create a new one
+			var cm *config.ConfigManager
+			var err error
+			
+			if globalCM := GetConfigManager(); globalCM != nil {
+				cm = globalCM
+			} else {
+				cm, err = config.NewConfigManager("")
+				if err != nil {
+					return fmt.Errorf("failed to load configuration: %w", err)
+				}
 			}
 
 			// Get the value

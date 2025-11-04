@@ -20,21 +20,27 @@ import (
 
     "github.com/spf13/cobra"
 
+    "github.com/rackerlabs/openCenter-cli/internal/config"
     "github.com/rackerlabs/openCenter-cli/internal/plugins"
 )
+
+// GlobalFlags represents the global flags available across all commands.
+type GlobalFlags struct {
+    Config   string   // --config: alternative cluster configuration file path
+    DryRun   bool     // --dry-run: enable dry-run mode
+    LogLevel string   // --log-level: set log level explicitly
+    Set      []string // --set: override configuration values using dot notation
+    Verbose  bool     // --verbose: enable verbose logging
+}
+
+// configManager holds the global configuration manager instance
+var configManager *config.ConfigManager
 
 var rootCmd = &cobra.Command{
     Use:   "openCenter",
     Short: "openCenter CLI manages cluster configurations and GitOps scaffolding",
     PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-        // Handle config-dir flag
-        if cfgDir, _ := cmd.Flags().GetString("config-dir"); cfgDir != "" {
-            // Set environment variable so that config.ResolveConfigDir picks it up
-            if err := os.Setenv("OPENCENTER_CONFIG_DIR", cfgDir); err != nil {
-                return err
-            }
-        }
-        return nil
+        return initializeGlobalConfig(cmd)
     },
 }
 
@@ -48,8 +54,9 @@ var rootCmd = &cobra.Command{
 //   - error: An error if one occurred during execution.
 func Execute(version string) error {
     rootCmd.Version = version
-    // Define global persistent flag for config-dir early so we can pre-parse it
-    rootCmd.PersistentFlags().String("config-dir", "", "configuration directory (defaults to ~/.config/openCenter on Linux/macOS)")
+    
+    // Add global persistent flags
+    addGlobalFlags(rootCmd)
 
     // Pre-parse --config-dir from os.Args so plugin discovery can use it
     // before Cobra runs PersistentPreRunE.
@@ -74,6 +81,163 @@ func Execute(version string) error {
     // Discover and attach external plugins as subcommands
     plugins.LoadExternalPlugins(rootCmd)
     return rootCmd.Execute()
+}
+
+// addGlobalFlags adds global persistent flags to the root command.
+func addGlobalFlags(cmd *cobra.Command) {
+    // Legacy config-dir flag (kept for backward compatibility)
+    cmd.PersistentFlags().String("config-dir", "", "configuration directory (defaults to ~/.config/openCenter on Linux/macOS)")
+    
+    // New global flags
+    cmd.PersistentFlags().String("config", "", "alternative cluster configuration file path")
+    cmd.PersistentFlags().Bool("dry-run", false, "enable dry-run mode to print planned actions without executing them")
+    cmd.PersistentFlags().String("log-level", "warn", "set log level explicitly (debug, info, warn, error)")
+    cmd.PersistentFlags().StringArray("set", []string{}, "override configuration values using dot notation (e.g., --set spec.provider=openstack)")
+    cmd.PersistentFlags().Bool("verbose", false, "enable verbose logging by setting log level to debug")
+}
+
+// parseGlobalFlags extracts global flags from the command.
+func parseGlobalFlags(cmd *cobra.Command) (*GlobalFlags, error) {
+    config, _ := cmd.Flags().GetString("config")
+    dryRun, _ := cmd.Flags().GetBool("dry-run")
+    logLevel, _ := cmd.Flags().GetString("log-level")
+    set, _ := cmd.Flags().GetStringArray("set")
+    verbose, _ := cmd.Flags().GetBool("verbose")
+
+    // If verbose is set, override log level to debug
+    if verbose {
+        logLevel = "debug"
+    }
+
+    return &GlobalFlags{
+        Config:   config,
+        DryRun:   dryRun,
+        LogLevel: logLevel,
+        Set:      set,
+        Verbose:  verbose,
+    }, nil
+}
+
+// initializeGlobalConfig initializes the global configuration manager and applies overrides.
+func initializeGlobalConfig(cmd *cobra.Command) error {
+    // Handle legacy config-dir flag
+    if cfgDir, _ := cmd.Flags().GetString("config-dir"); cfgDir != "" {
+        // Set environment variable so that config.ResolveConfigDir picks it up
+        if err := os.Setenv("OPENCENTER_CONFIG_DIR", cfgDir); err != nil {
+            return err
+        }
+    }
+
+    // Parse global flags
+    globalFlags, err := parseGlobalFlags(cmd)
+    if err != nil {
+        return fmt.Errorf("failed to parse global flags: %w", err)
+    }
+
+    // Initialize configuration manager
+    var configPath string
+    if globalFlags.Config != "" {
+        configPath = globalFlags.Config
+    }
+    
+    configManager, err = config.NewConfigManager(configPath)
+    if err != nil {
+        return fmt.Errorf("failed to initialize configuration: %w", err)
+    }
+
+    // Apply global flag overrides
+    if err := applyGlobalFlagOverrides(globalFlags); err != nil {
+        return fmt.Errorf("failed to apply global flag overrides: %w", err)
+    }
+
+    return nil
+}
+
+// applyGlobalFlagOverrides applies global flag overrides to the configuration.
+func applyGlobalFlagOverrides(globalFlags *GlobalFlags) error {
+    cliConfig := configManager.GetConfig()
+
+    // Create a copy to apply overrides
+    overriddenConfig := *cliConfig
+
+    // Apply log level override
+    if globalFlags.LogLevel != "warn" || globalFlags.Verbose {
+        overriddenConfig.Logging.Level = globalFlags.LogLevel
+    }
+
+    // Apply dry-run override
+    if globalFlags.DryRun {
+        overriddenConfig.Behavior.DryRun = true
+    }
+
+    // Apply verbose override
+    if globalFlags.Verbose {
+        overriddenConfig.Behavior.Verbose = true
+    }
+
+    // Apply --set flag overrides
+    if err := applySetFlagOverrides(&overriddenConfig, globalFlags.Set); err != nil {
+        return fmt.Errorf("failed to apply --set overrides: %w", err)
+    }
+
+    // Update the configuration manager with overridden config
+    // Note: We don't save these overrides to file, they're runtime-only
+    if err := configManager.LoadWithConfig(&overriddenConfig); err != nil {
+        return fmt.Errorf("failed to load overridden configuration: %w", err)
+    }
+
+    return nil
+}
+
+// applySetFlagOverrides applies --set flag overrides to the configuration.
+func applySetFlagOverrides(cliConfig *config.CLIConfig, setFlags []string) error {
+    // Create a temporary config manager to use its SetValue method
+    tempManager, err := config.NewConfigManagerWithConfig(cliConfig)
+    if err != nil {
+        return fmt.Errorf("failed to create temporary config manager: %w", err)
+    }
+
+    for _, setFlag := range setFlags {
+        parts := strings.SplitN(setFlag, "=", 2)
+        if len(parts) != 2 {
+            return fmt.Errorf("invalid --set format '%s', expected key=value", setFlag)
+        }
+
+        key := parts[0]
+        value := parts[1]
+
+        // Parse the value (try to detect type)
+        var parsedValue interface{}
+        if value == "true" {
+            parsedValue = true
+        } else if value == "false" {
+            parsedValue = false
+        } else {
+            // Try to parse as number
+            if intVal, err := fmt.Sscanf(value, "%d", new(int)); err == nil && intVal == 1 {
+                var num int
+                fmt.Sscanf(value, "%d", &num)
+                parsedValue = num
+            } else {
+                // Treat as string
+                parsedValue = value
+            }
+        }
+
+        // Apply the override using the configuration manager's dot notation
+        if err := tempManager.SetValue(key, parsedValue); err != nil {
+            return fmt.Errorf("failed to set configuration value '%s=%s': %w", key, value, err)
+        }
+    }
+
+    // Get the updated configuration back
+    *cliConfig = *tempManager.GetConfig()
+    return nil
+}
+
+// GetConfigManager returns the global configuration manager instance.
+func GetConfigManager() *config.ConfigManager {
+    return configManager
 }
 
 // helpers for printing errors. In Cobra commands, returning an error

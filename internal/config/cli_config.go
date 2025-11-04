@@ -382,6 +382,43 @@ func (cm *ConfigManager) GetConfigPath() string {
 	return cm.configPath
 }
 
+// LoadWithConfig loads the configuration manager with an existing configuration.
+// This is useful for applying runtime overrides without modifying the file.
+func (cm *ConfigManager) LoadWithConfig(config *CLIConfig) error {
+	cm.config = config
+	cm.validator = &ConfigValidator{}
+	
+	// Validate the provided configuration
+	if err := cm.validator.Validate(cm.config); err != nil {
+		return err
+	}
+
+	// Expand paths in the configuration
+	cm.expandConfigPaths()
+
+	return nil
+}
+
+// NewConfigManagerWithConfig creates a new configuration manager with an existing configuration.
+// This is useful for creating temporary managers for applying overrides.
+func NewConfigManagerWithConfig(config *CLIConfig) (*ConfigManager, error) {
+	cm := &ConfigManager{
+		config:    config,
+		defaults:  DefaultCLIConfig(),
+		validator: &ConfigValidator{},
+	}
+
+	// Validate the provided configuration
+	if err := cm.validator.Validate(cm.config); err != nil {
+		return nil, err
+	}
+
+	// Expand paths in the configuration
+	cm.expandConfigPaths()
+
+	return cm, nil
+}
+
 // setValueByPath sets a value in the configuration using dot notation.
 func (cm *ConfigManager) setValueByPath(config *CLIConfig, path string, value interface{}) error {
 	parts := strings.Split(path, ".")

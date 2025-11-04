@@ -413,7 +413,7 @@ func (w *world) aFileShouldExist(path string) error {
 }
 
 func (w *world) aDirectoryShouldExist(path string) error {
-	p := w.replaceTmp(path)
+	p := w.pathFromFeature(path)
 	if fi, err := os.Stat(p); err != nil {
 		return err
 	} else if !fi.IsDir() {
@@ -964,6 +964,34 @@ func (w *world) assertClusterConfigValue(clusterName, path, expectedValue string
 	return nil
 }
 
+func (w *world) assertClusterConfigValueContains(clusterName, path, expectedSubstring string) error {
+	// Load the config using the new directory structure
+	p := filepath.Join(w.configDir, "clusters", clusterName, "."+clusterName+"-config.yaml")
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return fmt.Errorf("could not read config file %s: %w", p, err)
+	}
+
+	var cfg config.Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("could not unmarshal config: %w", err)
+	}
+
+	// Get the value using reflection
+	actual, err := getField(&cfg, path)
+	if err != nil {
+		return err
+	}
+
+	actualStr := fmt.Sprintf("%v", actual)
+
+	if !strings.Contains(actualStr, expectedSubstring) {
+		return fmt.Errorf("config value for '%s' does not contain expected substring. expected to contain: '%s', got: '%s'", path, expectedSubstring, actualStr)
+	}
+
+	return nil
+}
+
 func getField(obj interface{}, path string) (interface{}, error) {
 	v := reflect.ValueOf(obj)
 	if v.Kind() == reflect.Ptr {
@@ -1023,6 +1051,7 @@ func RegisterSteps(s *godog.ScenarioContext, t *testing.T, w *world) {
 		return w.aFileShouldExist(filepath.Join(w.configDir, "clusters", name, "."+name+"-config.yaml"))
 	})
 	s.Step(`^the cluster configuration "([^"]*)" should have "([^"]*)" set to "([^"]*)"$`, w.assertClusterConfigValue)
+	s.Step(`^the cluster configuration "([^"]*)" should have "([^"]*)" containing "([^"]*)"$`, w.assertClusterConfigValueContains)
 	s.Step(`^a cluster "([^"]+)" is configured with a temporary gitops directory$`, w.aClusterIsConfiguredWithTemporaryGitopsDirectory)
 	s.Step(`^clusters "([^"]+)" exist$`, w.aClusterExists)
 	s.Step(`^the active cluster is "([^"]+)"$`, w.activeClusterIs)

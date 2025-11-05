@@ -266,8 +266,8 @@ Defines paths and settings related to secret management.
 | `sops_age_key_file` | `string` | `""` | Path to the SOPS age secret key file used for encryption/decryption. |
 
 Notes
-- If `sops_age_key_file` is not set at init time, `openCenter` automatically generates a key at `~/.config/openCenter/sops/age/keys/<cluster-name>-key.txt` and updates the saved config accordingly.
-- The generated file is written with permissions `0600` and contains a key string starting with `AGE-SECRET-KEY-1`.
+- If `sops_age_key_file` is not set at init time, `openCenter` automatically generates a proper Age key at `~/.config/openCenter/sops/age/keys/<cluster-name>-key.txt` and updates the saved config accordingly.
+- The generated file is written with permissions `0600` and contains a proper Age private key compatible with standard Age encryption tools.
  - To disable auto-generation during init, pass `--no-sops-keygen` to `openCenter cluster init`.
 
 ### Sources

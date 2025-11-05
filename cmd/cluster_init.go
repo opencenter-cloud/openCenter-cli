@@ -14,8 +14,6 @@
 package cmd
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/sops"
 	"github.com/rackerlabs/openCenter-cli/internal/util"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -389,8 +388,7 @@ func cleanupClusterDirectory(clusterDir string) error {
 
 // generateDefaultSOPSKey creates an age key file under the cluster-specific secrets directory
 // at <cluster-dir>/secrets/age/keys/<cluster>-key.txt and updates cfg.Secrets.SopsAgeKeyFile
-// to point to the generated file. The key is a placeholder that starts with
-// AGE-SECRET-KEY-1 followed by random bytes; file perms are 0600.
+// to point to the generated file using the new SOPS key manager.
 func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
 	// Get the cluster-specific secrets directory path
 	secretsDir, err := config.ClusterSecretsPath(cluster)
@@ -406,15 +404,15 @@ func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
 	// Generate the key file path
 	keyFile := filepath.Join(secretsDir, fmt.Sprintf("%s-key.txt", cluster))
 	
-	// Generate a key
-	var b [32]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return fmt.Errorf("failed to generate random key: %w", err)
+	// Use the new SOPS key manager to generate a proper Age key
+	km := sops.NewKeyManager(secretsDir)
+	keyPair, err := km.GenerateAgeKey()
+	if err != nil {
+		return fmt.Errorf("failed to generate Age key pair: %w", err)
 	}
-	key := fmt.Sprintf("AGE-SECRET-KEY-1%s\n", hex.EncodeToString(b[:]))
 	
-	// Write the key file with proper permissions (0600 for files)
-	if err := os.WriteFile(keyFile, []byte(key), 0o600); err != nil {
+	// Write the private key file with proper permissions (0600 for files)
+	if err := os.WriteFile(keyFile, []byte(keyPair.PrivateKey), 0o600); err != nil {
 		return fmt.Errorf("failed to write SOPS key file to cluster directory '%s': %w", keyFile, err)
 	}
 	
@@ -434,20 +432,20 @@ func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Confi
 		return fmt.Errorf("failed to create organization secrets directory '%s': %w", secretsKeyDir, err)
 	}
 	
-	// Generate a key
-	var b [32]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return fmt.Errorf("failed to generate random key: %w", err)
+	// Use the new SOPS key manager to generate a proper Age key
+	km := sops.NewKeyManager(secretsKeyDir)
+	keyPair, err := km.GenerateAgeKey()
+	if err != nil {
+		return fmt.Errorf("failed to generate Age key pair: %w", err)
 	}
-	key := fmt.Sprintf("AGE-SECRET-KEY-1%s\n", hex.EncodeToString(b[:]))
 	
-	// Write the key file with proper permissions (0600 for files)
-	if err := os.WriteFile(clusterPaths.SOPSKeyPath, []byte(key), 0o600); err != nil {
+	// Write the private key file with proper permissions (0600 for files)
+	if err := os.WriteFile(clusterPaths.SOPSKeyPath, []byte(keyPair.PrivateKey), 0o600); err != nil {
 		return fmt.Errorf("failed to write SOPS key file to organization directory '%s': %w", clusterPaths.SOPSKeyPath, err)
 	}
 	
 	// Create or update the SOPS configuration file for the organization
-	if err := createOrganizationSOPSConfig(clusterPaths.SOPSConfigPath, clusterPaths.SOPSKeyPath); err != nil {
+	if err := createOrganizationSOPSConfig(clusterPaths.SOPSConfigPath, keyPair.PublicKey); err != nil {
 		return fmt.Errorf("failed to create organization SOPS config: %w", err)
 	}
 	
@@ -456,18 +454,8 @@ func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Confi
 }
 
 // createOrganizationSOPSConfig creates or updates the .sops.yaml configuration file for the organization.
-func createOrganizationSOPSConfig(sopsConfigPath, keyPath string) error {
-	// Read the key file to get the public key
-	keyData, err := os.ReadFile(keyPath)
-	if err != nil {
-		return fmt.Errorf("failed to read SOPS key file: %w", err)
-	}
-	
-	// Extract the private key part (remove AGE-SECRET-KEY-1 prefix and newline)
-	privateKey := strings.TrimSpace(strings.TrimPrefix(string(keyData), "AGE-SECRET-KEY-1"))
-	
-	// For this implementation, we'll create a basic SOPS config
-	// In a real implementation, you might want to derive the public key from the private key
+func createOrganizationSOPSConfig(sopsConfigPath, publicKey string) error {
+	// Create a proper SOPS configuration with the Age public key
 	sopsConfig := fmt.Sprintf(`creation_rules:
   - path_regex: .*\.yaml$
     age: >-
@@ -475,7 +463,7 @@ func createOrganizationSOPSConfig(sopsConfigPath, keyPath string) error {
   - path_regex: .*\.json$
     age: >-
       %s
-`, privateKey[:56]+"...", privateKey[:56]+"...") // Truncated for example
+`, publicKey, publicKey)
 
 	// Write the SOPS configuration file
 	if err := os.WriteFile(sopsConfigPath, []byte(sopsConfig), 0o600); err != nil {

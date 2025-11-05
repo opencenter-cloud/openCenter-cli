@@ -176,16 +176,15 @@ after key rotation or setup changes.`,
 func executeSOPSGenerateKey(ctx context.Context, keyFile string, updateSOPS bool) error {
 	fmt.Println("🔑 Generating new Age key pair for SOPS encryption...")
 
-	// Initialize key manager
-	homeDir, _ := os.UserHomeDir()
-	keyDir := filepath.Join(homeDir, ".config", "sops", "age")
-	km := sops.NewKeyManager(keyDir)
-
-	// Use default key name if not specified
-	keyName := "keys"
-	if keyFile != "" {
-		keyName = filepath.Base(strings.TrimSuffix(keyFile, filepath.Ext(keyFile)))
+	// Set default key file path if not specified
+	if keyFile == "" {
+		homeDir, _ := os.UserHomeDir()
+		keyFile = filepath.Join(homeDir, ".config", "sops", "age", "keys.txt")
 	}
+
+	// Initialize key manager for the directory containing the key file
+	keyDir := filepath.Dir(keyFile)
+	km := sops.NewKeyManager(keyDir)
 
 	// Generate new key pair
 	keyPair, err := km.GenerateAgeKey()
@@ -193,32 +192,27 @@ func executeSOPSGenerateKey(ctx context.Context, keyFile string, updateSOPS bool
 		return fmt.Errorf("failed to generate Age key pair: %w", err)
 	}
 
-	// Check if key already exists and backup if needed
-	existingKeys, _ := km.ListAgeKeys()
-	for _, existing := range existingKeys {
-		if existing == keyName {
-			fmt.Printf("⚠️  Key '%s' already exists, creating backup...\n", keyName)
-			backupDir := filepath.Join(keyDir, "backups")
-			if err := os.MkdirAll(backupDir, 0o700); err == nil {
-				backupKM := sops.NewKeyManager(backupDir)
-				if existingKey, err := km.LoadAgeKey(keyName); err == nil {
-					backupName := fmt.Sprintf("%s-backup-%s", keyName, time.Now().Format("20060102-150405"))
-					backupKM.SaveAgeKey(existingKey, backupName)
-					fmt.Printf("✅ Existing key backed up as: %s\n", backupName)
-				}
-			}
-			break
+	// Check if key file already exists and backup if needed
+	if _, err := os.Stat(keyFile); err == nil {
+		fmt.Printf("⚠️  Key file '%s' already exists, creating backup...\n", keyFile)
+		backupPath := fmt.Sprintf("%s.backup-%s", keyFile, time.Now().Format("20060102-150405"))
+		if err := copyFile(keyFile, backupPath); err == nil {
+			fmt.Printf("✅ Existing key backed up as: %s\n", backupPath)
 		}
 	}
 
-	// Save new key
-	if err := km.SaveAgeKey(keyPair, keyName); err != nil {
+	// Ensure directory exists
+	if err := os.MkdirAll(keyDir, 0o700); err != nil {
+		return fmt.Errorf("failed to create key directory: %w", err)
+	}
+
+	// Write the private key to the specified path
+	if err := os.WriteFile(keyFile, []byte(keyPair.PrivateKey), 0o600); err != nil {
 		return fmt.Errorf("failed to save Age key: %w", err)
 	}
 
-	keyPath := filepath.Join(keyDir, fmt.Sprintf("%s.txt", keyName))
 	fmt.Println("✅ Age key pair generated successfully!")
-	fmt.Printf("📁 Private key: %s\n", keyPath)
+	fmt.Printf("📁 Private key: %s\n", keyFile)
 	fmt.Printf("🔑 Public key: %s\n", keyPair.PublicKey)
 
 	// Update SOPS configuration if requested

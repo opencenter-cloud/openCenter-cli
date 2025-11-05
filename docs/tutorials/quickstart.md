@@ -80,7 +80,7 @@ For other infrastructure types, you can specify a template:
 This command creates a new file at `~/.config/openCenter/demo.yaml`. This file is the single source of truth for your cluster, with infrastructure-specific defaults based on the selected template.
 
 Tip
-- If `secrets.sops_age_key_file` is not set in your config at init-time, `openCenter` automatically generates a SOPS age key at `~/.config/openCenter/sops/age/keys/demo-key.txt` (permissions `0600`) and saves the updated path into the config. You can replace this key later with one produced by `age-keygen` if desired.
+- If `secrets.sops_age_key_file` is not set in your config at init-time, `openCenter` automatically generates a proper Age key at `~/.config/openCenter/sops/age/keys/demo-key.txt` (permissions `0600`) and saves the updated path into the config. The generated key is compatible with standard Age encryption tools.
  - To disable auto-generation, pass `--no-sops-keygen` to the init command.
 
 ### Step 4: Configure and Validate

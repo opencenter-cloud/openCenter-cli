@@ -386,7 +386,7 @@ openCenter sops rotate-key --dry-run        # Test rotation
 
 ## Related Commands
 
-- `openCenter secrets sops-keygen` - Legacy key generation (use `sops generate-key` instead)
+
 - `openCenter cluster init` - Initialize cluster with SOPS key generation
 - `openCenter cluster setup` - Set up GitOps repository with SOPS integration
 - `openCenter cluster validate` - Validate cluster configuration including SOPS setup

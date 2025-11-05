@@ -147,9 +147,9 @@ func loadClusterMetadata(clusterName string) (ClusterMetadata, error) {
 		metadata.Name = clusterName
 	}
 
-	// Use "default" as fallback organization if not set
+	// Use "opencenter" as fallback organization if not set
 	if metadata.Organization == "" {
-		metadata.Organization = "default"
+		metadata.Organization = "opencenter"
 	}
 
 	return metadata, nil

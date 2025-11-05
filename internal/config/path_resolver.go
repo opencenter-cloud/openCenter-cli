@@ -58,10 +58,10 @@ func NewPathResolver(configManager *ConfigManager) *PathResolver {
 }
 
 // ResolveClusterPaths resolves all cluster paths for the given cluster name and organization.
-// If organization is empty, it uses "default" as the organization name.
+// If organization is empty, it uses "opencenter" as the organization name.
 func (pr *PathResolver) ResolveClusterPaths(clusterName, organization string) ClusterPaths {
 	if organization == "" {
-		organization = "default"
+		organization = "opencenter"
 	}
 
 	// Get base clusters directory from configuration
@@ -128,7 +128,7 @@ func (pr *PathResolver) ValidatePath(path string) error {
 // CreateOrganizationStructure creates the complete organization-based directory structure.
 func (pr *PathResolver) CreateOrganizationStructure(organization string) error {
 	if organization == "" {
-		organization = "default"
+		organization = "opencenter"
 	}
 
 	paths := pr.ResolveClusterPaths("", organization)
@@ -157,7 +157,7 @@ func (pr *PathResolver) CreateClusterDirectories(clusterName, organization strin
 	}
 
 	if organization == "" {
-		organization = "default"
+		organization = "opencenter"
 	}
 
 	paths := pr.ResolveClusterPaths(clusterName, organization)
@@ -271,7 +271,7 @@ func (mm *MigrationManager) DetectLegacyStructure() ([]string, error) {
 // MigrateClusterToOrganization migrates a cluster from legacy structure to organization-based structure.
 func (mm *MigrationManager) MigrateClusterToOrganization(clusterName, organization string) error {
 	if organization == "" {
-		organization = "default"
+		organization = "opencenter"
 	}
 
 	// Validate cluster name
@@ -524,7 +524,7 @@ func (mm *MigrationManager) updateClusterConfigWithOrganization(clusterName, org
 // ValidatePostMigration validates that the migration was successful.
 func (mm *MigrationManager) ValidatePostMigration(clusterName, organization string) error {
 	if organization == "" {
-		organization = "default"
+		organization = "opencenter"
 	}
 
 	paths := mm.pathResolver.ResolveClusterPaths(clusterName, organization)

@@ -199,7 +199,11 @@ func RenderClusterApps(cfg config.Config) error {
 			return nil
 		}
 
-		dst := filepath.Join(target, rel)
+		// Replace cluster-name and cluster_name placeholders in filename
+		relWithClusterName := strings.ReplaceAll(rel, "cluster-name", clusterName)
+		relWithClusterName = strings.ReplaceAll(relWithClusterName, "cluster_name", clusterName)
+		
+		dst := filepath.Join(target, relWithClusterName)
 
 		// If template file, process and strip template extension
 		if strings.HasSuffix(d.Name(), ".tmpl") || strings.HasSuffix(d.Name(), ".tpl") {
@@ -246,7 +250,11 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 			return err
 		}
 
-		dst := filepath.Join(target, rel)
+		// Replace cluster-name and cluster_name placeholders in filename
+		relWithClusterName := strings.ReplaceAll(rel, "cluster-name", clusterName)
+		relWithClusterName = strings.ReplaceAll(relWithClusterName, "cluster_name", clusterName)
+		
+		dst := filepath.Join(target, relWithClusterName)
 
 		// If template file, process and strip template extension
 		if strings.HasSuffix(d.Name(), ".tmpl") || strings.HasSuffix(d.Name(), ".tpl") {

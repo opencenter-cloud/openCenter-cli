@@ -148,14 +148,14 @@ Feature: CLI Configuration System Integration
     And a file "<<tmp>>/conf/clusters/test-org/secrets/age/keys/org-test-key.txt" should exist
     And a file "<<tmp>>/conf/clusters/test-org/secrets/.sops.yaml" should exist
 
-  @config @organization @default
-  Scenario: Default organization is used when none specified
+  @config @organization @opencenter
+  Scenario: Opencenter organization is used when none specified
     When I run "openCenter cluster init default-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a directory "<<tmp>>/conf/clusters/default" should exist
-    And a directory "<<tmp>>/conf/clusters/default/infrastructure/clusters/default-test" should exist
-    And a file "<<tmp>>/conf/clusters/default/infrastructure/clusters/default-test/.default-test-config.yaml" should exist
-    And the cluster configuration "default-test" should have "opencenter.meta.organization" set to "default"
+    And a directory "<<tmp>>/conf/clusters/opencenter" should exist
+    And a directory "<<tmp>>/conf/clusters/opencenter/infrastructure/clusters/default-test" should exist
+    And a file "<<tmp>>/conf/clusters/opencenter/infrastructure/clusters/default-test/.default-test-config.yaml" should exist
+    And the cluster configuration "default-test" should have "opencenter.meta.organization" set to "opencenter"
 
   @config @organization @multiple_clusters
   Scenario: Multiple clusters in same organization share GitOps structure
@@ -225,8 +225,8 @@ Feature: CLI Configuration System Integration
     And the exit code should be 0
     When I run "openCenter cluster init custom-path-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a directory "<<tmp>>/custom-clusters/default/infrastructure/clusters/custom-path-test" should exist
-    And a file "<<tmp>>/custom-clusters/default/infrastructure/clusters/custom-path-test/.custom-path-test-config.yaml" should exist
+    And a directory "<<tmp>>/custom-clusters/opencenter/infrastructure/clusters/custom-path-test" should exist
+    And a file "<<tmp>>/custom-clusters/opencenter/infrastructure/clusters/custom-path-test/.custom-path-test-config.yaml" should exist
 
   @config @filesystem @permissions
   Scenario: Configuration files are created with proper permissions

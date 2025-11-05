@@ -294,9 +294,9 @@ func TestGenerateOrganizationSOPSKey(t *testing.T) {
 			expectError:  false,
 		},
 		{
-			name:         "cluster with default organization",
+			name:         "cluster with opencenter organization",
 			clusterName:  "prod-cluster",
-			organization: "default",
+			organization: "opencenter",
 			expectError:  false,
 		},
 		{
@@ -327,10 +327,10 @@ func TestGenerateOrganizationSOPSKey(t *testing.T) {
 			cfg := config.NewDefault(tt.clusterName)
 			cfg.OpenCenter.GitOps.GitDir = "test-dir"
 
-			// Set expected organization (default if empty)
+			// Set expected organization (opencenter if empty)
 			expectedOrg := tt.organization
 			if expectedOrg == "" {
-				expectedOrg = "default"
+				expectedOrg = "opencenter"
 			}
 
 			// Call generateOrganizationSOPSKey
@@ -470,9 +470,9 @@ func TestOrganizationBasedClusterInit(t *testing.T) {
 			expectError:  false,
 		},
 		{
-			name:         "init cluster in default organization",
+			name:         "init cluster in opencenter organization",
 			clusterName:  "legacy-app",
-			organization: "default",
+			organization: "opencenter",
 			expectError:  false,
 		},
 		{
@@ -493,10 +493,10 @@ func TestOrganizationBasedClusterInit(t *testing.T) {
 
 			pathResolver := config.NewPathResolver(configManager)
 
-			// Set expected organization (default if empty)
+			// Set expected organization (opencenter if empty)
 			expectedOrg := tt.organization
 			if expectedOrg == "" {
-				expectedOrg = "default"
+				expectedOrg = "opencenter"
 			}
 
 			// Create organization structure

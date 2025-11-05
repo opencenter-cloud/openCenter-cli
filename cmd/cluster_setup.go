@@ -62,7 +62,7 @@ func newClusterSetupCmd() *cobra.Command {
             // Get organization from cluster metadata
             organization := cfg.OpenCenter.Meta.Organization
             if organization == "" {
-                organization = "default"
+                organization = "opencenter"
             }
 
             // Initialize organization-based GitOps setup

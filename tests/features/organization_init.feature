@@ -35,13 +35,13 @@ Feature: Organization-based cluster initialization
     And the file "<<tmp>>/conf/clusters/data-team/secrets/.sops.yaml" should contain "creation_rules:"
     And the cluster configuration "database" should have "secrets.sops_age_key_file" containing "data-team/secrets/age/keys/database-key.txt"
 
-  Scenario: Init cluster without organization uses default organization
+  Scenario: Init cluster without organization uses opencenter organization
     When I run "openCenter cluster init legacy-app --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a directory "<<tmp>>/conf/clusters/default" should exist
-    And a directory "<<tmp>>/conf/clusters/default/infrastructure/clusters/legacy-app" should exist
-    And a file "<<tmp>>/conf/clusters/default/infrastructure/clusters/legacy-app/.legacy-app-config.yaml" should exist
-    And the cluster configuration "legacy-app" should have "opencenter.meta.organization" set to "default"
+    And a directory "<<tmp>>/conf/clusters/opencenter" should exist
+    And a directory "<<tmp>>/conf/clusters/opencenter/infrastructure/clusters/legacy-app" should exist
+    And a file "<<tmp>>/conf/clusters/opencenter/infrastructure/clusters/legacy-app/.legacy-app-config.yaml" should exist
+    And the cluster configuration "legacy-app" should have "opencenter.meta.organization" set to "opencenter"
 
   Scenario: Init multiple clusters in same organization share GitOps root
     When I run "openCenter cluster init frontend --opencenter.meta.organization=web-team --config-dir <<tmp>>/conf"

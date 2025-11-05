@@ -48,10 +48,10 @@ func TestPathResolver_ResolveClusterPaths(t *testing.T) {
 			wantOrg:      "rackspace",
 		},
 		{
-			name:         "without organization defaults to default",
+			name:         "without organization defaults to opencenter",
 			clusterName:  "test-cluster",
 			organization: "",
-			wantOrg:      "default",
+			wantOrg:      "opencenter",
 		},
 		{
 			name:         "with different organization",
@@ -670,7 +670,7 @@ func TestPathResolver_ComplexOrganizationStructure(t *testing.T) {
 	pr := NewPathResolver(cm)
 	
 	// Test multiple organizations and clusters
-	organizations := []string{"org1", "org2", "default"}
+	organizations := []string{"org1", "org2", "opencenter"}
 	clusters := []string{"cluster1", "cluster2", "cluster3"}
 	
 	// Create structures for all combinations

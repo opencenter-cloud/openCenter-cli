@@ -384,6 +384,13 @@ type SimplifiedAWSCloud struct {
 func defaultConfig(name string) Config {
 	cfg := Config{
 		OpenCenter: SimplifiedOpenCenter{
+			Meta: ClusterMeta{
+				Name:         name,
+				Env:          "",
+				Region:       "",
+				Status:       "",
+				Organization: "opencenter",
+			},
 			Infrastructure: Infrastructure{
 				Provider: "openstack",
 				Cloud: CloudConfig{

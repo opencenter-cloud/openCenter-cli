@@ -708,3 +708,106 @@ func TestKeyManager_ImportExportRoundTrip(t *testing.T) {
 	assert.Equal(t, originalKeyPair.PrivateKey, importedKeyPair.PrivateKey)
 	assert.Equal(t, originalKeyPair.PublicKey, importedKeyPair.PublicKey)
 }
+
+func TestKeyManager_GenerateFallbackKey(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewKeyManager(tempDir)
+
+	// Generate fallback key
+	keyPair, err := manager.generateFallbackKey()
+	require.NoError(t, err)
+
+	// Verify key pair structure
+	assert.NotEmpty(t, keyPair.PublicKey)
+	assert.NotEmpty(t, keyPair.PrivateKey)
+	assert.NotEmpty(t, keyPair.Recipient)
+
+	// Verify key format
+	assert.True(t, strings.HasPrefix(keyPair.PublicKey, "age1"))
+	assert.True(t, strings.HasPrefix(keyPair.PrivateKey, "AGE-SECRET-KEY-"))
+
+	// Verify key was saved
+	keys, err := manager.ListAgeKeys()
+	require.NoError(t, err)
+	assert.Len(t, keys, 1)
+	assert.True(t, strings.HasPrefix(keys[0], "fallback-"))
+}
+
+func TestKeyManager_WriteFileAtomic(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewKeyManager(tempDir)
+
+	testFile := filepath.Join(tempDir, "test-atomic.txt")
+	testData := []byte("test atomic write")
+
+	// Test atomic write
+	err := manager.writeFileAtomic(testFile, testData, 0o644)
+	require.NoError(t, err)
+
+	// Verify file exists and has correct content
+	assert.FileExists(t, testFile)
+	content, err := os.ReadFile(testFile)
+	require.NoError(t, err)
+	assert.Equal(t, testData, content)
+
+	// Verify file permissions
+	info, err := os.Stat(testFile)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+}
+
+func TestKeyManager_SaveAgeKeyValidation(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewKeyManager(tempDir)
+
+	// Generate a valid key pair for testing
+	validKeyPair, err := manager.GenerateAgeKey()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		keyPair     *AgeKeyPair
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "valid key pair",
+			keyPair:     validKeyPair,
+			expectError: false,
+		},
+		{
+			name: "invalid private key",
+			keyPair: &AgeKeyPair{
+				PrivateKey: "invalid-private-key",
+				PublicKey:  validKeyPair.PublicKey,
+				Recipient:  validKeyPair.Recipient,
+			},
+			expectError: true,
+			errorMsg:    "invalid private key format",
+		},
+		{
+			name: "invalid public key",
+			keyPair: &AgeKeyPair{
+				PrivateKey: validKeyPair.PrivateKey,
+				PublicKey:  "invalid-public-key",
+				Recipient:  "invalid-public-key",
+			},
+			expectError: true,
+			errorMsg:    "invalid public key format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := manager.SaveAgeKey(tt.keyPair, "test-key-"+tt.name)
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

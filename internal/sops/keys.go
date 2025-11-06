@@ -52,7 +52,7 @@ type AgeKeyPair struct {
 	Recipient  string
 }
 
-// GenerateAgeKey generates a new age key pair
+// GenerateAgeKey generates a new age key pair with validation
 func (k *KeyManager) GenerateAgeKey() (*AgeKeyPair, error) {
 	// Generate age identity
 	identity, err := age.GenerateX25519Identity()
@@ -66,25 +66,109 @@ func (k *KeyManager) GenerateAgeKey() (*AgeKeyPair, error) {
 		Recipient:  identity.Recipient().String(),
 	}
 
+	// Validate generated key pair
+	if err := k.ValidateAgeKey(keyPair.PrivateKey); err != nil {
+		return nil, fmt.Errorf("generated private key validation failed: %w", err)
+	}
+	if err := k.ValidateAgeKey(keyPair.PublicKey); err != nil {
+		return nil, fmt.Errorf("generated public key validation failed: %w", err)
+	}
+
 	return keyPair, nil
 }
 
-// SaveAgeKey saves an age key pair to disk
+// generateFallbackKey generates a fallback age key when no key is available
+func (k *KeyManager) generateFallbackKey() (*AgeKeyPair, error) {
+	// Generate a new key pair
+	keyPair, err := k.GenerateAgeKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate fallback key: %w", err)
+	}
+
+	// Save the fallback key with a default name
+	fallbackKeyName := "fallback-" + fmt.Sprintf("%d", time.Now().Unix())
+	if err := k.SaveAgeKey(keyPair, fallbackKeyName); err != nil {
+		return nil, fmt.Errorf("failed to save fallback key: %w", err)
+	}
+
+	return keyPair, nil
+}
+
+// writeFileAtomic writes data to a file atomically by writing to a temporary file first
+func (k *KeyManager) writeFileAtomic(filename string, data []byte, perm os.FileMode) error {
+	// Create temporary file in the same directory
+	dir := filepath.Dir(filename)
+	tmpFile, err := os.CreateTemp(dir, ".tmp-"+filepath.Base(filename)+"-")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %w", err)
+	}
+
+	tmpPath := tmpFile.Name()
+	
+	// Ensure cleanup on failure
+	defer func() {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+	}()
+
+	// Write data to temporary file
+	if _, err := tmpFile.Write(data); err != nil {
+		return fmt.Errorf("failed to write to temporary file: %w", err)
+	}
+
+	// Set proper permissions
+	if err := tmpFile.Chmod(perm); err != nil {
+		return fmt.Errorf("failed to set file permissions: %w", err)
+	}
+
+	// Sync to ensure data is written to disk
+	if err := tmpFile.Sync(); err != nil {
+		return fmt.Errorf("failed to sync temporary file: %w", err)
+	}
+
+	// Close the temporary file
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temporary file: %w", err)
+	}
+
+	// Atomically move temporary file to final location
+	if err := os.Rename(tmpPath, filename); err != nil {
+		return fmt.Errorf("failed to move temporary file to final location: %w", err)
+	}
+
+	// Don't remove tmpPath in defer since rename succeeded
+	tmpPath = ""
+	return nil
+}
+
+// SaveAgeKey saves an age key pair to disk with atomic operations
 func (k *KeyManager) SaveAgeKey(keyPair *AgeKeyPair, keyName string) error {
+	// Validate key format before saving
+	if err := k.ValidateAgeKey(keyPair.PrivateKey); err != nil {
+		return fmt.Errorf("invalid private key format: %w", err)
+	}
+	if err := k.ValidateAgeKey(keyPair.PublicKey); err != nil {
+		return fmt.Errorf("invalid public key format: %w", err)
+	}
+
 	// Ensure key directory exists
 	if err := os.MkdirAll(k.keyDir, 0o700); err != nil {
 		return fmt.Errorf("failed to create key directory: %w", err)
 	}
 
-	// Save private key
+	// Use atomic file operations to prevent corruption
 	privateKeyPath := filepath.Join(k.keyDir, fmt.Sprintf("%s.txt", keyName))
-	if err := os.WriteFile(privateKeyPath, []byte(keyPair.PrivateKey), 0o600); err != nil {
+	publicKeyPath := filepath.Join(k.keyDir, fmt.Sprintf("%s.pub", keyName))
+
+	// Save private key atomically
+	if err := k.writeFileAtomic(privateKeyPath, []byte(keyPair.PrivateKey), 0o600); err != nil {
 		return fmt.Errorf("failed to save private key: %w", err)
 	}
 
-	// Save public key (recipient)
-	publicKeyPath := filepath.Join(k.keyDir, fmt.Sprintf("%s.pub", keyName))
-	if err := os.WriteFile(publicKeyPath, []byte(keyPair.PublicKey), 0o644); err != nil {
+	// Save public key atomically
+	if err := k.writeFileAtomic(publicKeyPath, []byte(keyPair.PublicKey), 0o644); err != nil {
+		// Clean up private key if public key save fails
+		os.Remove(privateKeyPath)
 		return fmt.Errorf("failed to save public key: %w", err)
 	}
 

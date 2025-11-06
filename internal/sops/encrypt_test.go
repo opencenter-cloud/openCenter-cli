@@ -194,6 +194,15 @@ func TestEncryptor_getFilesToEncrypt(t *testing.T) {
 }
 
 func TestEncryptor_CreateSOPSConfig(t *testing.T) {
+	// Create a temporary key manager and generate a test key
+	tmpKeyDir := t.TempDir()
+	km := NewKeyManager(tmpKeyDir)
+	keyPair, err := km.GenerateAgeKey()
+	require.NoError(t, err)
+	
+	err = km.SaveAgeKey(keyPair, "test-key")
+	require.NoError(t, err)
+
 	config := &config.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Cluster: config.ClusterConfig{
@@ -204,7 +213,7 @@ func TestEncryptor_CreateSOPSConfig(t *testing.T) {
 			},
 		},
 		Secrets: config.Secrets{
-			SopsAgeKeyFile: "age1test123456789",
+			SopsAgeKeyFile: filepath.Join(tmpKeyDir, "test-key.txt"),
 		},
 	}
 
@@ -236,7 +245,7 @@ func TestEncryptor_CreateSOPSConfig(t *testing.T) {
 	contentStr := string(content)
 	expectedContents := []string{
 		"test-cluster",
-		"age1test123456789",
+		keyPair.PublicKey, // Use the actual generated key
 		"creation_rules:",
 		"path_regex:",
 		"encrypted_regex:",
@@ -255,6 +264,21 @@ func TestEncryptor_CreateSOPSConfig(t *testing.T) {
 }
 
 func TestEncryptor_generateSOPSConfig(t *testing.T) {
+	// Create temporary key manager and generate test keys
+	tmpKeyDir := t.TempDir()
+	km := NewKeyManager(tmpKeyDir)
+	
+	// Generate keys for each test case
+	openstackKey, err := km.GenerateAgeKey()
+	require.NoError(t, err)
+	err = km.SaveAgeKey(openstackKey, "openstack-key")
+	require.NoError(t, err)
+	
+	vsphereKey, err := km.GenerateAgeKey()
+	require.NoError(t, err)
+	err = km.SaveAgeKey(vsphereKey, "vsphere-key")
+	require.NoError(t, err)
+
 	tests := []struct {
 		name     string
 		config   *config.Config
@@ -272,12 +296,12 @@ func TestEncryptor_generateSOPSConfig(t *testing.T) {
 					},
 				},
 				Secrets: config.Secrets{
-					SopsAgeKeyFile: "age1openstack123",
+					SopsAgeKeyFile: filepath.Join(tmpKeyDir, "openstack-key.txt"),
 				},
 			},
 			contains: []string{
 				"openstack-cluster",
-				"age1openstack123",
+				openstackKey.PublicKey,
 				"openstack-credentials",
 			},
 		},
@@ -293,12 +317,12 @@ func TestEncryptor_generateSOPSConfig(t *testing.T) {
 					},
 				},
 				Secrets: config.Secrets{
-					SopsAgeKeyFile: "age1vsphere123",
+					SopsAgeKeyFile: filepath.Join(tmpKeyDir, "vsphere-key.txt"),
 				},
 			},
 			contains: []string{
 				"vsphere-cluster",
-				"age1vsphere123",
+				vsphereKey.PublicKey,
 				"vsphere-credentials",
 				"customer-managed/services/.*/secret",
 			},
@@ -320,7 +344,7 @@ func TestEncryptor_generateSOPSConfig(t *testing.T) {
 			},
 			contains: []string{
 				"no-key-cluster",
-				"age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Should fallback to placeholder
+				"age1", // Should generate a fallback key that starts with age1
 			},
 		},
 	}
@@ -1214,4 +1238,101 @@ func TestEncryptor_CreateSampleSecretsForTemplate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEncryptor_GenerateFallbackKey(t *testing.T) {
+	e := NewEncryptor(nil, nil)
+	
+	// Generate fallback key
+	publicKey, err := e.generateFallbackKey()
+	require.NoError(t, err)
+
+	// Verify key format
+	assert.True(t, strings.HasPrefix(publicKey, "age1"))
+	assert.Len(t, publicKey, 62)
+}
+
+func TestEncryptor_ValidateKeyForProduction(t *testing.T) {
+	e := NewEncryptor(nil, nil)
+
+	tests := []struct {
+		name        string
+		key         string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "valid age key",
+			key:         "age1ql3vwyqfpvucvyz6x04chxtsm9l3f24tqq5pkq9jz4mk7ccvqxrqsqg5z5",
+			expectError: false,
+		},
+		{
+			name:        "placeholder key",
+			key:         "age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			expectError: true,
+			errorMsg:    "placeholder key detected",
+		},
+		{
+			name:        "invalid key format - wrong prefix",
+			key:         "wrong1ql3vwyqfpvucvyz6x04chxtsm9l3f24tqq5pkq9jz4mk7ccvqxrqsqg5z5",
+			expectError: true,
+			errorMsg:    "invalid age key format",
+		},
+		{
+			name:        "invalid key format - wrong length",
+			key:         "age1short",
+			expectError: true,
+			errorMsg:    "invalid age key format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := e.validateKeyForProduction(tt.key)
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEncryptor_CreateSOPSConfigWithPlaceholder(t *testing.T) {
+	e := NewEncryptor(nil, nil)
+	tmpDir := t.TempDir()
+
+	config := &config.Config{
+		OpenCenter: config.SimplifiedOpenCenter{
+			Cluster: config.ClusterConfig{
+				ClusterName: "test-cluster",
+			},
+			Infrastructure: config.Infrastructure{
+				Provider: "kind",
+			},
+		},
+		Secrets: config.Secrets{
+			SopsAgeKeyFile: "", // No age key provided - should trigger fallback
+		},
+	}
+
+	// This should succeed because we generate a fallback key
+	err := e.CreateSOPSConfig(tmpDir, config)
+	assert.NoError(t, err)
+
+	// Check that .sops.yaml was created
+	sopsConfigPath := filepath.Join(tmpDir, ".sops.yaml")
+	assert.FileExists(t, sopsConfigPath)
+
+	// Read and validate content
+	content, err := os.ReadFile(sopsConfigPath)
+	require.NoError(t, err)
+	contentStr := string(content)
+
+	// Should contain a valid age key (not placeholder)
+	assert.Contains(t, contentStr, "age1")
+	assert.NotContains(t, contentStr, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 }

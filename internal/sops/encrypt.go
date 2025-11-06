@@ -250,6 +250,11 @@ func (e *Encryptor) getFilesToEncrypt(overlayPath string, cfg *config.Config) []
 func (e *Encryptor) CreateSOPSConfig(overlayPath string, cfg *config.Config) error {
 	sopsConfig := e.generateSOPSConfig(cfg)
 
+	// Validate that we're not using placeholder keys in production
+	if strings.Contains(sopsConfig, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") {
+		return fmt.Errorf("cannot create SOPS config with placeholder key - please generate a proper age key first")
+	}
+
 	configPath := filepath.Join(overlayPath, ".sops.yaml")
 	if err := os.WriteFile(configPath, []byte(sopsConfig), 0o644); err != nil {
 		return fmt.Errorf("failed to write SOPS config: %w", err)
@@ -281,7 +286,13 @@ func (e *Encryptor) generateSOPSConfig(cfg *config.Config) string {
 	}
 	
 	if ageKey == "" {
-		ageKey = "age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" // Placeholder
+		// Generate a fallback key instead of using placeholder
+		if fallbackKey, err := e.generateFallbackKey(); err == nil {
+			ageKey = fallbackKey
+		} else {
+			// Only use placeholder as last resort and add validation warning
+			ageKey = "age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" // Placeholder - DO NOT USE IN PRODUCTION
+		}
 	}
 
 	config := fmt.Sprintf(`# SOPS configuration for cluster: %s
@@ -398,6 +409,42 @@ func (e *Encryptor) CheckSOPSVersion(ctx context.Context) (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+
+// generateFallbackKey generates a fallback age key when no key is available
+func (e *Encryptor) generateFallbackKey() (string, error) {
+	// Use the key manager to generate and save a fallback key
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
+	}
+	
+	keyDir := filepath.Join(homeDir, ".config", "sops", "age")
+	km := NewKeyManager(keyDir)
+	
+	// Generate a fallback key
+	keyPair, err := km.generateFallbackKey()
+	if err != nil {
+		return "", fmt.Errorf("failed to generate fallback key: %w", err)
+	}
+
+	// Return the public key (recipient)
+	return keyPair.PublicKey, nil
+}
+
+// validateKeyForProduction validates that a key is not a placeholder
+func (e *Encryptor) validateKeyForProduction(key string) error {
+	// Check for placeholder key pattern
+	if strings.Contains(key, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") {
+		return fmt.Errorf("placeholder key detected - this should not be used in production")
+	}
+	
+	// Validate age key format
+	if !strings.HasPrefix(key, "age1") || len(key) != 62 {
+		return fmt.Errorf("invalid age key format: %s", key)
+	}
+	
+	return nil
 }
 
 // CreateSampleEncryptedSecrets creates sample encrypted secrets in the repository

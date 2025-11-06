@@ -281,7 +281,7 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 
 		// Find SOPS files that would be re-encrypted
 		fmt.Println("🔍 Searching for SOPS-encrypted files...")
-		encryptor := sops.NewEncryptor(nil, nil)
+		encryptor := sops.NewDefaultEncryptor(nil, nil)
 		
 		err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -334,7 +334,7 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 	}
 
 	// Re-encrypt files with new key
-	encryptor := sops.NewEncryptor([]string{newKey.PublicKey}, nil)
+	encryptor := sops.NewDefaultEncryptor([]string{newKey.PublicKey}, nil)
 	
 	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -499,8 +499,8 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 	fmt.Println("✅ Key access test passed")
 
 	// Check SOPS installation
-	encryptor := sops.NewEncryptor(nil, nil)
-	if version, err := encryptor.CheckSOPSVersion(ctx); err != nil {
+	manager := sops.NewSOPSManager()
+	if version, err := manager.CheckSOPSVersion(ctx); err != nil {
 		fmt.Printf("⚠️  SOPS not found or not executable: %v\n", err)
 	} else {
 		fmt.Printf("✅ SOPS is installed: %s\n", version)
@@ -809,7 +809,7 @@ func executeSOPSSecretsList(ctx context.Context, searchPath string, dryRun bool)
 	
 	fmt.Printf("🔍 Searching for SOPS files in: %s\n", searchPath)
 
-	encryptor := sops.NewEncryptor(nil, nil)
+	encryptor := sops.NewDefaultEncryptor(nil, nil)
 	var encryptedFiles []string
 	var unencryptedFiles []string
 
@@ -873,7 +873,7 @@ func executeSOPSSecretsEncrypt(ctx context.Context, searchPath string, dryRun, c
 		return fmt.Errorf("failed to load SOPS age keys: %w", err)
 	}
 
-	encryptor := sops.NewEncryptor(ageKeys, nil)
+	encryptor := sops.NewDefaultEncryptor(ageKeys, nil)
 	var filesToEncrypt []string
 
 	// Find files that need encryption
@@ -955,7 +955,7 @@ func executeSOPSSecretsDecrypt(ctx context.Context, searchPath string, dryRun, c
 	fmt.Printf("📁 Search path: %s\n", searchPath)
 	fmt.Printf("💾 Create backups: %t\n", createBackups)
 
-	encryptor := sops.NewEncryptor(nil, nil)
+	encryptor := sops.NewDefaultEncryptor(nil, nil)
 	var filesToDecrypt []string
 
 	// Find encrypted files

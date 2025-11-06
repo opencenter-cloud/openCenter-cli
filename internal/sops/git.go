@@ -25,16 +25,17 @@ import (
 	"strings"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/util/crypto"
 )
 
 // GitIntegrator handles Git operations with SOPS-encrypted files
 type GitIntegrator struct {
 	repoPath  string
-	encryptor *Encryptor
+	encryptor Encryptor
 }
 
 // NewGitIntegrator creates a new Git integrator
-func NewGitIntegrator(repoPath string, encryptor *Encryptor) *GitIntegrator {
+func NewGitIntegrator(repoPath string, encryptor Encryptor) *GitIntegrator {
 	return &GitIntegrator{
 		repoPath:  repoPath,
 		encryptor: encryptor,
@@ -84,13 +85,13 @@ func (g *GitIntegrator) CommitEncryptedFiles(ctx context.Context, cfg *config.Co
 
 // encryptFilesForCommit encrypts files that should be encrypted before commit
 func (g *GitIntegrator) encryptFilesForCommit(ctx context.Context, cfg *config.Config) error {
-	filesToEncrypt := g.encryptor.getFilesToEncrypt(g.repoPath, cfg)
+	filesToEncrypt := g.getFilesToEncrypt(g.repoPath, cfg)
 
 	// Get age key from configuration
 	var ageKeys []string
 	if cfg.Secrets.SopsAgeKeyFile != "" {
 		// Load the age key from the specified file
-		if keyPair, err := loadAgeKeyFromFile(cfg.Secrets.SopsAgeKeyFile); err == nil {
+		if keyPair, err := g.loadAgeKeyFromFile(cfg.Secrets.SopsAgeKeyFile); err == nil {
 			ageKeys = []string{keyPair.PublicKey}
 		}
 	}
@@ -127,7 +128,7 @@ func (g *GitIntegrator) encryptFilesForCommit(ctx context.Context, cfg *config.C
 
 // stageEncryptedFiles stages encrypted files for commit
 func (g *GitIntegrator) stageEncryptedFiles(ctx context.Context, cfg *config.Config) error {
-	filesToStage := g.encryptor.getFilesToEncrypt(g.repoPath, cfg)
+	filesToStage := g.getFilesToEncrypt(g.repoPath, cfg)
 
 	for _, file := range filesToStage {
 		filePath := filepath.Join(g.repoPath, file)
@@ -485,4 +486,49 @@ func (g *GitIntegrator) GetLastCommitHash(ctx context.Context) (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+// Helper methods for GitIntegrator
+
+// getFilesToEncrypt returns the list of files that should be encrypted
+func (g *GitIntegrator) getFilesToEncrypt(overlayPath string, cfg *config.Config) []string {
+	var files []string
+
+	// Standard encrypted files
+	files = append(files,
+		"flux-system/gotk-sync.yaml",
+		"managed-services/sources/base-repo.yaml",
+	)
+
+	// Provider-specific encrypted files
+	switch cfg.OpenCenter.Infrastructure.Provider {
+	case "openstack":
+		files = append(files, "secrets/openstack-credentials.yaml")
+	case "vsphere":
+		files = append(files,
+			"secrets/vsphere-credentials.yaml",
+			"customer-managed/services/cloud-provider-vsphere/secret.yaml",
+		)
+	}
+
+	return files
+}
+
+// loadAgeKeyFromFile loads an age key pair from a file path
+func (g *GitIntegrator) loadAgeKeyFromFile(keyFilePath string) (*AgeKeyPair, error) {
+	// Expand home directory if needed
+	if keyFilePath[0] == '~' {
+		homeDir, _ := os.UserHomeDir()
+		keyFilePath = filepath.Join(homeDir, keyFilePath[2:])
+	}
+	
+	// Read the private key file
+	privateKeyData, err := os.ReadFile(keyFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read age key file: %w", err)
+	}
+	
+	privateKey := strings.TrimSpace(string(privateKeyData))
+	
+	// Parse the private key to get the public key
+	return crypto.ParseAgeKey(privateKey)
 }

@@ -283,6 +283,11 @@ func newClusterInitCmd() *cobra.Command {
 				}
 			}
 
+			// Validate organization name for directory creation
+			if err := validateOrganizationName(organization); err != nil {
+				return fmt.Errorf("invalid organization name '%s': %w", organization, err)
+			}
+
 			// Handle --strict
 			strict, _ := cmd.Flags().GetBool("strict")
 			if strict {
@@ -471,4 +476,14 @@ func createOrganizationSOPSConfig(sopsConfigPath, publicKey string) error {
 	}
 	
 	return nil
+}
+
+// validateOrganizationName validates that an organization name is safe for use as a directory name.
+func validateOrganizationName(organization string) error {
+	if organization == "" {
+		return fmt.Errorf("organization name cannot be empty")
+	}
+	
+	// Use the same validation as cluster names since they both become directory names
+	return config.ValidateClusterName(organization)
 }

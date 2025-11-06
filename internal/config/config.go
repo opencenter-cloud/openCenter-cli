@@ -628,7 +628,7 @@ func ResolveConfigDir() (string, error) {
 	return dir, err
 }
 
-// validateClusterName validates and sanitizes a cluster name to ensure it's safe for use as a directory name.
+// ValidateClusterName validates and sanitizes a cluster name to ensure it's safe for use as a directory name.
 // It checks for valid characters and prevents directory traversal attacks.
 //
 // Inputs:
@@ -636,7 +636,7 @@ func ResolveConfigDir() (string, error) {
 //
 // Outputs:
 //   - error: An error if the name is invalid.
-func validateClusterName(name string) error {
+func ValidateClusterName(name string) error {
 	if name == "" {
 		return errors.New("cluster name cannot be empty for directory creation")
 	}
@@ -674,7 +674,7 @@ func validateClusterName(name string) error {
 //   - string: The absolute path to the cluster directory.
 //   - error: An error if one occurred.
 func ClusterDirectoryPath(name string) (string, error) {
-	if err := validateClusterName(name); err != nil {
+	if err := ValidateClusterName(name); err != nil {
 		return "", fmt.Errorf("invalid cluster name for directory creation: %w", err)
 	}
 	
@@ -704,6 +704,7 @@ func ClusterSecretsPath(name string) (string, error) {
 }
 
 // ConfigPath returns the absolute path to a cluster's configuration file.
+// It implements a fallback strategy to support both organization-based and legacy structures.
 //
 // Inputs:
 //   - name: The name of the cluster (without the .yaml extension).
@@ -712,6 +713,10 @@ func ClusterSecretsPath(name string) (string, error) {
 //   - string: The absolute path to the configuration file.
 //   - error: An error if one occurred.
 func ConfigPath(name string) (string, error) {
+	if err := ValidateClusterName(name); err != nil {
+		return "", fmt.Errorf("invalid cluster name: %w", err)
+	}
+
 	// Try organization-aware path first
 	cliConfigManager, err := NewConfigManager("")
 	if err == nil {
@@ -749,6 +754,7 @@ func ConfigPath(name string) (string, error) {
 
 // Load reads and unmarshals a YAML configuration file for the given cluster name.
 // Default values are applied for any omitted fields.
+// It supports both organization-based and legacy directory structures.
 //
 // Inputs:
 //   - name: The name of the cluster.
@@ -757,23 +763,29 @@ func ConfigPath(name string) (string, error) {
 //   - Config: The loaded configuration.
 //   - error: An error if the file does not exist or cannot be parsed.
 func Load(name string) (Config, error) {
+	if err := ValidateClusterName(name); err != nil {
+		return Config{}, fmt.Errorf("invalid cluster name: %w", err)
+	}
+
 	path, err := ConfigPath(name)
 	if err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("failed to resolve configuration path for cluster '%s': %w", name, err)
 	}
+	
 	data, readErr := os.ReadFile(path)
 	if readErr != nil {
-		return Config{}, fmt.Errorf("failed to read cluster configuration file from directory structure '%s': %w", path, readErr)
+		return Config{}, fmt.Errorf("failed to read cluster configuration file '%s': %w", path, readErr)
 	}
+	
 	// Unmarshal YAML then overlay onto default config
 	cfg := defaultConfig(name)
 	if unmarshalErr := yaml.Unmarshal(data, &cfg); unmarshalErr != nil {
-		return Config{}, fmt.Errorf("failed to parse YAML: %w", unmarshalErr)
+		return Config{}, fmt.Errorf("failed to parse YAML configuration from '%s': %w", path, unmarshalErr)
 	}
 	
 	// Populate IAC field from defaults and user configuration
 	if err := populateIAC(&cfg); err != nil {
-		return Config{}, fmt.Errorf("failed to populate IAC: %w", err)
+		return Config{}, fmt.Errorf("failed to populate IAC configuration: %w", err)
 	}
 	
 	return cfg, nil
@@ -1108,6 +1120,7 @@ func Save(cfg Config) error {
 
 // List returns a sorted list of cluster names from the configuration directory.
 // It looks for cluster directories within the clusters subdirectory and flat config files.
+// It supports both organization-based and legacy directory structures.
 //
 // Outputs:
 //   - []string: A list of cluster names.
@@ -1115,10 +1128,11 @@ func Save(cfg Config) error {
 func List() ([]string, error) {
 	dir, err := ResolveConfigDir()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to resolve configuration directory: %w", err)
 	}
 	
 	var names []string
+	nameSet := make(map[string]bool) // Use set to avoid duplicates
 	
 	// Check for flat config files (backward compatibility)
 	if entries, err := os.ReadDir(dir); err == nil {
@@ -1127,8 +1141,9 @@ func List() ([]string, error) {
 				// Extract cluster name from filename (remove .yaml extension)
 				clusterName := strings.TrimSuffix(entry.Name(), ".yaml")
 				// Skip config.yaml (CLI config file)
-				if clusterName != "config" {
+				if clusterName != "config" && !nameSet[clusterName] {
 					names = append(names, clusterName)
+					nameSet[clusterName] = true
 				}
 			}
 		}
@@ -1146,7 +1161,7 @@ func List() ([]string, error) {
 			}
 			return names, nil
 		}
-		return nil, readErr
+		return nil, fmt.Errorf("failed to read clusters directory: %w", readErr)
 	}
 	
 	for _, entry := range entries {
@@ -1156,7 +1171,10 @@ func List() ([]string, error) {
 			// Check for legacy structure: clustersDir/clusterName/.clusterName-config.yaml
 			legacyConfigFile := filepath.Join(clustersDir, entryName, "."+entryName+"-config.yaml")
 			if _, err := os.Stat(legacyConfigFile); err == nil {
-				names = append(names, entryName)
+				if !nameSet[entryName] {
+					names = append(names, entryName)
+					nameSet[entryName] = true
+				}
 				continue
 			}
 			
@@ -1168,7 +1186,10 @@ func List() ([]string, error) {
 						clusterName := orgEntry.Name()
 						orgConfigFile := filepath.Join(orgInfraDir, clusterName, "."+clusterName+"-config.yaml")
 						if _, err := os.Stat(orgConfigFile); err == nil {
-							names = append(names, clusterName)
+							if !nameSet[clusterName] {
+								names = append(names, clusterName)
+								nameSet[clusterName] = true
+							}
 						}
 					}
 				}

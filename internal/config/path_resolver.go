@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -26,6 +27,7 @@ import (
 // It provides organization-aware directory structure creation and path management.
 type PathResolver struct {
 	configManager *ConfigManager
+	pathCache     map[string]string // Cache for resolved paths
 }
 
 // ClusterPaths contains all organization-aware paths for a cluster.
@@ -54,6 +56,7 @@ type MigrationManager struct {
 func NewPathResolver(configManager *ConfigManager) *PathResolver {
 	return &PathResolver{
 		configManager: configManager,
+		pathCache:     make(map[string]string),
 	}
 }
 
@@ -131,9 +134,14 @@ func (pr *PathResolver) CreateOrganizationStructure(organization string) error {
 		organization = "opencenter"
 	}
 
+	// Validate organization name before creating directories
+	if err := ValidateClusterName(organization); err != nil {
+		return fmt.Errorf("invalid organization name '%s': %w", organization, err)
+	}
+
 	paths := pr.ResolveClusterPaths("", organization)
 
-	// Create organization GitOps structure
+	// Create organization GitOps structure with proper error handling
 	dirs := []string{
 		paths.OrganizationDir,
 		filepath.Join(paths.GitOpsDir, "applications", "overlays"),
@@ -143,7 +151,14 @@ func (pr *PathResolver) CreateOrganizationStructure(organization string) error {
 
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+			return fmt.Errorf("failed to create organization directory %s: %w", dir, err)
+		}
+		
+		// Verify the directory was created and is accessible
+		if stat, err := os.Stat(dir); err != nil {
+			return fmt.Errorf("failed to verify organization directory %s: %w", dir, err)
+		} else if !stat.IsDir() {
+			return fmt.Errorf("path %s exists but is not a directory", dir)
 		}
 	}
 
@@ -152,7 +167,7 @@ func (pr *PathResolver) CreateOrganizationStructure(organization string) error {
 
 // CreateClusterDirectories creates all necessary directories for a cluster within an organization.
 func (pr *PathResolver) CreateClusterDirectories(clusterName, organization string) error {
-	if err := validateClusterName(clusterName); err != nil {
+	if err := ValidateClusterName(clusterName); err != nil {
 		return fmt.Errorf("invalid cluster name: %w", err)
 	}
 
@@ -160,9 +175,14 @@ func (pr *PathResolver) CreateClusterDirectories(clusterName, organization strin
 		organization = "opencenter"
 	}
 
+	// Validate organization name
+	if err := ValidateClusterName(organization); err != nil {
+		return fmt.Errorf("invalid organization name '%s': %w", organization, err)
+	}
+
 	paths := pr.ResolveClusterPaths(clusterName, organization)
 
-	// Create all cluster-specific directories
+	// Create all cluster-specific directories with proper error handling
 	dirs := []string{
 		paths.ClusterDir,
 		paths.ApplicationsDir,
@@ -176,6 +196,18 @@ func (pr *PathResolver) CreateClusterDirectories(clusterName, organization strin
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create cluster directory %s: %w", dir, err)
 		}
+		
+		// Verify the directory was created and is accessible
+		if stat, err := os.Stat(dir); err != nil {
+			return fmt.Errorf("failed to verify cluster directory %s: %w", dir, err)
+		} else if !stat.IsDir() {
+			return fmt.Errorf("path %s exists but is not a directory", dir)
+		}
+		
+		// Check directory permissions
+		if err := pr.validateDirectoryPermissions(dir); err != nil {
+			return fmt.Errorf("directory %s has insufficient permissions: %w", dir, err)
+		}
 	}
 
 	return nil
@@ -184,7 +216,7 @@ func (pr *PathResolver) CreateClusterDirectories(clusterName, organization strin
 // GetLegacyClusterPath returns the legacy cluster path for backward compatibility.
 // This is used during migration to detect legacy clusters.
 func (pr *PathResolver) GetLegacyClusterPath(clusterName string) (string, error) {
-	if err := validateClusterName(clusterName); err != nil {
+	if err := ValidateClusterName(clusterName); err != nil {
 		return "", fmt.Errorf("invalid cluster name: %w", err)
 	}
 
@@ -275,7 +307,7 @@ func (mm *MigrationManager) MigrateClusterToOrganization(clusterName, organizati
 	}
 
 	// Validate cluster name
-	if err := validateClusterName(clusterName); err != nil {
+	if err := ValidateClusterName(clusterName); err != nil {
 		return fmt.Errorf("invalid cluster name: %w", err)
 	}
 
@@ -537,8 +569,12 @@ func (mm *MigrationManager) ValidatePostMigration(clusterName, organization stri
 	}
 
 	for _, dir := range requiredDirs {
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if stat, err := os.Stat(dir); os.IsNotExist(err) {
 			return fmt.Errorf("required directory %s does not exist after migration", dir)
+		} else if err != nil {
+			return fmt.Errorf("failed to access directory %s after migration: %w", dir, err)
+		} else if !stat.IsDir() {
+			return fmt.Errorf("path %s exists but is not a directory after migration", dir)
 		}
 	}
 
@@ -569,6 +605,76 @@ func (mm *MigrationManager) ValidatePostMigration(clusterName, organization stri
 	}
 
 	return fmt.Errorf("organization metadata not found or incorrect in migrated configuration")
+}
+
+// BackupCluster creates a backup of a cluster before migration.
+func (mm *MigrationManager) BackupCluster(clusterName string) (string, error) {
+	legacyPath, err := mm.pathResolver.GetLegacyClusterPath(clusterName)
+	if err != nil {
+		return "", fmt.Errorf("failed to get legacy cluster path: %w", err)
+	}
+
+	// Create backup directory with timestamp
+	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	backupDir := legacyPath + ".backup." + timestamp
+
+	// Copy the entire cluster directory to backup location
+	if err := mm.copyDir(legacyPath, backupDir); err != nil {
+		return "", fmt.Errorf("failed to create backup: %w", err)
+	}
+
+	return backupDir, nil
+}
+
+// RestoreCluster restores a cluster from backup (rollback functionality).
+func (mm *MigrationManager) RestoreCluster(clusterName, backupPath string) error {
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		return fmt.Errorf("backup directory %s does not exist", backupPath)
+	}
+
+	legacyPath, err := mm.pathResolver.GetLegacyClusterPath(clusterName)
+	if err != nil {
+		return fmt.Errorf("failed to get legacy cluster path: %w", err)
+	}
+
+	// Remove current cluster directory if it exists
+	if _, err := os.Stat(legacyPath); err == nil {
+		if err := os.RemoveAll(legacyPath); err != nil {
+			return fmt.Errorf("failed to remove current cluster directory: %w", err)
+		}
+	}
+
+	// Restore from backup
+	if err := mm.copyDir(backupPath, legacyPath); err != nil {
+		return fmt.Errorf("failed to restore from backup: %w", err)
+	}
+
+	return nil
+}
+
+// MigrateAllLegacyClusters migrates all detected legacy clusters to organization structure.
+func (mm *MigrationManager) MigrateAllLegacyClusters(organization string) ([]string, []error) {
+	if organization == "" {
+		organization = "opencenter"
+	}
+
+	legacyClusters, err := mm.DetectLegacyStructure()
+	if err != nil {
+		return nil, []error{fmt.Errorf("failed to detect legacy clusters: %w", err)}
+	}
+
+	var migrated []string
+	var errors []error
+
+	for _, clusterName := range legacyClusters {
+		if err := mm.MigrateClusterToOrganization(clusterName, organization); err != nil {
+			errors = append(errors, fmt.Errorf("failed to migrate cluster %s: %w", clusterName, err))
+		} else {
+			migrated = append(migrated, clusterName)
+		}
+	}
+
+	return migrated, errors
 }
 
 // removeLegacyDirectoryIfEmpty removes the legacy directory if it's empty or only contains empty directories.
@@ -614,7 +720,7 @@ func (mm *MigrationManager) removeLegacyDirectoryIfEmpty(legacyPath string) erro
 // If the cluster has organization metadata, it uses the organization structure.
 // Otherwise, it falls back to the legacy structure for backward compatibility.
 func (pr *PathResolver) OrganizationAwareClusterDirectoryPath(clusterName string) (string, error) {
-	if err := validateClusterName(clusterName); err != nil {
+	if err := ValidateClusterName(clusterName); err != nil {
 		return "", fmt.Errorf("invalid cluster name: %w", err)
 	}
 
@@ -636,13 +742,32 @@ func (pr *PathResolver) OrganizationAwareClusterDirectoryPath(clusterName string
 }
 
 // OrganizationAwareConfigPath returns the configuration file path with organization support.
+// It uses caching to improve performance for repeated lookups.
 func (pr *PathResolver) OrganizationAwareConfigPath(clusterName string) (string, error) {
+	// Check cache first
+	cacheKey := "config:" + clusterName
+	if cachedPath, exists := pr.pathCache[cacheKey]; exists {
+		// Verify cached path still exists
+		if _, err := os.Stat(cachedPath); err == nil {
+			return cachedPath, nil
+		}
+		// Remove invalid cache entry
+		delete(pr.pathCache, cacheKey)
+	}
+
 	clusterDir, err := pr.OrganizationAwareClusterDirectoryPath(clusterName)
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(clusterDir, "."+clusterName+"-config.yaml"), nil
+	configPath := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
+	
+	// Cache the resolved path if the file exists
+	if _, err := os.Stat(configPath); err == nil {
+		pr.pathCache[cacheKey] = configPath
+	}
+
+	return configPath, nil
 }
 
 // OrganizationAwareSecretsPath returns the secrets path with organization support.
@@ -657,9 +782,46 @@ func (pr *PathResolver) OrganizationAwareSecretsPath(clusterName string) (string
 	return filepath.Join(paths.SecretsDir, "age", "keys"), nil
 }
 
+// validateDirectoryPermissions validates that a directory has proper read/write permissions.
+func (pr *PathResolver) validateDirectoryPermissions(dir string) error {
+	// Test write permissions by creating a temporary file
+	testFile := filepath.Join(dir, ".openCenter_permission_test")
+	file, err := os.Create(testFile)
+	if err != nil {
+		return fmt.Errorf("cannot write to directory: %w", err)
+	}
+	file.Close()
+	
+	// Clean up test file
+	if err := os.Remove(testFile); err != nil {
+		// Log warning but don't fail - the directory is writable
+		fmt.Printf("Warning: failed to remove test file %s: %v\n", testFile, err)
+	}
+	
+	return nil
+}
+
+// ClearCache clears the path resolution cache.
+// This should be called when the filesystem structure changes.
+func (pr *PathResolver) ClearCache() {
+	pr.pathCache = make(map[string]string)
+}
+
+// InvalidateCacheForCluster invalidates cache entries for a specific cluster.
+func (pr *PathResolver) InvalidateCacheForCluster(clusterName string) {
+	delete(pr.pathCache, "config:"+clusterName)
+	delete(pr.pathCache, "org:"+clusterName)
+}
+
 // getClusterOrganization attempts to determine the organization for a cluster.
 // It first checks if the cluster exists in organization structure, then checks configuration.
 func (pr *PathResolver) getClusterOrganization(clusterName string) (string, error) {
+	// Check cache first
+	cacheKey := "org:" + clusterName
+	if cachedOrg, exists := pr.pathCache[cacheKey]; exists {
+		return cachedOrg, nil
+	}
+
 	clustersDir := pr.configManager.GetConfig().Paths.ClustersDir
 	if clustersDir == "" {
 		configDir, err := ResolveConfigDir()
@@ -695,10 +857,14 @@ func (pr *PathResolver) getClusterOrganization(clusterName string) (string, erro
 			// Check if cluster exists in this organization
 			clusterPath := filepath.Join(clustersDir, orgName, "infrastructure", "clusters", clusterName)
 			if _, err := os.Stat(clusterPath); err == nil {
+				// Cache the result
+				pr.pathCache[cacheKey] = orgName
 				return orgName, nil
 			}
 		}
 	}
 
+	// Cache empty result to avoid repeated filesystem scans
+	pr.pathCache[cacheKey] = ""
 	return "", nil
 }

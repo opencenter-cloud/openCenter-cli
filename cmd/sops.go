@@ -39,6 +39,14 @@ for standalone clusters and GitOps deployments.`,
 	cmd.AddCommand(newSOPSRotateKeyCmd())
 	cmd.AddCommand(newSOPSBackupKeyCmd())
 	cmd.AddCommand(newSOPSValidateCmd())
+	
+	// Add secrets management commands
+	cmd.AddCommand(newSOPSSecretsListCmd())
+	cmd.AddCommand(newSOPSSecretsStatusCmd())
+	cmd.AddCommand(newSOPSSecretsEncryptCmd())
+	cmd.AddCommand(newSOPSSecretsEncryptFastCmd())
+	cmd.AddCommand(newSOPSSecretsDecryptCmd())
+	cmd.AddCommand(newSOPSSecretsDecryptFastCmd())
 
 	return cmd
 }
@@ -48,6 +56,7 @@ func newSOPSGenerateKeyCmd() *cobra.Command {
 	var (
 		keyFile    string
 		updateSOPS bool
+		dryRun     bool
 	)
 
 	cmd := &cobra.Command{
@@ -62,12 +71,13 @@ with appropriate file permissions (600).
 The generated public key should be used in .sops.yaml configuration and
 cluster specifications for SOPS encryption.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeSOPSGenerateKey(cmd.Context(), keyFile, updateSOPS)
+			return executeSOPSGenerateKey(cmd.Context(), keyFile, updateSOPS, dryRun)
 		},
 	}
 
 	cmd.Flags().StringVar(&keyFile, "key-file", "", "Path to save the Age key file (default: ~/.config/sops/age/keys.txt)")
 	cmd.Flags().BoolVar(&updateSOPS, "update-sops-config", true, "Update .sops.yaml configuration with new public key")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
 
 	return cmd
 }
@@ -114,6 +124,7 @@ func newSOPSBackupKeyCmd() *cobra.Command {
 	var (
 		keyFile   string
 		backupDir string
+		dryRun    bool
 	)
 
 	cmd := &cobra.Command{
@@ -130,12 +141,13 @@ The backup includes:
 • SOPS configuration (.sops.yaml)
 • Backup metadata with timestamp and creation details`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeSOPSBackupKey(cmd.Context(), keyFile, backupDir)
+			return executeSOPSBackupKey(cmd.Context(), keyFile, backupDir, dryRun)
 		},
 	}
 
 	cmd.Flags().StringVar(&keyFile, "key-file", "", "Path to Age key file (default: ~/.config/sops/age/keys.txt)")
 	cmd.Flags().StringVar(&backupDir, "backup-dir", "", "Backup directory (default: ~/.config/sops/age/backups)")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
 
 	return cmd
 }
@@ -145,6 +157,7 @@ func newSOPSValidateCmd() *cobra.Command {
 	var (
 		keyFile    string
 		configFile string
+		dryRun     bool
 	)
 
 	cmd := &cobra.Command{
@@ -162,24 +175,42 @@ This command performs comprehensive validation of the SOPS configuration:
 Use this command to troubleshoot SOPS issues or verify configuration
 after key rotation or setup changes.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeSOPSValidate(cmd.Context(), keyFile, configFile)
+			return executeSOPSValidate(cmd.Context(), keyFile, configFile, dryRun)
 		},
 	}
 
 	cmd.Flags().StringVar(&keyFile, "key-file", "", "Path to Age key file (default: ~/.config/sops/age/keys.txt)")
 	cmd.Flags().StringVar(&configFile, "config-file", ".sops.yaml", "Path to SOPS configuration file")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
 
 	return cmd
 }
 
 // executeSOPSGenerateKey generates a new Age key pair
-func executeSOPSGenerateKey(ctx context.Context, keyFile string, updateSOPS bool) error {
-	fmt.Println("🔑 Generating new Age key pair for SOPS encryption...")
+func executeSOPSGenerateKey(ctx context.Context, keyFile string, updateSOPS bool, dryRun bool) error {
+	if dryRun {
+		fmt.Println("🧪 DRY RUN: Age key generation simulation")
+	} else {
+		fmt.Println("🔑 Generating new Age key pair for SOPS encryption...")
+	}
 
 	// Set default key file path if not specified
 	if keyFile == "" {
 		homeDir, _ := os.UserHomeDir()
 		keyFile = filepath.Join(homeDir, ".config", "sops", "age", "keys.txt")
+	}
+
+	fmt.Printf("📁 Key file path: %s\n", keyFile)
+	fmt.Printf("🔧 Update SOPS config: %t\n", updateSOPS)
+
+	if dryRun {
+		fmt.Println("🔑 Would generate new Age key pair")
+		fmt.Println("📄 Would save private key to specified path")
+		fmt.Println("🔑 Would display public key for configuration")
+		if updateSOPS {
+			fmt.Println("⚙️  Would update .sops.yaml configuration")
+		}
+		return nil
 	}
 
 	// Initialize key manager for the directory containing the key file
@@ -340,8 +371,12 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 }
 
 // executeSOPSBackupKey creates a backup of Age keys
-func executeSOPSBackupKey(ctx context.Context, keyFile, backupDir string) error {
-	fmt.Println("💾 Creating Age key backup...")
+func executeSOPSBackupKey(ctx context.Context, keyFile, backupDir string, dryRun bool) error {
+	if dryRun {
+		fmt.Println("🧪 DRY RUN: Age key backup simulation")
+	} else {
+		fmt.Println("💾 Creating Age key backup...")
+	}
 
 	// Initialize key manager
 	homeDir, _ := os.UserHomeDir()
@@ -351,6 +386,14 @@ func executeSOPSBackupKey(ctx context.Context, keyFile, backupDir string) error 
 	// Use default backup directory if not specified
 	if backupDir == "" {
 		backupDir = filepath.Join(keyDir, "backups")
+	}
+
+	fmt.Printf("📁 Backup directory: %s\n", backupDir)
+
+	if dryRun {
+		fmt.Println("💾 Would create backup of all Age keys")
+		fmt.Println("📄 Would backup .sops.yaml configuration if it exists")
+		return nil
 	}
 
 	// Create backup
@@ -377,8 +420,12 @@ func executeSOPSBackupKey(ctx context.Context, keyFile, backupDir string) error 
 }
 
 // executeSOPSValidate validates Age key configuration
-func executeSOPSValidate(ctx context.Context, keyFile, configFile string) error {
-	fmt.Println("🔍 Validating SOPS configuration...")
+func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun bool) error {
+	if dryRun {
+		fmt.Println("🧪 DRY RUN: SOPS validation simulation")
+	} else {
+		fmt.Println("🔍 Validating SOPS configuration...")
+	}
 
 	// Initialize key manager
 	homeDir, _ := os.UserHomeDir()
@@ -393,6 +440,15 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string) error 
 
 	fmt.Printf("📁 Key name: %s\n", keyName)
 	fmt.Printf("📄 Config file: %s\n", configFile)
+
+	if dryRun {
+		fmt.Println("🔍 Would validate Age key file existence")
+		fmt.Println("🔍 Would validate Age key format")
+		fmt.Println("🔍 Would validate SOPS configuration")
+		fmt.Println("🔍 Would test key access")
+		fmt.Println("🔍 Would check SOPS installation")
+		return nil
+	}
 
 	// Check if key exists
 	keyPath := filepath.Join(keyDir, fmt.Sprintf("%s.txt", keyName))
@@ -540,4 +596,530 @@ func updateSOPSConfig(publicKey string) error {
 	}
 
 	return nil
+}
+
+// newSOPSSecretsListCmd creates the secrets-list subcommand
+func newSOPSSecretsListCmd() *cobra.Command {
+	var (
+		searchPath string
+		dryRun     bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "secrets-list",
+		Short: "List files that will be processed",
+		Long: `List all SOPS-encrypted files that will be processed.
+
+This command searches for YAML files that contain SOPS encryption metadata
+and displays them in a structured format. Use this to understand which
+files will be affected by encryption/decryption operations.
+
+The command searches recursively through the specified path and identifies
+files based on SOPS metadata presence.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeSOPSSecretsList(cmd.Context(), searchPath, dryRun)
+		},
+	}
+
+	cmd.Flags().StringVar(&searchPath, "search-path", ".", "Path to search for SOPS files")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
+
+	return cmd
+}
+
+// newSOPSSecretsStatusCmd creates the secrets-status subcommand (alias for secrets-list)
+func newSOPSSecretsStatusCmd() *cobra.Command {
+	var (
+		searchPath string
+		dryRun     bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "secrets-status",
+		Short: "Show status of secrets (alias for secrets-list)",
+		Long: `Show the status of secrets (alias for secrets-list).
+
+This command is an alias for secrets-list and provides the same functionality:
+searching for SOPS-encrypted files and displaying their status.
+
+Use this command to get an overview of all encrypted secrets in your
+project and their current encryption status.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeSOPSSecretsList(cmd.Context(), searchPath, dryRun)
+		},
+	}
+
+	cmd.Flags().StringVar(&searchPath, "search-path", ".", "Path to search for SOPS files")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
+
+	return cmd
+}
+
+// newSOPSSecretsEncryptCmd creates the secrets-encrypt subcommand
+func newSOPSSecretsEncryptCmd() *cobra.Command {
+	var (
+		searchPath string
+		dryRun     bool
+		backups    bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "secrets-encrypt",
+		Short: "Encrypt secrets (with backups)",
+		Long: `Encrypt secrets with automatic backup creation.
+
+This command finds all unencrypted YAML files that match SOPS configuration
+rules and encrypts them using the configured Age keys. Before encryption,
+it creates backups of the original files for safety.
+
+The encryption process:
+1. Creates timestamped backups of original files
+2. Encrypts files using SOPS with configured Age keys
+3. Validates successful encryption
+4. Reports results and backup locations
+
+Use this command when you want to encrypt secrets with maximum safety
+through automatic backup creation.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeSOPSSecretsEncrypt(cmd.Context(), searchPath, dryRun, backups)
+		},
+	}
+
+	cmd.Flags().StringVar(&searchPath, "search-path", ".", "Path to search for files to encrypt")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
+	cmd.Flags().BoolVar(&backups, "backups", true, "Create backups before encryption")
+
+	return cmd
+}
+
+// newSOPSSecretsEncryptFastCmd creates the secrets-encrypt-fast subcommand
+func newSOPSSecretsEncryptFastCmd() *cobra.Command {
+	var (
+		searchPath string
+		dryRun     bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "secrets-encrypt-fast",
+		Short: "Encrypt secrets (no backups, faster)",
+		Long: `Encrypt secrets without creating backups for faster operation.
+
+This command provides the same encryption functionality as secrets-encrypt
+but skips the backup creation step for improved performance. Use this when
+you're confident in your encryption setup or when working with files that
+are already version controlled.
+
+The fast encryption process:
+1. Finds unencrypted YAML files matching SOPS rules
+2. Encrypts files directly using SOPS with configured Age keys
+3. Validates successful encryption
+4. Reports results
+
+⚠️  Warning: This command does not create backups. Ensure your files are
+properly version controlled or backed up before using this command.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeSOPSSecretsEncrypt(cmd.Context(), searchPath, dryRun, false)
+		},
+	}
+
+	cmd.Flags().StringVar(&searchPath, "search-path", ".", "Path to search for files to encrypt")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
+
+	return cmd
+}
+
+// newSOPSSecretsDecryptCmd creates the secrets-decrypt subcommand
+func newSOPSSecretsDecryptCmd() *cobra.Command {
+	var (
+		searchPath string
+		dryRun     bool
+		backups    bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "secrets-decrypt",
+		Short: "Decrypt secrets (with backups)",
+		Long: `Decrypt secrets with automatic backup creation.
+
+This command finds all SOPS-encrypted YAML files and decrypts them using
+the configured Age keys. Before decryption, it creates backups of the
+encrypted files for safety.
+
+The decryption process:
+1. Creates timestamped backups of encrypted files
+2. Decrypts files using SOPS with configured Age keys
+3. Validates successful decryption
+4. Reports results and backup locations
+
+Use this command when you need to decrypt secrets with maximum safety
+through automatic backup creation.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeSOPSSecretsDecrypt(cmd.Context(), searchPath, dryRun, backups)
+		},
+	}
+
+	cmd.Flags().StringVar(&searchPath, "search-path", ".", "Path to search for files to decrypt")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
+	cmd.Flags().BoolVar(&backups, "backups", true, "Create backups before decryption")
+
+	return cmd
+}
+
+// newSOPSSecretsDecryptFastCmd creates the secrets-decrypt-fast subcommand
+func newSOPSSecretsDecryptFastCmd() *cobra.Command {
+	var (
+		searchPath string
+		dryRun     bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "secrets-decrypt-fast",
+		Short: "Decrypt secrets (no backups, faster)",
+		Long: `Decrypt secrets without creating backups for faster operation.
+
+This command provides the same decryption functionality as secrets-decrypt
+but skips the backup creation step for improved performance. Use this when
+you're confident in your decryption setup or when working with files that
+are already version controlled.
+
+The fast decryption process:
+1. Finds SOPS-encrypted YAML files
+2. Decrypts files directly using SOPS with configured Age keys
+3. Validates successful decryption
+4. Reports results
+
+⚠️  Warning: This command does not create backups. Ensure your files are
+properly version controlled or backed up before using this command.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeSOPSSecretsDecrypt(cmd.Context(), searchPath, dryRun, false)
+		},
+	}
+
+	cmd.Flags().StringVar(&searchPath, "search-path", ".", "Path to search for files to decrypt")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
+
+	return cmd
+}
+
+// executeSOPSSecretsList lists all SOPS-encrypted files
+func executeSOPSSecretsList(ctx context.Context, searchPath string, dryRun bool) error {
+	if dryRun {
+		fmt.Println("🧪 DRY RUN: Secrets list simulation")
+	}
+	
+	fmt.Printf("🔍 Searching for SOPS files in: %s\n", searchPath)
+
+	encryptor := sops.NewEncryptor(nil, nil)
+	var encryptedFiles []string
+	var unencryptedFiles []string
+
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil {
+				if isEncrypted {
+					encryptedFiles = append(encryptedFiles, path)
+				} else {
+					// For unencrypted files, check if they contain sensitive data patterns
+					if shouldEncrypt := shouldFileBeEncrypted(path); shouldEncrypt {
+						unencryptedFiles = append(unencryptedFiles, path)
+					}
+				}
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to search for files: %w", err)
+	}
+
+	// Display results
+	fmt.Printf("\n📊 SOPS Files Status:\n")
+	fmt.Printf("🔒 Encrypted files: %d\n", len(encryptedFiles))
+	for _, file := range encryptedFiles {
+		fmt.Printf("  ✅ %s\n", file)
+	}
+
+	fmt.Printf("\n🔓 Unencrypted files (should be encrypted): %d\n", len(unencryptedFiles))
+	for _, file := range unencryptedFiles {
+		fmt.Printf("  ⚠️  %s\n", file)
+	}
+
+	if len(encryptedFiles) == 0 && len(unencryptedFiles) == 0 {
+		fmt.Println("ℹ️  No SOPS-managed files found")
+	}
+
+	return nil
+}
+
+// executeSOPSSecretsEncrypt encrypts secrets files
+func executeSOPSSecretsEncrypt(ctx context.Context, searchPath string, dryRun, createBackups bool) error {
+	if dryRun {
+		fmt.Println("🧪 DRY RUN: Secrets encryption simulation")
+	} else {
+		fmt.Println("🔒 Starting secrets encryption...")
+	}
+
+	fmt.Printf("📁 Search path: %s\n", searchPath)
+	fmt.Printf("💾 Create backups: %t\n", createBackups)
+
+	// Load SOPS configuration to get age keys
+	ageKeys, err := loadSOPSAgeKeys()
+	if err != nil {
+		return fmt.Errorf("failed to load SOPS age keys: %w", err)
+	}
+
+	encryptor := sops.NewEncryptor(ageKeys, nil)
+	var filesToEncrypt []string
+
+	// Find files that need encryption
+	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && !isEncrypted {
+				if shouldEncrypt := shouldFileBeEncrypted(path); shouldEncrypt {
+					filesToEncrypt = append(filesToEncrypt, path)
+				}
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to search for files: %w", err)
+	}
+
+	if len(filesToEncrypt) == 0 {
+		fmt.Println("ℹ️  No files found that need encryption")
+		return nil
+	}
+
+	fmt.Printf("📄 Files to encrypt: %d\n", len(filesToEncrypt))
+
+	if dryRun {
+		for _, file := range filesToEncrypt {
+			fmt.Printf("  🔒 Would encrypt: %s\n", file)
+		}
+		return nil
+	}
+
+	// Process each file
+	successCount := 0
+	for _, file := range filesToEncrypt {
+		fmt.Printf("🔒 Encrypting: %s\n", file)
+
+		// Create backup if requested
+		if createBackups {
+			backupPath := fmt.Sprintf("%s.backup-%s", file, time.Now().Format("20060102-150405"))
+			if err := copyFile(file, backupPath); err != nil {
+				fmt.Printf("⚠️  Failed to create backup for %s: %v\n", file, err)
+				continue
+			}
+			fmt.Printf("💾 Backup created: %s\n", backupPath)
+		}
+
+		// Encrypt the file
+		encryptConfig := sops.EncryptionConfig{
+			AgeKeys: ageKeys,
+			InPlace: true,
+		}
+		if err := encryptor.EncryptFile(ctx, file, encryptConfig); err != nil {
+			fmt.Printf("❌ Failed to encrypt %s: %v\n", file, err)
+			continue
+		}
+
+		successCount++
+		fmt.Printf("✅ Successfully encrypted: %s\n", file)
+	}
+
+	fmt.Printf("\n🎉 Encryption completed: %d/%d files processed successfully\n", successCount, len(filesToEncrypt))
+
+	return nil
+}
+
+// executeSOPSSecretsDecrypt decrypts secrets files
+func executeSOPSSecretsDecrypt(ctx context.Context, searchPath string, dryRun, createBackups bool) error {
+	if dryRun {
+		fmt.Println("🧪 DRY RUN: Secrets decryption simulation")
+	} else {
+		fmt.Println("🔓 Starting secrets decryption...")
+	}
+
+	fmt.Printf("📁 Search path: %s\n", searchPath)
+	fmt.Printf("💾 Create backups: %t\n", createBackups)
+
+	encryptor := sops.NewEncryptor(nil, nil)
+	var filesToDecrypt []string
+
+	// Find encrypted files
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && isEncrypted {
+				filesToDecrypt = append(filesToDecrypt, path)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to search for files: %w", err)
+	}
+
+	if len(filesToDecrypt) == 0 {
+		fmt.Println("ℹ️  No encrypted files found")
+		return nil
+	}
+
+	fmt.Printf("📄 Files to decrypt: %d\n", len(filesToDecrypt))
+
+	if dryRun {
+		for _, file := range filesToDecrypt {
+			fmt.Printf("  🔓 Would decrypt: %s\n", file)
+		}
+		return nil
+	}
+
+	// Process each file
+	successCount := 0
+	for _, file := range filesToDecrypt {
+		fmt.Printf("🔓 Decrypting: %s\n", file)
+
+		// Create backup if requested
+		if createBackups {
+			backupPath := fmt.Sprintf("%s.encrypted-backup-%s", file, time.Now().Format("20060102-150405"))
+			if err := copyFile(file, backupPath); err != nil {
+				fmt.Printf("⚠️  Failed to create backup for %s: %v\n", file, err)
+				continue
+			}
+			fmt.Printf("💾 Backup created: %s\n", backupPath)
+		}
+
+		// Decrypt the file in place by creating a temporary decrypted version
+		tempFile := file + ".tmp"
+		if err := encryptor.DecryptFile(ctx, file, tempFile); err != nil {
+			fmt.Printf("❌ Failed to decrypt %s: %v\n", file, err)
+			continue
+		}
+
+		// Replace original file with decrypted version
+		if err := os.Rename(tempFile, file); err != nil {
+			fmt.Printf("❌ Failed to replace %s with decrypted version: %v\n", file, err)
+			os.Remove(tempFile) // Clean up temp file
+			continue
+		}
+
+		successCount++
+		fmt.Printf("✅ Successfully decrypted: %s\n", file)
+	}
+
+	fmt.Printf("\n🎉 Decryption completed: %d/%d files processed successfully\n", successCount, len(filesToDecrypt))
+
+	return nil
+}
+
+// shouldFileBeEncrypted determines if a file should be encrypted based on patterns
+func shouldFileBeEncrypted(filePath string) bool {
+	// Check file name patterns that typically contain secrets
+	fileName := filepath.Base(filePath)
+	secretPatterns := []string{
+		"secret",
+		"credential",
+		"password",
+		"token",
+		"key",
+		"cert",
+		"tls",
+		"auth",
+	}
+
+	for _, pattern := range secretPatterns {
+		if strings.Contains(strings.ToLower(fileName), pattern) {
+			return true
+		}
+	}
+
+	// Check file content for sensitive data patterns
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return false
+	}
+
+	contentStr := strings.ToLower(string(content))
+	sensitivePatterns := []string{
+		"password:",
+		"token:",
+		"secret:",
+		"key:",
+		"credential:",
+		"stringdata:",
+		"data:",
+	}
+
+	for _, pattern := range sensitivePatterns {
+		if strings.Contains(contentStr, pattern) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// loadSOPSAgeKeys loads age keys from SOPS configuration
+func loadSOPSAgeKeys() ([]string, error) {
+	// Try to load from .sops.yaml
+	if _, err := os.Stat(".sops.yaml"); err == nil {
+		content, err := os.ReadFile(".sops.yaml")
+		if err != nil {
+			return nil, fmt.Errorf("failed to read .sops.yaml: %w", err)
+		}
+
+		var config SOPSConfig
+		if err := yaml.Unmarshal(content, &config); err != nil {
+			return nil, fmt.Errorf("failed to parse .sops.yaml: %w", err)
+		}
+
+		var ageKeys []string
+		for _, rule := range config.CreationRules {
+			if rule.Age != "" {
+				ageKeys = append(ageKeys, rule.Age)
+			}
+		}
+
+		if len(ageKeys) > 0 {
+			return ageKeys, nil
+		}
+	}
+
+	// Try to load from environment or default key manager
+	homeDir, _ := os.UserHomeDir()
+	keyDir := filepath.Join(homeDir, ".config", "sops", "age")
+	km := sops.NewKeyManager(keyDir)
+
+	keyNames, err := km.ListAgeKeys()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list age keys: %w", err)
+	}
+
+	if len(keyNames) == 0 {
+		return nil, fmt.Errorf("no age keys found - run 'openCenter sops generate-key' first")
+	}
+
+	// Use the first available key
+	keyPair, err := km.LoadAgeKey(keyNames[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to load age key: %w", err)
+	}
+
+	return []string{keyPair.PublicKey}, nil
 }

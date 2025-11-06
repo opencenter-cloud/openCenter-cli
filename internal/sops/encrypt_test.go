@@ -320,7 +320,7 @@ func TestEncryptor_generateSOPSConfig(t *testing.T) {
 			},
 			contains: []string{
 				"no-key-cluster",
-				"TODO", // Should fallback to TODO
+				"age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Should fallback to placeholder
 			},
 		},
 	}

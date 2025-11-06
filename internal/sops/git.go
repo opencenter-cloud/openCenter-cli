@@ -86,8 +86,17 @@ func (g *GitIntegrator) CommitEncryptedFiles(ctx context.Context, cfg *config.Co
 func (g *GitIntegrator) encryptFilesForCommit(ctx context.Context, cfg *config.Config) error {
 	filesToEncrypt := g.encryptor.getFilesToEncrypt(g.repoPath, cfg)
 
+	// Get age key from configuration
+	var ageKeys []string
+	if cfg.Secrets.SopsAgeKeyFile != "" {
+		// Load the age key from the specified file
+		if keyPair, err := loadAgeKeyFromFile(cfg.Secrets.SopsAgeKeyFile); err == nil {
+			ageKeys = []string{keyPair.PublicKey}
+		}
+	}
+	
 	encryptConfig := EncryptionConfig{
-		AgeKeys: []string{}, // TODO: Get age key from cfg.Secrets
+		AgeKeys: ageKeys,
 		InPlace: true,
 		Verbose: false,
 	}

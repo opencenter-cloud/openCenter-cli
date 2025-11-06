@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"filippo.io/age"
 	"github.com/rackerlabs/openCenter-cli/internal/config"
 )
 
@@ -187,8 +188,16 @@ func (e *Encryptor) EncryptOverlayFiles(ctx context.Context, overlayPath string,
 	filesToEncrypt := e.getFilesToEncrypt(overlayPath, cfg)
 
 	// Create encryption config
+	var ageKeys []string
+	if cfg.Secrets.SopsAgeKeyFile != "" {
+		// Load the age key from the specified file
+		if keyPair, err := loadAgeKeyFromFile(cfg.Secrets.SopsAgeKeyFile); err == nil {
+			ageKeys = []string{keyPair.PublicKey}
+		}
+	}
+	
 	encryptConfig := EncryptionConfig{
-		AgeKeys: []string{}, // TODO: Add age key from cfg.Secrets
+		AgeKeys: ageKeys,
 		InPlace: true,
 		Verbose: true,
 	}
@@ -231,8 +240,8 @@ func (e *Encryptor) getFilesToEncrypt(overlayPath string, cfg *config.Config) []
 		)
 	}
 
-	// Additional encrypted files from configuration - TODO: Add to new config structure if needed
-	// files = append(files, cfg.Spec.Security.ExtraEncryptedFiles...)
+	// Additional encrypted files from configuration can be added here in the future
+	// This would require extending the config structure with ExtraEncryptedFiles field
 
 	return files
 }
@@ -251,9 +260,28 @@ func (e *Encryptor) CreateSOPSConfig(overlayPath string, cfg *config.Config) err
 
 // generateSOPSConfig generates the SOPS configuration content
 func (e *Encryptor) generateSOPSConfig(cfg *config.Config) string {
-	ageKey := cfg.Secrets.SopsAgeKeyFile
+	var ageKey string
+	if cfg.Secrets.SopsAgeKeyFile != "" {
+		// Load the public key from the age key file
+		if keyPair, err := loadAgeKeyFromFile(cfg.Secrets.SopsAgeKeyFile); err == nil {
+			ageKey = keyPair.PublicKey
+		}
+	}
+	
 	if ageKey == "" {
-		ageKey = "TODO" // Fallback if no age key is configured
+		// Fallback: try to load from default key manager
+		homeDir, _ := os.UserHomeDir()
+		keyDir := filepath.Join(homeDir, ".config", "sops", "age")
+		km := NewKeyManager(keyDir)
+		if keyNames, err := km.ListAgeKeys(); err == nil && len(keyNames) > 0 {
+			if keyPair, err := km.LoadAgeKey(keyNames[0]); err == nil {
+				ageKey = keyPair.PublicKey
+			}
+		}
+	}
+	
+	if ageKey == "" {
+		ageKey = "age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" // Placeholder
 	}
 
 	config := fmt.Sprintf(`# SOPS configuration for cluster: %s
@@ -611,4 +639,33 @@ stringData:
 	}
 
 	return baseSecrets
+}
+
+// loadAgeKeyFromFile loads an age key pair from a file path
+func loadAgeKeyFromFile(keyFilePath string) (*AgeKeyPair, error) {
+	// Expand home directory if needed
+	if strings.HasPrefix(keyFilePath, "~/") {
+		homeDir, _ := os.UserHomeDir()
+		keyFilePath = filepath.Join(homeDir, keyFilePath[2:])
+	}
+	
+	// Read the private key file
+	privateKeyData, err := os.ReadFile(keyFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read age key file: %w", err)
+	}
+	
+	privateKey := strings.TrimSpace(string(privateKeyData))
+	
+	// Parse the private key to get the public key
+	identity, err := age.ParseX25519Identity(privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse age identity: %w", err)
+	}
+	
+	return &AgeKeyPair{
+		PrivateKey: privateKey,
+		PublicKey:  identity.Recipient().String(),
+		Recipient:  identity.Recipient().String(),
+	}, nil
 }

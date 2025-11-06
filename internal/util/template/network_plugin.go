@@ -24,6 +24,16 @@ import (
 // DefaultNetworkPluginHandler implements NetworkPluginHandler interface
 type DefaultNetworkPluginHandler struct {
 	supportedPlugins map[string]NetworkPluginConfig
+	pluginHandlers   map[string]SpecificNetworkPluginHandler
+}
+
+// SpecificNetworkPluginHandler interface for individual network plugin handlers
+type SpecificNetworkPluginHandler interface {
+	ValidateConfiguration(config map[string]interface{}) error
+	RenderConfiguration(config map[string]interface{}) (string, error)
+	GetRequiredFields() []string
+	GetDefaultConfig() map[string]interface{}
+	GetPluginName() string
 }
 
 // NetworkPluginConfig represents configuration for a network plugin
@@ -38,7 +48,11 @@ type NetworkPluginConfig struct {
 func NewDefaultNetworkPluginHandler() *DefaultNetworkPluginHandler {
 	handler := &DefaultNetworkPluginHandler{
 		supportedPlugins: make(map[string]NetworkPluginConfig),
+		pluginHandlers:   make(map[string]SpecificNetworkPluginHandler),
 	}
+	
+	// Initialize specific plugin handlers
+	handler.initializePluginHandlers()
 	
 	// Initialize supported plugins
 	handler.initializeSupportedPlugins()
@@ -46,46 +60,28 @@ func NewDefaultNetworkPluginHandler() *DefaultNetworkPluginHandler {
 	return handler
 }
 
-// initializeSupportedPlugins initializes the supported network plugins
+// initializePluginHandlers initializes the specific plugin handlers
+func (h *DefaultNetworkPluginHandler) initializePluginHandlers() {
+	h.pluginHandlers["calico"] = NewCalicoHandler()
+	h.pluginHandlers["cilium"] = NewCiliumHandler()
+	h.pluginHandlers["kube-ovn"] = NewKubeOVNHandler()
+}
+
+// initializeSupportedPlugins initializes the supported network plugins using dedicated handlers
 func (h *DefaultNetworkPluginHandler) initializeSupportedPlugins() {
-	// Calico plugin configuration
-	h.supportedPlugins["calico"] = NetworkPluginConfig{
-		Name:           "calico",
-		RequiredFields: []string{},
-		DefaultConfig: map[string]interface{}{
-			"ipv4_pool": "192.168.0.0/16",
-			"ipv6_pool": "",
-			"mtu":       1440,
-		},
-		Validator: h.validateCalicoConfig,
-	}
-
-	// Cilium plugin configuration
-	h.supportedPlugins["cilium"] = NetworkPluginConfig{
-		Name:           "cilium",
-		RequiredFields: []string{},
-		DefaultConfig: map[string]interface{}{
-			"cluster_pool_ipv4_cidr":      "10.0.0.0/8",
-			"cluster_pool_ipv4_mask_size": 24,
-			"hubble": map[string]interface{}{
-				"enabled": false,
+	// Initialize plugins using dedicated handlers
+	for pluginName, handler := range h.pluginHandlers {
+		h.supportedPlugins[pluginName] = NetworkPluginConfig{
+			Name:           handler.GetPluginName(),
+			RequiredFields: handler.GetRequiredFields(),
+			DefaultConfig:  handler.GetDefaultConfig(),
+			Validator:      func(config map[string]interface{}) error {
+				return handler.ValidateConfiguration(config)
 			},
-		},
-		Validator: h.validateCiliumConfig,
+		}
 	}
 
-	// Kube-OVN plugin configuration
-	h.supportedPlugins["kube-ovn"] = NetworkPluginConfig{
-		Name:           "kube-ovn",
-		RequiredFields: []string{},
-		DefaultConfig: map[string]interface{}{
-			"default_subnet": "10.16.0.0/16",
-			"node_subnet":    "10.17.0.0/16",
-		},
-		Validator: h.validateKubeOVNConfig,
-	}
-
-	// Flannel plugin configuration
+	// Keep Flannel for backward compatibility (no dedicated handler yet)
 	h.supportedPlugins["flannel"] = NetworkPluginConfig{
 		Name:           "flannel",
 		RequiredFields: []string{},
@@ -124,6 +120,87 @@ func (h *DefaultNetworkPluginHandler) ValidateNetworkPlugin(pluginType string, c
 	return nil
 }
 
+// ValidateNetworkPluginMutualExclusivity validates that only one network plugin is enabled
+// This method takes a map of plugin configurations and ensures mutual exclusivity
+func (h *DefaultNetworkPluginHandler) ValidateNetworkPluginMutualExclusivity(pluginConfigs map[string]map[string]interface{}) error {
+	var enabledPlugins []string
+	
+	// Check each plugin configuration for enabled status
+	for pluginName, config := range pluginConfigs {
+		if config == nil {
+			continue
+		}
+		
+		// Check if plugin is enabled
+		if enabled, exists := config["enabled"]; exists {
+			if enabledBool, ok := enabled.(bool); ok && enabledBool {
+				enabledPlugins = append(enabledPlugins, pluginName)
+			}
+		}
+	}
+	
+	// Validate mutual exclusivity
+	if len(enabledPlugins) == 0 {
+		return fmt.Errorf("at least one network plugin must be enabled")
+	}
+	
+	if len(enabledPlugins) > 1 {
+		return fmt.Errorf("only one network plugin can be enabled at a time, but found enabled: %s", 
+			strings.Join(enabledPlugins, ", "))
+	}
+	
+	return nil
+}
+
+// ValidateNetworkPluginCompatibility validates compatibility between network plugins and other configurations
+func (h *DefaultNetworkPluginHandler) ValidateNetworkPluginCompatibility(pluginType string, config map[string]interface{}, globalConfig map[string]interface{}) error {
+	// Validate basic plugin configuration first
+	if err := h.ValidateNetworkPlugin(pluginType, config); err != nil {
+		return err
+	}
+	
+	// Plugin-specific compatibility checks
+	switch pluginType {
+	case "kube-ovn":
+		// Check Kube-OVN and Cilium integration compatibility
+		if ciliumIntegration, exists := config["cilium_integration"]; exists {
+			if ciliumBool, ok := ciliumIntegration.(bool); ok && ciliumBool {
+				// When Kube-OVN has Cilium integration enabled, ensure Cilium is not also enabled as primary
+				if globalConfig != nil {
+					if ciliumConfig, exists := globalConfig["cilium"]; exists {
+						if ciliumConfigMap, ok := ciliumConfig.(map[string]interface{}); ok {
+							if ciliumEnabled, exists := ciliumConfigMap["enabled"]; exists {
+								if ciliumEnabledBool, ok := ciliumEnabled.(bool); ok && ciliumEnabledBool {
+									return fmt.Errorf("kube-ovn with cilium_integration cannot be used when cilium is also enabled as primary network plugin")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	case "cilium":
+		// Check if Cilium is being used with Kube-OVN integration
+		if globalConfig != nil {
+			if kubeOVNConfig, exists := globalConfig["kube-ovn"]; exists {
+				if kubeOVNConfigMap, ok := kubeOVNConfig.(map[string]interface{}); ok {
+					if kubeOVNEnabled, exists := kubeOVNConfigMap["enabled"]; exists {
+						if kubeOVNEnabledBool, ok := kubeOVNEnabled.(bool); ok && kubeOVNEnabledBool {
+							if ciliumIntegration, exists := kubeOVNConfigMap["cilium_integration"]; exists {
+								if ciliumIntegrationBool, ok := ciliumIntegration.(bool); ok && ciliumIntegrationBool {
+									return fmt.Errorf("cilium cannot be enabled as primary when kube-ovn with cilium_integration is enabled")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return nil
+}
+
 // RenderNetworkPluginConfig renders network plugin configuration
 func (h *DefaultNetworkPluginHandler) RenderNetworkPluginConfig(pluginType string, config map[string]interface{}) (string, error) {
 	pluginConfig, exists := h.supportedPlugins[pluginType]
@@ -145,14 +222,13 @@ func (h *DefaultNetworkPluginHandler) RenderNetworkPluginConfig(pluginType strin
 		return "", fmt.Errorf("configuration validation failed: %w", err)
 	}
 
-	// Render configuration based on plugin type
+	// Use dedicated handler if available
+	if handler, exists := h.pluginHandlers[pluginType]; exists {
+		return handler.RenderConfiguration(mergedConfig)
+	}
+
+	// Fallback to legacy rendering for plugins without dedicated handlers
 	switch pluginType {
-	case "calico":
-		return h.renderCalicoConfig(mergedConfig), nil
-	case "cilium":
-		return h.renderCiliumConfig(mergedConfig), nil
-	case "kube-ovn":
-		return h.renderKubeOVNConfig(mergedConfig), nil
 	case "flannel":
 		return h.renderFlannelConfig(mergedConfig), nil
 	default:
@@ -175,6 +251,23 @@ func (h *DefaultNetworkPluginHandler) GetRequiredFields(pluginType string) []str
 		return pluginConfig.RequiredFields
 	}
 	return []string{}
+}
+
+// GetPluginHandler returns the dedicated handler for a specific plugin type
+func (h *DefaultNetworkPluginHandler) GetPluginHandler(pluginType string) (SpecificNetworkPluginHandler, error) {
+	if handler, exists := h.pluginHandlers[pluginType]; exists {
+		return handler, nil
+	}
+	return nil, fmt.Errorf("no dedicated handler found for plugin: %s", pluginType)
+}
+
+// GetAllPluginHandlers returns all available plugin handlers
+func (h *DefaultNetworkPluginHandler) GetAllPluginHandlers() map[string]SpecificNetworkPluginHandler {
+	handlers := make(map[string]SpecificNetworkPluginHandler)
+	for name, handler := range h.pluginHandlers {
+		handlers[name] = handler
+	}
+	return handlers
 }
 
 // Plugin-specific validation functions

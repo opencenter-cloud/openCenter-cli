@@ -24,22 +24,34 @@ import (
 	"text/template"
 )
 
-// DefaultTemplateEngine implements TemplateEngine interface
+// DefaultTemplateEngine implements TemplateEngine interface with dependency injection
 type DefaultTemplateEngine struct {
-	renderer  *DefaultTemplateRenderer
-	validator *DefaultTemplateValidator
-	templates *template.Template
-	funcMap   template.FuncMap
-	once      sync.Once
-	initErr   error
+	renderer             TemplateRenderer
+	validator            TemplateValidator
+	networkPluginHandler NetworkPluginHandler
+	templates            *template.Template
+	funcMap              template.FuncMap
+	once                 sync.Once
+	initErr              error
 }
 
-// NewDefaultTemplateEngine creates a new default template engine
+// NewDefaultTemplateEngine creates a new default template engine with dependency injection
 func NewDefaultTemplateEngine() *DefaultTemplateEngine {
 	return &DefaultTemplateEngine{
-		renderer:  NewDefaultTemplateRenderer(),
-		validator: NewDefaultTemplateValidator(),
-		funcMap:   make(template.FuncMap),
+		renderer:             NewDefaultTemplateRenderer(),
+		validator:            NewDefaultTemplateValidator(),
+		networkPluginHandler: NewDefaultNetworkPluginHandler(),
+		funcMap:              make(template.FuncMap),
+	}
+}
+
+// NewTemplateEngineWithDependencies creates a template engine with injected dependencies
+func NewTemplateEngineWithDependencies(renderer TemplateRenderer, validator TemplateValidator, networkHandler NetworkPluginHandler) *DefaultTemplateEngine {
+	return &DefaultTemplateEngine{
+		renderer:             renderer,
+		validator:            validator,
+		networkPluginHandler: networkHandler,
+		funcMap:              make(template.FuncMap),
 	}
 }
 
@@ -47,31 +59,70 @@ func NewDefaultTemplateEngine() *DefaultTemplateEngine {
 func (e *DefaultTemplateEngine) Init() error {
 	e.once.Do(func() {
 		// Initialize with empty templates - will be set later via InitWithFS or InitWithTemplates
-		e.templates = template.New("").Funcs(e.renderer.funcMap)
-		e.initErr = e.renderer.Init(e.templates)
-		if e.initErr == nil {
-			e.initErr = e.validator.Init(e.templates)
-		}
+		e.templates = template.New("")
+		e.initErr = e.initializeDependencies()
 	})
 	return e.initErr
 }
 
+// initializeDependencies initializes all injected dependencies
+func (e *DefaultTemplateEngine) initializeDependencies() error {
+	// Ensure we have a template instance
+	if e.templates == nil {
+		e.templates = template.New("")
+	}
+
+	// Initialize renderer
+	if defaultRenderer, ok := e.renderer.(*DefaultTemplateRenderer); ok {
+		if err := defaultRenderer.Init(e.templates); err != nil {
+			return fmt.Errorf("failed to initialize renderer: %w", err)
+		}
+		// Add renderer functions to template
+		e.templates = e.templates.Funcs(defaultRenderer.funcMap)
+	}
+
+	// Initialize validator
+	if defaultValidator, ok := e.validator.(*DefaultTemplateValidator); ok {
+		if err := defaultValidator.Init(e.templates); err != nil {
+			return fmt.Errorf("failed to initialize validator: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // InitWithFS initializes the template engine with an embedded filesystem
-func (e *DefaultTemplateEngine) InitWithFS(fs embed.FS, pattern string) error {
+func (e *DefaultTemplateEngine) InitWithFS(fs interface{}, pattern string) error {
 	e.once.Do(func() {
-		// Merge custom functions with renderer functions
-		funcMap := e.renderer.funcMap
+		// Type assert the filesystem
+		embedFS, ok := fs.(embed.FS)
+		if !ok {
+			e.initErr = fmt.Errorf("filesystem must be of type embed.FS")
+			return
+		}
+
+		// Get function map from renderer
+		var funcMap template.FuncMap
+		if defaultRenderer, ok := e.renderer.(*DefaultTemplateRenderer); ok {
+			funcMap = defaultRenderer.funcMap
+		} else {
+			funcMap = make(template.FuncMap)
+		}
+
+		// Merge custom functions
 		for name, fn := range e.funcMap {
 			funcMap[name] = fn
 		}
 
-		e.templates, e.initErr = template.New("").Funcs(funcMap).ParseFS(fs, pattern)
-		if e.initErr == nil {
-			e.initErr = e.renderer.Init(e.templates)
+		// Parse templates from filesystem
+		e.templates, e.initErr = template.New("").Funcs(funcMap).ParseFS(embedFS, pattern)
+		if e.initErr != nil {
+			e.initErr = fmt.Errorf("failed to parse templates from filesystem: %w", e.initErr)
+			return
 		}
-		if e.initErr == nil {
-			e.initErr = e.validator.Init(e.templates)
-		}
+
+		// Initialize dependencies
+		e.initErr = e.initializeDependencies()
 	})
 	return e.initErr
 }
@@ -84,10 +135,7 @@ func (e *DefaultTemplateEngine) InitWithTemplates(templates *template.Template) 
 			return
 		}
 		e.templates = templates
-		e.initErr = e.renderer.Init(e.templates)
-		if e.initErr == nil {
-			e.initErr = e.validator.Init(e.templates)
-		}
+		e.initErr = e.initializeDependencies()
 	})
 	return e.initErr
 }
@@ -108,17 +156,29 @@ func (e *DefaultTemplateEngine) AddFunctions(funcMap template.FuncMap) error {
 // RenderTemplate renders a template with the given data
 func (e *DefaultTemplateEngine) RenderTemplate(templateName string, data interface{}) (string, error) {
 	if e.templates == nil {
-		return "", fmt.Errorf("template engine not initialized")
+		return "", NewInitializationError("template engine", fmt.Errorf("template engine not initialized"))
 	}
-	return e.renderer.RenderTemplate(templateName, data)
+	
+	result, err := e.renderer.RenderTemplate(templateName, data)
+	if err != nil {
+		return "", NewTemplateExecutionError(templateName, err)
+	}
+	
+	return result, nil
 }
 
 // RenderTemplateToWriter renders a template to a writer
 func (e *DefaultTemplateEngine) RenderTemplateToWriter(templateName string, data interface{}, writer io.Writer) error {
 	if e.templates == nil {
-		return fmt.Errorf("template engine not initialized")
+		return NewInitializationError("template engine", fmt.Errorf("template engine not initialized"))
 	}
-	return e.renderer.RenderTemplateToWriter(templateName, data, writer)
+	
+	err := e.renderer.RenderTemplateToWriter(templateName, data, writer)
+	if err != nil {
+		return NewTemplateExecutionError(templateName, err)
+	}
+	
+	return nil
 }
 
 // GetTemplate returns a specific template
@@ -134,7 +194,13 @@ func (e *DefaultTemplateEngine) ListTemplates() []string {
 	if e.templates == nil {
 		return []string{}
 	}
-	return e.renderer.ListTemplates()
+	
+	templates := e.renderer.ListTemplates()
+	if templates == nil {
+		return []string{}
+	}
+	
+	return templates
 }
 
 // ValidateTemplate validates that a template exists and can be parsed
@@ -163,7 +229,11 @@ func (e *DefaultTemplateEngine) ValidateTemplateExists(templateName string) erro
 
 // ValidateRequiredFields validates that data contains all required fields
 func (e *DefaultTemplateEngine) ValidateRequiredFields(data interface{}, requiredFields []string) error {
-	return e.validator.ValidateRequiredFields(data, requiredFields)
+	err := e.validator.ValidateRequiredFields(data, requiredFields)
+	if err != nil {
+		return NewDataValidationError("", "required_fields", err)
+	}
+	return nil
 }
 
 // RenderWithValidation renders a template after validating the data
@@ -210,4 +280,46 @@ func (e *DefaultTemplateEngine) RenderToWriterWithValidation(templateName string
 
 	// Render template
 	return e.RenderTemplateToWriter(templateName, data, writer)
+}
+
+// GetRenderer returns the template renderer for dependency injection
+func (e *DefaultTemplateEngine) GetRenderer() TemplateRenderer {
+	return e.renderer
+}
+
+// GetValidator returns the template validator for dependency injection
+func (e *DefaultTemplateEngine) GetValidator() TemplateValidator {
+	return e.validator
+}
+
+// GetNetworkPluginHandler returns the network plugin handler for dependency injection
+func (e *DefaultTemplateEngine) GetNetworkPluginHandler() NetworkPluginHandler {
+	return e.networkPluginHandler
+}
+
+// CreateTemplateEngine creates a fully initialized template engine
+func CreateTemplateEngine() (TemplateEngine, error) {
+	engine := NewDefaultTemplateEngine()
+	if err := engine.Init(); err != nil {
+		return nil, NewInitializationError("template engine", err)
+	}
+	return engine, nil
+}
+
+// CreateTemplateEngineWithFS creates a template engine initialized with an embedded filesystem
+func CreateTemplateEngineWithFS(fs embed.FS, pattern string) (TemplateEngine, error) {
+	engine := NewDefaultTemplateEngine()
+	if err := engine.InitWithFS(fs, pattern); err != nil {
+		return nil, NewInitializationError("template engine with filesystem", err)
+	}
+	return engine, nil
+}
+
+// CreateTemplateEngineWithTemplates creates a template engine initialized with pre-parsed templates
+func CreateTemplateEngineWithTemplates(templates *template.Template) (TemplateEngine, error) {
+	engine := NewDefaultTemplateEngine()
+	if err := engine.InitWithTemplates(templates); err != nil {
+		return nil, NewInitializationError("template engine with templates", err)
+	}
+	return engine, nil
 }

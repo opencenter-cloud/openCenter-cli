@@ -27,6 +27,7 @@ type TemplateRenderer interface {
 	RenderTemplateToWriter(templateName string, data interface{}, writer io.Writer) error
 	GetTemplate(templateName string) (*template.Template, error)
 	ListTemplates() []string
+	AddFunctions(funcMap template.FuncMap) error
 }
 
 // TemplateValidator interface for validating templates and data
@@ -37,12 +38,27 @@ type TemplateValidator interface {
 	ValidateRequiredFields(data interface{}, requiredFields []string) error
 }
 
-// TemplateEngine interface combining rendering and validation
+// TemplateEngine interface combining rendering and validation with dependency injection
 type TemplateEngine interface {
 	TemplateRenderer
 	TemplateValidator
+	
+	// Initialization methods
 	Init() error
+	InitWithFS(fs interface{}, pattern string) error
+	InitWithTemplates(templates *template.Template) error
+	
+	// Function management
 	AddFunctions(funcMap template.FuncMap) error
+	
+	// Advanced rendering with validation
+	RenderWithValidation(templateName string, data interface{}, requiredFields []string) (string, error)
+	RenderToWriterWithValidation(templateName string, data interface{}, writer io.Writer, requiredFields []string) error
+	
+	// Component access for dependency injection
+	GetRenderer() TemplateRenderer
+	GetValidator() TemplateValidator
+	GetNetworkPluginHandler() NetworkPluginHandler
 }
 
 // NetworkPluginHandler interface for handling network plugin templates
@@ -51,6 +67,14 @@ type NetworkPluginHandler interface {
 	RenderNetworkPluginConfig(pluginType string, config map[string]interface{}) (string, error)
 	GetSupportedPlugins() []string
 	GetRequiredFields(pluginType string) []string
+	
+	// Mutual exclusivity validation
+	ValidateNetworkPluginMutualExclusivity(pluginConfigs map[string]map[string]interface{}) error
+	ValidateNetworkPluginCompatibility(pluginType string, config map[string]interface{}, globalConfig map[string]interface{}) error
+	
+	// Access to dedicated handlers
+	GetPluginHandler(pluginType string) (SpecificNetworkPluginHandler, error)
+	GetAllPluginHandlers() map[string]SpecificNetworkPluginHandler
 }
 
 // TemplateData represents data passed to templates

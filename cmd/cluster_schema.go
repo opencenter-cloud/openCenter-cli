@@ -25,8 +25,29 @@ import (
 func newClusterSchemaCmd() *cobra.Command {
     cmd := &cobra.Command{
         Use:   "schema",
-        Short: "Export cluster JSON schema",
+        Short: "Export cluster JSON schema with validation rules",
+        Long: `Export the JSON schema for openCenter cluster configuration.
+
+The schema includes comprehensive validation rules, constraints, and documentation
+for all configuration sections. It can be used for IDE integration, validation,
+and documentation purposes.
+
+Examples:
+  # Print schema to stdout
+  openCenter cluster schema
+
+  # Save schema to file with pretty formatting
+  openCenter cluster schema --out schema/cluster.schema.json --pretty
+
+  # Show schema version
+  openCenter cluster schema --version`,
         RunE: func(cmd *cobra.Command, args []string) error {
+            showVersion, _ := cmd.Flags().GetBool("version")
+            if showVersion {
+                fmt.Fprintf(cmd.OutOrStdout(), "Schema version: %s\n", config.GetSchemaVersion())
+                return nil
+            }
+
             outPath, _ := cmd.Flags().GetString("out")
             pretty, _ := cmd.Flags().GetBool("pretty")
             data, err := config.GenerateSchema(pretty)
@@ -45,11 +66,12 @@ func newClusterSchemaCmd() *cobra.Command {
             if err := os.WriteFile(outPath, data, 0o644); err != nil {
                 return err
             }
-            fmt.Fprintf(cmd.OutOrStdout(), "Schema written to %s\n", outPath)
+            fmt.Fprintf(cmd.OutOrStdout(), "Schema version %s written to %s\n", config.GetSchemaVersion(), outPath)
             return nil
         },
     }
     cmd.Flags().String("out", "", "output file path (default stdout)")
-    cmd.Flags().Bool("pretty", false, "pretty print JSON schema")
+    cmd.Flags().Bool("pretty", true, "pretty print JSON schema (default true)")
+    cmd.Flags().Bool("version", false, "show schema version")
     return cmd
 }

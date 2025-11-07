@@ -24,6 +24,38 @@ func newClusterCmd() *cobra.Command {
     cmd := &cobra.Command{
         Use:   "cluster",
         Short: "Manage cluster configurations",
+        Long: `Manage Kubernetes cluster configurations throughout their lifecycle.
+
+The cluster command provides subcommands for initializing, validating, updating,
+and managing cluster configurations. It supports organization-based multi-tenancy
+and integrates with GitOps workflows.
+
+Common Workflow:
+  1. Initialize a new cluster configuration
+  2. Validate the configuration
+  3. Run preflight checks
+  4. Set up infrastructure and GitOps repository
+  5. Bootstrap the cluster with Flux
+
+Configuration files are stored in organization-based directories:
+  ~/.config/openCenter/clusters/<organization>/<cluster>/`,
+        Example: `  # Initialize a new cluster
+  openCenter cluster init my-cluster
+
+  # Initialize with organization
+  openCenter cluster init my-cluster --opencenter.meta.organization=myorg
+
+  # Validate configuration
+  openCenter cluster validate my-cluster
+
+  # List all clusters
+  openCenter cluster list
+
+  # Select active cluster
+  openCenter cluster select my-cluster
+
+  # Show current cluster
+  openCenter cluster current`,
         RunE: func(cmd *cobra.Command, args []string) error {
             return cmd.Help()
         },

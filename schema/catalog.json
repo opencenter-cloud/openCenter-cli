@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/schema-catalog.json",
+  "version": 1,
+  "schemas": [
+    {
+      "name": "openCenter Cluster Configuration",
+      "description": "Schema for openCenter cluster configuration files",
+      "fileMatch": [
+        "**/clusters/**/*.yaml",
+        "**/clusters/**/*-config.yaml",
+        "**/.opencenter.yaml"
+      ],
+      "url": "./cluster.schema.json"
+    }
+  ]
+}

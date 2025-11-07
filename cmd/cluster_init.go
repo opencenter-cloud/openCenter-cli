@@ -179,6 +179,48 @@ func newClusterInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init <name>",
 		Short: "Initialize a new cluster configuration (non-interactive)",
+		Long: `Initialize a new cluster configuration with default values.
+
+This command creates a new cluster configuration file with sensible defaults
+based on the JSON schema. You can override any configuration value using
+command-line flags with dot notation.
+
+The configuration is created in an organization-based directory structure:
+  ~/.config/openCenter/clusters/<organization>/<cluster>/
+
+A SOPS Age encryption key is automatically generated unless --no-sops-keygen
+is specified. The key is stored in the cluster's secrets directory.
+
+Configuration Override:
+  Use dot notation to override any configuration value:
+    --opencenter.meta.env=prod
+    --opencenter.cluster.kubernetes.version=1.31.4
+    --opencenter.infrastructure.provider=aws
+
+Troubleshooting:
+  • If cluster already exists, use --force to overwrite
+  • Use --strict to enable validation during initialization
+  • Check ~/.config/openCenter/clusters/ for created files`,
+		Example: `  # Initialize with defaults
+  openCenter cluster init my-cluster
+
+  # Initialize with organization
+  openCenter cluster init my-cluster --opencenter.meta.organization=myorg
+
+  # Initialize with custom values
+  openCenter cluster init my-cluster \
+    --opencenter.meta.env=prod \
+    --opencenter.cluster.kubernetes.version=1.31.4 \
+    --opencenter.infrastructure.provider=aws
+
+  # Initialize without SOPS key generation
+  openCenter cluster init my-cluster --no-sops-keygen
+
+  # Force overwrite existing configuration
+  openCenter cluster init my-cluster --force
+
+  # Initialize with strict validation
+  openCenter cluster init my-cluster --strict`,
 		Args:  cobra.ExactArgs(1),
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			UnknownFlags: true,

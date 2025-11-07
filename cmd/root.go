@@ -40,6 +40,34 @@ var configManager *config.ConfigManager
 var rootCmd = &cobra.Command{
     Use:   "openCenter",
     Short: "openCenter CLI manages cluster configurations and GitOps scaffolding",
+    Long: `openCenter is a command-line tool for managing Kubernetes cluster configurations
+and GitOps repositories. It provides a declarative approach to cluster lifecycle
+management with built-in validation, secrets management, and multi-provider support.
+
+Key Features:
+  • Declarative YAML-based cluster configuration
+  • Automatic GitOps repository scaffolding
+  • SOPS integration for secrets management
+  • Multi-cloud provider support (OpenStack, AWS, VMware, Kind)
+  • Comprehensive validation and preflight checks
+  • Organization-based multi-tenancy support
+
+Documentation: https://docs.opencenter.cloud
+Support: https://github.com/rackerlabs/openCenter-cli/issues`,
+    Example: `  # Initialize a new cluster configuration
+  openCenter cluster init my-cluster
+
+  # Validate cluster configuration
+  openCenter cluster validate my-cluster
+
+  # Generate and view JSON schema
+  openCenter cluster schema --pretty
+
+  # List all clusters
+  openCenter cluster list
+
+  # Bootstrap a cluster with GitOps
+  openCenter cluster bootstrap my-cluster`,
     PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
         return initializeGlobalConfig(cmd)
     },

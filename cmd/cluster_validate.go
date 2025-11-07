@@ -36,6 +36,43 @@ func newClusterValidateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validate [name]",
 		Short: "Validate cluster configuration invariants and optionally generate complete config",
+		Long: `Validate cluster configuration against schema and business rules.
+
+This command performs comprehensive validation of cluster configuration including:
+  • Schema validation against JSON schema
+  • Required field validation
+  • Cross-field dependency validation
+  • Cloud provider credential validation
+  • Network configuration validation
+  • SOPS key validation
+
+If no cluster name is provided, validates the currently active cluster.
+
+Validation Checks:
+  • Cluster name format and uniqueness
+  • Kubernetes version compatibility
+  • Network CIDR conflicts
+  • SSH key format
+  • Cloud provider credentials
+  • SOPS encryption key availability
+  • GitOps repository configuration
+
+Troubleshooting:
+  • Check error messages for specific validation failures
+  • Use --generate-debug-config to save complete configuration
+  • Verify cloud provider credentials are set correctly
+  • Ensure SOPS key file exists and is readable`,
+		Example: `  # Validate active cluster
+  openCenter cluster validate
+
+  # Validate specific cluster
+  openCenter cluster validate my-cluster
+
+  # Validate and generate debug config
+  openCenter cluster validate my-cluster --generate-debug-config
+
+  # Validate and save debug config to specific directory
+  openCenter cluster validate my-cluster --generate-debug-config --output-dir=/tmp`,
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string

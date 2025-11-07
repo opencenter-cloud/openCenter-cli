@@ -417,7 +417,12 @@ func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
 	}
 	
 	// Write the private key file with proper permissions (0600 for files)
-	if err := os.WriteFile(keyFile, []byte(keyPair.PrivateKey), 0o600); err != nil {
+	// Ensure the key ends with a newline for proper format
+	keyContent := keyPair.PrivateKey
+	if !strings.HasSuffix(keyContent, "\n") {
+		keyContent += "\n"
+	}
+	if err := os.WriteFile(keyFile, []byte(keyContent), 0o600); err != nil {
 		return fmt.Errorf("failed to write SOPS key file to cluster directory '%s': %w", keyFile, err)
 	}
 	
@@ -445,7 +450,12 @@ func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Confi
 	}
 	
 	// Write the private key file with proper permissions (0600 for files)
-	if err := os.WriteFile(clusterPaths.SOPSKeyPath, []byte(keyPair.PrivateKey), 0o600); err != nil {
+	// Ensure the key ends with a newline for proper format
+	keyContent := keyPair.PrivateKey
+	if !strings.HasSuffix(keyContent, "\n") {
+		keyContent += "\n"
+	}
+	if err := os.WriteFile(clusterPaths.SOPSKeyPath, []byte(keyContent), 0o600); err != nil {
 		return fmt.Errorf("failed to write SOPS key file to organization directory '%s': %w", clusterPaths.SOPSKeyPath, err)
 	}
 	

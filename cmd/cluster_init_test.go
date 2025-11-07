@@ -127,9 +127,9 @@ func TestGenerateDefaultSOPSKey(t *testing.T) {
 				t.Error("expected key to end with newline")
 			}
 
-			// Verify key length (AGE-SECRET-KEY-1 + 64 hex chars + newline = 81 chars)
-			if len(keyStr) != 81 {
-				t.Errorf("expected key length 81, got %d", len(keyStr))
+			// Verify key length (AGE-SECRET-KEY-1 + 58 base64 chars + newline = 75 chars)
+			if len(keyStr) != 75 {
+				t.Errorf("expected key length 75, got %d", len(keyStr))
 			}
 
 			// Verify config was updated
@@ -404,9 +404,9 @@ func TestGenerateOrganizationSOPSKey(t *testing.T) {
 				t.Error("expected key to end with newline")
 			}
 
-			// Verify key length (AGE-SECRET-KEY-1 + 64 hex chars + newline = 81 chars)
-			if len(keyStr) != 81 {
-				t.Errorf("expected key length 81, got %d", len(keyStr))
+			// Verify key length (AGE-SECRET-KEY-1 + 58 base64 chars + newline = 75 chars)
+			if len(keyStr) != 75 {
+				t.Errorf("expected key length 75, got %d", len(keyStr))
 			}
 
 			// Verify config was updated with organization-based path

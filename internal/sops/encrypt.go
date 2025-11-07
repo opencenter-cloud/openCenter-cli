@@ -120,6 +120,9 @@ func (e *DefaultEncryptor) EncryptFile(ctx context.Context, filePath string, con
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
+	
+	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
+	cmd.Env = os.Environ()
 
 	if config.Verbose {
 		cmd.Stdout = os.Stdout
@@ -259,6 +262,9 @@ func (e *DefaultEncryptor) DecryptFile(ctx context.Context, filePath string, out
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
+	
+	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
+	cmd.Env = os.Environ()
 
 	if outputPath == "" {
 		cmd.Stdout = os.Stdout
@@ -314,6 +320,10 @@ func (e *DefaultEncryptor) RotateKeys(ctx context.Context, filePath string, newA
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
+	
+	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
+	cmd.Env = os.Environ()
+	
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -362,6 +372,10 @@ func (e *DefaultEncryptor) EditEncryptedFile(ctx context.Context, filePath strin
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
+	
+	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
+	cmd.Env = os.Environ()
+	
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

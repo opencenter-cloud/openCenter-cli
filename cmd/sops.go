@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/rackerlabs/openCenter-cli/internal/sops"
+	"github.com/rackerlabs/openCenter-cli/internal/util/crypto"
 )
 
 // newSOPSCmd creates the SOPS management command group
@@ -516,6 +517,41 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 			fmt.Printf("🐛 Key file permissions: %s\n", info.Mode())
 			fmt.Printf("🐛 Key file size: %d bytes\n", info.Size())
 		}
+	}
+
+	// Check if public key file exists, if not create it from private key
+	publicKeyPath := strings.TrimSuffix(keyPath, filepath.Ext(keyPath)) + ".pub"
+	if _, err := os.Stat(publicKeyPath); os.IsNotExist(err) {
+		if debugMode {
+			fmt.Printf("🐛 Public key file not found at: %s\n", publicKeyPath)
+			fmt.Println("🐛 Generating public key from private key...")
+		} else {
+			fmt.Printf("ℹ️  Public key file not found, generating from private key...\n")
+		}
+		
+		// Read the private key
+		privateKeyData, err := os.ReadFile(keyPath)
+		if err != nil {
+			return fmt.Errorf("❌ Failed to read private key: %w", err)
+		}
+		
+		// Parse the private key to extract the public key
+		keyPair, err := crypto.ParseAgeKey(strings.TrimSpace(string(privateKeyData)))
+		if err != nil {
+			return fmt.Errorf("❌ Failed to parse private key: %w", err)
+		}
+		
+		// Save the public key
+		if err := os.WriteFile(publicKeyPath, []byte(keyPair.PublicKey), 0o644); err != nil {
+			return fmt.Errorf("❌ Failed to save public key: %w", err)
+		}
+		
+		fmt.Printf("✅ Created public key file: %s\n", publicKeyPath)
+		if debugMode {
+			fmt.Printf("🐛 Public key: %s\n", keyPair.PublicKey)
+		}
+	} else if debugMode {
+		fmt.Printf("🐛 Public key file exists at: %s\n", publicKeyPath)
 	}
 
 	// Load key to get public key

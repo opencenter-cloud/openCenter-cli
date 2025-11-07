@@ -19,9 +19,24 @@ import (
 	"github.com/rackerlabs/openCenter-cli/cmd"
 )
 
-var version = "0.0.1"
+// Build information variables set at compile time via ldflags
+var (
+	version   = "dev"
+	gitCommit = "unknown"
+	gitBranch = "unknown"
+	gitTag    = ""
+	buildDate = "unknown"
+)
 
 func main() {
+	// Set build information in cmd package
+	cmd.Version = version
+	cmd.GitCommit = gitCommit
+	cmd.GitBranch = gitBranch
+	cmd.GitTag = gitTag
+	cmd.BuildDate = buildDate
+
+	// Execute with version for backward compatibility
 	if err := cmd.Execute(version); err != nil {
 		os.Exit(1)
 	}

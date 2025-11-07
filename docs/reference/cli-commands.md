@@ -641,6 +641,52 @@ openCenter config ide --all
 - `.vscode/settings.json`: VS Code YAML schema association
 - `.idea/jsonSchemas.xml`: JetBrains schema configuration
 
+## Version Command
+
+### version
+
+Display version and build information.
+
+```bash
+openCenter version [flags]
+```
+
+**Flags:**
+- `--short`: Display short version only
+
+**Examples:**
+
+```bash
+# Show full version information
+openCenter version
+
+# Show short version only
+openCenter version --short
+
+# Alternative: use --version flag
+openCenter --version
+```
+
+**Output (Full):**
+```
+openCenter version: 0.0.1-3ddfb1c
+Git commit:         3ddfb1c764b3aa4cc481cdb2a56ab0fea5a2a47d
+Git branch:         main
+Build date:         2025-11-07T20:33:55Z
+Go version:         go1.25.2
+Platform:           darwin/amd64
+```
+
+**Output (Short):**
+```
+0.0.1-3ddfb1c
+```
+
+**Version String Format:**
+- If built from a git tag: Uses the tag as version (e.g., `v1.0.0`)
+- If not from a tag: Uses `version-shortcommit` format (e.g., `0.0.1-3ddfb1c`)
+- Development builds: Shows `dev-shortcommit`
+
 ## Plugins Commands
 
 ### plugins list

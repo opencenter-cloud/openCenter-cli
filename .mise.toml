@@ -19,23 +19,91 @@ CONTAINER_RUNTIME = "podman"
 OPENCENTER_PLUGINS_DIR = "./testdata/plugins/"
 
 [tasks]
-# Build the openCenter binary
-build = "go build -o bin/openCenter"
+# Build the openCenter binary with version information
+build = '''
+#!/usr/bin/env bash
+set -e
+
+# Get git information
+GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+VERSION=${GIT_TAG:-"0.0.1"}
+
+# Build with ldflags
+go build -ldflags "\
+  -X main.version=${VERSION} \
+  -X main.gitCommit=${GIT_COMMIT} \
+  -X main.gitBranch=${GIT_BRANCH} \
+  -X main.gitTag=${GIT_TAG} \
+  -X main.buildDate=${BUILD_DATE}" \
+  -o bin/openCenter
+
+echo "Built openCenter ${VERSION} (${GIT_COMMIT:0:7})"
+'''
 
 # Build the openCenter binary for Linux
-build-linux = "GOOS=linux GOARCH=amd64 go build -o bin/openCenter-linux"
+build-linux = '''
+#!/usr/bin/env bash
+set -e
+
+# Get git information
+GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+VERSION=${GIT_TAG:-"0.0.1"}
+
+# Build with ldflags
+GOOS=linux GOARCH=amd64 go build -ldflags "\
+  -X main.version=${VERSION} \
+  -X main.gitCommit=${GIT_COMMIT} \
+  -X main.gitBranch=${GIT_BRANCH} \
+  -X main.gitTag=${GIT_TAG} \
+  -X main.buildDate=${BUILD_DATE}" \
+  -o bin/openCenter-linux
+
+echo "Built openCenter-linux ${VERSION} (${GIT_COMMIT:0:7})"
+'''
 
 # Build binaries for multiple platforms
-build-all = [
-  "echo Building for multiple platforms...",
-  "GOOS=linux GOARCH=amd64 go build -o bin/openCenter-linux-amd64",
-  "GOOS=linux GOARCH=arm64 go build -o bin/openCenter-linux-arm64", 
-  "GOOS=darwin GOARCH=amd64 go build -o bin/openCenter-darwin-amd64",
-  "GOOS=darwin GOARCH=arm64 go build -o bin/openCenter-darwin-arm64",
-  "GOOS=windows GOARCH=amd64 go build -o bin/openCenter-windows-amd64.exe",
-  "echo Build complete. Binaries created:",
-  "ls -la bin/openCenter-*"
-]
+build-all = '''
+#!/usr/bin/env bash
+set -e
+
+echo "Building for multiple platforms..."
+
+# Get git information
+GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+VERSION=${GIT_TAG:-"0.0.1"}
+
+LDFLAGS="-X main.version=${VERSION} \
+  -X main.gitCommit=${GIT_COMMIT} \
+  -X main.gitBranch=${GIT_BRANCH} \
+  -X main.gitTag=${GIT_TAG} \
+  -X main.buildDate=${BUILD_DATE}"
+
+# Build for each platform
+GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/openCenter-linux-amd64
+GOOS=linux GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/openCenter-linux-arm64
+GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/openCenter-darwin-amd64
+GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/openCenter-darwin-arm64
+GOOS=windows GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/openCenter-windows-amd64.exe
+
+echo "Build complete. Binaries created:"
+ls -la bin/openCenter-*
+echo ""
+echo "Version: ${VERSION}"
+echo "Commit: ${GIT_COMMIT:0:7}"
+echo "Branch: ${GIT_BRANCH}"
+if [ -n "${GIT_TAG}" ]; then
+  echo "Tag: ${GIT_TAG}"
+fi
+'''
 
 # Build the openCenter binary
 tidy = "go mod tidy"

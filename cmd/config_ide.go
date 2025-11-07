@@ -236,7 +236,7 @@ func setupVSCode() error {
 func showIDEInstructions(cmd *cobra.Command, ide string) error {
 	switch ide {
 	case "vscode":
-		fmt.Println(`
+		fmt.Print(`
 Visual Studio Code Setup Instructions
 ======================================
 
@@ -260,7 +260,7 @@ For more information, see: docs/ide-integration.md
 `)
 
 	case "jetbrains":
-		fmt.Println(`
+		fmt.Print(`
 JetBrains IDEs Setup Instructions
 ==================================
 
@@ -291,7 +291,7 @@ For more information, see: docs/ide-integration.md
 `)
 
 	case "vim":
-		fmt.Println(`
+		fmt.Print(`
 Vim/Neovim Setup Instructions
 ==============================
 
@@ -349,7 +349,7 @@ For more information, see: docs/ide-integration.md
 `)
 
 	case "emacs":
-		fmt.Println(`
+		fmt.Print(`
 Emacs Setup Instructions
 =========================
 

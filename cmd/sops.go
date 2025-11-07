@@ -435,9 +435,40 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 		fmt.Printf("🐛 Environment: OPENCENTER_DEBUG=%s\n", os.Getenv("OPENCENTER_DEBUG"))
 	}
 
-	// Initialize key manager
+	// Initialize key manager and determine key path
 	homeDir, _ := os.UserHomeDir()
-	keyDir := filepath.Join(homeDir, ".config", "sops", "age")
+	var keyPath string
+	var keyDir string
+	var keyName string
+	
+	if keyFile != "" {
+		// Use the provided key file path directly
+		if strings.HasPrefix(keyFile, "~") {
+			keyPath = filepath.Join(homeDir, keyFile[1:])
+		} else if filepath.IsAbs(keyFile) {
+			keyPath = keyFile
+		} else {
+			// Relative path - make it absolute
+			if absPath, err := filepath.Abs(keyFile); err == nil {
+				keyPath = absPath
+			} else {
+				keyPath = keyFile
+			}
+		}
+		keyDir = filepath.Dir(keyPath)
+		keyName = filepath.Base(strings.TrimSuffix(keyPath, filepath.Ext(keyPath)))
+		
+		if debugMode {
+			fmt.Printf("🐛 Using custom key file: %s\n", keyFile)
+			fmt.Printf("🐛 Resolved key path: %s\n", keyPath)
+		}
+	} else {
+		// Use default key location
+		keyDir = filepath.Join(homeDir, ".config", "sops", "age")
+		keyName = "keys"
+		keyPath = filepath.Join(keyDir, fmt.Sprintf("%s.txt", keyName))
+	}
+	
 	km := sops.NewKeyManager(keyDir)
 
 	if debugMode {
@@ -445,16 +476,8 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 		fmt.Printf("🐛 Key directory: %s\n", keyDir)
 	}
 
-	// Use default key name if not specified
-	keyName := "keys"
-	if keyFile != "" {
-		keyName = filepath.Base(strings.TrimSuffix(keyFile, filepath.Ext(keyFile)))
-		if debugMode {
-			fmt.Printf("🐛 Using custom key file: %s\n", keyFile)
-		}
-	}
-
 	fmt.Printf("📁 Key name: %s\n", keyName)
+	fmt.Printf("📁 Key path: %s\n", keyPath)
 	fmt.Printf("📄 Config file: %s\n", configFile)
 
 	if dryRun {
@@ -467,7 +490,6 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 	}
 
 	// Check if key exists
-	keyPath := filepath.Join(keyDir, fmt.Sprintf("%s.txt", keyName))
 	if debugMode {
 		fmt.Printf("🐛 Checking key path: %s\n", keyPath)
 	}

@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/rackerlabs/openCenter-cli/internal/util/errors"
 )
@@ -147,13 +149,59 @@ func (e *DefaultEncryptor) EncryptFile(ctx context.Context, filePath string, con
 	return nil
 }
 
-// EncryptFiles encrypts multiple files with SOPS
+// EncryptFiles encrypts multiple files with SOPS sequentially
 func (e *DefaultEncryptor) EncryptFiles(ctx context.Context, filePaths []string, config EncryptionConfig) error {
 	for _, filePath := range filePaths {
 		if err := e.EncryptFile(ctx, filePath, config); err != nil {
 			return fmt.Errorf("failed to encrypt %s: %w", filePath, err)
 		}
 	}
+	return nil
+}
+
+// EncryptFilesParallel encrypts multiple files with SOPS in parallel
+func (e *DefaultEncryptor) EncryptFilesParallel(ctx context.Context, filePaths []string, config EncryptionConfig, maxConcurrency int) error {
+	if maxConcurrency <= 0 {
+		maxConcurrency = 4 // Default to 4 concurrent operations
+	}
+
+	// Create a semaphore to limit concurrency
+	sem := make(chan struct{}, maxConcurrency)
+	errChan := make(chan error, len(filePaths))
+	
+	// Use a wait group to track completion
+	var wg sync.WaitGroup
+	
+	for _, filePath := range filePaths {
+		wg.Add(1)
+		go func(path string) {
+			defer wg.Done()
+			
+			// Acquire semaphore
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			
+			// Encrypt the file
+			if err := e.EncryptFile(ctx, path, config); err != nil {
+				errChan <- fmt.Errorf("failed to encrypt %s: %w", path, err)
+			}
+		}(filePath)
+	}
+	
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(errChan)
+	
+	// Collect errors
+	var errors []error
+	for err := range errChan {
+		errors = append(errors, err)
+	}
+	
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to encrypt %d files: %v", len(errors), errors)
+	}
+	
 	return nil
 }
 
@@ -333,6 +381,58 @@ func (e *DefaultEncryptor) EditEncryptedFile(ctx context.Context, filePath strin
 		}
 	}
 
+	return nil
+}
+
+// DecryptFilesParallel decrypts multiple SOPS-encrypted files in parallel
+func (e *DefaultEncryptor) DecryptFilesParallel(ctx context.Context, filePaths []string, outputDir string, maxConcurrency int) error {
+	if maxConcurrency <= 0 {
+		maxConcurrency = 4 // Default to 4 concurrent operations
+	}
+
+	// Create a semaphore to limit concurrency
+	sem := make(chan struct{}, maxConcurrency)
+	errChan := make(chan error, len(filePaths))
+	
+	// Use a wait group to track completion
+	var wg sync.WaitGroup
+	
+	for _, filePath := range filePaths {
+		wg.Add(1)
+		go func(path string) {
+			defer wg.Done()
+			
+			// Acquire semaphore
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			
+			// Determine output path
+			outputPath := ""
+			if outputDir != "" {
+				outputPath = filepath.Join(outputDir, filepath.Base(path))
+			}
+			
+			// Decrypt the file
+			if err := e.DecryptFile(ctx, path, outputPath); err != nil {
+				errChan <- fmt.Errorf("failed to decrypt %s: %w", path, err)
+			}
+		}(filePath)
+	}
+	
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(errChan)
+	
+	// Collect errors
+	var errors []error
+	for err := range errChan {
+		errors = append(errors, err)
+	}
+	
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to decrypt %d files: %v", len(errors), errors)
+	}
+	
 	return nil
 }
 

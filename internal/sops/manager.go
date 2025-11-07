@@ -134,21 +134,52 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 		Verbose: true,
 	}
 
-	// Encrypt each file
+	// Filter out non-existent files
+	var existingFiles []string
 	for _, file := range filesToEncrypt {
 		filePath := filepath.Join(overlayPath, file)
-
-		// Skip if file doesn't exist
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			m.logger.Debug("Skipping non-existent file", "file", file)
 			continue
 		}
+		existingFiles = append(existingFiles, filePath)
+	}
 
-		m.logger.Info("Encrypting file", "file", file)
+	// Encrypt files in parallel if there are multiple files
+	if len(existingFiles) > 1 {
+		m.logger.Info("Encrypting files in parallel", "count", len(existingFiles))
+		if encryptor, ok := m.encryptor.(*DefaultEncryptor); ok {
+			if err := encryptor.EncryptFilesParallel(ctx, existingFiles, encryptConfig, 4); err != nil {
+				return err
+			}
+		} else {
+			// Fallback to sequential encryption
+			for _, filePath := range existingFiles {
+				m.logger.Info("Encrypting file", "file", filePath)
+				if err := m.encryptor.EncryptFile(ctx, filePath, encryptConfig); err != nil {
+					return &errors.StructuredError{
+						Type:    errors.SOPSError,
+						Field:   filePath,
+						Message: "Failed to encrypt file",
+						Cause:   err,
+						Suggestions: []string{
+							"Check that SOPS is installed and accessible",
+							"Verify the age key is valid",
+							"Ensure the file is not already encrypted",
+							"Check file permissions",
+						},
+					}
+				}
+			}
+		}
+	} else if len(existingFiles) == 1 {
+		// Single file - encrypt directly
+		filePath := existingFiles[0]
+		m.logger.Info("Encrypting file", "file", filePath)
 		if err := m.encryptor.EncryptFile(ctx, filePath, encryptConfig); err != nil {
 			return &errors.StructuredError{
 				Type:    errors.SOPSError,
-				Field:   file,
+				Field:   filePath,
 				Message: "Failed to encrypt file",
 				Cause:   err,
 				Suggestions: []string{
@@ -159,7 +190,6 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 				},
 			}
 		}
-		m.logger.Info("Successfully encrypted file", "file", file)
 	}
 
 	m.logger.Info("Completed overlay files encryption", "encrypted_count", len(filesToEncrypt))

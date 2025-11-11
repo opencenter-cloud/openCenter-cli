@@ -6,8 +6,8 @@ Feature: Cluster commands integration with new directory structure
   Scenario: Cluster select, info, and validate work with new directory structure
     When I run "openCenter cluster init integration-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a directory "<<tmp>>/conf/clusters/opencenter/infrastructure/clusters/integration-test" should exist
-    And a file "<<tmp>>/conf/clusters/opencenter/infrastructure/clusters/integration-test/.integration-test-config.yaml" should exist
+    And a directory "<<tmp>>/conf/clusters/integration-test/infrastructure/clusters/integration-test" should exist
+    And a file "<<tmp>>/conf/clusters/integration-test/infrastructure/clusters/integration-test/.integration-test-config.yaml" should exist
 
     When I run "openCenter cluster select integration-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0

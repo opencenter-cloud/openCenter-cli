@@ -395,7 +395,7 @@ func defaultConfig(name string) Config {
 				Env:          "",
 				Region:       "",
 				Status:       "",
-				Organization: "opencenter",
+				Organization: name,
 			},
 			Infrastructure: Infrastructure{
 				Provider: "openstack",

@@ -18,7 +18,7 @@ Feature: Minimal network workflow (VRRP) from init to bootstrap
     # ./openCenter cluster init demo
     When I run "openCenter cluster init demo --config-dir tmp/conf --force"
     Then the exit code should be 0
-    And the file "tmp/conf/clusters/opencenter/infrastructure/clusters/demo/.demo-config.yaml" should exist
+    And the file "tmp/conf/clusters/demo/infrastructure/clusters/demo/.demo-config.yaml" should exist
 
     # ./openCenter cluster select demo
     When I run "openCenter cluster select demo --config-dir tmp/conf"

@@ -280,10 +280,10 @@ Troubleshooting:
 				}
 			}
 
-			// Determine organization from configuration or use default
+			// Determine organization from configuration or use cluster name as default
 			organization := cfg.OpenCenter.Meta.Organization
 			if organization == "" {
-				organization = "opencenter"
+				organization = name
 			}
 
 			// Update configuration with organization if not already set

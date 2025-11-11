@@ -4,8 +4,8 @@ Feature: openCenter cluster basics
 
   Scenario: Initialize a cluster with defaults
     When I run "openCenter cluster init demo --config-dir <<tmp>>/conf"
-    Then a file "<<tmp>>/conf/clusters/opencenter/infrastructure/clusters/demo/.demo-config.yaml" should exist
-    And the file "<<tmp>>/conf/clusters/opencenter/infrastructure/clusters/demo/.demo-config.yaml" should contain "cluster_name: demo"
+    Then a file "<<tmp>>/conf/clusters/demo/infrastructure/clusters/demo/.demo-config.yaml" should exist
+    And the file "<<tmp>>/conf/clusters/demo/infrastructure/clusters/demo/.demo-config.yaml" should contain "cluster_name: demo"
 
   Scenario: Select the cluster
     Given a file "<<tmp>>/conf/demo.yaml" with content:

@@ -1174,28 +1174,42 @@ func List() ([]string, error) {
 		if entry.IsDir() {
 			entryName := entry.Name()
 			
-			// Check for legacy structure: clustersDir/clusterName/.clusterName-config.yaml
-			legacyConfigFile := filepath.Join(clustersDir, entryName, "."+entryName+"-config.yaml")
-			if _, err := os.Stat(legacyConfigFile); err == nil {
-				if !nameSet[entryName] {
-					names = append(names, entryName)
-					nameSet[entryName] = true
-				}
-				continue
-			}
-			
-			// Check for organization-based structure: clustersDir/organization/.<cluster>-config.yaml
+			// Check for organization-based structure first: clustersDir/organization/.<cluster>-config.yaml
 			// List all .yaml files in the organization directory
 			orgDir := filepath.Join(clustersDir, entryName)
+			foundOrgClusters := false
 			if orgFiles, err := os.ReadDir(orgDir); err == nil {
 				for _, orgFile := range orgFiles {
 					if !orgFile.IsDir() && strings.HasPrefix(orgFile.Name(), ".") && strings.HasSuffix(orgFile.Name(), "-config.yaml") {
 						// Extract cluster name from .<cluster>-config.yaml
 						clusterName := strings.TrimPrefix(orgFile.Name(), ".")
 						clusterName = strings.TrimSuffix(clusterName, "-config.yaml")
-						if clusterName != "" && !nameSet[clusterName] {
-							names = append(names, clusterName)
-							nameSet[clusterName] = true
+						if clusterName != "" {
+							foundOrgClusters = true
+							// Format as organization/cluster
+							fullName := entryName + "/" + clusterName
+							if !nameSet[fullName] {
+								names = append(names, fullName)
+								nameSet[fullName] = true
+							}
+						}
+					}
+				}
+			}
+			
+			// Only check for legacy structure if no organization-based configs were found
+			if !foundOrgClusters {
+				// Check for legacy structure: clustersDir/clusterName/.clusterName-config.yaml
+				// This is for backward compatibility with old flat structure
+				legacyConfigFile := filepath.Join(clustersDir, entryName, "."+entryName+"-config.yaml")
+				if _, err := os.Stat(legacyConfigFile); err == nil {
+					// Check if this is truly legacy (has infrastructure/clusters subdirs)
+					infraDir := filepath.Join(clustersDir, entryName, "infrastructure", "clusters")
+					if _, err := os.Stat(infraDir); os.IsNotExist(err) {
+						// This is legacy flat structure
+						if !nameSet[entryName] {
+							names = append(names, entryName)
+							nameSet[entryName] = true
 						}
 					}
 				}

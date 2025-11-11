@@ -47,8 +47,8 @@ Feature: Cluster commands integration with new directory structure
 
     When I run "openCenter cluster list --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And stdout should contain "cluster-a"
-    And stdout should contain "cluster-b"
+    And stdout should contain "cluster-a/cluster-a"
+    And stdout should contain "cluster-b/cluster-b"
 
     When I run "openCenter cluster select cluster-a --config-dir <<tmp>>/conf"
     Then the exit code should be 0

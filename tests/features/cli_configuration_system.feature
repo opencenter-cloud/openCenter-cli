@@ -193,9 +193,9 @@ Feature: CLI Configuration System Integration
     And the exit code should be 0
     When I run "openCenter cluster list --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And stdout should contain "list-test-a"
-    And stdout should contain "list-test-b"
-    And stdout should contain "list-test-c"
+    And stdout should contain "list-org/list-test-a"
+    And stdout should contain "list-org/list-test-b"
+    And stdout should contain "other-org/list-test-c"
 
   @config @cluster_commands @info
   Scenario: Cluster info shows organization-based paths

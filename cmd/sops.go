@@ -703,7 +703,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 			fmt.Printf("🐛 Failed to list keys: %v\n", err)
 		}
 		
-		fmt.Println("🐛 === END DEBUG INFORMATION ===\n")
+		fmt.Println("🐛 === END DEBUG INFORMATION ===")
 	}
 
 	fmt.Println("✅ All validations completed successfully!")

@@ -14,6 +14,7 @@
 package cmd
 
 import (
+    "encoding/json"
     "fmt"
     "gopkg.in/yaml.v3"
 
@@ -59,20 +60,44 @@ func newClusterInfoCmd() *cobra.Command {
 				return nil
 			}
 
+			// Get the full path to the config file
+			configPath, err := config.ConfigPath(name)
+			if err != nil {
+				return fmt.Errorf("failed to resolve config path: %w", err)
+			}
+
             // Output format
             asJSON, _ := cmd.Flags().GetBool("json")
             if asJSON {
-                b, err := cfg.ToJSON()
-                if err != nil {
-                    return err
-                }
-                fmt.Fprint(cmd.OutOrStdout(), string(b))
-                return nil
+				// Print metadata and path in JSON format
+				output := map[string]any{
+					"config_path": configPath,
+					"metadata":    cfg.OpenCenter.Meta,
+				}
+				b, err := json.MarshalIndent(output, "", "  ")
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), string(b))
+				return nil
             }
-            // Print an active-cluster header for better context in human output
-            fmt.Fprintf(cmd.OutOrStdout(), "Active cluster: %s\n", name)
-            // Marshal to YAML
-            data, err := yaml.Marshal(cfg)
+
+            // Print metadata and config path in human-readable format
+            fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", name)
+            fmt.Fprintf(cmd.OutOrStdout(), "Config Path: %s\n\n", configPath)
+            fmt.Fprintln(cmd.OutOrStdout(), "Metadata:")
+            
+            // Create a combined metadata output that includes both Meta and cluster_name
+            metadataOutput := map[string]any{
+            	"name":         cfg.OpenCenter.Meta.Name,
+            	"cluster_name": cfg.OpenCenter.Cluster.ClusterName,
+            	"env":          cfg.OpenCenter.Meta.Env,
+            	"region":       cfg.OpenCenter.Meta.Region,
+            	"status":       cfg.OpenCenter.Meta.Status,
+            	"organization": cfg.OpenCenter.Meta.Organization,
+            }
+            
+            data, err := yaml.Marshal(metadataOutput)
             if err != nil {
                 return err
             }

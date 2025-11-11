@@ -755,12 +755,24 @@ func (pr *PathResolver) OrganizationAwareConfigPath(clusterName string) (string,
 		delete(pr.pathCache, cacheKey)
 	}
 
-	clusterDir, err := pr.OrganizationAwareClusterDirectoryPath(clusterName)
-	if err != nil {
-		return "", err
+	organization, err := pr.getClusterOrganization(clusterName)
+	if err != nil || organization == "" {
+		// Try legacy path
+		clusterDir, err := ClusterDirectoryPath(clusterName)
+		if err != nil {
+			return "", err
+		}
+		configPath := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
+		if _, err := os.Stat(configPath); err == nil {
+			pr.pathCache[cacheKey] = configPath
+			return configPath, nil
+		}
+		return "", fmt.Errorf("cluster configuration file not found for %s", clusterName)
 	}
 
-	configPath := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
+	// Use organization-based path (config at organization level)
+	paths := pr.ResolveClusterPaths(clusterName, organization)
+	configPath := filepath.Join(paths.OrganizationDir, "."+clusterName+"-config.yaml")
 	
 	// Cache the resolved path if the file exists
 	if _, err := os.Stat(configPath); err == nil {
@@ -854,9 +866,9 @@ func (pr *PathResolver) getClusterOrganization(clusterName string) (string, erro
 				continue // This is a legacy cluster, not an organization
 			}
 
-			// Check if cluster exists in this organization
-			clusterPath := filepath.Join(clustersDir, orgName, "infrastructure", "clusters", clusterName)
-			if _, err := os.Stat(clusterPath); err == nil {
+			// Check if cluster config exists at organization level
+			clusterConfigPath := filepath.Join(clustersDir, orgName, "."+clusterName+"-config.yaml")
+			if _, err := os.Stat(clusterConfigPath); err == nil {
 				// Cache the result
 				pr.pathCache[cacheKey] = orgName
 				return orgName, nil

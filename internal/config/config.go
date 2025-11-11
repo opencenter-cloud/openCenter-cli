@@ -1184,18 +1184,18 @@ func List() ([]string, error) {
 				continue
 			}
 			
-			// Check for organization-based structure: clustersDir/organization/infrastructure/clusters/*/
-			orgInfraDir := filepath.Join(clustersDir, entryName, "infrastructure", "clusters")
-			if orgEntries, err := os.ReadDir(orgInfraDir); err == nil {
-				for _, orgEntry := range orgEntries {
-					if orgEntry.IsDir() {
-						clusterName := orgEntry.Name()
-						orgConfigFile := filepath.Join(orgInfraDir, clusterName, "."+clusterName+"-config.yaml")
-						if _, err := os.Stat(orgConfigFile); err == nil {
-							if !nameSet[clusterName] {
-								names = append(names, clusterName)
-								nameSet[clusterName] = true
-							}
+			// Check for organization-based structure: clustersDir/organization/.<cluster>-config.yaml
+			// List all .yaml files in the organization directory
+			orgDir := filepath.Join(clustersDir, entryName)
+			if orgFiles, err := os.ReadDir(orgDir); err == nil {
+				for _, orgFile := range orgFiles {
+					if !orgFile.IsDir() && strings.HasPrefix(orgFile.Name(), ".") && strings.HasSuffix(orgFile.Name(), "-config.yaml") {
+						// Extract cluster name from .<cluster>-config.yaml
+						clusterName := strings.TrimPrefix(orgFile.Name(), ".")
+						clusterName = strings.TrimSuffix(clusterName, "-config.yaml")
+						if clusterName != "" && !nameSet[clusterName] {
+							names = append(names, clusterName)
+							nameSet[clusterName] = true
 						}
 					}
 				}

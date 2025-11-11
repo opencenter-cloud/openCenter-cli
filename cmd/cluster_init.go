@@ -416,8 +416,8 @@ Troubleshooting:
 				return fmt.Errorf("failed to marshal final config: %w", err)
 			}
 
-			// Get the config path using organization structure
-			configPath := filepath.Join(clusterPaths.ClusterDir, "."+name+"-config.yaml")
+			// Get the config path at organization level
+			configPath := filepath.Join(clusterPaths.OrganizationDir, "."+name+"-config.yaml")
 
 			// Write the config file with proper permissions (0600 for files)
 			if err := os.WriteFile(configPath, finalYAML, 0o600); err != nil {

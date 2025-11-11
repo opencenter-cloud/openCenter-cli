@@ -154,7 +154,7 @@ Feature: CLI Configuration System Integration
     Then the exit code should be 0
     And a directory "<<tmp>>/conf/clusters/default-test" should exist
     And a directory "<<tmp>>/conf/clusters/default-test/infrastructure/clusters/default-test" should exist
-    And a file "<<tmp>>/conf/clusters/default-test/infrastructure/clusters/default-test/.default-test-config.yaml" should exist
+    And a file "<<tmp>>/conf/clusters/default-test/.default-test-config.yaml" should exist
     And the cluster configuration "default-test" should have "opencenter.meta.organization" set to "default-test"
 
   @config @organization @multiple_clusters
@@ -226,7 +226,7 @@ Feature: CLI Configuration System Integration
     When I run "openCenter cluster init custom-path-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a directory "<<tmp>>/custom-clusters/custom-path-test/infrastructure/clusters/custom-path-test" should exist
-    And a file "<<tmp>>/custom-clusters/custom-path-test/infrastructure/clusters/custom-path-test/.custom-path-test-config.yaml" should exist
+    And a file "<<tmp>>/custom-clusters/custom-path-test/.custom-path-test-config.yaml" should exist
 
   @config @filesystem @permissions
   Scenario: Configuration files are created with proper permissions

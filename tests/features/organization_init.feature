@@ -22,7 +22,7 @@ Feature: Organization-based cluster initialization
   Scenario: Init cluster with organization creates cluster configuration in correct location
     When I run "openCenter cluster init api-service --opencenter.meta.organization=prod-team --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a file "<<tmp>>/conf/clusters/prod-team/infrastructure/clusters/api-service/.api-service-config.yaml" should exist
+    And a file "<<tmp>>/conf/clusters/prod-team/.api-service-config.yaml" should exist
     And the cluster configuration "api-service" should have "opencenter.meta.organization" set to "prod-team"
     And the cluster configuration "api-service" should have "opencenter.gitops.git_dir" containing "clusters/prod-team"
 
@@ -40,7 +40,7 @@ Feature: Organization-based cluster initialization
     Then the exit code should be 0
     And a directory "<<tmp>>/conf/clusters/legacy-app" should exist
     And a directory "<<tmp>>/conf/clusters/legacy-app/infrastructure/clusters/legacy-app" should exist
-    And a file "<<tmp>>/conf/clusters/legacy-app/infrastructure/clusters/legacy-app/.legacy-app-config.yaml" should exist
+    And a file "<<tmp>>/conf/clusters/legacy-app/.legacy-app-config.yaml" should exist
     And the cluster configuration "legacy-app" should have "opencenter.meta.organization" set to "legacy-app"
 
   Scenario: Init multiple clusters in same organization share GitOps root
@@ -49,8 +49,8 @@ Feature: Organization-based cluster initialization
     Then the exit code should be 0
     And a directory "<<tmp>>/conf/clusters/web-team/infrastructure/clusters/frontend" should exist
     And a directory "<<tmp>>/conf/clusters/web-team/infrastructure/clusters/backend" should exist
-    And a file "<<tmp>>/conf/clusters/web-team/infrastructure/clusters/frontend/.frontend-config.yaml" should exist
-    And a file "<<tmp>>/conf/clusters/web-team/infrastructure/clusters/backend/.backend-config.yaml" should exist
+    And a file "<<tmp>>/conf/clusters/web-team/.frontend-config.yaml" should exist
+    And a file "<<tmp>>/conf/clusters/web-team/.backend-config.yaml" should exist
     And the cluster configuration "frontend" should have "opencenter.gitops.git_dir" containing "clusters/web-team"
     And the cluster configuration "backend" should have "opencenter.gitops.git_dir" containing "clusters/web-team"
 
@@ -58,7 +58,7 @@ Feature: Organization-based cluster initialization
     When I run "openCenter cluster init test-service --opencenter.meta.organization=qa-team --config-dir <<tmp>>/conf"
     And I run "openCenter cluster init test-service --opencenter.meta.organization=qa-team --force --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a file "<<tmp>>/conf/clusters/qa-team/infrastructure/clusters/test-service/.test-service-config.yaml" should exist
+    And a file "<<tmp>>/conf/clusters/qa-team/.test-service-config.yaml" should exist
     And the cluster configuration "test-service" should have "opencenter.meta.organization" set to "qa-team"
 
   Scenario: Init cluster with organization fails when cluster exists without force

@@ -359,6 +359,11 @@ Troubleshooting:
 				return fmt.Errorf("failed to create organization structure: %w", err)
 			}
 
+			// Create .gitignore at organization level
+			if err := createOrganizationGitignore(clusterPaths.OrganizationDir); err != nil {
+				return fmt.Errorf("failed to create organization .gitignore: %w", err)
+			}
+
 			// Create cluster directories
 			if err := pathResolver.CreateClusterDirectories(name, organization); err != nil {
 				return fmt.Errorf("failed to create cluster directories: %w", err)
@@ -397,6 +402,50 @@ Troubleshooting:
 				}
 			}
 			// If user specified a custom git_dir, keep it as-is
+
+			// Update SSH key paths to point to organization secrets directory
+			// Format: <organization>/secrets/ssh/<cluster>-<env>-<region>
+			env := cfg.OpenCenter.Meta.Env
+			region := cfg.OpenCenter.Meta.Region
+			if env == "" {
+				env = "dev"
+			}
+			if region == "" {
+				region = "local"
+			}
+			
+			sshKeyBaseName := fmt.Sprintf("%s-%s-%s", name, env, region)
+			sshKeyPath := filepath.Join(organization, "secrets", "ssh", sshKeyBaseName)
+			sshPubKeyPath := sshKeyPath + ".pub"
+			
+			// Check if user explicitly set SSH keys via command line flags
+			userSetSSHKeys := false
+			for _, arg := range os.Args {
+				if strings.HasPrefix(arg, "--opencenter.gitops.git_ssh_key=") || 
+				   strings.HasPrefix(arg, "--gitops.git_ssh_key=") ||
+				   strings.HasPrefix(arg, "--opencenter.gitops.git_ssh_pub=") ||
+				   strings.HasPrefix(arg, "--gitops.git_ssh_pub=") {
+					userSetSSHKeys = true
+					break
+				}
+			}
+			
+			// Only set SSH key paths if user didn't explicitly provide them
+			if !userSetSSHKeys {
+				cfg.OpenCenter.GitOps.GitSSHKey = sshKeyPath
+				cfg.OpenCenter.GitOps.GitSSHPub = sshPubKeyPath
+				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
+					if gitops, ok := opencenter["gitops"].(map[string]any); ok {
+						gitops["git_ssh_key"] = sshKeyPath
+						gitops["git_ssh_pub"] = sshPubKeyPath
+					} else {
+						opencenter["gitops"] = map[string]any{
+							"git_ssh_key": sshKeyPath,
+							"git_ssh_pub": sshPubKeyPath,
+						}
+					}
+				}
+			}
 
 			// Update the map with any SOPS key changes from the struct
 			if cfg.Secrets.SopsAgeKeyFile != "" {
@@ -539,6 +588,103 @@ func createOrganizationSOPSConfig(sopsConfigPath, publicKey string) error {
 	// Write the SOPS configuration file
 	if err := os.WriteFile(sopsConfigPath, []byte(sopsConfig), 0o600); err != nil {
 		return fmt.Errorf("failed to write SOPS config file: %w", err)
+	}
+	
+	return nil
+}
+
+// createOrganizationGitignore creates a .gitignore file at the organization level.
+// This file is copied from the embedded gitops-base-dir/.gitignore template.
+func createOrganizationGitignore(organizationDir string) error {
+	gitignorePath := filepath.Join(organizationDir, ".gitignore")
+	
+	// Check if .gitignore already exists
+	if _, err := os.Stat(gitignorePath); err == nil {
+		// .gitignore already exists, don't overwrite it
+		return nil
+	}
+	
+	// Read the embedded .gitignore template from gitops-base-dir
+	gitignoreContent := `# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.egg-info/
+.Python
+build/
+dist/
+venv/
+.env
+.pytest_cache/
+htmlcov/
+.tox/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+override.tf
+override_*.tf
+*.tfvars
+*.tfvars.json
+.terraformrc
+terraform.rc
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Thumbnails
+._*
+# Spotlight files
+.Spotlight-V100
+# Temporary files
+.Trashes
+Icon?
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.xcscmblueprint
+.xcscmblueprint
+*.xccheckout
+# Finder
+.localized
+
+# Linux
+# Temporary files
+*~
+.#*
+*.swp
+*.bak
+*.tmp
+
+#RMPK specific
+.bin/
+id_rsa
+id_rsa.pub
+kubeconfig.yaml
+ca.crt
+ca.key
+kubespray/
+ansible-hardening/
+.python-version
+credentials/
+.mygitignore
+`
+	
+	// Write the .gitignore file with proper permissions (0644 for files)
+	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0o644); err != nil {
+		return fmt.Errorf("failed to write .gitignore file to organization directory '%s': %w", gitignorePath, err)
 	}
 	
 	return nil

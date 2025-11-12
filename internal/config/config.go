@@ -476,8 +476,8 @@ func defaultConfig(name string) Config {
 			GitOps: GitOpsConfig{
 				GitDir:    fmt.Sprintf("./testdata/local-git-repo-%s", name),
 				GitURL:    "",
-				GitSSHKey: "~/.ssh/id_ed25519-flux",
-				GitSSHPub: "~/.ssh/id_ed25519-flux.pub",
+				GitSSHKey: "",
+				GitSSHPub: "",
 				GitBranch: "main",
 				Flux: GitOpsFlux{
 					Interval: "15m",

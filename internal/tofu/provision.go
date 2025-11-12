@@ -12,6 +12,8 @@ import (
 // Provision generates OpenTofu backend/provider configuration for the cluster.
 // It writes a provider.tf containing the terraform backend block to
 // <git_dir>/infrastructure/clusters/<cluster>/provider.tf.
+// Note: main.tf is rendered by RenderInfrastructureCluster from the static template
+// to preserve human-readable ordering of locals and modules.
 func Provision(cfg config.Config) error {
     if !cfg.OpenTofu.Enabled {
         return nil
@@ -25,20 +27,6 @@ func Provision(cfg config.Config) error {
     // Validate template data before rendering
     if err := provision.ValidateTemplateData(cfg); err != nil {
         return fmt.Errorf("template validation failed: %w", err)
-    }
-
-    // Render main.tf from structured IaC (locals + modules)
-    mainPath := filepath.Join(clusterDir, "main.tf")
-    mf, err := os.Create(mainPath)
-    if err != nil {
-        return fmt.Errorf("failed to create main.tf: %w", err)
-    }
-    if err := provision.Templates.ExecuteTemplate(mf, "main.tf.tmpl", cfg); err != nil {
-        mf.Close()
-        return fmt.Errorf("failed to execute main.tf template: %w", err)
-    }
-    if err := mf.Close(); err != nil {
-        return err
     }
 
     // Render provider.tf for OpenTofu backend

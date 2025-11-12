@@ -404,7 +404,7 @@ Troubleshooting:
 			// If user specified a custom git_dir, keep it as-is
 
 			// Update SSH key paths to point to organization secrets directory
-			// Format: <organization>/secrets/ssh/<cluster>-<env>-<region>
+			// Format: <clustersDir>/<organization>/secrets/ssh/<cluster>-<env>-<region>
 			env := cfg.OpenCenter.Meta.Env
 			region := cfg.OpenCenter.Meta.Region
 			if env == "" {
@@ -414,8 +414,15 @@ Troubleshooting:
 				region = "local"
 			}
 			
+			// Get the clusters directory from config manager
+			configDir, err := config.ResolveConfigDir()
+			if err != nil {
+				return fmt.Errorf("failed to resolve config directory: %w", err)
+			}
+			clustersDir := filepath.Join(configDir, "clusters")
+			
 			sshKeyBaseName := fmt.Sprintf("%s-%s-%s", name, env, region)
-			sshKeyPath := filepath.Join(organization, "secrets", "ssh", sshKeyBaseName)
+			sshKeyPath := filepath.Join(clustersDir, organization, "secrets", "ssh", sshKeyBaseName)
 			sshPubKeyPath := sshKeyPath + ".pub"
 			
 			// Check if user explicitly set SSH keys via command line flags

@@ -337,8 +337,9 @@ func TestPathResolver_OrganizationAwarePaths(t *testing.T) {
 	}
 	
 	// Create a cluster config file to make it detectable
+	// Config file should be at organization level, not in cluster directory
 	paths := pr.ResolveClusterPaths(clusterName, organization)
-	configPath := filepath.Join(paths.ClusterDir, "."+clusterName+"-config.yaml")
+	configPath := filepath.Join(paths.OrganizationDir, "."+clusterName+"-config.yaml")
 	configContent := `
 opencenter:
   meta:
@@ -370,7 +371,8 @@ opencenter:
 		t.Fatalf("Failed to resolve organization-aware config path: %v", err)
 	}
 	
-	expectedConfigPath := filepath.Join(expectedPath, "."+clusterName+"-config.yaml")
+	// Config file should be at organization level
+	expectedConfigPath := filepath.Join(tempDir, "clusters", organization, "."+clusterName+"-config.yaml")
 	if configPathResolved != expectedConfigPath {
 		t.Errorf("Expected config path %s, got %s", expectedConfigPath, configPathResolved)
 	}

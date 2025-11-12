@@ -61,10 +61,10 @@ func NewPathResolver(configManager *ConfigManager) *PathResolver {
 }
 
 // ResolveClusterPaths resolves all cluster paths for the given cluster name and organization.
-// If organization is empty, it uses the cluster name as the organization name.
+// If organization is empty, it uses "opencenter" as the default organization.
 func (pr *PathResolver) ResolveClusterPaths(clusterName, organization string) ClusterPaths {
 	if organization == "" {
-		organization = clusterName
+		organization = "opencenter"
 	}
 
 	// Get base clusters directory from configuration

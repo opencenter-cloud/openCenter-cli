@@ -62,14 +62,16 @@ type GitOpsInfo struct {
 // item represents a single selectable entry in the interactive list.
 // It implements the `list.Item` interface required by the `huh` library's list component.
 type item struct {
-	title string
+	title        string
+	description  string
+	organization string
 }
 
 // Title returns the display text for the list item.
 func (i item) Title() string { return i.title }
 
-// Description provides additional details for the list item (unused in this case).
-func (i item) Description() string { return "" }
+// Description provides additional details for the list item.
+func (i item) Description() string { return i.description }
 
 // FilterValue returns the string value used for filtering the list.
 func (i item) FilterValue() string { return i.title }
@@ -127,6 +129,17 @@ func (m model) View() string {
 
 // loadClusterMetadata loads cluster metadata from the configuration file.
 func loadClusterMetadata(clusterName string) (ClusterMetadata, error) {
+	// Extract organization from cluster name if present (format: org/cluster)
+	var actualClusterName string
+	var orgFromName string
+	if strings.Contains(clusterName, "/") {
+		parts := strings.SplitN(clusterName, "/", 2)
+		orgFromName = parts[0]
+		actualClusterName = parts[1]
+	} else {
+		actualClusterName = clusterName
+	}
+
 	// Load cluster configuration
 	cfg, err := config.Load(clusterName)
 	if err != nil {
@@ -144,11 +157,13 @@ func loadClusterMetadata(clusterName string) (ClusterMetadata, error) {
 
 	// Use cluster name as fallback if not set in config
 	if metadata.Name == "" {
-		metadata.Name = clusterName
+		metadata.Name = actualClusterName
 	}
 
-	// Use "opencenter" as fallback organization if not set
-	if metadata.Organization == "" {
+	// Use organization from name if present, otherwise from config, otherwise "opencenter"
+	if orgFromName != "" {
+		metadata.Organization = orgFromName
+	} else if metadata.Organization == "" {
 		metadata.Organization = "opencenter"
 	}
 
@@ -157,6 +172,15 @@ func loadClusterMetadata(clusterName string) (ClusterMetadata, error) {
 
 // generateClusterSelectOutput generates the complete output for cluster select command.
 func generateClusterSelectOutput(clusterName string) (ClusterSelectOutput, error) {
+	// Extract actual cluster name from org/cluster format if present
+	var actualClusterName string
+	if strings.Contains(clusterName, "/") {
+		parts := strings.SplitN(clusterName, "/", 2)
+		actualClusterName = parts[1]
+	} else {
+		actualClusterName = clusterName
+	}
+
 	// Get CLI configuration manager
 	configManager, err := config.NewConfigManager("")
 	if err != nil {
@@ -178,14 +202,14 @@ func generateClusterSelectOutput(clusterName string) (ClusterSelectOutput, error
 	}
 
 	// Resolve cluster paths using organization from metadata
-	paths := pathResolver.ResolveClusterPaths(clusterName, metadata.Organization)
+	paths := pathResolver.ResolveClusterPaths(actualClusterName, metadata.Organization)
 
 	// Create GitOps info
 	gitOpsInfo := GitOpsInfo{
-		GitDir:          paths.GitOpsDir,
-		ApplicationsDir: filepath.Join(paths.GitOpsDir, "applications", "overlays", clusterName),
-		InfrastructureDir: filepath.Join(paths.GitOpsDir, "infrastructure", "clusters", clusterName),
-		SecretsDir:      paths.SecretsDir,
+		GitDir:            paths.GitOpsDir,
+		ApplicationsDir:   filepath.Join(paths.GitOpsDir, "applications", "overlays", actualClusterName),
+		InfrastructureDir: filepath.Join(paths.GitOpsDir, "infrastructure", "clusters", actualClusterName),
+		SecretsDir:        paths.SecretsDir,
 	}
 
 	// Generate export commands if cluster is deployed
@@ -337,13 +361,33 @@ KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.`,
 				}
 
 				items := []list.Item{}
-				for _, name := range names {
-					items = append(items, item{title: name})
+				for _, clusterName := range names {
+					// Extract organization and cluster name
+					var org string
+					if strings.Contains(clusterName, "/") {
+						parts := strings.SplitN(clusterName, "/", 2)
+						org = parts[0]
+					} else {
+						org = ""
+					}
+
+					// Create description with organization info
+					description := ""
+					if org != "" {
+						description = fmt.Sprintf("Organization: %s", org)
+					}
+
+					items = append(items, item{
+						title:        clusterName,
+						description:  description,
+						organization: org,
+					})
 				}
 
 				delegate := list.NewDefaultDelegate()
 				delegate.Styles.SelectedTitle = selectedItemStyle
 				delegate.Styles.NormalTitle = itemStyle
+				delegate.ShowDescription = true
 
 				l := list.New(items, delegate, 0, 0)
 				l.Title = "Select a cluster"

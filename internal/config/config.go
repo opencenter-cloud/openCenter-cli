@@ -1260,50 +1260,67 @@ func getConfigPathForSave(cfg Config) (string, error) {
 func List() ([]string, error) {
 	dir, err := ResolveConfigDir()
 	if err != nil {
+		Debugf("List: failed to resolve config directory: %v", err)
 		return nil, fmt.Errorf("failed to resolve configuration directory: %w", err)
 	}
+	Debugf("List: resolved config directory: %s", dir)
 	
 	var names []string
 	nameSet := make(map[string]bool) // Use set to avoid duplicates
 	
 	// Check for flat config files (backward compatibility)
+	Debugf("List: checking for flat config files in: %s", dir)
 	if entries, err := os.ReadDir(dir); err == nil {
+		Debugf("List: found %d entries in config directory", len(entries))
 		for _, entry := range entries {
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".yaml") {
 				// Extract cluster name from filename (remove .yaml extension)
 				clusterName := strings.TrimSuffix(entry.Name(), ".yaml")
+				Debugf("List: found yaml file: %s (cluster name: %s)", entry.Name(), clusterName)
 				// Skip config.yaml (CLI config file)
 				if clusterName != "config" && !nameSet[clusterName] {
+					Debugf("List: adding flat config cluster: %s", clusterName)
 					names = append(names, clusterName)
 					nameSet[clusterName] = true
+				} else if clusterName == "config" {
+					Debugf("List: skipping CLI config file: %s", entry.Name())
 				}
 			}
 		}
+	} else {
+		Debugf("List: failed to read config directory: %v", err)
 	}
 	
 	// Check clusters directory for legacy and organization-based structures
 	clustersDir := filepath.Join(dir, "clusters")
+	Debugf("List: checking clusters directory: %s", clustersDir)
 	entries, readErr := os.ReadDir(clustersDir)
 	if readErr != nil {
 		// If clusters directory doesn't exist, just return flat config files
 		if os.IsNotExist(readErr) {
+			Debugf("List: clusters directory does not exist, returning %d flat config clusters", len(names))
 			// Sort lexically
 			if len(names) > 1 {
 				sortStrings(names)
 			}
 			return names, nil
 		}
+		Debugf("List: failed to read clusters directory: %v", readErr)
 		return nil, fmt.Errorf("failed to read clusters directory: %w", readErr)
 	}
+	Debugf("List: found %d entries in clusters directory", len(entries))
 	
 	for _, entry := range entries {
 		if entry.IsDir() {
 			entryName := entry.Name()
+			Debugf("List: processing directory entry: %s", entryName)
 			
 			// Check for legacy structure first: clustersDir/clusterName/.clusterName-config.yaml
 			// This is for backward compatibility with old flat structure
 			legacyConfigFile := filepath.Join(clustersDir, entryName, "."+entryName+"-config.yaml")
+			Debugf("List: checking for legacy config file: %s", legacyConfigFile)
 			if _, err := os.Stat(legacyConfigFile); err == nil {
+				Debugf("List: found legacy config file for: %s", entryName)
 				// Check if this is truly legacy (no infrastructure/clusters subdirs OR no applications subdirs)
 				infraDir := filepath.Join(clustersDir, entryName, "infrastructure", "clusters")
 				appsDir := filepath.Join(clustersDir, entryName, "applications", "overlays")
@@ -1311,48 +1328,74 @@ func List() ([]string, error) {
 				hasApps := false
 				if _, err := os.Stat(infraDir); err == nil {
 					hasInfra = true
+					Debugf("List: %s has infrastructure directory", entryName)
 				}
 				if _, err := os.Stat(appsDir); err == nil {
 					hasApps = true
+					Debugf("List: %s has applications directory", entryName)
 				}
 				
 				// If it has neither infrastructure nor applications subdirs, it's legacy flat structure
 				if !hasInfra && !hasApps {
+					Debugf("List: %s is legacy flat structure (no infra/apps dirs)", entryName)
 					if !nameSet[entryName] {
+						Debugf("List: adding legacy cluster: %s", entryName)
 						names = append(names, entryName)
 						nameSet[entryName] = true
 					}
 					continue // Skip organization check for this entry
+				} else {
+					Debugf("List: %s has subdirs (infra=%v, apps=%v), treating as organization", entryName, hasInfra, hasApps)
 				}
+			} else {
+				Debugf("List: no legacy config file found for: %s", entryName)
 			}
 			
 			// Check for organization-based structure: clustersDir/organization/.<cluster>-config.yaml
 			// List all .yaml files in the organization directory
 			orgDir := filepath.Join(clustersDir, entryName)
+			Debugf("List: checking organization directory: %s", orgDir)
 			if orgFiles, err := os.ReadDir(orgDir); err == nil {
+				Debugf("List: found %d files in organization directory: %s", len(orgFiles), entryName)
 				for _, orgFile := range orgFiles {
 					if !orgFile.IsDir() && strings.HasPrefix(orgFile.Name(), ".") && strings.HasSuffix(orgFile.Name(), "-config.yaml") {
+						Debugf("List: found organization config file: %s", orgFile.Name())
 						// Extract cluster name from .<cluster>-config.yaml
 						clusterName := strings.TrimPrefix(orgFile.Name(), ".")
 						clusterName = strings.TrimSuffix(clusterName, "-config.yaml")
+						Debugf("List: extracted cluster name: %s from file: %s", clusterName, orgFile.Name())
 						if clusterName != "" && clusterName != entryName {
 							// Only treat as organization structure if cluster name != directory name
 							// Format as organization/cluster
 							fullName := entryName + "/" + clusterName
 							if !nameSet[fullName] {
+								Debugf("List: adding organization cluster: %s", fullName)
 								names = append(names, fullName)
 								nameSet[fullName] = true
+							} else {
+								Debugf("List: skipping duplicate cluster: %s", fullName)
 							}
+						} else {
+							Debugf("List: skipping cluster (name=%s matches org=%s or is empty)", clusterName, entryName)
 						}
 					}
 				}
+			} else {
+				Debugf("List: failed to read organization directory %s: %v", orgDir, err)
 			}
+		} else {
+			Debugf("List: skipping non-directory entry: %s", entry.Name())
 		}
 	}
 	
 	// Sort lexically
+	Debugf("List: sorting %d cluster names", len(names))
 	if len(names) > 1 {
 		sortStrings(names)
+	}
+	Debugf("List: returning %d total clusters", len(names))
+	for i, name := range names {
+		Debugf("List: final result[%d]: %s", i, name)
 	}
 	return names, nil
 }

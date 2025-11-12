@@ -39,24 +39,38 @@ func newClusterListCmd() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "List configured clusters",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			config.Debug("cluster list: starting cluster list operation")
+			
 			names, err := config.List()
 			if err != nil {
+				config.Debugf("cluster list: failed to list clusters: %v", err)
 				return failf("failed to list clusters: %v", err)
+			}
+			
+			config.Debugf("cluster list: found %d cluster(s)", len(names))
+			for i, name := range names {
+				config.Debugf("cluster list: [%d] %s", i, name)
 			}
 
 			jsonOutput, _ := cmd.Flags().GetBool("json")
+			config.Debugf("cluster list: json output mode: %v", jsonOutput)
+			
 			if jsonOutput {
 				b, err := json.Marshal(names)
 				if err != nil {
+					config.Debugf("cluster list: failed to marshal to JSON: %v", err)
 					return failf("failed to marshal cluster names to JSON: %v", err)
 				}
+				config.Debug("cluster list: outputting JSON format")
 				fmt.Fprintln(cmd.OutOrStdout(), string(b))
 				return nil
 			}
 
+			config.Debug("cluster list: outputting plain text format")
 			for _, n := range names {
 				fmt.Fprintln(cmd.OutOrStdout(), n)
 			}
+			config.Debug("cluster list: operation completed successfully")
 			return nil
 		},
 	}

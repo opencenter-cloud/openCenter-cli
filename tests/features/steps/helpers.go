@@ -737,56 +737,9 @@ func (w *world) anEmptyDirectory(path string) error {
 func (w *world) aFileWithContent(path string, content *godog.DocString) error {
 	p := w.replaceTmp(path)
 	
-	// Check if this is a cluster configuration file in the conf directory
-	if strings.Contains(p, "/conf/") && strings.HasSuffix(p, ".yaml") {
-		// Extract cluster name from the file path
-		fileName := filepath.Base(p)
-		clusterName := strings.TrimSuffix(fileName, ".yaml")
-		
-		// Check if the content looks like a cluster configuration (contains "opencenter:" section)
-		if strings.Contains(content.Content, "opencenter:") {
-			// For organization-based structure, use the default "opencenter" organization
-			// unless specified in the content
-			orgName := "opencenter"
-			
-			// Parse the content to check if organization is specified
-			var tempConfig map[string]interface{}
-			if err := yaml.Unmarshal([]byte(content.Content), &tempConfig); err == nil {
-				if opencenter, ok := tempConfig["opencenter"].(map[string]interface{}); ok {
-					if meta, ok := opencenter["meta"].(map[string]interface{}); ok {
-						if org, ok := meta["organization"].(string); ok && org != "" {
-							orgName = org
-						}
-					}
-				}
-			}
-			
-			// Create the organization-based directory structure path
-			confDir := filepath.Dir(p)
-			orgDir := filepath.Join(confDir, "clusters", orgName)
-			clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", clusterName)
-			newPath := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
-			
-			// Create the cluster directory
-			if err := os.MkdirAll(clusterDir, 0755); err != nil {
-				return err
-			}
-			
-			// Also create the applications and secrets directories for the organization
-			if err := os.MkdirAll(filepath.Join(orgDir, "applications", "overlays", clusterName), 0755); err != nil {
-				return err
-			}
-			if err := os.MkdirAll(filepath.Join(orgDir, "secrets", "age", "keys"), 0755); err != nil {
-				return err
-			}
-			
-			body := w.replaceTmp(content.Content)
-			body = normalizeConfigYAML(body)
-			return ioutil.WriteFile(newPath, []byte(body), 0644)
-		}
-	}
-	
-	// Default behavior for non-cluster config files
+	// Default behavior: create file at the specified path
+	// This supports both flat file structure and organization structure
+	// depending on what path the test specifies
 	dir := filepath.Dir(p)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err

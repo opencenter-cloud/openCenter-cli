@@ -723,7 +723,18 @@ func ConfigPath(name string) (string, error) {
 		return "", fmt.Errorf("invalid cluster name: %w", err)
 	}
 
-	// Try organization-aware path first
+	configDir, err := ResolveConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve config directory: %w", err)
+	}
+	
+	// Check for flat config file first (backward compatibility and test support)
+	flatConfigPath := filepath.Join(configDir, name+".yaml")
+	if _, statErr := os.Stat(flatConfigPath); statErr == nil {
+		return flatConfigPath, nil
+	}
+	
+	// Try organization-aware path (for org/cluster format)
 	cliConfigManager, err := NewConfigManager("")
 	if err == nil {
 		pathResolver := NewPathResolver(cliConfigManager)
@@ -735,27 +746,21 @@ func ConfigPath(name string) (string, error) {
 		}
 	}
 	
-	// Check for flat config file (backward compatibility)
-	configDir, err := ResolveConfigDir()
-	if err == nil {
-		flatConfigPath := filepath.Join(configDir, name+".yaml")
-		if _, statErr := os.Stat(flatConfigPath); statErr == nil {
-			return flatConfigPath, nil
-		}
-	}
-	
 	// Fall back to legacy directory structure path for backward compatibility
 	clusterDir, err := ClusterDirectoryPath(name)
 	if err != nil {
 		return "", err
 	}
 	
-	// Ensure the clusters subdirectory and cluster directory exist
-	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
-		return "", fmt.Errorf("failed to create cluster directory structure '%s': %w", clusterDir, err)
+	// Check if legacy config file exists before creating directories
+	legacyConfigPath := filepath.Join(clusterDir, "."+name+"-config.yaml")
+	if _, statErr := os.Stat(legacyConfigPath); statErr == nil {
+		return legacyConfigPath, nil
 	}
 	
-	return filepath.Join(clusterDir, "."+name+"-config.yaml"), nil
+	// Only create directories if we're actually going to write a new config
+	// For read operations, return error if file doesn't exist
+	return "", fmt.Errorf("cluster configuration file not found for cluster %s", name)
 }
 
 // Load reads and unmarshals a YAML configuration file for the given cluster name.
@@ -1108,10 +1113,22 @@ func Save(cfg Config) error {
 	if cfg.ClusterName() == "" {
 		return errors.New("cluster_name must not be empty")
 	}
+	
+	// Try to get existing config path first
 	path, err := ConfigPath(cfg.ClusterName())
 	if err != nil {
-		return err
+		// If config doesn't exist, determine where to create it based on organization
+		path, err = getConfigPathForSave(cfg)
+		if err != nil {
+			return err
+		}
 	}
+	
+	// Ensure parent directory exists
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	
 	// Marshal YAML with indentation
 	data, marshalErr := yaml.Marshal(&cfg)
 	if marshalErr != nil {
@@ -1122,6 +1139,26 @@ func Save(cfg Config) error {
 		return writeErr
 	}
 	return nil
+}
+
+// getConfigPathForSave determines where to save a new cluster configuration.
+// It uses organization structure if organization is set, otherwise uses flat file structure.
+func getConfigPathForSave(cfg Config) (string, error) {
+	configDir, err := ResolveConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve config directory: %w", err)
+	}
+	
+	organization := cfg.OpenCenter.Meta.Organization
+	clusterName := cfg.ClusterName()
+	
+	if organization != "" && organization != "opencenter" {
+		// Use organization structure: clusters/<org>/.<cluster>-config.yaml
+		return filepath.Join(configDir, "clusters", organization, "."+clusterName+"-config.yaml"), nil
+	}
+	
+	// Use flat file structure for backward compatibility and default organization
+	return filepath.Join(configDir, clusterName+".yaml"), nil
 }
 
 // List returns a sorted list of cluster names from the configuration directory.

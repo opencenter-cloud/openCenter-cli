@@ -141,19 +141,8 @@ func (cm *ConfigurationManager) SaveConfig(ctx context.Context, config *Config) 
 		return fmt.Errorf("configuration validation failed: %v", result.Errors)
 	}
 
-	// Get the configuration file path
-	configPath, err := cm.GetConfigPath(ctx, clusterName)
-	if err != nil {
-		return fmt.Errorf("failed to resolve config path: %w", err)
-	}
-
-	// Ensure the directory exists
-	configDir := filepath.Dir(configPath)
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory '%s': %w", configDir, err)
-	}
-
 	// Save the configuration using the existing Save function
+	// Save handles determining the correct path and creating directories
 	if err := Save(*config); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}

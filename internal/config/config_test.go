@@ -141,20 +141,26 @@ func TestConfigPath(t *testing.T) {
 	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
 	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
 
+	// Create a flat config file to test path resolution
+	flatConfigPath := filepath.Join(dir, "test-cluster.yaml")
+	if err := os.WriteFile(flatConfigPath, []byte("opencenter:\n  cluster:\n    cluster_name: test-cluster\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// ConfigPath should find the flat config file
 	path, err := ConfigPath("test-cluster")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expected := filepath.Join(dir, "clusters", "test-cluster", ".test-cluster-config.yaml")
-	if path != expected {
-		t.Errorf("expected path %s, got %s", expected, path)
+	if path != flatConfigPath {
+		t.Errorf("expected path %s, got %s", flatConfigPath, path)
 	}
 	
-	// Verify that the cluster directory was created
-	clusterDir := filepath.Join(dir, "clusters", "test-cluster")
-	if _, err := os.Stat(clusterDir); os.IsNotExist(err) {
-		t.Error("cluster directory was not created")
+	// Test that ConfigPath returns error for non-existent cluster
+	_, err = ConfigPath("non-existent-cluster")
+	if err == nil {
+		t.Error("expected error for non-existent cluster, got nil")
 	}
 }
 

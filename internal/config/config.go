@@ -350,9 +350,12 @@ type SimplifiedTofuLocal struct {
 
 // SimplifiedTofuS3 represents the S3 backend
 type SimplifiedTofuS3 struct {
-	Bucket string `yaml:"bucket" json:"bucket"`
-	Key    string `yaml:"key" json:"key"`
-	Region string `yaml:"region" json:"region"`
+	Bucket   string `yaml:"bucket" json:"bucket"`
+	Key      string `yaml:"key" json:"key"`
+	Region   string `yaml:"region" json:"region"`
+	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
+	Profile  string `yaml:"profile,omitempty" json:"profile,omitempty"`
+	Encrypt  bool   `yaml:"encrypt,omitempty" json:"encrypt,omitempty"`
 }
 
 // SimplifiedCloud represents the cloud section

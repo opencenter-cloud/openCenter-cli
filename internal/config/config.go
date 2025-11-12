@@ -1251,7 +1251,7 @@ func getConfigPathForSave(cfg Config) (string, error) {
 }
 
 // List returns a sorted list of cluster names from the configuration directory.
-// It looks for cluster directories within the clusters subdirectory and flat config files.
+// It looks for cluster directories within the configured clustersDir.
 // It supports both organization-based and legacy directory structures.
 //
 // Outputs:
@@ -1288,29 +1288,6 @@ func List() ([]string, error) {
 	
 	var names []string
 	nameSet := make(map[string]bool) // Use set to avoid duplicates
-	
-	// Check for flat config files (backward compatibility)
-	Debugf("List: checking for flat config files in: %s", dir)
-	if entries, err := os.ReadDir(dir); err == nil {
-		Debugf("List: found %d entries in config directory", len(entries))
-		for _, entry := range entries {
-			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".yaml") {
-				// Extract cluster name from filename (remove .yaml extension)
-				clusterName := strings.TrimSuffix(entry.Name(), ".yaml")
-				Debugf("List: found yaml file: %s (cluster name: %s)", entry.Name(), clusterName)
-				// Skip config.yaml (CLI config file)
-				if clusterName != "config" && !nameSet[clusterName] {
-					Debugf("List: adding flat config cluster: %s", clusterName)
-					names = append(names, clusterName)
-					nameSet[clusterName] = true
-				} else if clusterName == "config" {
-					Debugf("List: skipping CLI config file: %s", entry.Name())
-				}
-			}
-		}
-	} else {
-		Debugf("List: failed to read config directory: %v", err)
-	}
 	
 	// Check clusters directory for legacy and organization-based structures
 	Debugf("List: checking clusters directory: %s", clustersDir)

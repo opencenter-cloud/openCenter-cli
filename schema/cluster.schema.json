@@ -1454,6 +1454,32 @@
           "description": "Path to SOPS Age encryption key file",
           "pattern": "^[~./].*",
           "type": "string"
+        },
+        "ssh_key": {
+          "description": "SSH key configuration for cluster access",
+          "properties": {
+            "cypher": {
+              "default": "ed25519",
+              "description": "SSH key encryption algorithm",
+              "enum": [
+                "ed25519",
+                "rsa",
+                "ecdsa"
+              ],
+              "type": "string"
+            },
+            "private": {
+              "description": "Path to SSH private key file",
+              "pattern": "^[~./].*",
+              "type": "string"
+            },
+            "public": {
+              "description": "Path to SSH public key file",
+              "pattern": "^[~./].*\\.pub$",
+              "type": "string"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"

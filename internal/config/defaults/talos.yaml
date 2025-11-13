@@ -44,7 +44,7 @@ locals:
 
 modules:
   talos-cluster:
-    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/infra/talos?ref=main"
+    source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/infra/talos?ref=main"
     cluster_name: "local.cluster_name"
     kubernetes_version: "local.kubernetes_version"
     talos_version: "local.talos_version"
@@ -81,7 +81,7 @@ modules:
     persist_config: "local.persist_config"
     machine_cert_san: "local.machine_cert_san"
   talos-bootstrap:
-    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/talos-bootstrap?ref=main"
+    source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/talos-bootstrap?ref=main"
     cluster_name: "local.cluster_name"
     cluster_endpoint: "local.cluster_endpoint"
     talosconfig_path: "local.talosconfig_path"

@@ -35,7 +35,7 @@ locals:
 
 modules:
   baremetal-inventory:
-    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/infra/baremetal?ref=main"
+    source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/infra/baremetal?ref=main"
     cluster_name: "local.cluster_name"
     master_nodes: "local.master_nodes"
     worker_nodes: "local.worker_nodes"
@@ -45,7 +45,7 @@ modules:
     ansible_user: "local.ansible_user"
     ansible_become: "local.ansible_become"
   kubespray-cluster:
-    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/kubespray?ref=main"
+    source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/kubespray?ref=main"
     cluster_name: "local.cluster_name"
     master_nodes: "local.master_nodes"
     worker_nodes: "local.worker_nodes"

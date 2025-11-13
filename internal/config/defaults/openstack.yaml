@@ -66,7 +66,7 @@ locals:
   calico_nat_outgoing: true
 modules:
   openstack-nova:
-    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/infra/openstack-nova?ref=main"
+    source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/infra/openstack-nova?ref=main"
     availability_zone: "local.availability_zone"
     ca_certificates: "local.ca_certificates"
     use_octavia: "local.use_octavia"
@@ -115,7 +115,7 @@ modules:
     worker_node_bfv_source_type: "local.worker_node_bfv_source_type"
     worker_node_bfv_volume_type: "local.worker_node_bfv_volume_type"
   kubespray-cluster:
-    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/kubespray?ref=main"
+    source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/kubespray?ref=main"
     address_bastion: "module.openstack-nova.bastion_floating_ip"
     cluster_name: "local.cluster_name"
     cni_iface: "local.cni_iface"
@@ -142,7 +142,7 @@ modules:
     windows_nodes: "module.openstack-nova.windows_nodes"
     use_octavia: "local.use_octavia"
   calico:
-    source: "github.com/rackerlabs/openCenter-cli.git//install/iac/calico?ref=main"
+    source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/calico?ref=main"
     calico_interface_autodetect: "local.calico_interface_autodetect"
     calico_encapsulation_type: "local.calico_encapsulation_type"
     calico_nat_outgoing: "local.calico_nat_outgoing"

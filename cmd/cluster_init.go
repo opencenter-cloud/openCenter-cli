@@ -472,16 +472,39 @@ Troubleshooting:
 				}
 			}
 
+			// Set secrets.ssh_key paths using the same pattern as GitOps SSH keys
+			// Reuse sshKeyBaseName from above
+			secretsSSHKeyPath := filepath.Join(clusterPaths.SecretsDir, "ssh", sshKeyBaseName)
+			secretsSSHPubKeyPath := secretsSSHKeyPath + ".pub"
+			
+			cfg.Secrets.SSHKey.Private = secretsSSHKeyPath
+			cfg.Secrets.SSHKey.Public = secretsSSHPubKeyPath
+			cfg.Secrets.SSHKey.Cypher = "ed25519"
+			
 			// Update the map with any SOPS key changes from the struct
-			if cfg.Secrets.SopsAgeKeyFile != "" {
-				if secretsMap, ok := configMap["secrets"].(map[string]any); ok {
+			if secretsMap, ok := configMap["secrets"].(map[string]any); ok {
+				if cfg.Secrets.SopsAgeKeyFile != "" {
 					secretsMap["sops_age_key_file"] = cfg.Secrets.SopsAgeKeyFile
-				} else {
-					// Create secrets map if it doesn't exist
-					configMap["secrets"] = map[string]any{
-						"sops_age_key_file": cfg.Secrets.SopsAgeKeyFile,
-					}
 				}
+				// Add SSH key configuration
+				secretsMap["ssh_key"] = map[string]any{
+					"private": secretsSSHKeyPath,
+					"public":  secretsSSHPubKeyPath,
+					"cypher":  "ed25519",
+				}
+			} else {
+				// Create secrets map if it doesn't exist
+				secretsConfig := map[string]any{
+					"ssh_key": map[string]any{
+						"private": secretsSSHKeyPath,
+						"public":  secretsSSHPubKeyPath,
+						"cypher":  "ed25519",
+					},
+				}
+				if cfg.Secrets.SopsAgeKeyFile != "" {
+					secretsConfig["sops_age_key_file"] = cfg.Secrets.SopsAgeKeyFile
+				}
+				configMap["secrets"] = secretsConfig
 			}
 
 			// Convert the map to YAML for final output

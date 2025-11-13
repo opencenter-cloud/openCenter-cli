@@ -114,7 +114,7 @@ locals {
 }
 
 module "openstack-nova" {
-  source                                  = "github.com/rackerlabs/openCenter-cli.git//install/iac/terraform-openstack?ref=main"
+  source                                  = "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/terraform-openstack?ref=main"
   # source                                  = "../../../install/iac/terraform-openstack"
   # output
   naming_prefix                = local.naming_prefix
@@ -181,7 +181,7 @@ module "openstack-nova" {
 
 module "kubespray-cluster" {
   # source = "git@github.com:rackerlabs/terraform-mpk-kubespray.git/calico?ref=main"
-  source = "github.com/rackerlabs/openCenter-cli.git//install/iac/kubespray?ref=main"
+  source = "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/kubespray?ref=main"
   # source                                  = "../../../install/iac/kubespray"
   address_bastion                         = module.openstack-nova.bastion_floating_ip
   cluster_name                            = local.cluster_name
@@ -220,7 +220,7 @@ module "kubespray-cluster" {
 
 
 module "calico" {
-  source = "github.com/rackerlabs/openCenter-cli.git//install/iac/calico?ref=main"
+  source = "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/calico?ref=main"
 
   calico_interface_autodetect      = local.calico_interface_autodetect
   calico_encapsulation_type        = local.calico_encapsulation_type

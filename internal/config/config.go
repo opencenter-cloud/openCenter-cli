@@ -207,6 +207,14 @@ type AWSCloud struct {
 // Secrets holds paths or settings for secret management tools.
 type Secrets struct {
 	SopsAgeKeyFile string `yaml:"sops_age_key_file" json:"sops_age_key_file"`
+	SSHKey         SSHKey `yaml:"ssh_key" json:"ssh_key"`
+}
+
+// SSHKey holds SSH key configuration for cluster access
+type SSHKey struct {
+	Private string `yaml:"private" json:"private"`
+	Public  string `yaml:"public" json:"public"`
+	Cypher  string `yaml:"cypher" json:"cypher"`
 }
 
 // Simplified structures based on testdata/schema.yaml
@@ -545,6 +553,11 @@ func defaultConfig(name string) Config {
 		},
 		Secrets: Secrets{
 			SopsAgeKeyFile: "",
+			SSHKey: SSHKey{
+				Private: fmt.Sprintf("./testdata/local-git-repo-%s/%s/secrets/ssh/%s", name, name, name),
+				Public:  fmt.Sprintf("./testdata/local-git-repo-%s/%s/secrets/ssh/%s.pub", name, name, name),
+				Cypher:  "ed25519",
+			},
 		},
 	}
 	

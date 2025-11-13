@@ -828,6 +828,28 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 						"description": "Path to SOPS Age encryption key file",
 						"pattern":     "^[~./].*",
 					},
+					"ssh_key": map[string]any{
+						"type":        "object",
+						"description": "SSH key configuration for cluster access",
+						"properties": map[string]any{
+							"private": map[string]any{
+								"type":        "string",
+								"description": "Path to SSH private key file",
+								"pattern":     "^[~./].*",
+							},
+							"public": map[string]any{
+								"type":        "string",
+								"description": "Path to SSH public key file",
+								"pattern":     "^[~./].*\\.pub$",
+							},
+							"cypher": map[string]any{
+								"type":        "string",
+								"description": "SSH key encryption algorithm",
+								"enum":        []string{"ed25519", "rsa", "ecdsa"},
+								"default":     "ed25519",
+							},
+						},
+					},
 				},
 			},
 			"overrides": map[string]any{

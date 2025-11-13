@@ -179,7 +179,7 @@ func convertStringValue(value string) any {
 
 func newClusterInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "init <name>",
+		Use:   "init [name]",
 		Short: "Initialize a new cluster configuration (non-interactive)",
 		Long: `Initialize a new cluster configuration with default values.
 
@@ -239,15 +239,31 @@ Troubleshooting:
   # Force overwrite existing configuration
   openCenter cluster init my-cluster --force
 
+  # Force overwrite active cluster configuration
+  openCenter cluster init --force
+
   # Initialize with strict validation
   openCenter cluster init my-cluster --strict`,
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			UnknownFlags: true,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// name is required as a positional argument (initial seed)
-			name := args[0]
+			// Resolve cluster name from args or active cluster
+			var name string
+			if len(args) > 0 {
+				name = args[0]
+			} else {
+				// No name provided, try to use active cluster
+				activeName, err := config.GetActive()
+				if err != nil {
+					return fmt.Errorf("failed to get active cluster: %w", err)
+				}
+				if activeName == "" {
+					return fmt.Errorf("no cluster name provided and no active cluster set; specify a cluster name or use 'openCenter cluster use <name>' to set an active cluster")
+				}
+				name = activeName
+			}
 
 			// Initialize CLI configuration manager
 			configManager, err := config.NewConfigManager("")

@@ -278,6 +278,7 @@ type KubernetesConfig struct {
 	WorkerCountWindows   int            `yaml:"worker_count_windows" json:"worker_count_windows"`
 	MasterNodes          []NodeConfig   `yaml:"master_nodes,omitempty" json:"master_nodes,omitempty"`
 	WorkerNodes          []NodeConfig   `yaml:"worker_nodes,omitempty" json:"worker_nodes,omitempty"`
+	WindowsNodes         []NodeConfig   `yaml:"windows_nodes,omitempty" json:"windows_nodes,omitempty"`
 	NetworkPlugin        NetworkPlugin  `yaml:"network_plugin" json:"network_plugin"`
 	OIDC                 OIDCConfig     `yaml:"oidc" json:"oidc"`
 	WindowsWorkers       WindowsWorkers `yaml:"windows_workers" json:"windows_workers"`

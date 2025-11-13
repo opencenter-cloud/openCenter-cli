@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/rackerlabs/openCenter-cli/internal/sops"
@@ -609,8 +610,11 @@ func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
 	}
 	
 	// Write the private key file with proper permissions (0600 for files)
-	// Ensure the key ends with a newline for proper format
-	keyContent := keyPair.PrivateKey
+	// Format: # created: <timestamp>\n# public key: <public_key>\n<private_key>
+	keyContent := fmt.Sprintf("# created: %s\n# public key: %s\n%s",
+		time.Now().UTC().Format(time.RFC3339),
+		keyPair.PublicKey,
+		keyPair.PrivateKey)
 	if !strings.HasSuffix(keyContent, "\n") {
 		keyContent += "\n"
 	}
@@ -642,8 +646,11 @@ func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Confi
 	}
 	
 	// Write the private key file with proper permissions (0600 for files)
-	// Ensure the key ends with a newline for proper format
-	keyContent := keyPair.PrivateKey
+	// Format: # created: <timestamp>\n# public key: <public_key>\n<private_key>
+	keyContent := fmt.Sprintf("# created: %s\n# public key: %s\n%s",
+		time.Now().UTC().Format(time.RFC3339),
+		keyPair.PublicKey,
+		keyPair.PrivateKey)
 	if !strings.HasSuffix(keyContent, "\n") {
 		keyContent += "\n"
 	}

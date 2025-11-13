@@ -239,7 +239,15 @@ func executeSOPSGenerateKey(ctx context.Context, keyFile string, updateSOPS bool
 	}
 
 	// Write the private key to the specified path
-	if err := os.WriteFile(keyFile, []byte(keyPair.PrivateKey), 0o600); err != nil {
+	// Format: # created: <timestamp>\n# public key: <public_key>\n<private_key>
+	keyContent := fmt.Sprintf("# created: %s\n# public key: %s\n%s",
+		time.Now().UTC().Format(time.RFC3339),
+		keyPair.PublicKey,
+		keyPair.PrivateKey)
+	if !strings.HasSuffix(keyContent, "\n") {
+		keyContent += "\n"
+	}
+	if err := os.WriteFile(keyFile, []byte(keyContent), 0o600); err != nil {
 		return fmt.Errorf("failed to save Age key: %w", err)
 	}
 

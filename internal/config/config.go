@@ -446,7 +446,7 @@ func defaultConfig(name string) Config {
 					SubnetPods:           "10.42.0.0/16",
 					SubnetServices:       "10.43.0.0/16",
 					LoadbalancerProvider: "ovn",
-					DNSZoneName:          "gdo.prod.sjc3.k8s.opencenter.cloud",
+					DNSZoneName:          fmt.Sprintf("%s.sjc3.k8s.opencenter.cloud", name),
 					MasterCount:          3,
 					WorkerCount:          2,
 					WorkerCountWindows:   0,

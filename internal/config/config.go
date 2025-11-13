@@ -536,8 +536,8 @@ func defaultConfig(name string) Config {
 					Path: "terraform.tfstate",
 				},
 				S3: SimplifiedTofuS3{
-					Bucket: "1270657-rackspace-gdo",
-					Key:    "gdo.prod.sjc3/tfstate/terraform.tfstate",
+					Bucket: name,
+					Key:    fmt.Sprintf("%s/tfstate/terraform.tfstate", name),
 					Region: "us-west-2",
 				},
 			},

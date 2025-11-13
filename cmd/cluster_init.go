@@ -517,8 +517,11 @@ Troubleshooting:
 					return fmt.Errorf("failed to create SSH directory: %w", err)
 				}
 				
-				// Generate SSH key pair using the specified cipher
-				keyPair, err := crypto.GenerateSSHKey(cfg.Secrets.SSHKey.Cypher)
+				// Create SSH key comment in format: <organization>-<cluster>-<region>
+				sshKeyComment := fmt.Sprintf("%s-%s-%s", organization, name, region)
+				
+				// Generate SSH key pair using the specified cipher with comment
+				keyPair, err := crypto.GenerateSSHKeyWithComment(cfg.Secrets.SSHKey.Cypher, sshKeyComment)
 				if err != nil {
 					return fmt.Errorf("failed to generate SSH key pair: %w", err)
 				}

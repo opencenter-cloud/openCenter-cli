@@ -37,21 +37,29 @@ type SSHKeyPair struct {
 
 // GenerateSSHKey generates a passwordless SSH key pair based on the specified cipher type
 // Supported types: ed25519, rsa, ecdsa
+// The comment parameter is added to the public key in the format: key-data comment
 func GenerateSSHKey(cipherType string) (*SSHKeyPair, error) {
+	return GenerateSSHKeyWithComment(cipherType, "")
+}
+
+// GenerateSSHKeyWithComment generates a passwordless SSH key pair with a custom comment
+// Supported types: ed25519, rsa, ecdsa
+// The comment parameter is added to the public key in the format: key-data comment
+func GenerateSSHKeyWithComment(cipherType, comment string) (*SSHKeyPair, error) {
 	switch cipherType {
 	case "ed25519":
-		return generateED25519Key()
+		return generateED25519Key(comment)
 	case "rsa":
-		return generateRSAKey()
+		return generateRSAKey(comment)
 	case "ecdsa":
-		return generateECDSAKey()
+		return generateECDSAKey(comment)
 	default:
 		return nil, fmt.Errorf("unsupported SSH key cipher type: %s (supported: ed25519, rsa, ecdsa)", cipherType)
 	}
 }
 
 // generateED25519Key generates an Ed25519 SSH key pair
-func generateED25519Key() (*SSHKeyPair, error) {
+func generateED25519Key(comment string) (*SSHKeyPair, error) {
 	// Generate Ed25519 key pair
 	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -73,15 +81,18 @@ func generateED25519Key() (*SSHKeyPair, error) {
 	// Encode PEM block to bytes
 	privKeyBytes := pem.EncodeToMemory(privKeyPEM)
 
+	// Format public key with comment
+	pubKeyBytes := formatPublicKeyWithComment(sshPubKey, comment)
+
 	return &SSHKeyPair{
 		PrivateKey: privKeyBytes,
-		PublicKey:  ssh.MarshalAuthorizedKey(sshPubKey),
+		PublicKey:  pubKeyBytes,
 		KeyType:    "ed25519",
 	}, nil
 }
 
 // generateRSAKey generates a 4096-bit RSA SSH key pair
-func generateRSAKey() (*SSHKeyPair, error) {
+func generateRSAKey(comment string) (*SSHKeyPair, error) {
 	// Generate RSA key pair (4096 bits for security)
 	privKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
@@ -103,15 +114,18 @@ func generateRSAKey() (*SSHKeyPair, error) {
 	// Encode PEM block to bytes
 	privKeyBytes := pem.EncodeToMemory(privKeyPEM)
 
+	// Format public key with comment
+	pubKeyBytes := formatPublicKeyWithComment(sshPubKey, comment)
+
 	return &SSHKeyPair{
 		PrivateKey: privKeyBytes,
-		PublicKey:  ssh.MarshalAuthorizedKey(sshPubKey),
+		PublicKey:  pubKeyBytes,
 		KeyType:    "rsa",
 	}, nil
 }
 
 // generateECDSAKey generates an ECDSA SSH key pair using P-521 curve
-func generateECDSAKey() (*SSHKeyPair, error) {
+func generateECDSAKey(comment string) (*SSHKeyPair, error) {
 	// Generate ECDSA key pair using P-521 curve (highest security)
 	privKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
@@ -133,9 +147,28 @@ func generateECDSAKey() (*SSHKeyPair, error) {
 	// Encode PEM block to bytes
 	privKeyBytes := pem.EncodeToMemory(privKeyPEM)
 
+	// Format public key with comment
+	pubKeyBytes := formatPublicKeyWithComment(sshPubKey, comment)
+
 	return &SSHKeyPair{
 		PrivateKey: privKeyBytes,
-		PublicKey:  ssh.MarshalAuthorizedKey(sshPubKey),
+		PublicKey:  pubKeyBytes,
 		KeyType:    "ecdsa",
 	}, nil
+}
+
+// formatPublicKeyWithComment formats an SSH public key with an optional comment
+func formatPublicKeyWithComment(pubKey ssh.PublicKey, comment string) []byte {
+	authorizedKey := ssh.MarshalAuthorizedKey(pubKey)
+	
+	// If no comment provided, return as-is
+	if comment == "" {
+		return authorizedKey
+	}
+	
+	// SSH authorized key format is: "keytype base64data [comment]\n"
+	// MarshalAuthorizedKey already includes a newline, so we need to trim it,
+	// add the comment, then add the newline back
+	keyWithoutNewline := authorizedKey[:len(authorizedKey)-1]
+	return []byte(fmt.Sprintf("%s %s\n", string(keyWithoutNewline), comment))
 }

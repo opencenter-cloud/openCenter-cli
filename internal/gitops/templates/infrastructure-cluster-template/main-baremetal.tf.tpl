@@ -16,8 +16,8 @@ locals {
   #CIDR that will be used for kubernetes services. Not an openstack network.
   subnet_services                         = "{{ .OpenCenter.Cluster.Kubernetes.SubnetServices | default "10.43.0.0/16" }}"
   # use_octavia set to false to create a floating IP associated with the vrrp_ip port. true will create an octavia LB with a floating IP
-  use_octavia                             = {{ .IAC.Main.use_octavia | default false }}
-  loadbalancer_provider                   = "{{ .OpenCenter.Cluster.Kubernetes.LoadbalancerProvider | default "amphora" }}"
+  #use_octavia                             = {{ .IAC.Main.use_octavia | default false }}
+  #loadbalancer_provider                   = "{{ .OpenCenter.Cluster.Kubernetes.LoadbalancerProvider | default "amphora" }}"
   # vrrp_enabled cannot be set to true if use_octavia is true
   vrrp_enabled                            = {{ .IAC.Main.vrrp_enabled | default true }}
   # Creates a DNS record using the LB floating IP and dns_zone_name
@@ -41,11 +41,6 @@ locals {
   node_master                             = "{{ .IAC.Main.node_master | default "cp" }}"
   node_worker_windows                     = "{{ .IAC.Main.node_worker_windows | default "win" }}"
   ub_version                              = "{{ .IAC.Main.ub_version | default "24" }}"
-  #FLEX Flavor Settings ==========================
-  flavor_bastion                          = "{{ .OpenCenter.Cluster.Kubernetes.FlavorBastion | default "gp.5.2.2" }}"
-  flavor_master                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorMaster | default "gp.5.4.8" }}"
-  flavor_worker                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorWorker | default "gp.5.4.8" }}"
-  flavor_worker_windows                   = "{{ .IAC.Main.flavor_worker_windows | default "gp.5.4.16" }}"
 
   worker_node_bfv_volume_size             = {{ .IAC.Main.worker_node_bfv_volume_size | default 20 }}
   worker_node_bfv_destination_type        = "{{ .IAC.Main.worker_node_bfv_destination_type | default "volume" }}"

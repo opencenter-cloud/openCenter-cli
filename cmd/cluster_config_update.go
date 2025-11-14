@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/spf13/cobra"
@@ -95,6 +96,21 @@ Examples:
 				fmt.Fprintf(cmd.OutOrStderr(), "\nProceeding with update anyway...\n")
 			}
 
+			// Create backup of existing configuration before updating
+			configPath, pathErr := config.ConfigPath(clusterName)
+			if pathErr != nil {
+				return fmt.Errorf("failed to get config path: %w", pathErr)
+			}
+
+			// Create backup with timestamp
+			timestamp := time.Now().Format("20060102-150405")
+			backupPath := fmt.Sprintf("%s.%s.backup", configPath, timestamp)
+			
+			fmt.Fprintf(cmd.OutOrStdout(), "Creating backup at: %s\n", backupPath)
+			if err := copyFile(configPath, backupPath); err != nil {
+				return fmt.Errorf("failed to create backup: %w", err)
+			}
+
 			// Save the configuration (this will apply current defaults)
 			fmt.Fprintf(cmd.OutOrStdout(), "Saving updated configuration...\n")
 			if err := config.Save(cfg); err != nil {
@@ -102,12 +118,7 @@ Examples:
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Successfully updated configuration for cluster '%s'\n", clusterName)
-			
-			// Get the config path to show where it was saved
-			configPath, err := config.ConfigPath(clusterName)
-			if err == nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "Configuration saved to: %s\n", configPath)
-			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Configuration saved to: %s\n", configPath)
 
 			return nil
 		},

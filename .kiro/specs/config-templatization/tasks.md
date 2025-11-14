@@ -346,21 +346,21 @@ This document outlines the implementation tasks for the configuration schema enh
   - Check ManagedServiceCfg, StorageConfig, GitOpsConfig additions
   - _Requirements: 16.4, 16.5_
 
-- [ ] 17. Add Validation Functions
+- [x] 17. Add Validation Functions
   - Implement validation for new fields
   - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5_
 
-- [ ] 17.1 Add email validation
+- [x] 17.1 Add email validation
   - Implement `isValidEmail()` function
   - Add validation check in `Validate()` for AdminEmail
   - _Requirements: 19.2_
 
-- [ ] 17.2 Add domain validation
+- [x] 17.2 Add domain validation
   - Implement `isValidDomain()` function
   - Add validation check in `Validate()` for ClusterFQDN and BaseDomain
   - _Requirements: 19.3_
 
-- [ ] 17.3 Add service-specific validation
+- [x] 17.3 Add service-specific validation
   - Implement `validateService()` function
   - Check required fields for each enabled service
   - Check required secrets for each enabled service

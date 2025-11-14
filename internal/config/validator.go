@@ -16,6 +16,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -174,6 +175,54 @@ func (cv *ClusterConfigValidator) validateStructureWithResult(ctx context.Contex
 					"Use alphanumeric characters, hyphens, and underscores only",
 					"Start with an alphanumeric character",
 					"Keep length under 255 characters",
+				},
+			})
+		}
+	}
+	
+	// Validate admin email format
+	if config.OpenCenter.Cluster.AdminEmail != "" {
+		if !cv.isValidEmail(config.OpenCenter.Cluster.AdminEmail) {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.cluster.admin_email",
+				Value:   config.OpenCenter.Cluster.AdminEmail,
+				Message: "invalid email address format",
+				Suggestions: []string{
+					"Use valid email format (e.g., admin@example.com)",
+					"Ensure email contains @ symbol and valid domain",
+				},
+			})
+		}
+	}
+	
+	// Validate base domain format
+	if config.OpenCenter.Cluster.BaseDomain != "" {
+		if !cv.isValidDomain(config.OpenCenter.Cluster.BaseDomain) {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.cluster.base_domain",
+				Value:   config.OpenCenter.Cluster.BaseDomain,
+				Message: "invalid domain format",
+				Suggestions: []string{
+					"Use valid domain format (e.g., k8s.opencenter.cloud)",
+					"Domain must contain at least one dot and valid TLD",
+				},
+			})
+		}
+	}
+	
+	// Validate cluster FQDN format
+	if config.OpenCenter.Cluster.ClusterFQDN != "" {
+		if !cv.isValidDomain(config.OpenCenter.Cluster.ClusterFQDN) {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.cluster.cluster_fqdn",
+				Value:   config.OpenCenter.Cluster.ClusterFQDN,
+				Message: "invalid FQDN format",
+				Suggestions: []string{
+					"Use valid FQDN format (e.g., my-cluster.sjc3.k8s.opencenter.cloud)",
+					"FQDN must contain at least one dot and valid TLD",
 				},
 			})
 		}
@@ -339,6 +388,11 @@ func (cv *ClusterConfigValidator) validateSemanticsWithResult(ctx context.Contex
 				"Use ssh-keygen to generate key pairs if needed",
 			},
 		})
+	}
+	
+	// Validate service-specific configuration and secrets
+	for serviceName, svc := range config.OpenCenter.Services {
+		cv.validateService(serviceName, svc, config.Secrets, result)
 	}
 }
 
@@ -602,6 +656,181 @@ func (cv *ClusterConfigValidator) isValidKubernetesVersion(version string) bool 
 	}
 
 	return true
+}
+
+// isValidEmail checks if an email address is valid.
+func (cv *ClusterConfigValidator) isValidEmail(email string) bool {
+	if email == "" {
+		return false
+	}
+	
+	// Basic email validation using regex
+	// This pattern checks for: local-part@domain
+	// where local-part can contain alphanumeric, dots, hyphens, underscores
+	// and domain must have at least one dot
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
+}
+
+// isValidDomain checks if a domain name is valid.
+func (cv *ClusterConfigValidator) isValidDomain(domain string) bool {
+	if domain == "" {
+		return false
+	}
+	
+	// Domain validation using regex
+	// Allows alphanumeric characters, hyphens, and dots
+	// Must have at least one dot and valid TLD
+	domainRegex := regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+	return domainRegex.MatchString(domain)
+}
+
+// validateService validates service-specific configuration and secrets.
+func (cv *ClusterConfigValidator) validateService(serviceName string, svc ServiceCfg, secrets Secrets, result *ConfigValidationResult) {
+	if !svc.Enabled {
+		return
+	}
+	
+	// Validate service-specific required fields and secrets
+	switch serviceName {
+	case "cert-manager":
+		// Check required secrets
+		if secrets.CertManager.AWSAccessKey == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.cert_manager.aws_access_key",
+				Message: "AWS access key is required when cert-manager is enabled",
+				Suggestions: []string{
+					"Set secrets.cert_manager.aws_access_key for Route53 DNS validation",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		if secrets.CertManager.AWSSecretAccessKey == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.cert_manager.aws_secret_access_key",
+				Message: "AWS secret access key is required when cert-manager is enabled",
+				Suggestions: []string{
+					"Set secrets.cert_manager.aws_secret_access_key for Route53 DNS validation",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		
+	case "loki":
+		// Check required configuration
+		if svc.SwiftAuthURL == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.services.loki.swift_auth_url",
+				Message: "Swift auth URL is required when Loki is enabled",
+				Suggestions: []string{
+					"Set swift_auth_url to your Swift/OpenStack Keystone endpoint",
+				},
+			})
+		}
+		if svc.SwiftUsername == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.services.loki.swift_username",
+				Message: "Swift username is required when Loki is enabled",
+				Suggestions: []string{
+					"Set swift_username for Swift storage authentication",
+				},
+			})
+		}
+		if svc.SwiftProjectName == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.services.loki.swift_project_name",
+				Message: "Swift project name is required when Loki is enabled",
+				Suggestions: []string{
+					"Set swift_project_name for Swift storage authentication",
+				},
+			})
+		}
+		// Check required secrets
+		if secrets.Loki.SwiftPassword == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.loki.swift_password",
+				Message: "Swift password is required when Loki is enabled",
+				Suggestions: []string{
+					"Set secrets.loki.swift_password for Swift storage authentication",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		
+	case "keycloak":
+		// Check required secrets
+		if secrets.Keycloak.ClientSecret == "" {
+			result.Warnings = append(result.Warnings, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.keycloak.client_secret",
+				Message: "Keycloak client secret should be set when Keycloak is enabled",
+				Suggestions: []string{
+					"Set secrets.keycloak.client_secret for OIDC authentication",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		if secrets.Keycloak.AdminPassword == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.keycloak.admin_password",
+				Message: "Keycloak admin password is required when Keycloak is enabled",
+				Suggestions: []string{
+					"Set secrets.keycloak.admin_password for Keycloak admin user",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		
+	case "headlamp":
+		// Check required secrets
+		if secrets.Headlamp.OIDCClientSecret == "" {
+			result.Warnings = append(result.Warnings, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.headlamp.oidc_client_secret",
+				Message: "Headlamp OIDC client secret should be set when Headlamp is enabled",
+				Suggestions: []string{
+					"Set secrets.headlamp.oidc_client_secret for OIDC authentication",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		
+	case "weave-gitops":
+		// Check required secrets
+		if secrets.WeaveGitOps.PasswordHash == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.weave_gitops.password_hash",
+				Message: "Weave GitOps password hash is required when Weave GitOps is enabled",
+				Suggestions: []string{
+					"Set secrets.weave_gitops.password_hash (bcrypt hash)",
+					"Use 'htpasswd -nbBC 10 admin <password>' to generate hash",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		
+	case "kube-prometheus-stack":
+		// Check required secrets
+		if secrets.Grafana.AdminPassword == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.grafana.admin_password",
+				Message: "Grafana admin password is required when kube-prometheus-stack is enabled",
+				Suggestions: []string{
+					"Set secrets.grafana.admin_password for Grafana admin user",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+	}
 }
 
 // SetAutoRepair enables or disables automatic repair of configuration issues.

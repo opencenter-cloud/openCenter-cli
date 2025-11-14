@@ -64,12 +64,19 @@ func TestConfigurationManagerIntegration(t *testing.T) {
 			t.Fatalf("Failed to load default config: %v", err)
 		}
 
+		// Add required secrets for enabled services
+		config.Secrets.CertManager.AWSAccessKey = "test-access-key"
+		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret-key"
+		config.Secrets.Keycloak.AdminPassword = "test-admin-password"
+		config.Secrets.Grafana.AdminPassword = "test-grafana-password"
+		config.Secrets.WeaveGitOps.PasswordHash = "test-password-hash"
+
 		result := configManager.ValidateConfig(ctx, config)
 		if result == nil {
 			t.Fatal("Validation result should not be nil")
 		}
 
-		// Default config should be valid
+		// Default config should be valid with secrets
 		if !result.Valid {
 			t.Errorf("Default configuration should be valid, but got errors: %v", result.Errors)
 		}
@@ -124,6 +131,13 @@ func TestConfigurationManagerIntegration(t *testing.T) {
 
 		// Modify the configuration
 		config.OpenCenter.Meta.Organization = "test-org"
+		
+		// Add required secrets for enabled services
+		config.Secrets.CertManager.AWSAccessKey = "test-access-key"
+		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret-key"
+		config.Secrets.Keycloak.AdminPassword = "test-admin-password"
+		config.Secrets.Grafana.AdminPassword = "test-grafana-password"
+		config.Secrets.WeaveGitOps.PasswordHash = "test-password-hash"
 
 		// Save the configuration
 		err = configManager.SaveConfig(ctx, config)

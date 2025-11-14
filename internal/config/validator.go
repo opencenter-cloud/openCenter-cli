@@ -394,6 +394,11 @@ func (cv *ClusterConfigValidator) validateSemanticsWithResult(ctx context.Contex
 	for serviceName, svc := range config.OpenCenter.Services {
 		cv.validateService(serviceName, svc, config.Secrets, result)
 	}
+	
+	// Validate managed service configuration and secrets
+	for serviceName, svc := range config.OpenCenter.ManagedService {
+		cv.validateManagedService(serviceName, svc, config.Secrets, result)
+	}
 }
 
 // validateNetworkingWithResult validates network plugin configuration.
@@ -791,10 +796,10 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 	case "headlamp":
 		// Check required secrets
 		if secrets.Headlamp.OIDCClientSecret == "" {
-			result.Warnings = append(result.Warnings, &ConfigValidationError{
+			result.Errors = append(result.Errors, &ConfigValidationError{
 				Type:    "validation",
 				Field:   "secrets.headlamp.oidc_client_secret",
-				Message: "Headlamp OIDC client secret should be set when Headlamp is enabled",
+				Message: "Headlamp OIDC client secret is required when Headlamp is enabled",
 				Suggestions: []string{
 					"Set secrets.headlamp.oidc_client_secret for OIDC authentication",
 					"Use SOPS to encrypt sensitive credentials",
@@ -827,6 +832,65 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 				Suggestions: []string{
 					"Set secrets.grafana.admin_password for Grafana admin user",
 					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+	}
+}
+
+// validateManagedService validates managed service-specific configuration and secrets.
+func (cv *ClusterConfigValidator) validateManagedService(serviceName string, svc ServiceCfg, secrets Secrets, result *ConfigValidationResult) {
+	if !svc.Enabled {
+		return
+	}
+	
+	// Validate managed service-specific required fields and secrets
+	switch serviceName {
+	case "alert-proxy":
+		// Check required secrets
+		if secrets.AlertProxy.CoreDeviceId == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.alert_proxy.core_device_id",
+				Message: "Alert proxy core device ID is required when alert-proxy is enabled",
+				Suggestions: []string{
+					"Set secrets.alert_proxy.core_device_id for alert proxy configuration",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		if secrets.AlertProxy.AccountServiceToken == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.alert_proxy.account_service_token",
+				Message: "Alert proxy account service token is required when alert-proxy is enabled",
+				Suggestions: []string{
+					"Set secrets.alert_proxy.account_service_token for alert proxy configuration",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		if secrets.AlertProxy.CoreAccountNumber == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.alert_proxy.core_account_number",
+				Message: "Alert proxy core account number is required when alert-proxy is enabled",
+				Suggestions: []string{
+					"Set secrets.alert_proxy.core_account_number for alert proxy configuration",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		
+		// Check required configuration
+		if svc.AlertManagerBaseUrl == "" {
+			result.Warnings = append(result.Warnings, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.managed-service.alert-proxy.alert_manager_base_url",
+				Message: "Alert manager base URL should be set when alert-proxy is enabled",
+				Suggestions: []string{
+					"Set alert_manager_base_url to your AlertManager endpoint",
+					"Example: http://observability-kube-prometh-alertmanager.observability.svc.cluster.local:9093/api/v2/alerts",
 				},
 			})
 		}

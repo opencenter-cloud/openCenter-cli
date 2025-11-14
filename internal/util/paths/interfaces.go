@@ -69,7 +69,7 @@ type ClusterPaths struct {
 	ClusterDir        string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>
 	ApplicationsDir   string // ~/.config/openCenter/clusters/<organization>/applications/overlays/<cluster>
 	SecretsDir        string // ~/.config/openCenter/clusters/<organization>/secrets
-	SOPSKeyPath       string // ~/.config/openCenter/clusters/<organization>/secrets/age/keys/<cluster>-key.txt
+	SOPSKeyPath       string // ~/.config/openCenter/clusters/<organization>/secrets/age/keys/<cluster>.txt
 	SOPSConfigPath    string // ~/.config/openCenter/clusters/<organization>/.sops.yaml
 	KubeconfigPath    string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/kubeconfig.yaml
 	InventoryPath     string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/inventory/

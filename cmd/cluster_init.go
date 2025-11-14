@@ -659,24 +659,16 @@ func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Confi
 		return fmt.Errorf("failed to create organization secrets directory '%s': %w", secretsKeyDir, err)
 	}
 	
-	// Use the new SOPS key manager to generate a proper Age key
+	// Use the new SOPS key manager to generate and save a proper Age key
 	km := sops.NewKeyManager(secretsKeyDir)
 	keyPair, err := km.GenerateAgeKey()
 	if err != nil {
 		return fmt.Errorf("failed to generate Age key pair: %w", err)
 	}
 	
-	// Write the private key file with proper permissions (0600 for files)
-	// Format: # created: <timestamp>\n# public key: <public_key>\n<private_key>
-	keyContent := fmt.Sprintf("# created: %s\n# public key: %s\n%s",
-		time.Now().UTC().Format(time.RFC3339),
-		keyPair.PublicKey,
-		keyPair.PrivateKey)
-	if !strings.HasSuffix(keyContent, "\n") {
-		keyContent += "\n"
-	}
-	if err := os.WriteFile(clusterPaths.SOPSKeyPath, []byte(keyContent), 0o600); err != nil {
-		return fmt.Errorf("failed to write SOPS key file to organization directory '%s': %w", clusterPaths.SOPSKeyPath, err)
+	// Save the key using the key manager (creates <cluster>.txt and <cluster>.pub)
+	if err := km.SaveAgeKey(keyPair, cluster); err != nil {
+		return fmt.Errorf("failed to save Age key pair: %w", err)
 	}
 	
 	// Create or update the SOPS configuration file for the organization

@@ -177,7 +177,7 @@ type OrganizationClusterPaths struct {
 	ClusterDir        string `json:"cluster_dir"`        // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>
 	ApplicationsDir   string `json:"applications_dir"`   // ~/.config/openCenter/clusters/<organization>/applications/overlays/<cluster>
 	SecretsDir        string `json:"secrets_dir"`        // ~/.config/openCenter/clusters/<organization>/secrets
-	SOPSKeyPath       string `json:"sops_key_path"`      // ~/.config/openCenter/clusters/<organization>/secrets/age/keys/<cluster>-key.txt
+	SOPSKeyPath       string `json:"sops_key_path"`      // ~/.config/openCenter/clusters/<organization>/secrets/age/keys/<cluster>.txt
 	SOPSConfigPath    string `json:"sops_config_path"`   // ~/.config/openCenter/clusters/<organization>/.sops.yaml
 	KubeconfigPath    string `json:"kubeconfig_path"`    // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/kubeconfig.yaml
 	InventoryPath     string `json:"inventory_path"`     // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/inventory/

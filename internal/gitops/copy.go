@@ -147,16 +147,52 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 	// Skip files in disabled services directories
 	if len(pathParts) >= 2 && pathParts[0] == "services" {
 		serviceName := pathParts[1]
-		if service, exists := cfg.OpenCenter.Services[serviceName]; exists && !service.Enabled {
-			return true
+		
+		// Special handling for sources directory
+		if serviceName == "sources" && len(pathParts) >= 3 {
+			// Extract service name from source filename (e.g., opencenter-cert-manager.yaml -> cert-manager)
+			filename := pathParts[len(pathParts)-1]
+			if strings.HasPrefix(filename, "opencenter-") {
+				extractedServiceName := strings.TrimPrefix(filename, "opencenter-")
+				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml")
+				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml.tpl")
+				
+				// Check if this service is disabled
+				if service, exists := cfg.OpenCenter.Services[extractedServiceName]; exists && !service.Enabled {
+					return true
+				}
+			}
+		} else {
+			// Regular service directory check
+			if service, exists := cfg.OpenCenter.Services[serviceName]; exists && !service.Enabled {
+				return true
+			}
 		}
 	}
 	
 	// Skip files in disabled managed services directories
 	if len(pathParts) >= 2 && pathParts[0] == "managed-services" {
 		serviceName := pathParts[1]
-		if service, exists := cfg.OpenCenter.ManagedService[serviceName]; exists && !service.Enabled {
-			return true
+		
+		// Special handling for sources directory
+		if serviceName == "sources" && len(pathParts) >= 3 {
+			// Extract service name from source filename (e.g., opencenter-alert-proxy.yaml -> alert-proxy)
+			filename := pathParts[len(pathParts)-1]
+			if strings.HasPrefix(filename, "opencenter-") {
+				extractedServiceName := strings.TrimPrefix(filename, "opencenter-")
+				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml")
+				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml.tpl")
+				
+				// Check if this managed service is disabled
+				if service, exists := cfg.OpenCenter.ManagedService[extractedServiceName]; exists && !service.Enabled {
+					return true
+				}
+			}
+		} else {
+			// Regular managed service directory check
+			if service, exists := cfg.OpenCenter.ManagedService[serviceName]; exists && !service.Enabled {
+				return true
+			}
 		}
 	}
 	

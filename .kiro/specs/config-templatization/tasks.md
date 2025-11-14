@@ -296,11 +296,11 @@ This document outlines the implementation tasks for the configuration schema enh
   - Ensure gateway name is hardcoded as "rmpk-gateway" in all gateway resources
   - _Requirements: 13.2_
 
-- [ ] 14. Update Calico Templates
+- [x] 14. Update Calico Templates
   - Replace hardcoded network configuration
   - _Requirements: 14.1_
 
-- [ ] 14.1 Update calico/helm-values/override_values.yaml.tpl
+- [x] 14.1 Update calico/helm-values/override_values.yaml.tpl
   - Replace hardcoded pod CIDR with `{{ .OpenCenter.Cluster.Kubernetes.SubnetPods }}`
   - Replace hardcoded service CIDR with `{{ .OpenCenter.Cluster.Kubernetes.SubnetServices }}`
   - Add Kubernetes API server config: `{{ .OpenCenter.Services.calico.CalicoKubeAPIServer }}`

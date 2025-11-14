@@ -6,13 +6,15 @@ installation:
     nodeAddressAutodetectionV4:
       interface: "enp3s0"
     ipPools:
-      - cidr: "10.42.0.0/16"
+      - cidr: "{{ .OpenCenter.Cluster.Kubernetes.SubnetPods }}"
         encapsulation: "VXLAN"
         natOutgoing: Enabled
   serviceCIDRs:
-    - "10.43.0.0/16"
+    - "{{ .OpenCenter.Cluster.Kubernetes.SubnetServices }}"
 
 # Optionally configure the host and port used to access the Kubernetes API server.
+{{- if .OpenCenter.Services.calico.CalicoKubeAPIServer }}
 kubernetesServiceEndpoint:
-  host: "10.2.184.10"
+  host: "{{ .OpenCenter.Services.calico.CalicoKubeAPIServer }}"
   port: "443"
+{{- end }}

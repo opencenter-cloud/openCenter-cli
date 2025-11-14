@@ -89,51 +89,6 @@ func TestProvision_WhitespaceOnlyGitDir(t *testing.T) {
 	}
 }
 
-func TestProvision_RawIACMainTFSkipsAnsible(t *testing.T) {
-	cfg := config.NewDefault("test-cluster")
-	cfg.OpenCenter.GitOps.GitDir = t.TempDir()
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
-		"ansible": {Enabled: true},
-	}
-	cfg.IAC.MainTF = "resource \"test\" \"example\" {}"
-	
-	err := Provision(cfg)
-	if err != nil {
-		t.Errorf("unexpected error when raw IAC main_tf is present: %v", err)
-	}
-	
-	// Verify no files were created due to raw IAC
-	ansibleDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "ansible")
-	if _, err := os.Stat(ansibleDir); !os.IsNotExist(err) {
-		t.Error("ansible directory should not be created when raw IAC main_tf is present")
-	}
-}
-
-func TestProvision_WhitespaceOnlyMainTFDoesNotSkipAnsible(t *testing.T) {
-	cfg := config.NewDefault("test-cluster")
-	cfg.OpenCenter.GitOps.GitDir = t.TempDir()
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
-		"ansible": {Enabled: true},
-	}
-	cfg.IAC.MainTF = "   \t\n  "
-	
-	// This test will fail due to template execution issues, but it tests the logic
-	// that whitespace-only MainTF should not skip ansible provisioning
-	err := Provision(cfg)
-	
-	// We expect an error due to template execution, but not due to MainTF skipping
-	if err != nil && containsString(err.Error(), "failed to execute") {
-		// This is expected due to template issues, but the function didn't skip due to MainTF
-		t.Logf("Template execution failed as expected: %v", err)
-	} else if err == nil {
-		// If no error, check that directory was created (meaning it didn't skip)
-		ansibleDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "ansible")
-		if _, err := os.Stat(ansibleDir); os.IsNotExist(err) {
-			t.Error("ansible directory should be created when MainTF is whitespace only")
-		}
-	}
-}
-
 func TestProvision_DirectoryCreationFailure(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
 	

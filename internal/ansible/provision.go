@@ -42,12 +42,6 @@ func Provision(cfg config.Config) error {
 		return nil
 	}
 
-	// When using raw iac.main_tf content, skip ansible provisioning to avoid
-	// relying on legacy IAC fields that no longer exist.
-	if strings.TrimSpace(cfg.IAC.MainTF) != "" {
-		return nil
-	}
-
 	gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.GitDir)
 	if gitDir == "" {
 		return fmt.Errorf("opencenter.gitops.git_dir must be set to render ansible assets")

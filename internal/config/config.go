@@ -121,8 +121,6 @@ type GitOpsFlux struct {
 // IAC groups settings for infrastructure-as-code driven cluster provisioning.
 // It retains the detailed node/layout fields and adds engine/stack selectors.
 type IAC struct {
-	// Deprecated raw HCL for main.tf; prefer structured fields below
-	MainTF string `yaml:"main_tf,omitempty" json:"main_tf,omitempty"`
 	// Main contains the values for the Terraform locals (rendered into main.tf)
 	Main map[string]any `yaml:"main,omitempty" json:"main,omitempty"`
 	// Modules contains per-module attribute maps (rendered into main.tf)
@@ -1664,58 +1662,6 @@ func Validate(cfg Config) []string {
 		}
 	}
 	// iac validation is intentionally minimal for variables.tf-aligned shape
-
-	// Legacy VRRP validation for backward-compat features:
-	// If Octavia is not used, a VRRP IP must be provided. Prefer cloud.openstack.*
-	// but also honor legacy iac.networking.* when present in the YAML file.
-	// This keeps older workflows passing until fully migrated.
-	// Note: UseOctavia and VRRPIP are not in the simplified schema, commenting out for now
-	// useOctavia := cfg.OpenCenter.Infrastructure.Cloud.OpenStack.UseOctavia
-	// vrrpIP := strings.TrimSpace(cfg.OpenCenter.Infrastructure.Cloud.OpenStack.VRRPIP)
-	useOctavia := false
-	vrrpIP := ""
-	vrrpEnabled := false
-	// Fallback to reading networking from the YAML on disk if not set
-	if vrrpIP == "" || !useOctavia {
-		// Attempt to locate YAML file and parse minimal fields
-		// Ignore errors silently; this is a best-effort compatibility shim.
-		if path, err := ConfigPath(cfg.ClusterName()); err == nil {
-			if data, rerr := os.ReadFile(path); rerr == nil {
-				var raw map[string]any
-				if yerr := yaml.Unmarshal(data, &raw); yerr == nil {
-					// Check top-level networking section first
-					if netw, ok := raw["networking"].(map[string]any); ok {
-						if uo, ok := netw["use_octavia"].(bool); ok {
-							useOctavia = uo
-						}
-						if ve, ok := netw["vrrp_enabled"].(bool); ok {
-							vrrpEnabled = ve
-						}
-						if v, ok := netw["vrrp_ip"].(string); ok && strings.TrimSpace(v) != "" {
-							vrrpIP = strings.TrimSpace(v)
-						}
-					}
-					// Fallback to iac.networking for backward compatibility
-					if iac, ok := raw["iac"].(map[string]any); ok {
-						if netw, ok := iac["networking"].(map[string]any); ok {
-							if uo, ok := netw["use_octavia"].(bool); ok && !useOctavia {
-								useOctavia = uo
-							}
-							if ve, ok := netw["vrrp_enabled"].(bool); ok && !vrrpEnabled {
-								vrrpEnabled = ve
-							}
-							if v, ok := netw["vrrp_ip"].(string); ok && strings.TrimSpace(v) != "" && vrrpIP == "" {
-								vrrpIP = strings.TrimSpace(v)
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	if vrrpEnabled && !useOctavia && vrrpIP == "" {
-		errs = append(errs, "vrrp_ip must be set when use_octavia is false")
-	}
 	
 	// Network plugin validation - ensure only one is enabled
 	networkPlugins := []struct {

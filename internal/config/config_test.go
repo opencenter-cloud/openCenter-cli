@@ -14,12 +14,16 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -1007,6 +1011,900 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				if !found {
 					t.Errorf("expected error %q not found in: %v", expectedErr, errs)
 				}
+			}
+		})
+	}
+}
+
+// TestDefaultConfigNewFields tests that NewDefault populates all new configuration fields correctly
+func TestDefaultConfigNewFields(t *testing.T) {
+	cfg := NewDefault("test-cluster")
+
+	// Test ClusterConfig new fields
+	t.Run("ClusterConfig fields", func(t *testing.T) {
+		if cfg.OpenCenter.Cluster.BaseDomain != "k8s.opencenter.cloud" {
+			t.Errorf("expected BaseDomain 'k8s.opencenter.cloud', got %s", cfg.OpenCenter.Cluster.BaseDomain)
+		}
+
+		expectedFQDN := "test-cluster.sjc3.k8s.opencenter.cloud"
+		if cfg.OpenCenter.Cluster.ClusterFQDN != expectedFQDN {
+			t.Errorf("expected ClusterFQDN '%s', got %s", expectedFQDN, cfg.OpenCenter.Cluster.ClusterFQDN)
+		}
+
+		if cfg.OpenCenter.Cluster.AdminEmail != "admin@example.com" {
+			t.Errorf("expected AdminEmail 'admin@example.com', got %s", cfg.OpenCenter.Cluster.AdminEmail)
+		}
+	})
+
+	// Test GitOpsConfig new fields
+	t.Run("GitOpsConfig fields", func(t *testing.T) {
+		if cfg.OpenCenter.GitOps.GitOpsBaseRepo != "ssh://git@github.com/rackerlabs/openCenter-gitops-base.git" {
+			t.Errorf("expected GitOpsBaseRepo 'ssh://git@github.com/rackerlabs/openCenter-gitops-base.git', got %s", cfg.OpenCenter.GitOps.GitOpsBaseRepo)
+		}
+
+		if cfg.OpenCenter.GitOps.GitOpsBaseRelease != "v0.1.0" {
+			t.Errorf("expected GitOpsBaseRelease 'v0.1.0', got %s", cfg.OpenCenter.GitOps.GitOpsBaseRelease)
+		}
+
+		if cfg.OpenCenter.GitOps.GitOpsBranch != "main" {
+			t.Errorf("expected GitOpsBranch 'main', got %s", cfg.OpenCenter.GitOps.GitOpsBranch)
+		}
+	})
+
+	// Test StorageConfig
+	t.Run("StorageConfig fields", func(t *testing.T) {
+		if cfg.OpenCenter.Storage.DefaultStorageClass != "csi-cinder-sc-delete" {
+			t.Errorf("expected DefaultStorageClass 'csi-cinder-sc-delete', got %s", cfg.OpenCenter.Storage.DefaultStorageClass)
+		}
+	})
+
+	// Test ServiceCfg new fields
+	t.Run("ServiceCfg fields", func(t *testing.T) {
+		// Test cert-manager
+		certManager, ok := cfg.OpenCenter.Services["cert-manager"]
+		if !ok {
+			t.Fatal("cert-manager service not found")
+		}
+		if certManager.LetsEncryptServer != "https://acme-v02.api.letsencrypt.org/directory" {
+			t.Errorf("expected LetsEncryptServer 'https://acme-v02.api.letsencrypt.org/directory', got %s", certManager.LetsEncryptServer)
+		}
+		if certManager.Region != "us-east-1" {
+			t.Errorf("expected cert-manager Region 'us-east-1', got %s", certManager.Region)
+		}
+
+		// Test loki
+		loki, ok := cfg.OpenCenter.Services["loki"]
+		if !ok {
+			t.Fatal("loki service not found")
+		}
+		if loki.LokiVolumeSize != 20 {
+			t.Errorf("expected LokiVolumeSize 20, got %d", loki.LokiVolumeSize)
+		}
+		if loki.LokiStorageClass != "csi-cinder-sc-delete" {
+			t.Errorf("expected LokiStorageClass 'csi-cinder-sc-delete', got %s", loki.LokiStorageClass)
+		}
+
+		// Test kube-prometheus-stack
+		promStack, ok := cfg.OpenCenter.Services["kube-prometheus-stack"]
+		if !ok {
+			t.Fatal("kube-prometheus-stack service not found")
+		}
+		if promStack.PrometheusVolumeSize != 50 {
+			t.Errorf("expected PrometheusVolumeSize 50, got %d", promStack.PrometheusVolumeSize)
+		}
+		if promStack.PrometheusStorageClass != "csi-cinder-sc-delete" {
+			t.Errorf("expected PrometheusStorageClass 'csi-cinder-sc-delete', got %s", promStack.PrometheusStorageClass)
+		}
+		if promStack.GrafanaVolumeSize != 10 {
+			t.Errorf("expected GrafanaVolumeSize 10, got %d", promStack.GrafanaVolumeSize)
+		}
+		if promStack.GrafanaStorageClass != "csi-cinder-sc-delete" {
+			t.Errorf("expected GrafanaStorageClass 'csi-cinder-sc-delete', got %s", promStack.GrafanaStorageClass)
+		}
+		if promStack.AlertmanagerVolumeSize != 10 {
+			t.Errorf("expected AlertmanagerVolumeSize 10, got %d", promStack.AlertmanagerVolumeSize)
+		}
+		if promStack.AlertmanagerStorageClass != "csi-cinder-sc-delete" {
+			t.Errorf("expected AlertmanagerStorageClass 'csi-cinder-sc-delete', got %s", promStack.AlertmanagerStorageClass)
+		}
+	})
+
+	// Test Secrets section initialization
+	t.Run("Secrets section", func(t *testing.T) {
+		// All service-specific secrets should be empty (must be provided by user)
+		if cfg.Secrets.CertManager.AWSAccessKey != "" {
+			t.Error("expected CertManager.AWSAccessKey to be empty")
+		}
+		if cfg.Secrets.CertManager.AWSSecretAccessKey != "" {
+			t.Error("expected CertManager.AWSSecretAccessKey to be empty")
+		}
+		if cfg.Secrets.Loki.SwiftPassword != "" {
+			t.Error("expected Loki.SwiftPassword to be empty")
+		}
+		if cfg.Secrets.Keycloak.ClientSecret != "" {
+			t.Error("expected Keycloak.ClientSecret to be empty")
+		}
+		if cfg.Secrets.Keycloak.AdminPassword != "" {
+			t.Error("expected Keycloak.AdminPassword to be empty")
+		}
+		if cfg.Secrets.Headlamp.OIDCClientSecret != "" {
+			t.Error("expected Headlamp.OIDCClientSecret to be empty")
+		}
+		if cfg.Secrets.WeaveGitOps.Password != "" {
+			t.Error("expected WeaveGitOps.Password to be empty")
+		}
+		if cfg.Secrets.WeaveGitOps.PasswordHash != "" {
+			t.Error("expected WeaveGitOps.PasswordHash to be empty")
+		}
+		if cfg.Secrets.Grafana.AdminPassword != "" {
+			t.Error("expected Grafana.AdminPassword to be empty")
+		}
+		if cfg.Secrets.AlertProxy.CoreDeviceId != "" {
+			t.Error("expected AlertProxy.CoreDeviceId to be empty")
+		}
+		if cfg.Secrets.AlertProxy.AccountServiceToken != "" {
+			t.Error("expected AlertProxy.AccountServiceToken to be empty")
+		}
+		if cfg.Secrets.AlertProxy.CoreAccountNumber != "" {
+			t.Error("expected AlertProxy.CoreAccountNumber to be empty")
+		}
+	})
+}
+
+// TestDefaultConfigMatchesSpecifications tests that default values match the specifications
+func TestDefaultConfigMatchesSpecifications(t *testing.T) {
+	tests := []struct {
+		name     string
+		getValue func(Config) any
+		expected any
+	}{
+		{
+			name:     "BaseDomain default",
+			getValue: func(c Config) any { return c.OpenCenter.Cluster.BaseDomain },
+			expected: "k8s.opencenter.cloud",
+		},
+		{
+			name:     "AdminEmail default",
+			getValue: func(c Config) any { return c.OpenCenter.Cluster.AdminEmail },
+			expected: "admin@example.com",
+		},
+		{
+			name:     "GitOpsBaseRepo default",
+			getValue: func(c Config) any { return c.OpenCenter.GitOps.GitOpsBaseRepo },
+			expected: "ssh://git@github.com/rackerlabs/openCenter-gitops-base.git",
+		},
+		{
+			name:     "GitOpsBaseRelease default",
+			getValue: func(c Config) any { return c.OpenCenter.GitOps.GitOpsBaseRelease },
+			expected: "v0.1.0",
+		},
+		{
+			name:     "GitOpsBranch default",
+			getValue: func(c Config) any { return c.OpenCenter.GitOps.GitOpsBranch },
+			expected: "main",
+		},
+		{
+			name:     "DefaultStorageClass default",
+			getValue: func(c Config) any { return c.OpenCenter.Storage.DefaultStorageClass },
+			expected: "csi-cinder-sc-delete",
+		},
+		{
+			name:     "LetsEncryptServer default",
+			getValue: func(c Config) any { return c.OpenCenter.Services["cert-manager"].LetsEncryptServer },
+			expected: "https://acme-v02.api.letsencrypt.org/directory",
+		},
+		{
+			name:     "LokiVolumeSize default",
+			getValue: func(c Config) any { return c.OpenCenter.Services["loki"].LokiVolumeSize },
+			expected: 20,
+		},
+		{
+			name:     "PrometheusVolumeSize default",
+			getValue: func(c Config) any { return c.OpenCenter.Services["kube-prometheus-stack"].PrometheusVolumeSize },
+			expected: 50,
+		},
+		{
+			name:     "GrafanaVolumeSize default",
+			getValue: func(c Config) any { return c.OpenCenter.Services["kube-prometheus-stack"].GrafanaVolumeSize },
+			expected: 10,
+		},
+	}
+
+	cfg := NewDefault("test-cluster")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.getValue(cfg)
+			if actual != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, actual)
+			}
+		})
+	}
+}
+
+// TestValidateEmailFormat tests email validation
+func TestValidateEmailFormat(t *testing.T) {
+	validator := NewConfigValidator(false)
+	
+	tests := []struct {
+		name        string
+		email       string
+		expectError bool
+	}{
+		{
+			name:        "valid email",
+			email:       "admin@example.com",
+			expectError: false,
+		},
+		{
+			name:        "valid email with subdomain",
+			email:       "user@mail.example.com",
+			expectError: false,
+		},
+		{
+			name:        "valid email with plus",
+			email:       "user+tag@example.com",
+			expectError: false,
+		},
+		{
+			name:        "valid email with dots",
+			email:       "first.last@example.com",
+			expectError: false,
+		},
+		{
+			name:        "invalid email no at",
+			email:       "adminexample.com",
+			expectError: true,
+		},
+		{
+			name:        "invalid email no domain",
+			email:       "admin@",
+			expectError: true,
+		},
+		{
+			name:        "invalid email no local part",
+			email:       "@example.com",
+			expectError: true,
+		},
+		{
+			name:        "invalid email no TLD",
+			email:       "admin@example",
+			expectError: true,
+		},
+		{
+			name:        "empty email",
+			email:       "",
+			expectError: false, // Empty email is allowed, just not validated
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := NewDefault("test")
+			cfg.OpenCenter.GitOps.GitDir = "test-dir"
+			cfg.OpenCenter.Cluster.AdminEmail = tt.email
+
+			result := validator.ValidateStructure(context.Background(), &cfg)
+
+			hasEmailError := false
+			for _, err := range result.Errors {
+				if err.Field == "opencenter.cluster.admin_email" {
+					hasEmailError = true
+					break
+				}
+			}
+
+			if tt.expectError && !hasEmailError {
+				t.Errorf("expected email validation error for %q, but got none", tt.email)
+			}
+			if !tt.expectError && hasEmailError {
+				t.Errorf("expected no email validation error for %q, but got one", tt.email)
+			}
+		})
+	}
+}
+
+// TestValidateDomainFormat tests domain validation
+func TestValidateDomainFormat(t *testing.T) {
+	validator := NewConfigValidator(false)
+	
+	tests := []struct {
+		name        string
+		domain      string
+		field       string
+		expectError bool
+	}{
+		{
+			name:        "valid domain",
+			domain:      "k8s.opencenter.cloud",
+			field:       "base_domain",
+			expectError: false,
+		},
+		{
+			name:        "valid FQDN",
+			domain:      "my-cluster.sjc3.k8s.opencenter.cloud",
+			field:       "cluster_fqdn",
+			expectError: false,
+		},
+		{
+			name:        "valid domain with hyphens",
+			domain:      "my-cluster.example-domain.com",
+			field:       "base_domain",
+			expectError: false,
+		},
+		{
+			name:        "invalid domain no TLD",
+			domain:      "example",
+			field:       "base_domain",
+			expectError: true,
+		},
+		{
+			name:        "invalid domain no dot",
+			domain:      "examplecom",
+			field:       "base_domain",
+			expectError: true,
+		},
+		{
+			name:        "invalid domain starts with dot",
+			domain:      ".example.com",
+			field:       "base_domain",
+			expectError: true,
+		},
+		{
+			name:        "invalid domain ends with dot",
+			domain:      "example.com.",
+			field:       "base_domain",
+			expectError: true,
+		},
+		{
+			name:        "empty domain",
+			domain:      "",
+			field:       "base_domain",
+			expectError: false, // Empty is allowed, just not validated
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := NewDefault("test")
+			cfg.OpenCenter.GitOps.GitDir = "test-dir"
+			
+			if tt.field == "base_domain" {
+				cfg.OpenCenter.Cluster.BaseDomain = tt.domain
+			} else {
+				cfg.OpenCenter.Cluster.ClusterFQDN = tt.domain
+			}
+
+			result := validator.ValidateStructure(context.Background(), &cfg)
+
+			hasDomainError := false
+			expectedField := "opencenter.cluster." + tt.field
+			for _, err := range result.Errors {
+				if err.Field == expectedField {
+					hasDomainError = true
+					break
+				}
+			}
+
+			if tt.expectError && !hasDomainError {
+				t.Errorf("expected domain validation error for %q, but got none", tt.domain)
+			}
+			if !tt.expectError && hasDomainError {
+				t.Errorf("expected no domain validation error for %q, but got one", tt.domain)
+			}
+		})
+	}
+}
+
+// TestValidateServiceSpecificRequirements tests service-specific validation
+func TestValidateServiceSpecificRequirements(t *testing.T) {
+	validator := NewConfigValidator(false)
+	
+	tests := []struct {
+		name          string
+		setupConfig   func() Config
+		expectedField string
+		expectError   bool
+	}{
+		{
+			name: "cert-manager missing AWS access key",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenCenter.Services["cert-manager"] = ServiceCfg{Enabled: true}
+				cfg.Secrets.CertManager.AWSAccessKey = ""
+				cfg.Secrets.CertManager.AWSSecretAccessKey = "secret"
+				return cfg
+			},
+			expectedField: "secrets.cert_manager.aws_access_key",
+			expectError:   true,
+		},
+		{
+			name: "cert-manager missing AWS secret key",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenCenter.Services["cert-manager"] = ServiceCfg{Enabled: true}
+				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."
+				cfg.Secrets.CertManager.AWSSecretAccessKey = ""
+				return cfg
+			},
+			expectedField: "secrets.cert_manager.aws_secret_access_key",
+			expectError:   true,
+		},
+		{
+			name: "cert-manager with valid secrets",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenCenter.Services["cert-manager"] = ServiceCfg{Enabled: true}
+				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."
+				cfg.Secrets.CertManager.AWSSecretAccessKey = "secret"
+				return cfg
+			},
+			expectedField: "secrets.cert_manager.aws_access_key",
+			expectError:   false,
+		},
+		{
+			name: "loki missing Swift auth URL",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenCenter.Services["loki"] = ServiceCfg{
+					Enabled:          true,
+					SwiftAuthURL:     "",
+					SwiftUsername:    "user",
+					SwiftProjectName: "project",
+				}
+				cfg.Secrets.Loki.SwiftPassword = "password"
+				return cfg
+			},
+			expectedField: "opencenter.services.loki.swift_auth_url",
+			expectError:   true,
+		},
+		{
+			name: "loki missing Swift password",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenCenter.Services["loki"] = ServiceCfg{
+					Enabled:          true,
+					SwiftAuthURL:     "https://keystone.api.example.com/v3/",
+					SwiftUsername:    "user",
+					SwiftProjectName: "project",
+				}
+				cfg.Secrets.Loki.SwiftPassword = ""
+				return cfg
+			},
+			expectedField: "secrets.loki.swift_password",
+			expectError:   true,
+		},
+		{
+			name: "keycloak missing admin password",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenCenter.Services["keycloak"] = ServiceCfg{Enabled: true}
+				cfg.Secrets.Keycloak.AdminPassword = ""
+				return cfg
+			},
+			expectedField: "secrets.keycloak.admin_password",
+			expectError:   true,
+		},
+		{
+			name: "weave-gitops missing password hash",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenCenter.Services["weave-gitops"] = ServiceCfg{Enabled: true}
+				cfg.Secrets.WeaveGitOps.PasswordHash = ""
+				return cfg
+			},
+			expectedField: "secrets.weave_gitops.password_hash",
+			expectError:   true,
+		},
+		{
+			name: "kube-prometheus-stack missing Grafana password",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				cfg.OpenCenter.Services["kube-prometheus-stack"] = ServiceCfg{Enabled: true}
+				cfg.Secrets.Grafana.AdminPassword = ""
+				return cfg
+			},
+			expectedField: "secrets.grafana.admin_password",
+			expectError:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.setupConfig()
+			result := validator.ValidateSemantics(context.Background(), &cfg)
+
+			hasExpectedError := false
+			for _, err := range result.Errors {
+				if err.Field == tt.expectedField {
+					hasExpectedError = true
+					break
+				}
+			}
+
+			if tt.expectError && !hasExpectedError {
+				t.Errorf("expected validation error for field %q, but got none. Errors: %v", tt.expectedField, result.Errors)
+			}
+			if !tt.expectError && hasExpectedError {
+				t.Errorf("expected no validation error for field %q, but got one", tt.expectedField)
+			}
+		})
+	}
+}
+
+// TestValidateMissingRequiredFields tests that Validate catches missing required fields
+func TestValidateMissingRequiredFields(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupConfig func() Config
+		expectErrs  []string
+	}{
+		{
+			name: "missing cluster name",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Cluster.ClusterName = ""
+				cfg.OpenCenter.GitOps.GitDir = "test-dir"
+				return cfg
+			},
+			expectErrs: []string{"opencenter.cluster.cluster_name must be set"},
+		},
+		{
+			name: "missing git dir",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitDir = ""
+				return cfg
+			},
+			expectErrs: []string{"opencenter.gitops.git_dir must be set"},
+		},
+
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.setupConfig()
+			errs := Validate(cfg)
+
+			if len(errs) == 0 {
+				t.Errorf("expected validation errors, got none")
+				return
+			}
+
+			for _, expectedErr := range tt.expectErrs {
+				found := false
+				for _, err := range errs {
+					if strings.Contains(err, expectedErr) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("expected error containing %q not found in: %v", expectedErr, errs)
+				}
+			}
+		})
+	}
+}
+
+// TestTemplateRenderingWithNewFields tests that new configuration fields can be used in templates
+func TestTemplateRenderingWithNewFields(t *testing.T) {
+	tests := []struct {
+		name         string
+		templateText string
+		setupConfig  func() Config
+		expected     string
+	}{
+		{
+			name:         "BaseDomain rendering",
+			templateText: "domain: {{ .OpenCenter.Cluster.BaseDomain }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Cluster.BaseDomain = "k8s.example.com"
+				return cfg
+			},
+			expected: "domain: k8s.example.com",
+		},
+		{
+			name:         "ClusterFQDN rendering",
+			templateText: "fqdn: {{ .OpenCenter.Cluster.ClusterFQDN }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Cluster.ClusterFQDN = "test.sjc3.k8s.example.com"
+				return cfg
+			},
+			expected: "fqdn: test.sjc3.k8s.example.com",
+		},
+		{
+			name:         "AdminEmail rendering",
+			templateText: "email: {{ .OpenCenter.Cluster.AdminEmail }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Cluster.AdminEmail = "admin@example.com"
+				return cfg
+			},
+			expected: "email: admin@example.com",
+		},
+		{
+			name:         "GitOpsBaseRepo rendering",
+			templateText: "repo: {{ .OpenCenter.GitOps.GitOpsBaseRepo }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.GitOps.GitOpsBaseRepo = "ssh://git@github.com/example/repo.git"
+				return cfg
+			},
+			expected: "repo: ssh://git@github.com/example/repo.git",
+		},
+		{
+			name:         "DefaultStorageClass rendering",
+			templateText: "storageClass: {{ .OpenCenter.Storage.DefaultStorageClass }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Storage.DefaultStorageClass = "csi-cinder-sc-delete"
+				return cfg
+			},
+			expected: "storageClass: csi-cinder-sc-delete",
+		},
+		{
+			name:         "LetsEncryptServer rendering",
+			templateText: `server: {{ (index .OpenCenter.Services "cert-manager").LetsEncryptServer }}`,
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Services["cert-manager"] = ServiceCfg{
+					LetsEncryptServer: "https://acme-v02.api.letsencrypt.org/directory",
+				}
+				return cfg
+			},
+			expected: "server: https://acme-v02.api.letsencrypt.org/directory",
+		},
+		{
+			name:         "LokiVolumeSize rendering",
+			templateText: "size: {{ .OpenCenter.Services.loki.LokiVolumeSize }}Gi",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Services["loki"] = ServiceCfg{
+					LokiVolumeSize: 20,
+				}
+				return cfg
+			},
+			expected: "size: 20Gi",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.setupConfig()
+			
+			// Use text/template to render
+			tmpl, err := template.New("test").Parse(tt.templateText)
+			if err != nil {
+				t.Fatalf("failed to parse template: %v", err)
+			}
+
+			var buf strings.Builder
+			if err := tmpl.Execute(&buf, cfg); err != nil {
+				t.Fatalf("failed to execute template: %v", err)
+			}
+
+			result := buf.String()
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestTemplateRenderingWithSecrets tests that secret values are properly rendered
+func TestTemplateRenderingWithSecrets(t *testing.T) {
+	tests := []struct {
+		name         string
+		templateText string
+		setupConfig  func() Config
+		expected     string
+	}{
+		{
+			name:         "CertManager AWS access key",
+			templateText: "key: {{ .Secrets.CertManager.AWSAccessKey }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."
+				return cfg
+			},
+			expected: "key: AKIA...",
+		},
+		{
+			name:         "Loki Swift password",
+			templateText: "password: {{ .Secrets.Loki.SwiftPassword }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.Secrets.Loki.SwiftPassword = "secret-password"
+				return cfg
+			},
+			expected: "password: secret-password",
+		},
+		{
+			name:         "Keycloak admin password",
+			templateText: "password: {{ .Secrets.Keycloak.AdminPassword }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.Secrets.Keycloak.AdminPassword = "admin-secret"
+				return cfg
+			},
+			expected: "password: admin-secret",
+		},
+		{
+			name:         "Grafana admin password",
+			templateText: "password: {{ .Secrets.Grafana.AdminPassword }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.Secrets.Grafana.AdminPassword = "grafana-secret"
+				return cfg
+			},
+			expected: "password: grafana-secret",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.setupConfig()
+			
+			tmpl, err := template.New("test").Parse(tt.templateText)
+			if err != nil {
+				t.Fatalf("failed to parse template: %v", err)
+			}
+
+			var buf strings.Builder
+			if err := tmpl.Execute(&buf, cfg); err != nil {
+				t.Fatalf("failed to execute template: %v", err)
+			}
+
+			result := buf.String()
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestTemplateRenderingWithSprigFunctions tests Sprig function usage
+func TestTemplateRenderingWithSprigFunctions(t *testing.T) {
+	tests := []struct {
+		name         string
+		templateText string
+		setupConfig  func() Config
+		expected     string
+	}{
+		{
+			name:         "b64enc function",
+			templateText: "encoded: {{ .Secrets.Grafana.AdminPassword | b64enc }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.Secrets.Grafana.AdminPassword = "password"
+				return cfg
+			},
+			expected: "encoded: cGFzc3dvcmQ=",
+		},
+		{
+			name:         "default function with value",
+			templateText: "size: {{ .OpenCenter.Services.loki.LokiVolumeSize | default 20 }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Services["loki"] = ServiceCfg{
+					LokiVolumeSize: 50,
+				}
+				return cfg
+			},
+			expected: "size: 50",
+		},
+		{
+			name:         "default function with empty value",
+			templateText: "size: {{ .OpenCenter.Services.loki.LokiVolumeSize | default 20 }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Services["loki"] = ServiceCfg{
+					LokiVolumeSize: 0,
+				}
+				return cfg
+			},
+			expected: "size: 20",
+		},
+		{
+			name:         "printf function",
+			templateText: "url: {{ printf \"https://auth.%s\" .OpenCenter.Cluster.ClusterFQDN }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Cluster.ClusterFQDN = "test.example.com"
+				return cfg
+			},
+			expected: "url: https://auth.test.example.com",
+		},
+		{
+			name:         "nested default with printf",
+			templateText: "bucket: {{ .OpenCenter.Services.loki.LokiBucketName | default (printf \"%s-loki\" .OpenCenter.Cluster.ClusterName) }}",
+			setupConfig: func() Config {
+				cfg := NewDefault("test")
+				cfg.OpenCenter.Cluster.ClusterName = "my-cluster"
+				cfg.OpenCenter.Services["loki"] = ServiceCfg{
+					LokiBucketName: "",
+				}
+				return cfg
+			},
+			expected: "bucket: my-cluster-loki",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.setupConfig()
+			
+			// Use Sprig functions
+			tmpl, err := template.New("test").Funcs(sprig.TxtFuncMap()).Parse(tt.templateText)
+			if err != nil {
+				t.Fatalf("failed to parse template: %v", err)
+			}
+
+			var buf strings.Builder
+			if err := tmpl.Execute(&buf, cfg); err != nil {
+				t.Fatalf("failed to execute template: %v", err)
+			}
+
+			result := buf.String()
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestTemplateRenderingDefaultValues tests that default values work correctly in templates
+func TestTemplateRenderingDefaultValues(t *testing.T) {
+	cfg := NewDefault("test-cluster")
+	
+	tests := []struct {
+		name         string
+		templateText string
+		expected     string
+	}{
+		{
+			name:         "LetsEncryptServer with default",
+			templateText: `{{ (index .OpenCenter.Services "cert-manager").LetsEncryptServer | default "https://acme-v02.api.letsencrypt.org/directory" }}`,
+			expected:     "https://acme-v02.api.letsencrypt.org/directory",
+		},
+		{
+			name:         "StorageClass with default",
+			templateText: "{{ .OpenCenter.Services.loki.LokiStorageClass | default .OpenCenter.Storage.DefaultStorageClass | default \"csi-cinder-sc-delete\" }}",
+			expected:     "csi-cinder-sc-delete",
+		},
+		{
+			name:         "VolumeSize with default",
+			templateText: "{{ .OpenCenter.Services.loki.LokiVolumeSize | default 20 }}Gi",
+			expected:     "20Gi",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl, err := template.New("test").Funcs(sprig.TxtFuncMap()).Parse(tt.templateText)
+			if err != nil {
+				t.Fatalf("failed to parse template: %v", err)
+			}
+
+			var buf strings.Builder
+			if err := tmpl.Execute(&buf, cfg); err != nil {
+				t.Fatalf("failed to execute template: %v", err)
+			}
+
+			result := buf.String()
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
 			}
 		})
 	}

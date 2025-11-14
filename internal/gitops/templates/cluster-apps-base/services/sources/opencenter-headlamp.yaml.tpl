@@ -6,8 +6,15 @@ metadata:
   namespace: flux-system
 spec:
   interval: 15m
-  url: ssh://git@github.com/rackerlabs/openCenter-gitops-base.git
+  {{- $service := index .OpenCenter.Services "headlamp" }}
+  url: {{ $service.Uri | default .OpenCenter.GitOps.GitOpsBaseRepo }}
   ref:
-    branch: main
+    {{- if $service.Release }}
+    tag: {{ $service.Release }}
+    {{- else if .OpenCenter.GitOps.GitOpsBaseRelease }}
+    tag: {{ .OpenCenter.GitOps.GitOpsBaseRelease }}
+    {{- else }}
+    branch: {{ $service.Branch | default .OpenCenter.GitOps.GitOpsBranch | default "main" }}
+    {{- end }}
   secretRef:
     name: opencenter-base

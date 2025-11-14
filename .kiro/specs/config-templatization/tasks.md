@@ -268,18 +268,18 @@ This document outlines the implementation tasks for the configuration schema enh
   - observability for grafana/prometheus
   - _Requirements: 11.3_
 
-- [ ] 12. Update GitOps Source Templates
+- [-] 12. Update GitOps Source Templates
   - Replace hardcoded repository URLs and releases
   - _Requirements: 12.1, 12.2_
 
-- [ ] 12.1 Update base GitOps source templates
+- [x] 12.1 Update base GitOps source templates
   - For each source template in `services/sources/`, update:
   - url: `{{ .OpenCenter.GitOps.GitOpsBaseRepo }}`
   - ref.tag: `{{ .OpenCenter.GitOps.GitOpsBaseRelease }}`
   - ref.branch: `{{ .OpenCenter.GitOps.GitOpsBranch }}`
   - _Requirements: 12.1_
 
-- [ ] 12.2 Update service-specific source overrides
+- [x] 12.2 Update service-specific source overrides
   - For services with Release/Branch/Uri fields, add conditional logic
   - Pattern: `{{ .OpenCenter.Services.{service}.Release | default .OpenCenter.GitOps.GitOpsBaseRelease }}`
   - _Requirements: 12.2_
@@ -288,7 +288,7 @@ This document outlines the implementation tasks for the configuration schema enh
   - Verify hardcoded namespace usage
   - _Requirements: 13.1, 13.2_
 
-- [ ] 13.1 Update gateway/namespace.yaml.tpl
+- [-] 13.1 Update gateway/namespace.yaml.tpl
   - Ensure namespace name is hardcoded as "rackspace-system"
   - _Requirements: 13.1_
 

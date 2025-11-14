@@ -5,7 +5,7 @@ configuration:
   backupStorageLocation:
     - name: swift
       provider: community.openstack.org/openstack
-      bucket: demo-cluster
+      bucket: {{ .OpenCenter.Services.velero.VeleroBackupBucket | default .OpenCenter.Cluster.ClusterName }}
   volumeSnapshotLocation:
     # for Cinder block storage
     - name: cinder
@@ -18,7 +18,7 @@ configuration:
         # optional Region:
         #   in case multiple regions exist in a single cloud, select which region
         #   will be used for cinder volume backups.
-        region: ""
+        region: "{{ .OpenCenter.Services.velero.VeleroRegion }}"
         # optional snapshot method:
         # * "snapshot" is a default cinder snapshot method
         # * "clone" is for a full volume clone instead of a snapshot allowing the

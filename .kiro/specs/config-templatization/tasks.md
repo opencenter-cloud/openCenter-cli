@@ -129,7 +129,7 @@ This document outlines the implementation tasks for the configuration schema enh
   - Replace hardcoded image tag with `{{ .OpenCenter.ManagedService.alert-proxy.ImageTag | default "latest" }}`
   - _Requirements: 3.6_
 
-- [-] 4. Update Cert-Manager Templates
+- [x] 4. Update Cert-Manager Templates
   - Replace hardcoded AWS credentials and configuration
   - Use Secrets section for credentials
   - _Requirements: 4.1, 4.2, 4.3_
@@ -152,12 +152,12 @@ This document outlines the implementation tasks for the configuration schema enh
   - Replace hardcoded commonName with `{{ .OpenCenter.Cluster.BaseDomain | default "rmpk.dev" }}`
   - _Requirements: 4.3_
 
-- [ ] 5. Update Loki Templates
+- [x] 5. Update Loki Templates
   - Replace hardcoded Swift credentials and configuration
   - Use Secrets section for password
   - _Requirements: 5.1_
 
-- [ ] 5.1 Update loki/helm-values/override-values.yaml.tpl
+- [x] 5.1 Update loki/helm-values/override-values.yaml.tpl
   - Replace hardcoded bucket names with `{{ .OpenCenter.Services.loki.LokiBucketName | default (printf "%s-loki" .OpenCenter.Cluster.ClusterName) }}`
   - Replace hardcoded auth_url with `{{ .OpenCenter.Services.loki.SwiftAuthURL }}`
   - Replace hardcoded username with `{{ .OpenCenter.Services.loki.SwiftUsername }}`
@@ -170,11 +170,11 @@ This document outlines the implementation tasks for the configuration schema enh
   - Update write/read/backend persistence size with `{{ .OpenCenter.Services.loki.LokiVolumeSize | default 20 }}Gi`
   - _Requirements: 5.1_
 
-- [ ] 6. Update Velero Templates
+- [x] 6. Update Velero Templates
   - Replace hardcoded bucket configuration
   - _Requirements: 6.1, 6.2_
 
-- [ ] 6.1 Update velero/helm-values/override-values.yaml.tpl
+- [x] 6.1 Update velero/helm-values/override-values.yaml.tpl
   - Replace hardcoded bucket name with `{{ .OpenCenter.Services.velero.VeleroBackupBucket | default .OpenCenter.Cluster.ClusterName }}`
   - Add region configuration using `{{ .OpenCenter.Services.velero.VeleroRegion }}`
   - _Requirements: 6.1, 6.2_

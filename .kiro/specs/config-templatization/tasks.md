@@ -100,7 +100,7 @@ This document outlines the implementation tasks for the configuration schema enh
   - Add comment indicating secrets must be provided by user
   - _Requirements: 17.6_
 
-- [-] 3. Update Alert-Proxy Templates
+- [x] 3. Update Alert-Proxy Templates
   - Replace all hardcoded values with config references
   - Use Secrets section for sensitive data
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
@@ -129,18 +129,18 @@ This document outlines the implementation tasks for the configuration schema enh
   - Replace hardcoded image tag with `{{ .OpenCenter.ManagedService.alert-proxy.ImageTag | default "latest" }}`
   - _Requirements: 3.6_
 
-- [ ] 4. Update Cert-Manager Templates
+- [-] 4. Update Cert-Manager Templates
   - Replace hardcoded AWS credentials and configuration
   - Use Secrets section for credentials
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 4.1 Update cluster_name-aws-credentials-secret.yaml.tpl
+- [x] 4.1 Update cluster_name-aws-credentials-secret.yaml.tpl
   - Replace hardcoded access-key-id with `{{ .Secrets.CertManager.AWSAccessKey | b64enc }}`
   - Replace hardcoded secret-access-key with `{{ .Secrets.CertManager.AWSSecretAccessKey | b64enc }}`
   - Replace hardcoded secret name with `{{ .OpenCenter.Cluster.ClusterName }}-aws-credentials-secret`
   - _Requirements: 4.1_
 
-- [ ] 4.2 Update letsencrypt-issuer.yaml.tpl
+- [x] 4.2 Update letsencrypt-issuer.yaml.tpl
   - Replace hardcoded server URL with `{{ .OpenCenter.Services.cert-manager.LetsEncryptServer | default "https://acme-v02.api.letsencrypt.org/directory" }}`
   - Replace hardcoded email with `{{ .OpenCenter.Cluster.AdminEmail }}`
   - Replace hardcoded region with `{{ .OpenCenter.Services.cert-manager.Region }}`
@@ -148,7 +148,7 @@ This document outlines the implementation tasks for the configuration schema enh
   - Update secret references to use `{{ .OpenCenter.Cluster.ClusterName }}`
   - _Requirements: 4.2_
 
-- [ ] 4.3 Update rackspace-selfsigned-ca.yaml.tpl
+- [x] 4.3 Update rackspace-selfsigned-ca.yaml.tpl
   - Replace hardcoded commonName with `{{ .OpenCenter.Cluster.BaseDomain | default "rmpk.dev" }}`
   - _Requirements: 4.3_
 

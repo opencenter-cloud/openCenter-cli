@@ -4,7 +4,7 @@ metadata:
   name: rackspace-selfsigned-ca
 spec:
   isCA: true
-  commonName: rmpk.dev
+  commonName: {{ .OpenCenter.Cluster.BaseDomain | default "rmpk.dev" }}
   secretName: rackspace-root-secret
   duration: 87600h0m0s
   renewBefore: 360h0m0s

@@ -11,7 +11,7 @@ spec:
         operator: Exists
       - key: olm.managed
         operator: In
-        values: ['true']
+        values: ["true"]
   policyTypes: [Egress]
   egress:
     - ports:

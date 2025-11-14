@@ -1,7 +1,0 @@
-config:
-    baseURL: ""
-    oidc:
-        clientID: opencenter
-        clientSecret: E5PClJ1iESnyvgSMixeLeqODCAuw3MS8
-        issuerURL: https://auth.oc-poc2.td2.k8s.rmpk.dev/realms/opencenter
-        scopes: email,profile

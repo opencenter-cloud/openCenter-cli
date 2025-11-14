@@ -1,24 +1,15 @@
 ---
 credentials:
-  existingSecret: "velero-s3-credentials"
+  extraSecretRef: "velero-credentials"
 configuration:
   backupStorageLocation:
-    - name: oc-s3
-      default: true
-      bucket: {{ .ClusterName }}-backups
-      provider: aws
-
-      objectStorage:
-        bucket: {{ .ClusterName }}-backups
-        prefix: {{ .ClusterName }}
-
-      config:
-        region: us-west-2
-
+    - name: swift
+      provider: community.openstack.org/openstack
+      bucket: demo-cluster
   volumeSnapshotLocation:
     # for Cinder block storage
-    - name: aws
-      provider: aws
+    - name: cinder
+      provider: community.openstack.org/openstack-cinder
       config:
         # optional Cloud:
         #   in case clouds.yaml is used as authentication method, cloud allows
@@ -27,7 +18,7 @@ configuration:
         # optional Region:
         #   in case multiple regions exist in a single cloud, select which region
         #   will be used for cinder volume backups.
-        region: "us-west-2"
+        region: ""
         # optional snapshot method:
         # * "snapshot" is a default cinder snapshot method
         # * "clone" is for a full volume clone instead of a snapshot allowing the
@@ -38,7 +29,7 @@ configuration:
         # allowing the source volume to be deleted (EXPERIMENTAL)
         # requires the "enable_force_upload" Cinder option to be enabled on the server
         method: snapshot
-        # optional resource readiness timeouts in Golang time format: https://pkg.go.{{ .ClusterName }}/time#ParseDuration
+        # optional resource readiness timeouts in Golang time format: https://pkg.go.dev/time#ParseDuration
         # (default: 5m)
         volumeTimeout: 5m
         snapshotTimeout: 5m
@@ -60,22 +51,11 @@ configuration:
         # backups will be created incrementally (works only when snapshot method is set to backup)
         backupIncremental: "true"
 initContainers:
-  - name: velero-plugin-aws
-    image: velero/velero-plugin-for-aws:v1.13.0
+  - name: velero-plugin-openstack
+    image: lirt/velero-plugin-for-openstack:v0.6.0
     imagePullPolicy: IfNotPresent
     volumeMounts:
       - mountPath: /target
         name: plugins
 snapshotsEnabled: true
 backupsEnabled: true
-extraObjects:
-  - apiVersion: snapshot.storage.k8s.io/v1
-    deletionPolicy: Delete
-    driver: cinder.csi.openstack.org
-    kind: VolumeSnapshotClass
-    metadata:
-      labels:
-        velero.io/csi-volumesnapshot-class: "true"
-      name: csi-cinder-snapclass
-    parameters:
-      force-create: "true"

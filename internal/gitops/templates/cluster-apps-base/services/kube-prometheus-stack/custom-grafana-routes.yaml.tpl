@@ -2,11 +2,11 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: prometheus-gateway-route
+  name: grafana-gateway-route
   namespace: observability
 spec:
   hostnames:
-    - "grafana.{{ .ClusterName }}.k8s.opencenter.cloud"
+    - "grafana.demo.stage.sjc3.k8s.opencenter.cloud"
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -18,7 +18,7 @@ spec:
         - group: ""
           kind: Service
           name: observability-kube-prometheus-stack-grafana
-          port: 9090
+          port: 80
           weight: 1
       matches:
         - path:

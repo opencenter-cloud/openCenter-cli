@@ -12,14 +12,14 @@ spec:
       namespace: flux-system
     - name: postgres-operator-override
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/keycloak/00-postgres
+  path: applications/overlays/stage-cluster/services/keycloak/00-postgres
   targetNamespace: keycloak
   prune: true
   wait: true
@@ -44,14 +44,14 @@ spec:
       namespace: flux-system
     - name: keycloak-postgres
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/keycloak/10-operator
+  path: applications/overlays/stage-cluster/services/keycloak/10-operator
   targetNamespace: keycloak
   prune: true
   healthChecks:
@@ -84,22 +84,48 @@ spec:
       namespace: flux-system
     - name: gateway
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/keycloak/20-keycloak
+  path: applications/overlays/stage-cluster/services/keycloak/20-keycloak
   targetNamespace: keycloak
   prune: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: keycloak
+      namespace: keycloak
+  commonMetadata:
+    labels:
+      app.kubernetes.io/part-of: keycloak
+      app.kubernetes.io/managed-by: flux
+      opencenter/managed-by: opencenter
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: oidc-rbac
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: sources
+      namespace: flux-system
+    - name: rbac-manager-base
+      namespace: flux-system
+  interval: 15m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: opencenter-keycloak
+    namespace: flux-system
+  path: applications/base/services/keycloak/30-oidc-rbac
+  prune: true
   wait: true
-  # healthChecks:
-  #   - apiVersion: apps/v1
-  #     kind: StatefulSet
-  #     name: keycloak
-  #     namespace: keycloak
   commonMetadata:
     labels:
       app.kubernetes.io/part-of: keycloak

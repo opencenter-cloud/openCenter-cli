@@ -8,7 +8,7 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -39,14 +39,14 @@ spec:
   dependsOn:
     - name: envoy-gateway-api-base
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/gateway-api
+  path: ./applications/overlays/stage-cluster/services/gateway-api
   targetNamespace: envoy-gateway-system
   prune: true
   wait: true

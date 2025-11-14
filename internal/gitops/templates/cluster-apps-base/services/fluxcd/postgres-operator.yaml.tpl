@@ -8,7 +8,7 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -36,14 +36,14 @@ metadata:
   name: postgres-operator-override
   namespace: flux-system
 spec:
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/postgres-operator
+  path: ./applications/overlays/stage-cluster/services/postgres-operator
   targetNamespace: postgres-operator
   prune: true
   wait: true

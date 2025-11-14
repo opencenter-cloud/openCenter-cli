@@ -6,7 +6,7 @@ metadata:
   namespace: observability
 spec:
   hostnames:
-    - "alertmanager.{{ .ClusterName }}.k8s.opencenter.cloud"
+    - "alertmanager.demo.stage.sjc3.k8s.opencenter.cloud"
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway

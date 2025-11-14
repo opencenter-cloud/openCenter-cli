@@ -10,10 +10,10 @@ spec:
       namespace: flux-system
     - name: envoy-gateway-api-base
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
-  path: ./applications/overlays/{{ .ClusterName }}/services/gateway/
+  path: ./applications/overlays/stage-cluster/services/gateway/
   prune: true
   sourceRef:
     kind: GitRepository

@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - "../../base/keycloak/20-keycloak"
   - "./httproute.yaml"
+  - "./opencenter-realm.yaml"
   - "./rbac-manager-users.yaml"
 patchesStrategicMerge:
   - "./keycloak-cr-patch.yaml"

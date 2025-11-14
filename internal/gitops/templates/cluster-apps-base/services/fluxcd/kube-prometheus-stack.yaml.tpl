@@ -8,14 +8,16 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+    - name: observability-namespace
+      namespace: flux-system
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
-    name: opencenter-kube-prometheus-stack
+    name: opencenter-observability
     namespace: flux-system
-  path: applications/base/services/kube-prometheus-stack
+  path: applications/base/services/observability/kube-prometheus-stack
   targetNamespace: observability
   prune: true
   healthChecks:
@@ -38,14 +40,14 @@ spec:
   dependsOn:
     - name: envoy-gateway-api-base
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/kube-prometheus-stack
+  path: ./applications/overlays/stage-cluster/services/kube-prometheus-stack
   targetNamespace: observability
   prune: true
   wait: true

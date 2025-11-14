@@ -1,19 +1,18 @@
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: rackspace-system
+namespace: rackspace
 resources:
-  - "./namespace.yaml"
-  - "./account-service-token-secret.yaml"
-  - "./alert-manager-base-url-secret.yaml"
-  - "./core-account-id-secret.yaml"
-  - "./overseer-core-device-id-secret.yaml"
-  - "./http-route-fqdn-secret.yaml"
+  - "namespace.yaml"
+  - "account-service-token-secret.yaml"
+  - "alert-manager-url-secret.yaml"
+  - "core-account-id-secret.yaml"
+  - "overseer-core-device-id-secret.yaml"
+  - "http-route-fqdn-secret.yaml"
 secretGenerator:
   - name: alert-proxy-values-override
-    namespace: rackspace-system
+    namespace: rackspace
     type: Opaque
-    files:
-      - override.yaml=helm-values/override-values.yaml
+    files: [override.yaml=helm-values/override-values.yaml]
     options:
       disableNameSuffixHash: true

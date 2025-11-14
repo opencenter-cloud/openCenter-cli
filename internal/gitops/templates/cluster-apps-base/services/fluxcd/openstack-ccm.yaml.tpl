@@ -8,7 +8,7 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
@@ -35,7 +35,7 @@ metadata:
   name: openstack-ccm-override
   namespace: flux-system
 spec:
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
@@ -46,7 +46,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  path: ./applications/overlays/{{ .ClusterName }}/services/openstack-ccm
+  path: ./applications/overlays/stage-cluster/services/openstack-ccm
   targetNamespace: openstack-ccm
   prune: true
   commonMetadata:

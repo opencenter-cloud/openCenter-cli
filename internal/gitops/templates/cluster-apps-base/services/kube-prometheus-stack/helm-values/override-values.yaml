@@ -1,6 +1,8 @@
 ---
 alertmanager:
   enabled: true
+  alertmanagerSpec:
+    externalUrl: https://alertmanager.demo.stage.sjc3.k8s.opencenter.cloud
   config:
     global:
       resolve_timeout: 5m
@@ -32,9 +34,9 @@ alertmanager:
     receivers:
       - name: "null"
       - name: warning_alerts_receiver
-        msteams_configs:
+        msteamsv2_configs:
           - send_resolved: true
-            webhook_url: https://webhook-test.com/12d22beda463806580f243272a38bb30
+            webhook_url: "https://default570057f473ef41c8bcbb08db2fc15c.2b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/bd17f39626be4c2b87ba3afb8afaabd4/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=jB3RLriRvPe36tk-9C6pc-Gu0IUUuoo0xwty8lKAHug"
       - name: alert_proxy_receiver
         webhook_configs:
           - url: http://rackspace-alert-proxy.rackspace.svc.cluster.local/alert/process
@@ -42,10 +44,33 @@ alertmanager:
 prometheus:
   enabled: true
   prometheusSpec:
+    externalUrl: https://prometheus.demo.stage.sjc3.k8s.opencenter.cloud
+    externalLabels:
+      cluster: stage-cluster
+      region: sjc3
+      customer: 000000-opencenter-example
     serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
 grafana:
   enabled: true
   admin:
     existingSecret: "grafana-admin-password"
     userKey: admin-user
     passwordKey: admin-password
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Loki
+          uid: loki-default
+          type: loki
+          access: proxy
+          url: http://observability-loki-gateway.observability.svc.cluster.local
+          isDefault: false
+          jsonData:
+            httpHeaderName1: "X-Scope-OrgID"
+            maxLines: 1000
+          secureJsonData:
+            httpHeaderValue1: "default"
+          editable: true

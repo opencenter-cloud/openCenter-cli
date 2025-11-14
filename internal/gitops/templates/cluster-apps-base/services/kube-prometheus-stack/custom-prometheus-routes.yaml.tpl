@@ -6,7 +6,7 @@ metadata:
   namespace: observability
 spec:
   hostnames:
-    - "prometheus.{{ .ClusterName }}.k8s.opencenter.cloud"
+    - "prometheus.demo.stage.sjc3.k8s.opencenter.cloud"
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway

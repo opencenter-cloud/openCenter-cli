@@ -8,7 +8,7 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -38,7 +38,7 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -49,7 +49,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  path: ./applications/overlays/{{ .ClusterName }}/services/velero
+  path: ./applications/overlays/stage-cluster/services/velero
   targetNamespace: velero
   prune: true
   commonMetadata:

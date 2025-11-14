@@ -8,9 +8,9 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
-  timeout: 10m
+  timeout: 5m
   sourceRef:
     kind: GitRepository
     name: opencenter-headlamp
@@ -18,7 +18,6 @@ spec:
   path: applications/base/services/headlamp
   targetNamespace: headlamp
   prune: true
-  wait: true
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
@@ -36,21 +35,20 @@ metadata:
   name: headlamp-override
   namespace: flux-system
 spec:
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
-  timeout: 10m
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
+  timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/headlamp
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  path: ./applications/overlays/dev-cluster/services/headlamp
   targetNamespace: headlamp
   prune: true
-  wait: true
   commonMetadata:
     labels:
       app.kubernetes.io/part-of: headlamp

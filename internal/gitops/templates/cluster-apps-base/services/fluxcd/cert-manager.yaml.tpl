@@ -8,7 +8,7 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -39,7 +39,7 @@ spec:
   dependsOn:
     - name: cert-manager-base
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   decryption:
@@ -50,7 +50,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/cert-manager
+  path: ./applications/overlays/stage-cluster/services/cert-manager
   targetNamespace: cert-manager
   prune: true
   wait: true

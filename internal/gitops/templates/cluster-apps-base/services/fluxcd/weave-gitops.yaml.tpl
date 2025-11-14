@@ -1,8 +1,3 @@
-{/*
-This file was generated from overlay template comparison
-Environment-specific values are templated with Go template syntax
-Original source: dev environment overlay
-*/}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -13,7 +8,7 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -45,14 +40,14 @@ spec:
       namespace: flux-system
     - name: envoy-gateway-api-base
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/{{ .ClusterName }}/services/weave-gitops
+  path: ./applications/overlays/stage-cluster/services/weave-gitops
   targetNamespace: flux-system
   prune: true
   wait: true
@@ -65,4 +60,3 @@ spec:
       app.kubernetes.io/part-of: weave-gitops
       app.kubernetes.io/managed-by: flux
       opencenter/managed-by: opencenter
-      opencenter/tech-status: preview

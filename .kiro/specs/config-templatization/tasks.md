@@ -306,17 +306,17 @@ This document outlines the implementation tasks for the configuration schema enh
   - Add Kubernetes API server config: `{{ .OpenCenter.Services.calico.CalicoKubeAPIServer }}`
   - _Requirements: 14.1_
 
-- [ ] 15. Update Infrastructure Templates
+- [x] 15. Update Infrastructure Templates
   - Replace hardcoded node configurations
   - _Requirements: 15.1, 15.2_
 
-- [ ] 15.1 Update main-baremetal.tf.tpl
+- [x] 15.1 Update main-baremetal.tf.tpl
   - Replace hardcoded master node IPs with iteration over `{{ range .OpenCenter.Cluster.Kubernetes.MasterNodes }}`
   - Replace hardcoded worker node IPs with iteration over `{{ range .OpenCenter.Cluster.Kubernetes.WorkerNodes }}`
   - Use `{{ .ID }}`, `{{ .Name }}`, `{{ .AccessIPv4 }}` for each node
   - _Requirements: 15.1_
 
-- [ ] 15.2 Update main.tf.tpl
+- [x] 15.2 Update main.tf.tpl
   - Replace hardcoded DNS zone with `{{ .OpenCenter.Cluster.Kubernetes.DNSZoneName }}`
   - _Requirements: 15.2_
 

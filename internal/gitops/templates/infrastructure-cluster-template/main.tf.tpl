@@ -42,7 +42,7 @@ locals {
   # Creates a DNS record using the LB floating IP and dns_zone_name
   use_designate                           = {{ .IAC.Main.use_designate | default false }}
   # dns_zone_name is the dns zone to create if use_designate is true
-  dns_zone_name                           = "${local.cluster_name}.demo.mk8s.net"
+  dns_zone_name                           = "{{ .OpenCenter.Cluster.Kubernetes.DNSZoneName }}"
   # DNS servers to configure on the nodes
   dns_nameservers                         = {{ if .IAC.Main.dns_nameservers }}[{{ range $i, $dns := .IAC.Main.dns_nameservers }}{{if $i}}, {{end}}"{{ $dns }}"{{ end }}]{{ else }}["8.8.8.8", "8.8.4.4"]{{ end }}
   ntp_servers                             = {{ if .IAC.Main.ntp_servers }}[{{ range $i, $ntp := .IAC.Main.ntp_servers }}{{if $i}}, {{end}}"{{ $ntp }}"{{ end }}]{{ else }}["time.dfw3.rackspace.com","time2.dfw3.rackspace.com"]{{ end }}

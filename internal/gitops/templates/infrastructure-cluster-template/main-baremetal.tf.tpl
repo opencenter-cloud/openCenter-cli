@@ -112,23 +112,7 @@ locals {
     {{- end }}
   ]
   {{- else }}
-  master_nodes = [
-    {
-    id = "master-0"
-    name = "k8s-dev-iad3-cp0"
-    access_ip_v4 = "172.23.0.51"
-    },
-    {
-    id = "master-1"
-    name = "k8s-dev-iad3-cp1"
-    access_ip_v4 = "172.23.0.182"
-    },
-    {
-    id = "master-2"
-    name = "k8s-dev-iad3-cp2"
-    access_ip_v4 = "172.23.0.168"
-    }
-  ]
+  master_nodes = []
   {{- end }}
 
   {{- if .OpenCenter.Cluster.Kubernetes.WorkerNodes }}
@@ -142,23 +126,7 @@ locals {
     {{- end }}
   ]
   {{- else }}
-  worker_nodes = [
-    {
-    id = "worker-0"
-    name = "k8s-dev-iad3-wn0"
-    access_ip_v4 = "172.23.0.220"
-    },
-    {
-    id = "worker-1"
-    name = "k8s-dev-iad3-wn1"
-    access_ip_v4 = "172.23.0.155"
-    },
-    {
-    id = "worker-2"
-    name = "k8s-dev-iad3-wn2"
-    access_ip_v4 = "172.23.0.212"
-    }
-  ]
+  worker_nodes = []
   {{- end }}
 
   {{- if .OpenCenter.Cluster.Kubernetes.WindowsNodes }}

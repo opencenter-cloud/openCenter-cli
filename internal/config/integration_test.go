@@ -21,6 +21,20 @@ import (
 	"time"
 )
 
+// addDefaultSecrets adds all required secrets for services that are enabled by default.
+// This helper function ensures tests don't fail due to missing secrets for default services.
+func addDefaultSecrets(config *Config) {
+	config.Secrets.CertManager.AWSAccessKey = "test-key"
+	config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
+	config.Secrets.Keycloak.AdminPassword = "test-password"
+	config.Secrets.Grafana.AdminPassword = "test-password"
+	config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+	config.Secrets.Headlamp.OIDCClientSecret = "test-headlamp-secret"
+	config.Secrets.AlertProxy.CoreDeviceId = "test-device-id"
+	config.Secrets.AlertProxy.AccountServiceToken = "test-service-token"
+	config.Secrets.AlertProxy.CoreAccountNumber = "test-account-number"
+}
+
 func TestConfigurationManagerIntegration(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "openCenter-config-test")
@@ -65,11 +79,7 @@ func TestConfigurationManagerIntegration(t *testing.T) {
 		}
 
 		// Add required secrets for enabled services
-		config.Secrets.CertManager.AWSAccessKey = "test-access-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret-key"
-		config.Secrets.Keycloak.AdminPassword = "test-admin-password"
-		config.Secrets.Grafana.AdminPassword = "test-grafana-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-password-hash"
+		addDefaultSecrets(config)
 
 		result := configManager.ValidateConfig(ctx, config)
 		if result == nil {
@@ -133,11 +143,7 @@ func TestConfigurationManagerIntegration(t *testing.T) {
 		config.OpenCenter.Meta.Organization = "test-org"
 		
 		// Add required secrets for enabled services
-		config.Secrets.CertManager.AWSAccessKey = "test-access-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret-key"
-		config.Secrets.Keycloak.AdminPassword = "test-admin-password"
-		config.Secrets.Grafana.AdminPassword = "test-grafana-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-password-hash"
+		addDefaultSecrets(config)
 
 		// Save the configuration
 		err = configManager.SaveConfig(ctx, config)
@@ -697,6 +703,9 @@ func TestConfigurationValidation(t *testing.T) {
 	t.Run("DetectMissingClusterName", func(t *testing.T) {
 		config := NewDefault("")
 		config.OpenCenter.Cluster.ClusterName = ""
+		
+		// Add default secrets so we only test cluster name validation
+		addDefaultSecrets(&config)
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -707,7 +716,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "cluster_name" || err.Message == "cluster_name is required" {
+			if err.Field == "opencenter.cluster.cluster_name" || err.Message == "cluster name must be set" {
 				foundError = true
 				break
 			}
@@ -723,11 +732,7 @@ func TestConfigurationValidation(t *testing.T) {
 		config.OpenCenter.Cluster.AdminEmail = "invalid-email"
 
 		// Add required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.Grafana.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -738,7 +743,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "admin_email" {
+			if err.Field == "opencenter.cluster.admin_email" {
 				foundError = true
 				break
 			}
@@ -754,11 +759,7 @@ func TestConfigurationValidation(t *testing.T) {
 		config.OpenCenter.Cluster.ClusterFQDN = "invalid domain with spaces"
 
 		// Add required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.Grafana.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -769,7 +770,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "cluster_fqdn" {
+			if err.Field == "opencenter.cluster.cluster_fqdn" {
 				foundError = true
 				break
 			}
@@ -788,9 +789,10 @@ func TestConfigurationValidation(t *testing.T) {
 		// Don't set cert-manager secrets
 
 		// Add other required secrets
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.Grafana.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
+		// Clear cert-manager secrets to test validation
+		config.Secrets.CertManager.AWSAccessKey = ""
+		config.Secrets.CertManager.AWSSecretAccessKey = ""
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -801,7 +803,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "cert_manager.aws_access_key" || err.Field == "cert_manager.aws_secret_access_key" {
+			if err.Field == "secrets.cert_manager.aws_access_key" || err.Field == "secrets.cert_manager.aws_secret_access_key" {
 				foundError = true
 				break
 			}
@@ -820,11 +822,7 @@ func TestConfigurationValidation(t *testing.T) {
 		// Don't set loki secrets
 
 		// Add other required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.Grafana.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -835,7 +833,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "loki.swift_password" {
+			if err.Field == "secrets.loki.swift_password" {
 				foundError = true
 				break
 			}
@@ -854,10 +852,9 @@ func TestConfigurationValidation(t *testing.T) {
 		// Don't set keycloak secrets
 
 		// Add other required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Grafana.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
+		// Clear keycloak secrets to test validation
+		config.Secrets.Keycloak.AdminPassword = ""
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -868,7 +865,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "keycloak.admin_password" {
+			if err.Field == "secrets.keycloak.admin_password" {
 				foundError = true
 				break
 			}
@@ -887,10 +884,9 @@ func TestConfigurationValidation(t *testing.T) {
 		// Don't set grafana secrets
 
 		// Add other required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
+		// Clear grafana secrets to test validation
+		config.Secrets.Grafana.AdminPassword = ""
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -901,7 +897,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "grafana.admin_password" {
+			if err.Field == "secrets.grafana.admin_password" {
 				foundError = true
 				break
 			}
@@ -920,10 +916,9 @@ func TestConfigurationValidation(t *testing.T) {
 		// Don't set weave-gitops secrets
 
 		// Add other required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.Grafana.AdminPassword = "test-password"
+		addDefaultSecrets(&config)
+		// Clear weave-gitops secrets to test validation
+		config.Secrets.WeaveGitOps.PasswordHash = ""
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -934,7 +929,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "weave_gitops.password_hash" {
+			if err.Field == "secrets.weave_gitops.password_hash" {
 				foundError = true
 				break
 			}
@@ -953,11 +948,9 @@ func TestConfigurationValidation(t *testing.T) {
 		// Don't set headlamp secrets
 
 		// Add other required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.Grafana.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
+		// Clear headlamp secrets to test validation
+		config.Secrets.Headlamp.OIDCClientSecret = ""
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -968,7 +961,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "headlamp.oidc_client_secret" {
+			if err.Field == "secrets.headlamp.oidc_client_secret" {
 				foundError = true
 				break
 			}
@@ -987,11 +980,11 @@ func TestConfigurationValidation(t *testing.T) {
 		// Don't set alert-proxy secrets
 
 		// Add other required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.Grafana.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
+		// Clear alert-proxy secrets to test validation
+		config.Secrets.AlertProxy.CoreDeviceId = ""
+		config.Secrets.AlertProxy.AccountServiceToken = ""
+		config.Secrets.AlertProxy.CoreAccountNumber = ""
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)
@@ -1002,9 +995,9 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "alert_proxy.core_device_id" || 
-			   err.Field == "alert_proxy.account_service_token" || 
-			   err.Field == "alert_proxy.core_account_number" {
+			if err.Field == "secrets.alert_proxy.core_device_id" || 
+			   err.Field == "secrets.alert_proxy.account_service_token" || 
+			   err.Field == "secrets.alert_proxy.core_account_number" {
 				foundError = true
 				break
 			}
@@ -1022,11 +1015,7 @@ func TestConfigurationValidation(t *testing.T) {
 		config.OpenCenter.Cluster.BaseDomain = "example.com"
 
 		// Add all required secrets
-		config.Secrets.CertManager.AWSAccessKey = "test-key"
-		config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
-		config.Secrets.Keycloak.AdminPassword = "test-password"
-		config.Secrets.Grafana.AdminPassword = "test-password"
-		config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+		addDefaultSecrets(&config)
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)

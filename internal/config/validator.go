@@ -333,6 +333,20 @@ func (cv *ClusterConfigValidator) validateSemanticsWithResult(ctx context.Contex
 					},
 				})
 			}
+			
+			// Validate S3 bucket name is lowercase
+			if s3.Bucket != "" && s3.Bucket != strings.ToLower(s3.Bucket) {
+				result.Errors = append(result.Errors, &ConfigValidationError{
+					Type:    "validation",
+					Field:   "opentofu.backend.s3.bucket",
+					Value:   s3.Bucket,
+					Message: "S3 bucket name must be lowercase",
+					Suggestions: []string{
+						fmt.Sprintf("Change bucket name to: %s", strings.ToLower(s3.Bucket)),
+						"S3 bucket names must be lowercase per AWS requirements",
+					},
+				})
+			}
 
 			// Validate AWS credentials for S3 backend
 			if strings.TrimSpace(config.OpenCenter.Cluster.AWSAccessKey) == "" ||

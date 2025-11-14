@@ -661,7 +661,7 @@ func defaultConfig(name string) Config {
 					Path: "terraform.tfstate",
 				},
 				S3: SimplifiedTofuS3{
-					Bucket: strings.ToLower(name),
+					Bucket: strings.ToLower(name), // Default to cluster name, will be set to organization if available
 					Key:    fmt.Sprintf("%s/tfstate/terraform.tfstate", name),
 					Region: "us-west-2",
 				},
@@ -1033,12 +1033,36 @@ func Load(name string) (Config, error) {
 		return Config{}, fmt.Errorf("failed to parse YAML configuration from '%s': %w", path, unmarshalErr)
 	}
 	
+	// Apply organization-based defaults if not explicitly set
+	applyOrganizationDefaults(&cfg)
+	
 	// Populate IAC field from defaults and user configuration
 	if err := populateIAC(&cfg); err != nil {
 		return Config{}, fmt.Errorf("failed to populate IAC configuration: %w", err)
 	}
 	
 	return cfg, nil
+}
+
+// applyOrganizationDefaults applies organization-based defaults to the configuration.
+// This ensures that S3 bucket names use the organization name (lowercase) by default.
+func applyOrganizationDefaults(cfg *Config) {
+	// Set S3 bucket to organization name (lowercase) if not explicitly set by user
+	// Only apply if the bucket is still the default (cluster name)
+	organization := cfg.OpenCenter.Meta.Organization
+	if organization == "" {
+		organization = cfg.ClusterName()
+	}
+	
+	// If S3 bucket is set to the cluster name (default), update it to organization
+	if cfg.OpenTofu.Backend.S3.Bucket == strings.ToLower(cfg.ClusterName()) {
+		cfg.OpenTofu.Backend.S3.Bucket = strings.ToLower(organization)
+	}
+	
+	// Ensure bucket name is always lowercase
+	if cfg.OpenTofu.Backend.S3.Bucket != "" {
+		cfg.OpenTofu.Backend.S3.Bucket = strings.ToLower(cfg.OpenTofu.Backend.S3.Bucket)
+	}
 }
 
 // populateIAC populates the IAC field from default YAML data and user configuration.

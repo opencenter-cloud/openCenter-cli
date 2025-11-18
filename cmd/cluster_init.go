@@ -193,8 +193,10 @@ The configuration is created in an organization-based directory structure:
 By default, the cluster name is used as the organization name. Use --org to
 specify a different organization.
 
-SOPS Age encryption keys and SSH key pairs are automatically generated unless
---no-keygen is specified. Keys are stored in the cluster's secrets directory.
+SOPS Age encryption keys and SSH key pairs are automatically generated if they
+don't already exist, unless --no-keygen is specified. Use --regenerate-keys to
+force regeneration of existing keys. Keys are stored in the cluster's secrets
+directory.
 
 Configuration Override:
   Use --org flag or dot notation to set organization:
@@ -235,6 +237,9 @@ Troubleshooting:
 
   # Initialize without key generation (SOPS and SSH)
   openCenter cluster init my-cluster --no-keygen
+
+  # Regenerate keys even if they already exist
+  openCenter cluster init my-cluster --regenerate-keys
 
   # Force overwrite existing configuration
   openCenter cluster init my-cluster --force
@@ -411,12 +416,31 @@ Troubleshooting:
 			}
 
 			// Persist config
-			// If no SOPS key location provided, generate one using organization structure
+			// Generate SOPS key only if regenerate-keys flag is set or if key doesn't exist
+			regenerateKeys, _ := cmd.Flags().GetBool("regenerate-keys")
+			
+			// Check if SOPS key already exists
+			sopsKeyExists := false
+			if clusterPaths.SOPSKeyPath != "" {
+				if _, err := os.Stat(clusterPaths.SOPSKeyPath); err == nil {
+					sopsKeyExists = true
+				}
+			}
+			
+			// Generate SOPS key if:
+			// 1. regenerate-keys flag is set, OR
+			// 2. key doesn't exist and no-keygen is not set
 			disableKeygen, _ := cmd.Flags().GetBool("no-keygen")
-			if !disableKeygen && cfg.Secrets.SopsAgeKeyFile == "" && name != "" {
+			shouldGenerateSOPS := (regenerateKeys || !sopsKeyExists) && !disableKeygen
+			
+			if shouldGenerateSOPS && cfg.Secrets.SopsAgeKeyFile == "" && name != "" {
 				if err := generateOrganizationSOPSKey(name, organization, &cfg, pathResolver); err != nil {
 					return fmt.Errorf("failed to generate organization SOPS key: %w", err)
 				}
+			} else if sopsKeyExists && !regenerateKeys {
+				// Use existing SOPS key
+				cfg.Secrets.SopsAgeKeyFile = clusterPaths.SOPSKeyPath
+				fmt.Fprintf(cmd.OutOrStdout(), "Using existing SOPS key at %s\n", clusterPaths.SOPSKeyPath)
 			}
 
 			// Update GitOps directory to point to organization root
@@ -509,36 +533,50 @@ Troubleshooting:
 			cfg.Secrets.SSHKey.Public = secretsSSHPubKeyPath
 			cfg.Secrets.SSHKey.Cypher = sshKeyCypher
 			
-			// Generate SSH key pair if it doesn't exist and keygen is not disabled
-			if !disableKeygen {
-				if _, err := os.Stat(secretsSSHKeyPath); os.IsNotExist(err) {
-					// Create SSH directory if it doesn't exist
-					sshDir := filepath.Dir(secretsSSHKeyPath)
-					if err := os.MkdirAll(sshDir, 0o700); err != nil {
-						return fmt.Errorf("failed to create SSH directory: %w", err)
-					}
-					
-					// Create SSH key comment in format: <organization>-<cluster>-<region>
-					sshKeyComment := fmt.Sprintf("%s-%s-%s", organization, name, region)
-					
-					// Generate SSH key pair using the specified cipher with comment
-					keyPair, err := crypto.GenerateSSHKeyWithComment(cfg.Secrets.SSHKey.Cypher, sshKeyComment)
-					if err != nil {
-						return fmt.Errorf("failed to generate SSH key pair: %w", err)
-					}
-					
-					// Write private key with restrictive permissions
-					if err := os.WriteFile(secretsSSHKeyPath, keyPair.PrivateKey, 0o600); err != nil {
-						return fmt.Errorf("failed to write SSH private key: %w", err)
-					}
-					
-					// Write public key
-					if err := os.WriteFile(secretsSSHPubKeyPath, keyPair.PublicKey, 0o644); err != nil {
-						return fmt.Errorf("failed to write SSH public key: %w", err)
-					}
-					
+			// Check if SSH key already exists
+			sshKeyExists := false
+			if _, err := os.Stat(secretsSSHKeyPath); err == nil {
+				sshKeyExists = true
+			}
+			
+			// Generate SSH key pair if:
+			// 1. regenerate-keys flag is set, OR
+			// 2. key doesn't exist and no-keygen is not set
+			shouldGenerateSSH := (regenerateKeys || !sshKeyExists) && !disableKeygen
+			
+			if shouldGenerateSSH {
+				// Create SSH directory if it doesn't exist
+				sshDir := filepath.Dir(secretsSSHKeyPath)
+				if err := os.MkdirAll(sshDir, 0o700); err != nil {
+					return fmt.Errorf("failed to create SSH directory: %w", err)
+				}
+				
+				// Create SSH key comment in format: <organization>-<cluster>-<region>
+				sshKeyComment := fmt.Sprintf("%s-%s-%s", organization, name, region)
+				
+				// Generate SSH key pair using the specified cipher with comment
+				keyPair, err := crypto.GenerateSSHKeyWithComment(cfg.Secrets.SSHKey.Cypher, sshKeyComment)
+				if err != nil {
+					return fmt.Errorf("failed to generate SSH key pair: %w", err)
+				}
+				
+				// Write private key with restrictive permissions
+				if err := os.WriteFile(secretsSSHKeyPath, keyPair.PrivateKey, 0o600); err != nil {
+					return fmt.Errorf("failed to write SSH private key: %w", err)
+				}
+				
+				// Write public key
+				if err := os.WriteFile(secretsSSHPubKeyPath, keyPair.PublicKey, 0o644); err != nil {
+					return fmt.Errorf("failed to write SSH public key: %w", err)
+				}
+				
+				if regenerateKeys && sshKeyExists {
+					fmt.Fprintf(cmd.OutOrStdout(), "Regenerated %s SSH key pair at %s\n", cfg.Secrets.SSHKey.Cypher, secretsSSHKeyPath)
+				} else {
 					fmt.Fprintf(cmd.OutOrStdout(), "Generated %s SSH key pair at %s\n", cfg.Secrets.SSHKey.Cypher, secretsSSHKeyPath)
 				}
+			} else if sshKeyExists && !regenerateKeys {
+				fmt.Fprintf(cmd.OutOrStdout(), "Using existing SSH key pair at %s\n", secretsSSHKeyPath)
 			}
 			
 			// Update the map with any SOPS key changes from the struct
@@ -592,6 +630,7 @@ Troubleshooting:
 	cmd.Flags().Bool("strict", false, "fail if required values are missing")
 	cmd.Flags().Bool("force", false, "overwrite existing file")
 	cmd.Flags().Bool("no-keygen", false, "do not auto-generate SOPS age keys and SSH key pairs")
+	cmd.Flags().Bool("regenerate-keys", false, "regenerate SOPS age keys and SSH key pairs even if they already exist")
 	return cmd
 }
 
@@ -666,8 +705,9 @@ func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Confi
 		return fmt.Errorf("failed to generate Age key pair: %w", err)
 	}
 	
-	// Save the key using the key manager (creates <cluster>.txt and <cluster>.pub)
-	if err := km.SaveAgeKey(keyPair, cluster); err != nil {
+	// Save the key using the key manager (creates <cluster>-key.txt and <cluster>-key.pub)
+	keyName := cluster + "-key"
+	if err := km.SaveAgeKey(keyPair, keyName); err != nil {
 		return fmt.Errorf("failed to save Age key pair: %w", err)
 	}
 	

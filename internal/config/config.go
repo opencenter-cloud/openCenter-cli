@@ -311,8 +311,58 @@ type SimplifiedOpenCenter struct {
 	Cluster        ClusterConfig         `yaml:"cluster" json:"cluster"`
 	GitOps         GitOpsConfig          `yaml:"gitops" json:"gitops"`
 	Storage        StorageConfig         `yaml:"storage,omitempty" json:"storage,omitempty"`
+	Talos          *TalosConfig          `yaml:"talos,omitempty" json:"talos,omitempty"`
 	ManagedService map[string]ServiceCfg `yaml:"managed-service" json:"managed-service"`
 	Services       map[string]ServiceCfg `yaml:"services" json:"services"`
+}
+
+// TalosConfig represents Talos-specific configuration
+type TalosConfig struct {
+	Enabled        bool                `yaml:"enabled" json:"enabled" jsonschema:"description=Enable Talos Linux provider"`
+	Version        string              `yaml:"version" json:"version" jsonschema:"description=Talos Linux version"`
+	ImageURL       string              `yaml:"image_url" json:"image_url" jsonschema:"description=URL to Talos Linux image"`
+	ImageSignature string              `yaml:"image_signature" json:"image_signature" jsonschema:"description=Cryptographic signature of Talos image"`
+	MachineConfig  TalosMachineConfig  `yaml:"machine_config" json:"machine_config"`
+	NetworkConfig  TalosNetworkConfig  `yaml:"network_config" json:"network_config"`
+	SecurityConfig TalosSecurityConfig `yaml:"security_config" json:"security_config"`
+	PulumiConfig   TalosPulumiConfig   `yaml:"pulumi_config" json:"pulumi_config"`
+}
+
+// TalosMachineConfig holds Talos machine configuration settings
+type TalosMachineConfig struct {
+	AppArmorEnabled  bool     `yaml:"apparmor_enabled" json:"apparmor_enabled" jsonschema:"description=Enable AppArmor security profiles,default=true"`
+	SeccompEnabled   bool     `yaml:"seccomp_enabled" json:"seccomp_enabled" jsonschema:"description=Enable Seccomp security profiles,default=true"`
+	DiskEncryption   bool     `yaml:"disk_encryption" json:"disk_encryption" jsonschema:"description=Enable disk encryption with LUKS,default=true"`
+	KubePrismEnabled bool     `yaml:"kubeprism_enabled" json:"kubeprism_enabled" jsonschema:"description=Enable KubePrism for internal load balancing,default=true"`
+	SystemExtensions []string `yaml:"system_extensions,omitempty" json:"system_extensions,omitempty" jsonschema:"description=List of Talos system extensions to install"`
+	LogDestination   string   `yaml:"log_destination,omitempty" json:"log_destination,omitempty" jsonschema:"description=Destination for Talos system logs"`
+}
+
+// TalosNetworkConfig holds network topology settings
+type TalosNetworkConfig struct {
+	ManagementSubnet string   `yaml:"management_subnet" json:"management_subnet" jsonschema:"description=CIDR for management network,default=10.0.1.0/24"`
+	ControlSubnet    string   `yaml:"control_subnet" json:"control_subnet" jsonschema:"description=CIDR for control plane network,default=10.0.2.0/24"`
+	DataSubnet       string   `yaml:"data_subnet" json:"data_subnet" jsonschema:"description=CIDR for data plane network,default=10.0.3.0/24"`
+	WireGuardPort    int      `yaml:"wireguard_port" json:"wireguard_port" jsonschema:"description=UDP port for WireGuard VPN,default=51820"`
+	TalosAPIPort     int      `yaml:"talos_api_port" json:"talos_api_port" jsonschema:"description=TCP port for Talos API,default=50000"`
+	AllowedCIDRs     []string `yaml:"allowed_cidrs,omitempty" json:"allowed_cidrs,omitempty" jsonschema:"description=List of CIDRs allowed to access cluster"`
+}
+
+// TalosSecurityConfig holds security-related settings
+type TalosSecurityConfig struct {
+	VTPMEnabled       bool   `yaml:"vtpm_enabled" json:"vtpm_enabled" jsonschema:"description=Enable vTPM for hardware-backed encryption,default=true"`
+	BarbicanKeyID     string `yaml:"barbican_key_id,omitempty" json:"barbican_key_id,omitempty" jsonschema:"description=Barbican key ID for encryption"`
+	ImageVerification bool   `yaml:"image_verification" json:"image_verification" jsonschema:"description=Enable cryptographic image verification,default=true"`
+	MFARequired       bool   `yaml:"mfa_required" json:"mfa_required" jsonschema:"description=Require MFA for administrative access,default=true"`
+	AuditLogEnabled   bool   `yaml:"audit_log_enabled" json:"audit_log_enabled" jsonschema:"description=Enable audit logging,default=true"`
+}
+
+// TalosPulumiConfig holds Pulumi-specific settings
+type TalosPulumiConfig struct {
+	StackName         string `yaml:"stack_name" json:"stack_name" jsonschema:"description=Pulumi stack name"`
+	SwiftContainer    string `yaml:"swift_container" json:"swift_container" jsonschema:"description=Swift container for Pulumi state"`
+	SwiftPrefix       string `yaml:"swift_prefix,omitempty" json:"swift_prefix,omitempty" jsonschema:"description=Swift prefix for state isolation"`
+	SecretsPassphrase string `yaml:"secrets_passphrase,omitempty" json:"secrets_passphrase,omitempty" jsonschema:"secret=true,description=Passphrase for Pulumi secrets provider"`
 }
 
 // Infrastructure represents the infrastructure configuration block.
@@ -662,6 +712,7 @@ func defaultConfig(name string) Config {
 			Storage: StorageConfig{
 				DefaultStorageClass: "csi-cinder-sc-delete",
 			},
+			Talos: nil, // Talos is disabled by default, can be enabled by user
 			ManagedService: map[string]ServiceCfg{
 				"alert-proxy": {
 					Enabled:             true,
@@ -849,6 +900,52 @@ func defaultConfig(name string) Config {
 //   - Config: A new Config object with default values.
 func NewDefault(name string) Config {
 	return defaultConfig(name)
+}
+
+// DefaultTalosConfig returns a TalosConfig initialized with secure default values.
+// This function should be called when enabling Talos for a cluster.
+//
+// Inputs:
+//   - clusterName: The name of the cluster.
+//
+// Outputs:
+//   - *TalosConfig: A new TalosConfig object with default values.
+func DefaultTalosConfig(clusterName string) *TalosConfig {
+	return &TalosConfig{
+		Enabled:        true,
+		Version:        "v1.8.0",
+		ImageURL:       "https://github.com/siderolabs/talos/releases/download/v1.8.0/openstack-amd64.raw.xz",
+		ImageSignature: "",
+		MachineConfig: TalosMachineConfig{
+			AppArmorEnabled:  true,
+			SeccompEnabled:   true,
+			DiskEncryption:   true,
+			KubePrismEnabled: true,
+			SystemExtensions: []string{},
+			LogDestination:   "",
+		},
+		NetworkConfig: TalosNetworkConfig{
+			ManagementSubnet: "10.0.1.0/24",
+			ControlSubnet:    "10.0.2.0/24",
+			DataSubnet:       "10.0.3.0/24",
+			WireGuardPort:    51820,
+			TalosAPIPort:     50000,
+			AllowedCIDRs:     []string{},
+		},
+		SecurityConfig: TalosSecurityConfig{
+			VTPMEnabled:       true,
+			BarbicanKeyID:     "",
+			ImageVerification: true,
+			MFARequired:       true,
+			AuditLogEnabled:   true,
+		},
+		PulumiConfig: TalosPulumiConfig{
+			StackName:         fmt.Sprintf("%s-talos", clusterName),
+			SwiftContainer:    fmt.Sprintf("%s-pulumi-state", clusterName),
+			SwiftPrefix:       clusterName,
+			SecretsPassphrase: "",
+		},
+	}
 }
 
 // Helper methods for backward compatibility

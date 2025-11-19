@@ -812,6 +812,174 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 							},
 						},
 					},
+					"talos": map[string]any{
+						"type":        "object",
+						"description": "Talos Linux provider configuration for immutable Kubernetes clusters",
+						"properties": map[string]any{
+							"enabled": map[string]any{
+								"type":        "boolean",
+								"description": "Enable Talos Linux provider",
+								"default":     false,
+							},
+							"version": map[string]any{
+								"type":        "string",
+								"description": "Talos Linux version",
+								"pattern":     "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+								"examples":    []string{"v1.8.0", "v1.7.0"},
+							},
+							"image_url": map[string]any{
+								"type":        "string",
+								"description": "URL to Talos Linux image",
+								"format":      "uri",
+							},
+							"image_signature": map[string]any{
+								"type":        "string",
+								"description": "Cryptographic signature of Talos image",
+								"minLength":   64,
+							},
+							"machine_config": map[string]any{
+								"type":        "object",
+								"description": "Talos machine configuration settings",
+								"properties": map[string]any{
+									"apparmor_enabled": map[string]any{
+										"type":        "boolean",
+										"description": "Enable AppArmor security profiles",
+										"default":     true,
+									},
+									"seccomp_enabled": map[string]any{
+										"type":        "boolean",
+										"description": "Enable Seccomp security profiles",
+										"default":     true,
+									},
+									"disk_encryption": map[string]any{
+										"type":        "boolean",
+										"description": "Enable disk encryption with LUKS",
+										"default":     true,
+									},
+									"kubeprism_enabled": map[string]any{
+										"type":        "boolean",
+										"description": "Enable KubePrism for internal load balancing",
+										"default":     true,
+									},
+									"system_extensions": map[string]any{
+										"type":        "array",
+										"description": "List of Talos system extensions to install",
+										"items": map[string]any{
+											"type": "string",
+										},
+									},
+									"log_destination": map[string]any{
+										"type":        "string",
+										"description": "Destination for Talos system logs",
+										"format":      "uri",
+									},
+								},
+							},
+							"network_config": map[string]any{
+								"type":        "object",
+								"description": "Network topology settings",
+								"properties": map[string]any{
+									"management_subnet": map[string]any{
+										"type":        "string",
+										"description": "CIDR for management network",
+										"pattern":     "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+										"default":     "10.0.1.0/24",
+									},
+									"control_subnet": map[string]any{
+										"type":        "string",
+										"description": "CIDR for control plane network",
+										"pattern":     "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+										"default":     "10.0.2.0/24",
+									},
+									"data_subnet": map[string]any{
+										"type":        "string",
+										"description": "CIDR for data plane network",
+										"pattern":     "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+										"default":     "10.0.3.0/24",
+									},
+									"wireguard_port": map[string]any{
+										"type":        "integer",
+										"description": "UDP port for WireGuard VPN",
+										"minimum":     1024,
+										"maximum":     65535,
+										"default":     51820,
+									},
+									"talos_api_port": map[string]any{
+										"type":        "integer",
+										"description": "TCP port for Talos API",
+										"minimum":     1024,
+										"maximum":     65535,
+										"default":     50000,
+									},
+									"allowed_cidrs": map[string]any{
+										"type":        "array",
+										"description": "List of CIDRs allowed to access cluster",
+										"items": map[string]any{
+											"type":    "string",
+											"pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+										},
+									},
+								},
+							},
+							"security_config": map[string]any{
+								"type":        "object",
+								"description": "Security-related settings",
+								"properties": map[string]any{
+									"vtpm_enabled": map[string]any{
+										"type":        "boolean",
+										"description": "Enable vTPM for hardware-backed encryption",
+										"default":     true,
+									},
+									"barbican_key_id": map[string]any{
+										"type":        "string",
+										"description": "Barbican key ID for encryption",
+										"pattern":     "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+									},
+									"image_verification": map[string]any{
+										"type":        "boolean",
+										"description": "Enable cryptographic image verification",
+										"default":     true,
+									},
+									"mfa_required": map[string]any{
+										"type":        "boolean",
+										"description": "Require MFA for administrative access",
+										"default":     true,
+									},
+									"audit_log_enabled": map[string]any{
+										"type":        "boolean",
+										"description": "Enable audit logging",
+										"default":     true,
+									},
+								},
+							},
+							"pulumi_config": map[string]any{
+								"type":        "object",
+								"description": "Pulumi-specific settings",
+								"properties": map[string]any{
+									"stack_name": map[string]any{
+										"type":        "string",
+										"description": "Pulumi stack name",
+										"pattern":     "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+									},
+									"swift_container": map[string]any{
+										"type":        "string",
+										"description": "Swift container for Pulumi state",
+										"pattern":     "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+									},
+									"swift_prefix": map[string]any{
+										"type":        "string",
+										"description": "Swift prefix for state isolation",
+										"pattern":     "^[a-z0-9][a-z0-9-/]*[a-z0-9]$",
+									},
+									"secrets_passphrase": map[string]any{
+										"type":        "string",
+										"description": "Passphrase for Pulumi secrets provider (should be SOPS encrypted)",
+										"minLength":   32,
+									},
+								},
+							},
+						},
+					},
 					"managed-service": managedService,
 					"services":        services,
 				},

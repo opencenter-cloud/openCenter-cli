@@ -14,12 +14,12 @@
 package cmd
 
 import (
-    "fmt"
+	"fmt"
 
-    "github.com/rackerlabs/openCenter-cli/internal/config"
-    "github.com/rackerlabs/openCenter-cli/internal/gitops"
-    "github.com/rackerlabs/openCenter-cli/internal/tofu"
-    "github.com/spf13/cobra"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/gitops"
+	"github.com/rackerlabs/openCenter-cli/internal/tofu"
+	"github.com/spf13/cobra"
 )
 
 // newClusterRenderCmd creates the command for rendering GitOps templates.

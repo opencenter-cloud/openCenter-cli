@@ -14,20 +14,20 @@
 package cmd
 
 import (
-    "encoding/json"
-    "fmt"
-    "gopkg.in/yaml.v3"
+	"encoding/json"
+	"fmt"
+	"gopkg.in/yaml.v3"
 
-    "github.com/rackerlabs/openCenter-cli/internal/config"
-    "github.com/spf13/cobra"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/spf13/cobra"
 )
 
 func newClusterInfoCmd() *cobra.Command {
-    cmd := &cobra.Command{
-        Use:   "info [name]",
-        Short: "Show configuration for a cluster",
-        Args:  cobra.MaximumNArgs(1),
-        RunE: func(cmd *cobra.Command, args []string) error {
+	cmd := &cobra.Command{
+		Use:   "info [name]",
+		Short: "Show configuration for a cluster",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
 			if len(args) > 0 {
 				name = args[0]
@@ -66,9 +66,9 @@ func newClusterInfoCmd() *cobra.Command {
 				return fmt.Errorf("failed to resolve config path: %w", err)
 			}
 
-            // Output format
-            asJSON, _ := cmd.Flags().GetBool("json")
-            if asJSON {
+			// Output format
+			asJSON, _ := cmd.Flags().GetBool("json")
+			if asJSON {
 				// Print metadata and path in JSON format
 				output := map[string]any{
 					"config_path": configPath,
@@ -80,32 +80,32 @@ func newClusterInfoCmd() *cobra.Command {
 				}
 				fmt.Fprintln(cmd.OutOrStdout(), string(b))
 				return nil
-            }
+			}
 
-            // Print metadata and config path in human-readable format
-            fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", name)
-            fmt.Fprintf(cmd.OutOrStdout(), "Config Path: %s\n\n", configPath)
-            fmt.Fprintln(cmd.OutOrStdout(), "Metadata:")
-            
-            // Create a combined metadata output that includes both Meta and cluster_name
-            metadataOutput := map[string]any{
-            	"name":         cfg.OpenCenter.Meta.Name,
-            	"cluster_name": cfg.OpenCenter.Cluster.ClusterName,
-            	"env":          cfg.OpenCenter.Meta.Env,
-            	"region":       cfg.OpenCenter.Meta.Region,
-            	"status":       cfg.OpenCenter.Meta.Status,
-            	"organization": cfg.OpenCenter.Meta.Organization,
-            }
-            
-            data, err := yaml.Marshal(metadataOutput)
-            if err != nil {
-                return err
-            }
-            fmt.Fprint(cmd.OutOrStdout(), string(data))
-            return nil
-        },
-    }
-    cmd.Flags().Bool("validate", false, "validate cluster configuration invariants")
-    cmd.Flags().Bool("json", false, "output JSON instead of YAML")
-    return cmd
+			// Print metadata and config path in human-readable format
+			fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", name)
+			fmt.Fprintf(cmd.OutOrStdout(), "Config Path: %s\n\n", configPath)
+			fmt.Fprintln(cmd.OutOrStdout(), "Metadata:")
+
+			// Create a combined metadata output that includes both Meta and cluster_name
+			metadataOutput := map[string]any{
+				"name":         cfg.OpenCenter.Meta.Name,
+				"cluster_name": cfg.OpenCenter.Cluster.ClusterName,
+				"env":          cfg.OpenCenter.Meta.Env,
+				"region":       cfg.OpenCenter.Meta.Region,
+				"status":       cfg.OpenCenter.Meta.Status,
+				"organization": cfg.OpenCenter.Meta.Organization,
+			}
+
+			data, err := yaml.Marshal(metadataOutput)
+			if err != nil {
+				return err
+			}
+			fmt.Fprint(cmd.OutOrStdout(), string(data))
+			return nil
+		},
+	}
+	cmd.Flags().Bool("validate", false, "validate cluster configuration invariants")
+	cmd.Flags().Bool("json", false, "output JSON instead of YAML")
+	return cmd
 }

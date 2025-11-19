@@ -85,7 +85,7 @@ func setupIDEIntegration(cmd *cobra.Command, ide string, schemaOnly bool) error 
 	// Generate JSON schema
 	fmt.Println("📄 Generating JSON schema...")
 	schemaPath := "schema/cluster.schema.json"
-	
+
 	// Ensure schema directory exists
 	if err := os.MkdirAll(filepath.Dir(schemaPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create schema directory: %w", err)
@@ -192,9 +192,9 @@ func setupVSCode() error {
 		"yaml.completion":    true,
 		"yaml.hover":         true,
 		"files.associations": map[string]string{
-			"*-config.yaml":     "yaml",
-			".opencenter.yaml":  "yaml",
-			".sops.yaml":        "yaml",
+			"*-config.yaml":    "yaml",
+			".opencenter.yaml": "yaml",
+			".sops.yaml":       "yaml",
 		},
 		"editor.quickSuggestions": map[string]bool{
 			"strings": true,

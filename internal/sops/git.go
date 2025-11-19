@@ -95,7 +95,7 @@ func (g *GitIntegrator) encryptFilesForCommit(ctx context.Context, cfg *config.C
 			ageKeys = []string{keyPair.PublicKey}
 		}
 	}
-	
+
 	encryptConfig := EncryptionConfig{
 		AgeKeys: ageKeys,
 		InPlace: true,
@@ -487,6 +487,7 @@ func (g *GitIntegrator) GetLastCommitHash(ctx context.Context) (string, error) {
 
 	return strings.TrimSpace(string(output)), nil
 }
+
 // Helper methods for GitIntegrator
 
 // getFilesToEncrypt returns the list of files that should be encrypted
@@ -520,15 +521,15 @@ func (g *GitIntegrator) loadAgeKeyFromFile(keyFilePath string) (*AgeKeyPair, err
 		homeDir, _ := os.UserHomeDir()
 		keyFilePath = filepath.Join(homeDir, keyFilePath[2:])
 	}
-	
+
 	// Read the private key file
 	privateKeyData, err := os.ReadFile(keyFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read age key file: %w", err)
 	}
-	
+
 	privateKey := strings.TrimSpace(string(privateKeyData))
-	
+
 	// Parse the private key to get the public key
 	return crypto.ParseAgeKey(privateKey)
 }

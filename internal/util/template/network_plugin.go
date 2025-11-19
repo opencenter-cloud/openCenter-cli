@@ -50,13 +50,13 @@ func NewDefaultNetworkPluginHandler() *DefaultNetworkPluginHandler {
 		supportedPlugins: make(map[string]NetworkPluginConfig),
 		pluginHandlers:   make(map[string]SpecificNetworkPluginHandler),
 	}
-	
+
 	// Initialize specific plugin handlers
 	handler.initializePluginHandlers()
-	
+
 	// Initialize supported plugins
 	handler.initializeSupportedPlugins()
-	
+
 	return handler
 }
 
@@ -75,7 +75,7 @@ func (h *DefaultNetworkPluginHandler) initializeSupportedPlugins() {
 			Name:           handler.GetPluginName(),
 			RequiredFields: handler.GetRequiredFields(),
 			DefaultConfig:  handler.GetDefaultConfig(),
-			Validator:      func(config map[string]interface{}) error {
+			Validator: func(config map[string]interface{}) error {
 				return handler.ValidateConfiguration(config)
 			},
 		}
@@ -99,7 +99,7 @@ func (h *DefaultNetworkPluginHandler) initializeSupportedPlugins() {
 func (h *DefaultNetworkPluginHandler) ValidateNetworkPlugin(pluginType string, config map[string]interface{}) error {
 	pluginConfig, exists := h.supportedPlugins[pluginType]
 	if !exists {
-		return fmt.Errorf("unsupported network plugin: %s, supported plugins: %s", 
+		return fmt.Errorf("unsupported network plugin: %s, supported plugins: %s",
 			pluginType, strings.Join(h.GetSupportedPlugins(), ", "))
 	}
 
@@ -124,13 +124,13 @@ func (h *DefaultNetworkPluginHandler) ValidateNetworkPlugin(pluginType string, c
 // This method takes a map of plugin configurations and ensures mutual exclusivity
 func (h *DefaultNetworkPluginHandler) ValidateNetworkPluginMutualExclusivity(pluginConfigs map[string]map[string]interface{}) error {
 	var enabledPlugins []string
-	
+
 	// Check each plugin configuration for enabled status
 	for pluginName, config := range pluginConfigs {
 		if config == nil {
 			continue
 		}
-		
+
 		// Check if plugin is enabled
 		if enabled, exists := config["enabled"]; exists {
 			if enabledBool, ok := enabled.(bool); ok && enabledBool {
@@ -138,17 +138,17 @@ func (h *DefaultNetworkPluginHandler) ValidateNetworkPluginMutualExclusivity(plu
 			}
 		}
 	}
-	
+
 	// Validate mutual exclusivity
 	if len(enabledPlugins) == 0 {
 		return fmt.Errorf("at least one network plugin must be enabled")
 	}
-	
+
 	if len(enabledPlugins) > 1 {
-		return fmt.Errorf("only one network plugin can be enabled at a time, but found enabled: %s", 
+		return fmt.Errorf("only one network plugin can be enabled at a time, but found enabled: %s",
 			strings.Join(enabledPlugins, ", "))
 	}
-	
+
 	return nil
 }
 
@@ -158,7 +158,7 @@ func (h *DefaultNetworkPluginHandler) ValidateNetworkPluginCompatibility(pluginT
 	if err := h.ValidateNetworkPlugin(pluginType, config); err != nil {
 		return err
 	}
-	
+
 	// Plugin-specific compatibility checks
 	switch pluginType {
 	case "kube-ovn":
@@ -197,7 +197,7 @@ func (h *DefaultNetworkPluginHandler) ValidateNetworkPluginCompatibility(pluginT
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -353,7 +353,7 @@ func (h *DefaultNetworkPluginHandler) validateFlannelConfig(config map[string]in
 					}
 				}
 				if !isValid {
-					return fmt.Errorf("invalid backend type: %v, valid types: %s", 
+					return fmt.Errorf("invalid backend type: %v, valid types: %s",
 						backendType, strings.Join(validTypes, ", "))
 				}
 			}
@@ -368,52 +368,52 @@ func (h *DefaultNetworkPluginHandler) validateFlannelConfig(config map[string]in
 func (h *DefaultNetworkPluginHandler) renderCalicoConfig(config map[string]interface{}) string {
 	var parts []string
 	parts = append(parts, "network_plugin = \"calico\"")
-	
+
 	if ipv4Pool, exists := config["ipv4_pool"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_ipv4_pool = \"%v\"", ipv4Pool))
 	}
-	
+
 	if mtu, exists := config["mtu"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_mtu = %v", mtu))
 	}
-	
+
 	return strings.Join(parts, "\n")
 }
 
 func (h *DefaultNetworkPluginHandler) renderCiliumConfig(config map[string]interface{}) string {
 	var parts []string
 	parts = append(parts, "network_plugin = \"cilium\"")
-	
+
 	if cidr, exists := config["cluster_pool_ipv4_cidr"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_cluster_pool_ipv4_cidr = \"%v\"", cidr))
 	}
-	
+
 	if maskSize, exists := config["cluster_pool_ipv4_mask_size"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_cluster_pool_ipv4_mask_size = %v", maskSize))
 	}
-	
+
 	return strings.Join(parts, "\n")
 }
 
 func (h *DefaultNetworkPluginHandler) renderKubeOVNConfig(config map[string]interface{}) string {
 	var parts []string
 	parts = append(parts, "network_plugin = \"kube-ovn\"")
-	
+
 	if subnet, exists := config["default_subnet"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_default_subnet = \"%v\"", subnet))
 	}
-	
+
 	return strings.Join(parts, "\n")
 }
 
 func (h *DefaultNetworkPluginHandler) renderFlannelConfig(config map[string]interface{}) string {
 	var parts []string
 	parts = append(parts, "network_plugin = \"flannel\"")
-	
+
 	if network, exists := config["network"]; exists {
 		parts = append(parts, fmt.Sprintf("flannel_network = \"%v\"", network))
 	}
-	
+
 	if backend, exists := config["backend"]; exists {
 		if backendMap, ok := backend.(map[string]interface{}); ok {
 			if backendType, exists := backendMap["type"]; exists {
@@ -421,6 +421,6 @@ func (h *DefaultNetworkPluginHandler) renderFlannelConfig(config map[string]inte
 			}
 		}
 	}
-	
+
 	return strings.Join(parts, "\n")
 }

@@ -16,11 +16,11 @@ Package cmd implements the command-line interface for openCenter.
 
 It provides commands for managing cluster configurations, including initialization, validation, and GitOps scaffolding.
 
-When to use
+# When to use
 
 Use the commands in this package to interact with openCenter from the command line. The main entry point is the `openCenter` command, which has several subcommands for managing clusters.
 
-Examples
+# Examples
 
 To list all available clusters:
 

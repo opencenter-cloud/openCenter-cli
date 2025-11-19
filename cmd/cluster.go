@@ -14,17 +14,17 @@
 package cmd
 
 import (
-    "github.com/spf13/cobra"
+	"github.com/spf13/cobra"
 )
 
 // newClusterCmd creates the top-level "cluster" command. It has
 // several subcommands defined in separate files. Running "openCenter
 // cluster" without subcommand prints help.
 func newClusterCmd() *cobra.Command {
-    cmd := &cobra.Command{
-        Use:   "cluster",
-        Short: "Manage cluster configurations",
-        Long: `Manage Kubernetes cluster configurations throughout their lifecycle.
+	cmd := &cobra.Command{
+		Use:   "cluster",
+		Short: "Manage cluster configurations",
+		Long: `Manage Kubernetes cluster configurations throughout their lifecycle.
 
 The cluster command provides subcommands for initializing, validating, updating,
 and managing cluster configurations. It supports organization-based multi-tenancy
@@ -39,7 +39,7 @@ Common Workflow:
 
 Configuration files are stored in organization-based directories:
   ~/.config/openCenter/clusters/<organization>/<cluster>/`,
-        Example: `  # Initialize a new cluster
+		Example: `  # Initialize a new cluster
   openCenter cluster init my-cluster
 
   # Initialize with organization
@@ -56,27 +56,27 @@ Configuration files are stored in organization-based directories:
 
   # Show current cluster
   openCenter cluster current`,
-        RunE: func(cmd *cobra.Command, args []string) error {
-            return cmd.Help()
-        },
-    }
-    // Add subcommands
-    cmd.AddCommand(newClusterListCmd())
-    cmd.AddCommand(newClusterSelectCmd())
-    cmd.AddCommand(newClusterCurrentCmd())
-    cmd.AddCommand(newClusterInfoCmd())
-    cmd.AddCommand(newClusterInitCmd())
-    cmd.AddCommand(newClusterEditCmd())
-    cmd.AddCommand(newClusterValidateCmd())
-    cmd.AddCommand(newClusterPreflightCmd())
-    cmd.AddCommand(newClusterSetupCmd())
-    cmd.AddCommand(newClusterRenderCmd())
-    cmd.AddCommand(newClusterBootstrapCmd())
-    cmd.AddCommand(newClusterSchemaCmd())
-    cmd.AddCommand(newClusterDestroyCmd())
-    cmd.AddCommand(newClusterUpdateCmd())
-    cmd.AddCommand(newClusterMigrateCmd())
-    cmd.AddCommand(newClusterConfigUpdateCmd())
-    cmd.AddCommand(newClusterServiceCmd())
-    return cmd
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+	// Add subcommands
+	cmd.AddCommand(newClusterListCmd())
+	cmd.AddCommand(newClusterSelectCmd())
+	cmd.AddCommand(newClusterCurrentCmd())
+	cmd.AddCommand(newClusterInfoCmd())
+	cmd.AddCommand(newClusterInitCmd())
+	cmd.AddCommand(newClusterEditCmd())
+	cmd.AddCommand(newClusterValidateCmd())
+	cmd.AddCommand(newClusterPreflightCmd())
+	cmd.AddCommand(newClusterSetupCmd())
+	cmd.AddCommand(newClusterRenderCmd())
+	cmd.AddCommand(newClusterBootstrapCmd())
+	cmd.AddCommand(newClusterSchemaCmd())
+	cmd.AddCommand(newClusterDestroyCmd())
+	cmd.AddCommand(newClusterUpdateCmd())
+	cmd.AddCommand(newClusterMigrateCmd())
+	cmd.AddCommand(newClusterConfigUpdateCmd())
+	cmd.AddCommand(newClusterServiceCmd())
+	return cmd
 }

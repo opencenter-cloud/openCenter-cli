@@ -84,6 +84,7 @@ Complete documentation for all cluster lifecycle commands:
 *   **[Cluster Commands Dev](./docs/dev/cluster/readme.md)** - Cluster command internals
 
 ### Configuration Resources
+*   **[Cluster Configuration File](./docs/cluster-config.md)** - Complete cluster config reference
 *   **[Configuration Schema](./CONFIG_SCHEMA_ADDITIONS.md)** - Complete field reference
 *   **[Template Analysis](./TEMPLATE_ANALYSIS_REPORT.md)** - Template implementation status
 *   **[Migration Guide](./MIGRATION_GUIDE.md)** - Upgrade from older configurations

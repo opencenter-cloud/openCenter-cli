@@ -17,20 +17,415 @@ This checklist validates that a Kubespray-managed Kubernetes cluster is producti
 
 ## Table of Contents
 
-1. [Kubespray Deployment Validation](#1-kubespray-deployment-validation)
-2. [Infrastructure & Topology](#2-infrastructure--topology)
-3. [Control Plane & etcd](#3-control-plane--etcd)
-4. [Node OS Baseline](#4-node-os-baseline)
-5. [Networking](#5-networking)
-6. [Security & Certificates](#6-security--certificates)
-7. [Post-Install Conformance](#7-post-install-conformance)
-8. [Managed Services Validation](#8-managed-services-validation)
-9. [Day-2 Readiness Gates](#9-day-2-readiness-gates)
-10. [Sign-Off & Acceptance](#10-sign-off--acceptance)
+1. [Cluster Configuration Validation](#1-cluster-configuration-validation)
+2. [Kubespray Deployment Validation](#2-kubespray-deployment-validation)
+3. [Infrastructure & Topology](#3-infrastructure--topology)
+4. [Control Plane & etcd](#4-control-plane--etcd)
+5. [Node OS Baseline](#5-node-os-baseline)
+6. [Networking](#6-networking)
+7. [Security & Certificates](#7-security--certificates)
+8. [Post-Install Conformance](#8-post-install-conformance)
+9. [Managed Services Validation](#9-managed-services-validation)
+10. [Day-2 Readiness Gates](#10-day-2-readiness-gates)
+11. [Sign-Off & Acceptance](#11-sign-off--acceptance)
 
 ---
 
-## 1. Kubespray Deployment Validation
+## 1. Cluster Configuration Validation
+
+**Purpose:** Validate that the cluster configuration file accurately reflects the deployed cluster and all enabled services. This section establishes the baseline for all subsequent validation by comparing the declared configuration against actual cluster state.
+
+**Reference Documentation:**
+- [Cluster Configuration File Reference](./cluster-config.md) - Complete documentation of the configuration file structure
+
+### 1.1 Configuration File Validation
+
+**Purpose:** Validate that the cluster configuration file exists, is valid, and matches the deployed cluster.
+
+**Prerequisites:**
+- Access to cluster configuration file (`.<cluster-name>-config.yaml`)
+- openCenter CLI installed
+- yq or similar YAML parser installed
+
+**Validation Procedure:**
+
+```bash
+# CLI Command Proposal
+openCenter cluster validate config \
+  --cluster <CLUSTER_NAME>
+```
+
+**Manual Validation Steps:**
+
+1. **Locate and verify cluster configuration file:**
+   ```bash
+   # Configuration file location (organization-based structure)
+   CONFIG_FILE=~/.config/openCenter/clusters/<organization>/.<cluster-name>-config.yaml
+   
+   # Verify file exists and is readable
+   ls -la $CONFIG_FILE
+   
+   # Check file permissions (should be 0600)
+   stat -c "%a %n" $CONFIG_FILE  # Linux
+   stat -f "%Lp %N" $CONFIG_FILE  # macOS
+   ```
+
+2. **Validate configuration against JSON schema:**
+   ```bash
+   # Using openCenter CLI
+   openCenter cluster validate <CLUSTER_NAME>
+   
+   # Or using external validator (ajv-cli)
+   openCenter cluster schema --out cluster.schema.json
+   ajv validate -s cluster.schema.json -d $CONFIG_FILE
+   ```
+
+3. **Extract and verify cluster metadata:**
+   ```bash
+   # Parse configuration file
+   echo "=== Cluster Metadata ==="
+   yq eval '.opencenter.meta' $CONFIG_FILE
+   
+   echo "=== Cluster Name ==="
+   yq eval '.opencenter.cluster.cluster_name' $CONFIG_FILE
+   
+   echo "=== Kubernetes Version ==="
+   yq eval '.opencenter.cluster.kubernetes.version' $CONFIG_FILE
+   
+   echo "=== Infrastructure Provider ==="
+   yq eval '.opencenter.infrastructure.provider' $CONFIG_FILE
+   ```
+
+4. **Verify infrastructure provider configuration:**
+   ```bash
+   # Check provider-specific settings
+   PROVIDER=$(yq eval '.opencenter.infrastructure.provider' $CONFIG_FILE)
+   echo "Provider: $PROVIDER"
+   
+   # For OpenStack
+   if [ "$PROVIDER" = "openstack" ]; then
+     echo "=== OpenStack Configuration ==="
+     yq eval '.opencenter.infrastructure.cloud.openstack' $CONFIG_FILE
+   fi
+   
+   # For AWS
+   if [ "$PROVIDER" = "aws" ]; then
+     echo "=== AWS Configuration ==="
+     yq eval '.opencenter.infrastructure.cloud.aws' $CONFIG_FILE
+   fi
+   
+   # For baremetal
+   if [ "$PROVIDER" = "baremetal" ]; then
+     echo "=== Baremetal Configuration ==="
+     yq eval '.opencenter.cluster.kubernetes.master_nodes' $CONFIG_FILE
+     yq eval '.opencenter.cluster.kubernetes.worker_nodes' $CONFIG_FILE
+   fi
+   ```
+
+5. **List all enabled services from configuration:**
+   ```bash
+   # Extract all enabled services
+   echo "=== Enabled Services ==="
+   yq eval '.opencenter.services | to_entries | .[] | select(.value.enabled == true) | .key' $CONFIG_FILE | tee enabled-services.txt
+   
+   # Count enabled services
+   SERVICE_COUNT=$(cat enabled-services.txt | wc -l)
+   echo "Total enabled services: $SERVICE_COUNT"
+   ```
+
+6. **Verify CNI plugin configuration (only one should be enabled):**
+   ```bash
+   # Check which CNI is enabled
+   echo "=== CNI Plugin Configuration ==="
+   yq eval '.opencenter.cluster.kubernetes.network_plugin' $CONFIG_FILE
+   
+   # Verify only one CNI is enabled
+   CNI_COUNT=$(yq eval '.opencenter.cluster.kubernetes.network_plugin | to_entries | .[] | select(.value.enabled == true) | .key' $CONFIG_FILE | wc -l)
+   
+   if [ "$CNI_COUNT" -ne 1 ]; then
+     echo "❌ ERROR: Multiple or no CNI plugins enabled (found: $CNI_COUNT)"
+     exit 1
+   else
+     CNI_NAME=$(yq eval '.opencenter.cluster.kubernetes.network_plugin | to_entries | .[] | select(.value.enabled == true) | .key' $CONFIG_FILE)
+     echo "✅ Single CNI plugin enabled: $CNI_NAME"
+   fi
+   ```
+
+7. **Verify GitOps configuration:**
+   ```bash
+   # Check GitOps settings
+   echo "=== GitOps Configuration ==="
+   yq eval '.opencenter.gitops' $CONFIG_FILE
+   
+   # Verify GitOps directory exists
+   GITOPS_DIR=$(yq eval '.opencenter.gitops.git_dir' $CONFIG_FILE)
+   if [ -d "$GITOPS_DIR" ]; then
+     echo "✅ GitOps directory exists: $GITOPS_DIR"
+     ls -la $GITOPS_DIR
+   else
+     echo "❌ GitOps directory not found: $GITOPS_DIR"
+   fi
+   ```
+
+8. **Check secrets configuration:**
+   ```bash
+   # Verify SOPS key path
+   echo "=== Secrets Configuration ==="
+   SOPS_KEY=$(yq eval '.secrets.sops_age_key_file' $CONFIG_FILE)
+   if [ -f "$SOPS_KEY" ]; then
+     echo "✅ SOPS key exists: $SOPS_KEY"
+   else
+     echo "❌ SOPS key not found: $SOPS_KEY"
+   fi
+   
+   # Verify SSH key paths
+   SSH_PRIVATE=$(yq eval '.secrets.ssh_key.private' $CONFIG_FILE)
+   SSH_PUBLIC=$(yq eval '.secrets.ssh_key.public' $CONFIG_FILE)
+   
+   if [ -f "$SSH_PRIVATE" ] && [ -f "$SSH_PUBLIC" ]; then
+     echo "✅ SSH keys exist"
+     ls -la $SSH_PRIVATE $SSH_PUBLIC
+   else
+     echo "❌ SSH keys not found"
+   fi
+   ```
+
+9. **Validate node counts and topology:**
+   ```bash
+   # Extract node configuration
+   echo "=== Node Configuration ==="
+   MASTER_COUNT=$(yq eval '.opencenter.cluster.kubernetes.master_count' $CONFIG_FILE)
+   WORKER_COUNT=$(yq eval '.opencenter.cluster.kubernetes.worker_count' $CONFIG_FILE)
+   
+   echo "Control Plane Nodes (configured): $MASTER_COUNT"
+   echo "Worker Nodes (configured): $WORKER_COUNT"
+   echo "Total Nodes (configured): $((MASTER_COUNT + WORKER_COUNT))"
+   
+   # Verify odd number for HA
+   if [ $MASTER_COUNT -gt 1 ] && [ $((MASTER_COUNT % 2)) -eq 0 ]; then
+     echo "⚠️  WARNING: Control plane count should be odd for HA (found: $MASTER_COUNT)"
+   fi
+   ```
+
+10. **Compare configuration with actual cluster state:**
+    ```bash
+    echo "=== Configuration vs Actual State ==="
+    
+    # Compare node count
+    ACTUAL_NODES=$(kubectl get nodes --no-headers | wc -l)
+    EXPECTED_NODES=$((MASTER_COUNT + WORKER_COUNT))
+    
+    if [ "$ACTUAL_NODES" -eq "$EXPECTED_NODES" ]; then
+      echo "✅ Node count matches: Expected $EXPECTED_NODES, Found $ACTUAL_NODES"
+    else
+      echo "❌ Node count mismatch: Expected $EXPECTED_NODES, Found $ACTUAL_NODES"
+    fi
+    
+    # Compare Kubernetes version
+    CONFIGURED_VERSION=$(yq eval '.opencenter.cluster.kubernetes.version' $CONFIG_FILE)
+    ACTUAL_VERSION=$(kubectl version --short 2>/dev/null | grep Server | awk '{print $3}' | sed 's/v//')
+    
+    if [[ "$ACTUAL_VERSION" == "$CONFIGURED_VERSION"* ]]; then
+      echo "✅ Kubernetes version matches: $CONFIGURED_VERSION"
+    else
+      echo "❌ Version mismatch: Expected $CONFIGURED_VERSION, Found $ACTUAL_VERSION"
+    fi
+    
+    # Compare CNI plugin
+    CONFIGURED_CNI=$(yq eval '.opencenter.cluster.kubernetes.network_plugin | to_entries | .[] | select(.value.enabled == true) | .key' $CONFIG_FILE)
+    
+    case $CONFIGURED_CNI in
+      calico)
+        kubectl get pods -n kube-system -l k8s-app=calico-node &>/dev/null && echo "✅ Calico CNI deployed" || echo "❌ Calico CNI not found"
+        ;;
+      cilium)
+        kubectl get pods -n kube-system -l k8s-app=cilium &>/dev/null && echo "✅ Cilium CNI deployed" || echo "❌ Cilium CNI not found"
+        ;;
+      kube-ovn)
+        kubectl get pods -n kube-system -l app=kube-ovn-cni &>/dev/null && echo "✅ Kube-OVN CNI deployed" || echo "❌ Kube-OVN CNI not found"
+        ;;
+    esac
+    ```
+
+**Evidence Artifacts:**
+- [ ] `cluster-config.yaml` - Full cluster configuration file
+- [ ] `config-validation.txt` - Schema validation results
+- [ ] `enabled-services.txt` - List of enabled services
+- [ ] `config-vs-actual.txt` - Configuration vs actual state comparison
+- [ ] `config-metadata.json` - Extracted metadata
+
+**Acceptance Criteria:**
+- ✅ Configuration file exists and is readable (permissions 0600)
+- ✅ Configuration validates against JSON schema
+- ✅ All required fields populated
+- ✅ Infrastructure provider correctly configured
+- ✅ Only one CNI plugin enabled
+- ✅ Node counts match actual cluster
+- ✅ Kubernetes version matches actual cluster
+- ✅ GitOps directory exists and accessible
+- ✅ SOPS and SSH keys exist at configured paths
+- ✅ Enabled services list documented
+
+**Risks & Pitfalls:**
+- ⚠️ Configuration drift after manual cluster changes
+- ⚠️ Missing or incorrect service configurations
+- ⚠️ Secrets paths pointing to non-existent files
+- ⚠️ Multiple CNI plugins enabled causing conflicts
+- ⚠️ Node count mismatch indicating scaling without config update
+
+---
+
+### 1.2 Service Configuration Matrix
+
+**Purpose:** Create a comprehensive matrix of configured vs deployed services for validation. This matrix serves as the checklist for Section 9 (Managed Services Validation).
+
+**Validation Procedure:**
+
+```bash
+# CLI Command Proposal
+openCenter cluster validate service-matrix \
+  --cluster <CLUSTER_NAME>
+```
+
+**Manual Validation Steps:**
+
+1. **Generate service matrix from configuration:**
+   ```bash
+   cat > service-matrix.sh <<'EOF'
+   #!/bin/bash
+   CONFIG_FILE=$1
+   
+   echo "Service,Configured,Deployed,Status"
+   
+   # Check each service from the configuration
+   for service in calico cert-manager etcd-backup external-snapshotter fluxcd \
+                  gateway gateway-api headlamp keycloak kube-prometheus-stack \
+                  kyverno loki olm openstack-ccm openstack-csi postgres-operator \
+                  prometheus rbac-manager sources velero vsphere-csi weave-gitops; do
+     
+     ENABLED=$(yq eval ".opencenter.services.$service.enabled" $CONFIG_FILE 2>/dev/null)
+     
+     if [ "$ENABLED" = "true" ]; then
+       # Check if deployed (namespace or pods exist)
+       case $service in
+         fluxcd)
+           DEPLOYED=$(kubectl get ns flux-system 2>/dev/null && echo "true" || echo "false")
+           ;;
+         cert-manager)
+           DEPLOYED=$(kubectl get ns cert-manager 2>/dev/null && echo "true" || echo "false")
+           ;;
+         kube-prometheus-stack)
+           DEPLOYED=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus 2>/dev/null | grep -q Running && echo "true" || echo "false")
+           ;;
+         keycloak)
+           DEPLOYED=$(kubectl get pods -n keycloak 2>/dev/null | grep -q Running && echo "true" || echo "false")
+           ;;
+         headlamp)
+           DEPLOYED=$(kubectl get pods -n headlamp 2>/dev/null | grep -q Running && echo "true" || echo "false")
+           ;;
+         velero)
+           DEPLOYED=$(kubectl get ns velero 2>/dev/null && echo "true" || echo "false")
+           ;;
+         *)
+           DEPLOYED=$(kubectl get pods --all-namespaces -l app.kubernetes.io/name=$service 2>/dev/null | grep -q Running && echo "true" || echo "false")
+           ;;
+       esac
+       
+       if [ "$DEPLOYED" = "true" ]; then
+         STATUS="✅ Match"
+       else
+         STATUS="❌ Missing"
+       fi
+     else
+       ENABLED="false"
+       DEPLOYED="N/A"
+       STATUS="⊘ Disabled"
+     fi
+     
+     echo "$service,$ENABLED,$DEPLOYED,$STATUS"
+   done
+   EOF
+   
+   chmod +x service-matrix.sh
+   ./service-matrix.sh $CONFIG_FILE | column -t -s,
+   ```
+
+2. **Validate critical services are enabled:**
+   ```bash
+   # Critical services that should typically be enabled
+   CRITICAL_SERVICES="fluxcd cert-manager gateway-api"
+   
+   echo "=== Critical Services Check ==="
+   for service in $CRITICAL_SERVICES; do
+     ENABLED=$(yq eval ".opencenter.services.$service.enabled" $CONFIG_FILE)
+     if [ "$ENABLED" != "true" ]; then
+       echo "⚠️  WARNING: Critical service $service is not enabled"
+     else
+       echo "✅ Critical service $service is enabled"
+     fi
+   done
+   ```
+
+3. **Check service-specific configuration for enabled services:**
+   ```bash
+   # For each enabled service, verify its configuration
+   echo "=== Service Configurations ==="
+   while read service; do
+     echo ""
+     echo "=== $service Configuration ==="
+     yq eval ".opencenter.services.$service" $CONFIG_FILE
+   done < enabled-services.txt
+   ```
+
+4. **Verify service dependencies:**
+   ```bash
+   # Check for common service dependencies
+   echo "=== Service Dependencies Check ==="
+   
+   # If Keycloak is enabled, check OIDC configuration
+   KEYCLOAK_ENABLED=$(yq eval ".opencenter.services.keycloak.enabled" $CONFIG_FILE)
+   if [ "$KEYCLOAK_ENABLED" = "true" ]; then
+     echo "Keycloak enabled, checking OIDC configuration..."
+     yq eval '.opencenter.cluster.kubernetes.oidc' $CONFIG_FILE
+   fi
+   
+   # If Loki is enabled, check storage configuration
+   LOKI_ENABLED=$(yq eval ".opencenter.services.loki.enabled" $CONFIG_FILE)
+   if [ "$LOKI_ENABLED" = "true" ]; then
+     echo "Loki enabled, checking storage configuration..."
+     yq eval '.opencenter.services.loki | pick(["swift_auth_url", "loki_bucket_name", "loki_storage_class"])' $CONFIG_FILE
+   fi
+   
+   # If Velero is enabled, check backup configuration
+   VELERO_ENABLED=$(yq eval ".opencenter.services.velero.enabled" $CONFIG_FILE)
+   if [ "$VELERO_ENABLED" = "true" ]; then
+     echo "Velero enabled, checking backup configuration..."
+     yq eval '.opencenter.services.velero | pick(["velero_backup_bucket", "velero_region"])' $CONFIG_FILE
+   fi
+   ```
+
+**Evidence Artifacts:**
+- [ ] `service-matrix.csv` - Service configuration matrix
+- [ ] `service-configs.yaml` - All service configurations
+- [ ] `critical-services-check.txt` - Critical services validation
+- [ ] `service-dependencies.txt` - Service dependency validation
+
+**Acceptance Criteria:**
+- ✅ All enabled services are deployed
+- ✅ No unexpected services running
+- ✅ Critical services enabled and healthy
+- ✅ Service configurations match requirements
+- ✅ Service dependencies satisfied
+
+**Risks & Pitfalls:**
+- ⚠️ Services enabled in config but not deployed
+- ⚠️ Services deployed but not in configuration (shadow IT)
+- ⚠️ Missing service dependencies
+- ⚠️ Incomplete service configurations
+
+---
+
+## 2. Kubespray Deployment Validation
 
 ### 1.1 Inventory & Configuration
 

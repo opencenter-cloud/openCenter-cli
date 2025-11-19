@@ -41,9 +41,9 @@ func NewOpenStackValidator() *OpenStackValidator {
 // ValidateCredentials validates OpenStack credentials.
 func (v *OpenStackValidator) ValidateCredentials(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	os := config.OpenCenter.Infrastructure.Cloud.OpenStack
-	
+
 	// Validate application credentials
 	if os.ApplicationCredentialID == "" || os.ApplicationCredentialSecret == "" {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -63,16 +63,16 @@ func (v *OpenStackValidator) ValidateCredentials(ctx context.Context, config *Co
 			))
 		}
 	}
-	
+
 	return validationErrors
 }
 
 // ValidateConfiguration validates OpenStack configuration.
 func (v *OpenStackValidator) ValidateConfiguration(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	os := config.OpenCenter.Infrastructure.Cloud.OpenStack
-	
+
 	// Validate auth URL
 	if os.AuthURL == "" {
 		validationErrors = append(validationErrors, errors.CreateValidationError(
@@ -96,7 +96,7 @@ func (v *OpenStackValidator) ValidateConfiguration(ctx context.Context, config *
 			"Example: https://keystone.api.example.com/v3/",
 		))
 	}
-	
+
 	// Validate region
 	if os.Region == "" {
 		validationErrors = append(validationErrors, errors.CreateValidationError(
@@ -106,7 +106,7 @@ func (v *OpenStackValidator) ValidateConfiguration(ctx context.Context, config *
 			"Check with your OpenStack administrator for available regions",
 		))
 	}
-	
+
 	// Validate tenant/project
 	if os.TenantName == "" {
 		validationErrors = append(validationErrors, errors.CreateValidationError(
@@ -115,7 +115,7 @@ func (v *OpenStackValidator) ValidateConfiguration(ctx context.Context, config *
 			"Set tenant_name to your OpenStack project/tenant name",
 		))
 	}
-	
+
 	// Validate domain information
 	if os.Domain == "" {
 		validationErrors = append(validationErrors, errors.CreateValidationError(
@@ -125,23 +125,23 @@ func (v *OpenStackValidator) ValidateConfiguration(ctx context.Context, config *
 			"Use 'Default' for default domain",
 		))
 	}
-	
+
 	// Validate network configuration
 	v.validateNetworkConfiguration(os, &validationErrors)
-	
+
 	return validationErrors
 }
 
 // ValidateConnectivity validates connectivity to OpenStack services.
 func (v *OpenStackValidator) ValidateConnectivity(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	os := config.OpenCenter.Infrastructure.Cloud.OpenStack
-	
+
 	if os.AuthURL == "" {
 		return validationErrors // Can't test connectivity without auth URL
 	}
-	
+
 	// Test connectivity to Keystone
 	req, err := http.NewRequestWithContext(ctx, "GET", os.AuthURL, nil)
 	if err != nil {
@@ -153,7 +153,7 @@ func (v *OpenStackValidator) ValidateConnectivity(ctx context.Context, config *C
 		))
 		return validationErrors
 	}
-	
+
 	resp, err := v.httpClient.Do(req)
 	if err != nil {
 		validationErrors = append(validationErrors, errors.CreateCloudError(
@@ -165,7 +165,7 @@ func (v *OpenStackValidator) ValidateConnectivity(ctx context.Context, config *C
 		return validationErrors
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 {
 		validationErrors = append(validationErrors, errors.CreateCloudError(
 			"OpenStack",
@@ -174,7 +174,7 @@ func (v *OpenStackValidator) ValidateConnectivity(ctx context.Context, config *C
 			fmt.Errorf("HTTP %d", resp.StatusCode),
 		))
 	}
-	
+
 	return validationErrors
 }
 
@@ -207,7 +207,7 @@ func (v *OpenStackValidator) validateNetworkConfiguration(os SimplifiedOpenStack
 			"Check OpenStack console for correct network ID",
 		))
 	}
-	
+
 	// Validate subnet ID if provided
 	if os.SubnetId != "" && !v.isValidUUID(os.SubnetId) {
 		*validationErrors = append(*validationErrors, errors.CreateValidationError(
@@ -226,12 +226,12 @@ func (v *OpenStackValidator) isValidUUID(uuid string) bool {
 	if len(uuid) != 36 {
 		return false
 	}
-	
+
 	// Check for proper hyphen placement
 	if uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-' {
 		return false
 	}
-	
+
 	// Check for valid hex characters
 	validChars := "0123456789abcdefABCDEF-"
 	for _, char := range uuid {
@@ -246,7 +246,7 @@ func (v *OpenStackValidator) isValidUUID(uuid string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -255,7 +255,7 @@ func (v *OpenStackValidator) isValidURL(rawURL string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	return parsedURL.Scheme == "http" || parsedURL.Scheme == "https"
 }
 
@@ -266,13 +266,13 @@ func (v *OpenStackValidator) isValidIP(ip string) bool {
 		// Check for IPv6 (basic check)
 		return strings.Contains(ip, ":")
 	}
-	
+
 	// IPv4 validation
 	for _, part := range parts {
 		if len(part) == 0 || len(part) > 3 {
 			return false
 		}
-		
+
 		num := 0
 		for _, char := range part {
 			if char < '0' || char > '9' {
@@ -280,11 +280,11 @@ func (v *OpenStackValidator) isValidIP(ip string) bool {
 			}
 			num = num*10 + int(char-'0')
 		}
-		
+
 		if num > 255 {
 			return false
 		}
 	}
-	
+
 	return true
 }

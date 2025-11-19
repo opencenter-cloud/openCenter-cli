@@ -34,10 +34,10 @@ func NewDefaultPathExpander() *DefaultPathExpander {
 func (e *DefaultPathExpander) ExpandPath(path string) string {
 	// First expand environment variables
 	expanded := e.ExpandEnvironmentVariables(path)
-	
+
 	// Then expand user home directory
 	expanded = e.ExpandUserHome(expanded)
-	
+
 	return expanded
 }
 
@@ -72,13 +72,13 @@ func (e *DefaultPathExpander) ExpandUserHome(path string) string {
 func (e *DefaultPathExpander) ResolvePath(path string) (string, error) {
 	// Expand the path
 	expanded := e.ExpandPath(path)
-	
+
 	// Convert to absolute path
 	absPath, err := filepath.Abs(expanded)
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Clean the path to remove any redundant elements
 	return filepath.Clean(absPath), nil
 }
@@ -88,7 +88,7 @@ func ExpandPathWithDefaults(path, defaultPath string) string {
 	if path == "" {
 		path = defaultPath
 	}
-	
+
 	expander := NewDefaultPathExpander()
 	return expander.ExpandPath(path)
 }

@@ -120,7 +120,7 @@ func (e *DefaultEncryptor) EncryptFile(ctx context.Context, filePath string, con
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
-	
+
 	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
 	cmd.Env = os.Environ()
 
@@ -171,40 +171,40 @@ func (e *DefaultEncryptor) EncryptFilesParallel(ctx context.Context, filePaths [
 	// Create a semaphore to limit concurrency
 	sem := make(chan struct{}, maxConcurrency)
 	errChan := make(chan error, len(filePaths))
-	
+
 	// Use a wait group to track completion
 	var wg sync.WaitGroup
-	
+
 	for _, filePath := range filePaths {
 		wg.Add(1)
 		go func(path string) {
 			defer wg.Done()
-			
+
 			// Acquire semaphore
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			
+
 			// Encrypt the file
 			if err := e.EncryptFile(ctx, path, config); err != nil {
 				errChan <- fmt.Errorf("failed to encrypt %s: %w", path, err)
 			}
 		}(filePath)
 	}
-	
+
 	// Wait for all goroutines to complete
 	wg.Wait()
 	close(errChan)
-	
+
 	// Collect errors
 	var errors []error
 	for err := range errChan {
 		errors = append(errors, err)
 	}
-	
+
 	if len(errors) > 0 {
 		return fmt.Errorf("failed to encrypt %d files: %v", len(errors), errors)
 	}
-	
+
 	return nil
 }
 
@@ -262,7 +262,7 @@ func (e *DefaultEncryptor) DecryptFile(ctx context.Context, filePath string, out
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
-	
+
 	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
 	cmd.Env = os.Environ()
 
@@ -320,10 +320,10 @@ func (e *DefaultEncryptor) RotateKeys(ctx context.Context, filePath string, newA
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
-	
+
 	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
 	cmd.Env = os.Environ()
-	
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -372,10 +372,10 @@ func (e *DefaultEncryptor) EditEncryptedFile(ctx context.Context, filePath strin
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
-	
+
 	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
 	cmd.Env = os.Environ()
-	
+
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -407,46 +407,46 @@ func (e *DefaultEncryptor) DecryptFilesParallel(ctx context.Context, filePaths [
 	// Create a semaphore to limit concurrency
 	sem := make(chan struct{}, maxConcurrency)
 	errChan := make(chan error, len(filePaths))
-	
+
 	// Use a wait group to track completion
 	var wg sync.WaitGroup
-	
+
 	for _, filePath := range filePaths {
 		wg.Add(1)
 		go func(path string) {
 			defer wg.Done()
-			
+
 			// Acquire semaphore
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			
+
 			// Determine output path
 			outputPath := ""
 			if outputDir != "" {
 				outputPath = filepath.Join(outputDir, filepath.Base(path))
 			}
-			
+
 			// Decrypt the file
 			if err := e.DecryptFile(ctx, path, outputPath); err != nil {
 				errChan <- fmt.Errorf("failed to decrypt %s: %w", path, err)
 			}
 		}(filePath)
 	}
-	
+
 	// Wait for all goroutines to complete
 	wg.Wait()
 	close(errChan)
-	
+
 	// Collect errors
 	var errors []error
 	for err := range errChan {
 		errors = append(errors, err)
 	}
-	
+
 	if len(errors) > 0 {
 		return fmt.Errorf("failed to decrypt %d files: %v", len(errors), errors)
 	}
-	
+
 	return nil
 }
 

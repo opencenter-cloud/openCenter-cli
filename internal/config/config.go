@@ -40,10 +40,10 @@ type Config struct {
 
 // ClusterMeta holds high-level metadata about the cluster.
 type ClusterMeta struct {
-	Name   string `yaml:"name" json:"name"`
-	Env    string `yaml:"env" json:"env"`
-	Region string `yaml:"region" json:"region"`
-	Status string `yaml:"status" json:"status"`
+	Name         string `yaml:"name" json:"name"`
+	Env          string `yaml:"env" json:"env"`
+	Region       string `yaml:"region" json:"region"`
+	Status       string `yaml:"status" json:"status"`
 	Organization string `yaml:"organization" json:"organization"`
 }
 
@@ -102,7 +102,7 @@ type GitOpsConfig struct {
 	Branch    string     `yaml:"branch,omitempty" json:"branch,omitempty"`
 	Uri       string     `yaml:"uri,omitempty" json:"uri,omitempty"`
 	Flux      GitOpsFlux `yaml:"flux,omitempty" json:"flux,omitempty"`
-	
+
 	// New fields for GitOps base repository configuration
 	GitOpsBaseRepo    string `yaml:"gitops_base_repo,omitempty" json:"gitops_base_repo,omitempty" jsonschema:"description=URL of the GitOps base repository"`
 	GitOpsBaseRelease string `yaml:"gitops_base_release,omitempty" json:"gitops_base_release,omitempty" jsonschema:"description=Release tag of the GitOps base repository"`
@@ -261,7 +261,7 @@ type VSphereCsiSecrets struct {
 type Secrets struct {
 	SopsAgeKeyFile string `yaml:"sops_age_key_file" json:"sops_age_key_file"`
 	SSHKey         SSHKey `yaml:"ssh_key" json:"ssh_key"`
-	
+
 	// Service-specific secrets
 	CertManager CertManagerSecrets `yaml:"cert_manager" json:"cert_manager"`
 	Loki        LokiSecrets        `yaml:"loki" json:"loki"`
@@ -373,35 +373,35 @@ type Infrastructure struct {
 
 // ServiceCfg captures the on/off toggle plus optional metadata for a service.
 type ServiceCfg struct {
-	Enabled bool   `yaml:"enabled" json:"enabled"`
-	Email   string `yaml:"email" json:"email"`
-	Region  string `yaml:"region" json:"region"`
-	S3Host  string `yaml:"s3_host" json:"s3_host"`
+	Enabled  bool   `yaml:"enabled" json:"enabled"`
+	Email    string `yaml:"email" json:"email"`
+	Region   string `yaml:"region" json:"region"`
+	S3Host   string `yaml:"s3_host" json:"s3_host"`
 	S3Region string `yaml:"s3_region" json:"s3_region"`
-	
+
 	// Alert-proxy specific fields (non-secret)
 	AlertManagerBaseUrl string `yaml:"alert_manager_base_url" json:"alert_manager_base_url"`
 	HTTPRouteFQDN       string `yaml:"http_route_fqdn" json:"http_route_fqdn"`
-	
+
 	// Version control fields
 	Release string `yaml:"release" json:"release"`
 	Branch  string `yaml:"branch" json:"branch"`
 	Uri     string `yaml:"uri" json:"uri"`
-	
+
 	// GitOps source fields (for managed services)
 	GitOpsSourceRepo    string `yaml:"gitops_source_repo" json:"gitops_source_repo" jsonschema:"description=GitOps source repository URL"`
 	GitOpsSourceRelease string `yaml:"gitops_source_release" json:"gitops_source_release" jsonschema:"description=GitOps source release tag"`
 	GitOpsSourceBranch  string `yaml:"gitops_source_branch" json:"gitops_source_branch" jsonschema:"description=GitOps source branch"`
-	
+
 	// Common service fields
 	Namespace       string `yaml:"namespace" json:"namespace" jsonschema:"description=Kubernetes namespace for the service"`
 	Hostname        string `yaml:"hostname" json:"hostname" jsonschema:"description=Hostname for HTTPRoute configuration"`
 	ImageRepository string `yaml:"image_repository" json:"image_repository" jsonschema:"description=Container image repository"`
 	ImageTag        string `yaml:"image_tag" json:"image_tag" jsonschema:"description=Container image tag"`
-	
+
 	// Cert-manager fields
 	LetsEncryptServer string `yaml:"letsencrypt_server" json:"letsencrypt_server" jsonschema:"description=LetsEncrypt ACME server URL"`
-	
+
 	// Loki fields
 	SwiftAuthURL     string `yaml:"swift_auth_url" json:"swift_auth_url" jsonschema:"description=Swift authentication URL"`
 	SwiftUsername    string `yaml:"swift_username" json:"swift_username" jsonschema:"description=Swift username"`
@@ -411,28 +411,28 @@ type ServiceCfg struct {
 	LokiBucketName   string `yaml:"loki_bucket_name" json:"loki_bucket_name" jsonschema:"description=Loki storage bucket name"`
 	LokiVolumeSize   int    `yaml:"loki_volume_size" json:"loki_volume_size" jsonschema:"description=Loki persistent volume size in GB"`
 	LokiStorageClass string `yaml:"loki_storage_class" json:"loki_storage_class" jsonschema:"description=Loki storage class"`
-	
+
 	// Velero fields
 	VeleroBackupBucket string `yaml:"velero_backup_bucket" json:"velero_backup_bucket" jsonschema:"description=Velero backup bucket name"`
 	VeleroRegion       string `yaml:"velero_region" json:"velero_region" jsonschema:"description=Velero backup region"`
-	
+
 	// Keycloak fields
 	KeycloakRealm       string `yaml:"keycloak_realm" json:"keycloak_realm" jsonschema:"description=Keycloak realm name"`
 	KeycloakFrontendURL string `yaml:"keycloak_frontend_url" json:"keycloak_frontend_url" jsonschema:"description=Keycloak frontend URL"`
 	KeycloakClientID    string `yaml:"keycloak_client_id" json:"keycloak_client_id" jsonschema:"description=Keycloak client ID"`
-	
+
 	// Grafana/Prometheus fields
-	GrafanaVolumeSize          int    `yaml:"grafana_volume_size" json:"grafana_volume_size" jsonschema:"description=Grafana persistent volume size in GB"`
-	GrafanaStorageClass        string `yaml:"grafana_storage_class" json:"grafana_storage_class" jsonschema:"description=Grafana storage class"`
-	PrometheusVolumeSize       int    `yaml:"prometheus_volume_size" json:"prometheus_volume_size" jsonschema:"description=Prometheus persistent volume size in GB"`
-	PrometheusStorageClass     string `yaml:"prometheus_storage_class" json:"prometheus_storage_class" jsonschema:"description=Prometheus storage class"`
-	AlertmanagerVolumeSize     int    `yaml:"alertmanager_volume_size" json:"alertmanager_volume_size" jsonschema:"description=Alertmanager persistent volume size in GB"`
-	AlertmanagerStorageClass   string `yaml:"alertmanager_storage_class" json:"alertmanager_storage_class" jsonschema:"description=Alertmanager storage class"`
-	
+	GrafanaVolumeSize        int    `yaml:"grafana_volume_size" json:"grafana_volume_size" jsonschema:"description=Grafana persistent volume size in GB"`
+	GrafanaStorageClass      string `yaml:"grafana_storage_class" json:"grafana_storage_class" jsonschema:"description=Grafana storage class"`
+	PrometheusVolumeSize     int    `yaml:"prometheus_volume_size" json:"prometheus_volume_size" jsonschema:"description=Prometheus persistent volume size in GB"`
+	PrometheusStorageClass   string `yaml:"prometheus_storage_class" json:"prometheus_storage_class" jsonschema:"description=Prometheus storage class"`
+	AlertmanagerVolumeSize   int    `yaml:"alertmanager_volume_size" json:"alertmanager_volume_size" jsonschema:"description=Alertmanager persistent volume size in GB"`
+	AlertmanagerStorageClass string `yaml:"alertmanager_storage_class" json:"alertmanager_storage_class" jsonschema:"description=Alertmanager storage class"`
+
 	// Headlamp fields
 	HeadlampOIDCIssuerURL string `yaml:"headlamp_oidc_issuer_url" json:"headlamp_oidc_issuer_url" jsonschema:"description=Headlamp OIDC issuer URL"`
 	HeadlampOIDCClientID  string `yaml:"headlamp_oidc_client_id" json:"headlamp_oidc_client_id" jsonschema:"description=Headlamp OIDC client ID"`
-	
+
 	// Calico fields
 	CalicoKubeAPIServer string `yaml:"calico_kube_api_server" json:"calico_kube_api_server" jsonschema:"description=Calico Kubernetes API server address"`
 }
@@ -451,7 +451,7 @@ type ClusterConfig struct {
 	K8sAPIPortACL      []string         `yaml:"k8s_api_port_acl" json:"k8s_api_port_acl"`
 	SSHAuthorizedKeys  []string         `yaml:"ssh_authorized_keys" json:"ssh_authorized_keys"`
 	Kubernetes         KubernetesConfig `yaml:"kubernetes" json:"kubernetes"`
-	
+
 	// New fields for configuration-driven templates
 	BaseDomain  string `yaml:"base_domain,omitempty" json:"base_domain,omitempty" jsonschema:"description=Base domain for the cluster (e.g. k8s.opencenter.cloud)"`
 	ClusterFQDN string `yaml:"cluster_fqdn,omitempty" json:"cluster_fqdn,omitempty" jsonschema:"description=Fully qualified domain name for the cluster"`
@@ -759,15 +759,15 @@ func defaultConfig(name string) Config {
 					KeycloakFrontendURL: fmt.Sprintf("https://auth.%s.sjc3.k8s.opencenter.cloud", name),
 				},
 				"kube-prometheus-stack": {
-					Enabled:                    true,
-					PrometheusVolumeSize:       50,
-					PrometheusStorageClass:     "csi-cinder-sc-delete",
-					GrafanaVolumeSize:          10,
-					GrafanaStorageClass:        "csi-cinder-sc-delete",
-					AlertmanagerVolumeSize:     10,
-					AlertmanagerStorageClass:   "csi-cinder-sc-delete",
+					Enabled:                  true,
+					PrometheusVolumeSize:     50,
+					PrometheusStorageClass:   "csi-cinder-sc-delete",
+					GrafanaVolumeSize:        10,
+					GrafanaStorageClass:      "csi-cinder-sc-delete",
+					AlertmanagerVolumeSize:   10,
+					AlertmanagerStorageClass: "csi-cinder-sc-delete",
 				},
-				"kyverno":           {Enabled: true},
+				"kyverno": {Enabled: true},
 				"loki": {
 					Enabled:          false,
 					LokiVolumeSize:   20,
@@ -861,7 +861,7 @@ func defaultConfig(name string) Config {
 			},
 		},
 	}
-	
+
 	// Populate IAC field from defaults
 	if err := populateIAC(&cfg); err != nil {
 		// If IAC population fails, return config with minimal IAC structure
@@ -887,7 +887,7 @@ func defaultConfig(name string) Config {
 			},
 		}
 	}
-	
+
 	return cfg
 }
 
@@ -1006,6 +1006,7 @@ func ResolveConfigDir() (string, error) {
 	}
 	return dir, err
 }
+
 // ParseClusterIdentifier parses a cluster identifier which can be in one of two formats:
 // 1. "cluster" - just the cluster name (uses default "opencenter" organization)
 // 2. "organization/cluster" - organization and cluster name
@@ -1021,7 +1022,7 @@ func ParseClusterIdentifier(identifier string) (organization string, clusterName
 	if identifier == "" {
 		return "", "", errors.New("cluster identifier cannot be empty")
 	}
-	
+
 	// Check for organization/cluster format
 	if strings.Contains(identifier, "/") {
 		parts := strings.SplitN(identifier, "/", 2)
@@ -1030,7 +1031,7 @@ func ParseClusterIdentifier(identifier string) (organization string, clusterName
 		}
 		organization = parts[0]
 		clusterName = parts[1]
-		
+
 		// Validate both parts
 		if err := ValidateClusterName(organization); err != nil {
 			return "", "", fmt.Errorf("invalid organization name: %w", err)
@@ -1038,15 +1039,15 @@ func ParseClusterIdentifier(identifier string) (organization string, clusterName
 		if err := ValidateClusterName(clusterName); err != nil {
 			return "", "", fmt.Errorf("invalid cluster name: %w", err)
 		}
-		
+
 		return organization, clusterName, nil
 	}
-	
+
 	// Just cluster name, use default organization
 	if err := ValidateClusterName(identifier); err != nil {
 		return "", "", err
 	}
-	
+
 	return "opencenter", identifier, nil
 }
 
@@ -1064,28 +1065,28 @@ func ValidateClusterName(name string) error {
 	if name == "" {
 		return errors.New("cluster name cannot be empty for directory creation")
 	}
-	
+
 	// Check for path separators and special characters that could cause issues
 	if strings.Contains(name, "/") || strings.Contains(name, "\\") {
 		return errors.New("cluster name cannot contain path separators (/ or \\) for directory structure")
 	}
-	
+
 	// Check for relative path components
 	if name == "." || name == ".." || strings.HasPrefix(name, ".") && (strings.Contains(name, "/") || strings.Contains(name, "\\")) {
 		return errors.New("cluster name cannot be a relative path component for security reasons")
 	}
-	
+
 	// Allow alphanumeric characters, hyphens, underscores, and dots (but not starting with dot)
 	validName := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
 	if !validName.MatchString(name) {
 		return errors.New("cluster name must start with alphanumeric character and contain only alphanumeric characters, dots, hyphens, and underscores for directory naming")
 	}
-	
+
 	// Prevent excessively long names that could cause filesystem issues
 	if len(name) > 255 {
 		return errors.New("cluster name cannot exceed 255 characters for filesystem compatibility")
 	}
-	
+
 	return nil
 }
 
@@ -1101,12 +1102,12 @@ func ClusterDirectoryPath(name string) (string, error) {
 	if err := ValidateClusterName(name); err != nil {
 		return "", fmt.Errorf("invalid cluster name for directory creation: %w", err)
 	}
-	
+
 	dir, err := ResolveConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve config directory for cluster '%s': %w", name, err)
 	}
-	
+
 	return filepath.Join(dir, "clusters", name), nil
 }
 
@@ -1123,7 +1124,7 @@ func ClusterSecretsPath(name string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get cluster directory for secrets path: %w", err)
 	}
-	
+
 	return filepath.Join(clusterDir, "secrets", "age", "keys"), nil
 }
 
@@ -1149,7 +1150,7 @@ func ConfigPath(name string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve config directory: %w", err)
 	}
-	
+
 	// Check for flat config file first (backward compatibility and test support)
 	// Only check flat config if using default organization and no explicit org was provided
 	if !strings.Contains(name, "/") {
@@ -1158,20 +1159,20 @@ func ConfigPath(name string) (string, error) {
 			return flatConfigPath, nil
 		}
 	}
-	
+
 	// If organization was explicitly specified, only check that organization
 	if strings.Contains(name, "/") {
 		cliConfigManager, err := NewConfigManager("")
 		if err == nil {
 			pathResolver := NewPathResolver(cliConfigManager)
 			paths := pathResolver.ResolveClusterPaths(clusterName, organization)
-			
+
 			// Check for config file at cluster directory level
 			clusterConfigPath := filepath.Join(paths.ClusterDir, "."+clusterName+"-config.yaml")
 			if _, statErr := os.Stat(clusterConfigPath); statErr == nil {
 				return clusterConfigPath, nil
 			}
-			
+
 			// Check for config file at organization level
 			orgConfigPath := filepath.Join(paths.OrganizationDir, "."+clusterName+"-config.yaml")
 			if _, statErr := os.Stat(orgConfigPath); statErr == nil {
@@ -1185,13 +1186,13 @@ func ConfigPath(name string) (string, error) {
 			for _, entry := range entries {
 				if entry.IsDir() {
 					orgName := entry.Name()
-					
+
 					// Check for config file at organization level
 					orgConfigPath := filepath.Join(clustersDir, orgName, "."+clusterName+"-config.yaml")
 					if _, statErr := os.Stat(orgConfigPath); statErr == nil {
 						return orgConfigPath, nil
 					}
-					
+
 					// Check for config file at cluster directory level
 					clusterConfigPath := filepath.Join(clustersDir, orgName, "infrastructure", "clusters", clusterName, "."+clusterName+"-config.yaml")
 					if _, statErr := os.Stat(clusterConfigPath); statErr == nil {
@@ -1201,7 +1202,7 @@ func ConfigPath(name string) (string, error) {
 			}
 		}
 	}
-	
+
 	// Fall back to legacy directory structure path for backward compatibility
 	// Only try legacy path if using default organization
 	if organization == "opencenter" && !strings.Contains(name, "/") {
@@ -1209,14 +1210,14 @@ func ConfigPath(name string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		
+
 		// Check if legacy config file exists before creating directories
 		legacyConfigPath := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
 		if _, statErr := os.Stat(legacyConfigPath); statErr == nil {
 			return legacyConfigPath, nil
 		}
 	}
-	
+
 	// Only create directories if we're actually going to write a new config
 	// For read operations, return error if file doesn't exist
 	return "", fmt.Errorf("cluster configuration file not found for cluster %s", name)
@@ -1244,26 +1245,26 @@ func Load(name string) (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to resolve configuration path for cluster '%s': %w", name, err)
 	}
-	
+
 	data, readErr := os.ReadFile(path)
 	if readErr != nil {
 		return Config{}, fmt.Errorf("failed to read cluster configuration file '%s': %w", path, readErr)
 	}
-	
+
 	// Unmarshal YAML then overlay onto default config (use actual cluster name, not full identifier)
 	cfg := defaultConfig(clusterName)
 	if unmarshalErr := yaml.Unmarshal(data, &cfg); unmarshalErr != nil {
 		return Config{}, fmt.Errorf("failed to parse YAML configuration from '%s': %w", path, unmarshalErr)
 	}
-	
+
 	// Apply organization-based defaults if not explicitly set
 	applyOrganizationDefaults(&cfg)
-	
+
 	// Populate IAC field from defaults and user configuration
 	if err := populateIAC(&cfg); err != nil {
 		return Config{}, fmt.Errorf("failed to populate IAC configuration: %w", err)
 	}
-	
+
 	return cfg, nil
 }
 
@@ -1276,12 +1277,12 @@ func applyOrganizationDefaults(cfg *Config) {
 	if organization == "" {
 		organization = cfg.ClusterName()
 	}
-	
+
 	// If S3 bucket is set to the cluster name (default), update it to organization
 	if cfg.OpenTofu.Backend.S3.Bucket == strings.ToLower(cfg.ClusterName()) {
 		cfg.OpenTofu.Backend.S3.Bucket = strings.ToLower(organization)
 	}
-	
+
 	// Ensure bucket name is always lowercase
 	if cfg.OpenTofu.Backend.S3.Bucket != "" {
 		cfg.OpenTofu.Backend.S3.Bucket = strings.ToLower(cfg.OpenTofu.Backend.S3.Bucket)
@@ -1296,32 +1297,32 @@ func populateIAC(cfg *Config) error {
 		Locals  map[string]any `yaml:"locals"`
 		Modules map[string]any `yaml:"modules"`
 	}
-	
+
 	if err := yaml.Unmarshal([]byte(defaultIACYAML), &defaultIAC); err != nil {
 		return fmt.Errorf("failed to parse default IAC YAML: %w", err)
 	}
-	
+
 	// Initialize IAC field
 	cfg.IAC = IAC{
 		Main:    make(map[string]any),
 		Modules: make(map[string]any),
 	}
-	
+
 	// Copy default locals to IAC.Main
 	for k, v := range defaultIAC.Locals {
 		cfg.IAC.Main[k] = v
 	}
-	
+
 	// Copy default modules to IAC.Modules
 	for k, v := range defaultIAC.Modules {
 		cfg.IAC.Modules[k] = v
 	}
-	
+
 	// Override with user configuration values
 	if err := mergeUserConfigIntoIAC(cfg); err != nil {
 		return fmt.Errorf("failed to merge user config into IAC: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -1331,7 +1332,7 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 	if cfg.OpenCenter.Cluster.ClusterName != "" {
 		cfg.IAC.Main["cluster_name"] = cfg.OpenCenter.Cluster.ClusterName
 	}
-	
+
 	// Map OpenStack configuration
 	if cfg.OpenCenter.Infrastructure.Provider == "openstack" {
 		os := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
@@ -1359,7 +1360,7 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 			cfg.IAC.Main["router_external_network_id"] = os.FloatingNetworkId
 		}
 	}
-	
+
 	// Map Kubernetes configuration
 	k8s := cfg.OpenCenter.Cluster.Kubernetes
 	if k8s.Version != "" {
@@ -1395,7 +1396,7 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 	if k8s.DNSZoneName != "" {
 		cfg.IAC.Main["dns_zone_name"] = k8s.DNSZoneName
 	}
-	
+
 	// Map network plugin configuration with proper conditional logic
 	if k8s.NetworkPlugin.Calico.Enabled {
 		cfg.IAC.Main["network_plugin"] = "calico"
@@ -1413,12 +1414,12 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 		cfg.IAC.Main["network_plugin"] = "kube-ovn"
 		cfg.IAC.Main["kube_ovn_cilium_integration"] = k8s.NetworkPlugin.KubeOVN.CiliumIntegration
 	}
-	
+
 	// Map SSH authorized keys
 	if len(cfg.OpenCenter.Cluster.SSHAuthorizedKeys) > 0 {
 		cfg.IAC.Main["ssh_authorized_keys"] = cfg.OpenCenter.Cluster.SSHAuthorizedKeys
 	}
-	
+
 	// Map baremetal node configurations
 	if len(k8s.MasterNodes) > 0 {
 		cfg.IAC.Main["master_nodes"] = k8s.MasterNodes
@@ -1426,7 +1427,7 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 	if len(k8s.WorkerNodes) > 0 {
 		cfg.IAC.Main["worker_nodes"] = k8s.WorkerNodes
 	}
-	
+
 	return nil
 }
 
@@ -1607,7 +1608,7 @@ func Save(cfg Config) error {
 	if cfg.ClusterName() == "" {
 		return errors.New("cluster_name must not be empty")
 	}
-	
+
 	// Try to get existing config path first
 	path, err := ConfigPath(cfg.ClusterName())
 	if err != nil {
@@ -1617,12 +1618,12 @@ func Save(cfg Config) error {
 			return err
 		}
 	}
-	
+
 	// Ensure parent directory exists
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
-	
+
 	// Marshal YAML with indentation
 	data, marshalErr := yaml.Marshal(&cfg)
 	if marshalErr != nil {
@@ -1642,15 +1643,15 @@ func getConfigPathForSave(cfg Config) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve config directory: %w", err)
 	}
-	
+
 	organization := cfg.OpenCenter.Meta.Organization
 	clusterName := cfg.ClusterName()
-	
+
 	if organization != "" && organization != "opencenter" {
 		// Use organization structure: clusters/<org>/.<cluster>-config.yaml
 		return filepath.Join(configDir, "clusters", organization, "."+clusterName+"-config.yaml"), nil
 	}
-	
+
 	// Use flat file structure for backward compatibility and default organization
 	return filepath.Join(configDir, clusterName+".yaml"), nil
 }
@@ -1669,14 +1670,14 @@ func List() ([]string, error) {
 		return nil, fmt.Errorf("failed to resolve configuration directory: %w", err)
 	}
 	Debugf("List: resolved config directory: %s", dir)
-	
+
 	// Load CLI configuration to get the configured clustersDir
 	configManager, err := NewConfigManager("")
 	if err != nil {
 		Debugf("List: failed to load CLI config manager: %v", err)
 		// Fall back to default behavior if CLI config can't be loaded
 	}
-	
+
 	var clustersDir string
 	if configManager != nil {
 		clustersDir = configManager.GetConfig().Paths.ClustersDir
@@ -1686,14 +1687,14 @@ func List() ([]string, error) {
 		clustersDir = filepath.Join(dir, "clusters")
 		Debugf("List: using default clustersDir: %s", clustersDir)
 	}
-	
+
 	// Expand environment variables and tilde in clustersDir
 	clustersDir = ExpandPath(clustersDir)
 	Debugf("List: expanded clustersDir: %s", clustersDir)
-	
+
 	var names []string
 	nameSet := make(map[string]bool) // Use set to avoid duplicates
-	
+
 	// Check clusters directory for legacy and organization-based structures
 	Debugf("List: checking clusters directory: %s", clustersDir)
 	entries, readErr := os.ReadDir(clustersDir)
@@ -1711,12 +1712,12 @@ func List() ([]string, error) {
 		return nil, fmt.Errorf("failed to read clusters directory: %w", readErr)
 	}
 	Debugf("List: found %d entries in clusters directory", len(entries))
-	
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			entryName := entry.Name()
 			Debugf("List: processing directory entry: %s", entryName)
-			
+
 			// Check for legacy structure first: clustersDir/clusterName/.clusterName-config.yaml
 			// This is for backward compatibility with old flat structure
 			legacyConfigFile := filepath.Join(clustersDir, entryName, "."+entryName+"-config.yaml")
@@ -1736,7 +1737,7 @@ func List() ([]string, error) {
 					hasApps = true
 					Debugf("List: %s has applications directory", entryName)
 				}
-				
+
 				// If it has neither infrastructure nor applications subdirs, it's legacy flat structure
 				if !hasInfra && !hasApps {
 					Debugf("List: %s is legacy flat structure (no infra/apps dirs)", entryName)
@@ -1752,7 +1753,7 @@ func List() ([]string, error) {
 			} else {
 				Debugf("List: no legacy config file found for: %s", entryName)
 			}
-			
+
 			// Check for organization-based structure: clustersDir/organization/.<cluster>-config.yaml
 			// List all .yaml files in the organization directory
 			orgDir := filepath.Join(clustersDir, entryName)
@@ -1789,7 +1790,7 @@ func List() ([]string, error) {
 			Debugf("List: skipping non-directory entry: %s", entry.Name())
 		}
 	}
-	
+
 	// Sort lexically
 	Debugf("List: sorting %d cluster names", len(names))
 	if len(names) > 1 {
@@ -1909,7 +1910,7 @@ func Validate(cfg Config) []string {
 		}
 	}
 	// iac validation is intentionally minimal for variables.tf-aligned shape
-	
+
 	// Network plugin validation - ensure only one is enabled
 	networkPlugins := []struct {
 		name    string
@@ -1919,7 +1920,7 @@ func Validate(cfg Config) []string {
 		{"Cilium", cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled},
 		{"Kube-OVN", cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled},
 	}
-	
+
 	enabledCount := 0
 	var enabledPlugins []string
 	for _, plugin := range networkPlugins {
@@ -1928,13 +1929,13 @@ func Validate(cfg Config) []string {
 			enabledPlugins = append(enabledPlugins, plugin.name)
 		}
 	}
-	
+
 	if enabledCount == 0 {
 		errs = append(errs, "at least one network plugin (Calico, Cilium, or Kube-OVN) must be enabled")
 	} else if enabledCount > 1 {
 		errs = append(errs, fmt.Sprintf("only one network plugin can be enabled at a time, but found: %s", strings.Join(enabledPlugins, ", ")))
 	}
-	
+
 	// Windows node validation - exclude Windows blocks when worker_count_windows = 0
 	if cfg.OpenCenter.Cluster.Kubernetes.WorkerCountWindows == 0 {
 		// Windows workers should be disabled when count is 0
@@ -1942,26 +1943,26 @@ func Validate(cfg Config) []string {
 			errs = append(errs, "windows_workers.enabled must be false when worker_count_windows is 0")
 		}
 	}
-	
+
 	// Validate services: only one of release or branch can be set
 	for serviceName, serviceCfg := range cfg.OpenCenter.Services {
 		if serviceCfg.Release != "" && serviceCfg.Branch != "" {
 			errs = append(errs, fmt.Sprintf("service '%s': only one of 'release' or 'branch' can be set, not both", serviceName))
 		}
 	}
-	
+
 	// Validate managed services: only one of release or branch can be set
 	for serviceName, serviceCfg := range cfg.OpenCenter.ManagedService {
 		if serviceCfg.Release != "" && serviceCfg.Branch != "" {
 			errs = append(errs, fmt.Sprintf("managed-service '%s': only one of 'release' or 'branch' can be set, not both", serviceName))
 		}
 	}
-	
+
 	// Validate GitOps: only one of release or branch can be set
 	if cfg.OpenCenter.GitOps.Release != "" && cfg.OpenCenter.GitOps.Branch != "" {
 		errs = append(errs, "gitops: only one of 'release' or 'branch' can be set, not both")
 	}
-	
+
 	return errs
 }
 

@@ -29,11 +29,11 @@ type ConfigurationManager struct {
 	pathResolver PathResolverInterface
 	cache        ConfigCacheInterface
 	migrator     ConfigMigratorInterface
-	
+
 	// Configuration options
 	enableCache  bool
 	cacheTimeout time.Duration
-	
+
 	// Thread safety
 	mu sync.RWMutex
 }
@@ -66,7 +66,7 @@ func NewEnhancedConfigurationManager(
 	autoRepair bool,
 ) *ConfigurationManager {
 	enhancedValidator := NewEnhancedConfigValidator(autoRepair)
-	
+
 	return &ConfigurationManager{
 		loader:       loader,
 		validator:    enhancedValidator,
@@ -99,7 +99,7 @@ func (cm *ConfigurationManager) LoadConfig(ctx context.Context, clusterName stri
 		if pathErr != nil {
 			return nil, fmt.Errorf("failed to resolve config path for cluster '%s': %w", clusterName, pathErr)
 		}
-		
+
 		config, err = cm.loader.LoadFromFile(ctx, configPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load config for cluster '%s': %w", clusterName, err)
@@ -194,14 +194,14 @@ func (cm *ConfigurationManager) ValidateConfigComprehensive(ctx context.Context,
 	// Use enhanced validator if available
 	if enhancedValidator, ok := cm.validator.(*EnhancedConfigValidator); ok {
 		result := enhancedValidator.ValidateComprehensive(ctx, config)
-		
+
 		// Convert structured errors to config validation errors
 		configResult := &ConfigValidationResult{
 			Valid:    result.Valid,
 			Errors:   []*ConfigValidationError{},
 			Warnings: []*ConfigValidationError{},
 		}
-		
+
 		for _, err := range result.Errors {
 			configResult.Errors = append(configResult.Errors, &ConfigValidationError{
 				Type:        string(err.Type),
@@ -210,7 +210,7 @@ func (cm *ConfigurationManager) ValidateConfigComprehensive(ctx context.Context,
 				Suggestions: err.Suggestions,
 			})
 		}
-		
+
 		for _, warning := range result.Warnings {
 			configResult.Warnings = append(configResult.Warnings, &ConfigValidationError{
 				Type:        string(warning.Type),
@@ -219,10 +219,10 @@ func (cm *ConfigurationManager) ValidateConfigComprehensive(ctx context.Context,
 				Suggestions: warning.Suggestions,
 			})
 		}
-		
+
 		return configResult
 	}
-	
+
 	// Fall back to regular validation
 	return cm.validator.Validate(ctx, config)
 }
@@ -353,28 +353,28 @@ func (cm *ConfigurationManager) formatValidationSummary(result *ConfigValidation
 	}
 
 	summary := "✗ Configuration has issues\n"
-	
+
 	if len(result.Errors) > 0 {
 		summary += fmt.Sprintf("\nErrors (%d):\n", len(result.Errors))
 		for _, err := range result.Errors {
 			summary += fmt.Sprintf("  - %s\n", err.Error())
 		}
 	}
-	
+
 	if len(result.Warnings) > 0 {
 		summary += fmt.Sprintf("\nWarnings (%d):\n", len(result.Warnings))
 		for _, warning := range result.Warnings {
 			summary += fmt.Sprintf("  - %s\n", warning.Error())
 		}
 	}
-	
+
 	if len(result.Repaired) > 0 {
 		summary += fmt.Sprintf("\nAuto-repaired (%d):\n", len(result.Repaired))
 		for _, repaired := range result.Repaired {
 			summary += fmt.Sprintf("  - %s\n", repaired.Error())
 		}
 	}
-	
+
 	return summary
 }
 

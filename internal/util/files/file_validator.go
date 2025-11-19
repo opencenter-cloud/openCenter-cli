@@ -37,13 +37,13 @@ func (v *DefaultFileValidator) ValidateFileExists(filename string) error {
 	if filename == "" {
 		return fmt.Errorf("filename cannot be empty")
 	}
-	
+
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return fmt.Errorf("file does not exist: %s", filename)
 	} else if err != nil {
 		return fmt.Errorf("cannot access file %s: %w", filename, err)
 	}
-	
+
 	return nil
 }
 
@@ -52,14 +52,14 @@ func (v *DefaultFileValidator) ValidateFileReadable(filename string) error {
 	if err := v.ValidateFileExists(filename); err != nil {
 		return err
 	}
-	
+
 	// Try to open the file for reading
 	file, err := os.Open(filename)
 	if err != nil {
 		return fmt.Errorf("file is not readable %s: %w", filename, err)
 	}
 	file.Close()
-	
+
 	return nil
 }
 
@@ -70,14 +70,14 @@ func (v *DefaultFileValidator) ValidateFileWritable(filename string) error {
 		parentDir := filepath.Dir(filename)
 		return v.validateDirectoryWritable(parentDir)
 	}
-	
+
 	// File exists, try to open it for writing
 	file, err := os.OpenFile(filename, os.O_WRONLY, 0)
 	if err != nil {
 		return fmt.Errorf("file is not writable %s: %w", filename, err)
 	}
 	file.Close()
-	
+
 	return nil
 }
 
@@ -86,17 +86,17 @@ func (v *DefaultFileValidator) ValidateFilePermissions(filename string, expected
 	if err := v.ValidateFileExists(filename); err != nil {
 		return err
 	}
-	
+
 	info, err := os.Stat(filename)
 	if err != nil {
 		return fmt.Errorf("cannot get file permissions for %s: %w", filename, err)
 	}
-	
+
 	actualPerm := info.Mode().Perm()
 	if actualPerm != expectedPerm {
 		return fmt.Errorf("file %s has permissions %o, expected %o", filename, actualPerm, expectedPerm)
 	}
-	
+
 	return nil
 }
 
@@ -105,16 +105,16 @@ func (v *DefaultFileValidator) ValidateFileSize(filename string, maxSize int64) 
 	if err := v.ValidateFileExists(filename); err != nil {
 		return err
 	}
-	
+
 	info, err := os.Stat(filename)
 	if err != nil {
 		return fmt.Errorf("cannot get file size for %s: %w", filename, err)
 	}
-	
+
 	if info.Size() > maxSize {
 		return fmt.Errorf("file %s size %d exceeds maximum allowed size %d", filename, info.Size(), maxSize)
 	}
-	
+
 	return nil
 }
 
@@ -123,15 +123,15 @@ func (v *DefaultFileValidator) ValidateFileExtension(filename string, allowedExt
 	if len(allowedExtensions) == 0 {
 		return nil // No restrictions
 	}
-	
+
 	ext := strings.ToLower(filepath.Ext(filename))
-	
+
 	for _, allowedExt := range allowedExtensions {
 		if strings.ToLower(allowedExt) == ext {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("file %s has extension %s, allowed extensions: %v", filename, ext, allowedExtensions)
 }
 
@@ -144,11 +144,11 @@ func (v *DefaultFileValidator) validateDirectoryWritable(dirname string) error {
 	} else if err != nil {
 		return fmt.Errorf("cannot access directory %s: %w", dirname, err)
 	}
-	
+
 	if !info.IsDir() {
 		return fmt.Errorf("path is not a directory: %s", dirname)
 	}
-	
+
 	// Try to create a temporary file to test write permissions
 	tempFile := filepath.Join(dirname, ".write_test_"+fmt.Sprintf("%d", os.Getpid()))
 	file, err := os.Create(tempFile)
@@ -156,13 +156,13 @@ func (v *DefaultFileValidator) validateDirectoryWritable(dirname string) error {
 		return fmt.Errorf("directory is not writable %s: %w", dirname, err)
 	}
 	file.Close()
-	
+
 	// Clean up test file
 	if err := os.Remove(tempFile); err != nil {
 		// Log warning but don't fail validation
 		fmt.Printf("Warning: failed to remove test file %s: %v\n", tempFile, err)
 	}
-	
+
 	return nil
 }
 
@@ -171,12 +171,12 @@ func (v *DefaultFileValidator) ValidateFilePath(filename string) error {
 	if filename == "" {
 		return fmt.Errorf("filename cannot be empty")
 	}
-	
+
 	// Check for path traversal attempts
 	if strings.Contains(filename, "..") {
 		return fmt.Errorf("filename contains path traversal elements: %s", filename)
 	}
-	
+
 	// Check for invalid characters
 	invalidChars := []string{"\x00", "<", ">", ":", "\"", "|", "?", "*"}
 	for _, char := range invalidChars {
@@ -184,12 +184,12 @@ func (v *DefaultFileValidator) ValidateFilePath(filename string) error {
 			return fmt.Errorf("filename contains invalid character '%s': %s", char, filename)
 		}
 	}
-	
+
 	// Check path length
 	if len(filename) > 255 {
 		return fmt.Errorf("filename is too long (%d characters), maximum is 255", len(filename))
 	}
-	
+
 	return nil
 }
 
@@ -198,16 +198,16 @@ func (v *DefaultFileValidator) ValidateFileNotEmpty(filename string) error {
 	if err := v.ValidateFileExists(filename); err != nil {
 		return err
 	}
-	
+
 	info, err := os.Stat(filename)
 	if err != nil {
 		return fmt.Errorf("cannot get file info for %s: %w", filename, err)
 	}
-	
+
 	if info.Size() == 0 {
 		return fmt.Errorf("file is empty: %s", filename)
 	}
-	
+
 	return nil
 }
 
@@ -216,16 +216,16 @@ func (v *DefaultFileValidator) ValidateFileIsRegular(filename string) error {
 	if err := v.ValidateFileExists(filename); err != nil {
 		return err
 	}
-	
+
 	info, err := os.Stat(filename)
 	if err != nil {
 		return fmt.Errorf("cannot get file info for %s: %w", filename, err)
 	}
-	
+
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("path is not a regular file: %s", filename)
 	}
-	
+
 	return nil
 }
 
@@ -234,16 +234,16 @@ func (v *DefaultFileValidator) ValidateFileIsDirectory(filename string) error {
 	if err := v.ValidateFileExists(filename); err != nil {
 		return err
 	}
-	
+
 	info, err := os.Stat(filename)
 	if err != nil {
 		return fmt.Errorf("cannot get file info for %s: %w", filename, err)
 	}
-	
+
 	if !info.IsDir() {
 		return fmt.Errorf("path is not a directory: %s", filename)
 	}
-	
+
 	return nil
 }
 
@@ -252,20 +252,20 @@ func (v *DefaultFileValidator) ValidateFileAge(filename string, maxAgeSeconds in
 	if err := v.ValidateFileExists(filename); err != nil {
 		return err
 	}
-	
+
 	info, err := os.Stat(filename)
 	if err != nil {
 		return fmt.Errorf("cannot get file info for %s: %w", filename, err)
 	}
-	
+
 	fileAge := info.ModTime().Unix()
 	currentTime := time.Now().Unix()
-	
+
 	if currentTime-fileAge > maxAgeSeconds {
-		return fmt.Errorf("file %s is too old (age: %d seconds, max: %d seconds)", 
+		return fmt.Errorf("file %s is too old (age: %d seconds, max: %d seconds)",
 			filename, currentTime-fileAge, maxAgeSeconds)
 	}
-	
+
 	return nil
 }
 
@@ -276,7 +276,7 @@ func (v *DefaultFileValidator) ValidateMultipleFiles(filenames []string, validat
 			return fmt.Errorf("validation failed for file %s: %w", filename, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -286,10 +286,10 @@ func (v *DefaultFileValidator) ValidateFilePattern(pattern string, validator fun
 	if err != nil {
 		return fmt.Errorf("invalid file pattern %s: %w", pattern, err)
 	}
-	
+
 	if len(matches) == 0 {
 		return fmt.Errorf("no files match pattern: %s", pattern)
 	}
-	
+
 	return v.ValidateMultipleFiles(matches, validator)
 }

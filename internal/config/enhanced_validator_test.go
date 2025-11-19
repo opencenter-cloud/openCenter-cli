@@ -49,10 +49,10 @@ func TestEnhancedConfigValidator_ValidateComprehensive(t *testing.T) {
 					Cluster: ClusterConfig{
 						ClusterName: "test-cluster",
 						Kubernetes: KubernetesConfig{
-							Version:       "1.31.4",
-							MasterCount:   1,
-							WorkerCount:   1,
-							SubnetPods:    "10.42.0.0/16",
+							Version:        "1.31.4",
+							MasterCount:    1,
+							WorkerCount:    1,
+							SubnetPods:     "10.42.0.0/16",
 							SubnetServices: "10.43.0.0/16",
 							NetworkPlugin: NetworkPlugin{
 								Calico: CalicoConfig{

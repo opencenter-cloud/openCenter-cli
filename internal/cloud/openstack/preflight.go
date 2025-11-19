@@ -14,7 +14,7 @@
 package openstack
 
 import (
-    "os/exec"
+	"os/exec"
 )
 
 // PreflightOpenStack performs provider-specific preflight checks for
@@ -27,14 +27,14 @@ import (
 // Outputs:
 //   - []string: A list of warning messages. If the list is empty, all checks passed.
 func PreflightOpenStack(authURL string) []string {
-    var warnings []string
-    // Check presence of openstack CLI
-    if _, err := exec.LookPath("openstack"); err != nil {
-        warnings = append(warnings, "openstack CLI not found: please install the OpenStack client tools and configure OS_* environment variables or clouds.yaml")
-    }
-    // Check auth URL configured
-    if authURL == "" {
-        warnings = append(warnings, "cloud.openstack.auth_url is empty; authentication may fail")
-    }
-    return warnings
+	var warnings []string
+	// Check presence of openstack CLI
+	if _, err := exec.LookPath("openstack"); err != nil {
+		warnings = append(warnings, "openstack CLI not found: please install the OpenStack client tools and configure OS_* environment variables or clouds.yaml")
+	}
+	// Check auth URL configured
+	if authURL == "" {
+		warnings = append(warnings, "cloud.openstack.auth_url is empty; authentication may fail")
+	}
+	return warnings
 }

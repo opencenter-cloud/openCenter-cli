@@ -25,11 +25,11 @@ import (
 func setupServiceTestEnv(t *testing.T, clusterName string) (string, func()) {
 	t.Helper()
 	cfgDir := t.TempDir()
-	
+
 	// Manually manage environment to avoid t.Setenv issues with subtests
 	oldEnv := os.Getenv("OPENCENTER_CONFIG_DIR")
 	os.Setenv("OPENCENTER_CONFIG_DIR", cfgDir)
-	
+
 	cleanup := func() {
 		if oldEnv != "" {
 			os.Setenv("OPENCENTER_CONFIG_DIR", oldEnv)
@@ -209,7 +209,7 @@ func TestClusterServiceEnable(t *testing.T) {
 }
 
 func TestClusterServiceDisable(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		name        string
 		clusterName string
 		serviceName string

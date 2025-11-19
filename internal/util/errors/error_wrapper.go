@@ -34,7 +34,7 @@ func (w *DefaultErrorWrapper) WrapError(err error, message string) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If it's already a structured error, preserve its structure
 	if structuredErr, ok := err.(*StructuredError); ok {
 		return &StructuredError{
@@ -47,7 +47,7 @@ func (w *DefaultErrorWrapper) WrapError(err error, message string) error {
 			Retryable:   structuredErr.Retryable,
 		}
 	}
-	
+
 	return fmt.Errorf("%s: %w", message, err)
 }
 
@@ -56,15 +56,15 @@ func (w *DefaultErrorWrapper) WrapErrorWithContext(ctx context.Context, err erro
 	if err == nil {
 		return nil
 	}
-	
+
 	wrappedErr := w.WrapError(err, message)
-	
+
 	// Add context information if available
 	if structuredErr, ok := wrappedErr.(*StructuredError); ok {
 		if structuredErr.Context == nil {
 			structuredErr.Context = make(map[string]interface{})
 		}
-		
+
 		// Add context values if available
 		if ctx != nil {
 			if requestID := ctx.Value("request_id"); requestID != nil {
@@ -78,7 +78,7 @@ func (w *DefaultErrorWrapper) WrapErrorWithContext(ctx context.Context, err erro
 			}
 		}
 	}
-	
+
 	return wrappedErr
 }
 
@@ -87,7 +87,7 @@ func (w *DefaultErrorWrapper) WrapErrorWithType(err error, errorType ErrorType, 
 	if err == nil {
 		return nil
 	}
-	
+
 	// Create a structured error with the specified type
 	structuredErr := &StructuredError{
 		Type:      errorType,
@@ -95,22 +95,22 @@ func (w *DefaultErrorWrapper) WrapErrorWithType(err error, errorType ErrorType, 
 		Cause:     err,
 		Retryable: false,
 	}
-	
+
 	// If the original error is structured, preserve some of its properties
 	if originalStructured, ok := err.(*StructuredError); ok {
 		structuredErr.Field = originalStructured.Field
 		structuredErr.Context = originalStructured.Context
 		structuredErr.Retryable = originalStructured.Retryable
-		
+
 		// Combine suggestions
 		structuredErr.Suggestions = append(structuredErr.Suggestions, originalStructured.Suggestions...)
 	}
-	
+
 	// Add type-specific suggestions
 	handler := NewDefaultErrorHandler()
 	typeSuggestions := handler.suggestionMap[errorType]
 	structuredErr.Suggestions = append(structuredErr.Suggestions, typeSuggestions...)
-	
+
 	return structuredErr
 }
 
@@ -119,21 +119,21 @@ func (w *DefaultErrorWrapper) UnwrapError(err error) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If it's a structured error, return the cause
 	if structuredErr, ok := err.(*StructuredError); ok {
 		return structuredErr.Cause
 	}
-	
+
 	// Use standard unwrapping
 	type unwrapper interface {
 		Unwrap() error
 	}
-	
+
 	if u, ok := err.(unwrapper); ok {
 		return u.Unwrap()
 	}
-	
+
 	return err
 }
 
@@ -142,12 +142,12 @@ func WrapWithField(err error, field string) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	if structuredErr, ok := err.(*StructuredError); ok {
 		structuredErr.Field = field
 		return structuredErr
 	}
-	
+
 	return &StructuredError{
 		Type:      ValidationError,
 		Field:     field,
@@ -162,16 +162,16 @@ func WrapWithSuggestions(err error, suggestions ...string) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	if structuredErr, ok := err.(*StructuredError); ok {
 		structuredErr.Suggestions = append(structuredErr.Suggestions, suggestions...)
 		return structuredErr
 	}
-	
+
 	handler := NewDefaultErrorHandler()
 	structuredErr := handler.HandleError(err)
 	structuredErr.Suggestions = append(structuredErr.Suggestions, suggestions...)
-	
+
 	return structuredErr
 }
 
@@ -180,7 +180,7 @@ func WrapWithContext(err error, context map[string]interface{}) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	if structuredErr, ok := err.(*StructuredError); ok {
 		if structuredErr.Context == nil {
 			structuredErr.Context = make(map[string]interface{})
@@ -190,23 +190,23 @@ func WrapWithContext(err error, context map[string]interface{}) error {
 		}
 		return structuredErr
 	}
-	
+
 	handler := NewDefaultErrorHandler()
 	structuredErr := handler.HandleError(err)
 	structuredErr.Context = context
-	
+
 	return structuredErr
 }
 
 // Chain creates a chain of wrapped errors
 func Chain(errors ...error) error {
 	var result error
-	
+
 	for i, err := range errors {
 		if err == nil {
 			continue
 		}
-		
+
 		if result == nil {
 			result = err
 		} else {
@@ -214,7 +214,7 @@ func Chain(errors ...error) error {
 			result = wrapper.WrapError(result, fmt.Sprintf("error %d", i+1))
 		}
 	}
-	
+
 	return result
 }
 
@@ -223,22 +223,22 @@ func Annotate(err error, annotation string) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	if structuredErr, ok := err.(*StructuredError); ok {
 		// Add annotation to context
 		if structuredErr.Context == nil {
 			structuredErr.Context = make(map[string]interface{})
 		}
-		
+
 		// Add to existing annotations or create new
 		if existing, ok := structuredErr.Context["annotations"].([]string); ok {
 			structuredErr.Context["annotations"] = append(existing, annotation)
 		} else {
 			structuredErr.Context["annotations"] = []string{annotation}
 		}
-		
+
 		return structuredErr
 	}
-	
+
 	return fmt.Errorf("%s (%s)", err.Error(), annotation)
 }

@@ -202,11 +202,11 @@ func TestNetworkPluginCompatibility(t *testing.T) {
 	handler := NewDefaultNetworkPluginHandler()
 
 	tests := []struct {
-		name         string
-		pluginType   string
-		config       map[string]interface{}
-		globalConfig map[string]interface{}
-		expectError  bool
+		name          string
+		pluginType    string
+		config        map[string]interface{}
+		globalConfig  map[string]interface{}
+		expectError   bool
 		errorContains string
 	}{
 		{

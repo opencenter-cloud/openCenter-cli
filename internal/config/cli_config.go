@@ -42,9 +42,9 @@ type LoggingConfig struct {
 
 // FileConfig controls file logging rotation settings.
 type FileConfig struct {
-	MaxSize    int  `yaml:"maxSize"`    // MB
+	MaxSize    int  `yaml:"maxSize"` // MB
 	MaxBackups int  `yaml:"maxBackups"`
-	MaxAge     int  `yaml:"maxAge"`     // days
+	MaxAge     int  `yaml:"maxAge"` // days
 	Compress   bool `yaml:"compress"`
 }
 
@@ -83,11 +83,11 @@ type ConfigValidator struct {
 
 // ConfigError represents configuration-related errors with actionable messages.
 type ConfigError struct {
-	Type    string      // validation, permission, path, format
-	Field   string      // dot notation path to problematic field
-	Value   interface{}
-	Message string
-	Repaired bool       // indicates if the error was automatically repaired
+	Type     string // validation, permission, path, format
+	Field    string // dot notation path to problematic field
+	Value    interface{}
+	Message  string
+	Repaired bool // indicates if the error was automatically repaired
 }
 
 // ValidationResult contains the results of configuration validation.
@@ -103,7 +103,7 @@ func (ce *ConfigError) Error() string {
 	if ce.Repaired {
 		prefix = "[AUTO-REPAIRED] "
 	}
-	
+
 	if ce.Field != "" {
 		return fmt.Sprintf("%s%s error in field '%s': %s", prefix, ce.Type, ce.Field, ce.Message)
 	}
@@ -115,7 +115,7 @@ func (ce *ConfigError) Suggestions() []string {
 	if ce.Repaired {
 		return []string{"Configuration was automatically repaired with default values"}
 	}
-	
+
 	switch ce.Type {
 	case "validation":
 		switch ce.Field {
@@ -286,7 +286,7 @@ func (cm *ConfigManager) Load() error {
 				return fmt.Errorf("failed to save auto-repaired configuration: %w", err)
 			}
 		}
-		
+
 		// If there are still errors after repair, return them
 		if len(result.Errors) > 0 {
 			return result.Errors[0] // Return the first error
@@ -445,53 +445,53 @@ func (cm *ConfigManager) ValidateConfig() *ValidationResult {
 func (cm *ConfigManager) RepairConfig() (*ValidationResult, error) {
 	// Create a validator with auto-repair enabled
 	repairValidator := &ConfigValidator{autoRepair: true}
-	
+
 	// Validate and repair
 	result := repairValidator.ValidateWithResult(cm.config)
-	
+
 	// If repairs were made, save the configuration
 	if len(result.Repaired) > 0 {
 		if err := cm.Save(); err != nil {
 			return result, fmt.Errorf("failed to save repaired configuration: %w", err)
 		}
 	}
-	
+
 	return result, nil
 }
 
 // GetValidationSummary returns a human-readable summary of validation results.
 func (cm *ConfigManager) GetValidationSummary() string {
 	result := cm.ValidateConfig()
-	
+
 	var summary strings.Builder
-	
+
 	if result.Valid {
 		summary.WriteString("✓ Configuration is valid\n")
 	} else {
 		summary.WriteString("✗ Configuration has issues\n")
 	}
-	
+
 	if len(result.Errors) > 0 {
 		summary.WriteString(fmt.Sprintf("\nErrors (%d):\n", len(result.Errors)))
 		for _, err := range result.Errors {
 			summary.WriteString(fmt.Sprintf("  - %s\n", err.Error()))
 		}
 	}
-	
+
 	if len(result.Warnings) > 0 {
 		summary.WriteString(fmt.Sprintf("\nWarnings (%d):\n", len(result.Warnings)))
 		for _, warning := range result.Warnings {
 			summary.WriteString(fmt.Sprintf("  - %s\n", warning.Error()))
 		}
 	}
-	
+
 	if len(result.Repaired) > 0 {
 		summary.WriteString(fmt.Sprintf("\nAuto-repaired (%d):\n", len(result.Repaired)))
 		for _, repaired := range result.Repaired {
 			summary.WriteString(fmt.Sprintf("  - %s\n", repaired.Error()))
 		}
 	}
-	
+
 	return summary.String()
 }
 
@@ -500,7 +500,7 @@ func (cm *ConfigManager) GetValidationSummary() string {
 func (cm *ConfigManager) LoadWithConfig(config *CLIConfig) error {
 	cm.config = config
 	cm.validator = &ConfigValidator{autoRepair: false} // Don't auto-repair when loading existing config
-	
+
 	// Validate the provided configuration
 	result := cm.validator.ValidateWithResult(cm.config)
 	if !result.Valid && len(result.Errors) > 0 {

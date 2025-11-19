@@ -25,7 +25,7 @@ import (
 const (
 	// MaskString is the string used to mask sensitive data
 	MaskString = "***REDACTED***"
-	
+
 	// PartialMaskString shows partial information
 	PartialMaskString = "***"
 )
@@ -42,11 +42,11 @@ func NewDefaultCredentialMasker() *DefaultCredentialMasker {
 		sensitivePatterns: make([]*regexp.Regexp, 0),
 		sensitiveFields:   make(map[string]bool),
 	}
-	
+
 	// Initialize default sensitive patterns
 	masker.initializeDefaultPatterns()
 	masker.initializeDefaultFields()
-	
+
 	return masker
 }
 
@@ -58,33 +58,33 @@ func (m *DefaultCredentialMasker) initializeDefaultPatterns() {
 		`(?i)(access[_-]?token|accesstoken)[\s:=]+['"]*([a-zA-Z0-9_\-\.]{20,})`,
 		`(?i)(secret[_-]?key|secretkey)[\s:=]+['"]*([a-zA-Z0-9_\-]{20,})`,
 		`(?i)(auth[_-]?token|authtoken)[\s:=]+['"]*([a-zA-Z0-9_\-\.]{20,})`,
-		
+
 		// Passwords
 		`(?i)(password|passwd|pwd)[\s:=]+['"]*([^\s'"]{8,})`,
-		
+
 		// AWS credentials
 		`(?i)(aws[_-]?access[_-]?key[_-]?id)[\s:=]+['"]*([A-Z0-9]{20})`,
 		`(?i)(aws[_-]?secret[_-]?access[_-]?key)[\s:=]+['"]*([a-zA-Z0-9/+=]{40})`,
-		
+
 		// Private keys (PEM format)
 		`-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----[\s\S]*?-----END\s+(?:RSA\s+)?PRIVATE\s+KEY-----`,
-		
+
 		// Age keys
 		`AGE-SECRET-KEY-[A-Z0-9]{59}`,
-		
+
 		// Generic secrets in environment variable format
 		`(?i)([A-Z_]+(?:PASSWORD|SECRET|TOKEN|KEY|CREDENTIAL)[A-Z_]*)=([^\s]+)`,
-		
+
 		// Bearer tokens
 		`(?i)bearer\s+([a-zA-Z0-9_\-\.]{20,})`,
-		
+
 		// Basic auth
 		`(?i)basic\s+([a-zA-Z0-9+/=]{20,})`,
-		
+
 		// Connection strings with passwords
 		`(?i)(postgres|mysql|mongodb)://[^:]+:([^@]+)@`,
 	}
-	
+
 	for _, pattern := range patterns {
 		if re, err := regexp.Compile(pattern); err == nil {
 			m.sensitivePatterns = append(m.sensitivePatterns, re)
@@ -113,7 +113,7 @@ func (m *DefaultCredentialMasker) initializeDefaultFields() {
 		"openstack_password",
 		"vsphere_password",
 	}
-	
+
 	for _, field := range fields {
 		m.sensitiveFields[strings.ToLower(field)] = true
 	}
@@ -124,9 +124,9 @@ func (m *DefaultCredentialMasker) MaskString(input string) string {
 	if input == "" {
 		return input
 	}
-	
+
 	masked := input
-	
+
 	// Apply all sensitive patterns
 	for _, pattern := range m.sensitivePatterns {
 		masked = pattern.ReplaceAllStringFunc(masked, func(match string) string {
@@ -142,7 +142,7 @@ func (m *DefaultCredentialMasker) MaskString(input string) string {
 			return MaskString
 		})
 	}
-	
+
 	return masked
 }
 
@@ -151,9 +151,9 @@ func (m *DefaultCredentialMasker) MaskMap(data map[string]interface{}) map[strin
 	if data == nil {
 		return nil
 	}
-	
+
 	masked := make(map[string]interface{})
-	
+
 	for key, value := range data {
 		if m.IsSensitiveField(key) {
 			// Mask the entire value for sensitive fields
@@ -172,14 +172,14 @@ func (m *DefaultCredentialMasker) MaskMap(data map[string]interface{}) map[strin
 			}
 		}
 	}
-	
+
 	return masked
 }
 
 // maskSlice masks sensitive data in a slice
 func (m *DefaultCredentialMasker) maskSlice(data []interface{}) []interface{} {
 	masked := make([]interface{}, len(data))
-	
+
 	for i, item := range data {
 		switch v := item.(type) {
 		case map[string]interface{}:
@@ -192,7 +192,7 @@ func (m *DefaultCredentialMasker) maskSlice(data []interface{}) []interface{} {
 			masked[i] = item
 		}
 	}
-	
+
 	return masked
 }
 
@@ -201,7 +201,7 @@ func (m *DefaultCredentialMasker) MaskError(err error) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	maskedMessage := m.MaskString(err.Error())
 	return fmt.Errorf("%s", maskedMessage)
 }
@@ -221,19 +221,19 @@ func (m *DefaultCredentialMasker) AddSensitiveField(fieldName string) {
 // IsSensitiveField checks if a field name is sensitive
 func (m *DefaultCredentialMasker) IsSensitiveField(fieldName string) bool {
 	normalized := strings.ToLower(fieldName)
-	
+
 	// Direct match
 	if m.sensitiveFields[normalized] {
 		return true
 	}
-	
+
 	// Check if field name contains sensitive keywords
 	for sensitiveField := range m.sensitiveFields {
 		if strings.Contains(normalized, sensitiveField) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -242,11 +242,11 @@ func MaskPartial(input string, showChars int) string {
 	if input == "" {
 		return input
 	}
-	
+
 	if len(input) <= showChars*2 {
 		return MaskString
 	}
-	
+
 	return input[:showChars] + PartialMaskString + input[len(input)-showChars:]
 }
 
@@ -256,14 +256,14 @@ func MaskEmail(email string) string {
 	if len(parts) != 2 {
 		return MaskString
 	}
-	
+
 	username := parts[0]
 	domain := parts[1]
-	
+
 	if len(username) <= 2 {
 		return MaskString + "@" + domain
 	}
-	
+
 	return username[:1] + PartialMaskString + "@" + domain
 }
 

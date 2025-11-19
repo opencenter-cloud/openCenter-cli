@@ -160,7 +160,7 @@ func TestConfigPath(t *testing.T) {
 	if path != flatConfigPath {
 		t.Errorf("expected path %s, got %s", flatConfigPath, path)
 	}
-	
+
 	// Test that ConfigPath returns error for non-existent cluster
 	_, err = ConfigPath("non-existent-cluster")
 	if err == nil {
@@ -739,7 +739,7 @@ func TestValidateClusterName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateClusterName(tt.clusterName)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error for cluster name %q, but got none", tt.clusterName)
@@ -787,19 +787,19 @@ func TestClusterDirectoryPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path, err := ClusterDirectoryPath(tt.clusterName)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error for cluster name %q, but got none", tt.clusterName)
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("expected no error for cluster name %q, but got: %v", tt.clusterName, err)
 				return
 			}
-			
+
 			expected := filepath.Join(dir, "clusters", tt.clusterName)
 			if path != expected {
 				t.Errorf("expected path %s, got %s", expected, path)
@@ -838,19 +838,19 @@ func TestClusterSecretsPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path, err := ClusterSecretsPath(tt.clusterName)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error for cluster name %q, but got none", tt.clusterName)
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("expected no error for cluster name %q, but got: %v", tt.clusterName, err)
 				return
 			}
-			
+
 			expected := filepath.Join(dir, "clusters", tt.clusterName, "secrets", "age", "keys")
 			if path != expected {
 				t.Errorf("expected path %s, got %s", expected, path)
@@ -1225,7 +1225,7 @@ func TestDefaultConfigMatchesSpecifications(t *testing.T) {
 // TestValidateEmailFormat tests email validation
 func TestValidateEmailFormat(t *testing.T) {
 	validator := NewConfigValidator(false)
-	
+
 	tests := []struct {
 		name        string
 		email       string
@@ -1307,7 +1307,7 @@ func TestValidateEmailFormat(t *testing.T) {
 // TestValidateDomainFormat tests domain validation
 func TestValidateDomainFormat(t *testing.T) {
 	validator := NewConfigValidator(false)
-	
+
 	tests := []struct {
 		name        string
 		domain      string
@@ -1368,7 +1368,7 @@ func TestValidateDomainFormat(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := NewDefault("test")
 			cfg.OpenCenter.GitOps.GitDir = "test-dir"
-			
+
 			if tt.field == "base_domain" {
 				cfg.OpenCenter.Cluster.BaseDomain = tt.domain
 			} else {
@@ -1399,7 +1399,7 @@ func TestValidateDomainFormat(t *testing.T) {
 // TestValidateServiceSpecificRequirements tests service-specific validation
 func TestValidateServiceSpecificRequirements(t *testing.T) {
 	validator := NewConfigValidator(false)
-	
+
 	tests := []struct {
 		name          string
 		setupConfig   func() Config
@@ -1566,7 +1566,6 @@ func TestValidateMissingRequiredFields(t *testing.T) {
 			},
 			expectErrs: []string{"opencenter.gitops.git_dir must be set"},
 		},
-
 	}
 
 	for _, tt := range tests {
@@ -1682,7 +1681,7 @@ func TestTemplateRenderingWithNewFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.setupConfig()
-			
+
 			// Use text/template to render
 			tmpl, err := template.New("test").Parse(tt.templateText)
 			if err != nil {
@@ -1755,7 +1754,7 @@ func TestTemplateRenderingWithSecrets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.setupConfig()
-			
+
 			tmpl, err := template.New("test").Parse(tt.templateText)
 			if err != nil {
 				t.Fatalf("failed to parse template: %v", err)
@@ -1844,7 +1843,7 @@ func TestTemplateRenderingWithSprigFunctions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.setupConfig()
-			
+
 			// Use Sprig functions
 			tmpl, err := template.New("test").Funcs(sprig.TxtFuncMap()).Parse(tt.templateText)
 			if err != nil {
@@ -1867,7 +1866,7 @@ func TestTemplateRenderingWithSprigFunctions(t *testing.T) {
 // TestTemplateRenderingDefaultValues tests that default values work correctly in templates
 func TestTemplateRenderingDefaultValues(t *testing.T) {
 	cfg := NewDefault("test-cluster")
-	
+
 	tests := []struct {
 		name         string
 		templateText string

@@ -14,35 +14,35 @@
 package cmd
 
 import (
-    "fmt"
-    "strings"
+	"fmt"
+	"strings"
 
-    "github.com/rackerlabs/openCenter-cli/internal/config"
-    "github.com/spf13/cobra"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/spf13/cobra"
 )
 
 func newClusterCurrentCmd() *cobra.Command {
-    cmd := &cobra.Command{
-        Use:   "current",
-        Short: "Show the current active cluster",
-        RunE: func(cmd *cobra.Command, args []string) error {
-            name, err := config.GetActive()
-            if err != nil {
-                return err
-            }
-            if name == "" {
-                // Nothing to show
-                return nil
-            }
-            q, _ := cmd.Flags().GetBool("quiet")
-            if q {
-                fmt.Fprint(cmd.OutOrStdout(), strings.TrimSpace(name))
-            } else {
-                fmt.Fprintf(cmd.OutOrStdout(), "%s\n", strings.TrimSpace(name))
-            }
-            return nil
-        },
-    }
-    cmd.Flags().BoolP("quiet", "q", false, "quiet output (just the name)")
-    return cmd
+	cmd := &cobra.Command{
+		Use:   "current",
+		Short: "Show the current active cluster",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, err := config.GetActive()
+			if err != nil {
+				return err
+			}
+			if name == "" {
+				// Nothing to show
+				return nil
+			}
+			q, _ := cmd.Flags().GetBool("quiet")
+			if q {
+				fmt.Fprint(cmd.OutOrStdout(), strings.TrimSpace(name))
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\n", strings.TrimSpace(name))
+			}
+			return nil
+		},
+	}
+	cmd.Flags().BoolP("quiet", "q", false, "quiet output (just the name)")
+	return cmd
 }

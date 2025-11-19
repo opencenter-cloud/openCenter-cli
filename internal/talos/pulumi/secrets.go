@@ -96,7 +96,7 @@ func (s *SecretsProvider) DecryptPassphrase(ctx context.Context, encryptedPassph
 	// 1. Use SOPS to decrypt the passphrase
 	// 2. Verify Barbican key reference
 	// 3. Return the decrypted value
-	
+
 	// For now, just return a placeholder
 	decryptedPassphrase := "decrypted-passphrase"
 

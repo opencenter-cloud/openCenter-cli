@@ -47,7 +47,7 @@ func NewParallelRenderer(engine TemplateEngine, maxConcurrency int) *ParallelRen
 	if maxConcurrency <= 0 {
 		maxConcurrency = 4 // Default to 4 concurrent operations
 	}
-	
+
 	return &ParallelRenderer{
 		engine:         engine,
 		maxConcurrency: maxConcurrency,
@@ -62,22 +62,22 @@ func (pr *ParallelRenderer) RenderMultiple(ctx context.Context, requests []Rende
 
 	// Create channels for results and errors
 	resultChan := make(chan RenderResult, len(requests))
-	
+
 	// Create a semaphore to limit concurrency
 	sem := make(chan struct{}, pr.maxConcurrency)
-	
+
 	// Use a wait group to track completion
 	var wg sync.WaitGroup
-	
+
 	for _, req := range requests {
 		wg.Add(1)
 		go func(request RenderRequest) {
 			defer wg.Done()
-			
+
 			// Acquire semaphore
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			
+
 			// Check context cancellation
 			select {
 			case <-ctx.Done():
@@ -88,7 +88,7 @@ func (pr *ParallelRenderer) RenderMultiple(ctx context.Context, requests []Rende
 				return
 			default:
 			}
-			
+
 			// Render the template
 			content, err := pr.engine.RenderTemplate(request.TemplateName, request.Data)
 			resultChan <- RenderResult{
@@ -98,17 +98,17 @@ func (pr *ParallelRenderer) RenderMultiple(ctx context.Context, requests []Rende
 			}
 		}(req)
 	}
-	
+
 	// Wait for all goroutines to complete
 	go func() {
 		wg.Wait()
 		close(resultChan)
 	}()
-	
+
 	// Collect results
 	results := make(map[string]string)
 	var errors []error
-	
+
 	for result := range resultChan {
 		if result.Error != nil {
 			errors = append(errors, fmt.Errorf("failed to render %s: %w", result.OutputKey, result.Error))
@@ -120,11 +120,11 @@ func (pr *ParallelRenderer) RenderMultiple(ctx context.Context, requests []Rende
 			results[key] = result.Content
 		}
 	}
-	
+
 	if len(errors) > 0 {
 		return results, fmt.Errorf("failed to render %d templates: %v", len(errors), errors)
 	}
-	
+
 	return results, nil
 }
 
@@ -139,12 +139,12 @@ func (pr *ParallelRenderer) RenderMultipleWithValidation(ctx context.Context, re
 		if err := pr.engine.ValidateTemplate(req.TemplateName); err != nil {
 			return nil, fmt.Errorf("template validation failed for %s: %w", req.TemplateName, err)
 		}
-		
+
 		if err := pr.engine.ValidateTemplateData(req.TemplateName, req.Data); err != nil {
 			return nil, fmt.Errorf("template data validation failed for %s: %w", req.TemplateName, err)
 		}
 	}
-	
+
 	// Render in parallel
 	return pr.RenderMultiple(ctx, requests)
 }
@@ -164,7 +164,7 @@ func (pr *ParallelRenderer) RenderBatch(ctx context.Context, templateNames []str
 			OutputKey:    name,
 		}
 	}
-	
+
 	return pr.RenderMultiple(ctx, requests)
 }
 

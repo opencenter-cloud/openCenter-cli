@@ -160,12 +160,12 @@ func generateECDSAKey(comment string) (*SSHKeyPair, error) {
 // formatPublicKeyWithComment formats an SSH public key with an optional comment
 func formatPublicKeyWithComment(pubKey ssh.PublicKey, comment string) []byte {
 	authorizedKey := ssh.MarshalAuthorizedKey(pubKey)
-	
+
 	// If no comment provided, return as-is
 	if comment == "" {
 		return authorizedKey
 	}
-	
+
 	// SSH authorized key format is: "keytype base64data [comment]\n"
 	// MarshalAuthorizedKey already includes a newline, so we need to trim it,
 	// add the comment, then add the newline back

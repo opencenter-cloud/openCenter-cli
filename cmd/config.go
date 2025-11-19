@@ -64,7 +64,7 @@ Values are displayed after merging with defaults and expanding environment varia
 			// Use global config manager if available, otherwise create a new one
 			var cm *config.ConfigManager
 			var err error
-			
+
 			if globalCM := GetConfigManager(); globalCM != nil {
 				cm = globalCM
 			} else {
@@ -172,7 +172,7 @@ an error will be returned.`,
 			// Use global config manager if available, otherwise create a new one
 			var cm *config.ConfigManager
 			var err error
-			
+
 			if globalCM := GetConfigManager(); globalCM != nil {
 				cm = globalCM
 			} else {

@@ -53,7 +53,7 @@ func TestDefaultCLIConfig(t *testing.T) {
 func TestExpandPath(t *testing.T) {
 	// Test tilde expansion
 	home, _ := os.UserHomeDir()
-	
+
 	tests := []struct {
 		input    string
 		expected string
@@ -74,7 +74,7 @@ func TestExpandPath(t *testing.T) {
 
 func TestConfigValidator(t *testing.T) {
 	validator := &ConfigValidator{autoRepair: false}
-	
+
 	// Test valid configuration
 	validConfig := DefaultCLIConfig()
 	if err := validator.Validate(validConfig); err != nil {
@@ -99,22 +99,22 @@ func TestConfigValidator(t *testing.T) {
 func TestConfigValidatorWithResult(t *testing.T) {
 	// Test without auto-repair
 	validator := &ConfigValidator{autoRepair: false}
-	
+
 	invalidConfig := DefaultCLIConfig()
 	invalidConfig.Logging.Level = "invalid"
 	invalidConfig.Logging.Format = "invalid"
 	invalidConfig.Logging.File.MaxSize = -1
-	
+
 	result := validator.ValidateWithResult(invalidConfig)
-	
+
 	if result.Valid {
 		t.Error("Invalid configuration should not be valid")
 	}
-	
+
 	if len(result.Errors) < 3 {
 		t.Errorf("Expected at least 3 errors, got %d", len(result.Errors))
 	}
-	
+
 	if len(result.Repaired) != 0 {
 		t.Errorf("Expected 0 repairs without auto-repair, got %d", len(result.Repaired))
 	}
@@ -123,36 +123,36 @@ func TestConfigValidatorWithResult(t *testing.T) {
 func TestConfigValidatorAutoRepair(t *testing.T) {
 	// Test with auto-repair
 	validator := &ConfigValidator{autoRepair: true}
-	
+
 	invalidConfig := DefaultCLIConfig()
 	invalidConfig.Logging.Level = "invalid"
 	invalidConfig.Logging.Format = "invalid"
 	invalidConfig.Logging.File.MaxSize = -1
-	
+
 	result := validator.ValidateWithResult(invalidConfig)
-	
+
 	if !result.Valid {
 		t.Error("Configuration should be valid after auto-repair")
 	}
-	
+
 	if len(result.Errors) != 0 {
 		t.Errorf("Expected 0 errors after auto-repair, got %d", len(result.Errors))
 	}
-	
+
 	if len(result.Repaired) < 3 {
 		t.Errorf("Expected at least 3 repairs, got %d", len(result.Repaired))
 	}
-	
+
 	// Verify that values were actually repaired
 	defaults := DefaultCLIConfig()
 	if invalidConfig.Logging.Level != defaults.Logging.Level {
 		t.Errorf("Log level was not repaired to default")
 	}
-	
+
 	if invalidConfig.Logging.Format != defaults.Logging.Format {
 		t.Errorf("Log format was not repaired to default")
 	}
-	
+
 	if invalidConfig.Logging.File.MaxSize != defaults.Logging.File.MaxSize {
 		t.Errorf("MaxSize was not repaired to default")
 	}
@@ -160,18 +160,18 @@ func TestConfigValidatorAutoRepair(t *testing.T) {
 
 func TestConfigValidatorPathValidation(t *testing.T) {
 	validator := &ConfigValidator{autoRepair: false}
-	
+
 	// Test empty paths
 	invalidConfig := DefaultCLIConfig()
 	invalidConfig.Paths.ConfigDir = ""
 	invalidConfig.Paths.ClustersDir = ""
-	
+
 	result := validator.ValidateWithResult(invalidConfig)
-	
+
 	if result.Valid {
 		t.Error("Configuration with empty paths should not be valid")
 	}
-	
+
 	if len(result.Errors) < 2 {
 		t.Errorf("Expected at least 2 path errors, got %d", len(result.Errors))
 	}
@@ -179,16 +179,16 @@ func TestConfigValidatorPathValidation(t *testing.T) {
 
 func TestConfigValidatorWarnings(t *testing.T) {
 	validator := &ConfigValidator{autoRepair: false}
-	
+
 	// Test configuration that should generate warnings
 	config := DefaultCLIConfig()
 	config.Behavior.AutoConfirm = true
 	config.Behavior.DryRun = false
 	config.Defaults.Provider = "unknown-provider"
 	config.Defaults.Environment = "unknown-env"
-	
+
 	result := validator.ValidateWithResult(config)
-	
+
 	if len(result.Warnings) == 0 {
 		t.Error("Expected warnings for potentially problematic configuration")
 	}
@@ -198,7 +198,7 @@ func TestConfigManagerSetGetValue(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	cm, err := NewConfigManager(configPath)
 	if err != nil {
 		t.Fatalf("Failed to create config manager: %v", err)
@@ -277,7 +277,7 @@ func TestConfigError(t *testing.T) {
 func TestConfigManagerMergeWithDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	cm, err := NewConfigManager(configPath)
 	if err != nil {
 		t.Fatalf("Failed to create config manager: %v", err)
@@ -318,7 +318,7 @@ func TestConfigManagerMergeWithDefaults(t *testing.T) {
 func TestConfigManagerValidation(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	cm, err := NewConfigManager(configPath)
 	if err != nil {
 		t.Fatalf("Failed to create config manager: %v", err)
@@ -340,7 +340,7 @@ func TestConfigManagerValidation(t *testing.T) {
 func TestConfigManagerRepair(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	cm, err := NewConfigManager(configPath)
 	if err != nil {
 		t.Fatalf("Failed to create config manager: %v", err)
@@ -375,7 +375,7 @@ func TestConfigManagerRepair(t *testing.T) {
 func TestConfigManagerGracefulDegradation(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	
+
 	// Create config file with invalid content
 	invalidYAML := `
 logging:
@@ -387,7 +387,7 @@ paths:
   configDir: ""
   clustersDir: ""
 `
-	
+
 	if err := os.WriteFile(configPath, []byte(invalidYAML), 0600); err != nil {
 		t.Fatalf("Failed to write invalid config: %v", err)
 	}
@@ -632,7 +632,7 @@ func TestSetLogFormat(t *testing.T) {
 
 func TestYAMLFormatter(t *testing.T) {
 	formatter := &YAMLFormatter{}
-	
+
 	// Create a test log entry
 	entry := &logrus.Entry{
 		Time:    time.Now(),
@@ -650,28 +650,28 @@ func TestYAMLFormatter(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	
+
 	// Check that output contains expected YAML elements
 	if !strings.Contains(outputStr, "timestamp:") {
 		t.Error("YAML output should contain timestamp")
 	}
-	
+
 	if !strings.Contains(outputStr, "level: info") {
 		t.Error("YAML output should contain log level")
 	}
-	
+
 	if !strings.Contains(outputStr, "message: \"Test message\"") {
 		t.Error("YAML output should contain message")
 	}
-	
+
 	if !strings.Contains(outputStr, "fields:") {
 		t.Error("YAML output should contain fields section")
 	}
-	
+
 	if !strings.Contains(outputStr, "key1: value1") {
 		t.Error("YAML output should contain field data")
 	}
-	
+
 	if !strings.Contains(outputStr, "---") {
 		t.Error("YAML output should end with document separator")
 	}
@@ -903,7 +903,7 @@ func TestConfigManagerDotNotationEdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := cm.SetValue(tt.key, tt.value)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error for key '%s', but got none", tt.key)
@@ -1119,22 +1119,22 @@ func TestPathValidationEdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Test direct path validation using ExpandPath and basic checks
 			expandedPath := ExpandPath(tt.path)
-			
+
 			var hasError bool
 			var errorMsg string
-			
+
 			// Check for path traversal
 			if strings.Contains(expandedPath, "..") {
 				hasError = true
 				errorMsg = "contains directory traversal"
 			}
-			
+
 			// Check for empty path
 			if tt.path == "" {
 				hasError = true
 				errorMsg = "empty path"
 			}
-			
+
 			// Check if path is absolute after expansion (for non-empty paths)
 			if tt.path != "" && !filepath.IsAbs(expandedPath) {
 				hasError = true

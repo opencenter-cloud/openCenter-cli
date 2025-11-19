@@ -44,7 +44,7 @@ func (w *DefaultAtomicFileWriter) WriteAtomic(filename string, data []byte, perm
 	}
 
 	tempPath := tempFile.Name()
-	
+
 	// Ensure cleanup on failure
 	defer func() {
 		tempFile.Close()
@@ -84,7 +84,7 @@ func (w *DefaultAtomicFileWriter) WriteAtomic(filename string, data []byte, perm
 // WriteAtomicWithBackup writes data to a file atomically with backup
 func (w *DefaultAtomicFileWriter) WriteAtomicWithBackup(filename string, data []byte, perm os.FileMode) error {
 	var backupPath string
-	
+
 	// Create backup if file exists
 	if _, err := os.Stat(filename); err == nil {
 		backupManager := NewDefaultFileBackupManager()
@@ -93,7 +93,7 @@ func (w *DefaultAtomicFileWriter) WriteAtomicWithBackup(filename string, data []
 			return fmt.Errorf("failed to create backup: %w", err)
 		}
 	}
-	
+
 	// Attempt atomic write
 	if err := w.WriteAtomic(filename, data, perm); err != nil {
 		// Restore backup if write failed and backup exists
@@ -105,7 +105,7 @@ func (w *DefaultAtomicFileWriter) WriteAtomicWithBackup(filename string, data []
 		}
 		return fmt.Errorf("atomic write failed: %w", err)
 	}
-	
+
 	// Clean up backup on successful write
 	if backupPath != "" {
 		if err := os.Remove(backupPath); err != nil {
@@ -113,7 +113,7 @@ func (w *DefaultAtomicFileWriter) WriteAtomicWithBackup(filename string, data []
 			fmt.Printf("Warning: failed to remove backup file %s: %v\n", backupPath, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -122,17 +122,17 @@ func (w *DefaultAtomicFileWriter) CreateTempFile(dir, pattern string) (*os.File,
 	if dir == "" {
 		dir = os.TempDir()
 	}
-	
+
 	// Ensure directory exists
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
-	
+
 	tempFile, err := os.CreateTemp(dir, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary file: %w", err)
 	}
-	
+
 	return tempFile, nil
 }
 
@@ -141,27 +141,27 @@ func (w *DefaultAtomicFileWriter) CommitTempFile(tempFile *os.File, finalPath st
 	if tempFile == nil {
 		return fmt.Errorf("temporary file is nil")
 	}
-	
+
 	tempPath := tempFile.Name()
-	
+
 	// Close the temporary file
 	if err := tempFile.Close(); err != nil {
 		return fmt.Errorf("failed to close temporary file: %w", err)
 	}
-	
+
 	// Ensure parent directory of final path exists
 	finalDir := filepath.Dir(finalPath)
 	if err := os.MkdirAll(finalDir, 0755); err != nil {
 		return fmt.Errorf("failed to create final directory %s: %w", finalDir, err)
 	}
-	
+
 	// Atomically move temporary file to final location
 	if err := os.Rename(tempPath, finalPath); err != nil {
 		// Clean up temporary file on failure
 		os.Remove(tempPath)
 		return fmt.Errorf("failed to move temporary file to final location: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -173,23 +173,23 @@ func WriteFileAtomic(filename string, data []byte, perm os.FileMode) error {
 
 // AtomicFileOperation represents an atomic file operation
 type AtomicFileOperation struct {
-	tempFile   *os.File
-	finalPath  string
-	writer     *DefaultAtomicFileWriter
-	committed  bool
+	tempFile  *os.File
+	finalPath string
+	writer    *DefaultAtomicFileWriter
+	committed bool
 }
 
 // NewAtomicFileOperation creates a new atomic file operation
 func NewAtomicFileOperation(finalPath string) (*AtomicFileOperation, error) {
 	writer := NewDefaultAtomicFileWriter()
-	
+
 	// Create temporary file in the same directory as final path
 	dir := filepath.Dir(finalPath)
 	tempFile, err := writer.CreateTempFile(dir, ".tmp-"+filepath.Base(finalPath)+"-")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary file: %w", err)
 	}
-	
+
 	return &AtomicFileOperation{
 		tempFile:  tempFile,
 		finalPath: finalPath,
@@ -203,7 +203,7 @@ func (op *AtomicFileOperation) Write(data []byte) (int, error) {
 	if op.committed {
 		return 0, fmt.Errorf("operation already committed")
 	}
-	
+
 	return op.tempFile.Write(data)
 }
 
@@ -217,7 +217,7 @@ func (op *AtomicFileOperation) SetPermissions(perm os.FileMode) error {
 	if op.committed {
 		return fmt.Errorf("operation already committed")
 	}
-	
+
 	return op.tempFile.Chmod(perm)
 }
 
@@ -226,16 +226,16 @@ func (op *AtomicFileOperation) Commit() error {
 	if op.committed {
 		return fmt.Errorf("operation already committed")
 	}
-	
+
 	// Sync before committing
 	if err := op.tempFile.Sync(); err != nil {
 		return fmt.Errorf("failed to sync temporary file: %w", err)
 	}
-	
+
 	if err := op.writer.CommitTempFile(op.tempFile, op.finalPath); err != nil {
 		return fmt.Errorf("failed to commit operation: %w", err)
 	}
-	
+
 	op.committed = true
 	return nil
 }
@@ -245,14 +245,14 @@ func (op *AtomicFileOperation) Abort() error {
 	if op.committed {
 		return nil // Already committed, nothing to abort
 	}
-	
+
 	tempPath := op.tempFile.Name()
 	op.tempFile.Close()
-	
+
 	if err := os.Remove(tempPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove temporary file: %w", err)
 	}
-	
+
 	return nil
 }
 

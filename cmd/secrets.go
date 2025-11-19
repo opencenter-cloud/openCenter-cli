@@ -309,23 +309,6 @@ func newSecretsDeleteCmd() *cobra.Command {
 				return err
 			}
 
-			secret, err := client.DescribeSecret(cmd.Context(), name)
-			if err != nil {
-				return err
-			}
-
-			isBootstrap := false
-			for _, tag := range secret.Tags {
-				if tag == "scope=bootstrap" {
-					isBootstrap = true
-					break
-				}
-			}
-
-			if isBootstrap && !force {
-				return fmt.Errorf("secret '%s' is a bootstrap secret. Use --force to delete", name)
-			}
-
 			err = client.DeleteSecret(cmd.Context(), name)
 			if err != nil {
 				return err

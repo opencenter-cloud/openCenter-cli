@@ -141,7 +141,7 @@ func TestConfigurationManagerIntegration(t *testing.T) {
 
 		// Modify the configuration
 		config.OpenCenter.Meta.Organization = "test-org"
-		
+
 		// Add required secrets for enabled services
 		addDefaultSecrets(config)
 
@@ -309,7 +309,7 @@ func TestFullClusterRendering(t *testing.T) {
 	t.Run("LoadIntegrationTestConfig", func(t *testing.T) {
 		// Load the integration test configuration
 		configPath := filepath.Join("../../testdata/config/clusters/test-integration/cluster.yaml")
-		
+
 		// Check if file exists
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Skipf("Integration test config not found at %s", configPath)
@@ -321,7 +321,7 @@ func TestFullClusterRendering(t *testing.T) {
 			t.Fatalf("Failed to create factory: %v", err)
 		}
 		loader := factory.CreateConfigLoader()
-		
+
 		config, err := loader.LoadFromFile(ctx, configPath)
 		if err != nil {
 			t.Fatalf("Failed to load integration test config: %v", err)
@@ -365,7 +365,7 @@ func TestFullClusterRendering(t *testing.T) {
 
 	t.Run("VerifyServiceConfiguration", func(t *testing.T) {
 		configPath := filepath.Join("../../testdata/config/clusters/test-integration/cluster.yaml")
-		
+
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Skipf("Integration test config not found at %s", configPath)
 		}
@@ -375,7 +375,7 @@ func TestFullClusterRendering(t *testing.T) {
 			t.Fatalf("Failed to create factory: %v", err)
 		}
 		loader := factory.CreateConfigLoader()
-		
+
 		config, err := loader.LoadFromFile(ctx, configPath)
 		if err != nil {
 			t.Fatalf("Failed to load integration test config: %v", err)
@@ -477,7 +477,7 @@ func TestFullClusterRendering(t *testing.T) {
 
 	t.Run("VerifySecretsConfiguration", func(t *testing.T) {
 		configPath := filepath.Join("../../testdata/config/clusters/test-integration/cluster.yaml")
-		
+
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Skipf("Integration test config not found at %s", configPath)
 		}
@@ -487,7 +487,7 @@ func TestFullClusterRendering(t *testing.T) {
 			t.Fatalf("Failed to create factory: %v", err)
 		}
 		loader := factory.CreateConfigLoader()
-		
+
 		config, err := loader.LoadFromFile(ctx, configPath)
 		if err != nil {
 			t.Fatalf("Failed to load integration test config: %v", err)
@@ -546,7 +546,7 @@ func TestFullClusterRendering(t *testing.T) {
 
 	t.Run("VerifyManagedServiceConfiguration", func(t *testing.T) {
 		configPath := filepath.Join("../../testdata/config/clusters/test-integration/cluster.yaml")
-		
+
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Skipf("Integration test config not found at %s", configPath)
 		}
@@ -556,7 +556,7 @@ func TestFullClusterRendering(t *testing.T) {
 			t.Fatalf("Failed to create factory: %v", err)
 		}
 		loader := factory.CreateConfigLoader()
-		
+
 		config, err := loader.LoadFromFile(ctx, configPath)
 		if err != nil {
 			t.Fatalf("Failed to load integration test config: %v", err)
@@ -580,7 +580,7 @@ func TestFullClusterRendering(t *testing.T) {
 
 	t.Run("VerifyNoHardcodedValues", func(t *testing.T) {
 		configPath := filepath.Join("../../testdata/config/clusters/test-integration/cluster.yaml")
-		
+
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Skipf("Integration test config not found at %s", configPath)
 		}
@@ -590,7 +590,7 @@ func TestFullClusterRendering(t *testing.T) {
 			t.Fatalf("Failed to create factory: %v", err)
 		}
 		loader := factory.CreateConfigLoader()
-		
+
 		config, err := loader.LoadFromFile(ctx, configPath)
 		if err != nil {
 			t.Fatalf("Failed to load integration test config: %v", err)
@@ -667,7 +667,7 @@ func TestConfigurationValidation(t *testing.T) {
 
 	t.Run("ValidateCompleteConfiguration", func(t *testing.T) {
 		configPath := filepath.Join("../../testdata/config/clusters/test-integration/cluster.yaml")
-		
+
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			t.Skipf("Integration test config not found at %s", configPath)
 		}
@@ -677,7 +677,7 @@ func TestConfigurationValidation(t *testing.T) {
 			t.Fatalf("Failed to create factory: %v", err)
 		}
 		loader := factory.CreateConfigLoader()
-		
+
 		config, err := loader.LoadFromFile(ctx, configPath)
 		if err != nil {
 			t.Fatalf("Failed to load integration test config: %v", err)
@@ -703,7 +703,7 @@ func TestConfigurationValidation(t *testing.T) {
 	t.Run("DetectMissingClusterName", func(t *testing.T) {
 		config := NewDefault("")
 		config.OpenCenter.Cluster.ClusterName = ""
-		
+
 		// Add default secrets so we only test cluster name validation
 		addDefaultSecrets(&config)
 
@@ -995,9 +995,9 @@ func TestConfigurationValidation(t *testing.T) {
 
 		foundError := false
 		for _, err := range result.Errors {
-			if err.Field == "secrets.alert_proxy.core_device_id" || 
-			   err.Field == "secrets.alert_proxy.account_service_token" || 
-			   err.Field == "secrets.alert_proxy.core_account_number" {
+			if err.Field == "secrets.alert_proxy.core_device_id" ||
+				err.Field == "secrets.alert_proxy.account_service_token" ||
+				err.Field == "secrets.alert_proxy.core_account_number" {
 				foundError = true
 				break
 			}

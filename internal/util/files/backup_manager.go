@@ -44,16 +44,16 @@ func (b *DefaultFileBackupManager) CreateBackup(filename string) (string, error)
 	if err := b.validator.ValidateFileExists(filename); err != nil {
 		return "", fmt.Errorf("source file validation failed: %w", err)
 	}
-	
+
 	// Generate backup filename with timestamp
 	timestamp := time.Now().Format("20060102-150405")
 	backupPath := fmt.Sprintf("%s.backup.%s", filename, timestamp)
-	
+
 	// Copy file to backup location
 	if err := b.fileOperator.CopyFile(filename, backupPath); err != nil {
 		return "", fmt.Errorf("failed to create backup: %w", err)
 	}
-	
+
 	return backupPath, nil
 }
 
@@ -62,12 +62,12 @@ func (b *DefaultFileBackupManager) RestoreBackup(backupPath, originalPath string
 	if err := b.validator.ValidateFileExists(backupPath); err != nil {
 		return fmt.Errorf("backup file validation failed: %w", err)
 	}
-	
+
 	// Copy backup to original location
 	if err := b.fileOperator.CopyFile(backupPath, originalPath); err != nil {
 		return fmt.Errorf("failed to restore from backup: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -77,17 +77,17 @@ func (b *DefaultFileBackupManager) CleanupBackups(pattern string, maxAgeSeconds 
 	if err != nil {
 		return fmt.Errorf("failed to list backups: %w", err)
 	}
-	
+
 	currentTime := time.Now().Unix()
 	var cleanupErrors []error
-	
+
 	for _, backup := range backups {
 		info, err := os.Stat(backup)
 		if err != nil {
 			cleanupErrors = append(cleanupErrors, fmt.Errorf("failed to get info for backup %s: %w", backup, err))
 			continue
 		}
-		
+
 		fileAge := currentTime - info.ModTime().Unix()
 		if fileAge > maxAgeSeconds {
 			if err := b.fileOperator.DeleteFile(backup); err != nil {
@@ -95,11 +95,11 @@ func (b *DefaultFileBackupManager) CleanupBackups(pattern string, maxAgeSeconds 
 			}
 		}
 	}
-	
+
 	if len(cleanupErrors) > 0 {
 		return fmt.Errorf("cleanup completed with %d errors: %v", len(cleanupErrors), cleanupErrors)
 	}
-	
+
 	return nil
 }
 
@@ -109,12 +109,12 @@ func (b *DefaultFileBackupManager) ListBackups(pattern string) ([]string, error)
 	if !strings.Contains(pattern, ".backup.") {
 		pattern = pattern + ".backup.*"
 	}
-	
+
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, fmt.Errorf("invalid backup pattern %s: %w", pattern, err)
 	}
-	
+
 	// Filter to ensure they are actually backup files
 	var backups []string
 	for _, match := range matches {
@@ -122,19 +122,19 @@ func (b *DefaultFileBackupManager) ListBackups(pattern string) ([]string, error)
 			backups = append(backups, match)
 		}
 	}
-	
+
 	// Sort by modification time (newest first)
 	sort.Slice(backups, func(i, j int) bool {
 		infoI, errI := os.Stat(backups[i])
 		infoJ, errJ := os.Stat(backups[j])
-		
+
 		if errI != nil || errJ != nil {
 			return false
 		}
-		
+
 		return infoI.ModTime().After(infoJ.ModTime())
 	})
-	
+
 	return backups, nil
 }
 
@@ -143,14 +143,14 @@ func (b *DefaultFileBackupManager) CreateBackupWithSuffix(filename, suffix strin
 	if err := b.validator.ValidateFileExists(filename); err != nil {
 		return "", fmt.Errorf("source file validation failed: %w", err)
 	}
-	
+
 	backupPath := fmt.Sprintf("%s.%s", filename, suffix)
-	
+
 	// Copy file to backup location
 	if err := b.fileOperator.CopyFile(filename, backupPath); err != nil {
 		return "", fmt.Errorf("failed to create backup: %w", err)
 	}
-	
+
 	return backupPath, nil
 }
 
@@ -159,7 +159,7 @@ func (b *DefaultFileBackupManager) CreateIncrementalBackup(filename string) (str
 	if err := b.validator.ValidateFileExists(filename); err != nil {
 		return "", fmt.Errorf("source file validation failed: %w", err)
 	}
-	
+
 	// Find the next available backup number
 	backupNum := 1
 	for {
@@ -172,7 +172,7 @@ func (b *DefaultFileBackupManager) CreateIncrementalBackup(filename string) (str
 			return backupPath, nil
 		}
 		backupNum++
-		
+
 		// Prevent infinite loop
 		if backupNum > 999 {
 			return "", fmt.Errorf("too many backup files exist for %s", filename)
@@ -187,11 +187,11 @@ func (b *DefaultFileBackupManager) GetLatestBackup(filename string) (string, err
 	if err != nil {
 		return "", fmt.Errorf("failed to list backups: %w", err)
 	}
-	
+
 	if len(backups) == 0 {
 		return "", fmt.Errorf("no backups found for file: %s", filename)
 	}
-	
+
 	// ListBackups returns sorted by newest first
 	return backups[0], nil
 }
@@ -202,7 +202,7 @@ func (b *DefaultFileBackupManager) RestoreFromLatestBackup(filename string) erro
 	if err != nil {
 		return fmt.Errorf("failed to find latest backup: %w", err)
 	}
-	
+
 	return b.RestoreBackup(latestBackup, filename)
 }
 
@@ -211,34 +211,34 @@ func (b *DefaultFileBackupManager) BackupDirectory(dirname string) ([]string, er
 	if err := b.validator.ValidateFileIsDirectory(dirname); err != nil {
 		return nil, fmt.Errorf("directory validation failed: %w", err)
 	}
-	
+
 	entries, err := os.ReadDir(dirname)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read directory: %w", err)
 	}
-	
+
 	var backupPaths []string
 	var backupErrors []error
-	
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue // Skip subdirectories
 		}
-		
+
 		filePath := filepath.Join(dirname, entry.Name())
 		backupPath, err := b.CreateBackup(filePath)
 		if err != nil {
 			backupErrors = append(backupErrors, fmt.Errorf("failed to backup %s: %w", filePath, err))
 			continue
 		}
-		
+
 		backupPaths = append(backupPaths, backupPath)
 	}
-	
+
 	if len(backupErrors) > 0 {
 		return backupPaths, fmt.Errorf("directory backup completed with %d errors: %v", len(backupErrors), backupErrors)
 	}
-	
+
 	return backupPaths, nil
 }
 
@@ -253,15 +253,15 @@ func (b *DefaultFileBackupManager) GetBackupInfo(backupPath string) (*BackupInfo
 	if err := b.validator.ValidateFileExists(backupPath); err != nil {
 		return nil, fmt.Errorf("backup file validation failed: %w", err)
 	}
-	
+
 	info, err := os.Stat(backupPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backup file info: %w", err)
 	}
-	
+
 	// Extract original filename from backup path
 	originalFile := strings.Split(backupPath, ".backup.")[0]
-	
+
 	backupInfo := &BackupInfo{
 		BackupPath:   backupPath,
 		OriginalFile: originalFile,
@@ -269,7 +269,7 @@ func (b *DefaultFileBackupManager) GetBackupInfo(backupPath string) (*BackupInfo
 		CreatedAt:    info.ModTime(),
 		IsValid:      true,
 	}
-	
+
 	return backupInfo, nil
 }
 

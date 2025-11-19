@@ -44,9 +44,9 @@ func NewDefaultAtomicOperationManager(auditLogger AuditLogger) *DefaultAtomicOpe
 func (m *DefaultAtomicOperationManager) BeginTransaction(ctx context.Context, name string) (Transaction, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	txID := uuid.New().String()
-	
+
 	tx := &DefaultTransaction{
 		id:          txID,
 		name:        name,
@@ -57,9 +57,9 @@ func (m *DefaultAtomicOperationManager) BeginTransaction(ctx context.Context, na
 		auditLogger: m.auditLogger,
 		ctx:         ctx,
 	}
-	
+
 	m.transactions[txID] = tx
-	
+
 	// Log transaction start
 	if m.auditLogger != nil {
 		m.auditLogger.LogSecurityEvent(ctx, SecurityEvent{
@@ -75,7 +75,7 @@ func (m *DefaultAtomicOperationManager) BeginTransaction(ctx context.Context, na
 			},
 		})
 	}
-	
+
 	return tx, nil
 }
 
@@ -85,7 +85,7 @@ func (m *DefaultAtomicOperationManager) ExecuteAtomic(ctx context.Context, name 
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	
+
 	// Execute the operation
 	if err := operation(tx); err != nil {
 		// Rollback on error
@@ -94,7 +94,7 @@ func (m *DefaultAtomicOperationManager) ExecuteAtomic(ctx context.Context, name 
 		}
 		return fmt.Errorf("operation failed and rolled back: %w", err)
 	}
-	
+
 	// Commit if successful
 	if err := tx.Commit(); err != nil {
 		// Attempt rollback if commit fails
@@ -103,7 +103,7 @@ func (m *DefaultAtomicOperationManager) ExecuteAtomic(ctx context.Context, name 
 		}
 		return fmt.Errorf("commit failed and rolled back: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -124,25 +124,25 @@ type DefaultTransaction struct {
 func (t *DefaultTransaction) AddOperation(operation Operation) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	if t.committed {
 		return fmt.Errorf("cannot add operation to committed transaction")
 	}
-	
+
 	if t.rolledBack {
 		return fmt.Errorf("cannot add operation to rolled back transaction")
 	}
-	
+
 	// Set operation ID if not provided
 	if operation.ID == "" {
 		operation.ID = uuid.New().String()
 	}
-	
+
 	// Set initial status
 	operation.Status = "pending"
-	
+
 	t.operations = append(t.operations, operation)
-	
+
 	return nil
 }
 
@@ -150,29 +150,29 @@ func (t *DefaultTransaction) AddOperation(operation Operation) error {
 func (t *DefaultTransaction) Commit() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	if t.committed {
 		return fmt.Errorf("transaction already committed")
 	}
-	
+
 	if t.rolledBack {
 		return fmt.Errorf("cannot commit rolled back transaction")
 	}
-	
+
 	// Execute all operations
 	for i := range t.operations {
 		op := &t.operations[i]
-		
+
 		if op.Execute == nil {
 			continue
 		}
-		
+
 		op.Status = "executing"
 		op.ExecutedAt = time.Now()
-		
+
 		if err := op.Execute(); err != nil {
 			op.Status = "failed"
-			
+
 			// Log failure
 			if t.auditLogger != nil {
 				t.auditLogger.LogSecurityEvent(t.ctx, SecurityEvent{
@@ -189,18 +189,18 @@ func (t *DefaultTransaction) Commit() error {
 					},
 				})
 			}
-			
+
 			// Rollback all previously executed operations
 			t.rollbackExecutedOperations(i)
-			
+
 			return fmt.Errorf("operation %s failed: %w", op.ID, err)
 		}
-		
+
 		op.Status = "completed"
 	}
-	
+
 	t.committed = true
-	
+
 	// Log successful commit
 	if t.auditLogger != nil {
 		t.auditLogger.LogSecurityEvent(t.ctx, SecurityEvent{
@@ -211,13 +211,13 @@ func (t *DefaultTransaction) Commit() error {
 			Success:   true,
 			Severity:  "medium",
 			Details: map[string]interface{}{
-				"transaction_id":     t.id,
-				"transaction_name":   t.name,
-				"operations_count":   len(t.operations),
+				"transaction_id":   t.id,
+				"transaction_name": t.name,
+				"operations_count": len(t.operations),
 			},
 		})
 	}
-	
+
 	return nil
 }
 
@@ -225,29 +225,29 @@ func (t *DefaultTransaction) Commit() error {
 func (t *DefaultTransaction) Rollback() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	if t.committed {
 		return fmt.Errorf("cannot rollback committed transaction")
 	}
-	
+
 	if t.rolledBack {
 		return nil // Already rolled back
 	}
-	
+
 	// Rollback all executed operations in reverse order
 	errors := make([]error, 0)
-	
+
 	for i := len(t.operations) - 1; i >= 0; i-- {
 		op := &t.operations[i]
-		
+
 		if op.Status != "completed" && op.Status != "executing" {
 			continue
 		}
-		
+
 		if op.Rollback == nil {
 			continue
 		}
-		
+
 		if err := op.Rollback(); err != nil {
 			errors = append(errors, fmt.Errorf("failed to rollback operation %s: %w", op.ID, err))
 			op.Status = "rollback_failed"
@@ -255,9 +255,9 @@ func (t *DefaultTransaction) Rollback() error {
 			op.Status = "rolled_back"
 		}
 	}
-	
+
 	t.rolledBack = true
-	
+
 	// Log rollback
 	if t.auditLogger != nil {
 		success := len(errors) == 0
@@ -265,7 +265,7 @@ func (t *DefaultTransaction) Rollback() error {
 		if !success {
 			severity = "high"
 		}
-		
+
 		t.auditLogger.LogSecurityEvent(t.ctx, SecurityEvent{
 			Timestamp: time.Now(),
 			EventType: "transaction_rollback",
@@ -281,11 +281,11 @@ func (t *DefaultTransaction) Rollback() error {
 			},
 		})
 	}
-	
+
 	if len(errors) > 0 {
 		return fmt.Errorf("rollback completed with errors: %v", errors)
 	}
-	
+
 	return nil
 }
 
@@ -293,15 +293,15 @@ func (t *DefaultTransaction) Rollback() error {
 func (t *DefaultTransaction) rollbackExecutedOperations(upToIndex int) {
 	for i := upToIndex - 1; i >= 0; i-- {
 		op := &t.operations[i]
-		
+
 		if op.Status != "completed" {
 			continue
 		}
-		
+
 		if op.Rollback == nil {
 			continue
 		}
-		
+
 		if err := op.Rollback(); err != nil {
 			op.Status = "rollback_failed"
 		} else {
@@ -324,7 +324,7 @@ func (t *DefaultTransaction) GetName() string {
 func (t *DefaultTransaction) GetOperations() []Operation {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	// Return a copy to prevent external modification
 	ops := make([]Operation, len(t.operations))
 	copy(ops, t.operations)

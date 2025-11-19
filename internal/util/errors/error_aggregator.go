@@ -63,7 +63,7 @@ func (a *DefaultErrorAggregator) GetErrors() []error {
 // GetErrorsByType returns errors of a specific type
 func (a *DefaultErrorAggregator) GetErrorsByType(errorType ErrorType) []error {
 	var filteredErrors []error
-	
+
 	for _, err := range a.errors {
 		if structuredErr, ok := err.(*StructuredError); ok {
 			if structuredErr.Type == errorType {
@@ -77,7 +77,7 @@ func (a *DefaultErrorAggregator) GetErrorsByType(errorType ErrorType) []error {
 			}
 		}
 	}
-	
+
 	return filteredErrors
 }
 
@@ -91,11 +91,11 @@ func (a *DefaultErrorAggregator) ToError() error {
 	if len(a.errors) == 0 {
 		return nil
 	}
-	
+
 	if len(a.errors) == 1 {
 		return a.errors[0]
 	}
-	
+
 	return &ErrorCollection{Errors: a.errors}
 }
 
@@ -114,21 +114,21 @@ func (a *DefaultErrorAggregator) GetSummary() string {
 	if len(a.errors) == 0 {
 		return "No errors"
 	}
-	
+
 	if len(a.errors) == 1 {
 		return a.handler.FormatError(a.errors[0])
 	}
-	
+
 	// Group errors by type
 	errorsByType := make(map[ErrorType][]error)
 	for _, err := range a.errors {
 		structuredErr := a.handler.HandleError(err)
 		errorsByType[structuredErr.Type] = append(errorsByType[structuredErr.Type], err)
 	}
-	
+
 	var summary strings.Builder
 	summary.WriteString(fmt.Sprintf("Found %d errors:\n", len(a.errors)))
-	
+
 	for errorType, errors := range errorsByType {
 		summary.WriteString(fmt.Sprintf("\n%s (%d):\n", strings.ToUpper(string(errorType)), len(errors)))
 		for i, err := range errors {
@@ -140,7 +140,7 @@ func (a *DefaultErrorAggregator) GetSummary() string {
 			}
 		}
 	}
-	
+
 	return summary.String()
 }
 
@@ -188,7 +188,7 @@ func (va *ValidationAggregator) ToValidationResult() *ValidationResult {
 	result := &ValidationResult{
 		Valid: !va.HasErrors(),
 	}
-	
+
 	// Convert errors to structured errors
 	for _, err := range va.GetErrors() {
 		if structuredErr, ok := err.(*StructuredError); ok {
@@ -198,7 +198,7 @@ func (va *ValidationAggregator) ToValidationResult() *ValidationResult {
 			result.Errors = append(result.Errors, structuredErr)
 		}
 	}
-	
+
 	// Convert warnings to structured errors
 	for _, warning := range va.warnings {
 		if structuredErr, ok := warning.(*StructuredError); ok {
@@ -208,7 +208,7 @@ func (va *ValidationAggregator) ToValidationResult() *ValidationResult {
 			result.Warnings = append(result.Warnings, structuredErr)
 		}
 	}
-	
+
 	return result
 }
 
@@ -242,11 +242,11 @@ func (mfa *MultiFieldAggregator) AddFieldError(field string, err error) {
 	if err == nil {
 		return
 	}
-	
+
 	if mfa.fieldErrors[field] == nil {
 		mfa.fieldErrors[field] = NewDefaultErrorAggregator()
 	}
-	
+
 	mfa.fieldErrors[field].AddErrorWithContext(field, err)
 }
 
@@ -290,15 +290,15 @@ func (mfa *MultiFieldAggregator) ToError() error {
 	if !mfa.HasAnyErrors() {
 		return nil
 	}
-	
+
 	var allErrors []error
 	for _, aggregator := range mfa.fieldErrors {
 		allErrors = append(allErrors, aggregator.GetErrors()...)
 	}
-	
+
 	if len(allErrors) == 1 {
 		return allErrors[0]
 	}
-	
+
 	return &ErrorCollection{Errors: allErrors}
 }

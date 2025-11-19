@@ -16,11 +16,11 @@ Package config provides functionality for managing cluster configurations.
 
 This package defines the data structures for the cluster configuration, as well as functions for loading, saving, and validating configurations. It also includes functionality for generating a JSON schema for the configuration.
 
-When to use
+# When to use
 
 This package is used internally by openCenter to manage cluster configurations. It is not intended for direct use by end-users.
 
-Configuration structure
+# Configuration structure
 
 The main data structure in this package is the `Config` struct, which represents the root configuration for a cluster. It groups GitOps, Kubernetes, and Cloud configuration under nested fields.
 */

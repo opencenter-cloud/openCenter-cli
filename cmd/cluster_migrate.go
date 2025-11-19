@@ -53,7 +53,7 @@ If migration fails, you can use the --rollback flag to restore from backup.`,
 			if organization == "" {
 				organization = "opencenter"
 			}
-			
+
 			backup, _ := cmd.Flags().GetBool("backup")
 			rollback, _ := cmd.Flags().GetString("rollback")
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -65,12 +65,12 @@ If migration fails, you can use the --rollback flag to restore from backup.`,
 					return fmt.Errorf("cluster name is required for rollback operation")
 				}
 				clusterName := args[0]
-				
+
 				fmt.Fprintf(cmd.OutOrStdout(), "Rolling back cluster '%s' from backup '%s'...\n", clusterName, rollback)
 				if err := migrationManager.RestoreCluster(clusterName, rollback); err != nil {
 					return fmt.Errorf("rollback failed: %w", err)
 				}
-				
+
 				fmt.Fprintf(cmd.OutOrStdout(), "Successfully rolled back cluster '%s'\n", clusterName)
 				return nil
 			}
@@ -105,7 +105,7 @@ If migration fails, you can use the --rollback flag to restore from backup.`,
 			} else {
 				// Migrate all legacy clusters
 				clustersToMigrate = legacyClusters
-				
+
 				if !force {
 					fmt.Fprintf(cmd.OutOrStdout(), "Found %d legacy clusters to migrate: %v\n", len(legacyClusters), legacyClusters)
 					fmt.Fprintf(cmd.OutOrStdout(), "This will migrate all clusters to organization '%s'. Use --force to proceed without confirmation.\n", organization)
@@ -149,7 +149,7 @@ If migration fails, you can use the --rollback flag to restore from backup.`,
 				if err := migrationManager.MigrateClusterToOrganization(clusterName, organization); err != nil {
 					fmt.Fprintf(cmd.ErrOrStderr(), "  Migration failed for cluster '%s': %v\n", clusterName, err)
 					failed = append(failed, clusterName)
-					
+
 					// Attempt rollback if backup exists
 					if backup && backupPath != "" {
 						fmt.Fprintf(cmd.OutOrStdout(), "  Attempting rollback...\n")

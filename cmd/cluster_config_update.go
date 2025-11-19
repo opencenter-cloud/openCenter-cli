@@ -105,7 +105,7 @@ Examples:
 			// Create backup with timestamp
 			timestamp := time.Now().Format("20060102-150405")
 			backupPath := fmt.Sprintf("%s.%s.backup", configPath, timestamp)
-			
+
 			fmt.Fprintf(cmd.OutOrStdout(), "Creating backup at: %s\n", backupPath)
 			if err := copyFile(configPath, backupPath); err != nil {
 				return fmt.Errorf("failed to create backup: %w", err)

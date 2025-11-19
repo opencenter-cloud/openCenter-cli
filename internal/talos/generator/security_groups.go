@@ -58,12 +58,12 @@ func (g *generator) buildControlPlaneSecurityGroup(talosConfig *talos.TalosConfi
 			},
 			// etcd peer communication
 			{
-				Direction:    "ingress",
-				Protocol:     "tcp",
-				PortRangeMin: 2379,
-				PortRangeMax: 2380,
+				Direction:     "ingress",
+				Protocol:      "tcp",
+				PortRangeMin:  2379,
+				PortRangeMax:  2380,
 				RemoteGroupID: "self", // Only from other control plane nodes
-				Description:  "etcd peer communication",
+				Description:   "etcd peer communication",
 			},
 			// Kubelet
 			{

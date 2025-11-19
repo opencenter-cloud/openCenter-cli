@@ -116,10 +116,10 @@ func calculateRequiredResources(cfg *config.Config) talos.ResourceRequirements {
 	// Default requirements for a minimal cluster
 	// These will be refined based on actual cluster configuration
 	return talos.ResourceRequirements{
-		Instances:      5,  // 3 control plane + 2 workers
-		Cores:          20, // 4 cores per node
+		Instances:      5,     // 3 control plane + 2 workers
+		Cores:          20,    // 4 cores per node
 		RAM:            40960, // 8GB per node
-		Networks:       3,  // management, control, data
+		Networks:       3,     // management, control, data
 		Routers:        1,
 		SecurityGroups: 5,
 		Volumes:        5,

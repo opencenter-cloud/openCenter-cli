@@ -122,7 +122,7 @@ func (m *Manager) Refresh(ctx context.Context) (*talos.DriftReport, error) {
 		return nil, fmt.Errorf("refresh operation failed: %w", err)
 	}
 
-	m.logger.Info("Pulumi stack refreshed", 
+	m.logger.Info("Pulumi stack refreshed",
 		"stack", m.config.StackName,
 		"has_drift", report.HasDrift)
 	return report, nil

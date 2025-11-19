@@ -43,10 +43,10 @@ type SecureTempFileManager interface {
 
 // SecureTempFile represents a secure temporary file
 type SecureTempFile struct {
-	File       *os.File
-	Path       string
+	File        *os.File
+	Path        string
 	Permissions os.FileMode
-	CreatedAt  time.Time
+	CreatedAt   time.Time
 }
 
 // Write writes data to the secure temporary file
@@ -93,28 +93,28 @@ type AuditLogger interface {
 
 // SecurityEvent represents a security-relevant event
 type SecurityEvent struct {
-	Timestamp   time.Time              `json:"timestamp"`
-	EventType   string                 `json:"event_type"`
-	Operation   string                 `json:"operation"`
-	User        string                 `json:"user,omitempty"`
-	Resource    string                 `json:"resource,omitempty"`
-	Success     bool                   `json:"success"`
-	Details     map[string]interface{} `json:"details,omitempty"`
-	Severity    string                 `json:"severity"`
-	Source      string                 `json:"source"`
+	Timestamp time.Time              `json:"timestamp"`
+	EventType string                 `json:"event_type"`
+	Operation string                 `json:"operation"`
+	User      string                 `json:"user,omitempty"`
+	Resource  string                 `json:"resource,omitempty"`
+	Success   bool                   `json:"success"`
+	Details   map[string]interface{} `json:"details,omitempty"`
+	Severity  string                 `json:"severity"`
+	Source    string                 `json:"source"`
 }
 
 // AuditFilter represents filters for querying audit logs
 type AuditFilter struct {
-	StartTime  time.Time `json:"start_time,omitempty"`
-	EndTime    time.Time `json:"end_time,omitempty"`
-	EventType  string    `json:"event_type,omitempty"`
-	Operation  string    `json:"operation,omitempty"`
-	User       string    `json:"user,omitempty"`
-	Resource   string    `json:"resource,omitempty"`
-	Success    *bool     `json:"success,omitempty"`
-	Severity   string    `json:"severity,omitempty"`
-	Limit      int       `json:"limit,omitempty"`
+	StartTime time.Time `json:"start_time,omitempty"`
+	EndTime   time.Time `json:"end_time,omitempty"`
+	EventType string    `json:"event_type,omitempty"`
+	Operation string    `json:"operation,omitempty"`
+	User      string    `json:"user,omitempty"`
+	Resource  string    `json:"resource,omitempty"`
+	Success   *bool     `json:"success,omitempty"`
+	Severity  string    `json:"severity,omitempty"`
+	Limit     int       `json:"limit,omitempty"`
 }
 
 // AtomicOperationManager interface for atomic operations with rollback
@@ -158,12 +158,12 @@ type BackupManager interface {
 
 // BackupInfo represents information about a backup
 type BackupInfo struct {
-	ID          string                 `json:"id"`
-	Resource    string                 `json:"resource"`
-	CreatedAt   time.Time              `json:"created_at"`
-	Size        int64                  `json:"size"`
-	Path        string                 `json:"path"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	ID        string                 `json:"id"`
+	Resource  string                 `json:"resource"`
+	CreatedAt time.Time              `json:"created_at"`
+	Size      int64                  `json:"size"`
+	Path      string                 `json:"path"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // SecretRotationManager interface for managing secret rotation

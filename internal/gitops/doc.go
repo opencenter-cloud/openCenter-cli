@@ -16,7 +16,7 @@ Package gitops provides functionality for managing GitOps templates.
 
 This package is responsible for copying and rendering embedded templates into the target GitOps repository. It uses Go's `embed` package to include the templates in the binary.
 
-When to use
+# When to use
 
 This package is used internally by openCenter to set up the GitOps repository for a cluster. It is invoked as part of the `cluster setup` command.
 */

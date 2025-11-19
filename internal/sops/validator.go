@@ -84,7 +84,7 @@ func (v *DefaultValidator) ValidateKeyForProduction(key string) error {
 			},
 		}
 	}
-	
+
 	// Validate age key format in the configuration content
 	lines := strings.Split(key, "\n")
 	for _, line := range lines {
@@ -105,7 +105,7 @@ func (v *DefaultValidator) ValidateKeyForProduction(key string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (v *DefaultValidator) ValidateEncryptedFile(filePath string) error {
 	}
 
 	contentStr := string(content)
-	
+
 	// Check for SOPS metadata
 	if !strings.Contains(contentStr, "sops:") {
 		return &errors.StructuredError{
@@ -247,6 +247,6 @@ func (v *DefaultValidator) validateAgeKeyFormat(key string) error {
 	if !strings.HasPrefix(key, "age1") || len(key) != 62 {
 		return fmt.Errorf("invalid age key format: %s", key)
 	}
-	
+
 	return nil
 }

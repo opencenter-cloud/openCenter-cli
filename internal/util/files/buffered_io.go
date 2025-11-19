@@ -27,7 +27,7 @@ import (
 const (
 	// DefaultBufferSize is the default buffer size for file operations
 	DefaultBufferSize = 64 * 1024 // 64KB
-	
+
 	// LargeBufferSize is used for large file operations
 	LargeBufferSize = 256 * 1024 // 256KB
 )
@@ -44,14 +44,14 @@ func NewBufferedFileReader(filePath string, bufferSize int) (*BufferedFileReader
 	if bufferSize <= 0 {
 		bufferSize = DefaultBufferSize
 	}
-	
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}
-	
+
 	reader := bufio.NewReaderSize(file, bufferSize)
-	
+
 	return &BufferedFileReader{
 		file:       file,
 		reader:     reader,
@@ -96,24 +96,24 @@ func NewBufferedFileWriter(filePath string, bufferSize int, perm os.FileMode) (*
 	if bufferSize <= 0 {
 		bufferSize = DefaultBufferSize
 	}
-	
+
 	if perm == 0 {
 		perm = 0644
 	}
-	
+
 	// Ensure directory exists
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
-	
+
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}
-	
+
 	writer := bufio.NewWriterSize(file, bufferSize)
-	
+
 	return &BufferedFileWriter{
 		file:       file,
 		writer:     writer,
@@ -167,7 +167,7 @@ func ReadFileBuffered(filePath string) ([]byte, error) {
 		return nil, err
 	}
 	defer reader.Close()
-	
+
 	return reader.ReadAll()
 }
 
@@ -178,11 +178,11 @@ func WriteFileBuffered(filePath string, data []byte, perm os.FileMode) error {
 		return err
 	}
 	defer writer.Close()
-	
+
 	if _, err := writer.Write(data); err != nil {
 		return fmt.Errorf("failed to write data: %w", err)
 	}
-	
+
 	return writer.Sync()
 }
 
@@ -191,45 +191,45 @@ func CopyFileBuffered(srcPath, dstPath string, bufferSize int) error {
 	if bufferSize <= 0 {
 		bufferSize = DefaultBufferSize
 	}
-	
+
 	// Open source file
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return fmt.Errorf("failed to open source file %s: %w", srcPath, err)
 	}
 	defer srcFile.Close()
-	
+
 	// Get source file info for permissions
 	srcInfo, err := srcFile.Stat()
 	if err != nil {
 		return fmt.Errorf("failed to stat source file: %w", err)
 	}
-	
+
 	// Create destination file
 	dstFile, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
 	if err != nil {
 		return fmt.Errorf("failed to create destination file %s: %w", dstPath, err)
 	}
 	defer dstFile.Close()
-	
+
 	// Create buffered reader and writer
 	reader := bufio.NewReaderSize(srcFile, bufferSize)
 	writer := bufio.NewWriterSize(dstFile, bufferSize)
-	
+
 	// Copy data
 	if _, err := io.Copy(writer, reader); err != nil {
 		return fmt.Errorf("failed to copy data: %w", err)
 	}
-	
+
 	// Flush and sync
 	if err := writer.Flush(); err != nil {
 		return fmt.Errorf("failed to flush buffer: %w", err)
 	}
-	
+
 	if err := dstFile.Sync(); err != nil {
 		return fmt.Errorf("failed to sync file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -238,37 +238,37 @@ func AppendFileBuffered(filePath string, data []byte, perm os.FileMode) error {
 	if perm == 0 {
 		perm = 0644
 	}
-	
+
 	// Ensure directory exists
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
-	
+
 	// Open file in append mode
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, perm)
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}
 	defer file.Close()
-	
+
 	// Create buffered writer
 	writer := bufio.NewWriter(file)
-	
+
 	// Write data
 	if _, err := writer.Write(data); err != nil {
 		return fmt.Errorf("failed to write data: %w", err)
 	}
-	
+
 	// Flush and sync
 	if err := writer.Flush(); err != nil {
 		return fmt.Errorf("failed to flush buffer: %w", err)
 	}
-	
+
 	if err := file.Sync(); err != nil {
 		return fmt.Errorf("failed to sync file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -279,7 +279,7 @@ func ReadLinesBuffered(filePath string, callback func(line string) error) error 
 		return err
 	}
 	defer reader.Close()
-	
+
 	for {
 		line, err := reader.ReadLine()
 		if err == io.EOF {
@@ -288,11 +288,11 @@ func ReadLinesBuffered(filePath string, callback func(line string) error) error 
 		if err != nil {
 			return fmt.Errorf("failed to read line: %w", err)
 		}
-		
+
 		if err := callback(line); err != nil {
 			return fmt.Errorf("callback error: %w", err)
 		}
 	}
-	
+
 	return nil
 }

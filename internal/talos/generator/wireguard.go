@@ -88,7 +88,7 @@ func (g *generator) generateWireGuardPeers(ctx context.Context, count int) ([]ta
 		peers[i] = talos.WireGuardPeer{
 			PublicKey: peerPublicKey,
 			AllowedIPs: []string{
-				"10.0.0.0/8",  // Allow access to all cluster networks
+				"10.0.0.0/8",    // Allow access to all cluster networks
 				"172.16.0.0/12", // Private network range
 			},
 			PresharedKey: presharedKey,

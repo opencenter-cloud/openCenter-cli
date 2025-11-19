@@ -72,8 +72,8 @@ func (g *generator) buildPulumiStackConfig(cfg *config.Config, talosConfig *talo
 			"talos:credentialPolicies": g.buildCredentialPolicies(),
 
 			// Image configuration
-			"talos:imageURL":        talosConfig.ImageURL,
-			"talos:imageSignature":  talosConfig.ImageSignature,
+			"talos:imageURL":          talosConfig.ImageURL,
+			"talos:imageSignature":    talosConfig.ImageSignature,
 			"talos:imageVerification": talosConfig.SecurityConfig.ImageVerification,
 
 			// Cluster configuration
@@ -89,18 +89,18 @@ func (g *generator) buildPulumiStackConfig(cfg *config.Config, talosConfig *talo
 func (g *generator) buildPulumiNetworkConfig(talosConfig *talos.TalosConfig) []map[string]interface{} {
 	return []map[string]interface{}{
 		{
-			"name": "management",
-			"cidr": talosConfig.NetworkConfig.ManagementSubnet,
+			"name":        "management",
+			"cidr":        talosConfig.NetworkConfig.ManagementSubnet,
 			"description": "Management network for bastion and WireGuard access",
 		},
 		{
-			"name": "control",
-			"cidr": talosConfig.NetworkConfig.ControlSubnet,
+			"name":        "control",
+			"cidr":        talosConfig.NetworkConfig.ControlSubnet,
 			"description": "Control plane network for Talos control nodes",
 		},
 		{
-			"name": "data",
-			"cidr": talosConfig.NetworkConfig.DataSubnet,
+			"name":        "data",
+			"cidr":        talosConfig.NetworkConfig.DataSubnet,
 			"description": "Data plane network for worker nodes",
 		},
 	}
@@ -110,8 +110,8 @@ func (g *generator) buildPulumiNetworkConfig(talosConfig *talos.TalosConfig) []m
 func (g *generator) buildRouterConfig(clusterName string) []map[string]interface{} {
 	return []map[string]interface{}{
 		{
-			"name": fmt.Sprintf("%s-router", clusterName),
-			"description": "Main router for cluster networks",
+			"name":            fmt.Sprintf("%s-router", clusterName),
+			"description":     "Main router for cluster networks",
 			"externalNetwork": "public", // This should be configurable
 			"routes": []map[string]interface{}{
 				{
@@ -127,52 +127,52 @@ func (g *generator) buildRouterConfig(clusterName string) []map[string]interface
 func (g *generator) buildSecurityGroupConfig(talosConfig *talos.TalosConfig) []map[string]interface{} {
 	return []map[string]interface{}{
 		{
-			"name": "control-plane",
-			"description": "Security group for control plane nodes",
+			"name":          "control-plane",
+			"description":   "Security group for control plane nodes",
 			"defaultPolicy": "deny",
 			"rules": []map[string]interface{}{
 				{
-					"direction": "ingress",
-					"protocol": "tcp",
-					"port": 6443,
+					"direction":   "ingress",
+					"protocol":    "tcp",
+					"port":        6443,
 					"description": "Kubernetes API server",
 				},
 				{
-					"direction": "ingress",
-					"protocol": "tcp",
-					"port": talosConfig.NetworkConfig.TalosAPIPort,
+					"direction":   "ingress",
+					"protocol":    "tcp",
+					"port":        talosConfig.NetworkConfig.TalosAPIPort,
 					"description": "Talos API",
 				},
 				{
-					"direction": "ingress",
-					"protocol": "tcp",
-					"portRange": "2379-2380",
+					"direction":   "ingress",
+					"protocol":    "tcp",
+					"portRange":   "2379-2380",
 					"description": "etcd",
 				},
 			},
 		},
 		{
-			"name": "worker",
-			"description": "Security group for worker nodes",
+			"name":          "worker",
+			"description":   "Security group for worker nodes",
 			"defaultPolicy": "deny",
 			"rules": []map[string]interface{}{
 				{
-					"direction": "ingress",
-					"protocol": "tcp",
-					"port": 10250,
+					"direction":   "ingress",
+					"protocol":    "tcp",
+					"port":        10250,
 					"description": "Kubelet",
 				},
 			},
 		},
 		{
-			"name": "bastion",
-			"description": "Security group for bastion/WireGuard gateway",
+			"name":          "bastion",
+			"description":   "Security group for bastion/WireGuard gateway",
 			"defaultPolicy": "deny",
 			"rules": []map[string]interface{}{
 				{
-					"direction": "ingress",
-					"protocol": "udp",
-					"portRange": fmt.Sprintf("%d-%d", talosConfig.NetworkConfig.WireGuardPort, talosConfig.NetworkConfig.WireGuardPort+1),
+					"direction":   "ingress",
+					"protocol":    "udp",
+					"portRange":   fmt.Sprintf("%d-%d", talosConfig.NetworkConfig.WireGuardPort, talosConfig.NetworkConfig.WireGuardPort+1),
 					"description": "WireGuard VPN",
 				},
 			},
@@ -184,17 +184,17 @@ func (g *generator) buildSecurityGroupConfig(talosConfig *talos.TalosConfig) []m
 func (g *generator) buildLoadBalancerConfig(clusterName string, talosConfig *talos.TalosConfig) []map[string]interface{} {
 	return []map[string]interface{}{
 		{
-			"name": fmt.Sprintf("%s-control-plane-lb", clusterName),
+			"name":        fmt.Sprintf("%s-control-plane-lb", clusterName),
 			"description": "Load balancer for control plane API",
-			"type": "octavia", // Can fallback to HAProxy
-			"port": 6443,
-			"protocol": "tcp",
+			"type":        "octavia", // Can fallback to HAProxy
+			"port":        6443,
+			"protocol":    "tcp",
 			"healthCheck": map[string]interface{}{
-				"protocol": "https",
-				"port": 6443,
-				"path": "/healthz",
-				"interval": 10,
-				"timeout": 5,
+				"protocol":           "https",
+				"port":               6443,
+				"path":               "/healthz",
+				"interval":           10,
+				"timeout":            5,
 				"unhealthyThreshold": 3,
 			},
 		},
@@ -205,7 +205,7 @@ func (g *generator) buildLoadBalancerConfig(clusterName string, talosConfig *tal
 func (g *generator) buildCredentialPolicies() []map[string]interface{} {
 	return []map[string]interface{}{
 		{
-			"name": "talos-cluster-admin",
+			"name":        "talos-cluster-admin",
 			"description": "Least-privilege policy for Talos cluster management",
 			"permissions": []string{
 				"compute:create",
@@ -228,7 +228,7 @@ func (g *generator) buildCredentialPolicies() []map[string]interface{} {
 			},
 		},
 		{
-			"name": "talos-node",
+			"name":        "talos-node",
 			"description": "Least-privilege policy for Talos nodes",
 			"permissions": []string{
 				"compute:read",

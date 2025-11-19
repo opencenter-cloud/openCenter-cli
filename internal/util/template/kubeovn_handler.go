@@ -42,26 +42,26 @@ func (h *KubeOVNHandler) GetRequiredFields() []string {
 // GetDefaultConfig returns the default configuration for Kube-OVN
 func (h *KubeOVNHandler) GetDefaultConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"enabled":                    true,
-		"cilium_integration":         true,
-		"default_subnet":            "10.16.0.0/16",
-		"node_subnet":               "10.17.0.0/16",
-		"service_subnet":            "10.96.0.0/12",
-		"kube_ovn_version":          "1.12.0",
-		"ovn_nb_port":               6641,
-		"ovn_sb_port":               6642,
-		"ovn_northd_probe_interval": 5000,
+		"enabled":                       true,
+		"cilium_integration":            true,
+		"default_subnet":                "10.16.0.0/16",
+		"node_subnet":                   "10.17.0.0/16",
+		"service_subnet":                "10.96.0.0/12",
+		"kube_ovn_version":              "1.12.0",
+		"ovn_nb_port":                   6641,
+		"ovn_sb_port":                   6642,
+		"ovn_northd_probe_interval":     5000,
 		"ovn_controller_probe_interval": 5000,
-		"enable_lb":                 true,
-		"enable_np":                 true,
-		"enable_eip_snat":           true,
-		"enable_external_vpc":       false,
-		"nic_bridge_mappings":       "",
-		"network_type":              "geneve",
-		"default_interface_name":    "",
-		"exclude_ips":               "",
-		"enable_ssl":                false,
-		"enable_bind_local_ip":      true,
+		"enable_lb":                     true,
+		"enable_np":                     true,
+		"enable_eip_snat":               true,
+		"enable_external_vpc":           false,
+		"nic_bridge_mappings":           "",
+		"network_type":                  "geneve",
+		"default_interface_name":        "",
+		"exclude_ips":                   "",
+		"enable_ssl":                    false,
+		"enable_bind_local_ip":          true,
 	}
 }
 
@@ -140,7 +140,7 @@ func (h *KubeOVNHandler) ValidateConfiguration(config map[string]interface{}) er
 				}
 			}
 			if !isValid {
-				return fmt.Errorf("invalid network type: %s, valid types: %s", 
+				return fmt.Errorf("invalid network type: %s, valid types: %s",
 					networkTypeStr, strings.Join(validTypes, ", "))
 			}
 		}
@@ -172,7 +172,7 @@ func (h *KubeOVNHandler) validatePort(config map[string]interface{}, portKey str
 		} else {
 			return fmt.Errorf("%s must be an integer", portKey)
 		}
-		
+
 		if portInt < minPort || portInt > maxPort {
 			return fmt.Errorf("invalid %s: %d, must be between %d and %d", portKey, portInt, minPort, maxPort)
 		}
@@ -191,7 +191,7 @@ func (h *KubeOVNHandler) validateProbeInterval(config map[string]interface{}, in
 		} else {
 			return fmt.Errorf("%s must be an integer", intervalKey)
 		}
-		
+
 		if intervalInt < 1000 || intervalInt > 60000 {
 			return fmt.Errorf("invalid %s: %d, must be between 1000 and 60000 milliseconds", intervalKey, intervalInt)
 		}
@@ -208,90 +208,90 @@ func (h *KubeOVNHandler) RenderConfiguration(config map[string]interface{}) (str
 
 	var parts []string
 	parts = append(parts, "network_plugin = \"kube-ovn\"")
-	
+
 	// Render Cilium integration
 	if ciliumIntegration, exists := config["cilium_integration"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_cilium_integration = %v", ciliumIntegration))
 	}
-	
+
 	// Render subnet configurations
 	if defaultSubnet, exists := config["default_subnet"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_default_subnet = \"%v\"", defaultSubnet))
 	}
-	
+
 	if nodeSubnet, exists := config["node_subnet"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_node_subnet = \"%v\"", nodeSubnet))
 	}
-	
+
 	if serviceSubnet, exists := config["service_subnet"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_service_subnet = \"%v\"", serviceSubnet))
 	}
-	
+
 	// Render version
 	if version, exists := config["kube_ovn_version"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_version = \"%v\"", version))
 	}
-	
+
 	// Render port configurations
 	if nbPort, exists := config["ovn_nb_port"]; exists {
 		parts = append(parts, fmt.Sprintf("ovn_nb_port = %v", nbPort))
 	}
-	
+
 	if sbPort, exists := config["ovn_sb_port"]; exists {
 		parts = append(parts, fmt.Sprintf("ovn_sb_port = %v", sbPort))
 	}
-	
+
 	// Render probe intervals
 	if northdProbe, exists := config["ovn_northd_probe_interval"]; exists {
 		parts = append(parts, fmt.Sprintf("ovn_northd_probe_interval = %v", northdProbe))
 	}
-	
+
 	if controllerProbe, exists := config["ovn_controller_probe_interval"]; exists {
 		parts = append(parts, fmt.Sprintf("ovn_controller_probe_interval = %v", controllerProbe))
 	}
-	
+
 	// Render feature flags
 	if enableLB, exists := config["enable_lb"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_enable_lb = %v", enableLB))
 	}
-	
+
 	if enableNP, exists := config["enable_np"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_enable_np = %v", enableNP))
 	}
-	
+
 	if enableEipSnat, exists := config["enable_eip_snat"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_enable_eip_snat = %v", enableEipSnat))
 	}
-	
+
 	if enableExternalVPC, exists := config["enable_external_vpc"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_enable_external_vpc = %v", enableExternalVPC))
 	}
-	
+
 	if enableSSL, exists := config["enable_ssl"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_enable_ssl = %v", enableSSL))
 	}
-	
+
 	if enableBindLocalIP, exists := config["enable_bind_local_ip"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_enable_bind_local_ip = %v", enableBindLocalIP))
 	}
-	
+
 	// Render network type
 	if networkType, exists := config["network_type"]; exists {
 		parts = append(parts, fmt.Sprintf("kube_ovn_network_type = \"%v\"", networkType))
 	}
-	
+
 	// Render optional string configurations
 	if nicBridgeMappings, exists := config["nic_bridge_mappings"]; exists && nicBridgeMappings != "" {
 		parts = append(parts, fmt.Sprintf("kube_ovn_nic_bridge_mappings = \"%v\"", nicBridgeMappings))
 	}
-	
+
 	if defaultInterfaceName, exists := config["default_interface_name"]; exists && defaultInterfaceName != "" {
 		parts = append(parts, fmt.Sprintf("kube_ovn_default_interface_name = \"%v\"", defaultInterfaceName))
 	}
-	
+
 	if excludeIPs, exists := config["exclude_ips"]; exists && excludeIPs != "" {
 		parts = append(parts, fmt.Sprintf("kube_ovn_exclude_ips = \"%v\"", excludeIPs))
 	}
-	
+
 	return strings.Join(parts, "\n"), nil
 }

@@ -179,7 +179,7 @@ func (cv *ClusterConfigValidator) validateStructureWithResult(ctx context.Contex
 			})
 		}
 	}
-	
+
 	// Validate admin email format
 	if config.OpenCenter.Cluster.AdminEmail != "" {
 		if !cv.isValidEmail(config.OpenCenter.Cluster.AdminEmail) {
@@ -195,7 +195,7 @@ func (cv *ClusterConfigValidator) validateStructureWithResult(ctx context.Contex
 			})
 		}
 	}
-	
+
 	// Validate base domain format
 	if config.OpenCenter.Cluster.BaseDomain != "" {
 		if !cv.isValidDomain(config.OpenCenter.Cluster.BaseDomain) {
@@ -211,7 +211,7 @@ func (cv *ClusterConfigValidator) validateStructureWithResult(ctx context.Contex
 			})
 		}
 	}
-	
+
 	// Validate cluster FQDN format
 	if config.OpenCenter.Cluster.ClusterFQDN != "" {
 		if !cv.isValidDomain(config.OpenCenter.Cluster.ClusterFQDN) {
@@ -333,7 +333,7 @@ func (cv *ClusterConfigValidator) validateSemanticsWithResult(ctx context.Contex
 					},
 				})
 			}
-			
+
 			// Validate S3 bucket name is lowercase
 			if s3.Bucket != "" && s3.Bucket != strings.ToLower(s3.Bucket) {
 				result.Errors = append(result.Errors, &ConfigValidationError{
@@ -403,12 +403,12 @@ func (cv *ClusterConfigValidator) validateSemanticsWithResult(ctx context.Contex
 			},
 		})
 	}
-	
+
 	// Validate service-specific configuration and secrets
 	for serviceName, svc := range config.OpenCenter.Services {
 		cv.validateService(serviceName, svc, config.Secrets, result)
 	}
-	
+
 	// Validate managed service configuration and secrets
 	for serviceName, svc := range config.OpenCenter.ManagedService {
 		cv.validateManagedService(serviceName, svc, config.Secrets, result)
@@ -682,7 +682,7 @@ func (cv *ClusterConfigValidator) isValidEmail(email string) bool {
 	if email == "" {
 		return false
 	}
-	
+
 	// Basic email validation using regex
 	// This pattern checks for: local-part@domain
 	// where local-part can contain alphanumeric, dots, hyphens, underscores
@@ -696,7 +696,7 @@ func (cv *ClusterConfigValidator) isValidDomain(domain string) bool {
 	if domain == "" {
 		return false
 	}
-	
+
 	// Domain validation using regex
 	// Allows alphanumeric characters, hyphens, and dots
 	// Must have at least one dot and valid TLD
@@ -709,7 +709,7 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 	if !svc.Enabled {
 		return
 	}
-	
+
 	// Validate service-specific required fields and secrets
 	switch serviceName {
 	case "cert-manager":
@@ -736,7 +736,7 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 				},
 			})
 		}
-		
+
 	case "loki":
 		// Check required configuration
 		if svc.SwiftAuthURL == "" {
@@ -781,7 +781,7 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 				},
 			})
 		}
-		
+
 	case "keycloak":
 		// Check required secrets
 		if secrets.Keycloak.ClientSecret == "" {
@@ -806,7 +806,7 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 				},
 			})
 		}
-		
+
 	case "headlamp":
 		// Check required secrets
 		if secrets.Headlamp.OIDCClientSecret == "" {
@@ -820,7 +820,7 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 				},
 			})
 		}
-		
+
 	case "weave-gitops":
 		// Check required secrets
 		if secrets.WeaveGitOps.PasswordHash == "" {
@@ -835,7 +835,7 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 				},
 			})
 		}
-		
+
 	case "kube-prometheus-stack":
 		// Check required secrets
 		if secrets.Grafana.AdminPassword == "" {
@@ -857,7 +857,7 @@ func (cv *ClusterConfigValidator) validateManagedService(serviceName string, svc
 	if !svc.Enabled {
 		return
 	}
-	
+
 	// Validate managed service-specific required fields and secrets
 	switch serviceName {
 	case "alert-proxy":
@@ -895,7 +895,7 @@ func (cv *ClusterConfigValidator) validateManagedService(serviceName string, svc
 				},
 			})
 		}
-		
+
 		// Check required configuration
 		if svc.AlertManagerBaseUrl == "" {
 			result.Warnings = append(result.Warnings, &ConfigValidationError{

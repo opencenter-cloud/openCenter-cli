@@ -36,7 +36,7 @@ type TemplateValidator interface {
 	ValidateTemplateData(templateName string, data interface{}) error
 	ValidateTemplateExists(templateName string) error
 	ValidateRequiredFields(data interface{}, requiredFields []string) error
-	
+
 	// Enhanced validation methods for comprehensive template validation framework
 	ValidateTemplateWithData(templateName string, data interface{}) *TemplateValidationResult
 	ValidateTemplateSyntax(templateName string) error
@@ -49,25 +49,25 @@ type TemplateValidator interface {
 type TemplateEngine interface {
 	TemplateRenderer
 	TemplateValidator
-	
+
 	// Initialization methods
 	Init() error
 	InitWithFS(fs interface{}, pattern string) error
 	InitWithTemplates(templates *template.Template) error
-	
+
 	// Function management
 	AddFunctions(funcMap template.FuncMap) error
-	
+
 	// Advanced rendering with validation
 	RenderWithValidation(templateName string, data interface{}, requiredFields []string) (string, error)
 	RenderToWriterWithValidation(templateName string, data interface{}, writer io.Writer, requiredFields []string) error
-	
+
 	// Enhanced validation methods
 	ValidateTemplateWithDataAndResult(templateName string, data interface{}) (*TemplateValidationResult, error)
 	ValidateTemplateSyntaxEngine(templateName string) error
 	ValidateVariableSubstitutionEngine(templateName string, data interface{}) error
 	ExtractTemplateVariablesEngine(templateName string) ([]VariableInfo, error)
-	
+
 	// Component access for dependency injection
 	GetRenderer() TemplateRenderer
 	GetValidator() TemplateValidator
@@ -80,11 +80,11 @@ type NetworkPluginHandler interface {
 	RenderNetworkPluginConfig(pluginType string, config map[string]interface{}) (string, error)
 	GetSupportedPlugins() []string
 	GetRequiredFields(pluginType string) []string
-	
+
 	// Mutual exclusivity validation
 	ValidateNetworkPluginMutualExclusivity(pluginConfigs map[string]map[string]interface{}) error
 	ValidateNetworkPluginCompatibility(pluginType string, config map[string]interface{}, globalConfig map[string]interface{}) error
-	
+
 	// Access to dedicated handlers
 	GetPluginHandler(pluginType string) (SpecificNetworkPluginHandler, error)
 	GetAllPluginHandlers() map[string]SpecificNetworkPluginHandler
@@ -109,14 +109,14 @@ func (e ValidationError) Error() string {
 
 // TemplateValidationResult represents the result of comprehensive template validation
 type TemplateValidationResult struct {
-	Valid              bool
-	Errors             []*TemplateError
-	Warnings           []*TemplateError
-	MissingVariables   []string
-	UnusedVariables    []string
-	SyntaxErrors       []string
-	RequiredFields     []string
-	OptionalFields     []string
+	Valid            bool
+	Errors           []*TemplateError
+	Warnings         []*TemplateError
+	MissingVariables []string
+	UnusedVariables  []string
+	SyntaxErrors     []string
+	RequiredFields   []string
+	OptionalFields   []string
 }
 
 // VariableInfo represents information about a template variable

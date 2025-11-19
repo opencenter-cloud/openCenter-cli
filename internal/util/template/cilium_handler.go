@@ -42,17 +42,17 @@ func (h *CiliumHandler) GetRequiredFields() []string {
 // GetDefaultConfig returns the default configuration for Cilium
 func (h *CiliumHandler) GetDefaultConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"enabled":                        true,
-		"operator_enabled":               true,
-		"kubeProxyReplacement":          true,
-		"cluster_pool_ipv4_cidr":        "10.0.0.0/8",
-		"cluster_pool_ipv4_mask_size":   24,
-		"cilium_version":                "1.14.5",
-		"cilium_operator_version":       "1.14.5",
-		"cilium_tunnel_mode":            "vxlan",
-		"cilium_enable_ipv4":            true,
-		"cilium_enable_ipv6":            false,
-		"cilium_enable_l7_proxy":        true,
+		"enabled":                         true,
+		"operator_enabled":                true,
+		"kubeProxyReplacement":            true,
+		"cluster_pool_ipv4_cidr":          "10.0.0.0/8",
+		"cluster_pool_ipv4_mask_size":     24,
+		"cilium_version":                  "1.14.5",
+		"cilium_operator_version":         "1.14.5",
+		"cilium_tunnel_mode":              "vxlan",
+		"cilium_enable_ipv4":              true,
+		"cilium_enable_ipv6":              false,
+		"cilium_enable_l7_proxy":          true,
 		"cilium_enable_bandwidth_manager": false,
 		"hubble": map[string]interface{}{
 			"enabled": false,
@@ -99,7 +99,7 @@ func (h *CiliumHandler) ValidateConfiguration(config map[string]interface{}) err
 		} else {
 			return fmt.Errorf("cluster_pool_ipv4_mask_size must be an integer")
 		}
-		
+
 		if maskSizeInt < 8 || maskSizeInt > 30 {
 			return fmt.Errorf("invalid cluster pool IPv4 mask size: %d, must be between 8 and 30", maskSizeInt)
 		}
@@ -117,7 +117,7 @@ func (h *CiliumHandler) ValidateConfiguration(config map[string]interface{}) err
 				}
 			}
 			if !isValid {
-				return fmt.Errorf("invalid cilium tunnel mode: %s, valid modes: %s", 
+				return fmt.Errorf("invalid cilium tunnel mode: %s, valid modes: %s",
 					tunnelModeStr, strings.Join(validModes, ", "))
 			}
 		}
@@ -206,67 +206,67 @@ func (h *CiliumHandler) RenderConfiguration(config map[string]interface{}) (stri
 
 	var parts []string
 	parts = append(parts, "network_plugin = \"cilium\"")
-	
+
 	// Render operator enabled
 	if operatorEnabled, exists := config["operator_enabled"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_operator_enabled = %v", operatorEnabled))
 	}
-	
+
 	// Render kube-proxy replacement
 	if kubeProxyReplacement, exists := config["kubeProxyReplacement"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_kube_proxy_replacement = %v", kubeProxyReplacement))
 	}
-	
+
 	// Render cluster pool IPv4 CIDR
 	if cidr, exists := config["cluster_pool_ipv4_cidr"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_cluster_pool_ipv4_cidr = \"%v\"", cidr))
 	}
-	
+
 	// Render cluster pool IPv4 mask size
 	if maskSize, exists := config["cluster_pool_ipv4_mask_size"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_cluster_pool_ipv4_mask_size = %v", maskSize))
 	}
-	
+
 	// Render versions
 	if version, exists := config["cilium_version"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_version = \"%v\"", version))
 	}
-	
+
 	if operatorVersion, exists := config["cilium_operator_version"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_operator_version = \"%v\"", operatorVersion))
 	}
-	
+
 	// Render tunnel mode
 	if tunnelMode, exists := config["cilium_tunnel_mode"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_tunnel_mode = \"%v\"", tunnelMode))
 	}
-	
+
 	// Render IPv4/IPv6 settings
 	if enableIPv4, exists := config["cilium_enable_ipv4"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_enable_ipv4 = %v", enableIPv4))
 	}
-	
+
 	if enableIPv6, exists := config["cilium_enable_ipv6"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_enable_ipv6 = %v", enableIPv6))
 	}
-	
+
 	// Render L7 proxy
 	if enableL7Proxy, exists := config["cilium_enable_l7_proxy"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_enable_l7_proxy = %v", enableL7Proxy))
 	}
-	
+
 	// Render bandwidth manager
 	if enableBandwidthManager, exists := config["cilium_enable_bandwidth_manager"]; exists {
 		parts = append(parts, fmt.Sprintf("cilium_enable_bandwidth_manager = %v", enableBandwidthManager))
 	}
-	
+
 	// Render Hubble configuration
 	if hubble, exists := config["hubble"]; exists {
 		if hubbleMap, ok := hubble.(map[string]interface{}); ok {
 			if hubbleEnabled, exists := hubbleMap["enabled"]; exists {
 				parts = append(parts, fmt.Sprintf("cilium_hubble_enabled = %v", hubbleEnabled))
 			}
-			
+
 			if metrics, exists := hubbleMap["metrics"]; exists {
 				if metricsMap, ok := metrics.(map[string]interface{}); ok {
 					if metricsEnabled, exists := metricsMap["enabled"]; exists {
@@ -274,7 +274,7 @@ func (h *CiliumHandler) RenderConfiguration(config map[string]interface{}) (stri
 					}
 				}
 			}
-			
+
 			if relay, exists := hubbleMap["relay"]; exists {
 				if relayMap, ok := relay.(map[string]interface{}); ok {
 					if relayEnabled, exists := relayMap["enabled"]; exists {
@@ -282,7 +282,7 @@ func (h *CiliumHandler) RenderConfiguration(config map[string]interface{}) (stri
 					}
 				}
 			}
-			
+
 			if ui, exists := hubbleMap["ui"]; exists {
 				if uiMap, ok := ui.(map[string]interface{}); ok {
 					if uiEnabled, exists := uiMap["enabled"]; exists {
@@ -292,6 +292,6 @@ func (h *CiliumHandler) RenderConfiguration(config map[string]interface{}) (stri
 			}
 		}
 	}
-	
+
 	return strings.Join(parts, "\n"), nil
 }

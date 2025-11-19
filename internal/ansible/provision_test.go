@@ -27,12 +27,12 @@ func TestProvision_ServiceDisabled(t *testing.T) {
 	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
 		"ansible": {Enabled: false},
 	}
-	
+
 	err := Provision(cfg)
 	if err != nil {
 		t.Errorf("unexpected error when ansible service is disabled: %v", err)
 	}
-	
+
 	// Verify no files were created
 	ansibleDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "ansible")
 	if _, err := os.Stat(ansibleDir); !os.IsNotExist(err) {
@@ -44,12 +44,12 @@ func TestProvision_ServiceNotConfigured(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
 	cfg.OpenCenter.GitOps.GitDir = t.TempDir()
 	cfg.OpenCenter.Services = map[string]config.ServiceCfg{}
-	
+
 	err := Provision(cfg)
 	if err != nil {
 		t.Errorf("unexpected error when ansible service is not configured: %v", err)
 	}
-	
+
 	// Verify no files were created
 	ansibleDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "ansible")
 	if _, err := os.Stat(ansibleDir); !os.IsNotExist(err) {
@@ -63,7 +63,7 @@ func TestProvision_MissingGitDir(t *testing.T) {
 	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
 		"ansible": {Enabled: true},
 	}
-	
+
 	err := Provision(cfg)
 	if err == nil {
 		t.Error("expected error when git_dir is missing")
@@ -79,7 +79,7 @@ func TestProvision_WhitespaceOnlyGitDir(t *testing.T) {
 	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
 		"ansible": {Enabled: true},
 	}
-	
+
 	err := Provision(cfg)
 	if err == nil {
 		t.Error("expected error when git_dir is whitespace only")
@@ -91,20 +91,20 @@ func TestProvision_WhitespaceOnlyGitDir(t *testing.T) {
 
 func TestProvision_DirectoryCreationFailure(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
-	
+
 	// Create a file where we want to create the ansible directory
 	tempDir := t.TempDir()
 	cfg.OpenCenter.GitOps.GitDir = tempDir
 	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
 		"ansible": {Enabled: true},
 	}
-	
+
 	// Create a file with the same name as the directory we want to create
 	ansiblePath := filepath.Join(tempDir, "ansible")
 	if err := os.WriteFile(ansiblePath, []byte("blocking file"), 0644); err != nil {
 		t.Fatalf("failed to create blocking file: %v", err)
 	}
-	
+
 	err := Provision(cfg)
 	if err == nil {
 		t.Error("expected error when ansible directory creation fails")
@@ -116,21 +116,21 @@ func TestProvision_DirectoryCreationFailure(t *testing.T) {
 
 func TestProvision_FileCreationFailure(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
-	
+
 	// Create a directory structure where file creation will fail
 	tempDir := t.TempDir()
 	cfg.OpenCenter.GitOps.GitDir = tempDir
 	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
 		"ansible": {Enabled: true},
 	}
-	
+
 	// Create ansible directory with restrictive permissions
 	ansibleDir := filepath.Join(tempDir, "ansible")
 	if err := os.MkdirAll(ansibleDir, 0000); err != nil {
 		t.Fatalf("failed to create ansible directory: %v", err)
 	}
 	defer os.Chmod(ansibleDir, 0755) // Restore permissions for cleanup
-	
+
 	err := Provision(cfg)
 	if err == nil {
 		t.Error("expected error when file creation fails")
@@ -146,11 +146,11 @@ func TestProvision_DirectoryPermissions(t *testing.T) {
 	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
 		"ansible": {Enabled: true},
 	}
-	
+
 	// This test will fail due to template execution, but we can test that
 	// the directory is created with correct permissions
 	err := Provision(cfg)
-	
+
 	// Check that ansible directory was created with correct permissions
 	ansibleDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "ansible")
 	if info, statErr := os.Stat(ansibleDir); statErr == nil {
@@ -164,7 +164,7 @@ func TestProvision_DirectoryPermissions(t *testing.T) {
 		// If Provision succeeded but directory doesn't exist, that's a problem
 		t.Error("Provision succeeded but ansible directory was not created")
 	}
-	
+
 	// We expect template execution to fail, so log the error for reference
 	if err != nil {
 		t.Logf("Expected template execution error: %v", err)
@@ -173,14 +173,14 @@ func TestProvision_DirectoryPermissions(t *testing.T) {
 
 // Helper function to check if a string contains a substring
 func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || 
-		func() bool {
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
+			func() bool {
+				for i := 0; i <= len(s)-len(substr); i++ {
+					if s[i:i+len(substr)] == substr {
+						return true
+					}
 				}
-			}
-			return false
-		}())))
+				return false
+			}())))
 }

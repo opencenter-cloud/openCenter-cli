@@ -93,7 +93,7 @@ Examples:
 
 			// Open the editor
 			fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in %s...\n", configPath, editor)
-			
+
 			editorCmd := exec.Command(editor, configPath)
 			editorCmd.Stdin = os.Stdin
 			editorCmd.Stdout = os.Stdout

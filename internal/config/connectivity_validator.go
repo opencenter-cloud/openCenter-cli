@@ -44,9 +44,9 @@ func NewConnectivityValidator(timeout time.Duration) *ConnectivityValidator {
 // ValidateCloudProviderConnectivity performs comprehensive connectivity validation for cloud providers.
 func (cv *ConnectivityValidator) ValidateCloudProviderConnectivity(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	provider := config.OpenCenter.Infrastructure.Provider
-	
+
 	switch provider {
 	case "openstack":
 		errors := cv.validateOpenStackConnectivity(ctx, config)
@@ -65,20 +65,20 @@ func (cv *ConnectivityValidator) ValidateCloudProviderConnectivity(ctx context.C
 			nil,
 		))
 	}
-	
+
 	return validationErrors
 }
 
 // validateOpenStackConnectivity validates connectivity to OpenStack services.
 func (cv *ConnectivityValidator) validateOpenStackConnectivity(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	os := config.OpenCenter.Infrastructure.Cloud.OpenStack
-	
+
 	if os.AuthURL == "" {
 		return validationErrors // Can't test connectivity without auth URL
 	}
-	
+
 	// Test connectivity to Keystone
 	if err := cv.testHTTPConnectivity(ctx, os.AuthURL); err != nil {
 		validationErrors = append(validationErrors, errors.CreateCloudError(
@@ -88,7 +88,7 @@ func (cv *ConnectivityValidator) validateOpenStackConnectivity(ctx context.Conte
 			err,
 		))
 	}
-	
+
 	// Test DNS resolution for auth URL
 	if err := cv.testDNSResolution(ctx, os.AuthURL); err != nil {
 		validationErrors = append(validationErrors, errors.CreateCloudError(
@@ -98,27 +98,27 @@ func (cv *ConnectivityValidator) validateOpenStackConnectivity(ctx context.Conte
 			err,
 		))
 	}
-	
+
 	return validationErrors
 }
 
 // validateAWSConnectivity validates connectivity to AWS services.
 func (cv *ConnectivityValidator) validateAWSConnectivity(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	aws := config.OpenCenter.Infrastructure.Cloud.AWS
-	
+
 	if aws.Region == "" {
 		return validationErrors // Can't test connectivity without region
 	}
-	
+
 	// Test connectivity to AWS endpoints
 	awsEndpoints := []string{
 		fmt.Sprintf("https://ec2.%s.amazonaws.com", aws.Region),
 		fmt.Sprintf("https://s3.%s.amazonaws.com", aws.Region),
 		fmt.Sprintf("https://iam.amazonaws.com"),
 	}
-	
+
 	for _, endpoint := range awsEndpoints {
 		if err := cv.testHTTPConnectivity(ctx, endpoint); err != nil {
 			validationErrors = append(validationErrors, errors.CreateCloudError(
@@ -129,7 +129,7 @@ func (cv *ConnectivityValidator) validateAWSConnectivity(ctx context.Context, co
 			))
 		}
 	}
-	
+
 	// Test DNS resolution for AWS endpoints
 	for _, endpoint := range awsEndpoints {
 		if err := cv.testDNSResolution(ctx, endpoint); err != nil {
@@ -141,7 +141,7 @@ func (cv *ConnectivityValidator) validateAWSConnectivity(ctx context.Context, co
 			))
 		}
 	}
-	
+
 	return validationErrors
 }
 
@@ -151,19 +151,19 @@ func (cv *ConnectivityValidator) testHTTPConnectivity(ctx context.Context, rawUR
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	resp, err := cv.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	// Accept any response that indicates the server is reachable
 	// Even 4xx errors indicate the server is responding
 	if resp.StatusCode >= 500 {
 		return fmt.Errorf("server error: HTTP %d", resp.StatusCode)
 	}
-	
+
 	return nil
 }
 
@@ -173,28 +173,28 @@ func (cv *ConnectivityValidator) testDNSResolution(ctx context.Context, rawURL s
 	if err != nil {
 		return fmt.Errorf("invalid URL: %w", err)
 	}
-	
+
 	hostname := parsedURL.Hostname()
 	if hostname == "" {
 		return fmt.Errorf("no hostname in URL")
 	}
-	
+
 	// Test DNS resolution
 	resolver := &net.Resolver{}
 	_, err = resolver.LookupHost(ctx, hostname)
 	if err != nil {
 		return fmt.Errorf("DNS resolution failed: %w", err)
 	}
-	
+
 	return nil
 }
 
 // ValidateCredentialFormat validates the format of cloud provider credentials.
 func (cv *ConnectivityValidator) ValidateCredentialFormat(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	provider := config.OpenCenter.Infrastructure.Provider
-	
+
 	switch provider {
 	case "openstack":
 		errors := cv.validateOpenStackCredentialFormat(config)
@@ -203,16 +203,16 @@ func (cv *ConnectivityValidator) ValidateCredentialFormat(ctx context.Context, c
 		errors := cv.validateAWSCredentialFormat(config)
 		validationErrors = append(validationErrors, errors...)
 	}
-	
+
 	return validationErrors
 }
 
 // validateOpenStackCredentialFormat validates OpenStack credential format.
 func (cv *ConnectivityValidator) validateOpenStackCredentialFormat(config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	os := config.OpenCenter.Infrastructure.Cloud.OpenStack
-	
+
 	// Validate application credential ID format (should be UUID)
 	if os.ApplicationCredentialID != "" && !cv.isValidUUID(os.ApplicationCredentialID) {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -222,7 +222,7 @@ func (cv *ConnectivityValidator) validateOpenStackCredentialFormat(config *Confi
 			nil,
 		))
 	}
-	
+
 	// Validate application credential secret (should not be empty if ID is provided)
 	if os.ApplicationCredentialID != "" && os.ApplicationCredentialSecret == "" {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -232,14 +232,14 @@ func (cv *ConnectivityValidator) validateOpenStackCredentialFormat(config *Confi
 			nil,
 		))
 	}
-	
+
 	return validationErrors
 }
 
 // validateAWSCredentialFormat validates AWS credential format.
 func (cv *ConnectivityValidator) validateAWSCredentialFormat(config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	// Validate AWS access key format
 	if config.OpenCenter.Cluster.AWSAccessKey != "" && !cv.isValidAWSAccessKey(config.OpenCenter.Cluster.AWSAccessKey) {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -249,7 +249,7 @@ func (cv *ConnectivityValidator) validateAWSCredentialFormat(config *Config) []*
 			nil,
 		))
 	}
-	
+
 	// Validate AWS secret access key format
 	if config.OpenCenter.Cluster.AWSSecretAccessKey != "" && !cv.isValidAWSSecretKey(config.OpenCenter.Cluster.AWSSecretAccessKey) {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -259,7 +259,7 @@ func (cv *ConnectivityValidator) validateAWSCredentialFormat(config *Config) []*
 			nil,
 		))
 	}
-	
+
 	return validationErrors
 }
 
@@ -270,12 +270,12 @@ func (cv *ConnectivityValidator) isValidUUID(uuid string) bool {
 	if len(uuid) != 36 {
 		return false
 	}
-	
+
 	// Check for proper hyphen placement
 	if uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-' {
 		return false
 	}
-	
+
 	// Check for valid hex characters
 	validChars := "0123456789abcdefABCDEF-"
 	for _, char := range uuid {
@@ -290,7 +290,7 @@ func (cv *ConnectivityValidator) isValidUUID(uuid string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -299,13 +299,13 @@ func (cv *ConnectivityValidator) isValidAWSAccessKey(key string) bool {
 	if len(key) != 20 {
 		return false
 	}
-	
+
 	for _, char := range key {
 		if !((char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -314,7 +314,7 @@ func (cv *ConnectivityValidator) isValidAWSSecretKey(key string) bool {
 	if len(key) != 40 {
 		return false
 	}
-	
+
 	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 	for _, char := range key {
 		found := false
@@ -328,14 +328,14 @@ func (cv *ConnectivityValidator) isValidAWSSecretKey(key string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
 // ValidateCredentialSecurity checks for common security issues with credentials.
 func (cv *ConnectivityValidator) ValidateCredentialSecurity(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	// Check for hardcoded credentials (security warning)
 	if config.OpenCenter.Cluster.AWSAccessKey != "" && !strings.Contains(config.OpenCenter.Cluster.AWSAccessKey, "ENC[") {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -345,7 +345,7 @@ func (cv *ConnectivityValidator) ValidateCredentialSecurity(ctx context.Context,
 			fmt.Errorf("credential security issue"),
 		))
 	}
-	
+
 	if config.OpenCenter.Cluster.AWSSecretAccessKey != "" && !strings.Contains(config.OpenCenter.Cluster.AWSSecretAccessKey, "ENC[") {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
 			"AWS",
@@ -354,7 +354,7 @@ func (cv *ConnectivityValidator) ValidateCredentialSecurity(ctx context.Context,
 			fmt.Errorf("credential security issue"),
 		))
 	}
-	
+
 	os := config.OpenCenter.Infrastructure.Cloud.OpenStack
 	if os.ApplicationCredentialSecret != "" && !strings.Contains(os.ApplicationCredentialSecret, "ENC[") {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -364,6 +364,6 @@ func (cv *ConnectivityValidator) ValidateCredentialSecurity(ctx context.Context,
 			fmt.Errorf("credential security issue"),
 		))
 	}
-	
+
 	return validationErrors
 }

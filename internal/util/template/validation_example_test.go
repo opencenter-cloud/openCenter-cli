@@ -21,8 +21,6 @@ import (
 	"text/template"
 )
 
-
-
 // TestTemplateValidationFrameworkDemo demonstrates the validation framework
 func TestTemplateValidationFrameworkDemo(t *testing.T) {
 	// This test demonstrates the validation framework capabilities
@@ -168,7 +166,7 @@ func TestNetworkPluginValidationDemo(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := engine.ValidateNetworkPluginConfig(tc.pluginType, tc.config)
-			
+
 			if tc.expectErr {
 				if err == nil {
 					t.Errorf("Expected error for %s, got nil", tc.name)

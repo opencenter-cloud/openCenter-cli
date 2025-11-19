@@ -33,19 +33,19 @@ func NewConfigManagerFactory(cliConfigManager *ConfigManager) *ConfigManagerFact
 func (f *ConfigManagerFactory) CreateConfigurationManager() *ConfigurationManager {
 	// Create path resolver
 	pathResolver := NewPathResolverImpl(f.cliConfigManager)
-	
+
 	// Create loader
 	loader := NewConfigLoader(pathResolver)
-	
+
 	// Create validator
 	validator := NewConfigValidator(true) // Enable auto-repair
-	
+
 	// Create cache
 	cache := NewInMemoryConfigCache(5*time.Minute, 100)
-	
+
 	// Create migrator
 	migrator := NewConfigMigrator(pathResolver, loader, validator)
-	
+
 	// Create configuration manager
 	return NewConfigurationManager(loader, validator, pathResolver, cache, migrator)
 }
@@ -76,7 +76,7 @@ func (f *ConfigManagerFactory) CreateConfigMigrator() ConfigMigratorInterface {
 	pathResolver := f.CreatePathResolver()
 	loader := f.CreateConfigLoader()
 	validator := f.CreateConfigValidator(false) // Don't auto-repair during migration
-	
+
 	return NewConfigMigrator(pathResolver, loader, validator)
 }
 
@@ -85,19 +85,19 @@ func (f *ConfigManagerFactory) CreateConfigMigrator() ConfigMigratorInterface {
 func (f *ConfigManagerFactory) CreateMinimalConfigurationManager() *ConfigurationManager {
 	// Create path resolver
 	pathResolver := NewPathResolverImpl(f.cliConfigManager)
-	
+
 	// Create loader
 	loader := NewConfigLoader(pathResolver)
-	
+
 	// Create validator
 	validator := NewConfigValidator(false) // Disable auto-repair for minimal setup
-	
+
 	// Create simple cache
 	cache := NewInMemoryConfigCache(1*time.Minute, 10)
-	
+
 	// No migrator for minimal setup
 	var migrator ConfigMigratorInterface = nil
-	
+
 	// Create configuration manager
 	return NewConfigurationManager(loader, validator, pathResolver, cache, migrator)
 }
@@ -106,25 +106,25 @@ func (f *ConfigManagerFactory) CreateMinimalConfigurationManager() *Configuratio
 func (f *ConfigManagerFactory) CreateTestConfigurationManager() *ConfigurationManager {
 	// Create path resolver
 	pathResolver := NewPathResolverImpl(f.cliConfigManager)
-	
+
 	// Create loader
 	loader := NewConfigLoader(pathResolver)
-	
+
 	// Create validator with auto-repair disabled for predictable testing
 	validator := NewConfigValidator(false)
-	
+
 	// Create cache with short TTL for testing
 	cache := NewInMemoryConfigCache(10*time.Second, 5)
-	
+
 	// Create migrator
 	migrator := NewConfigMigrator(pathResolver, loader, validator)
-	
+
 	// Create configuration manager
 	configManager := NewConfigurationManager(loader, validator, pathResolver, cache, migrator)
-	
+
 	// Disable caching for testing to ensure fresh loads
 	configManager.SetCacheEnabled(false)
-	
+
 	return configManager
 }
 
@@ -134,7 +134,7 @@ func GetDefaultFactory() (*ConfigManagerFactory, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return NewConfigManagerFactory(cliConfigManager), nil
 }
 
@@ -155,7 +155,7 @@ func (f *ConfigManagerFactory) CreateStandaloneComponents() *StandaloneComponent
 	validator := NewConfigValidator(true)
 	cache := NewInMemoryConfigCache(5*time.Minute, 100)
 	migrator := NewConfigMigrator(pathResolver, loader, validator)
-	
+
 	return &StandaloneComponents{
 		PathResolver: pathResolver,
 		Loader:       loader,
@@ -167,11 +167,11 @@ func (f *ConfigManagerFactory) CreateStandaloneComponents() *StandaloneComponent
 
 // ConfigManagerOptions provides options for creating configuration managers.
 type ConfigManagerOptions struct {
-	EnableCache     bool
-	CacheTTL        time.Duration
-	CacheMaxSize    int
+	EnableCache      bool
+	CacheTTL         time.Duration
+	CacheMaxSize     int
 	EnableAutoRepair bool
-	EnableMigration bool
+	EnableMigration  bool
 }
 
 // DefaultConfigManagerOptions returns default options for configuration manager creation.
@@ -190,16 +190,16 @@ func (f *ConfigManagerFactory) CreateConfigurationManagerWithOptions(opts *Confi
 	if opts == nil {
 		opts = DefaultConfigManagerOptions()
 	}
-	
+
 	// Create path resolver
 	pathResolver := NewPathResolverImpl(f.cliConfigManager)
-	
+
 	// Create loader
 	loader := NewConfigLoader(pathResolver)
-	
+
 	// Create validator
 	validator := NewConfigValidator(opts.EnableAutoRepair)
-	
+
 	// Create cache
 	var cache ConfigCacheInterface
 	if opts.EnableCache {
@@ -207,21 +207,21 @@ func (f *ConfigManagerFactory) CreateConfigurationManagerWithOptions(opts *Confi
 	} else {
 		cache = NewInMemoryConfigCache(0, 1) // Minimal cache that effectively disables caching
 	}
-	
+
 	// Create migrator
 	var migrator ConfigMigratorInterface
 	if opts.EnableMigration {
 		migrator = NewConfigMigrator(pathResolver, loader, validator)
 	}
-	
+
 	// Create configuration manager
 	configManager := NewConfigurationManager(loader, validator, pathResolver, cache, migrator)
-	
+
 	// Configure caching
 	configManager.SetCacheEnabled(opts.EnableCache)
 	if opts.EnableCache {
 		configManager.SetCacheTimeout(opts.CacheTTL)
 	}
-	
+
 	return configManager
 }

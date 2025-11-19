@@ -14,19 +14,19 @@
 package cmd
 
 import (
-    "fmt"
-    "os"
-    "path/filepath"
+	"fmt"
+	"os"
+	"path/filepath"
 
-    "github.com/rackerlabs/openCenter-cli/internal/config"
-    "github.com/spf13/cobra"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/spf13/cobra"
 )
 
 func newClusterSchemaCmd() *cobra.Command {
-    cmd := &cobra.Command{
-        Use:   "schema",
-        Short: "Export cluster JSON schema with validation rules",
-        Long: `Export the JSON schema for openCenter cluster configuration.
+	cmd := &cobra.Command{
+		Use:   "schema",
+		Short: "Export cluster JSON schema with validation rules",
+		Long: `Export the JSON schema for openCenter cluster configuration.
 
 The schema includes comprehensive validation rules, constraints, and documentation
 for all configuration sections. It can be used for IDE integration, validation,
@@ -41,37 +41,37 @@ Examples:
 
   # Show schema version
   openCenter cluster schema --version`,
-        RunE: func(cmd *cobra.Command, args []string) error {
-            showVersion, _ := cmd.Flags().GetBool("version")
-            if showVersion {
-                fmt.Fprintf(cmd.OutOrStdout(), "Schema version: %s\n", config.GetSchemaVersion())
-                return nil
-            }
+		RunE: func(cmd *cobra.Command, args []string) error {
+			showVersion, _ := cmd.Flags().GetBool("version")
+			if showVersion {
+				fmt.Fprintf(cmd.OutOrStdout(), "Schema version: %s\n", config.GetSchemaVersion())
+				return nil
+			}
 
-            outPath, _ := cmd.Flags().GetString("out")
-            pretty, _ := cmd.Flags().GetBool("pretty")
-            data, err := config.GenerateSchema(pretty)
-            if err != nil {
-                return err
-            }
-            if outPath == "" {
-                // Print to stdout
-                fmt.Fprintln(cmd.OutOrStdout(), string(data))
-                return nil
-            }
-            // Ensure directory exists
-            if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-                return err
-            }
-            if err := os.WriteFile(outPath, data, 0o644); err != nil {
-                return err
-            }
-            fmt.Fprintf(cmd.OutOrStdout(), "Schema version %s written to %s\n", config.GetSchemaVersion(), outPath)
-            return nil
-        },
-    }
-    cmd.Flags().String("out", "", "output file path (default stdout)")
-    cmd.Flags().Bool("pretty", true, "pretty print JSON schema (default true)")
-    cmd.Flags().Bool("version", false, "show schema version")
-    return cmd
+			outPath, _ := cmd.Flags().GetString("out")
+			pretty, _ := cmd.Flags().GetBool("pretty")
+			data, err := config.GenerateSchema(pretty)
+			if err != nil {
+				return err
+			}
+			if outPath == "" {
+				// Print to stdout
+				fmt.Fprintln(cmd.OutOrStdout(), string(data))
+				return nil
+			}
+			// Ensure directory exists
+			if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+				return err
+			}
+			if err := os.WriteFile(outPath, data, 0o644); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Schema version %s written to %s\n", config.GetSchemaVersion(), outPath)
+			return nil
+		},
+	}
+	cmd.Flags().String("out", "", "output file path (default stdout)")
+	cmd.Flags().Bool("pretty", true, "pretty print JSON schema (default true)")
+	cmd.Flags().Bool("version", false, "show schema version")
+	return cmd
 }

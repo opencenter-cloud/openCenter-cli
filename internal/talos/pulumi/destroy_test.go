@@ -280,7 +280,7 @@ func TestDestroyEngine_validateDestroyConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := &testLogger{}
 			manager, err := NewManager(tt.config, "test-project", logger)
-			
+
 			// If NewManager fails, that's expected for invalid configs
 			if err != nil {
 				if !tt.wantErr {
@@ -288,7 +288,7 @@ func TestDestroyEngine_validateDestroyConfig(t *testing.T) {
 				}
 				return
 			}
-			
+
 			engine, err := NewDestroyEngine(manager, logger)
 			if err != nil {
 				t.Fatalf("NewDestroyEngine() error = %v", err)

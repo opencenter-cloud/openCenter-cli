@@ -65,13 +65,13 @@ type ErrorAggregator interface {
 
 // StructuredError represents a structured error with additional context
 type StructuredError struct {
-	Type        ErrorType `json:"type"`
-	Field       string    `json:"field,omitempty"`
-	Message     string    `json:"message"`
-	Cause       error     `json:"-"`
-	Suggestions []string  `json:"suggestions,omitempty"`
+	Type        ErrorType              `json:"type"`
+	Field       string                 `json:"field,omitempty"`
+	Message     string                 `json:"message"`
+	Cause       error                  `json:"-"`
+	Suggestions []string               `json:"suggestions,omitempty"`
 	Context     map[string]interface{} `json:"context,omitempty"`
-	Retryable   bool      `json:"retryable"`
+	Retryable   bool                   `json:"retryable"`
 }
 
 // Error implements the error interface
@@ -105,7 +105,7 @@ func (ec *ErrorCollection) Error() string {
 
 // ValidationResult represents the result of a validation operation
 type ValidationResult struct {
-	Valid    bool              `json:"valid"`
+	Valid    bool               `json:"valid"`
 	Errors   []*StructuredError `json:"errors,omitempty"`
 	Warnings []*StructuredError `json:"warnings,omitempty"`
 }
@@ -125,15 +125,15 @@ func (vr *ValidationResult) ToError() error {
 	if !vr.HasErrors() {
 		return nil
 	}
-	
+
 	if len(vr.Errors) == 1 {
 		return vr.Errors[0]
 	}
-	
+
 	var errors []error
 	for _, err := range vr.Errors {
 		errors = append(errors, err)
 	}
-	
+
 	return &ErrorCollection{Errors: errors}
 }

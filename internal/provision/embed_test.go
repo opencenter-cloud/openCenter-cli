@@ -24,13 +24,13 @@ func TestInit(t *testing.T) {
 	if err != nil {
 		t.Errorf("Init() failed: %v", err)
 	}
-	
+
 	// Call again to test sync.Once behavior
 	err = Init()
 	if err != nil {
 		t.Errorf("Init() failed on second call: %v", err)
 	}
-	
+
 	// Verify that Templates is not nil
 	if Templates == nil {
 		t.Error("Templates should not be nil after Init()")
@@ -42,7 +42,7 @@ func TestTemplatesInitialization(t *testing.T) {
 	if Templates == nil {
 		t.Fatal("Templates should be initialized")
 	}
-	
+
 	// Check that some expected templates exist
 	expectedTemplates := []string{
 		"ansible.cfg.tmpl",
@@ -50,7 +50,7 @@ func TestTemplatesInitialization(t *testing.T) {
 		"main.tf.tmpl",
 		"variables.tf.tmpl",
 	}
-	
+
 	for _, tmplName := range expectedTemplates {
 		tmpl := Templates.Lookup(tmplName)
 		if tmpl == nil {
@@ -61,32 +61,32 @@ func TestTemplatesInitialization(t *testing.T) {
 
 func TestValidateTemplateData(t *testing.T) {
 	tests := []struct {
-		name string
-		data any
+		name        string
+		data        any
 		expectError bool
 	}{
 		{
-			name: "nil data",
-			data: nil,
+			name:        "nil data",
+			data:        nil,
 			expectError: false, // Current implementation doesn't validate
 		},
 		{
-			name: "string data",
-			data: "test",
+			name:        "string data",
+			data:        "test",
 			expectError: false,
 		},
 		{
-			name: "map data",
-			data: map[string]any{"key": "value"},
+			name:        "map data",
+			data:        map[string]any{"key": "value"},
 			expectError: false,
 		},
 		{
-			name: "struct data",
-			data: struct{ Name string }{Name: "test"},
+			name:        "struct data",
+			data:        struct{ Name string }{Name: "test"},
 			expectError: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateTemplateData(tt.data)
@@ -112,7 +112,7 @@ func TestHclRender(t *testing.T) {
 			input:    nil,
 			expected: "null",
 		},
-		
+
 		// String values
 		{
 			name:     "simple string",
@@ -154,7 +154,7 @@ func TestHclRender(t *testing.T) {
 			input:    "join(\"-\", [local.prefix, \"cluster\"])",
 			expected: "join(\"-\", [local.prefix, \"cluster\"])",
 		},
-		
+
 		// Boolean values
 		{
 			name:     "true boolean",
@@ -166,7 +166,7 @@ func TestHclRender(t *testing.T) {
 			input:    false,
 			expected: "false",
 		},
-		
+
 		// Integer values
 		{
 			name:     "positive integer",
@@ -188,7 +188,7 @@ func TestHclRender(t *testing.T) {
 			input:    int64(9223372036854775807),
 			expected: "9223372036854775807",
 		},
-		
+
 		// Float values
 		{
 			name:     "float32",
@@ -200,7 +200,7 @@ func TestHclRender(t *testing.T) {
 			input:    3.14159,
 			expected: "3.14159",
 		},
-		
+
 		// Slice values
 		{
 			name:     "empty slice",
@@ -222,7 +222,7 @@ func TestHclRender(t *testing.T) {
 			input:    []any{[]string{"a", "b"}, []int{1, 2}},
 			expected: `[["a", "b"], [1, 2]]`,
 		},
-		
+
 		// Map values
 		{
 			name:     "empty map",
@@ -245,7 +245,7 @@ func TestHclRender(t *testing.T) {
 			expected: `{ count = 3 vpc_id = local.vpc_id }`,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := hclRender(tt.input)
@@ -318,7 +318,7 @@ func TestIsExpr(t *testing.T) {
 			expected: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := isExpr(tt.input)
@@ -361,7 +361,7 @@ func TestEscapeQuotes(t *testing.T) {
 			expected: `\"\"\"`,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := escapeQuotes(tt.input)
@@ -399,7 +399,7 @@ func TestSortedKeys(t *testing.T) {
 			expected: []string{"1", "10", "2"}, // String sort, not numeric
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := sortedKeys(tt.input)
@@ -438,9 +438,9 @@ func TestHclRenderComplexStructures(t *testing.T) {
 			"subnets": []string{"10.0.1.0/24", "10.0.2.0/24"},
 		},
 	}
-	
+
 	result := hclRender(complexData)
-	
+
 	// Verify the result contains expected elements
 	expectedElements := []string{
 		"cluster =",
@@ -452,7 +452,7 @@ func TestHclRenderComplexStructures(t *testing.T) {
 		"enabled = true",
 		"[\"10.0.1.0/24\", \"10.0.2.0/24\"]",
 	}
-	
+
 	for _, element := range expectedElements {
 		if !strings.Contains(result, element) {
 			t.Errorf("Expected result to contain %q, but it didn't. Result: %s", element, result)
@@ -465,14 +465,14 @@ func TestTemplateCustomFunctions(t *testing.T) {
 	if Templates == nil {
 		t.Fatal("Templates not initialized")
 	}
-	
+
 	// Create a simple template to test custom functions
 	tmplText := `{{- hcl .data -}}`
 	tmpl, err := Templates.New("test").Parse(tmplText)
 	if err != nil {
 		t.Fatalf("Failed to parse test template: %v", err)
 	}
-	
+
 	// Test data
 	data := map[string]any{
 		"data": map[string]any{
@@ -480,13 +480,13 @@ func TestTemplateCustomFunctions(t *testing.T) {
 			"count": 3,
 		},
 	}
-	
+
 	var result strings.Builder
 	err = tmpl.Execute(&result, data)
 	if err != nil {
 		t.Fatalf("Failed to execute template: %v", err)
 	}
-	
+
 	output := result.String()
 	expected := `{ count = 3 name = "test" }`
 	if output != expected {
@@ -499,20 +499,20 @@ func TestTemplateSprigFunctions(t *testing.T) {
 	if Templates == nil {
 		t.Fatal("Templates not initialized")
 	}
-	
+
 	// Test upper function from sprig
 	tmplText := `{{ upper "hello" }}`
 	tmpl, err := Templates.New("test-sprig").Parse(tmplText)
 	if err != nil {
 		t.Fatalf("Failed to parse test template: %v", err)
 	}
-	
+
 	var result strings.Builder
 	err = tmpl.Execute(&result, nil)
 	if err != nil {
 		t.Fatalf("Failed to execute template: %v", err)
 	}
-	
+
 	output := result.String()
 	expected := "HELLO"
 	if output != expected {

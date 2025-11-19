@@ -49,7 +49,7 @@ func (h *DefaultErrorHandler) HandleError(err error) *StructuredError {
 
 	// Determine error type based on error message
 	errorType := h.determineErrorType(err)
-	
+
 	return &StructuredError{
 		Type:        errorType,
 		Message:     err.Error(),
@@ -66,24 +66,24 @@ func (h *DefaultErrorHandler) FormatError(err error) string {
 	}
 
 	structuredErr := h.HandleError(err)
-	
+
 	var parts []string
-	
+
 	// Add error type if not user error
 	if structuredErr.Type != UserError {
 		parts = append(parts, fmt.Sprintf("[%s]", strings.ToUpper(string(structuredErr.Type))))
 	}
-	
+
 	// Add field if present
 	if structuredErr.Field != "" {
 		parts = append(parts, fmt.Sprintf("Field '%s':", structuredErr.Field))
 	}
-	
+
 	// Add message
 	parts = append(parts, structuredErr.Message)
-	
+
 	result := strings.Join(parts, " ")
-	
+
 	// Add suggestions if available
 	if len(structuredErr.Suggestions) > 0 {
 		result += "\n\nSuggestions:"
@@ -91,7 +91,7 @@ func (h *DefaultErrorHandler) FormatError(err error) string {
 			result += "\n  - " + suggestion
 		}
 	}
-	
+
 	return result
 }
 
@@ -103,32 +103,32 @@ func (h *DefaultErrorHandler) GetSuggestions(err error) []string {
 
 	errorType := h.determineErrorType(err)
 	suggestions := h.suggestionMap[errorType]
-	
+
 	// Add specific suggestions based on error content
 	errorMsg := strings.ToLower(err.Error())
-	
+
 	switch {
 	case strings.Contains(errorMsg, "permission denied"):
 		suggestions = append(suggestions, "Check file and directory permissions")
 		suggestions = append(suggestions, "Ensure you have write access to the target directory")
-		
+
 	case strings.Contains(errorMsg, "no such file or directory"):
 		suggestions = append(suggestions, "Verify the file or directory path exists")
 		suggestions = append(suggestions, "Check for typos in the path")
-		
+
 	case strings.Contains(errorMsg, "invalid"):
 		suggestions = append(suggestions, "Review the input format and requirements")
 		suggestions = append(suggestions, "Check the documentation for valid values")
-		
+
 	case strings.Contains(errorMsg, "connection"):
 		suggestions = append(suggestions, "Check your network connectivity")
 		suggestions = append(suggestions, "Verify firewall settings")
-		
+
 	case strings.Contains(errorMsg, "timeout"):
 		suggestions = append(suggestions, "Retry the operation")
 		suggestions = append(suggestions, "Check if the service is responsive")
 	}
-	
+
 	return suggestions
 }
 
@@ -139,7 +139,7 @@ func (h *DefaultErrorHandler) IsRetryable(err error) bool {
 	}
 
 	errorMsg := strings.ToLower(err.Error())
-	
+
 	// Network-related errors are usually retryable
 	if strings.Contains(errorMsg, "timeout") ||
 		strings.Contains(errorMsg, "connection refused") ||
@@ -147,20 +147,20 @@ func (h *DefaultErrorHandler) IsRetryable(err error) bool {
 		strings.Contains(errorMsg, "temporary") {
 		return true
 	}
-	
+
 	// File system errors that might be temporary
 	if strings.Contains(errorMsg, "resource temporarily unavailable") ||
 		strings.Contains(errorMsg, "device busy") {
 		return true
 	}
-	
+
 	// Validation and permission errors are usually not retryable
 	if strings.Contains(errorMsg, "invalid") ||
 		strings.Contains(errorMsg, "permission denied") ||
 		strings.Contains(errorMsg, "access denied") {
 		return false
 	}
-	
+
 	return false
 }
 
@@ -171,35 +171,35 @@ func (h *DefaultErrorHandler) determineErrorType(err error) ErrorType {
 	}
 
 	errorMsg := strings.ToLower(err.Error())
-	
+
 	switch {
 	case strings.Contains(errorMsg, "validation") || strings.Contains(errorMsg, "invalid"):
 		return ValidationError
-		
+
 	case strings.Contains(errorMsg, "path") || strings.Contains(errorMsg, "directory") || strings.Contains(errorMsg, "file"):
 		return PathError
-		
+
 	case strings.Contains(errorMsg, "permission") || strings.Contains(errorMsg, "access"):
 		return PermissionError
-		
+
 	case strings.Contains(errorMsg, "template"):
 		return TemplateError
-		
+
 	case strings.Contains(errorMsg, "sops") || strings.Contains(errorMsg, "encryption"):
 		return SOPSError
-		
+
 	case strings.Contains(errorMsg, "config"):
 		return ConfigError
-		
+
 	case strings.Contains(errorMsg, "network") || strings.Contains(errorMsg, "connection"):
 		return NetworkError
-		
+
 	case strings.Contains(errorMsg, "cloud") || strings.Contains(errorMsg, "aws") || strings.Contains(errorMsg, "openstack"):
 		return CloudError
-		
+
 	case strings.Contains(errorMsg, "credential") || strings.Contains(errorMsg, "authentication") || strings.Contains(errorMsg, "unauthorized"):
 		return CredentialError
-		
+
 	default:
 		return SystemError
 	}
@@ -212,61 +212,61 @@ func (h *DefaultErrorHandler) initializeSuggestions() {
 		"Refer to the documentation for valid values",
 		"Validate required fields are provided",
 	}
-	
+
 	h.suggestionMap[PathError] = []string{
 		"Verify the path exists and is accessible",
 		"Check for typos in the path",
 		"Ensure proper path separators are used",
 	}
-	
+
 	h.suggestionMap[PermissionError] = []string{
 		"Check file and directory permissions",
 		"Ensure you have the necessary access rights",
 		"Run with appropriate privileges if needed",
 	}
-	
+
 	h.suggestionMap[TemplateError] = []string{
 		"Verify template syntax is correct",
 		"Check that all required variables are provided",
 		"Ensure template file exists and is readable",
 	}
-	
+
 	h.suggestionMap[SOPSError] = []string{
 		"Verify SOPS is installed and in PATH",
 		"Check that age keys are properly configured",
 		"Ensure SOPS_AGE_KEY_FILE environment variable is set",
 	}
-	
+
 	h.suggestionMap[ConfigError] = []string{
 		"Validate configuration file syntax",
 		"Check that all required configuration fields are provided",
 		"Ensure configuration file is readable",
 	}
-	
+
 	h.suggestionMap[NetworkError] = []string{
 		"Check network connectivity",
 		"Verify firewall settings",
 		"Ensure the target service is accessible",
 	}
-	
+
 	h.suggestionMap[FileError] = []string{
 		"Check file exists and is readable",
 		"Verify file permissions",
 		"Ensure sufficient disk space",
 	}
-	
+
 	h.suggestionMap[SystemError] = []string{
 		"Check system resources",
 		"Verify system dependencies are installed",
 		"Review system logs for additional details",
 	}
-	
+
 	h.suggestionMap[CloudError] = []string{
 		"Verify cloud provider credentials",
 		"Check cloud provider service availability",
 		"Ensure proper network connectivity to cloud APIs",
 	}
-	
+
 	h.suggestionMap[CredentialError] = []string{
 		"Verify credentials are correctly configured",
 		"Check credential expiration dates",
@@ -293,7 +293,7 @@ func CreatePathError(path, message string, cause error) *StructuredError {
 		"Check path permissions",
 		"Ensure parent directories exist",
 	}
-	
+
 	return &StructuredError{
 		Type:        PathError,
 		Field:       "path",
@@ -312,7 +312,7 @@ func CreatePermissionError(resource, operation string, cause error) *StructuredE
 		fmt.Sprintf("Ensure you have %s access", operation),
 		"Run with appropriate privileges if needed",
 	}
-	
+
 	return &StructuredError{
 		Type:        PermissionError,
 		Field:       "permissions",
@@ -332,7 +332,7 @@ func CreateSOPSError(operation, message string, cause error) *StructuredError {
 		"Ensure SOPS_AGE_KEY_FILE environment variable is set",
 		"Validate key file permissions",
 	}
-	
+
 	return &StructuredError{
 		Type:        SOPSError,
 		Field:       "sops",
@@ -351,7 +351,7 @@ func CreateConfigError(field, message string, cause error) *StructuredError {
 		"Check required fields are provided",
 		"Refer to configuration documentation",
 	}
-	
+
 	return &StructuredError{
 		Type:        ConfigError,
 		Field:       field,
@@ -388,7 +388,7 @@ func CreateCloudError(provider, operation, message string, cause error) *Structu
 		"Ensure proper network connectivity to cloud APIs",
 		"Review cloud provider documentation for requirements",
 	}
-	
+
 	return &StructuredError{
 		Type:        CloudError,
 		Field:       "cloud_provider",
@@ -409,7 +409,7 @@ func CreateCredentialError(credentialType, field, message string, cause error) *
 		"Use SOPS to encrypt sensitive credentials",
 		"Refer to cloud provider documentation for credential setup",
 	}
-	
+
 	return &StructuredError{
 		Type:        CredentialError,
 		Field:       field,

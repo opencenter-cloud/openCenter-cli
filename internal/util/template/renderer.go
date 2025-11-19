@@ -37,7 +37,7 @@ type DefaultTemplateRenderer struct {
 // NewDefaultTemplateRenderer creates a new default template renderer
 func NewDefaultTemplateRenderer() *DefaultTemplateRenderer {
 	funcMap := sprig.TxtFuncMap()
-	
+
 	// Add custom template functions
 	funcMap["hcl"] = hclRender
 	funcMap["sortedKeys"] = sortedKeys
@@ -47,7 +47,7 @@ func NewDefaultTemplateRenderer() *DefaultTemplateRenderer {
 	funcMap["isEmpty"] = isEmpty
 	funcMap["toYAML"] = toYAML
 	funcMap["fromYAML"] = fromYAML
-	
+
 	return &DefaultTemplateRenderer{
 		funcMap: funcMap,
 	}
@@ -128,11 +128,11 @@ func (r *DefaultTemplateRenderer) AddFunctions(funcMap template.FuncMap) error {
 	if r.funcMap == nil {
 		r.funcMap = make(template.FuncMap)
 	}
-	
+
 	for name, fn := range funcMap {
 		r.funcMap[name] = fn
 	}
-	
+
 	return nil
 }
 

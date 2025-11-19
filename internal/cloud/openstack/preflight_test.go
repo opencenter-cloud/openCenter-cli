@@ -14,17 +14,17 @@
 package openstack
 
 import (
-    "testing"
+	"testing"
 )
 
 func TestPreflightOpenStack(t *testing.T) {
-    // Ensure deterministic environment: hide any system-installed 'openstack' CLI
-    t.Setenv("PATH", "/nonexistent")
-    // Test with empty authURL
-    warnings := PreflightOpenStack("")
-    if len(warnings) != 2 {
-        t.Errorf("expected 2 warnings, but got %d", len(warnings))
-    }
+	// Ensure deterministic environment: hide any system-installed 'openstack' CLI
+	t.Setenv("PATH", "/nonexistent")
+	// Test with empty authURL
+	warnings := PreflightOpenStack("")
+	if len(warnings) != 2 {
+		t.Errorf("expected 2 warnings, but got %d", len(warnings))
+	}
 
 	// Test with non-empty authURL
 	warnings = PreflightOpenStack("http://keystone:5000")

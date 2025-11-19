@@ -81,10 +81,10 @@ func TestNewManager(t *testing.T) {
 
 func TestManager_Initialize(t *testing.T) {
 	tests := []struct {
-		name         string
+		name          string
 		initialConfig *talos.TalosPulumiConfig
 		updateConfig  *talos.TalosPulumiConfig
-		wantErr      bool
+		wantErr       bool
 	}{
 		{
 			name: "valid initialization",
@@ -127,7 +127,7 @@ func TestManager_Initialize(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := &testLogger{}
 			manager, err := NewManager(tt.initialConfig, "test-project", logger)
-			
+
 			// If NewManager fails, that's expected for invalid configs
 			if err != nil {
 				if !tt.wantErr {

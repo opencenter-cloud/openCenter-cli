@@ -14,12 +14,12 @@
 package steps
 
 import (
-    "context"
-    "os"
-    "testing"
-    "strings"
-    "path/filepath"
-    "runtime"
+	"context"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
 
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
@@ -29,47 +29,47 @@ import (
 // register steps defined in helpers.go. Running `go test` in this
 // package will execute the feature files automatically.
 func TestFeatures(t *testing.T) {
-    opts := godog.Options{
-        Output: colors.Colored(os.Stdout),
-        Format: "pretty",
-        Paths:  []string{".."},
-        Tags:   "~@wip",
-    }
-    // Allow overriding via CLI flags passed after 'args' in go test invocation,
-    // e.g. `go test ./... -v args --godog.paths=tests/features/foo.feature --godog.tags=@fast`.
-    for i := 0; i < len(os.Args); i++ {
-        a := os.Args[i]
-        if a == "--godog.paths" && i+1 < len(os.Args) {
-            p := os.Args[i+1]
-            _, thisFile, _, _ := runtime.Caller(0)
-            repo := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
-            if strings.HasPrefix(p, "tests/") {
-                p = filepath.Join(repo, p)
-            }
-            opts.Paths = []string{p}
-        }
-        if strings.HasPrefix(a, "--godog.paths=") {
-            p := strings.TrimPrefix(a, "--godog.paths=")
-            _, thisFile, _, _ := runtime.Caller(0)
-            repo := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
-            if strings.HasPrefix(p, "tests/") {
-                p = filepath.Join(repo, p)
-            }
-            opts.Paths = []string{p}
-        }
-        if a == "--godog.tags" && i+1 < len(os.Args) {
-            opts.Tags = os.Args[i+1]
-        }
-        if strings.HasPrefix(a, "--godog.tags=") {
-            opts.Tags = strings.TrimPrefix(a, "--godog.tags=")
-        }
-        if a == "--godog.format" && i+1 < len(os.Args) {
-            opts.Format = os.Args[i+1]
-        }
-        if strings.HasPrefix(a, "--godog.format=") {
-            opts.Format = strings.TrimPrefix(a, "--godog.format=")
-        }
-    }
+	opts := godog.Options{
+		Output: colors.Colored(os.Stdout),
+		Format: "pretty",
+		Paths:  []string{".."},
+		Tags:   "~@wip",
+	}
+	// Allow overriding via CLI flags passed after 'args' in go test invocation,
+	// e.g. `go test ./... -v args --godog.paths=tests/features/foo.feature --godog.tags=@fast`.
+	for i := 0; i < len(os.Args); i++ {
+		a := os.Args[i]
+		if a == "--godog.paths" && i+1 < len(os.Args) {
+			p := os.Args[i+1]
+			_, thisFile, _, _ := runtime.Caller(0)
+			repo := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
+			if strings.HasPrefix(p, "tests/") {
+				p = filepath.Join(repo, p)
+			}
+			opts.Paths = []string{p}
+		}
+		if strings.HasPrefix(a, "--godog.paths=") {
+			p := strings.TrimPrefix(a, "--godog.paths=")
+			_, thisFile, _, _ := runtime.Caller(0)
+			repo := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
+			if strings.HasPrefix(p, "tests/") {
+				p = filepath.Join(repo, p)
+			}
+			opts.Paths = []string{p}
+		}
+		if a == "--godog.tags" && i+1 < len(os.Args) {
+			opts.Tags = os.Args[i+1]
+		}
+		if strings.HasPrefix(a, "--godog.tags=") {
+			opts.Tags = strings.TrimPrefix(a, "--godog.tags=")
+		}
+		if a == "--godog.format" && i+1 < len(os.Args) {
+			opts.Format = os.Args[i+1]
+		}
+		if strings.HasPrefix(a, "--godog.format=") {
+			opts.Format = strings.TrimPrefix(a, "--godog.format=")
+		}
+	}
 
 	w, err := newWorld()
 	if err != nil {
@@ -80,15 +80,15 @@ func TestFeatures(t *testing.T) {
 		Name: "openCenter",
 		ScenarioInitializer: func(s *godog.ScenarioContext) {
 			s.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-            // Create a per-scenario workspace under repo-level testdata
-            // Resolve repo-root testdata directory based on this file's path
-            _, thisFile, _, _ := runtime.Caller(0)
-            base := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "testdata")
-            tmp, err := os.MkdirTemp(base, "opencenter-test-")
-            if err != nil {
-                t.Fatalf("failed to create temp dir: %v", err)
-            }
-            w.tmpDir = tmp
+				// Create a per-scenario workspace under repo-level testdata
+				// Resolve repo-root testdata directory based on this file's path
+				_, thisFile, _, _ := runtime.Caller(0)
+				base := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "testdata")
+				tmp, err := os.MkdirTemp(base, "opencenter-test-")
+				if err != nil {
+					t.Fatalf("failed to create temp dir: %v", err)
+				}
+				w.tmpDir = tmp
 				if err := w.isolateConfigDir(); err != nil {
 					t.Fatalf("failed to isolate config dir: %v", err)
 				}
@@ -101,7 +101,7 @@ func TestFeatures(t *testing.T) {
 				// Clean up environment variables
 				os.Unsetenv("OPENCENTER_CONFIG_DIR")
 				os.Unsetenv("OPENCENTER_TEST_TMP")
-				
+
 				// Clean up temporary directories
 				if w.tmpDir != "" {
 					os.RemoveAll(w.tmpDir)
@@ -112,7 +112,7 @@ func TestFeatures(t *testing.T) {
 				if w.remoteGitDir != "" {
 					os.RemoveAll(w.remoteGitDir)
 				}
-				
+
 				// Reset world state
 				w.tmpDir = ""
 				w.configDir = ""
@@ -125,7 +125,7 @@ func TestFeatures(t *testing.T) {
 				w.answers = nil
 				w.pendingChoice = ""
 				w.cwd = ""
-				
+
 				return ctx, err
 			})
 		},

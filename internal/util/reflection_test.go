@@ -41,15 +41,15 @@ func TestFindField(t *testing.T) {
 		YamlOnly:    "yaml only",
 		JsonOnly:    "json only",
 	}
-	
+
 	v := reflect.ValueOf(testStruct)
-	
+
 	tests := []struct {
-		name           string
-		fieldName      string
-		expectFound    bool
-		expectedValue  interface{}
-		expectedKind   reflect.Kind
+		name          string
+		fieldName     string
+		expectFound   bool
+		expectedValue interface{}
+		expectedKind  reflect.Kind
 	}{
 		{
 			name:          "find by yaml tag - name",
@@ -111,21 +111,21 @@ func TestFindField(t *testing.T) {
 			expectFound: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := FindField(v, tt.fieldName)
-			
+
 			if tt.expectFound {
 				if !result.IsValid() {
 					t.Errorf("expected to find field %q, but got invalid value", tt.fieldName)
 					return
 				}
-				
+
 				if result.Kind() != tt.expectedKind {
 					t.Errorf("expected field kind %v, got %v", tt.expectedKind, result.Kind())
 				}
-				
+
 				if result.Interface() != tt.expectedValue {
 					t.Errorf("expected field value %v, got %v", tt.expectedValue, result.Interface())
 				}
@@ -164,14 +164,14 @@ func TestFindField_NonStruct(t *testing.T) {
 			value: nil,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var v reflect.Value
 			if tt.value != nil {
 				v = reflect.ValueOf(tt.value)
 			}
-			
+
 			result := FindField(v, "any_field")
 			if result.IsValid() {
 				t.Errorf("expected invalid value for non-struct input, got: %v", result.Interface())
@@ -186,14 +186,14 @@ func TestFindField_PointerToStruct(t *testing.T) {
 		Count:   100,
 		Enabled: false,
 	}
-	
+
 	// Test with pointer to struct (should not work directly)
 	v := reflect.ValueOf(testStruct)
 	result := FindField(v, "name")
 	if result.IsValid() {
 		t.Error("expected invalid value for pointer to struct without dereferencing")
 	}
-	
+
 	// Test with dereferenced pointer (should work)
 	v = reflect.ValueOf(testStruct).Elem()
 	result = FindField(v, "name")
@@ -206,10 +206,10 @@ func TestFindField_PointerToStruct(t *testing.T) {
 
 func TestFindField_EmptyStruct(t *testing.T) {
 	type EmptyStruct struct{}
-	
+
 	empty := EmptyStruct{}
 	v := reflect.ValueOf(empty)
-	
+
 	result := FindField(v, "any_field")
 	if result.IsValid() {
 		t.Error("expected invalid value for empty struct")
@@ -220,26 +220,26 @@ func TestFindField_NestedStruct(t *testing.T) {
 	type NestedStruct struct {
 		Inner TestStruct `yaml:"inner" json:"inner"`
 	}
-	
+
 	nested := NestedStruct{
 		Inner: TestStruct{
 			Name:  "nested",
 			Count: 99,
 		},
 	}
-	
+
 	v := reflect.ValueOf(nested)
 	result := FindField(v, "inner")
-	
+
 	if !result.IsValid() {
 		t.Error("expected to find nested struct field")
 		return
 	}
-	
+
 	if result.Kind() != reflect.Struct {
 		t.Errorf("expected struct kind, got %v", result.Kind())
 	}
-	
+
 	// Test finding field in the nested struct
 	innerResult := FindField(result, "name")
 	if !innerResult.IsValid() {
@@ -256,16 +256,16 @@ func TestFindField_TagParsing(t *testing.T) {
 		Field3 string `yaml:",inline" json:",inline"`
 		Field4 string `yaml:"field4," json:"field4,"`
 	}
-	
+
 	testStruct := TagTestStruct{
 		Field1: "value1",
 		Field2: "value2",
 		Field3: "value3",
 		Field4: "value4",
 	}
-	
+
 	v := reflect.ValueOf(testStruct)
-	
+
 	// Test that tag parsing handles additional options correctly
 	tests := []struct {
 		fieldName     string
@@ -275,7 +275,7 @@ func TestFindField_TagParsing(t *testing.T) {
 		{"field2", "value2"},
 		{"field4", "value4"},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.fieldName, func(t *testing.T) {
 			result := FindField(v, tt.fieldName)
@@ -286,7 +286,7 @@ func TestFindField_TagParsing(t *testing.T) {
 			}
 		})
 	}
-	
+
 	// Test inline tag (empty tag name after comma)
 	result := FindField(v, "")
 	if !result.IsValid() {

@@ -27,13 +27,13 @@ import (
 // TemplateCache provides caching for compiled templates and rendered results
 type TemplateCache struct {
 	// Compiled template cache
-	templates map[string]*template.Template
+	templates   map[string]*template.Template
 	templatesMu sync.RWMutex
-	
+
 	// Rendered result cache
-	results map[string]*CachedResult
+	results   map[string]*CachedResult
 	resultsMu sync.RWMutex
-	
+
 	// Configuration
 	maxCacheSize int
 	defaultTTL   time.Duration
@@ -64,7 +64,7 @@ func NewTemplateCache(maxCacheSize int, defaultTTL time.Duration) *TemplateCache
 	if defaultTTL <= 0 {
 		defaultTTL = 5 * time.Minute
 	}
-	
+
 	return &TemplateCache{
 		templates:    make(map[string]*template.Template),
 		results:      make(map[string]*CachedResult),
@@ -79,10 +79,10 @@ func (tc *TemplateCache) GetTemplate(name string) (*template.Template, bool) {
 	if !tc.enableCache {
 		return nil, false
 	}
-	
+
 	tc.templatesMu.RLock()
 	defer tc.templatesMu.RUnlock()
-	
+
 	tmpl, exists := tc.templates[name]
 	return tmpl, exists
 }
@@ -92,15 +92,15 @@ func (tc *TemplateCache) SetTemplate(name string, tmpl *template.Template) {
 	if !tc.enableCache || tmpl == nil {
 		return
 	}
-	
+
 	tc.templatesMu.Lock()
 	defer tc.templatesMu.Unlock()
-	
+
 	// Check cache size and evict if necessary
 	if len(tc.templates) >= tc.maxCacheSize {
 		tc.evictOldestTemplate()
 	}
-	
+
 	tc.templates[name] = tmpl
 }
 
@@ -109,21 +109,21 @@ func (tc *TemplateCache) GetResult(key string) (string, bool) {
 	if !tc.enableCache {
 		return "", false
 	}
-	
+
 	tc.resultsMu.RLock()
 	defer tc.resultsMu.RUnlock()
-	
+
 	result, exists := tc.results[key]
 	if !exists {
 		return "", false
 	}
-	
+
 	// Check if result has expired
 	if result.IsExpired() {
 		go tc.removeExpiredResult(key)
 		return "", false
 	}
-	
+
 	return result.Content, true
 }
 
@@ -132,15 +132,15 @@ func (tc *TemplateCache) SetResult(key string, content string, dataHash string) 
 	if !tc.enableCache {
 		return
 	}
-	
+
 	tc.resultsMu.Lock()
 	defer tc.resultsMu.Unlock()
-	
+
 	// Check cache size and evict if necessary
 	if len(tc.results) >= tc.maxCacheSize {
 		tc.evictOldestResult()
 	}
-	
+
 	tc.results[key] = &CachedResult{
 		Content:   content,
 		Timestamp: time.Now(),
@@ -153,7 +153,7 @@ func (tc *TemplateCache) SetResult(key string, content string, dataHash string) 
 func (tc *TemplateCache) InvalidateTemplate(name string) {
 	tc.templatesMu.Lock()
 	defer tc.templatesMu.Unlock()
-	
+
 	delete(tc.templates, name)
 }
 
@@ -161,7 +161,7 @@ func (tc *TemplateCache) InvalidateTemplate(name string) {
 func (tc *TemplateCache) InvalidateResult(key string) {
 	tc.resultsMu.Lock()
 	defer tc.resultsMu.Unlock()
-	
+
 	delete(tc.results, key)
 }
 
@@ -171,7 +171,7 @@ func (tc *TemplateCache) InvalidateAll() {
 	tc.resultsMu.Lock()
 	defer tc.templatesMu.Unlock()
 	defer tc.resultsMu.Unlock()
-	
+
 	tc.templates = make(map[string]*template.Template)
 	tc.results = make(map[string]*CachedResult)
 }
@@ -180,14 +180,14 @@ func (tc *TemplateCache) InvalidateAll() {
 func (tc *TemplateCache) CleanupExpired() {
 	tc.resultsMu.Lock()
 	defer tc.resultsMu.Unlock()
-	
+
 	keysToDelete := make([]string, 0)
 	for key, result := range tc.results {
 		if result.IsExpired() {
 			keysToDelete = append(keysToDelete, key)
 		}
 	}
-	
+
 	for _, key := range keysToDelete {
 		delete(tc.results, key)
 	}
@@ -198,10 +198,10 @@ func (tc *TemplateCache) StartCleanupRoutine(interval time.Duration) chan struct
 	if interval <= 0 {
 		interval = time.Minute
 	}
-	
+
 	stopChan := make(chan struct{})
 	ticker := time.NewTicker(interval)
-	
+
 	go func() {
 		defer ticker.Stop()
 		for {
@@ -213,7 +213,7 @@ func (tc *TemplateCache) StartCleanupRoutine(interval time.Duration) chan struct
 			}
 		}
 	}()
-	
+
 	return stopChan
 }
 
@@ -223,21 +223,21 @@ func (tc *TemplateCache) GetStats() map[string]interface{} {
 	tc.resultsMu.RLock()
 	defer tc.templatesMu.RUnlock()
 	defer tc.resultsMu.RUnlock()
-	
+
 	expired := 0
 	for _, result := range tc.results {
 		if result.IsExpired() {
 			expired++
 		}
 	}
-	
+
 	return map[string]interface{}{
-		"template_count":      len(tc.templates),
-		"result_count":        len(tc.results),
-		"expired_results":     expired,
-		"max_cache_size":      tc.maxCacheSize,
-		"default_ttl":         tc.defaultTTL.String(),
-		"cache_enabled":       tc.enableCache,
+		"template_count":  len(tc.templates),
+		"result_count":    len(tc.results),
+		"expired_results": expired,
+		"max_cache_size":  tc.maxCacheSize,
+		"default_ttl":     tc.defaultTTL.String(),
+		"cache_enabled":   tc.enableCache,
 	}
 }
 
@@ -256,16 +256,16 @@ func (tc *TemplateCache) SetMaxCacheSize(size int) {
 	if size <= 0 {
 		return
 	}
-	
+
 	tc.maxCacheSize = size
-	
+
 	// Evict entries if current size exceeds new max size
 	tc.templatesMu.Lock()
 	for len(tc.templates) > tc.maxCacheSize {
 		tc.evictOldestTemplate()
 	}
 	tc.templatesMu.Unlock()
-	
+
 	tc.resultsMu.Lock()
 	for len(tc.results) > tc.maxCacheSize {
 		tc.evictOldestResult()
@@ -284,7 +284,7 @@ func (tc *TemplateCache) SetDefaultTTL(ttl time.Duration) {
 func (tc *TemplateCache) removeExpiredResult(key string) {
 	tc.resultsMu.Lock()
 	defer tc.resultsMu.Unlock()
-	
+
 	result, exists := tc.results[key]
 	if exists && result.IsExpired() {
 		delete(tc.results, key)
@@ -296,7 +296,7 @@ func (tc *TemplateCache) evictOldestTemplate() {
 	if len(tc.templates) == 0 {
 		return
 	}
-	
+
 	// Simple eviction: remove first entry
 	// In a production system, you might want LRU or LFU eviction
 	for key := range tc.templates {
@@ -310,11 +310,11 @@ func (tc *TemplateCache) evictOldestResult() {
 	if len(tc.results) == 0 {
 		return
 	}
-	
+
 	var oldestKey string
 	var oldestTime time.Time
 	first := true
-	
+
 	for key, result := range tc.results {
 		if first || result.Timestamp.Before(oldestTime) {
 			oldestKey = key
@@ -322,7 +322,7 @@ func (tc *TemplateCache) evictOldestResult() {
 			first = false
 		}
 	}
-	
+
 	if oldestKey != "" {
 		delete(tc.results, oldestKey)
 	}
@@ -344,7 +344,7 @@ func NewCachedTemplateRenderer(renderer TemplateRenderer, cache *TemplateCache) 
 	if cache == nil {
 		cache = NewTemplateCache(100, 5*time.Minute)
 	}
-	
+
 	return &CachedTemplateRenderer{
 		renderer: renderer,
 		cache:    cache,
@@ -356,21 +356,21 @@ func (ctr *CachedTemplateRenderer) RenderTemplate(templateName string, data inte
 	// Generate data hash for cache key
 	dataHash := fmt.Sprintf("%v", data) // Simple hash - in production use proper hashing
 	cacheKey := GenerateCacheKey(templateName, dataHash)
-	
+
 	// Check cache first
 	if content, found := ctr.cache.GetResult(cacheKey); found {
 		return content, nil
 	}
-	
+
 	// Render template
 	content, err := ctr.renderer.RenderTemplate(templateName, data)
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Cache the result
 	ctr.cache.SetResult(cacheKey, content, dataHash)
-	
+
 	return content, nil
 }
 
@@ -385,16 +385,16 @@ func (ctr *CachedTemplateRenderer) GetTemplate(templateName string) (*template.T
 	if tmpl, found := ctr.cache.GetTemplate(templateName); found {
 		return tmpl, nil
 	}
-	
+
 	// Get template from renderer
 	tmpl, err := ctr.renderer.GetTemplate(templateName)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Cache the template
 	ctr.cache.SetTemplate(templateName, tmpl)
-	
+
 	return tmpl, nil
 }
 

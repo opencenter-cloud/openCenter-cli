@@ -293,7 +293,7 @@ func (cm *ConfigMigrator) MigrateAllLegacyClusters(ctx context.Context, organiza
 // migrateClusterFiles migrates files from legacy structure to organization structure.
 func (cm *ConfigMigrator) migrateClusterFiles(legacyPaths, newPaths *OrganizationClusterPaths) error {
 	clusterName := filepath.Base(legacyPaths.ClusterDir)
-	
+
 	// Define migration mappings
 	migrations := map[string]string{
 		// Configuration file
@@ -437,7 +437,7 @@ func (cm *ConfigMigrator) copyFile(src, dst string, mode os.FileMode) error {
 func (cm *ConfigMigrator) updateClusterConfigWithOrganization(clusterName, organization string, paths *OrganizationClusterPaths) error {
 	// Load the cluster configuration from the new location
 	configPath := filepath.Join(paths.ClusterDir, "."+clusterName+"-config.yaml")
-	
+
 	// Read the configuration file
 	data, err := os.ReadFile(configPath)
 	if err != nil {

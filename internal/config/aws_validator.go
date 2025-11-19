@@ -33,7 +33,7 @@ func NewAWSValidator() *AWSValidator {
 // ValidateCredentials validates AWS credentials.
 func (v *AWSValidator) ValidateCredentials(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	// Validate AWS access key
 	if config.OpenCenter.Cluster.AWSAccessKey == "" {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -50,7 +50,7 @@ func (v *AWSValidator) ValidateCredentials(ctx context.Context, config *Config) 
 			nil,
 		))
 	}
-	
+
 	// Validate AWS secret access key
 	if config.OpenCenter.Cluster.AWSSecretAccessKey == "" {
 		validationErrors = append(validationErrors, errors.CreateCredentialError(
@@ -67,18 +67,16 @@ func (v *AWSValidator) ValidateCredentials(ctx context.Context, config *Config) 
 			nil,
 		))
 	}
-	
 
-	
 	return validationErrors
 }
 
 // ValidateConfiguration validates AWS configuration.
 func (v *AWSValidator) ValidateConfiguration(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	aws := config.OpenCenter.Infrastructure.Cloud.AWS
-	
+
 	// Validate region
 	if aws.Region == "" {
 		validationErrors = append(validationErrors, errors.CreateValidationError(
@@ -95,25 +93,25 @@ func (v *AWSValidator) ValidateConfiguration(ctx context.Context, config *Config
 			"Check AWS documentation for valid region names",
 		))
 	}
-	
+
 	// Validate VPC configuration
 	v.validateVPCConfiguration(aws, &validationErrors)
-	
+
 	// Validate subnet configuration
 	v.validateSubnetConfiguration(aws, &validationErrors)
-	
+
 	return validationErrors
 }
 
 // ValidateConnectivity validates connectivity to AWS services.
 func (v *AWSValidator) ValidateConnectivity(ctx context.Context, config *Config) []*errors.StructuredError {
 	var validationErrors []*errors.StructuredError
-	
+
 	// Note: Actual AWS API connectivity testing would require AWS SDK
 	// For now, we'll perform basic validation that doesn't require network calls
-	
+
 	aws := config.OpenCenter.Infrastructure.Cloud.AWS
-	
+
 	// Validate that region is accessible (basic check)
 	if aws.Region != "" && !v.isValidAWSRegion(aws.Region) {
 		validationErrors = append(validationErrors, errors.CreateCloudError(
@@ -123,7 +121,7 @@ func (v *AWSValidator) ValidateConnectivity(ctx context.Context, config *Config)
 			nil,
 		))
 	}
-	
+
 	return validationErrors
 }
 
@@ -162,7 +160,7 @@ func (v *AWSValidator) validateSubnetConfiguration(aws SimplifiedAWSCloud, valid
 			))
 		}
 	}
-	
+
 	// Validate public subnets
 	for i, subnet := range aws.PublicSubnets {
 		if !v.isValidCIDR(subnet) {
@@ -174,7 +172,7 @@ func (v *AWSValidator) validateSubnetConfiguration(aws SimplifiedAWSCloud, valid
 			))
 		}
 	}
-	
+
 	// Check for subnet overlap
 	allSubnets := append(aws.PrivateSubnets, aws.PublicSubnets...)
 	for i, subnet1 := range allSubnets {
@@ -192,8 +190,6 @@ func (v *AWSValidator) validateSubnetConfiguration(aws SimplifiedAWSCloud, valid
 	}
 }
 
-
-
 // Helper methods for AWS validation
 
 func (v *AWSValidator) isValidAWSAccessKey(key string) bool {
@@ -201,13 +197,13 @@ func (v *AWSValidator) isValidAWSAccessKey(key string) bool {
 	if len(key) != 20 {
 		return false
 	}
-	
+
 	for _, char := range key {
 		if !((char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -216,7 +212,7 @@ func (v *AWSValidator) isValidAWSSecretKey(key string) bool {
 	if len(key) != 40 {
 		return false
 	}
-	
+
 	validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 	for _, char := range key {
 		found := false
@@ -230,11 +226,9 @@ func (v *AWSValidator) isValidAWSSecretKey(key string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
-
-
 
 func (v *AWSValidator) isValidAWSRegion(region string) bool {
 	// Basic AWS region format validation
@@ -256,11 +250,10 @@ func (v *AWSValidator) isValidCIDR(cidr string) bool {
 func (v *AWSValidator) subnetsOverlap(cidr1, cidr2 string) bool {
 	_, net1, err1 := net.ParseCIDR(cidr1)
 	_, net2, err2 := net.ParseCIDR(cidr2)
-	
+
 	if err1 != nil || err2 != nil {
 		return false
 	}
-	
+
 	return net1.Contains(net2.IP) || net2.Contains(net1.IP)
 }
-

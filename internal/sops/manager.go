@@ -41,7 +41,7 @@ func NewDefaultSOPSManager(keyManager crypto.KeyManager, encryptor Encryptor, va
 	if logger == nil {
 		logger = slog.Default()
 	}
-	
+
 	return &DefaultSOPSManager{
 		keyManager: keyManager,
 		encryptor:  encryptor,
@@ -54,12 +54,12 @@ func NewDefaultSOPSManager(keyManager crypto.KeyManager, encryptor Encryptor, va
 func NewSOPSManager() *DefaultSOPSManager {
 	homeDir, _ := os.UserHomeDir()
 	keyDir := filepath.Join(homeDir, ".config", "sops", "age")
-	
+
 	keyManager := crypto.NewDefaultKeyManager(keyDir)
 	encryptor := NewDefaultEncryptor([]string{}, []string{})
 	validator := NewDefaultValidator()
 	logger := slog.Default()
-	
+
 	return NewDefaultSOPSManager(keyManager, encryptor, validator, logger)
 }
 
@@ -81,7 +81,7 @@ func (m *DefaultSOPSManager) GetValidator() Validator {
 // EncryptOverlayFiles encrypts sensitive files in an overlay directory
 func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPath string, cfg *config.Config) error {
 	m.logger.Info("Starting overlay files encryption", "overlay_path", overlayPath)
-	
+
 	// Get list of files to encrypt
 	filesToEncrypt := m.getFilesToEncrypt(overlayPath, cfg)
 	m.logger.Debug("Files to encrypt", "count", len(filesToEncrypt), "files", filesToEncrypt)
@@ -97,7 +97,7 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 			m.logger.Warn("Failed to load age key from config", "key_file", cfg.Secrets.SopsAgeKeyFile, "error", err)
 		}
 	}
-	
+
 	// Fallback to key manager if no keys from config
 	if len(ageKeys) == 0 {
 		if keyNames, err := m.keyManager.ListAgeKeys(); err == nil && len(keyNames) > 0 {
@@ -107,7 +107,7 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 			}
 		}
 	}
-	
+
 	// Generate fallback key if still no keys available
 	if len(ageKeys) == 0 {
 		m.logger.Info("No existing keys found, generating fallback key")
@@ -127,7 +127,7 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 			}
 		}
 	}
-	
+
 	encryptConfig := EncryptionConfig{
 		AgeKeys: ageKeys,
 		InPlace: true,
@@ -199,7 +199,7 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 // CreateSOPSConfig creates a .sops.yaml configuration file
 func (m *DefaultSOPSManager) CreateSOPSConfig(overlayPath string, cfg *config.Config) error {
 	m.logger.Info("Creating SOPS configuration", "overlay_path", overlayPath)
-	
+
 	sopsConfig := m.generateSOPSConfig(cfg)
 
 	// Validate that we're not using placeholder keys in production
@@ -238,21 +238,21 @@ func (m *DefaultSOPSManager) CreateSOPSConfig(overlayPath string, cfg *config.Co
 // ValidateEncryption validates that files are properly encrypted
 func (m *DefaultSOPSManager) ValidateEncryption(overlayPath string, cfg *config.Config) error {
 	m.logger.Info("Validating encryption", "overlay_path", overlayPath)
-	
+
 	return m.validator.ValidateEncryption(overlayPath, cfg)
 }
 
 // CreateSampleEncryptedSecrets creates sample encrypted secrets in the repository
 func (m *DefaultSOPSManager) CreateSampleEncryptedSecrets(ctx context.Context, repoPath string, ageKey string) error {
 	m.logger.Info("Creating sample encrypted secrets", "repo_path", repoPath)
-	
+
 	return m.createSampleEncryptedSecretsForTemplate(ctx, repoPath, ageKey, "basic")
 }
 
 // EncryptRepositorySecrets encrypts all sample secrets in a repository
 func (m *DefaultSOPSManager) EncryptRepositorySecrets(ctx context.Context, repoPath string, ageKey string) error {
 	m.logger.Info("Encrypting repository secrets", "repo_path", repoPath)
-	
+
 	secretsDir := filepath.Join(repoPath, "examples", "secrets")
 
 	// Find all .yaml files that are not already encrypted
@@ -325,7 +325,7 @@ func (m *DefaultSOPSManager) EncryptRepositorySecrets(ctx context.Context, repoP
 // CheckSOPSVersion checks if SOPS is available and returns version info
 func (m *DefaultSOPSManager) CheckSOPSVersion(ctx context.Context) (string, error) {
 	m.logger.Debug("Checking SOPS version")
-	
+
 	version, err := checkSOPSVersion(ctx)
 	if err != nil {
 		return "", &errors.StructuredError{
@@ -339,7 +339,7 @@ func (m *DefaultSOPSManager) CheckSOPSVersion(ctx context.Context) (string, erro
 			},
 		}
 	}
-	
+
 	m.logger.Info("SOPS version check successful", "version", version)
 	return version, nil
 }
@@ -379,7 +379,7 @@ func (m *DefaultSOPSManager) generateSOPSConfig(cfg *config.Config) string {
 			ageKey = keyPair.PublicKey
 		}
 	}
-	
+
 	if ageKey == "" {
 		// Fallback: try to load from default key manager
 		if keyNames, err := m.keyManager.ListAgeKeys(); err == nil && len(keyNames) > 0 {
@@ -388,7 +388,7 @@ func (m *DefaultSOPSManager) generateSOPSConfig(cfg *config.Config) string {
 			}
 		}
 	}
-	
+
 	if ageKey == "" {
 		// Generate a fallback key instead of using placeholder
 		if keyPair, err := m.keyManager.GenerateFallbackKey(); err == nil {
@@ -430,15 +430,15 @@ func (m *DefaultSOPSManager) loadAgeKeyFromFile(keyFilePath string) (*crypto.Age
 		homeDir, _ := os.UserHomeDir()
 		keyFilePath = filepath.Join(homeDir, keyFilePath[2:])
 	}
-	
+
 	// Read the private key file
 	privateKeyData, err := os.ReadFile(keyFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read age key file: %w", err)
 	}
-	
+
 	privateKey := string(privateKeyData)
-	
+
 	// Parse the private key to get the public key
 	return crypto.ParseAgeKey(privateKey)
 }

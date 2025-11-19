@@ -40,7 +40,7 @@ for standalone clusters and GitOps deployments.`,
 	cmd.AddCommand(newSOPSRotateKeyCmd())
 	cmd.AddCommand(newSOPSBackupKeyCmd())
 	cmd.AddCommand(newSOPSValidateCmd())
-	
+
 	// Add secrets management commands
 	cmd.AddCommand(newSOPSSecretsListCmd())
 	cmd.AddCommand(newSOPSSecretsStatusCmd())
@@ -291,12 +291,12 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 		// Find SOPS files that would be re-encrypted
 		fmt.Println("🔍 Searching for SOPS-encrypted files...")
 		encryptor := sops.NewDefaultEncryptor(nil, nil)
-		
+
 		err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-			
+
 			if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
 				if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && isEncrypted {
 					fmt.Printf("  📄 Would re-encrypt: %s\n", path)
@@ -304,7 +304,7 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 			}
 			return nil
 		})
-		
+
 		if err != nil {
 			return fmt.Errorf("failed to search for encrypted files: %w", err)
 		}
@@ -344,12 +344,12 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 
 	// Re-encrypt files with new key
 	encryptor := sops.NewDefaultEncryptor([]string{newKey.PublicKey}, nil)
-	
+
 	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
 			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && isEncrypted {
 				fmt.Printf("🔄 Re-encrypting: %s\n", path)
@@ -360,7 +360,7 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 		}
 		return nil
 	})
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to re-encrypt files: %w", err)
 	}
@@ -432,7 +432,7 @@ func executeSOPSBackupKey(ctx context.Context, keyFile, backupDir string, dryRun
 func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun bool) error {
 	// Check if debug mode is enabled
 	debugMode := os.Getenv("OPENCENTER_DEBUG") != ""
-	
+
 	if dryRun {
 		fmt.Println("🧪 DRY RUN: SOPS validation simulation")
 	} else {
@@ -449,7 +449,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 	var keyPath string
 	var keyDir string
 	var keyName string
-	
+
 	if keyFile != "" {
 		// Use the provided key file path directly
 		if strings.HasPrefix(keyFile, "~") {
@@ -466,7 +466,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 		}
 		keyDir = filepath.Dir(keyPath)
 		keyName = filepath.Base(strings.TrimSuffix(keyPath, filepath.Ext(keyPath)))
-		
+
 		if debugMode {
 			fmt.Printf("🐛 Using custom key file: %s\n", keyFile)
 			fmt.Printf("🐛 Resolved key path: %s\n", keyPath)
@@ -477,7 +477,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 		keyName = "keys"
 		keyPath = filepath.Join(keyDir, fmt.Sprintf("%s.txt", keyName))
 	}
-	
+
 	km := sops.NewKeyManager(keyDir)
 
 	if debugMode {
@@ -502,7 +502,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 	if debugMode {
 		fmt.Printf("🐛 Checking key path: %s\n", keyPath)
 	}
-	
+
 	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
 		if debugMode {
 			fmt.Printf("🐛 Key file not found at: %s\n", keyPath)
@@ -536,30 +536,30 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 		} else {
 			fmt.Printf("ℹ️  Public key file not found, generating from private key...\n")
 		}
-		
+
 		// Read the private key
 		privateKeyData, err := os.ReadFile(keyPath)
 		if err != nil {
 			return fmt.Errorf("❌ Failed to read private key: %w", err)
 		}
-		
+
 		// Extract the actual key (skip comments and empty lines)
 		privateKeyStr := extractAgeKeyFromContent(string(privateKeyData))
 		if privateKeyStr == "" {
 			return fmt.Errorf("❌ No valid age key found in file")
 		}
-		
+
 		// Parse the private key to extract the public key
 		keyPair, err := crypto.ParseAgeKey(privateKeyStr)
 		if err != nil {
 			return fmt.Errorf("❌ Failed to parse private key: %w", err)
 		}
-		
+
 		// Save the public key
 		if err := os.WriteFile(publicKeyPath, []byte(keyPair.PublicKey), 0o644); err != nil {
 			return fmt.Errorf("❌ Failed to save public key: %w", err)
 		}
-		
+
 		fmt.Printf("✅ Created public key file: %s\n", publicKeyPath)
 		if debugMode {
 			fmt.Printf("🐛 Public key: %s\n", keyPair.PublicKey)
@@ -604,7 +604,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 	if debugMode {
 		fmt.Printf("🐛 Checking for SOPS config at: %s\n", configFile)
 	}
-	
+
 	if _, err := os.Stat(configFile); err == nil {
 		fmt.Println("🔍 Validating SOPS configuration file...")
 
@@ -628,7 +628,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 		if !strings.Contains(string(content), keyPair.PublicKey) {
 			fmt.Printf("⚠️  SOPS configuration does not contain current Age public key\n")
 			fmt.Printf("💡 Consider updating %s with the current public key\n", configFile)
-			
+
 			if debugMode {
 				fmt.Printf("🐛 Expected public key: %s\n", keyPair.PublicKey)
 				// Show what age keys are in the config
@@ -676,7 +676,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 			fmt.Printf("🐛 PATH: %s\n", path)
 		}
 	}
-	
+
 	manager := sops.NewSOPSManager()
 	if version, err := manager.CheckSOPSVersion(ctx); err != nil {
 		fmt.Printf("⚠️  SOPS not found or not executable: %v\n", err)
@@ -690,14 +690,14 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 	// Additional debug checks
 	if debugMode {
 		fmt.Println("\n🐛 === ADDITIONAL DEBUG INFORMATION ===")
-		
+
 		// Check SOPS_AGE_KEY_FILE environment variable
 		if sopsKeyFile := os.Getenv("SOPS_AGE_KEY_FILE"); sopsKeyFile != "" {
 			fmt.Printf("🐛 SOPS_AGE_KEY_FILE: %s\n", sopsKeyFile)
 		} else {
 			fmt.Println("🐛 SOPS_AGE_KEY_FILE: (not set)")
 		}
-		
+
 		// List all age keys in the key directory
 		fmt.Println("🐛 All Age keys in key directory:")
 		if keyNames, err := km.ListAgeKeys(); err == nil {
@@ -710,7 +710,7 @@ func executeSOPSValidate(ctx context.Context, keyFile, configFile string, dryRun
 		} else {
 			fmt.Printf("🐛 Failed to list keys: %v\n", err)
 		}
-		
+
 		fmt.Println("🐛 === END DEBUG INFORMATION ===")
 	}
 
@@ -1026,9 +1026,9 @@ func executeSOPSSecretsList(ctx context.Context, keyFile, searchPath string, dry
 	if dryRun {
 		fmt.Println("🧪 DRY RUN: Secrets list simulation")
 	}
-	
+
 	fmt.Printf("🔍 Searching for SOPS files in: %s\n", searchPath)
-	
+
 	// Setup key environment if keyFile is specified
 	if keyFile != "" {
 		if err := setupSOPSKeyEnvironment(keyFile); err != nil {
@@ -1094,18 +1094,18 @@ func executeSOPSSecretsEncrypt(ctx context.Context, keyFile, searchPath string, 
 
 	fmt.Printf("📁 Search path: %s\n", searchPath)
 	fmt.Printf("💾 Create backups: %t\n", createBackups)
-	
+
 	// Setup key environment and load age keys
 	var ageKeys []string
 	var err error
-	
+
 	if keyFile != "" {
 		// Use the specified key file
 		if err := setupSOPSKeyEnvironment(keyFile); err != nil {
 			return fmt.Errorf("failed to setup key environment: %w", err)
 		}
 		fmt.Printf("🔑 Using key file: %s\n", keyFile)
-		
+
 		// Load the public key from the key file
 		ageKeys, err = loadAgeKeysFromFile(keyFile)
 		if err != nil {
@@ -1200,7 +1200,7 @@ func executeSOPSSecretsDecrypt(ctx context.Context, keyFile, searchPath string, 
 
 	fmt.Printf("📁 Search path: %s\n", searchPath)
 	fmt.Printf("💾 Create backups: %t\n", createBackups)
-	
+
 	// Setup key environment if keyFile is specified
 	if keyFile != "" {
 		if err := setupSOPSKeyEnvironment(keyFile); err != nil {
@@ -1383,7 +1383,7 @@ func setupSOPSKeyEnvironment(keyFile string) error {
 	// Resolve the key file path
 	homeDir, _ := os.UserHomeDir()
 	var keyPath string
-	
+
 	if strings.HasPrefix(keyFile, "~") {
 		keyPath = filepath.Join(homeDir, keyFile[1:])
 	} else if filepath.IsAbs(keyFile) {
@@ -1396,17 +1396,17 @@ func setupSOPSKeyEnvironment(keyFile string) error {
 			keyPath = keyFile
 		}
 	}
-	
+
 	// Check if key file exists
 	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
 		return fmt.Errorf("key file not found: %s", keyPath)
 	}
-	
+
 	// Set the environment variable for SOPS
 	if err := os.Setenv("SOPS_AGE_KEY_FILE", keyPath); err != nil {
 		return fmt.Errorf("failed to set SOPS_AGE_KEY_FILE: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -1433,7 +1433,7 @@ func loadAgeKeysFromFile(keyFile string) ([]string, error) {
 	// Resolve the key file path
 	homeDir, _ := os.UserHomeDir()
 	var keyPath string
-	
+
 	if strings.HasPrefix(keyFile, "~") {
 		keyPath = filepath.Join(homeDir, keyFile[1:])
 	} else if filepath.IsAbs(keyFile) {
@@ -1446,24 +1446,24 @@ func loadAgeKeysFromFile(keyFile string) ([]string, error) {
 			keyPath = keyFile
 		}
 	}
-	
+
 	// Read the key file
 	privateKeyData, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %w", err)
 	}
-	
+
 	// Extract the actual key (skip comments and empty lines)
 	privateKeyStr := extractAgeKeyFromContent(string(privateKeyData))
 	if privateKeyStr == "" {
 		return nil, fmt.Errorf("no valid age key found in file")
 	}
-	
+
 	// Parse the private key to get the public key
 	keyPair, err := crypto.ParseAgeKey(privateKeyStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse private key: %w", err)
 	}
-	
+
 	return []string{keyPair.PublicKey}, nil
 }

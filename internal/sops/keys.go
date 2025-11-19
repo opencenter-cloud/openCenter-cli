@@ -49,7 +49,7 @@ func NewKeyManager(keyDir string) crypto.KeyManager {
 func SetupSOPSEnvironment(keyManager crypto.KeyManager, keyName string) error {
 	// This is a SOPS-specific function that sets up environment variables
 	// for SOPS to use the specified key
-	
+
 	// Get key info to find the file path
 	keyInfo, err := keyManager.GetKeyInfo(keyName)
 	if err != nil {

@@ -61,8 +61,8 @@ func (r *RefreshEngine) ExecuteRefresh(ctx context.Context) (*talos.DriftReport,
 		return nil, fmt.Errorf("drift report generation failed: %w", err)
 	}
 
-	r.logger.Info("Pulumi refresh completed", 
-		"stack", r.manager.config.StackName, 
+	r.logger.Info("Pulumi refresh completed",
+		"stack", r.manager.config.StackName,
 		"has_drift", report.HasDrift,
 		"drifted_count", len(report.Drifted))
 	return report, nil

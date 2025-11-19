@@ -34,7 +34,7 @@ func TestProperty_SecurityHardeningCompleteness(t *testing.T) {
 		func(clusterName string) bool {
 			// Generate default Talos configuration
 			talosConfig := DefaultTalosConfig(clusterName)
-			
+
 			// Verify all security features are enabled by default
 			if !talosConfig.MachineConfig.AppArmorEnabled {
 				return false
@@ -48,7 +48,7 @@ func TestProperty_SecurityHardeningCompleteness(t *testing.T) {
 			if !talosConfig.MachineConfig.KubePrismEnabled {
 				return false
 			}
-			
+
 			// Verify security config defaults
 			if !talosConfig.SecurityConfig.VTPMEnabled {
 				return false
@@ -62,7 +62,7 @@ func TestProperty_SecurityHardeningCompleteness(t *testing.T) {
 			if !talosConfig.SecurityConfig.AuditLogEnabled {
 				return false
 			}
-			
+
 			return true
 		},
 		genClusterName(),

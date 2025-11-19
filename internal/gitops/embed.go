@@ -14,8 +14,8 @@
 package gitops
 
 import (
-	_ "embed"
 	"embed"
+	_ "embed"
 )
 
 // Files holds the embedded contents of the gitops-base-dir and templates directories.

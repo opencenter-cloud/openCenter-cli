@@ -54,7 +54,7 @@ func TestDefaultTemplateValidator_ValidateTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewDefaultTemplateValidator()
-			
+
 			// Create templates
 			tmpl := template.New("")
 			if tt.templateText != "" {
@@ -69,20 +69,20 @@ func TestDefaultTemplateValidator_ValidateTemplate(t *testing.T) {
 					tmpl.New(tt.templateName)
 				}
 			}
-			
+
 			err := validator.Init(tmpl)
 			if err != nil {
 				t.Fatalf("Failed to initialize validator: %v", err)
 			}
-			
+
 			err = validator.ValidateTemplate(tt.templateName)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error, got nil")
 					return
 				}
-				
+
 				if templateErr, ok := GetTemplateError(err); ok {
 					if templateErr.Type != tt.errorType {
 						t.Errorf("Expected error type %v, got %v", tt.errorType, templateErr.Type)
@@ -101,12 +101,12 @@ func TestDefaultTemplateValidator_ValidateTemplate(t *testing.T) {
 
 func TestDefaultTemplateValidator_ValidateTemplateWithData(t *testing.T) {
 	tests := []struct {
-		name               string
-		templateText       string
-		data               interface{}
-		expectValid        bool
-		expectMissingVars  []string
-		expectUnusedVars   []string
+		name              string
+		templateText      string
+		data              interface{}
+		expectValid       bool
+		expectMissingVars []string
+		expectUnusedVars  []string
 	}{
 		{
 			name:         "valid template with complete data",
@@ -137,10 +137,10 @@ func TestDefaultTemplateValidator_ValidateTemplateWithData(t *testing.T) {
 			expectUnusedVars: []string{"Age"},
 		},
 		{
-			name:         "template with nil data",
-			templateText: "Hello {{.Name}}",
-			data:         nil,
-			expectValid:  false,
+			name:              "template with nil data",
+			templateText:      "Hello {{.Name}}",
+			data:              nil,
+			expectValid:       false,
 			expectMissingVars: []string{"Name"},
 		},
 		{
@@ -170,27 +170,27 @@ func TestDefaultTemplateValidator_ValidateTemplateWithData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewDefaultTemplateValidator()
-			
+
 			// Create template
 			tmpl, err := template.New("test").Parse(tt.templateText)
 			if err != nil {
 				t.Fatalf("Failed to create test template: %v", err)
 			}
-			
+
 			err = validator.Init(tmpl)
 			if err != nil {
 				t.Fatalf("Failed to initialize validator: %v", err)
 			}
-			
+
 			result := validator.ValidateTemplateWithData("test", tt.data)
-			
+
 			if result.Valid != tt.expectValid {
 				t.Errorf("Expected valid=%v, got valid=%v", tt.expectValid, result.Valid)
 				if len(result.Errors) > 0 {
 					t.Logf("Errors: %v", result.Errors)
 				}
 			}
-			
+
 			// Check missing variables
 			if len(tt.expectMissingVars) > 0 {
 				if len(result.MissingVariables) == 0 {
@@ -210,7 +210,7 @@ func TestDefaultTemplateValidator_ValidateTemplateWithData(t *testing.T) {
 					}
 				}
 			}
-			
+
 			// Check unused variables
 			if len(tt.expectUnusedVars) > 0 {
 				if len(result.UnusedVariables) == 0 {
@@ -275,34 +275,34 @@ func TestDefaultTemplateValidator_ExtractTemplateVariables(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewDefaultTemplateValidator()
-			
+
 			// Create template
 			tmpl, err := template.New("test").Parse(tt.templateText)
 			if err != nil {
 				t.Fatalf("Failed to create test template: %v", err)
 			}
-			
+
 			err = validator.Init(tmpl)
 			if err != nil {
 				t.Fatalf("Failed to initialize validator: %v", err)
 			}
-			
+
 			variables, err := validator.ExtractTemplateVariables("test")
 			if err != nil {
 				t.Fatalf("Failed to extract variables: %v", err)
 			}
-			
+
 			// Convert to string slice for easier comparison
 			var actualVars []string
 			for _, v := range variables {
 				actualVars = append(actualVars, v.Name)
 			}
-			
+
 			if len(actualVars) != len(tt.expectedVars) {
 				t.Errorf("Expected %d variables, got %d: %v", len(tt.expectedVars), len(actualVars), actualVars)
 				return
 			}
-			
+
 			for _, expected := range tt.expectedVars {
 				found := false
 				for _, actual := range actualVars {
@@ -395,9 +395,9 @@ func TestDefaultTemplateValidator_ValidateVariableAccess(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewDefaultTemplateValidator()
-			
+
 			err := validator.validateVariableAccess(tt.data, tt.variablePath)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error, got nil")
@@ -508,9 +508,9 @@ func TestDefaultTemplateValidator_ValidateNetworkPluginConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewDefaultTemplateValidator()
-			
+
 			err := validator.ValidateNetworkPluginConfig(tt.pluginType, tt.config)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error, got nil")
@@ -560,7 +560,7 @@ func TestDefaultTemplateValidator_ValidateTemplateSyntax(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewDefaultTemplateValidator()
-			
+
 			// Create template
 			tmpl, err := template.New("test").Parse(tt.templateText)
 			if err != nil {
@@ -569,14 +569,14 @@ func TestDefaultTemplateValidator_ValidateTemplateSyntax(t *testing.T) {
 				}
 				t.Fatalf("Failed to create test template: %v", err)
 			}
-			
+
 			err = validator.Init(tmpl)
 			if err != nil {
 				t.Fatalf("Failed to initialize validator: %v", err)
 			}
-			
+
 			err = validator.ValidateTemplateSyntax("test")
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error, got nil")
@@ -592,38 +592,38 @@ func TestDefaultTemplateValidator_ValidateTemplateSyntax(t *testing.T) {
 
 func TestTemplateValidationResult_ErrorHandling(t *testing.T) {
 	validator := NewDefaultTemplateValidator()
-	
+
 	// Create template with missing variables
 	tmpl, err := template.New("test").Parse("Hello {{.Name}}, you are {{.Age}} years old")
 	if err != nil {
 		t.Fatalf("Failed to create test template: %v", err)
 	}
-	
+
 	err = validator.Init(tmpl)
 	if err != nil {
 		t.Fatalf("Failed to initialize validator: %v", err)
 	}
-	
+
 	// Test with incomplete data
 	data := map[string]interface{}{
 		"Name": "John",
 		// Missing Age
 	}
-	
+
 	result := validator.ValidateTemplateWithData("test", data)
-	
+
 	if result.Valid {
 		t.Error("Expected validation to fail")
 	}
-	
+
 	if len(result.Errors) == 0 {
 		t.Error("Expected validation errors")
 	}
-	
+
 	if len(result.MissingVariables) == 0 {
 		t.Error("Expected missing variables")
 	}
-	
+
 	// Check that errors contain helpful information
 	for _, err := range result.Errors {
 		if err.Message == "" {
@@ -638,18 +638,18 @@ func TestTemplateValidationResult_ErrorHandling(t *testing.T) {
 func TestTemplateValidator_Integration(t *testing.T) {
 	// Test integration with template engine
 	engine := NewDefaultTemplateEngine()
-	
+
 	// Create template with variables
 	tmpl, err := template.New("integration").Parse("Hello {{.User.Name}}, your role is {{.User.Role}}")
 	if err != nil {
 		t.Fatalf("Failed to create test template: %v", err)
 	}
-	
+
 	err = engine.InitWithTemplates(tmpl)
 	if err != nil {
 		t.Fatalf("Failed to initialize engine: %v", err)
 	}
-	
+
 	// Test with complete data
 	completeData := map[string]interface{}{
 		"User": map[string]interface{}{
@@ -657,12 +657,12 @@ func TestTemplateValidator_Integration(t *testing.T) {
 			"Role": "Admin",
 		},
 	}
-	
+
 	result := engine.ValidateTemplateWithData("integration", completeData)
 	if !result.Valid {
 		t.Errorf("Expected validation to pass, got errors: %v", result.Errors)
 	}
-	
+
 	// Test with incomplete data
 	incompleteData := map[string]interface{}{
 		"User": map[string]interface{}{
@@ -670,28 +670,28 @@ func TestTemplateValidator_Integration(t *testing.T) {
 			// Missing Role
 		},
 	}
-	
+
 	result = engine.ValidateTemplateWithData("integration", incompleteData)
 	if result.Valid {
 		t.Error("Expected validation to fail")
 	}
-	
+
 	if len(result.Errors) == 0 {
 		t.Error("Expected validation errors")
 	}
-	
+
 	// Test variable extraction
 	variables, err := engine.ExtractTemplateVariables("integration")
 	if err != nil {
 		t.Fatalf("Failed to extract variables: %v", err)
 	}
-	
+
 	expectedVars := []string{"User.Name", "User.Role"}
 	actualVars := make([]string, len(variables))
 	for i, v := range variables {
 		actualVars[i] = v.Name
 	}
-	
+
 	for _, expected := range expectedVars {
 		found := false
 		for _, actual := range actualVars {

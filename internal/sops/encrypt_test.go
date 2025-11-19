@@ -99,7 +99,7 @@ sops:
 
 func TestDefaultEncryptor_GetEncryptedContent(t *testing.T) {
 	content := "test content"
-	
+
 	// Create temporary file
 	tmpFile, err := os.CreateTemp("", "test-*.yaml")
 	if err != nil {
@@ -128,7 +128,7 @@ func TestDefaultEncryptor_GetEncryptedContent(t *testing.T) {
 
 func TestDefaultEncryptor_EncryptFile_FileNotFound(t *testing.T) {
 	e := NewDefaultEncryptor([]string{"age1test123"}, nil)
-	
+
 	config := EncryptionConfig{
 		AgeKeys: []string{"age1test123"},
 		InPlace: true,
@@ -159,12 +159,12 @@ func TestDefaultEncryptor_DecryptFile_FileNotFound(t *testing.T) {
 
 func TestDefaultEncryptor_EncryptFiles(t *testing.T) {
 	e := NewDefaultEncryptor([]string{"age1test123"}, nil)
-	
+
 	// Create temporary files
 	tmpDir := t.TempDir()
 	file1 := filepath.Join(tmpDir, "file1.yaml")
 	file2 := filepath.Join(tmpDir, "file2.yaml")
-	
+
 	// Create test files
 	if err := os.WriteFile(file1, []byte("content1"), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
@@ -188,7 +188,7 @@ func TestDefaultEncryptor_EncryptFiles(t *testing.T) {
 
 func TestDefaultEncryptor_RotateKeys(t *testing.T) {
 	e := NewDefaultEncryptor(nil, nil)
-	
+
 	// Create temporary file
 	tmpFile, err := os.CreateTemp("", "test-*.yaml")
 	if err != nil {
@@ -207,7 +207,7 @@ func TestDefaultEncryptor_RotateKeys(t *testing.T) {
 func TestCheckSOPSVersion(t *testing.T) {
 	// This test checks the helper function
 	version, err := checkSOPSVersion(context.Background())
-	
+
 	// We expect this to fail in test environment since SOPS CLI might not be installed
 	// The important thing is that the method doesn't panic
 	if err != nil {

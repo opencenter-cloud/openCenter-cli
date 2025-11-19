@@ -16,7 +16,7 @@ Package util provides utility functions for openCenter.
 
 This package contains helper functions that are used by other packages in the application.
 
-When to use
+# When to use
 
 This package is used internally by openCenter and is not intended for direct use by end-users.
 */

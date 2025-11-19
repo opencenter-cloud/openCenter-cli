@@ -248,7 +248,7 @@ Troubleshooting:
 
   # Initialize with strict validation
   openCenter cluster init my-cluster --strict`,
-		Args:  cobra.MaximumNArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			UnknownFlags: true,
 		},
@@ -332,7 +332,7 @@ Troubleshooting:
 
 			// Always update configuration with the determined organization
 			cfg.OpenCenter.Meta.Organization = organization
-			
+
 			// Handle --type flag to set infrastructure provider
 			typeFlag, _ := cmd.Flags().GetString("type")
 			if typeFlag != "" {
@@ -370,13 +370,13 @@ Troubleshooting:
 
 			// Handle --force
 			force, _ := cmd.Flags().GetBool("force")
-			
+
 			// Check if cluster directory exists in organization structure
 			if _, err := os.Stat(clusterPaths.ClusterDir); err == nil {
 				if !force {
 					return fmt.Errorf("cluster configuration directory '%s' already exists in organization '%s', use --force to overwrite", name, organization)
 				}
-				
+
 				// Force flag is set, perform cleanup and overwrite
 				if err := cleanupClusterDirectory(clusterPaths.ClusterDir); err != nil {
 					return fmt.Errorf("failed to cleanup existing cluster directory '%s': %w", clusterPaths.ClusterDir, err)
@@ -417,7 +417,7 @@ Troubleshooting:
 			// Persist config
 			// Generate SOPS key only if regenerate-keys flag is set or if key doesn't exist
 			regenerateKeys, _ := cmd.Flags().GetBool("regenerate-keys")
-			
+
 			// Check if SOPS key already exists
 			sopsKeyExists := false
 			if clusterPaths.SOPSKeyPath != "" {
@@ -425,13 +425,13 @@ Troubleshooting:
 					sopsKeyExists = true
 				}
 			}
-			
+
 			// Generate SOPS key if:
 			// 1. regenerate-keys flag is set, OR
 			// 2. key doesn't exist and no-keygen is not set
 			disableKeygen, _ := cmd.Flags().GetBool("no-keygen")
 			shouldGenerateSOPS := (regenerateKeys || !sopsKeyExists) && !disableKeygen
-			
+
 			if shouldGenerateSOPS && cfg.Secrets.SopsAgeKeyFile == "" && name != "" {
 				if err := generateOrganizationSOPSKey(name, organization, &cfg, pathResolver); err != nil {
 					return fmt.Errorf("failed to generate organization SOPS key: %w", err)
@@ -451,7 +451,7 @@ Troubleshooting:
 					break
 				}
 			}
-			
+
 			// If user didn't explicitly set a custom git_dir, use organization-based path
 			if !userSetCustomGitDir {
 				cfg.OpenCenter.GitOps.GitDir = clusterPaths.GitOpsDir
@@ -477,25 +477,25 @@ Troubleshooting:
 			if region == "" {
 				region = "local"
 			}
-			
+
 			// Use the already-resolved secrets directory from clusterPaths
 			// This respects any custom clustersDir configuration
 			sshKeyBaseName := fmt.Sprintf("%s-%s-%s", name, env, region)
 			sshKeyPath := filepath.Join(clusterPaths.SecretsDir, "ssh", sshKeyBaseName)
 			sshPubKeyPath := sshKeyPath + ".pub"
-			
+
 			// Check if user explicitly set SSH keys via command line flags
 			userSetSSHKeys := false
 			for _, arg := range os.Args {
-				if strings.HasPrefix(arg, "--opencenter.gitops.git_ssh_key=") || 
-				   strings.HasPrefix(arg, "--gitops.git_ssh_key=") ||
-				   strings.HasPrefix(arg, "--opencenter.gitops.git_ssh_pub=") ||
-				   strings.HasPrefix(arg, "--gitops.git_ssh_pub=") {
+				if strings.HasPrefix(arg, "--opencenter.gitops.git_ssh_key=") ||
+					strings.HasPrefix(arg, "--gitops.git_ssh_key=") ||
+					strings.HasPrefix(arg, "--opencenter.gitops.git_ssh_pub=") ||
+					strings.HasPrefix(arg, "--gitops.git_ssh_pub=") {
 					userSetSSHKeys = true
 					break
 				}
 			}
-			
+
 			// Only set SSH key paths if user didn't explicitly provide them
 			if !userSetSSHKeys {
 				cfg.OpenCenter.GitOps.GitSSHKey = sshKeyPath
@@ -517,7 +517,7 @@ Troubleshooting:
 			// Reuse sshKeyBaseName from above
 			secretsSSHKeyPath := filepath.Join(clusterPaths.SecretsDir, "ssh", sshKeyBaseName)
 			secretsSSHPubKeyPath := secretsSSHKeyPath + ".pub"
-			
+
 			// Check if user provided a cypher type, otherwise default to ed25519
 			sshKeyCypher := "ed25519"
 			if secretsMap, ok := configMap["secrets"].(map[string]any); ok {
@@ -527,48 +527,48 @@ Troubleshooting:
 					}
 				}
 			}
-			
+
 			cfg.Secrets.SSHKey.Private = secretsSSHKeyPath
 			cfg.Secrets.SSHKey.Public = secretsSSHPubKeyPath
 			cfg.Secrets.SSHKey.Cypher = sshKeyCypher
-			
+
 			// Check if SSH key already exists
 			sshKeyExists := false
 			if _, err := os.Stat(secretsSSHKeyPath); err == nil {
 				sshKeyExists = true
 			}
-			
+
 			// Generate SSH key pair if:
 			// 1. regenerate-keys flag is set, OR
 			// 2. key doesn't exist and no-keygen is not set
 			shouldGenerateSSH := (regenerateKeys || !sshKeyExists) && !disableKeygen
-			
+
 			if shouldGenerateSSH {
 				// Create SSH directory if it doesn't exist
 				sshDir := filepath.Dir(secretsSSHKeyPath)
 				if err := os.MkdirAll(sshDir, 0o700); err != nil {
 					return fmt.Errorf("failed to create SSH directory: %w", err)
 				}
-				
+
 				// Create SSH key comment in format: <organization>-<cluster>-<region>
 				sshKeyComment := fmt.Sprintf("%s-%s-%s", organization, name, region)
-				
+
 				// Generate SSH key pair using the specified cipher with comment
 				keyPair, err := crypto.GenerateSSHKeyWithComment(cfg.Secrets.SSHKey.Cypher, sshKeyComment)
 				if err != nil {
 					return fmt.Errorf("failed to generate SSH key pair: %w", err)
 				}
-				
+
 				// Write private key with restrictive permissions
 				if err := os.WriteFile(secretsSSHKeyPath, keyPair.PrivateKey, 0o600); err != nil {
 					return fmt.Errorf("failed to write SSH private key: %w", err)
 				}
-				
+
 				// Write public key
 				if err := os.WriteFile(secretsSSHPubKeyPath, keyPair.PublicKey, 0o644); err != nil {
 					return fmt.Errorf("failed to write SSH public key: %w", err)
 				}
-				
+
 				if regenerateKeys && sshKeyExists {
 					fmt.Fprintf(cmd.OutOrStdout(), "Regenerated %s SSH key pair at %s\n", cfg.Secrets.SSHKey.Cypher, secretsSSHKeyPath)
 				} else {
@@ -577,7 +577,7 @@ Troubleshooting:
 			} else if sshKeyExists && !regenerateKeys {
 				fmt.Fprintf(cmd.OutOrStdout(), "Using existing SSH key pair at %s\n", secretsSSHKeyPath)
 			}
-			
+
 			// Update the map with any SOPS key changes from the struct
 			if secretsMap, ok := configMap["secrets"].(map[string]any); ok {
 				if cfg.Secrets.SopsAgeKeyFile != "" {
@@ -652,22 +652,22 @@ func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to get cluster secrets directory path: %w", err)
 	}
-	
+
 	// Create the secrets directory with proper permissions (0755 for directories)
 	if err := os.MkdirAll(secretsDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create cluster secrets directory '%s': %w", secretsDir, err)
 	}
-	
+
 	// Generate the key file path
 	keyFile := filepath.Join(secretsDir, fmt.Sprintf("%s-key.txt", cluster))
-	
+
 	// Use the new SOPS key manager to generate a proper Age key
 	km := sops.NewKeyManager(secretsDir)
 	keyPair, err := km.GenerateAgeKey()
 	if err != nil {
 		return fmt.Errorf("failed to generate Age key pair: %w", err)
 	}
-	
+
 	// Write the private key file with proper permissions (0600 for files)
 	keyContent := keyPair.PrivateKey
 	if !strings.HasSuffix(keyContent, "\n") {
@@ -676,7 +676,7 @@ func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
 	if err := os.WriteFile(keyFile, []byte(keyContent), 0o600); err != nil {
 		return fmt.Errorf("failed to write SOPS key file to cluster directory '%s': %w", keyFile, err)
 	}
-	
+
 	cfg.Secrets.SopsAgeKeyFile = keyFile
 	return nil
 }
@@ -686,31 +686,31 @@ func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
 func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Config, pathResolver *config.PathResolver) error {
 	// Resolve cluster paths for the organization
 	clusterPaths := pathResolver.ResolveClusterPaths(cluster, organization)
-	
+
 	// Create the secrets directory with proper permissions (0755 for directories)
 	secretsKeyDir := filepath.Dir(clusterPaths.SOPSKeyPath)
 	if err := os.MkdirAll(secretsKeyDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create organization secrets directory '%s': %w", secretsKeyDir, err)
 	}
-	
+
 	// Use the new SOPS key manager to generate and save a proper Age key
 	km := sops.NewKeyManager(secretsKeyDir)
 	keyPair, err := km.GenerateAgeKey()
 	if err != nil {
 		return fmt.Errorf("failed to generate Age key pair: %w", err)
 	}
-	
+
 	// Save the key using the key manager (creates <cluster>-key.txt and <cluster>-key.pub)
 	keyName := cluster + "-key"
 	if err := km.SaveAgeKey(keyPair, keyName); err != nil {
 		return fmt.Errorf("failed to save Age key pair: %w", err)
 	}
-	
+
 	// Create or update the SOPS configuration file for the organization
 	if err := createOrganizationSOPSConfig(clusterPaths.SOPSConfigPath, keyPair.PublicKey, cluster); err != nil {
 		return fmt.Errorf("failed to create organization SOPS config: %w", err)
 	}
-	
+
 	cfg.Secrets.SopsAgeKeyFile = clusterPaths.SOPSKeyPath
 	return nil
 }
@@ -722,18 +722,18 @@ func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Confi
 func createOrganizationSOPSConfig(sopsConfigPath, publicKey string, clusterName string) error {
 	// sopsConfigPath is already the full path to .sops.yaml at organization root
 	rootSOPSConfigPath := sopsConfigPath
-	
+
 	// Define the path patterns for this cluster
 	clusterRule := fmt.Sprintf(`  - path_regex: (applications/overlays/%s/.*|infrastructure/clusters/%s/.*)\.ya?ml$
     age: >-
       %s`, clusterName, clusterName, publicKey)
-	
+
 	// Check if .sops.yaml already exists at organization root
 	var existingContent string
 	if data, err := os.ReadFile(rootSOPSConfigPath); err == nil {
 		existingContent = string(data)
 	}
-	
+
 	var sopsConfig string
 	if existingContent == "" {
 		// Create new .sops.yaml with header and first cluster rule
@@ -752,13 +752,13 @@ creation_rules:
 			var newLines []string
 			skipNext := false
 			inClusterRule := false
-			
+
 			for i, line := range lines {
 				if skipNext {
 					skipNext = false
 					continue
 				}
-				
+
 				// Check if this is the start of our cluster's rule
 				if strings.Contains(line, clusterRulePattern) {
 					inClusterRule = true
@@ -770,11 +770,11 @@ creation_rules:
 					}
 					continue
 				}
-				
+
 				if inClusterRule && strings.TrimSpace(line) != "" && !strings.HasPrefix(strings.TrimSpace(line), "age:") {
 					inClusterRule = false
 				}
-				
+
 				if !inClusterRule {
 					newLines = append(newLines, line)
 				}
@@ -787,12 +787,12 @@ creation_rules:
 			sopsConfig = fmt.Sprintf("%s\n%s\n", existingContent, clusterRule)
 		}
 	}
-	
+
 	// Write the SOPS configuration file at organization root
 	if err := os.WriteFile(rootSOPSConfigPath, []byte(sopsConfig), 0o600); err != nil {
 		return fmt.Errorf("failed to write SOPS config file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -800,13 +800,13 @@ creation_rules:
 // This file is copied from the embedded gitops-base-dir/.gitignore template.
 func createOrganizationGitignore(organizationDir string) error {
 	gitignorePath := filepath.Join(organizationDir, ".gitignore")
-	
+
 	// Check if .gitignore already exists
 	if _, err := os.Stat(gitignorePath); err == nil {
 		// .gitignore already exists, don't overwrite it
 		return nil
 	}
-	
+
 	// Read the embedded .gitignore template from gitops-base-dir
 	gitignoreContent := `# Python
 __pycache__/
@@ -884,12 +884,12 @@ ansible-hardening/
 credentials/
 .mygitignore
 `
-	
+
 	// Write the .gitignore file with proper permissions (0644 for files)
 	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write .gitignore file to organization directory '%s': %w", gitignorePath, err)
 	}
-	
+
 	return nil
 }
 
@@ -898,7 +898,7 @@ func validateOrganizationName(organization string) error {
 	if organization == "" {
 		return fmt.Errorf("organization name cannot be empty")
 	}
-	
+
 	// Use the same validation as cluster names since they both become directory names
 	return config.ValidateClusterName(organization)
 }

@@ -27,13 +27,13 @@ import (
 type SOPSManager interface {
 	// Key management operations
 	GetKeyManager() crypto.KeyManager
-	
+
 	// Encryption operations
 	GetEncryptor() Encryptor
-	
+
 	// Validation operations
 	GetValidator() Validator
-	
+
 	// High-level operations
 	EncryptOverlayFiles(ctx context.Context, overlayPath string, cfg *config.Config) error
 	CreateSOPSConfig(overlayPath string, cfg *config.Config) error

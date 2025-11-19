@@ -80,7 +80,7 @@ func (pr *PathResolverImpl) ResolveClusterPaths(ctx context.Context, clusterName
 	// Build organization-based paths
 	organizationDir := filepath.Join(clustersDir, organization)
 	gitOpsDir := organizationDir
-	
+
 	var clusterDir, applicationsDir string
 	if clusterName != "" {
 		clusterDir = filepath.Join(organizationDir, "infrastructure", "clusters", clusterName)
@@ -89,7 +89,7 @@ func (pr *PathResolverImpl) ResolveClusterPaths(ctx context.Context, clusterName
 		clusterDir = filepath.Join(organizationDir, "infrastructure", "clusters")
 		applicationsDir = filepath.Join(organizationDir, "applications", "overlays")
 	}
-	
+
 	secretsDir := filepath.Join(organizationDir, "secrets")
 
 	var sopsKeyPath, kubeconfigPath, inventoryPath, venvPath, binPath string
@@ -150,14 +150,14 @@ func (pr *PathResolverImpl) CreateClusterDirectories(ctx context.Context, cluste
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create cluster directory %s: %w", dir, err)
 		}
-		
+
 		// Verify the directory was created and is accessible
 		if stat, err := os.Stat(dir); err != nil {
 			return fmt.Errorf("failed to verify cluster directory %s: %w", dir, err)
 		} else if !stat.IsDir() {
 			return fmt.Errorf("path %s exists but is not a directory", dir)
 		}
-		
+
 		// Check directory permissions
 		if err := pr.validateDirectoryPermissions(dir); err != nil {
 			return fmt.Errorf("directory %s has insufficient permissions: %w", dir, err)
@@ -195,7 +195,7 @@ func (pr *PathResolverImpl) CreateOrganizationStructure(ctx context.Context, org
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create organization directory %s: %w", dir, err)
 		}
-		
+
 		// Verify the directory was created and is accessible
 		if stat, err := os.Stat(dir); err != nil {
 			return fmt.Errorf("failed to verify organization directory %s: %w", dir, err)
@@ -295,7 +295,7 @@ func (pr *PathResolverImpl) GetClusterOrganization(ctx context.Context, clusterN
 	for _, entry := range entries {
 		if entry.IsDir() {
 			orgName := entry.Name()
-			
+
 			// Skip if this looks like a legacy cluster directory
 			legacyConfigPath := filepath.Join(clustersDir, orgName, "."+orgName+"-config.yaml")
 			if _, err := os.Stat(legacyConfigPath); err == nil {
@@ -382,7 +382,7 @@ func (pr *PathResolverImpl) OrganizationAwareConfigPath(ctx context.Context, clu
 		return "", err
 	}
 	flatConfigPath := filepath.Join(configDir, clusterName+".yaml")
-	
+
 	// Cache the resolved path if it exists
 	if _, err := os.Stat(flatConfigPath); err == nil {
 		pr.mu.Lock()
@@ -466,13 +466,13 @@ func (pr *PathResolverImpl) validateDirectoryPermissions(dir string) error {
 		return fmt.Errorf("cannot write to directory: %w", err)
 	}
 	file.Close()
-	
+
 	// Clean up test file
 	if err := os.Remove(testFile); err != nil {
 		// Log warning but don't fail - the directory is writable
 		fmt.Printf("Warning: failed to remove test file %s: %v\n", testFile, err)
 	}
-	
+
 	return nil
 }
 

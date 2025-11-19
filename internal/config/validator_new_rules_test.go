@@ -35,7 +35,7 @@ func TestNewValidationRules(t *testing.T) {
 		config.OpenCenter.Services["kube-prometheus-stack"] = ServiceCfg{Enabled: false}
 		config.OpenCenter.Services["weave-gitops"] = ServiceCfg{Enabled: false}
 		config.OpenCenter.ManagedService["alert-proxy"] = ServiceCfg{Enabled: false}
-		
+
 		// Clear all secrets
 		config.Secrets = Secrets{}
 
@@ -121,7 +121,7 @@ func TestNewValidationRules(t *testing.T) {
 		config.OpenTofu.Backend.S3.Bucket = "MyBucket"
 		config.OpenTofu.Backend.S3.Key = "terraform.tfstate"
 		config.OpenTofu.Backend.S3.Region = "us-west-2"
-		
+
 		// Add AWS credentials for S3 backend
 		config.OpenCenter.Cluster.AWSAccessKey = "test-key"
 		config.OpenCenter.Cluster.AWSSecretAccessKey = "test-secret"
@@ -161,7 +161,7 @@ func TestNewValidationRules(t *testing.T) {
 		// Test that S3 bucket defaults to organization name (lowercase)
 		config := NewDefault("test-cluster")
 		config.OpenCenter.Meta.Organization = "MyOrganization"
-		
+
 		// Simulate loading config which applies organization defaults
 		applyOrganizationDefaults(&config)
 

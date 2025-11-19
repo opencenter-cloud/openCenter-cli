@@ -41,16 +41,16 @@ func (f *DefaultFileOperator) ReadFile(filename string) ([]byte, error) {
 	if err := f.validator.ValidateFileExists(filename); err != nil {
 		return nil, fmt.Errorf("file validation failed: %w", err)
 	}
-	
+
 	if err := f.validator.ValidateFileReadable(filename); err != nil {
 		return nil, fmt.Errorf("file not readable: %w", err)
 	}
-	
+
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filename, err)
 	}
-	
+
 	return data, nil
 }
 
@@ -60,11 +60,11 @@ func (f *DefaultFileOperator) WriteFile(filename string, data []byte, perm os.Fi
 	if err := f.ensureParentDir(filename); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
-	
+
 	if err := os.WriteFile(filename, data, perm); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filename, err)
 	}
-	
+
 	return nil
 }
 
@@ -87,17 +87,17 @@ func (f *DefaultFileOperator) AppendToFile(filename string, data []byte) error {
 			return fmt.Errorf("failed to create parent directory: %w", err)
 		}
 	}
-	
+
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open file for append %s: %w", filename, err)
 	}
 	defer file.Close()
-	
+
 	if _, err := file.Write(data); err != nil {
 		return fmt.Errorf("failed to append to file %s: %w", filename, err)
 	}
-	
+
 	return nil
 }
 
@@ -106,46 +106,46 @@ func (f *DefaultFileOperator) CopyFile(src, dst string) error {
 	if err := f.validator.ValidateFileExists(src); err != nil {
 		return fmt.Errorf("source file validation failed: %w", err)
 	}
-	
+
 	if err := f.validator.ValidateFileReadable(src); err != nil {
 		return fmt.Errorf("source file not readable: %w", err)
 	}
-	
+
 	// Get source file info
 	srcInfo, err := os.Stat(src)
 	if err != nil {
 		return fmt.Errorf("failed to get source file info: %w", err)
 	}
-	
+
 	// Ensure destination parent directory exists
 	if err := f.ensureParentDir(dst); err != nil {
 		return fmt.Errorf("failed to create destination parent directory: %w", err)
 	}
-	
+
 	// Open source file
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
 	defer srcFile.Close()
-	
+
 	// Create destination file
 	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
 	defer dstFile.Close()
-	
+
 	// Copy file contents
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
 		return fmt.Errorf("failed to copy file contents: %w", err)
 	}
-	
+
 	// Sync to ensure data is written
 	if err := dstFile.Sync(); err != nil {
 		return fmt.Errorf("failed to sync destination file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -154,26 +154,26 @@ func (f *DefaultFileOperator) MoveFile(src, dst string) error {
 	if err := f.validator.ValidateFileExists(src); err != nil {
 		return fmt.Errorf("source file validation failed: %w", err)
 	}
-	
+
 	// Ensure destination parent directory exists
 	if err := f.ensureParentDir(dst); err != nil {
 		return fmt.Errorf("failed to create destination parent directory: %w", err)
 	}
-	
+
 	// Try to rename first (atomic operation if on same filesystem)
 	if err := os.Rename(src, dst); err == nil {
 		return nil
 	}
-	
+
 	// If rename fails, fall back to copy and delete
 	if err := f.CopyFile(src, dst); err != nil {
 		return fmt.Errorf("failed to copy file during move: %w", err)
 	}
-	
+
 	if err := f.DeleteFile(src); err != nil {
 		return fmt.Errorf("failed to delete source file after copy: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -182,11 +182,11 @@ func (f *DefaultFileOperator) DeleteFile(filename string) error {
 	if !f.FileExists(filename) {
 		return nil // File doesn't exist, nothing to delete
 	}
-	
+
 	if err := os.Remove(filename); err != nil {
 		return fmt.Errorf("failed to delete file %s: %w", filename, err)
 	}
-	
+
 	return nil
 }
 
@@ -202,7 +202,7 @@ func (f *DefaultFileOperator) GetFileInfo(filename string) (os.FileInfo, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file info for %s: %w", filename, err)
 	}
-	
+
 	return info, nil
 }
 
@@ -212,11 +212,11 @@ func (f *DefaultFileOperator) ensureParentDir(filename string) error {
 	if parentDir == "." || parentDir == "/" {
 		return nil
 	}
-	
+
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory %s: %w", parentDir, err)
 	}
-	
+
 	return nil
 }
 
@@ -226,7 +226,7 @@ func (f *DefaultFileOperator) GetFileSize(filename string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return info.Size(), nil
 }
 
@@ -236,7 +236,7 @@ func (f *DefaultFileOperator) IsDirectory(path string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	return info.IsDir()
 }
 
@@ -246,7 +246,7 @@ func (f *DefaultFileOperator) IsRegularFile(path string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	return info.Mode().IsRegular()
 }
 
@@ -256,7 +256,7 @@ func (f *DefaultFileOperator) GetFileMetadata(filename string) (*FileMetadata, e
 	if err != nil {
 		return nil, err
 	}
-	
+
 	metadata := &FileMetadata{
 		Path:        filename,
 		Size:        info.Size(),
@@ -265,7 +265,7 @@ func (f *DefaultFileOperator) GetFileMetadata(filename string) (*FileMetadata, e
 		IsDir:       info.IsDir(),
 		Permissions: info.Mode().String(),
 	}
-	
+
 	return metadata, nil
 }
 
@@ -284,7 +284,7 @@ func (f *DefaultFileOperator) TouchFile(filename string) error {
 		}
 		return nil
 	}
-	
+
 	// Create empty file
 	return f.CreateEmptyFile(filename, 0644)
 }
@@ -294,14 +294,14 @@ func (f *DefaultFileOperator) TruncateFile(filename string, size int64) error {
 	if err := f.validator.ValidateFileExists(filename); err != nil {
 		return fmt.Errorf("file validation failed: %w", err)
 	}
-	
+
 	if err := f.validator.ValidateFileWritable(filename); err != nil {
 		return fmt.Errorf("file not writable: %w", err)
 	}
-	
+
 	if err := os.Truncate(filename, size); err != nil {
 		return fmt.Errorf("failed to truncate file %s: %w", filename, err)
 	}
-	
+
 	return nil
 }

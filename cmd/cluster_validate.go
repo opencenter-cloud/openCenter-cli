@@ -14,12 +14,12 @@
 package cmd
 
 import (
-    "fmt"
-    "os"
-    "path/filepath"
+	"fmt"
+	"os"
+	"path/filepath"
 
-    "github.com/rackerlabs/openCenter-cli/internal/config"
-    "github.com/spf13/cobra"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/spf13/cobra"
 )
 
 // newClusterValidateCmd creates the command for validating a cluster's configuration.
@@ -73,7 +73,7 @@ Troubleshooting:
 
   # Validate and save debug config to specific directory
   openCenter cluster validate my-cluster --generate-debug-config --output-dir=/tmp`,
-		Args:  cobra.MaximumNArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
 			if len(args) > 0 {

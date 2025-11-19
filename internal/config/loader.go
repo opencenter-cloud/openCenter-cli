@@ -53,7 +53,7 @@ func (cl *ConfigLoader) LoadFromFile(ctx context.Context, filePath string) (*Con
 
 	// Extract cluster name from file path for context
 	clusterName := cl.extractClusterNameFromPath(filePath)
-	
+
 	return cl.LoadFromBytes(ctx, data, clusterName)
 }
 
@@ -235,7 +235,7 @@ func (cl *ConfigLoader) ValidateFile(ctx context.Context, filePath string) error
 func (cl *ConfigLoader) extractClusterNameFromPath(filePath string) string {
 	// Extract filename without extension
 	filename := filepath.Base(filePath)
-	
+
 	// Handle organization-based structure: .cluster-name-config.yaml
 	if filename[0] == '.' && filepath.Ext(filename) == ".yaml" {
 		// Remove leading dot and -config.yaml suffix
@@ -244,12 +244,12 @@ func (cl *ConfigLoader) extractClusterNameFromPath(filePath string) string {
 			return name[:len(name)-len(suffix)]
 		}
 	}
-	
+
 	// Handle legacy structure: cluster-name.yaml
 	if filepath.Ext(filename) == ".yaml" {
 		return filename[:len(filename)-5] // Remove .yaml extension
 	}
-	
+
 	return filename
 }
 
@@ -264,14 +264,14 @@ func (cl *ConfigLoader) IsValidFormat(filePath string) bool {
 	if len(ext) > 0 {
 		ext = ext[1:] // Remove the dot
 	}
-	
+
 	supportedFormats := cl.GetSupportedFormats()
 	for _, format := range supportedFormats {
 		if ext == format {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

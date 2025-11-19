@@ -28,8 +28,8 @@ import (
 )
 
 var (
-	docStyle    = lipgloss.NewStyle().Margin(1, 2)
-	titleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFDF5")).Background(lipgloss.Color("#25A065")).Padding(0, 1)
+	docStyle          = lipgloss.NewStyle().Margin(1, 2)
+	titleStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFDF5")).Background(lipgloss.Color("#25A065")).Padding(0, 1)
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
 	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 )
@@ -45,7 +45,7 @@ type ClusterMetadata struct {
 
 // ClusterSelectOutput represents the complete output for cluster select command.
 type ClusterSelectOutput struct {
-	Metadata        ClusterMetadata
+	Metadata       ClusterMetadata
 	Paths          config.ClusterPaths
 	ExportCommands []string
 	GitOpsInfo     GitOpsInfo
@@ -53,10 +53,10 @@ type ClusterSelectOutput struct {
 
 // GitOpsInfo represents GitOps repository information.
 type GitOpsInfo struct {
-	GitDir          string
-	ApplicationsDir string
+	GitDir            string
+	ApplicationsDir   string
 	InfrastructureDir string
-	SecretsDir      string
+	SecretsDir        string
 }
 
 // item represents a single selectable entry in the interactive list.
@@ -216,7 +216,7 @@ func generateClusterSelectOutput(clusterName string) (ClusterSelectOutput, error
 	}
 
 	return ClusterSelectOutput{
-		Metadata:        metadata,
+		Metadata:       metadata,
 		Paths:          paths,
 		ExportCommands: exportCommands,
 		GitOpsInfo:     gitOpsInfo,
@@ -342,7 +342,7 @@ func newClusterSelectCmd() *cobra.Command {
 If no cluster name is provided, an interactive selection menu is displayed.
 For deployed clusters, environment setup commands are generated to configure
 KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.`,
-		Args:  cobra.MaximumNArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
 			if len(args) > 0 {

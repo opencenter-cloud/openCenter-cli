@@ -100,15 +100,15 @@ type FileHasher interface {
 
 // FileMetadata represents file metadata
 type FileMetadata struct {
-	Path         string      `json:"path"`
-	Size         int64       `json:"size"`
-	Mode         os.FileMode `json:"mode"`
-	ModTime      int64       `json:"mod_time"`
-	IsDir        bool        `json:"is_dir"`
-	Hash         string      `json:"hash,omitempty"`
-	Permissions  string      `json:"permissions"`
-	Owner        string      `json:"owner,omitempty"`
-	Group        string      `json:"group,omitempty"`
+	Path        string      `json:"path"`
+	Size        int64       `json:"size"`
+	Mode        os.FileMode `json:"mode"`
+	ModTime     int64       `json:"mod_time"`
+	IsDir       bool        `json:"is_dir"`
+	Hash        string      `json:"hash,omitempty"`
+	Permissions string      `json:"permissions"`
+	Owner       string      `json:"owner,omitempty"`
+	Group       string      `json:"group,omitempty"`
 }
 
 // FileOperation represents a file operation for batch processing

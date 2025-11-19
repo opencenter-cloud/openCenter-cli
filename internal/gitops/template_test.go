@@ -42,18 +42,18 @@ func TestRenderInfrastructureClusterWithDefaults(t *testing.T) {
 
 	// Test default values from main-stage.tf
 	expectedDefaults := map[string]string{
-		"subnet_nodes":                  "10.2.184.0/22",
-		"worker_count":                  "2",
-		"master_count":                  "3",
-		"kubernetes_version":            "1.31.4",
-		"flavor_master":                 "gp.0.4.4",
-		"flavor_worker":                 "gp.0.4.8",
-		"worker_node_bfv_volume_size":   "40",
-		"worker_node_bfv_volume_type":   "HA-Standard",
+		"subnet_nodes":                       "10.2.184.0/22",
+		"worker_count":                       "2",
+		"master_count":                       "3",
+		"kubernetes_version":                 "1.31.4",
+		"flavor_master":                      "gp.0.4.4",
+		"flavor_worker":                      "gp.0.4.8",
+		"worker_node_bfv_volume_size":        "40",
+		"worker_node_bfv_volume_type":        "HA-Standard",
 		"kubelet_rotate_server_certificates": "true",
-		"dns_nameservers":               `["8.8.8.8", "8.8.4.4"]`,
-		"node_worker":                   "-wn",
-		"node_master":                   "-cp",
+		"dns_nameservers":                    `["8.8.8.8", "8.8.4.4"]`,
+		"node_worker":                        "-wn",
+		"node_master":                        "-cp",
 	}
 
 	for key, expected := range expectedDefaults {
@@ -68,7 +68,7 @@ func TestRenderInfrastructureClusterConditionalOIDC(t *testing.T) {
 	cfg := config.NewDefault("oidc-test")
 	cfg.OpenCenter.Cluster.ClusterName = "oidc-test"
 	cfg.OpenCenter.GitOps.GitDir = dst
-	
+
 	// Enable OIDC
 	cfg.OpenCenter.Cluster.Kubernetes.OIDC.Enabled = true
 	cfg.OpenCenter.Cluster.Kubernetes.OIDC.KubeOIDCURL = "https://auth.example.com/realms/test"
@@ -109,7 +109,7 @@ func TestRenderInfrastructureClusterConditionalOIDCDisabled(t *testing.T) {
 	cfg := config.NewDefault("no-oidc-test")
 	cfg.OpenCenter.Cluster.ClusterName = "no-oidc-test"
 	cfg.OpenCenter.GitOps.GitDir = dst
-	
+
 	// Explicitly disable OIDC
 	cfg.OpenCenter.Cluster.Kubernetes.OIDC.Enabled = false
 
@@ -148,7 +148,7 @@ func TestRenderInfrastructureClusterConditionalWindows(t *testing.T) {
 	cfg := config.NewDefault("windows-test")
 	cfg.OpenCenter.Cluster.ClusterName = "windows-test"
 	cfg.OpenCenter.GitOps.GitDir = dst
-	
+
 	// Enable Windows workers
 	cfg.OpenCenter.Cluster.Kubernetes.WorkerCountWindows = 2
 	cfg.OpenCenter.Cluster.Kubernetes.WindowsWorkers.Enabled = true
@@ -187,7 +187,7 @@ func TestRenderInfrastructureClusterConditionalWindowsDisabled(t *testing.T) {
 	cfg := config.NewDefault("no-windows-test")
 	cfg.OpenCenter.Cluster.ClusterName = "no-windows-test"
 	cfg.OpenCenter.GitOps.GitDir = dst
-	
+
 	// Disable Windows workers (default)
 	cfg.OpenCenter.Cluster.Kubernetes.WorkerCountWindows = 0
 
@@ -223,7 +223,7 @@ func TestRenderInfrastructureClusterConditionalCalico(t *testing.T) {
 	cfg := config.NewDefault("calico-test")
 	cfg.OpenCenter.Cluster.ClusterName = "calico-test"
 	cfg.OpenCenter.GitOps.GitDir = dst
-	
+
 	// Enable Calico explicitly
 	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = true
 
@@ -249,7 +249,7 @@ func TestRenderInfrastructureClusterConditionalCalicoDisabled(t *testing.T) {
 	cfg := config.NewDefault("no-calico-test")
 	cfg.OpenCenter.Cluster.ClusterName = "no-calico-test"
 	cfg.OpenCenter.GitOps.GitDir = dst
-	
+
 	// Disable Calico and enable Cilium instead
 	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
 	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled = true
@@ -317,7 +317,7 @@ func TestRenderInfrastructureClusterNetworkPluginSelection(t *testing.T) {
 			cfg := config.NewDefault("network-plugin-test")
 			cfg.OpenCenter.Cluster.ClusterName = "network-plugin-test"
 			cfg.OpenCenter.GitOps.GitDir = dst
-			
+
 			tc.setupConfig(&cfg)
 
 			if err := RenderInfrastructureCluster(cfg); err != nil {

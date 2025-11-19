@@ -27,9 +27,9 @@ import (
 func TestNewGitIntegrator(t *testing.T) {
 	repoPath := "/test/repo"
 	encryptor := NewDefaultEncryptor(nil, nil)
-	
+
 	integrator := NewGitIntegrator(repoPath, encryptor)
-	
+
 	if integrator == nil {
 		t.Error("NewGitIntegrator() should not return nil")
 	}
@@ -38,22 +38,22 @@ func TestNewGitIntegrator(t *testing.T) {
 func TestGitIntegrator_ValidateRepository(t *testing.T) {
 	// Create temporary directory
 	tmpDir := t.TempDir()
-	
+
 	encryptor := NewDefaultEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tmpDir, encryptor)
-	
+
 	// Should fail because it's not a git repository
 	err := integrator.ValidateRepository()
 	if err == nil {
 		t.Error("ValidateRepository() should fail for non-git directory")
 	}
-	
+
 	// Create .git directory
 	gitDir := filepath.Join(tmpDir, ".git")
 	if err := os.Mkdir(gitDir, 0755); err != nil {
 		t.Fatalf("Failed to create .git directory: %v", err)
 	}
-	
+
 	// Should pass now
 	err = integrator.ValidateRepository()
 	if err != nil {
@@ -63,15 +63,15 @@ func TestGitIntegrator_ValidateRepository(t *testing.T) {
 
 func TestGitIntegrator_CreateGitIgnore(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	encryptor := NewDefaultEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tmpDir, encryptor)
-	
+
 	err := integrator.CreateGitIgnore()
 	if err != nil {
 		t.Errorf("CreateGitIgnore() error = %v", err)
 	}
-	
+
 	// Check if .gitignore was created
 	gitignorePath := filepath.Join(tmpDir, ".gitignore")
 	if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
@@ -81,15 +81,15 @@ func TestGitIntegrator_CreateGitIgnore(t *testing.T) {
 
 func TestGitIntegrator_SetupGitAttributes(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	encryptor := NewDefaultEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tmpDir, encryptor)
-	
+
 	err := integrator.SetupGitAttributes()
 	if err != nil {
 		t.Errorf("SetupGitAttributes() error = %v", err)
 	}
-	
+
 	// Check if .gitattributes was created
 	gitattributesPath := filepath.Join(tmpDir, ".gitattributes")
 	if _, err := os.Stat(gitattributesPath); os.IsNotExist(err) {
@@ -99,10 +99,10 @@ func TestGitIntegrator_SetupGitAttributes(t *testing.T) {
 
 func TestGitIntegrator_CreateCommitMessage(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	encryptor := NewDefaultEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tmpDir, encryptor)
-	
+
 	cfg := &config.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Cluster: config.ClusterConfig{
@@ -110,7 +110,7 @@ func TestGitIntegrator_CreateCommitMessage(t *testing.T) {
 			},
 		},
 	}
-	
+
 	tests := []struct {
 		operation string
 		contains  string
@@ -120,7 +120,7 @@ func TestGitIntegrator_CreateCommitMessage(t *testing.T) {
 		{"encrypt", "Encrypt sensitive files"},
 		{"other", "Update overlay files"},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.operation, func(t *testing.T) {
 			message := integrator.CreateCommitMessage(cfg, tt.operation)
@@ -136,10 +136,10 @@ func TestGitIntegrator_CreateCommitMessage(t *testing.T) {
 
 func TestGitIntegrator_getFilesToEncrypt(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	encryptor := NewDefaultEncryptor(nil, nil)
 	integrator := NewGitIntegrator(tmpDir, encryptor)
-	
+
 	cfg := &config.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Infrastructure: config.Infrastructure{
@@ -147,20 +147,20 @@ func TestGitIntegrator_getFilesToEncrypt(t *testing.T) {
 			},
 		},
 	}
-	
+
 	files := integrator.getFilesToEncrypt(tmpDir, cfg)
-	
+
 	// Should contain standard files
 	expectedFiles := []string{
 		"flux-system/gotk-sync.yaml",
 		"managed-services/sources/base-repo.yaml",
 		"secrets/openstack-credentials.yaml",
 	}
-	
+
 	if len(files) != len(expectedFiles) {
 		t.Errorf("getFilesToEncrypt() returned %d files, expected %d", len(files), len(expectedFiles))
 	}
-	
+
 	for _, expected := range expectedFiles {
 		found := false
 		for _, file := range files {
@@ -177,9 +177,9 @@ func TestGitIntegrator_getFilesToEncrypt(t *testing.T) {
 
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || 
-		containsAt(s, substr))))
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
+			containsAt(s, substr))))
 }
 
 func containsAt(s, substr string) bool {

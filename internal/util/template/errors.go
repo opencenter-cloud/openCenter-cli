@@ -54,23 +54,23 @@ type TemplateError struct {
 // Error implements the error interface
 func (e *TemplateError) Error() string {
 	var parts []string
-	
+
 	if e.Template != "" {
 		parts = append(parts, fmt.Sprintf("template '%s'", e.Template))
 	}
-	
+
 	if e.Field != "" {
 		parts = append(parts, fmt.Sprintf("field '%s'", e.Field))
 	}
-	
+
 	parts = append(parts, e.Message)
-	
+
 	result := strings.Join(parts, ": ")
-	
+
 	if e.Cause != nil {
 		result = fmt.Sprintf("%s: %v", result, e.Cause)
 	}
-	
+
 	return result
 }
 
@@ -107,10 +107,10 @@ func NewTemplateNotFoundError(templateName string, availableTemplates []string) 
 		Template: templateName,
 		Message:  "template not found",
 	}
-	
+
 	if len(availableTemplates) > 0 {
 		err.WithSuggestions(
-			"Available templates: " + strings.Join(availableTemplates, ", "),
+			"Available templates: "+strings.Join(availableTemplates, ", "),
 			"Check template name spelling",
 			"Ensure template is properly loaded",
 		)
@@ -121,7 +121,7 @@ func NewTemplateNotFoundError(templateName string, availableTemplates []string) 
 			"Check template loading configuration",
 		)
 	}
-	
+
 	return err
 }
 

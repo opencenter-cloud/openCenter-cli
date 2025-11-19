@@ -31,8 +31,6 @@ type DefaultTemplateValidator struct {
 	templates *template.Template
 }
 
-
-
 // NewDefaultTemplateValidator creates a new default template validator
 func NewDefaultTemplateValidator() *DefaultTemplateValidator {
 	return &DefaultTemplateValidator{}
@@ -341,7 +339,7 @@ func (v *DefaultTemplateValidator) extractVariablesFromArgument(arg parse.Node, 
 				varPath += "."
 			}
 			varPath += strings.Join(a.Ident, ".")
-			
+
 			*variables = append(*variables, VariableInfo{
 				Name:     strings.Join(a.Ident, "."),
 				Path:     varPath,
@@ -526,7 +524,7 @@ func (v *DefaultTemplateValidator) findUnusedVariablesRecursive(data interface{}
 // validateTemplateExecution performs a dry-run execution to catch runtime errors
 func (v *DefaultTemplateValidator) validateTemplateExecution(tmpl *template.Template, data interface{}) error {
 	var buf bytes.Buffer
-	
+
 	// Try to execute the template
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return fmt.Errorf("template execution failed: %w", err)
@@ -641,7 +639,7 @@ func (v *DefaultTemplateValidator) ValidateNetworkPluginConfig(pluginType string
 	}
 
 	if !isSupported {
-		return fmt.Errorf("unsupported network plugin: %s, supported plugins: %s", 
+		return fmt.Errorf("unsupported network plugin: %s, supported plugins: %s",
 			pluginType, strings.Join(supportedPlugins, ", "))
 	}
 
@@ -789,7 +787,7 @@ func (v *DefaultTemplateValidator) validateFlannelConfigValidator(config map[str
 					}
 				}
 				if !isValid {
-					return fmt.Errorf("invalid backend type: %v, valid types: %s", 
+					return fmt.Errorf("invalid backend type: %v, valid types: %s",
 						backendType, strings.Join(validTypes, ", "))
 				}
 			}
@@ -881,7 +879,7 @@ func (v *DefaultTemplateValidator) validateFlannelConfig(config map[string]inter
 					}
 				}
 				if !isValid {
-					return fmt.Errorf("invalid flannel backend type: %v, valid types: %s", 
+					return fmt.Errorf("invalid flannel backend type: %v, valid types: %s",
 						backendType, strings.Join(validTypes, ", "))
 				}
 			}
@@ -954,7 +952,7 @@ func (v *DefaultTemplateValidator) ExtractTemplateVariables(templateName string)
 // ValidateTemplateWithMissingVariableDetection validates template and detects missing variables
 func (v *DefaultTemplateValidator) ValidateTemplateWithMissingVariableDetection(templateName string, data interface{}) (*TemplateValidationResult, error) {
 	result := v.ValidateTemplateWithData(templateName, data)
-	
+
 	// Add additional missing variable detection using regex patterns
 	if v.templates != nil {
 		tmpl := v.templates.Lookup(templateName)
@@ -975,25 +973,25 @@ func (v *DefaultTemplateValidator) ValidateTemplateWithMissingVariableDetection(
 			}
 		}
 	}
-	
+
 	if len(result.Errors) > 0 {
 		result.Valid = false
 		return result, fmt.Errorf("template validation failed with %d errors", len(result.Errors))
 	}
-	
+
 	return result, nil
 }
 
 // detectMissingVariablesWithRegex uses regex to detect potentially missing variables
 func (v *DefaultTemplateValidator) detectMissingVariablesWithRegex(tmpl *template.Template, data interface{}) []string {
 	var missing []string
-	
+
 	// Get template text (this is a simplified approach)
 	templateText := v.getTemplateText(tmpl)
 	if templateText == "" {
 		return missing
 	}
-	
+
 	// Regex patterns to find template variables
 	patterns := []*regexp.Regexp{
 		regexp.MustCompile(`\{\{\s*\.([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*)\s*\}\}`),
@@ -1002,9 +1000,9 @@ func (v *DefaultTemplateValidator) detectMissingVariablesWithRegex(tmpl *templat
 		regexp.MustCompile(`\{\{\s*with\s+\.([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*)\s*\}\}`),
 		regexp.MustCompile(`\{\{\s*if\s+\.([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*)\s*\}\}`),
 	}
-	
+
 	foundVars := make(map[string]bool)
-	
+
 	for _, pattern := range patterns {
 		matches := pattern.FindAllStringSubmatch(templateText, -1)
 		for _, match := range matches {
@@ -1020,7 +1018,7 @@ func (v *DefaultTemplateValidator) detectMissingVariablesWithRegex(tmpl *templat
 			}
 		}
 	}
-	
+
 	return missing
 }
 

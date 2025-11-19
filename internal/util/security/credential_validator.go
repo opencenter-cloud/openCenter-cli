@@ -42,12 +42,12 @@ func (v *DefaultCredentialValidator) ValidateNoCredentialsInConfig(configPath st
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
-	
+
 	matches := v.ScanForCredentials(string(content))
 	if len(matches) > 0 {
 		return fmt.Errorf("found %d potential credentials in config file %s", len(matches), configPath)
 	}
-	
+
 	return nil
 }
 
@@ -57,19 +57,19 @@ func (v *DefaultCredentialValidator) ValidateNoCredentialsInLogs(logPath string)
 	if err != nil {
 		return fmt.Errorf("failed to read log file: %w", err)
 	}
-	
+
 	matches := v.ScanForCredentials(string(content))
 	if len(matches) > 0 {
 		return fmt.Errorf("found %d potential credentials in log file %s", len(matches), logPath)
 	}
-	
+
 	return nil
 }
 
 // ScanForCredentials scans content for potential credentials
 func (v *DefaultCredentialValidator) ScanForCredentials(content string) []CredentialMatch {
 	var matches []CredentialMatch
-	
+
 	// Define credential patterns with severity
 	patterns := []struct {
 		pattern  string
@@ -85,12 +85,12 @@ func (v *DefaultCredentialValidator) ScanForCredentials(content string) []Creden
 		{`(?i)(token)[\s:=]+['"]*([a-zA-Z0-9_\-\.]{20,})`, "token", "medium"},
 		{`(?i)bearer\s+([a-zA-Z0-9_\-\.]{20,})`, "bearer_token", "high"},
 	}
-	
+
 	lines := strings.Split(content, "\n")
-	
+
 	for _, p := range patterns {
 		re := regexp.MustCompile(p.pattern)
-		
+
 		for lineNum, line := range lines {
 			if re.MatchString(line) {
 				// Find all matches in the line
@@ -113,10 +113,10 @@ func (v *DefaultCredentialValidator) ScanForCredentials(content string) []Creden
 						}
 						context = context[start:end]
 					}
-					
+
 					// Mask the credential in context
 					context = v.masker.MaskString(context)
-					
+
 					matches = append(matches, CredentialMatch{
 						Type:     p.credType,
 						Line:     lineNum + 1,
@@ -128,14 +128,14 @@ func (v *DefaultCredentialValidator) ScanForCredentials(content string) []Creden
 			}
 		}
 	}
-	
+
 	return matches
 }
 
 // ValidateEnvironmentVariables checks for credentials in environment variables
 func (v *DefaultCredentialValidator) ValidateEnvironmentVariables() error {
 	var issues []string
-	
+
 	// Check for common credential environment variables that should be encrypted
 	sensitiveEnvVars := []string{
 		"AWS_SECRET_ACCESS_KEY",
@@ -144,7 +144,7 @@ func (v *DefaultCredentialValidator) ValidateEnvironmentVariables() error {
 		"SOPS_AGE_KEY",
 		"AGE_SECRET_KEY",
 	}
-	
+
 	for _, envVar := range sensitiveEnvVars {
 		if value := os.Getenv(envVar); value != "" {
 			// Check if the value looks like it might be plaintext
@@ -153,58 +153,58 @@ func (v *DefaultCredentialValidator) ValidateEnvironmentVariables() error {
 			}
 		}
 	}
-	
+
 	if len(issues) > 0 {
 		return fmt.Errorf("credential validation issues: %s", strings.Join(issues, "; "))
 	}
-	
+
 	return nil
 }
 
 // ScanFileForCredentials scans a file and returns detailed credential matches
 func ScanFileForCredentials(filePath string) ([]CredentialMatch, error) {
 	validator := NewDefaultCredentialValidator()
-	
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
-	
+
 	var content strings.Builder
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		content.WriteString(scanner.Text())
 		content.WriteString("\n")
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("failed to scan file: %w", err)
 	}
-	
+
 	return validator.ScanForCredentials(content.String()), nil
 }
 
 // ValidateConfigSecurity performs comprehensive security validation on a config file
 func ValidateConfigSecurity(configPath string) error {
 	validator := NewDefaultCredentialValidator()
-	
+
 	// Check for plaintext credentials
 	if err := validator.ValidateNoCredentialsInConfig(configPath); err != nil {
 		return err
 	}
-	
+
 	// Check file permissions
 	info, err := os.Stat(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to stat config file: %w", err)
 	}
-	
+
 	// Warn if file is world-readable
 	mode := info.Mode()
 	if mode&0004 != 0 {
 		return fmt.Errorf("config file %s is world-readable (permissions: %s)", configPath, mode)
 	}
-	
+
 	return nil
 }

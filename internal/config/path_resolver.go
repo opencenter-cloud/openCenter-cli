@@ -33,17 +33,17 @@ type PathResolver struct {
 // ClusterPaths contains all organization-aware paths for a cluster.
 // This structure supports the new organization-based directory layout.
 type ClusterPaths struct {
-	OrganizationDir   string // ~/.config/openCenter/clusters/<organization>
-	GitOpsDir         string // ~/.config/openCenter/clusters/<organization>
-	ClusterDir        string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>
-	ApplicationsDir   string // ~/.config/openCenter/clusters/<organization>/applications/overlays/<cluster>
-	SecretsDir        string // ~/.config/openCenter/clusters/<organization>/secrets
-	SOPSKeyPath       string // ~/.config/openCenter/clusters/<organization>/secrets/age/keys/<cluster>.txt
-	SOPSConfigPath    string // ~/.config/openCenter/clusters/<organization>/.sops.yaml
-	KubeconfigPath    string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/kubeconfig.yaml
-	InventoryPath     string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/inventory/
-	VenvPath          string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/venv/
-	BinPath           string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/.bin/
+	OrganizationDir string // ~/.config/openCenter/clusters/<organization>
+	GitOpsDir       string // ~/.config/openCenter/clusters/<organization>
+	ClusterDir      string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>
+	ApplicationsDir string // ~/.config/openCenter/clusters/<organization>/applications/overlays/<cluster>
+	SecretsDir      string // ~/.config/openCenter/clusters/<organization>/secrets
+	SOPSKeyPath     string // ~/.config/openCenter/clusters/<organization>/secrets/age/keys/<cluster>.txt
+	SOPSConfigPath  string // ~/.config/openCenter/clusters/<organization>/.sops.yaml
+	KubeconfigPath  string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/kubeconfig.yaml
+	InventoryPath   string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/inventory/
+	VenvPath        string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/venv/
+	BinPath         string // ~/.config/openCenter/clusters/<organization>/infrastructure/clusters/<cluster>/.bin/
 }
 
 // MigrationManager handles migration from legacy flat structure to organization-based structure.
@@ -153,7 +153,7 @@ func (pr *PathResolver) CreateOrganizationStructure(organization string) error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create organization directory %s: %w", dir, err)
 		}
-		
+
 		// Verify the directory was created and is accessible
 		if stat, err := os.Stat(dir); err != nil {
 			return fmt.Errorf("failed to verify organization directory %s: %w", dir, err)
@@ -196,14 +196,14 @@ func (pr *PathResolver) CreateClusterDirectories(clusterName, organization strin
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create cluster directory %s: %w", dir, err)
 		}
-		
+
 		// Verify the directory was created and is accessible
 		if stat, err := os.Stat(dir); err != nil {
 			return fmt.Errorf("failed to verify cluster directory %s: %w", dir, err)
 		} else if !stat.IsDir() {
 			return fmt.Errorf("path %s exists but is not a directory", dir)
 		}
-		
+
 		// Check directory permissions
 		if err := pr.validateDirectoryPermissions(dir); err != nil {
 			return fmt.Errorf("directory %s has insufficient permissions: %w", dir, err)
@@ -502,7 +502,7 @@ func (mm *MigrationManager) copyFile(src, dst string, mode os.FileMode) error {
 func (mm *MigrationManager) updateClusterConfigWithOrganization(clusterName, organization string, paths ClusterPaths) error {
 	// Load the cluster configuration from the new location
 	configPath := filepath.Join(paths.ClusterDir, "."+clusterName+"-config.yaml")
-	
+
 	// Read the configuration file
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -773,7 +773,7 @@ func (pr *PathResolver) OrganizationAwareConfigPath(clusterName string) (string,
 	// Use organization-based path (config at organization level)
 	paths := pr.ResolveClusterPaths(clusterName, organization)
 	configPath := filepath.Join(paths.OrganizationDir, "."+clusterName+"-config.yaml")
-	
+
 	// Cache the resolved path if the file exists
 	if _, err := os.Stat(configPath); err == nil {
 		pr.pathCache[cacheKey] = configPath
@@ -803,13 +803,13 @@ func (pr *PathResolver) validateDirectoryPermissions(dir string) error {
 		return fmt.Errorf("cannot write to directory: %w", err)
 	}
 	file.Close()
-	
+
 	// Clean up test file
 	if err := os.Remove(testFile); err != nil {
 		// Log warning but don't fail - the directory is writable
 		fmt.Printf("Warning: failed to remove test file %s: %v\n", testFile, err)
 	}
-	
+
 	return nil
 }
 
@@ -859,7 +859,7 @@ func (pr *PathResolver) getClusterOrganization(clusterName string) (string, erro
 	for _, entry := range entries {
 		if entry.IsDir() {
 			orgName := entry.Name()
-			
+
 			// Skip if this looks like a legacy cluster directory
 			legacyConfigPath := filepath.Join(clustersDir, orgName, "."+orgName+"-config.yaml")
 			if _, err := os.Stat(legacyConfigPath); err == nil {

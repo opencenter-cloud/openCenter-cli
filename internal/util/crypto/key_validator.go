@@ -90,12 +90,12 @@ func (v *AgeKeyValidator) ValidateKeyAccess(keyName string) error {
 // ValidateKeyPair validates that a private and public key pair match
 func ValidateKeyPair(privateKey, publicKey string) error {
 	validator := NewAgeKeyValidator()
-	
+
 	// Validate individual keys
 	if err := validator.ValidateAgeKey(privateKey); err != nil {
 		return fmt.Errorf("invalid private key: %w", err)
 	}
-	
+
 	if err := validator.ValidateAgeKey(publicKey); err != nil {
 		return fmt.Errorf("invalid public key: %w", err)
 	}

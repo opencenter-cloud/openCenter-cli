@@ -16,7 +16,7 @@ Package openstack provides OpenStack-specific functionality.
 
 This package contains functions for performing preflight checks and other operations related to OpenStack.
 
-When to use
+# When to use
 
 This package is used internally by openCenter to ensure that the environment is correctly configured for OpenStack. It is invoked as part of the `cluster preflight` command.
 */

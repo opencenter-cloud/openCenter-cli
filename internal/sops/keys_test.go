@@ -54,26 +54,26 @@ func TestNewKeyManager(t *testing.T) {
 func TestSetupSOPSEnvironment(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewKeyManager(tmpDir)
-	
+
 	// Generate a test key
 	keyPair, err := manager.GenerateAgeKey()
 	if err != nil {
 		t.Fatalf("Failed to generate test key: %v", err)
 	}
-	
+
 	// Save the key
 	keyName := "test-key"
 	err = manager.SaveAgeKey(keyPair, keyName)
 	if err != nil {
 		t.Fatalf("Failed to save test key: %v", err)
 	}
-	
+
 	// Test setup environment
 	err = SetupSOPSEnvironment(manager, keyName)
 	if err != nil {
 		t.Errorf("SetupSOPSEnvironment() error = %v", err)
 	}
-	
+
 	// Check if environment variable was set
 	envVar := os.Getenv("SOPS_AGE_KEY_FILE")
 	if envVar == "" {
@@ -95,20 +95,20 @@ func TestCheckSOPSInstallation(t *testing.T) {
 func TestValidateSOPSKeyAccess(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewKeyManager(tmpDir)
-	
+
 	// Generate a test key
 	keyPair, err := manager.GenerateAgeKey()
 	if err != nil {
 		t.Fatalf("Failed to generate test key: %v", err)
 	}
-	
+
 	// Save the key
 	keyName := "test-key"
 	err = manager.SaveAgeKey(keyPair, keyName)
 	if err != nil {
 		t.Fatalf("Failed to save test key: %v", err)
 	}
-	
+
 	// Test key validation
 	err = ValidateSOPSKeyAccess(manager, keyName)
 	if err != nil {
@@ -119,7 +119,7 @@ func TestValidateSOPSKeyAccess(t *testing.T) {
 func TestValidateSOPSKeyAccess_NonExistentKey(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewKeyManager(tmpDir)
-	
+
 	// Test with non-existent key
 	err := ValidateSOPSKeyAccess(manager, "non-existent-key")
 	if err == nil {

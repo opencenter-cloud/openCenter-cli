@@ -40,7 +40,7 @@ func (ce *CacheEntry) IsExpired() bool {
 type InMemoryConfigCache struct {
 	cache map[string]*CacheEntry
 	mu    sync.RWMutex
-	
+
 	// Configuration
 	defaultTTL time.Duration
 	maxSize    int

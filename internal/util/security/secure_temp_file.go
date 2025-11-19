@@ -43,30 +43,30 @@ func NewDefaultSecureTempFileManager() *DefaultSecureTempFileManager {
 func (m *DefaultSecureTempFileManager) CreateSecureTempFile(pattern string) (*SecureTempFile, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Create temporary file with secure permissions (0600 - owner read/write only)
 	tempFile, err := os.CreateTemp("", pattern)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create secure temporary file: %w", err)
 	}
-	
+
 	// Set restrictive permissions immediately
 	if err := tempFile.Chmod(0600); err != nil {
 		tempFile.Close()
 		os.Remove(tempFile.Name())
 		return nil, fmt.Errorf("failed to set secure permissions: %w", err)
 	}
-	
+
 	secureTempFile := &SecureTempFile{
 		File:        tempFile,
 		Path:        tempFile.Name(),
 		Permissions: 0600,
 		CreatedAt:   time.Now(),
 	}
-	
+
 	// Track the temp file for cleanup
 	m.tempFiles[secureTempFile.Path] = secureTempFile
-	
+
 	return secureTempFile, nil
 }
 
@@ -74,22 +74,22 @@ func (m *DefaultSecureTempFileManager) CreateSecureTempFile(pattern string) (*Se
 func (m *DefaultSecureTempFileManager) CreateSecureTempDir(pattern string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Create temporary directory with secure permissions (0700 - owner full access only)
 	tempDir, err := os.MkdirTemp("", pattern)
 	if err != nil {
 		return "", fmt.Errorf("failed to create secure temporary directory: %w", err)
 	}
-	
+
 	// Set restrictive permissions
 	if err := os.Chmod(tempDir, 0700); err != nil {
 		os.RemoveAll(tempDir)
 		return "", fmt.Errorf("failed to set secure permissions: %w", err)
 	}
-	
+
 	// Track the temp directory for cleanup
 	m.tempDirs[tempDir] = time.Now()
-	
+
 	return tempDir, nil
 }
 
@@ -97,7 +97,7 @@ func (m *DefaultSecureTempFileManager) CreateSecureTempDir(pattern string) (stri
 func (m *DefaultSecureTempFileManager) CleanupTempFile(path string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Close file if it's still open
 	if tempFile, exists := m.tempFiles[path]; exists {
 		if tempFile.File != nil {
@@ -105,12 +105,12 @@ func (m *DefaultSecureTempFileManager) CleanupTempFile(path string) error {
 		}
 		delete(m.tempFiles, path)
 	}
-	
+
 	// Securely remove the file
 	if err := secureRemoveFile(path); err != nil {
 		return fmt.Errorf("failed to cleanup temp file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -118,15 +118,15 @@ func (m *DefaultSecureTempFileManager) CleanupTempFile(path string) error {
 func (m *DefaultSecureTempFileManager) CleanupTempDir(path string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Remove from tracking
 	delete(m.tempDirs, path)
-	
+
 	// Securely remove the directory and all contents
 	if err := secureRemoveDir(path); err != nil {
 		return fmt.Errorf("failed to cleanup temp directory: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -134,9 +134,9 @@ func (m *DefaultSecureTempFileManager) CleanupTempDir(path string) error {
 func (m *DefaultSecureTempFileManager) CleanupAll() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	var errors []error
-	
+
 	// Cleanup all temp files
 	for path, tempFile := range m.tempFiles {
 		if tempFile.File != nil {
@@ -147,7 +147,7 @@ func (m *DefaultSecureTempFileManager) CleanupAll() error {
 		}
 	}
 	m.tempFiles = make(map[string]*SecureTempFile)
-	
+
 	// Cleanup all temp directories
 	for path := range m.tempDirs {
 		if err := secureRemoveDir(path); err != nil {
@@ -155,11 +155,11 @@ func (m *DefaultSecureTempFileManager) CleanupAll() error {
 		}
 	}
 	m.tempDirs = make(map[string]time.Time)
-	
+
 	if len(errors) > 0 {
 		return fmt.Errorf("cleanup errors: %v", errors)
 	}
-	
+
 	return nil
 }
 
@@ -173,7 +173,7 @@ func secureRemoveFile(path string) error {
 		}
 		return err
 	}
-	
+
 	// Only overwrite regular files (not directories or special files)
 	if info.Mode().IsRegular() {
 		// Overwrite file with zeros before deletion (basic secure deletion)
@@ -193,7 +193,7 @@ func secureRemoveFile(path string) error {
 			file.Close()
 		}
 	}
-	
+
 	// Remove the file
 	return os.Remove(path)
 }
@@ -205,26 +205,26 @@ func secureRemoveDir(path string) error {
 		if err != nil {
 			return err
 		}
-		
+
 		// Skip the root directory itself for now
 		if filePath == path {
 			return nil
 		}
-		
+
 		// Securely remove files
 		if !info.IsDir() {
 			if err := secureRemoveFile(filePath); err != nil {
 				return err
 			}
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	// Remove the directory structure
 	return os.RemoveAll(path)
 }
@@ -232,32 +232,32 @@ func secureRemoveDir(path string) error {
 // CreateSecureTempFileWithContent creates a secure temp file with initial content
 func CreateSecureTempFileWithContent(pattern string, content []byte) (*SecureTempFile, error) {
 	manager := NewDefaultSecureTempFileManager()
-	
+
 	tempFile, err := manager.CreateSecureTempFile(pattern)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if _, err := tempFile.Write(content); err != nil {
 		tempFile.Close()
 		manager.CleanupTempFile(tempFile.Path)
 		return nil, fmt.Errorf("failed to write content to temp file: %w", err)
 	}
-	
+
 	// Sync to ensure data is written
 	if err := tempFile.File.Sync(); err != nil {
 		tempFile.Close()
 		manager.CleanupTempFile(tempFile.Path)
 		return nil, fmt.Errorf("failed to sync temp file: %w", err)
 	}
-	
+
 	// Seek back to beginning for reading
 	if _, err := tempFile.File.Seek(0, 0); err != nil {
 		tempFile.Close()
 		manager.CleanupTempFile(tempFile.Path)
 		return nil, fmt.Errorf("failed to seek temp file: %w", err)
 	}
-	
+
 	return tempFile, nil
 }
 
@@ -274,7 +274,7 @@ func NewSecureFileWriter(pattern string) (*SecureFileWriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &SecureFileWriter{
 		tempFile: tempFile,
 		manager:  manager,

@@ -42,17 +42,17 @@ func (h *CalicoHandler) GetRequiredFields() []string {
 // GetDefaultConfig returns the default configuration for Calico
 func (h *CalicoHandler) GetDefaultConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"enabled":                        true,
-		"cni_iface":                     "enp3s0",
-		"calico_interface_autodetect":   "interface",
-		"ipv4_pool":                     "192.168.0.0/16",
-		"ipv6_pool":                     "",
-		"mtu":                           1440,
-		"calico_network_backend":        "bird",
-		"calico_rr_enabled":             false,
-		"calico_node_mesh_enabled":      true,
-		"calico_felix_log_level":        "info",
-		"calico_cni_log_level":          "info",
+		"enabled":                     true,
+		"cni_iface":                   "enp3s0",
+		"calico_interface_autodetect": "interface",
+		"ipv4_pool":                   "192.168.0.0/16",
+		"ipv6_pool":                   "",
+		"mtu":                         1440,
+		"calico_network_backend":      "bird",
+		"calico_rr_enabled":           false,
+		"calico_node_mesh_enabled":    true,
+		"calico_felix_log_level":      "info",
+		"calico_cni_log_level":        "info",
 	}
 }
 
@@ -112,7 +112,7 @@ func (h *CalicoHandler) ValidateConfiguration(config map[string]interface{}) err
 				}
 			}
 			if !isValid {
-				return fmt.Errorf("invalid calico interface autodetect method: %s, valid methods: %s", 
+				return fmt.Errorf("invalid calico interface autodetect method: %s, valid methods: %s",
 					autodetectStr, strings.Join(validMethods, ", "))
 			}
 		}
@@ -130,7 +130,7 @@ func (h *CalicoHandler) ValidateConfiguration(config map[string]interface{}) err
 				}
 			}
 			if !isValid {
-				return fmt.Errorf("invalid calico network backend: %s, valid backends: %s", 
+				return fmt.Errorf("invalid calico network backend: %s, valid backends: %s",
 					backendStr, strings.Join(validBackends, ", "))
 			}
 		}
@@ -138,7 +138,7 @@ func (h *CalicoHandler) ValidateConfiguration(config map[string]interface{}) err
 
 	// Validate log levels
 	validLogLevels := []string{"debug", "info", "warning", "error", "fatal"}
-	
+
 	if logLevel, exists := config["calico_felix_log_level"]; exists {
 		if logLevelStr, ok := logLevel.(string); ok && logLevelStr != "" {
 			isValid := false
@@ -149,7 +149,7 @@ func (h *CalicoHandler) ValidateConfiguration(config map[string]interface{}) err
 				}
 			}
 			if !isValid {
-				return fmt.Errorf("invalid calico felix log level: %s, valid levels: %s", 
+				return fmt.Errorf("invalid calico felix log level: %s, valid levels: %s",
 					logLevelStr, strings.Join(validLogLevels, ", "))
 			}
 		}
@@ -165,7 +165,7 @@ func (h *CalicoHandler) ValidateConfiguration(config map[string]interface{}) err
 				}
 			}
 			if !isValid {
-				return fmt.Errorf("invalid calico CNI log level: %s, valid levels: %s", 
+				return fmt.Errorf("invalid calico CNI log level: %s, valid levels: %s",
 					logLevelStr, strings.Join(validLogLevels, ", "))
 			}
 		}
@@ -183,55 +183,55 @@ func (h *CalicoHandler) RenderConfiguration(config map[string]interface{}) (stri
 
 	var parts []string
 	parts = append(parts, "network_plugin = \"calico\"")
-	
+
 	// Render CNI interface
 	if cniIface, exists := config["cni_iface"]; exists {
 		parts = append(parts, fmt.Sprintf("cni_iface = \"%v\"", cniIface))
 	}
-	
+
 	// Render interface autodetect method
 	if autodetect, exists := config["calico_interface_autodetect"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_interface_autodetect = \"%v\"", autodetect))
 	}
-	
+
 	// Render IPv4 pool
 	if ipv4Pool, exists := config["ipv4_pool"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_ipv4_pool = \"%v\"", ipv4Pool))
 	}
-	
+
 	// Render IPv6 pool if specified
 	if ipv6Pool, exists := config["ipv6_pool"]; exists && ipv6Pool != "" {
 		parts = append(parts, fmt.Sprintf("calico_ipv6_pool = \"%v\"", ipv6Pool))
 	}
-	
+
 	// Render MTU
 	if mtu, exists := config["mtu"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_mtu = %v", mtu))
 	}
-	
+
 	// Render network backend
 	if backend, exists := config["calico_network_backend"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_network_backend = \"%v\"", backend))
 	}
-	
+
 	// Render route reflector settings
 	if rrEnabled, exists := config["calico_rr_enabled"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_rr_enabled = %v", rrEnabled))
 	}
-	
+
 	// Render node mesh settings
 	if nodeMesh, exists := config["calico_node_mesh_enabled"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_node_mesh_enabled = %v", nodeMesh))
 	}
-	
+
 	// Render log levels
 	if felixLogLevel, exists := config["calico_felix_log_level"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_felix_log_level = \"%v\"", felixLogLevel))
 	}
-	
+
 	if cniLogLevel, exists := config["calico_cni_log_level"]; exists {
 		parts = append(parts, fmt.Sprintf("calico_cni_log_level = \"%v\"", cniLogLevel))
 	}
-	
+
 	return strings.Join(parts, "\n"), nil
 }

@@ -16,7 +16,7 @@ Package ansible provides functionality for generating Ansible files.
 
 This package is used to create Ansible inventory and configuration files from templates. It is called when the `ansible.enabled` flag is set to `true` in the cluster configuration.
 
-When to use
+# When to use
 
 This package is used internally by openCenter and is not intended for direct use by end-users. It is invoked as part of the `cluster setup` command.
 */

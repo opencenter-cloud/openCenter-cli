@@ -144,13 +144,13 @@ func (f *YAMLFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	// Write timestamp
 	output.WriteString(fmt.Sprintf("timestamp: %s\n", entry.Time.Format("2006-01-02T15:04:05.000Z07:00")))
-	
+
 	// Write level
 	output.WriteString(fmt.Sprintf("level: %s\n", entry.Level.String()))
-	
+
 	// Write message
 	output.WriteString(fmt.Sprintf("message: %q\n", entry.Message))
-	
+
 	// Write fields if any
 	if len(entry.Data) > 0 {
 		output.WriteString("fields:\n")
@@ -158,9 +158,9 @@ func (f *YAMLFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 			output.WriteString(fmt.Sprintf("  %s: %v\n", key, value))
 		}
 	}
-	
+
 	output.WriteString("---\n")
-	
+
 	return []byte(output.String()), nil
 }
 
@@ -210,12 +210,12 @@ func ValidateLoggingConfig(config *LoggingConfig) error {
 		// If it's not a standard output, validate as file path
 		expandedPath := ExpandPath(config.Output)
 		dir := filepath.Dir(expandedPath)
-		
+
 		// Check if directory exists or can be created
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("cannot create log directory %s: %w", dir, err)
 		}
-		
+
 		// Try to create/open the file
 		file, err := os.OpenFile(expandedPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
@@ -243,12 +243,12 @@ func ValidateLoggingConfig(config *LoggingConfig) error {
 // SetLogLevel sets the log level for the global logger
 func SetLogLevel(level string) error {
 	logger := GetGlobalLogger()
-	
+
 	parsedLevel, err := logrus.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("invalid log level '%s': %w", level, err)
 	}
-	
+
 	logger.SetLevel(parsedLevel)
 	return nil
 }
@@ -256,7 +256,7 @@ func SetLogLevel(level string) error {
 // SetLogFormat sets the log format for the global logger
 func SetLogFormat(format string) error {
 	logger := GetGlobalLogger()
-	
+
 	switch strings.ToLower(format) {
 	case "json":
 		logger.SetFormatter(&logrus.JSONFormatter{
@@ -272,7 +272,7 @@ func SetLogFormat(format string) error {
 	default:
 		return fmt.Errorf("invalid log format '%s', must be one of: text, json, yaml", format)
 	}
-	
+
 	return nil
 }
 

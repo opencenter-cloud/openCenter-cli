@@ -25,9 +25,9 @@ import (
 
 // DefaultSecretRotationManager implements SecretRotationManager interface
 type DefaultSecretRotationManager struct {
-	backupManager  BackupManager
-	atomicManager  AtomicOperationManager
-	auditLogger    AuditLogger
+	backupManager BackupManager
+	atomicManager AtomicOperationManager
+	auditLogger   AuditLogger
 }
 
 // NewDefaultSecretRotationManager creates a new secret rotation manager
@@ -62,11 +62,11 @@ func (m *DefaultSecretRotationManager) RotateSecret(ctx context.Context, secretN
 				return nil
 			},
 		}
-		
+
 		if err := tx.AddOperation(backupOp); err != nil {
 			return err
 		}
-		
+
 		// Create rotation operation
 		var oldValue []byte
 		rotateOp := Operation{
@@ -79,12 +79,12 @@ func (m *DefaultSecretRotationManager) RotateSecret(ctx context.Context, secretN
 				if err != nil && !os.IsNotExist(err) {
 					return fmt.Errorf("failed to read old secret: %w", err)
 				}
-				
+
 				// Write new value
 				if err := os.WriteFile(secretName, newValue, 0600); err != nil {
 					return fmt.Errorf("failed to write new secret: %w", err)
 				}
-				
+
 				return nil
 			},
 			Rollback: func() error {
@@ -94,11 +94,11 @@ func (m *DefaultSecretRotationManager) RotateSecret(ctx context.Context, secretN
 				return nil
 			},
 		}
-		
+
 		if err := tx.AddOperation(rotateOp); err != nil {
 			return err
 		}
-		
+
 		// Log rotation
 		if m.auditLogger != nil {
 			m.auditLogger.LogSecurityEvent(ctx, SecurityEvent{
@@ -109,7 +109,7 @@ func (m *DefaultSecretRotationManager) RotateSecret(ctx context.Context, secretN
 				Severity:  "high",
 			})
 		}
-		
+
 		return nil
 	})
 }
@@ -137,11 +137,11 @@ func (m *DefaultSecretRotationManager) RotateSOPSKeys(ctx context.Context, oldKe
 				return nil
 			},
 		}
-		
+
 		if err := tx.AddOperation(backupOp); err != nil {
 			return err
 		}
-		
+
 		// Copy new key to old key location
 		var oldKeyData []byte
 		replaceOp := Operation{
@@ -154,18 +154,18 @@ func (m *DefaultSecretRotationManager) RotateSOPSKeys(ctx context.Context, oldKe
 				if err != nil && !os.IsNotExist(err) {
 					return fmt.Errorf("failed to read old key: %w", err)
 				}
-				
+
 				// Read new key
 				newKeyData, err := os.ReadFile(newKeyPath)
 				if err != nil {
 					return fmt.Errorf("failed to read new key: %w", err)
 				}
-				
+
 				// Write new key to old key location
 				if err := os.WriteFile(oldKeyPath, newKeyData, 0600); err != nil {
 					return fmt.Errorf("failed to write new key: %w", err)
 				}
-				
+
 				return nil
 			},
 			Rollback: func() error {
@@ -175,16 +175,16 @@ func (m *DefaultSecretRotationManager) RotateSOPSKeys(ctx context.Context, oldKe
 				return nil
 			},
 		}
-		
+
 		if err := tx.AddOperation(replaceOp); err != nil {
 			return err
 		}
-		
+
 		// Log SOPS key rotation
 		if m.auditLogger != nil {
 			m.auditLogger.LogSOPSOperation(ctx, "rotate_keys", oldKeyPath, true)
 		}
-		
+
 		return nil
 	})
 }
@@ -195,23 +195,23 @@ func (m *DefaultSecretRotationManager) ValidateRotation(ctx context.Context, sec
 	if _, err := os.Stat(secretName); err != nil {
 		return fmt.Errorf("secret file not found after rotation: %w", err)
 	}
-	
+
 	// Check file permissions
 	info, err := os.Stat(secretName)
 	if err != nil {
 		return fmt.Errorf("failed to stat secret file: %w", err)
 	}
-	
+
 	// Ensure file has secure permissions (0600)
 	if info.Mode().Perm() != 0600 {
 		return fmt.Errorf("secret file has insecure permissions: %s", info.Mode().Perm())
 	}
-	
+
 	// Check file is not empty
 	if info.Size() == 0 {
 		return fmt.Errorf("secret file is empty after rotation")
 	}
-	
+
 	return nil
 }
 
@@ -222,11 +222,11 @@ func (m *DefaultSecretRotationManager) RollbackRotation(ctx context.Context, sec
 	if err != nil {
 		return fmt.Errorf("failed to list backups: %w", err)
 	}
-	
+
 	if len(backups) == 0 {
 		return fmt.Errorf("no backups found for secret %s", secretName)
 	}
-	
+
 	// Get the most recent backup
 	var mostRecent BackupInfo
 	for _, backup := range backups {
@@ -234,12 +234,12 @@ func (m *DefaultSecretRotationManager) RollbackRotation(ctx context.Context, sec
 			mostRecent = backup
 		}
 	}
-	
+
 	// Restore the backup
 	if err := m.backupManager.RestoreBackup(ctx, mostRecent.ID); err != nil {
 		return fmt.Errorf("failed to restore backup: %w", err)
 	}
-	
+
 	// Log rollback
 	if m.auditLogger != nil {
 		m.auditLogger.LogSecurityEvent(ctx, SecurityEvent{
@@ -253,7 +253,7 @@ func (m *DefaultSecretRotationManager) RollbackRotation(ctx context.Context, sec
 			},
 		})
 	}
-	
+
 	return nil
 }
 
@@ -264,26 +264,26 @@ func (m *DefaultSecretRotationManager) RotateAllSecretsInDirectory(ctx context.C
 	if err != nil {
 		return fmt.Errorf("failed to read directory: %w", err)
 	}
-	
+
 	// Rotate each secret file
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
-		
+
 		secretPath := filepath.Join(dirPath, entry.Name())
-		
+
 		// Get new value from rotation function
 		newValue, err := rotateFunc(secretPath)
 		if err != nil {
 			return fmt.Errorf("failed to generate new value for %s: %w", secretPath, err)
 		}
-		
+
 		// Rotate the secret
 		if err := m.RotateSecret(ctx, secretPath, newValue); err != nil {
 			return fmt.Errorf("failed to rotate %s: %w", secretPath, err)
 		}
 	}
-	
+
 	return nil
 }

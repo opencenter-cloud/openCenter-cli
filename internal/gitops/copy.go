@@ -143,11 +143,11 @@ func copyFile(src, dst string) error {
 // It checks if the file belongs to a disabled service or managed service.
 func shouldSkipFile(relPath string, cfg config.Config) bool {
 	pathParts := strings.Split(relPath, string(filepath.Separator))
-	
+
 	// Skip files in disabled services directories
 	if len(pathParts) >= 2 && pathParts[0] == "services" {
 		serviceName := pathParts[1]
-		
+
 		// Special handling for sources directory
 		if serviceName == "sources" && len(pathParts) >= 3 {
 			// Extract service name from source filename (e.g., opencenter-cert-manager.yaml -> cert-manager)
@@ -156,7 +156,7 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 				extractedServiceName := strings.TrimPrefix(filename, "opencenter-")
 				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml")
 				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml.tpl")
-				
+
 				// Check if this service is disabled
 				if service, exists := cfg.OpenCenter.Services[extractedServiceName]; exists && !service.Enabled {
 					return true
@@ -169,11 +169,11 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 			}
 		}
 	}
-	
+
 	// Skip files in disabled managed services directories
 	if len(pathParts) >= 2 && pathParts[0] == "managed-services" {
 		serviceName := pathParts[1]
-		
+
 		// Special handling for sources directory
 		if serviceName == "sources" && len(pathParts) >= 3 {
 			// Extract service name from source filename (e.g., opencenter-alert-proxy.yaml -> alert-proxy)
@@ -182,7 +182,7 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 				extractedServiceName := strings.TrimPrefix(filename, "opencenter-")
 				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml")
 				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml.tpl")
-				
+
 				// Check if this managed service is disabled
 				if service, exists := cfg.OpenCenter.ManagedService[extractedServiceName]; exists && !service.Enabled {
 					return true
@@ -195,7 +195,7 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -238,7 +238,7 @@ func RenderClusterApps(cfg config.Config) error {
 		// Replace cluster-name and cluster_name placeholders in filename
 		relWithClusterName := strings.ReplaceAll(rel, "cluster-name", clusterName)
 		relWithClusterName = strings.ReplaceAll(relWithClusterName, "cluster_name", clusterName)
-		
+
 		dst := filepath.Join(target, relWithClusterName)
 
 		// If template file, process and strip template extension
@@ -278,7 +278,7 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 	if provider == "" {
 		provider = "openstack" // default
 	}
-	
+
 	// Map provider to template filename
 	mainTfTemplate := "main.tf.tpl" // default for openstack
 	if provider == "baremetal" {
@@ -300,7 +300,7 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 		}
 
 		filename := d.Name()
-		
+
 		// Skip main.tf templates that don't match the provider
 		if strings.HasPrefix(filename, "main") && strings.HasSuffix(filename, ".tf.tpl") {
 			if filename != mainTfTemplate {
@@ -314,7 +314,7 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 		// Replace cluster-name and cluster_name placeholders in filename
 		relWithClusterName := strings.ReplaceAll(rel, "cluster-name", clusterName)
 		relWithClusterName = strings.ReplaceAll(relWithClusterName, "cluster_name", clusterName)
-		
+
 		dst := filepath.Join(target, relWithClusterName)
 
 		// If template file, process and strip template extension

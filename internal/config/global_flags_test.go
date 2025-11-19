@@ -44,28 +44,28 @@ func TestGlobalFlagOverrides(t *testing.T) {
 	baseConfig := cm.GetConfig()
 
 	tests := []struct {
-		name        string
-		globalFlags *GlobalFlags
-		expectLevel string
-		expectDryRun bool
+		name          string
+		globalFlags   *GlobalFlags
+		expectLevel   string
+		expectDryRun  bool
 		expectVerbose bool
 	}{
 		{
 			name: "verbose flag overrides log level",
 			globalFlags: &GlobalFlags{
-				Verbose: true,
+				Verbose:  true,
 				LogLevel: "warn", // Should be overridden by verbose
 			},
-			expectLevel: "debug",
+			expectLevel:   "debug",
 			expectVerbose: true,
 		},
 		{
 			name: "explicit log level",
 			globalFlags: &GlobalFlags{
 				LogLevel: "info",
-				Verbose: false,
+				Verbose:  false,
 			},
-			expectLevel: "info",
+			expectLevel:   "info",
 			expectVerbose: false,
 		},
 		{
@@ -79,11 +79,11 @@ func TestGlobalFlagOverrides(t *testing.T) {
 			name: "multiple overrides",
 			globalFlags: &GlobalFlags{
 				LogLevel: "error",
-				DryRun: true,
-				Verbose: false,
+				DryRun:   true,
+				Verbose:  false,
 			},
-			expectLevel: "error",
-			expectDryRun: true,
+			expectLevel:   "error",
+			expectDryRun:  true,
 			expectVerbose: false,
 		},
 	}
@@ -175,7 +175,7 @@ func TestSetFlagParsing(t *testing.T) {
 			},
 		},
 		{
-			name:     "set multiple values",
+			name: "set multiple values",
 			setFlags: []string{
 				"logging.level=debug",
 				"defaults.region=us-west-2",

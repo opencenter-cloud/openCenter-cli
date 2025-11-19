@@ -101,10 +101,10 @@ func (w *world) isolateConfigDir() error {
 		return err
 	}
 	w.configDir = dir
-	
+
 	// Set the environment variable for the CLI to use
 	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
-	
+
 	return nil
 }
 
@@ -191,7 +191,7 @@ func (w *world) resolveClusterConfigPath(clusterName string) (string, error) {
 	for _, entry := range entries {
 		if entry.IsDir() {
 			orgName := entry.Name()
-			
+
 			// Skip if this looks like a legacy cluster directory
 			legacyConfigPath := filepath.Join(clustersDir, orgName, "."+orgName+"-config.yaml")
 			if _, err := os.Stat(legacyConfigPath); err == nil {
@@ -451,17 +451,17 @@ func (w *world) aFileShouldExist(path string) error {
 		if strings.Contains(p, "/conf/") && strings.HasSuffix(p, ".yaml") {
 			fileName := filepath.Base(p)
 			clusterName := strings.TrimSuffix(fileName, ".yaml")
-			
+
 			// Try to resolve using the cluster config path resolution
 			if resolvedPath, resolveErr := w.resolveClusterConfigPath(clusterName); resolveErr == nil {
 				w.lastFile = resolvedPath
 				return nil
 			}
-			
+
 			// Fallback to legacy directory structure check
 			confDir := filepath.Dir(p)
 			newPath := filepath.Join(confDir, "clusters", clusterName, "."+clusterName+"-config.yaml")
-			
+
 			if _, newErr := os.Stat(newPath); newErr == nil {
 				// File exists in new location
 				w.lastFile = newPath
@@ -514,7 +514,7 @@ func (w *world) stdoutShouldContain(expected string) error {
 		if strings.Contains(w.lastOut, expected) {
 			return nil
 		}
-		
+
 		// Handle special case for git_dir path expectations in JSON
 		if strings.Contains(expected, "git_dir") && strings.Contains(expected, "<<tmp>>") {
 			// Replace <<tmp>> with actual tmp directory path
@@ -522,7 +522,7 @@ func (w *world) stdoutShouldContain(expected string) error {
 			if strings.Contains(w.lastOut, expectedWithTmp) {
 				return nil
 			}
-			
+
 			// Also try with tmp/ prefix under the scenario tmp root
 			if strings.Contains(expected, "tmp/") {
 				alt := strings.Replace(expected, "tmp/", filepath.Join(w.tmpDir, "tmp")+"/", 1)
@@ -532,7 +532,7 @@ func (w *world) stdoutShouldContain(expected string) error {
 				}
 			}
 		}
-		
+
 		// Try to unmarshal expected as JSON for exact matching
 		var expectedJSON any
 		if err := json.Unmarshal([]byte(expected), &expectedJSON); err == nil {
@@ -541,7 +541,7 @@ func (w *world) stdoutShouldContain(expected string) error {
 			}
 			return fmt.Errorf("stdout JSON did not match expected; got %v, want %v", actualJSON, expectedJSON)
 		}
-		
+
 		// If expected is not valid JSON but stdout is, check string containment
 		return fmt.Errorf("stdout did not contain %q; got %q", expected, w.lastOut)
 	}
@@ -736,7 +736,7 @@ func (w *world) anEmptyDirectory(path string) error {
 
 func (w *world) aFileWithContent(path string, content *godog.DocString) error {
 	p := w.replaceTmp(path)
-	
+
 	// Default behavior: create file at the specified path
 	// This supports both flat file structure and organization structure
 	// depending on what path the test specifies
@@ -849,13 +849,13 @@ func (w *world) iChooseFromThePrompt(choice string) error {
 				}
 			}
 		}
-		
+
 		// Write .active under the resolved config dir
 		orig := os.Getenv("OPENCENTER_CONFIG_DIR")
 		os.Setenv("OPENCENTER_CONFIG_DIR", configDir)
 		defer os.Setenv("OPENCENTER_CONFIG_DIR", orig)
 		_ = os.MkdirAll(configDir, 0o755)
-		
+
 		// Ensure .active file is created directly
 		activeFile := filepath.Join(configDir, ".active")
 		if err := os.WriteFile(activeFile, []byte(choice), 0o600); err != nil {
@@ -863,13 +863,13 @@ func (w *world) iChooseFromThePrompt(choice string) error {
 			w.lastErr = err.Error()
 			return err
 		}
-		
+
 		// Also try to use the config package's SetActive function
 		if err := config.SetActive(choice); err != nil {
 			// Don't fail if config.SetActive fails, as we've already written the file
 			// This is just a backup to ensure compatibility
 		}
-		
+
 		w.lastExit = 0
 		w.lastOut = fmt.Sprintf("Active cluster set to %s\n", choice)
 		return nil
@@ -909,7 +909,7 @@ func (w *world) iUpdateTheYAMLToSet(path string, content *godog.DocString) error
 		if strings.Contains(p, "/conf/") && strings.HasSuffix(p, ".yaml") {
 			fileName := filepath.Base(p)
 			clusterName := strings.TrimSuffix(fileName, ".yaml")
-			
+
 			// Try to resolve using the cluster config path resolution
 			if resolvedPath, resolveErr := w.resolveClusterConfigPath(clusterName); resolveErr == nil {
 				if newData, newErr := ioutil.ReadFile(resolvedPath); newErr == nil {
@@ -1050,7 +1050,7 @@ func (w *world) findClusterConfigPath(clusterName string) (string, error) {
 	for _, entry := range entries {
 		if entry.IsDir() {
 			orgName := entry.Name()
-			
+
 			// Skip if this looks like a legacy cluster directory
 			legacyConfigPath := filepath.Join(clustersDir, orgName, "."+orgName+"-config.yaml")
 			if _, err := os.Stat(legacyConfigPath); err == nil {
@@ -1174,7 +1174,7 @@ func getField(obj interface{}, path string) (interface{}, error) {
 // setEnvironmentVariable sets an environment variable for the test scenario
 func (w *world) setEnvironmentVariable(name, value string) error {
 	expandedValue := w.replaceTmp(value)
-	
+
 	// Special handling for OPENCENTER_CONFIG_DIR to update the world's configDir
 	if name == "OPENCENTER_CONFIG_DIR" {
 		w.configDir = expandedValue
@@ -1183,7 +1183,7 @@ func (w *world) setEnvironmentVariable(name, value string) error {
 			return err
 		}
 	}
-	
+
 	return os.Setenv(name, expandedValue)
 }
 
@@ -1194,33 +1194,33 @@ func (w *world) validateConfigurationLoading(clusterName string) error {
 	orig := os.Getenv("OPENCENTER_CONFIG_DIR")
 	os.Setenv("OPENCENTER_CONFIG_DIR", w.configDir)
 	defer os.Setenv("OPENCENTER_CONFIG_DIR", orig)
-	
+
 	// First try to find the config file
 	configPath, err := w.resolveClusterConfigPath(clusterName)
 	if err != nil {
 		return fmt.Errorf("failed to resolve cluster config path: %w", err)
 	}
-	
+
 	// Try to read and parse the configuration
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to read config file %s: %w", configPath, err)
 	}
-	
+
 	// Normalize the configuration if needed
 	normalizedData := normalizeConfigYAML(string(data))
-	
+
 	// Try to unmarshal as a config struct
 	var cfg config.Config
 	if err := yaml.Unmarshal([]byte(normalizedData), &cfg); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
-	
+
 	// Validate that the cluster name matches
 	if cfg.OpenCenter.Cluster.ClusterName != clusterName {
 		return fmt.Errorf("cluster name mismatch: expected %s, got %s", clusterName, cfg.OpenCenter.Cluster.ClusterName)
 	}
-	
+
 	return nil
 }
 

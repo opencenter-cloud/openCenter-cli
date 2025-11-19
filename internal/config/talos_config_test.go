@@ -131,18 +131,18 @@ func TestTalosConfigYAMLMarshaling(t *testing.T) {
 func TestConfigWithTalosSection(t *testing.T) {
 	// Create a temporary directory for test config
 	tmpDir := t.TempDir()
-	
+
 	// Set OPENCENTER_CONFIG_DIR to temp directory
 	oldConfigDir := os.Getenv("OPENCENTER_CONFIG_DIR")
 	os.Setenv("OPENCENTER_CONFIG_DIR", tmpDir)
 	defer os.Setenv("OPENCENTER_CONFIG_DIR", oldConfigDir)
 
 	clusterName := "test-talos-cluster"
-	
+
 	// Create a config with Talos section
 	cfg := NewDefault(clusterName)
 	cfg.OpenCenter.Talos = DefaultTalosConfig(clusterName)
-	
+
 	// Marshal to YAML
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -172,7 +172,7 @@ func TestConfigWithTalosSection(t *testing.T) {
 	}
 
 	if loaded.OpenCenter.Talos.Version != cfg.OpenCenter.Talos.Version {
-		t.Errorf("Version mismatch: expected %s, got %s", 
+		t.Errorf("Version mismatch: expected %s, got %s",
 			cfg.OpenCenter.Talos.Version, loaded.OpenCenter.Talos.Version)
 	}
 }
@@ -181,17 +181,17 @@ func TestConfigWithTalosSection(t *testing.T) {
 func TestConfigWithoutTalosSection(t *testing.T) {
 	// Create a temporary directory for test config
 	tmpDir := t.TempDir()
-	
+
 	// Set OPENCENTER_CONFIG_DIR to temp directory
 	oldConfigDir := os.Getenv("OPENCENTER_CONFIG_DIR")
 	os.Setenv("OPENCENTER_CONFIG_DIR", tmpDir)
 	defer os.Setenv("OPENCENTER_CONFIG_DIR", oldConfigDir)
 
 	clusterName := "test-no-talos-cluster"
-	
+
 	// Create a config without Talos section (default)
 	cfg := NewDefault(clusterName)
-	
+
 	// Marshal to YAML
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -268,12 +268,12 @@ func TestTalosConfigValidation(t *testing.T) {
 
 			// Basic validation checks
 			isValid := true
-			
+
 			// Check version is not empty
 			if talosConfig.Version == "" {
 				isValid = false
 			}
-			
+
 			// Check port ranges
 			if talosConfig.NetworkConfig.WireGuardPort < 1024 || talosConfig.NetworkConfig.WireGuardPort > 65535 {
 				isValid = false

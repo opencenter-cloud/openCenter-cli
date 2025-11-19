@@ -28,12 +28,12 @@ import (
 
 // DefaultAuditLogger implements AuditLogger interface
 type DefaultAuditLogger struct {
-	logPath    string
-	logLevel   string
-	masker     *DefaultCredentialMasker
-	mu         sync.Mutex
-	file       *os.File
-	enabled    bool
+	logPath  string
+	logLevel string
+	masker   *DefaultCredentialMasker
+	mu       sync.Mutex
+	file     *os.File
+	enabled  bool
 }
 
 // AuditLoggerConfig represents configuration for audit logger
@@ -51,18 +51,18 @@ func NewDefaultAuditLogger(config AuditLoggerConfig) (*DefaultAuditLogger, error
 		masker:   NewDefaultCredentialMasker(),
 		enabled:  config.Enabled,
 	}
-	
+
 	if !logger.enabled {
 		return logger, nil
 	}
-	
+
 	// Create log directory if it doesn't exist
 	if logger.logPath != "" {
 		logDir := filepath.Dir(logger.logPath)
 		if err := os.MkdirAll(logDir, 0700); err != nil {
 			return nil, fmt.Errorf("failed to create audit log directory: %w", err)
 		}
-		
+
 		// Open log file with append mode and secure permissions
 		file, err := os.OpenFile(logger.logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
@@ -70,7 +70,7 @@ func NewDefaultAuditLogger(config AuditLoggerConfig) (*DefaultAuditLogger, error
 		}
 		logger.file = file
 	}
-	
+
 	return logger, nil
 }
 
@@ -79,20 +79,20 @@ func (l *DefaultAuditLogger) LogSecurityEvent(ctx context.Context, event Securit
 	if !l.enabled {
 		return nil
 	}
-	
+
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	
+
 	// Set timestamp if not provided
 	if event.Timestamp.IsZero() {
 		event.Timestamp = time.Now()
 	}
-	
+
 	// Mask sensitive data in event details
 	if event.Details != nil {
 		event.Details = l.masker.MaskMap(event.Details)
 	}
-	
+
 	// Add context information if available
 	if ctx != nil {
 		if user, ok := ctx.Value("user").(string); ok && event.User == "" {
@@ -102,12 +102,12 @@ func (l *DefaultAuditLogger) LogSecurityEvent(ctx context.Context, event Securit
 			event.Source = source
 		}
 	}
-	
+
 	// Set default source if not provided
 	if event.Source == "" {
 		event.Source = "openCenter"
 	}
-	
+
 	return l.writeEvent(event)
 }
 
@@ -125,7 +125,7 @@ func (l *DefaultAuditLogger) LogSOPSOperation(ctx context.Context, operation, ke
 			"key_name":  keyName,
 		},
 	}
-	
+
 	return l.LogSecurityEvent(ctx, event)
 }
 
@@ -144,7 +144,7 @@ func (l *DefaultAuditLogger) LogConfigChange(ctx context.Context, configPath, op
 			"changes":     changes,
 		},
 	}
-	
+
 	return l.LogSecurityEvent(ctx, event)
 }
 
@@ -162,7 +162,7 @@ func (l *DefaultAuditLogger) LogCredentialAccess(ctx context.Context, credential
 			"operation":       operation,
 		},
 	}
-	
+
 	return l.LogSecurityEvent(ctx, event)
 }
 
@@ -172,7 +172,7 @@ func (l *DefaultAuditLogger) LogAuthenticationAttempt(ctx context.Context, user,
 	if !success {
 		severity = "high"
 	}
-	
+
 	event := SecurityEvent{
 		Timestamp: time.Now(),
 		EventType: "authentication",
@@ -185,7 +185,7 @@ func (l *DefaultAuditLogger) LogAuthenticationAttempt(ctx context.Context, user,
 			"method": method,
 		},
 	}
-	
+
 	return l.LogSecurityEvent(ctx, event)
 }
 
@@ -194,43 +194,43 @@ func (l *DefaultAuditLogger) GetAuditLog(ctx context.Context, filter AuditFilter
 	if !l.enabled || l.logPath == "" {
 		return nil, fmt.Errorf("audit logging is not enabled or log path not configured")
 	}
-	
+
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	
+
 	// Read log file
 	content, err := os.ReadFile(l.logPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read audit log: %w", err)
 	}
-	
+
 	// Parse log entries
 	var events []SecurityEvent
 	lines := splitLines(string(content))
-	
+
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
-		
+
 		var event SecurityEvent
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
 			continue // Skip invalid entries
 		}
-		
+
 		// Apply filters
 		if !matchesFilter(event, filter) {
 			continue
 		}
-		
+
 		events = append(events, event)
-		
+
 		// Apply limit if specified
 		if filter.Limit > 0 && len(events) >= filter.Limit {
 			break
 		}
 	}
-	
+
 	return events, nil
 }
 
@@ -241,24 +241,24 @@ func (l *DefaultAuditLogger) writeEvent(event SecurityEvent) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
-	
+
 	// Write to file if configured
 	if l.file != nil {
 		if _, err := l.file.Write(append(data, '\n')); err != nil {
 			return fmt.Errorf("failed to write to audit log: %w", err)
 		}
-		
+
 		// Sync to ensure data is written
 		if err := l.file.Sync(); err != nil {
 			return fmt.Errorf("failed to sync audit log: %w", err)
 		}
 	}
-	
+
 	// Also write to stdout for debugging if log level is debug
 	if l.logLevel == "debug" {
 		fmt.Fprintf(os.Stdout, "[AUDIT] %s\n", string(data))
 	}
-	
+
 	return nil
 }
 
@@ -266,11 +266,11 @@ func (l *DefaultAuditLogger) writeEvent(event SecurityEvent) error {
 func (l *DefaultAuditLogger) Close() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	
+
 	if l.file != nil {
 		return l.file.Close()
 	}
-	
+
 	return nil
 }
 
@@ -283,37 +283,37 @@ func matchesFilter(event SecurityEvent, filter AuditFilter) bool {
 	if !filter.EndTime.IsZero() && event.Timestamp.After(filter.EndTime) {
 		return false
 	}
-	
+
 	// Check event type
 	if filter.EventType != "" && event.EventType != filter.EventType {
 		return false
 	}
-	
+
 	// Check operation
 	if filter.Operation != "" && event.Operation != filter.Operation {
 		return false
 	}
-	
+
 	// Check user
 	if filter.User != "" && event.User != filter.User {
 		return false
 	}
-	
+
 	// Check resource
 	if filter.Resource != "" && event.Resource != filter.Resource {
 		return false
 	}
-	
+
 	// Check success
 	if filter.Success != nil && event.Success != *filter.Success {
 		return false
 	}
-	
+
 	// Check severity
 	if filter.Severity != "" && event.Severity != filter.Severity {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -321,7 +321,7 @@ func matchesFilter(event SecurityEvent, filter AuditFilter) bool {
 func splitLines(content string) []string {
 	var lines []string
 	var current string
-	
+
 	for _, char := range content {
 		if char == '\n' {
 			if current != "" {
@@ -332,11 +332,11 @@ func splitLines(content string) []string {
 			current += string(char)
 		}
 	}
-	
+
 	if current != "" {
 		lines = append(lines, current)
 	}
-	
+
 	return lines
 }
 
@@ -345,34 +345,34 @@ func (l *DefaultAuditLogger) RotateAuditLog() error {
 	if !l.enabled || l.logPath == "" {
 		return nil
 	}
-	
+
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	
+
 	// Close current file
 	if l.file != nil {
 		if err := l.file.Close(); err != nil {
 			return fmt.Errorf("failed to close audit log: %w", err)
 		}
 	}
-	
+
 	// Rename current log file with timestamp
 	timestamp := time.Now().Format("20060102-150405")
 	rotatedPath := fmt.Sprintf("%s.%s", l.logPath, timestamp)
-	
+
 	if err := os.Rename(l.logPath, rotatedPath); err != nil {
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("failed to rotate audit log: %w", err)
 		}
 	}
-	
+
 	// Open new log file
 	file, err := os.OpenFile(l.logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to open new audit log: %w", err)
 	}
 	l.file = file
-	
+
 	return nil
 }
 
@@ -382,7 +382,7 @@ func GetDefaultAuditLogPath() string {
 	if err != nil {
 		return "/tmp/opencenter-audit.log"
 	}
-	
+
 	return filepath.Join(homeDir, ".config", "openCenter", "audit", "audit.log")
 }
 
@@ -393,6 +393,6 @@ func NewDefaultAuditLoggerWithDefaults() (*DefaultAuditLogger, error) {
 		LogLevel: "info",
 		Enabled:  true,
 	}
-	
+
 	return NewDefaultAuditLogger(config)
 }

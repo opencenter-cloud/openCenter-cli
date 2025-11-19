@@ -137,13 +137,13 @@ func (e *DefaultTemplateEngine) InitWithTemplates(templates *template.Template) 
 		e.templates = templates
 		e.initErr = e.initializeDependencies()
 	})
-	
+
 	// If already initialized, update the templates and re-initialize dependencies
 	if e.initErr == nil && e.templates != templates {
 		e.templates = templates
 		e.initErr = e.initializeDependencies()
 	}
-	
+
 	return e.initErr
 }
 
@@ -152,11 +152,11 @@ func (e *DefaultTemplateEngine) AddFunctions(funcMap template.FuncMap) error {
 	if e.funcMap == nil {
 		e.funcMap = make(template.FuncMap)
 	}
-	
+
 	for name, fn := range funcMap {
 		e.funcMap[name] = fn
 	}
-	
+
 	return e.renderer.AddFunctions(funcMap)
 }
 
@@ -165,12 +165,12 @@ func (e *DefaultTemplateEngine) RenderTemplate(templateName string, data interfa
 	if e.templates == nil {
 		return "", NewInitializationError("template engine", fmt.Errorf("template engine not initialized"))
 	}
-	
+
 	result, err := e.renderer.RenderTemplate(templateName, data)
 	if err != nil {
 		return "", NewTemplateExecutionError(templateName, err)
 	}
-	
+
 	return result, nil
 }
 
@@ -179,12 +179,12 @@ func (e *DefaultTemplateEngine) RenderTemplateToWriter(templateName string, data
 	if e.templates == nil {
 		return NewInitializationError("template engine", fmt.Errorf("template engine not initialized"))
 	}
-	
+
 	err := e.renderer.RenderTemplateToWriter(templateName, data, writer)
 	if err != nil {
 		return NewTemplateExecutionError(templateName, err)
 	}
-	
+
 	return nil
 }
 
@@ -201,12 +201,12 @@ func (e *DefaultTemplateEngine) ListTemplates() []string {
 	if e.templates == nil {
 		return []string{}
 	}
-	
+
 	templates := e.renderer.ListTemplates()
 	if templates == nil {
 		return []string{}
 	}
-	
+
 	return templates
 }
 
@@ -231,12 +231,12 @@ func (e *DefaultTemplateEngine) ValidateTemplateWithDataAndResult(templateName s
 	if e.templates == nil {
 		return nil, NewInitializationError("template engine", fmt.Errorf("template engine not initialized"))
 	}
-	
+
 	result := e.validator.ValidateTemplateWithData(templateName, data)
 	if !result.Valid {
 		return result, fmt.Errorf("template validation failed with %d errors", len(result.Errors))
 	}
-	
+
 	return result, nil
 }
 
@@ -278,7 +278,7 @@ func (e *DefaultTemplateEngine) ValidateTemplateWithData(templateName string, da
 		}
 		return result
 	}
-	
+
 	return e.validator.ValidateTemplateWithData(templateName, data)
 }
 

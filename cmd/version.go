@@ -82,27 +82,27 @@ func getVersionString() string {
 // getFullVersionInfo returns formatted version information
 func getFullVersionInfo() string {
 	versionStr := getVersionString()
-	
+
 	info := fmt.Sprintf("openCenter version: %s\n", versionStr)
-	
+
 	if GitCommit != "unknown" {
 		info += fmt.Sprintf("Git commit:         %s\n", GitCommit)
 	}
-	
+
 	if GitBranch != "unknown" {
 		info += fmt.Sprintf("Git branch:         %s\n", GitBranch)
 	}
-	
+
 	if GitTag != "" {
 		info += fmt.Sprintf("Git tag:            %s\n", GitTag)
 	}
-	
+
 	if BuildDate != "unknown" {
 		info += fmt.Sprintf("Build date:         %s\n", BuildDate)
 	}
-	
+
 	info += fmt.Sprintf("Go version:         %s\n", runtime.Version())
 	info += fmt.Sprintf("Platform:           %s/%s\n", runtime.GOOS, runtime.GOARCH)
-	
+
 	return info
 }

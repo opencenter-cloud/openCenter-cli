@@ -27,10 +27,10 @@ import (
 
 // EnhancedConfigValidator provides comprehensive configuration validation with structured error handling.
 type EnhancedConfigValidator struct {
-	errorHandler         errors.ErrorHandler
-	errorWrapper         errors.ErrorWrapper
-	autoRepair           bool
-	cloudValidators      map[string]CloudProviderValidator
+	errorHandler          errors.ErrorHandler
+	errorWrapper          errors.ErrorWrapper
+	autoRepair            bool
+	cloudValidators       map[string]CloudProviderValidator
 	connectivityValidator *ConnectivityValidator
 }
 
@@ -51,26 +51,26 @@ func NewEnhancedConfigValidator(autoRepair bool) *EnhancedConfigValidator {
 		cloudValidators:       make(map[string]CloudProviderValidator),
 		connectivityValidator: NewConnectivityValidator(10 * time.Second),
 	}
-	
+
 	// Register cloud provider validators
 	validator.cloudValidators["openstack"] = NewOpenStackValidator()
 	validator.cloudValidators["aws"] = NewAWSValidator()
 	validator.cloudValidators["vsphere"] = NewVSphereValidator()
-	
+
 	return validator
 }
 
 // Validate implements ConfigValidatorInterface.
 func (v *EnhancedConfigValidator) Validate(ctx context.Context, config *Config) *ConfigValidationResult {
 	result := v.ValidateComprehensive(ctx, config)
-	
+
 	// Convert structured errors to config validation errors
 	configResult := &ConfigValidationResult{
 		Valid:    result.Valid,
 		Errors:   []*ConfigValidationError{},
 		Warnings: []*ConfigValidationError{},
 	}
-	
+
 	for _, err := range result.Errors {
 		configResult.Errors = append(configResult.Errors, &ConfigValidationError{
 			Type:        string(err.Type),
@@ -79,7 +79,7 @@ func (v *EnhancedConfigValidator) Validate(ctx context.Context, config *Config) 
 			Suggestions: err.Suggestions,
 		})
 	}
-	
+
 	for _, warning := range result.Warnings {
 		configResult.Warnings = append(configResult.Warnings, &ConfigValidationError{
 			Type:        string(warning.Type),
@@ -88,7 +88,7 @@ func (v *EnhancedConfigValidator) Validate(ctx context.Context, config *Config) 
 			Suggestions: warning.Suggestions,
 		})
 	}
-	
+
 	return configResult
 }
 
@@ -96,7 +96,7 @@ func (v *EnhancedConfigValidator) Validate(ctx context.Context, config *Config) 
 func (v *EnhancedConfigValidator) ValidateStructure(ctx context.Context, config *Config) *ConfigValidationResult {
 	aggregator := errors.NewValidationAggregator()
 	v.validateBasicStructure(ctx, config, aggregator)
-	
+
 	result := aggregator.ToValidationResult()
 	return v.convertToConfigValidationResult(result)
 }
@@ -105,7 +105,7 @@ func (v *EnhancedConfigValidator) ValidateStructure(ctx context.Context, config 
 func (v *EnhancedConfigValidator) ValidateSemantics(ctx context.Context, config *Config) *ConfigValidationResult {
 	aggregator := errors.NewValidationAggregator()
 	v.validateCrossFieldDependencies(ctx, config, aggregator)
-	
+
 	result := aggregator.ToValidationResult()
 	return v.convertToConfigValidationResult(result)
 }
@@ -114,7 +114,7 @@ func (v *EnhancedConfigValidator) ValidateSemantics(ctx context.Context, config 
 func (v *EnhancedConfigValidator) ValidateNetworking(ctx context.Context, config *Config) *ConfigValidationResult {
 	aggregator := errors.NewValidationAggregator()
 	v.validateNetworkConfiguration(ctx, config, aggregator)
-	
+
 	result := aggregator.ToValidationResult()
 	return v.convertToConfigValidationResult(result)
 }
@@ -123,7 +123,7 @@ func (v *EnhancedConfigValidator) ValidateNetworking(ctx context.Context, config
 func (v *EnhancedConfigValidator) ValidateCloudProvider(ctx context.Context, config *Config) *ConfigValidationResult {
 	aggregator := errors.NewValidationAggregator()
 	v.validateCloudProviderConfiguration(ctx, config, aggregator)
-	
+
 	result := aggregator.ToValidationResult()
 	return v.convertToConfigValidationResult(result)
 }
@@ -135,7 +135,7 @@ func (v *EnhancedConfigValidator) convertToConfigValidationResult(result *errors
 		Errors:   []*ConfigValidationError{},
 		Warnings: []*ConfigValidationError{},
 	}
-	
+
 	for _, err := range result.Errors {
 		configResult.Errors = append(configResult.Errors, &ConfigValidationError{
 			Type:        string(err.Type),
@@ -144,7 +144,7 @@ func (v *EnhancedConfigValidator) convertToConfigValidationResult(result *errors
 			Suggestions: err.Suggestions,
 		})
 	}
-	
+
 	for _, warning := range result.Warnings {
 		configResult.Warnings = append(configResult.Warnings, &ConfigValidationError{
 			Type:        string(warning.Type),
@@ -153,35 +153,35 @@ func (v *EnhancedConfigValidator) convertToConfigValidationResult(result *errors
 			Suggestions: warning.Suggestions,
 		})
 	}
-	
+
 	return configResult
 }
 
 // ValidateComprehensive performs comprehensive validation with structured error handling.
 func (v *EnhancedConfigValidator) ValidateComprehensive(ctx context.Context, config *Config) *errors.ValidationResult {
 	aggregator := errors.NewValidationAggregator()
-	
+
 	// Validate basic structure
 	v.validateBasicStructure(ctx, config, aggregator)
-	
+
 	// Validate cross-field dependencies
 	v.validateCrossFieldDependencies(ctx, config, aggregator)
-	
+
 	// Validate network configuration
 	v.validateNetworkConfiguration(ctx, config, aggregator)
-	
+
 	// Validate cloud provider configuration
 	v.validateCloudProviderConfiguration(ctx, config, aggregator)
-	
+
 	// Validate security configuration
 	v.validateSecurityConfiguration(ctx, config, aggregator)
-	
+
 	// Validate credential format and security
 	v.validateCredentialSecurity(ctx, config, aggregator)
-	
+
 	// Validate cloud provider connectivity (as warnings)
 	v.validateConnectivity(ctx, config, aggregator)
-	
+
 	return aggregator.ToValidationResult()
 }
 
@@ -191,7 +191,7 @@ func (v *EnhancedConfigValidator) validateBasicStructure(ctx context.Context, co
 		aggregator.AddError(errors.CreateConfigError("config", "configuration cannot be nil", nil))
 		return
 	}
-	
+
 	// Validate cluster name
 	if config.ClusterName() == "" {
 		aggregator.AddError(errors.CreateValidationError(
@@ -209,7 +209,7 @@ func (v *EnhancedConfigValidator) validateBasicStructure(ctx context.Context, co
 			"Keep length under 255 characters",
 		))
 	}
-	
+
 	// Validate GitOps directory
 	if config.GitOps().GitDir == "" {
 		aggregator.AddError(errors.CreateValidationError(
@@ -219,7 +219,7 @@ func (v *EnhancedConfigValidator) validateBasicStructure(ctx context.Context, co
 			"Use a path where GitOps repository will be created",
 		))
 	}
-	
+
 	// Validate Kubernetes version
 	if k8sVersion := config.OpenCenter.Cluster.Kubernetes.Version; k8sVersion != "" {
 		if !v.isValidKubernetesVersion(k8sVersion) {
@@ -231,7 +231,7 @@ func (v *EnhancedConfigValidator) validateBasicStructure(ctx context.Context, co
 			))
 		}
 	}
-	
+
 	// Validate node counts
 	v.validateNodeCounts(config, aggregator)
 }
@@ -241,7 +241,7 @@ func (v *EnhancedConfigValidator) validateCrossFieldDependencies(ctx context.Con
 	if config == nil {
 		return
 	}
-	
+
 	// Validate Windows workers configuration
 	if config.OpenCenter.Cluster.Kubernetes.WorkerCountWindows == 0 {
 		if config.OpenCenter.Cluster.Kubernetes.WindowsWorkers.Enabled {
@@ -253,12 +253,12 @@ func (v *EnhancedConfigValidator) validateCrossFieldDependencies(ctx context.Con
 			))
 		}
 	}
-	
+
 	// Validate OpenTofu backend configuration
 	if config.OpenTofu.Enabled {
 		v.validateOpenTofuConfiguration(config, aggregator)
 	}
-	
+
 	// Validate SSH keys
 	if len(config.OpenCenter.Cluster.SSHAuthorizedKeys) == 0 {
 		aggregator.AddWarning(errors.CreateValidationError(
@@ -284,7 +284,7 @@ func (v *EnhancedConfigValidator) validateNetworkConfiguration(ctx context.Conte
 		{"Cilium", config.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled},
 		{"Kube-OVN", config.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled},
 	}
-	
+
 	enabledCount := 0
 	var enabledPlugins []string
 	for _, plugin := range networkPlugins {
@@ -293,7 +293,7 @@ func (v *EnhancedConfigValidator) validateNetworkConfiguration(ctx context.Conte
 			enabledPlugins = append(enabledPlugins, plugin.name)
 		}
 	}
-	
+
 	if enabledCount == 0 {
 		aggregator.AddError(errors.CreateValidationError(
 			"opencenter.cluster.kubernetes.network_plugin",
@@ -311,10 +311,10 @@ func (v *EnhancedConfigValidator) validateNetworkConfiguration(ctx context.Conte
 			"Cilium provides advanced features like eBPF",
 		))
 	}
-	
+
 	// Validate subnet configurations
 	v.validateSubnetConfiguration(config, aggregator)
-	
+
 	// Validate network plugin specific configuration
 	v.validateNetworkPluginConfiguration(config, aggregator)
 }
@@ -335,7 +335,7 @@ func (v *EnhancedConfigValidator) validateCloudProviderConfiguration(ctx context
 		))
 		return
 	}
-	
+
 	// Use cloud provider specific validator if available
 	if validator, exists := v.cloudValidators[provider]; exists {
 		// Validate credentials
@@ -343,13 +343,13 @@ func (v *EnhancedConfigValidator) validateCloudProviderConfiguration(ctx context
 		for _, err := range credentialErrors {
 			aggregator.AddError(err)
 		}
-		
+
 		// Validate configuration
 		configErrors := validator.ValidateConfiguration(ctx, config)
 		for _, err := range configErrors {
 			aggregator.AddError(err)
 		}
-		
+
 		// Validate connectivity (as warnings since they require network access)
 		connectivityErrors := validator.ValidateConnectivity(ctx, config)
 		for _, err := range connectivityErrors {
@@ -382,7 +382,7 @@ func (v *EnhancedConfigValidator) validateSecurityConfiguration(ctx context.Cont
 			))
 		}
 	}
-	
+
 	// Validate SOPS configuration if present
 	// This would be expanded based on SOPS configuration structure
 }
@@ -396,13 +396,13 @@ func (v *EnhancedConfigValidator) validateClusterNameFormat(name string) error {
 	if len(name) > 255 {
 		return fmt.Errorf("cluster name too long (max 255 characters)")
 	}
-	
+
 	// Check for valid characters (alphanumeric, hyphens, underscores)
 	validName := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
 	if !validName.MatchString(name) {
 		return fmt.Errorf("cluster name must start with alphanumeric character and contain only alphanumeric, hyphens, and underscores")
 	}
-	
+
 	return nil
 }
 
@@ -412,7 +412,7 @@ func (v *EnhancedConfigValidator) isValidKubernetesVersion(version string) bool 
 	if len(parts) != 3 {
 		return false
 	}
-	
+
 	// Check if all parts are numeric
 	for _, part := range parts {
 		if part == "" {
@@ -424,7 +424,7 @@ func (v *EnhancedConfigValidator) isValidKubernetesVersion(version string) bool 
 			}
 		}
 	}
-	
+
 	return true
 }
 
@@ -437,7 +437,7 @@ func (v *EnhancedConfigValidator) validateNodeCounts(config *Config, aggregator 
 			"Use odd numbers (1, 3, 5) for etcd quorum",
 		))
 	}
-	
+
 	if config.OpenCenter.Cluster.Kubernetes.WorkerCount < 0 {
 		aggregator.AddError(errors.CreateValidationError(
 			"opencenter.cluster.kubernetes.worker_count",
@@ -446,7 +446,7 @@ func (v *EnhancedConfigValidator) validateNodeCounts(config *Config, aggregator 
 			"Use at least 2 workers for production workloads",
 		))
 	}
-	
+
 	if config.OpenCenter.Cluster.Kubernetes.WorkerCountWindows < 0 {
 		aggregator.AddError(errors.CreateValidationError(
 			"opencenter.cluster.kubernetes.worker_count_windows",
@@ -466,13 +466,13 @@ func (v *EnhancedConfigValidator) validateOpenTofuConfiguration(config *Config, 
 			"Use 'opentofu' for default path",
 		))
 	}
-	
+
 	// Validate backend configuration
 	backendType := strings.ToLower(strings.TrimSpace(config.OpenTofu.Backend.Type))
 	if backendType == "" {
 		backendType = "local"
 	}
-	
+
 	switch backendType {
 	case "local":
 		if config.OpenTofu.Backend.Local.Path == "" {
@@ -506,7 +506,7 @@ func (v *EnhancedConfigValidator) validateS3BackendConfiguration(config *Config,
 			"Set opentofu.backend.s3.region to AWS region",
 		))
 	}
-	
+
 	// Validate AWS credentials for S3 backend
 	if strings.TrimSpace(config.OpenCenter.Cluster.AWSAccessKey) == "" ||
 		strings.TrimSpace(config.OpenCenter.Cluster.AWSSecretAccessKey) == "" {
@@ -538,7 +538,7 @@ func (v *EnhancedConfigValidator) validateSubnetConfiguration(config *Config, ag
 			"Ensure it doesn't conflict with node or service subnets",
 		))
 	}
-	
+
 	// Validate service subnet
 	if serviceSubnet := config.OpenCenter.Cluster.Kubernetes.SubnetServices; serviceSubnet != "" {
 		if !v.isValidCIDR(serviceSubnet) {
@@ -557,12 +557,12 @@ func (v *EnhancedConfigValidator) validateSubnetConfiguration(config *Config, ag
 			"Ensure it doesn't conflict with node or pod subnets",
 		))
 	}
-	
+
 	// Check for subnet conflicts
-	if config.OpenCenter.Cluster.Kubernetes.SubnetPods != "" && 
-	   config.OpenCenter.Cluster.Kubernetes.SubnetServices != "" {
-		if v.subnetsOverlap(config.OpenCenter.Cluster.Kubernetes.SubnetPods, 
-						   config.OpenCenter.Cluster.Kubernetes.SubnetServices) {
+	if config.OpenCenter.Cluster.Kubernetes.SubnetPods != "" &&
+		config.OpenCenter.Cluster.Kubernetes.SubnetServices != "" {
+		if v.subnetsOverlap(config.OpenCenter.Cluster.Kubernetes.SubnetPods,
+			config.OpenCenter.Cluster.Kubernetes.SubnetServices) {
 			aggregator.AddError(errors.CreateValidationError(
 				"opencenter.cluster.kubernetes.subnet_pods",
 				"pod and service subnets overlap",
@@ -586,7 +586,7 @@ func (v *EnhancedConfigValidator) validateNetworkPluginConfiguration(config *Con
 			))
 		}
 	}
-	
+
 	// Validate Kube-OVN and Cilium integration
 	if config.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled &&
 		config.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.CiliumIntegration &&
@@ -608,11 +608,11 @@ func (v *EnhancedConfigValidator) isValidCIDR(cidr string) bool {
 func (v *EnhancedConfigValidator) subnetsOverlap(cidr1, cidr2 string) bool {
 	_, net1, err1 := net.ParseCIDR(cidr1)
 	_, net2, err2 := net.ParseCIDR(cidr2)
-	
+
 	if err1 != nil || err2 != nil {
 		return false // Can't determine overlap if parsing fails
 	}
-	
+
 	return net1.Contains(net2.IP) || net2.Contains(net1.IP)
 }
 
@@ -622,17 +622,17 @@ func (v *EnhancedConfigValidator) isValidSSHPublicKey(key string) bool {
 	if len(parts) < 2 {
 		return false
 	}
-	
+
 	// Check for valid key types
 	validTypes := []string{"ssh-rsa", "ssh-dss", "ssh-ed25519", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"}
 	keyType := parts[0]
-	
+
 	for _, validType := range validTypes {
 		if keyType == validType {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -651,7 +651,7 @@ func (v *EnhancedConfigValidator) validateCredentialSecurity(ctx context.Context
 	for _, err := range formatErrors {
 		aggregator.AddError(err)
 	}
-	
+
 	// Validate credential security (as warnings)
 	securityErrors := v.connectivityValidator.ValidateCredentialSecurity(ctx, config)
 	for _, err := range securityErrors {
@@ -674,10 +674,10 @@ func (v *EnhancedConfigValidator) validateConnectivity(ctx context.Context, conf
 // ValidatePreFlight performs pre-flight validation including connectivity checks.
 func (v *EnhancedConfigValidator) ValidatePreFlight(ctx context.Context, config *Config) *errors.ValidationResult {
 	aggregator := errors.NewValidationAggregator()
-	
+
 	// Perform all comprehensive validation
 	result := v.ValidateComprehensive(ctx, config)
-	
+
 	// Add all errors and warnings from comprehensive validation
 	for _, err := range result.Errors {
 		aggregator.AddError(err)
@@ -685,10 +685,10 @@ func (v *EnhancedConfigValidator) ValidatePreFlight(ctx context.Context, config 
 	for _, warning := range result.Warnings {
 		aggregator.AddWarning(warning)
 	}
-	
+
 	// Add additional pre-flight specific checks
 	v.validatePreFlightRequirements(ctx, config, aggregator)
-	
+
 	return aggregator.ToValidationResult()
 }
 
@@ -696,7 +696,7 @@ func (v *EnhancedConfigValidator) ValidatePreFlight(ctx context.Context, config 
 func (v *EnhancedConfigValidator) validatePreFlightRequirements(ctx context.Context, config *Config, aggregator *errors.ValidationAggregator) {
 	// Validate that required tools are available (this would be expanded)
 	provider := config.OpenCenter.Infrastructure.Provider
-	
+
 	switch provider {
 	case "openstack":
 		// Check for OpenStack CLI tools (as warnings)
@@ -715,7 +715,7 @@ func (v *EnhancedConfigValidator) validatePreFlightRequirements(ctx context.Cont
 			"Follow AWS CLI installation guide",
 		))
 	}
-	
+
 	// Validate OpenTofu/Terraform availability
 	if config.OpenTofu.Enabled {
 		aggregator.AddWarning(errors.CreateValidationError(

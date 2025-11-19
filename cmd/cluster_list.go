@@ -14,10 +14,10 @@
 package cmd
 
 import (
-    "fmt"
+	"fmt"
 
-    "github.com/rackerlabs/openCenter-cli/internal/config"
-    "github.com/spf13/cobra"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/spf13/cobra"
 )
 
 import (
@@ -40,13 +40,13 @@ func newClusterListCmd() *cobra.Command {
 		Short:   "List configured clusters",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			config.Debug("cluster list: starting cluster list operation")
-			
+
 			names, err := config.List()
 			if err != nil {
 				config.Debugf("cluster list: failed to list clusters: %v", err)
 				return failf("failed to list clusters: %v", err)
 			}
-			
+
 			config.Debugf("cluster list: found %d cluster(s)", len(names))
 			for i, name := range names {
 				config.Debugf("cluster list: [%d] %s", i, name)
@@ -54,7 +54,7 @@ func newClusterListCmd() *cobra.Command {
 
 			jsonOutput, _ := cmd.Flags().GetBool("json")
 			config.Debugf("cluster list: json output mode: %v", jsonOutput)
-			
+
 			if jsonOutput {
 				b, err := json.Marshal(names)
 				if err != nil {

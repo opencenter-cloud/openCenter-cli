@@ -41,7 +41,7 @@ func NewDefaultBackupManager(backupDir string, auditLogger AuditLogger) (*Defaul
 	if err := os.MkdirAll(backupDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create backup directory: %w", err)
 	}
-	
+
 	return &DefaultBackupManager{
 		backupDir:   backupDir,
 		backups:     make(map[string]BackupInfo),
@@ -53,21 +53,21 @@ func NewDefaultBackupManager(backupDir string, auditLogger AuditLogger) (*Defaul
 func (m *DefaultBackupManager) CreateBackup(ctx context.Context, resource string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Check if resource exists
 	info, err := os.Stat(resource)
 	if err != nil {
 		return "", fmt.Errorf("failed to stat resource: %w", err)
 	}
-	
+
 	// Generate backup ID
 	backupID := uuid.New().String()
-	
+
 	// Create backup filename with timestamp
 	timestamp := time.Now().Format("20060102-150405")
 	backupName := fmt.Sprintf("%s-%s-%s", filepath.Base(resource), timestamp, backupID[:8])
 	backupPath := filepath.Join(m.backupDir, backupName)
-	
+
 	// Copy resource to backup location
 	if info.IsDir() {
 		if err := copyDir(resource, backupPath); err != nil {
@@ -78,7 +78,7 @@ func (m *DefaultBackupManager) CreateBackup(ctx context.Context, resource string
 			return "", fmt.Errorf("failed to backup file: %w", err)
 		}
 	}
-	
+
 	// Store backup info
 	backupInfo := BackupInfo{
 		ID:        backupID,
@@ -91,9 +91,9 @@ func (m *DefaultBackupManager) CreateBackup(ctx context.Context, resource string
 			"is_directory":  info.IsDir(),
 		},
 	}
-	
+
 	m.backups[backupID] = backupInfo
-	
+
 	// Log backup creation
 	if m.auditLogger != nil {
 		m.auditLogger.LogSecurityEvent(ctx, SecurityEvent{
@@ -110,7 +110,7 @@ func (m *DefaultBackupManager) CreateBackup(ctx context.Context, resource string
 			},
 		})
 	}
-	
+
 	return backupID, nil
 }
 
@@ -118,31 +118,31 @@ func (m *DefaultBackupManager) CreateBackup(ctx context.Context, resource string
 func (m *DefaultBackupManager) RestoreBackup(ctx context.Context, backupID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Get backup info
 	backupInfo, exists := m.backups[backupID]
 	if !exists {
 		return fmt.Errorf("backup %s not found", backupID)
 	}
-	
+
 	// Check if backup file exists
 	if _, err := os.Stat(backupInfo.Path); err != nil {
 		return fmt.Errorf("backup file not found: %w", err)
 	}
-	
+
 	// Determine if it's a directory or file
 	isDir := false
 	if metadata, ok := backupInfo.Metadata["is_directory"].(bool); ok {
 		isDir = metadata
 	}
-	
+
 	// Restore the backup
 	if isDir {
 		// Remove existing directory if it exists
 		if err := os.RemoveAll(backupInfo.Resource); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to remove existing directory: %w", err)
 		}
-		
+
 		// Copy backup directory to original location
 		if err := copyDir(backupInfo.Path, backupInfo.Resource); err != nil {
 			return fmt.Errorf("failed to restore directory: %w", err)
@@ -153,7 +153,7 @@ func (m *DefaultBackupManager) RestoreBackup(ctx context.Context, backupID strin
 			return fmt.Errorf("failed to restore file: %w", err)
 		}
 	}
-	
+
 	// Log backup restoration
 	if m.auditLogger != nil {
 		m.auditLogger.LogSecurityEvent(ctx, SecurityEvent{
@@ -169,7 +169,7 @@ func (m *DefaultBackupManager) RestoreBackup(ctx context.Context, backupID strin
 			},
 		})
 	}
-	
+
 	return nil
 }
 
@@ -177,21 +177,21 @@ func (m *DefaultBackupManager) RestoreBackup(ctx context.Context, backupID strin
 func (m *DefaultBackupManager) DeleteBackup(ctx context.Context, backupID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Get backup info
 	backupInfo, exists := m.backups[backupID]
 	if !exists {
 		return fmt.Errorf("backup %s not found", backupID)
 	}
-	
+
 	// Remove backup file/directory
 	if err := os.RemoveAll(backupInfo.Path); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to delete backup: %w", err)
 	}
-	
+
 	// Remove from tracking
 	delete(m.backups, backupID)
-	
+
 	// Log backup deletion
 	if m.auditLogger != nil {
 		m.auditLogger.LogSecurityEvent(ctx, SecurityEvent{
@@ -207,7 +207,7 @@ func (m *DefaultBackupManager) DeleteBackup(ctx context.Context, backupID string
 			},
 		})
 	}
-	
+
 	return nil
 }
 
@@ -215,15 +215,15 @@ func (m *DefaultBackupManager) DeleteBackup(ctx context.Context, backupID string
 func (m *DefaultBackupManager) ListBackups(ctx context.Context, resource string) ([]BackupInfo, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	var backups []BackupInfo
-	
+
 	for _, backup := range m.backups {
 		if backup.Resource == resource {
 			backups = append(backups, backup)
 		}
 	}
-	
+
 	return backups, nil
 }
 
@@ -231,11 +231,11 @@ func (m *DefaultBackupManager) ListBackups(ctx context.Context, resource string)
 func (m *DefaultBackupManager) CleanupOldBackups(ctx context.Context, maxAge time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	cutoffTime := time.Now().Add(-maxAge)
 	var errors []error
 	deletedCount := 0
-	
+
 	for backupID, backup := range m.backups {
 		if backup.CreatedAt.Before(cutoffTime) {
 			// Remove backup file/directory
@@ -243,13 +243,13 @@ func (m *DefaultBackupManager) CleanupOldBackups(ctx context.Context, maxAge tim
 				errors = append(errors, fmt.Errorf("failed to delete backup %s: %w", backupID, err))
 				continue
 			}
-			
+
 			// Remove from tracking
 			delete(m.backups, backupID)
 			deletedCount++
 		}
 	}
-	
+
 	// Log cleanup
 	if m.auditLogger != nil {
 		m.auditLogger.LogSecurityEvent(ctx, SecurityEvent{
@@ -265,11 +265,11 @@ func (m *DefaultBackupManager) CleanupOldBackups(ctx context.Context, maxAge tim
 			},
 		})
 	}
-	
+
 	if len(errors) > 0 {
 		return fmt.Errorf("cleanup completed with errors: %v", errors)
 	}
-	
+
 	return nil
 }
 
@@ -280,24 +280,24 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read source file: %w", err)
 	}
-	
+
 	// Get source file permissions
 	info, err := os.Stat(src)
 	if err != nil {
 		return fmt.Errorf("failed to stat source file: %w", err)
 	}
-	
+
 	// Ensure destination directory exists
 	dstDir := filepath.Dir(dst)
 	if err := os.MkdirAll(dstDir, 0700); err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
-	
+
 	// Write to destination file with same permissions
 	if err := os.WriteFile(dst, data, info.Mode()); err != nil {
 		return fmt.Errorf("failed to write destination file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -308,23 +308,23 @@ func copyDir(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to stat source directory: %w", err)
 	}
-	
+
 	// Create destination directory
 	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
-	
+
 	// Read source directory entries
 	entries, err := os.ReadDir(src)
 	if err != nil {
 		return fmt.Errorf("failed to read source directory: %w", err)
 	}
-	
+
 	// Copy each entry
 	for _, entry := range entries {
 		srcPath := filepath.Join(src, entry.Name())
 		dstPath := filepath.Join(dst, entry.Name())
-		
+
 		if entry.IsDir() {
 			// Recursively copy subdirectory
 			if err := copyDir(srcPath, dstPath); err != nil {
@@ -337,7 +337,7 @@ func copyDir(src, dst string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -347,6 +347,6 @@ func GetDefaultBackupDir() string {
 	if err != nil {
 		return "/tmp/opencenter-backups"
 	}
-	
+
 	return filepath.Join(homeDir, ".config", "openCenter", "backups")
 }

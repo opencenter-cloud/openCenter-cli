@@ -105,6 +105,7 @@ func Execute(version string) error {
     rootCmd.AddCommand(newClusterCmd())
     rootCmd.AddCommand(newConfigCmd())
     rootCmd.AddCommand(newSOPSCmd())
+    rootCmd.AddCommand(newSecretsCmd())
     rootCmd.AddCommand(newPluginsCmd())
     rootCmd.AddCommand(newVersionCmd())
     // Discover and attach external plugins as subcommands

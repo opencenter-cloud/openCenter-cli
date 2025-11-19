@@ -287,9 +287,26 @@ type StorageConfig struct {
 	DefaultStorageClass string `yaml:"default_storage_class,omitempty" json:"default_storage_class,omitempty" jsonschema:"description=Default storage class for persistent volumes,default=csi-cinder-sc-delete"`
 }
 
+// OpenCenterSecrets holds the configuration for the secrets management backend.
+type OpenCenterSecrets struct {
+	Backend  string         `yaml:"backend,omitempty" json:"backend,omitempty"`
+	Barbican BarbicanConfig `yaml:"barbican,omitempty" json:"barbican,omitempty"`
+}
+
+// BarbicanConfig holds the configuration for the Barbican secrets backend.
+type BarbicanConfig struct {
+	AuthURL           string `yaml:"auth_url,omitempty" json:"auth_url,omitempty"`
+	ProjectID         string `yaml:"project_id,omitempty" json:"project_id,omitempty"`
+	Region            string `yaml:"region,omitempty" json:"region,omitempty"`
+	UserDomainName    string `yaml:"user_domain_name,omitempty" json:"user_domain_name,omitempty"`
+	ProjectDomainName string `yaml:"project_domain_name,omitempty" json:"project_domain_name,omitempty"`
+	CACert            string `yaml:"ca_cert,omitempty" json:"ca_cert,omitempty"`
+}
+
 // SimplifiedOpenCenter represents the opencenter section of the new simplified schema
 type SimplifiedOpenCenter struct {
 	Meta           ClusterMeta           `yaml:"meta" json:"meta"`
+	Secrets        OpenCenterSecrets     `yaml:"secrets,omitempty" json:"secrets,omitempty"`
 	Infrastructure Infrastructure        `yaml:"infrastructure" json:"infrastructure"`
 	Cluster        ClusterConfig         `yaml:"cluster" json:"cluster"`
 	GitOps         GitOpsConfig          `yaml:"gitops" json:"gitops"`
@@ -537,6 +554,17 @@ func defaultConfig(name string) Config {
 				Region:       "",
 				Status:       "",
 				Organization: name,
+			},
+			Secrets: OpenCenterSecrets{
+				Backend: "barbican",
+				Barbican: BarbicanConfig{
+					AuthURL:           "https://identity.example.com/v3",
+					ProjectID:         "",
+					Region:            "regionOne",
+					UserDomainName:    "Default",
+					ProjectDomainName: "Default",
+					CACert:            "",
+				},
 			},
 			Infrastructure: Infrastructure{
 				Provider: "openstack",

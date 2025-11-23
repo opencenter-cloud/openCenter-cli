@@ -134,6 +134,13 @@ func newClusterBootstrapCmd() *cobra.Command {
 			if logPath != "" && !dryRun {
 				fmt.Fprintf(cmd.OutOrStdout(), "Log written to %s\n", logPath)
 			}
+
+			// Update stage and status
+			if err := config.UpdateStatus(name, config.StageBootstrap, config.StatusSuccess); err != nil {
+				// Don't fail the command if status update fails, just warn
+				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)
+			}
+
 			return nil
 		},
 	}

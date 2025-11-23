@@ -38,16 +38,14 @@ func newClusterDestroyCmd() *cobra.Command {
 				return fmt.Errorf("failed to remove gitops directory: %w", err)
 			}
 
-			// Remove config file
-			path, err := config.ConfigPath(name)
-			if err != nil {
-				return err
-			}
-			if err := os.Remove(path); err != nil {
-				return fmt.Errorf("failed to remove config file: %w", err)
+			// Instead of deleting the config file, we mark the cluster as destroyed
+			// Update stage and status
+			if err := config.UpdateStatus(name, config.StageDestroy, config.StatusSuccess); err != nil {
+				// Don't fail the command if status update fails, just warn
+				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Cluster %q destroyed.\n", name)
+			fmt.Fprintf(cmd.OutOrStdout(), "Cluster %q marked as destroyed.\n", name)
 			return nil
 		},
 	}

@@ -67,6 +67,13 @@ func newClusterRenderCmd() *cobra.Command {
 			if err := tofu.Provision(cfg); err != nil {
 				return fmt.Errorf("failed to provision opentofu: %w", err)
 			}
+
+			// Update stage and status
+			if err := config.UpdateStatus(name, config.StageRender, config.StatusSuccess); err != nil {
+				// Don't fail the command if status update fails, just warn
+				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)
+			}
+
 			fmt.Fprintln(cmd.OutOrStdout(), "Render complete.")
 			return nil
 		},

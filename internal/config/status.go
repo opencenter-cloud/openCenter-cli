@@ -1,0 +1,37 @@
+// Copyright 2025 Victor Palma <victor.palma@rackspace.com>
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package config
+
+import (
+	"fmt"
+)
+
+// UpdateStatus updates the cluster's stage and status in the configuration file.
+// It loads the configuration, updates the values, and saves it back.
+func UpdateStatus(clusterName, stage, status string) error {
+	// Use Load to support both legacy and organization-based paths
+	cfg, err := Load(clusterName)
+	if err != nil {
+		return fmt.Errorf("failed to load cluster configuration for status update: %w", err)
+	}
+
+	cfg.OpenCenter.Meta.Stage = stage
+	cfg.OpenCenter.Meta.Status = status
+
+	if err := Save(cfg); err != nil {
+		return fmt.Errorf("failed to save cluster configuration with new status: %w", err)
+	}
+
+	return nil
+}

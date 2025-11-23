@@ -65,6 +65,12 @@ func newClusterPreflightCmd() *cobra.Command {
 			default:
 				// Unknown provider; no checks
 			}
+			// Update stage and status
+			if err := config.UpdateStatus(name, config.StagePreflight, config.StatusSuccess); err != nil {
+				// Don't fail the command if status update fails, just warn
+				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)
+			}
+
 			fmt.Fprintln(cmd.OutOrStdout(), "Preflight complete.")
 			return nil
 		},

@@ -44,8 +44,30 @@ type ClusterMeta struct {
 	Env          string `yaml:"env" json:"env"`
 	Region       string `yaml:"region" json:"region"`
 	Status       string `yaml:"status" json:"status"`
+	Stage        string `yaml:"stage" json:"stage"`
 	Organization string `yaml:"organization" json:"organization"`
 }
+
+// Cluster Stages
+const (
+	StageInit      = "init"
+	StagePreflight = "preflight"
+	StageSetup     = "setup"
+	StageBootstrap = "bootstrap"
+	StageValidate  = "validate"
+	StageDestroy   = "destroy"
+	StageRender    = "render"
+	StagePlan      = "plan"
+	StageApply     = "apply"
+)
+
+// Cluster Statuses
+const (
+	StatusPending = "pending"
+	StatusRunning = "running"
+	StatusSuccess = "success"
+	StatusFailed  = "failed"
+)
 
 // OpenTofu holds OpenTofu-specific settings.
 type OpenTofu struct {

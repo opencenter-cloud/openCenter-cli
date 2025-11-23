@@ -333,6 +333,10 @@ Troubleshooting:
 			// Always update configuration with the determined organization
 			cfg.OpenCenter.Meta.Organization = organization
 
+			// Set initial stage and status
+			cfg.OpenCenter.Meta.Stage = config.StageInit
+			cfg.OpenCenter.Meta.Status = config.StatusSuccess
+
 			// Handle --type flag to set infrastructure provider
 			typeFlag, _ := cmd.Flags().GetString("type")
 			if typeFlag != "" {
@@ -352,15 +356,21 @@ Troubleshooting:
 			if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
 				if meta, ok := opencenter["meta"].(map[string]any); ok {
 					meta["organization"] = organization
+					meta["stage"] = config.StageInit
+					meta["status"] = config.StatusSuccess
 				} else {
 					opencenter["meta"] = map[string]any{
 						"organization": organization,
+						"stage":        config.StageInit,
+						"status":       config.StatusSuccess,
 					}
 				}
 			} else {
 				configMap["opencenter"] = map[string]any{
 					"meta": map[string]any{
 						"organization": organization,
+						"stage":        config.StageInit,
+						"status":       config.StatusSuccess,
 					},
 				}
 			}
@@ -373,11 +383,19 @@ Troubleshooting:
 
 			// Check if cluster directory exists in organization structure
 			if _, err := os.Stat(clusterPaths.ClusterDir); err == nil {
-				if !force {
+				// Check if the cluster is marked as destroyed
+				isDestroyed := false
+				if existingCfg, err := config.Load(name); err == nil {
+					if existingCfg.OpenCenter.Meta.Stage == config.StageDestroy {
+						isDestroyed = true
+					}
+				}
+
+				if !force && !isDestroyed {
 					return fmt.Errorf("cluster configuration directory '%s' already exists in organization '%s', use --force to overwrite", name, organization)
 				}
 
-				// Force flag is set, perform cleanup and overwrite
+				// Force flag is set or cluster is destroyed, perform cleanup and overwrite
 				if err := cleanupClusterDirectory(clusterPaths.ClusterDir); err != nil {
 					return fmt.Errorf("failed to cleanup existing cluster directory '%s': %w", clusterPaths.ClusterDir, err)
 				}

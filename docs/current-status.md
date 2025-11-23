@@ -1,12 +1,12 @@
 # openCenter - Current Status Report
 
-**Last Updated:** November 7, 2025  
+**Last Updated:** November 23, 2025  
 **Version:** 0.0.1  
 **Status:** Active Development
 
 ## Executive Summary
 
-openCenter is in active development with core functionality implemented and tested. The tool successfully provides configuration-first cluster management with GitOps integration, SOPS-based secrets management, and multi-provider support. The codebase is well-structured with comprehensive test coverage and follows Go best practices.
+openCenter is in active development with core functionality implemented and tested. The tool successfully provides configuration-first cluster management with GitOps integration, SOPS-based secrets management, and multi-provider support. The codebase is well-structured with comprehensive test coverage and follows Go best practices. Recent updates include support for Talos Linux, Barbican secrets management, and Pulumi integration.
 
 ## Implementation Status
 
@@ -21,6 +21,9 @@ openCenter is in active development with core functionality implemented and test
   - Configuration merging and overrides
   - Dot-notation path resolution
   - Debug configuration generation
+  - **Templatization** (100%)
+    - Configuration-driven template rendering
+    - Support for all service templates
 
 - **Path Resolution** (100%)
   - Organization-based directory structure
@@ -36,16 +39,22 @@ openCenter is in active development with core functionality implemented and test
   - Network plugin mutual exclusivity
   - Provider-specific validation
   - Comprehensive error reporting
+  - **Enhanced Validation**
+    - Secrets validation
+    - CNI validation
+    - S3 bucket configuration validation
+    - Managed service secret validation
 
 #### CLI Commands
 - **Cluster Lifecycle** (100%)
-  - `cluster init` - Initialize new clusters
+  - `cluster init` - Initialize new clusters (with SSH key generation)
   - `cluster validate` - Validate configuration
   - `cluster list` - List all clusters
   - `cluster select` - Set active cluster
   - `cluster current` - Show active cluster
   - `cluster info` - Display cluster details
   - `cluster update` - Update configuration
+  - `cluster config-update` - Update with defaults
   - `cluster migrate` - Migrate schema versions
   - `cluster setup` - Setup GitOps repository
   - `cluster bootstrap` - Bootstrap infrastructure
@@ -103,6 +112,14 @@ openCenter is in active development with core functionality implemented and test
   - Access control
   - Backup creation
   - Key metadata tracking
+  - **SSH Key Management**
+    - Automatic generation during init
+    - Organization-cluster-region comment format
+
+- **Barbican Integration** (100%)
+  - Secrets management with OpenStack Barbican
+  - Client implementation
+  - Authentication support
 
 #### Provider Support
 - **OpenStack** (90%)
@@ -127,6 +144,11 @@ openCenter is in active development with core functionality implemented and test
   - CNI configuration
   - Kubeconfig export
 
+- **Bare Metal** (100%)
+  - Cluster configuration support
+  - Node definition (master/worker)
+  - Template rendering
+
 - **VMware** (40%)
   - ⚠️ Basic configuration support
   - ❌ Validation incomplete
@@ -140,6 +162,12 @@ openCenter is in active development with core functionality implemented and test
   - Module management
   - State management
 
+- **Pulumi Integration** (100%)
+  - Refresh and destroy operations
+  - Stack management
+  - Secrets handling
+  - Preview support
+
 #### Testing
 - **BDD Tests** (85%)
   - Configuration management tests
@@ -149,13 +177,13 @@ openCenter is in active development with core functionality implemented and test
   - Validation tests
   - ⚠️ Some provider-specific tests incomplete
 
-- **Unit Tests** (75%)
+- **Unit Tests** (80%)
   - Configuration loading/saving
   - Path resolution
   - Validation logic
   - Template rendering
   - SOPS operations
-  - ⚠️ Some edge cases need coverage
+  - New validation rules coverage
 
 #### Build System
 - **Mise Integration** (100%)
@@ -184,7 +212,7 @@ openCenter is in active development with core functionality implemented and test
   - ❌ Dependency validation
 
 #### Documentation
-- **Reference Documentation** (70%)
+- **Reference Documentation** (80%)
   - ✅ CLI command reference
   - ✅ Configuration reference
   - ✅ Overview documentation
@@ -204,6 +232,13 @@ openCenter is in active development with core functionality implemented and test
   - ❌ Multi-cluster setup
   - ❌ Production deployment
   - ❌ Disaster recovery
+
+#### Talos Provider
+- **Talos Linux Support** (In Progress)
+  - Configuration schema extensions
+  - Project structure setup
+  - Core interfaces
+  - Pulumi integration for Talos
 
 ### 📋 Planned
 
@@ -257,12 +292,6 @@ openCenter is in active development with core functionality implemented and test
   - Resource provisioning
   - Template management
 
-- **Bare Metal** (New Provider)
-  - Server configuration
-  - Network setup
-  - PXE boot support
-  - Hardware validation
-
 - **Azure** (New Provider)
   - Resource group management
   - Virtual network configuration
@@ -280,7 +309,7 @@ openCenter is in active development with core functionality implemented and test
 ### Test Coverage
 - **Overall Coverage:** ~75%
 - **Core Packages:** ~85%
-- **CLI Commands:** ~70%
+- **CLI Commands:** ~75%
 - **Providers:** ~60%
 
 ### Code Organization
@@ -376,6 +405,7 @@ openCenter is in active development with core functionality implemented and test
 - ✅ AWS (all regions)
 - ⚠️ VMware vSphere 7.0+ (partial)
 - ✅ Kind (local development)
+- ✅ Bare Metal (generic)
 
 ## Security Considerations
 
@@ -386,6 +416,7 @@ openCenter is in active development with core functionality implemented and test
 - ✅ No plaintext secrets in configuration
 - ✅ Git-friendly encrypted files
 - ✅ Key rotation support
+- ✅ Barbican integration for OpenStack secrets
 
 ### Planned
 - 📋 Secrets scanning in CI
@@ -397,11 +428,11 @@ openCenter is in active development with core functionality implemented and test
 ## Next Steps
 
 ### Short Term (1-2 weeks)
-1. Complete VMware provider validation
-2. Fix intermittent BDD test failures
-3. Improve error messages
-4. Complete schema reference documentation
-5. Add troubleshooting guides
+1. Complete Talos provider implementation
+2. Complete VMware provider validation
+3. Fix intermittent BDD test failures
+4. Improve error messages
+5. Complete schema reference documentation
 
 ### Medium Term (1-2 months)
 1. Implement interactive configuration wizard
@@ -419,12 +450,4 @@ openCenter is in active development with core functionality implemented and test
 
 ## Conclusion
 
-openCenter is in a strong position with core functionality implemented and tested. The architecture is solid, the codebase is well-organized, and the test coverage is good. The main areas for improvement are:
-
-1. **Provider Support:** Complete VMware implementation and add Azure/GCP
-2. **Validation:** Enhance connectivity and preflight checks
-3. **Documentation:** Expand how-to guides and tutorials
-4. **Features:** Add interactive wizard and health monitoring
-5. **Testing:** Increase coverage and fix intermittent failures
-
-The tool is ready for early adopters and internal use, with a clear path to production readiness.
+openCenter continues to evolve with significant additions like Talos Linux support, Barbican integration, and Pulumi capabilities. The core platform remains stable and well-tested, with a focus on expanding provider support and enhancing the developer experience through better validation and tooling.

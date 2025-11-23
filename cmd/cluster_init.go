@@ -391,6 +391,19 @@ Troubleshooting:
 			// Handle --strict
 			strict, _ := cmd.Flags().GetBool("strict")
 			if strict {
+				// In strict mode, clear default values for required fields if user didn't explicitly set them
+				// This ensures validation fails if required fields are missing
+				userSetCustomGitDir := false
+				for _, arg := range os.Args {
+					if strings.HasPrefix(arg, "--opencenter.gitops.git_dir=") || strings.HasPrefix(arg, "--gitops.git_dir=") {
+						userSetCustomGitDir = true
+						break
+					}
+				}
+				if !userSetCustomGitDir {
+					cfg.OpenCenter.GitOps.GitDir = ""
+				}
+				
 				if errs := config.Validate(cfg); len(errs) > 0 {
 					for _, e := range errs {
 						fmt.Fprintln(cmd.ErrOrStderr(), e)
@@ -430,7 +443,8 @@ Troubleshooting:
 			// 1. regenerate-keys flag is set, OR
 			// 2. key doesn't exist and no-keygen is not set
 			disableKeygen, _ := cmd.Flags().GetBool("no-keygen")
-			shouldGenerateSOPS := (regenerateKeys || !sopsKeyExists) && !disableKeygen
+			disableSopsKeygen, _ := cmd.Flags().GetBool("no-sops-keygen")
+			shouldGenerateSOPS := (regenerateKeys || !sopsKeyExists) && !disableKeygen && !disableSopsKeygen
 
 			if shouldGenerateSOPS && cfg.Secrets.SopsAgeKeyFile == "" && name != "" {
 				if err := generateOrganizationSOPSKey(name, organization, &cfg, pathResolver); err != nil {
@@ -610,8 +624,8 @@ Troubleshooting:
 				return fmt.Errorf("failed to marshal final config: %w", err)
 			}
 
-			// Get the config path at organization level
-			configPath := filepath.Join(clusterPaths.OrganizationDir, "."+name+"-config.yaml")
+			// Get the config path at cluster directory level
+			configPath := filepath.Join(clusterPaths.ClusterDir, "."+name+"-config.yaml")
 
 			// Write the config file with proper permissions (0600 for files)
 			if err := os.WriteFile(configPath, finalYAML, 0o600); err != nil {
@@ -629,6 +643,7 @@ Troubleshooting:
 	cmd.Flags().Bool("strict", false, "fail if required values are missing")
 	cmd.Flags().Bool("force", false, "overwrite existing file")
 	cmd.Flags().Bool("no-keygen", false, "do not auto-generate SOPS age keys and SSH key pairs")
+	cmd.Flags().Bool("no-sops-keygen", false, "do not auto-generate SOPS age keys (alias for no-keygen)")
 	cmd.Flags().Bool("regenerate-keys", false, "regenerate SOPS age keys and SSH key pairs even if they already exist")
 	return cmd
 }

@@ -1695,6 +1695,24 @@ func List() ([]string, error) {
 	var names []string
 	nameSet := make(map[string]bool) // Use set to avoid duplicates
 
+	// First, check for flat YAML files in the config directory (for backward compatibility and tests)
+	Debugf("List: checking for flat config files in: %s", dir)
+	if flatEntries, flatErr := os.ReadDir(dir); flatErr == nil {
+		for _, flatEntry := range flatEntries {
+			if !flatEntry.IsDir() && strings.HasSuffix(flatEntry.Name(), ".yaml") {
+				// Extract cluster name by removing .yaml extension
+				clusterName := strings.TrimSuffix(flatEntry.Name(), ".yaml")
+				// Skip the CLI config file itself
+				if clusterName != "" && clusterName != "config" && !nameSet[clusterName] {
+					Debugf("List: found flat config file: %s (cluster: %s)", flatEntry.Name(), clusterName)
+					names = append(names, clusterName)
+					nameSet[clusterName] = true
+				}
+			}
+		}
+	}
+	Debugf("List: found %d flat config clusters", len(names))
+
 	// Check clusters directory for legacy and organization-based structures
 	Debugf("List: checking clusters directory: %s", clustersDir)
 	entries, readErr := os.ReadDir(clustersDir)

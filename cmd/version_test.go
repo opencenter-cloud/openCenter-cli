@@ -108,7 +108,7 @@ func TestVersionCommand(t *testing.T) {
 			BuildDate = tt.buildDate
 
 			// Create command
-			cmd := newVersionCmd()
+			cmd := NewVersionCmd()
 			if tt.shortFlag {
 				cmd.SetArgs([]string{"--short"})
 			}

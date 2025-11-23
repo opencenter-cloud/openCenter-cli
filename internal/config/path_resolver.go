@@ -184,12 +184,19 @@ func (pr *PathResolver) CreateClusterDirectories(clusterName, organization strin
 
 	// Create all cluster-specific directories with proper error handling
 	dirs := []string{
+		paths.OrganizationDir,
+		filepath.Join(paths.OrganizationDir, "infrastructure"),
+		filepath.Join(paths.OrganizationDir, "infrastructure", "clusters"),
 		paths.ClusterDir,
+		filepath.Join(paths.OrganizationDir, "applications"),
+		filepath.Join(paths.OrganizationDir, "applications", "overlays"),
 		paths.ApplicationsDir,
+		paths.SecretsDir,
+		filepath.Join(paths.SecretsDir, "age"),
+		filepath.Dir(paths.SOPSKeyPath), // age/keys directory
 		paths.InventoryPath,
 		paths.VenvPath,
 		paths.BinPath,
-		filepath.Dir(paths.SOPSKeyPath), // age/keys directory
 	}
 
 	for _, dir := range dirs {

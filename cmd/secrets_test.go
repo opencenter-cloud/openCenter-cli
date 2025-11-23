@@ -25,7 +25,7 @@ func TestNewSecretsCmd(t *testing.T) {
 	)
 
 	// test "secrets" command by itself
-	cmd := newSecretsCmd()
+	cmd := NewSecretsCmd()
 	cmd.SetOut(&out)
 	cmd.SetArgs([]string{"--help"})
 	err := cmd.Execute()

@@ -15,8 +15,8 @@ import (
 	"github.com/rackerlabs/openCenter-cli/internal/util/crypto"
 )
 
-// newSOPSCmd creates the SOPS management command group
-func newSOPSCmd() *cobra.Command {
+// NewSOPSCmd creates the SOPS management command group
+func NewSOPSCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sops",
 		Short: "SOPS key management and automation",

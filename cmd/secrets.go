@@ -28,7 +28,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func newSecretsCmd() *cobra.Command {
+func NewSecretsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "secrets",
 		Short: "Manage secrets with Barbican",

@@ -102,12 +102,12 @@ func Execute(version string) error {
 	}
 
 	// Register subcommands
-	rootCmd.AddCommand(newClusterCmd())
-	rootCmd.AddCommand(newConfigCmd())
-	rootCmd.AddCommand(newSOPSCmd())
-	rootCmd.AddCommand(newSecretsCmd())
-	rootCmd.AddCommand(newPluginsCmd())
-	rootCmd.AddCommand(newVersionCmd())
+	rootCmd.AddCommand(NewClusterCmd())
+	rootCmd.AddCommand(NewConfigCmd())
+	rootCmd.AddCommand(NewSOPSCmd())
+	rootCmd.AddCommand(NewSecretsCmd())
+	rootCmd.AddCommand(NewPluginsCmd())
+	rootCmd.AddCommand(NewVersionCmd())
 	// Discover and attach external plugins as subcommands
 	plugins.LoadExternalPlugins(rootCmd)
 	return rootCmd.Execute()
@@ -285,6 +285,11 @@ func applySetFlagOverrides(cliConfig *config.CLIConfig, setFlags []string) error
 // GetConfigManager returns the global configuration manager instance.
 func GetConfigManager() *config.ConfigManager {
 	return configManager
+}
+
+// GetRootCmd returns the root cobra command.
+func GetRootCmd() *cobra.Command {
+	return rootCmd
 }
 
 // helpers for printing errors. In Cobra commands, returning an error

@@ -34,8 +34,8 @@ var (
 	BuildDate = "unknown"
 )
 
-// newVersionCmd creates the version command
-func newVersionCmd() *cobra.Command {
+// NewVersionCmd creates the version command
+func NewVersionCmd() *cobra.Command {
 	var short bool
 
 	cmd := &cobra.Command{

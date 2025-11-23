@@ -17,10 +17,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newClusterCmd creates the top-level "cluster" command. It has
+// NewClusterCmd creates the top-level "cluster" command. It has
 // several subcommands defined in separate files. Running "openCenter
 // cluster" without subcommand prints help.
-func newClusterCmd() *cobra.Command {
+func NewClusterCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Manage cluster configurations",

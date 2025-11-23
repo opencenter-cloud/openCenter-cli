@@ -22,10 +22,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// newConfigCmd creates the top-level "config" command for CLI configuration management.
+// NewConfigCmd creates the top-level "config" command for CLI configuration management.
 // It provides subcommands for viewing, setting, getting, resetting, and locating
 // the CLI configuration file.
-func newConfigCmd() *cobra.Command {
+func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage CLI configuration settings",

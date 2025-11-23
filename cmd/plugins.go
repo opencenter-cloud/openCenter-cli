@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newPluginsCmd() *cobra.Command {
+func NewPluginsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "plugins",
 		Short: "Manage openCenter plugins",

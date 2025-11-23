@@ -77,3 +77,4 @@ gitea/
 testdata/
 tests/features/steps/tmp/
 .mygitignore
+.vscode/

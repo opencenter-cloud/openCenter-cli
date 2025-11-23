@@ -16,6 +16,9 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
@@ -29,8 +32,10 @@ func newClusterInfoCmd() *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var name string
+			var isActiveCluster bool
 			if len(args) > 0 {
 				name = args[0]
+				isActiveCluster = false
 			} else {
 				var err error
 				name, err = config.GetActive()
@@ -40,6 +45,7 @@ func newClusterInfoCmd() *cobra.Command {
 				if name == "" {
 					return fmt.Errorf("no active cluster; specify name")
 				}
+				isActiveCluster = true
 			}
 			cfg, err := config.Load(name)
 			if err != nil {
@@ -66,13 +72,30 @@ func newClusterInfoCmd() *cobra.Command {
 				return fmt.Errorf("failed to resolve config path: %w", err)
 			}
 
+			// Check if we're in the git directory to show "Active cluster" prefix
+			isInGitDir := false
+			if cfg.OpenCenter.GitOps.GitDir != "" {
+				cwd, err := os.Getwd()
+				if err == nil {
+					gitDir := config.ExpandPath(cfg.OpenCenter.GitOps.GitDir)
+					if absGitDir, err := filepath.Abs(gitDir); err == nil {
+						if absCwd, err := filepath.Abs(cwd); err == nil {
+							isInGitDir = (absCwd == absGitDir)
+						}
+					}
+				}
+			}
+
 			// Output format
 			asJSON, _ := cmd.Flags().GetBool("json")
 			if asJSON {
-				// Print metadata and path in JSON format
+				// Print full config in JSON format including cluster_name
 				output := map[string]any{
-					"config_path": configPath,
-					"metadata":    cfg.OpenCenter.Meta,
+					"config_path":  configPath,
+					"cluster_name": cfg.OpenCenter.Cluster.ClusterName,
+					"metadata":     cfg.OpenCenter.Meta,
+					"git_dir":      cfg.OpenCenter.GitOps.GitDir,
+					"git_url":      cfg.OpenCenter.GitOps.GitURL,
 				}
 				b, err := json.MarshalIndent(output, "", "  ")
 				if err != nil {
@@ -83,8 +106,23 @@ func newClusterInfoCmd() *cobra.Command {
 			}
 
 			// Print metadata and config path in human-readable format
-			fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", name)
+			// Show "Active cluster:" if this is the active cluster or we're in the git directory
+			if isActiveCluster || isInGitDir {
+				fmt.Fprintf(cmd.OutOrStdout(), "Active cluster: %s\n", name)
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", name)
+			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Config Path: %s\n\n", configPath)
+			
+			// Print GitOps configuration
+			if cfg.OpenCenter.GitOps.GitDir != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "git_dir: %s\n", cfg.OpenCenter.GitOps.GitDir)
+			}
+			if cfg.OpenCenter.GitOps.GitURL != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "git_url: %s\n", cfg.OpenCenter.GitOps.GitURL)
+			}
+			fmt.Fprintln(cmd.OutOrStdout())
+
 			fmt.Fprintln(cmd.OutOrStdout(), "Metadata:")
 
 			// Create a combined metadata output that includes both Meta and cluster_name

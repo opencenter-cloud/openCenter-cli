@@ -70,6 +70,9 @@ func (cv *ClusterConfigValidator) Validate(ctx context.Context, config *Config) 
 	// Validate cloud provider
 	cv.validateCloudProviderWithResult(ctx, config, result)
 
+	// Validate VRRP configuration
+	cv.validateVRRP(config, result)
+
 	// Set overall validity
 	result.Valid = len(result.Errors) == 0
 
@@ -920,6 +923,26 @@ func (cv *ClusterConfigValidator) validateServiceSecrets(config *Config, result 
 				Suggestions: []string{
 					"Set secrets.grafana.admin_password for Grafana admin user",
 					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+	}
+}
+
+// validateVRRP validates VRRP configuration requirements.
+// When use_octavia is false and vrrp_enabled is true, vrrp_ip must be set.
+func (cv *ClusterConfigValidator) validateVRRP(config *Config, result *ConfigValidationResult) {
+	// Check if VRRP validation is applicable
+	if !config.Networking.UseOctavia && config.Networking.VRRPEnabled {
+		if config.Networking.VRRPIP == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "networking.vrrp_ip",
+				Message: "vrrp_ip must be set when use_octavia is false",
+				Suggestions: []string{
+					"Set networking.vrrp_ip to a valid IP address",
+					"Example: networking.vrrp_ip: \"10.0.4.10\"",
+					"Or enable Octavia by setting networking.use_octavia: true",
 				},
 			})
 		}

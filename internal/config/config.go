@@ -34,6 +34,7 @@ type Config struct {
 	OpenCenter SimplifiedOpenCenter `yaml:"opencenter" json:"opencenter"`
 	OpenTofu   SimplifiedOpenTofu   `yaml:"opentofu" json:"opentofu"`
 	Secrets    Secrets              `yaml:"secrets" json:"secrets"`
+	Networking Networking           `yaml:"networking,omitempty" json:"networking,omitempty"`
 	Overrides  map[string]any       `yaml:"overrides,omitempty" json:"overrides,omitempty"`
 	IAC        IAC                  `yaml:"-" json:"-"` // Hidden from YAML output, for template compatibility
 }

@@ -93,6 +93,8 @@ func newClusterInfoCmd() *cobra.Command {
 				output := map[string]any{
 					"config_path":  configPath,
 					"cluster_name": cfg.OpenCenter.Cluster.ClusterName,
+					"organization": cfg.OpenCenter.Meta.Organization,
+					"provider":     cfg.OpenCenter.Infrastructure.Provider,
 					"metadata":     cfg.OpenCenter.Meta,
 					"git_dir":      cfg.OpenCenter.GitOps.GitDir,
 					"git_url":      cfg.OpenCenter.GitOps.GitURL,
@@ -129,10 +131,11 @@ func newClusterInfoCmd() *cobra.Command {
 			metadataOutput := map[string]any{
 				"name":         cfg.OpenCenter.Meta.Name,
 				"cluster_name": cfg.OpenCenter.Cluster.ClusterName,
+				"organization": cfg.OpenCenter.Meta.Organization,
+				"provider":     cfg.OpenCenter.Infrastructure.Provider,
 				"env":          cfg.OpenCenter.Meta.Env,
 				"region":       cfg.OpenCenter.Meta.Region,
 				"status":       cfg.OpenCenter.Meta.Status,
-				"organization": cfg.OpenCenter.Meta.Organization,
 			}
 
 			data, err := yaml.Marshal(metadataOutput)

@@ -754,7 +754,7 @@ func defaultConfig(name string) Config {
 					CalicoKubeAPIServer: fmt.Sprintf("https://api.%s.sjc3.k8s.opencenter.cloud:6443", name),
 				},
 				"cert-manager": {
-					Enabled:           true,
+					Enabled:           false,
 					Email:             "mpk-support@rackspace.com",
 					Region:            "us-east-1",
 					LetsEncryptServer: "https://acme-v02.api.letsencrypt.org/directory",
@@ -775,7 +775,7 @@ func defaultConfig(name string) Config {
 					HeadlampOIDCClientID:  "kubernetes",
 				},
 				"keycloak": {
-					Enabled:             true,
+					Enabled:             false,
 					Hostname:            fmt.Sprintf("auth.%s.sjc3.k8s.opencenter.cloud", name),
 					KeycloakRealm:       "opencenter",
 					KeycloakClientID:    "kubernetes",
@@ -829,12 +829,14 @@ func defaultConfig(name string) Config {
 			Enabled: true,
 			Path:    "opentofu",
 			Backend: SimplifiedTofuBackend{
-				Type:  "s3",
-				Local: SimplifiedTofuLocal{},
+				Type: "local",
+				Local: SimplifiedTofuLocal{
+					Path: fmt.Sprintf("./testdata/test-git-repo-%s/terraform.tfstate", name),
+				},
 				S3: SimplifiedTofuS3{
-					Bucket: strings.ToLower(name), // Default to cluster name, will be set to organization if available
-					Key:    fmt.Sprintf("%s/tfstate/terraform.tfstate", name),
-					Region: "us-west-2",
+					Bucket: "",
+					Key:    "",
+					Region: "",
 				},
 			},
 		},
@@ -1629,6 +1631,24 @@ func SaveDebugConfig(clusterName, gitDir string) error {
 // Outputs:
 //   - error: An error if the configuration cannot be saved.
 func Save(cfg Config) error {
+	return saveConfig(cfg, false)
+}
+
+// SaveWithOmitEmpty writes the configuration to a YAML file, omitting empty fields.
+// The file is saved with 0600 permissions to protect sensitive data.
+// This is useful for cleaning up configurations by removing fields with zero values.
+//
+// Inputs:
+//   - cfg: The configuration to save.
+//
+// Outputs:
+//   - error: An error if the configuration cannot be saved.
+func SaveWithOmitEmpty(cfg Config) error {
+	return saveConfig(cfg, true)
+}
+
+// saveConfig is the internal implementation for saving configurations.
+func saveConfig(cfg Config, omitEmpty bool) error {
 	if cfg.ClusterName() == "" {
 		return errors.New("cluster_name must not be empty")
 	}
@@ -1648,8 +1668,29 @@ func Save(cfg Config) error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	// Marshal YAML with indentation
-	data, marshalErr := yaml.Marshal(&cfg)
+	var data []byte
+	var marshalErr error
+
+	if omitEmpty {
+		// Marshal to map first, then clean empty values
+		var configMap map[string]any
+		tempData, err := yaml.Marshal(&cfg)
+		if err != nil {
+			return err
+		}
+		if err := yaml.Unmarshal(tempData, &configMap); err != nil {
+			return err
+		}
+		
+		// Remove empty values recursively
+		cleanEmptyValues(configMap)
+		
+		data, marshalErr = yaml.Marshal(configMap)
+	} else {
+		// Standard marshal
+		data, marshalErr = yaml.Marshal(&cfg)
+	}
+
 	if marshalErr != nil {
 		return marshalErr
 	}
@@ -1658,6 +1699,52 @@ func Save(cfg Config) error {
 		return writeErr
 	}
 	return nil
+}
+
+// cleanEmptyValues recursively removes empty values from a map.
+// Empty values include: nil, empty strings, empty slices, empty maps, and zero numbers.
+func cleanEmptyValues(m map[string]any) {
+	for key, value := range m {
+		if isEmpty(value) {
+			delete(m, key)
+			continue
+		}
+		
+		// Recursively clean nested maps
+		if nestedMap, ok := value.(map[string]any); ok {
+			cleanEmptyValues(nestedMap)
+			// Remove the nested map if it became empty after cleaning
+			if len(nestedMap) == 0 {
+				delete(m, key)
+			}
+		}
+	}
+}
+
+// isEmpty checks if a value is considered empty.
+func isEmpty(v any) bool {
+	if v == nil {
+		return true
+	}
+	
+	switch val := v.(type) {
+	case string:
+		return val == ""
+	case bool:
+		return false // Keep boolean values even if false
+	case int, int8, int16, int32, int64:
+		return val == 0
+	case uint, uint8, uint16, uint32, uint64:
+		return val == 0
+	case float32, float64:
+		return val == 0
+	case []any:
+		return len(val) == 0
+	case map[string]any:
+		return len(val) == 0
+	default:
+		return false
+	}
 }
 
 // getConfigPathForSave determines where to save a new cluster configuration.

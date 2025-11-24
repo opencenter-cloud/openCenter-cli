@@ -779,7 +779,7 @@ func (pr *PathResolver) OrganizationAwareConfigPath(clusterName string) (string,
 
 	// Use organization-based path (config at organization level)
 	paths := pr.ResolveClusterPaths(clusterName, organization)
-	configPath := filepath.Join(paths.ClusterDir, "."+clusterName+"-config.yaml")
+	configPath := filepath.Join(paths.OrganizationDir, "."+clusterName+"-config.yaml")
 
 	// Cache the resolved path if the file exists
 	if _, err := os.Stat(configPath); err == nil {

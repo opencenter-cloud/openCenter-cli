@@ -22,13 +22,14 @@ import (
 )
 
 // newClusterConfigUpdateCmd creates the command for updating a cluster configuration
-// by reloading it with current defaults and saving it back.
+// by reloading it with current defaults and saving it back with empty fields omitted.
 //
 // This command loads the current cluster configuration and creates a new cluster
 // configuration using the values at load time. This is useful for:
 // - Applying new default values from schema updates
 // - Normalizing configuration format
 // - Migrating configurations to new structure
+// - Cleaning up empty/unused fields from the configuration
 //
 // Returns:
 //   - *cobra.Command: A pointer to the configured `config-update` command.
@@ -43,11 +44,13 @@ configuration using the values at load time. This is useful for:
 - Applying new default values from schema updates
 - Normalizing configuration format
 - Migrating configurations to new structure
+- Cleaning up empty/unused fields from the configuration
 
 The command will:
 1. Load the existing cluster configuration
 2. Merge it with current schema defaults
-3. Save the updated configuration back to the same location
+3. Remove any empty fields (omitempty behavior)
+4. Save the updated configuration back to the same location
 
 If no cluster name is provided, the currently selected cluster is used.
 
@@ -111,9 +114,9 @@ Examples:
 				return fmt.Errorf("failed to create backup: %w", err)
 			}
 
-			// Save the configuration (this will apply current defaults)
+			// Save the configuration with omitempty (this will apply current defaults and remove empty fields)
 			fmt.Fprintf(cmd.OutOrStdout(), "Saving updated configuration...\n")
-			if err := config.Save(cfg); err != nil {
+			if err := config.SaveWithOmitEmpty(cfg); err != nil {
 				return fmt.Errorf("failed to save updated configuration: %w", err)
 			}
 

@@ -875,6 +875,9 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 					Release: "v1.0.0",
 					Branch:  "main",
 				}
+				// Provide required secrets to avoid validation errors
+				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."
+				cfg.Secrets.CertManager.AWSSecretAccessKey = "secret"
 				return cfg
 			},
 			expectErrs: []string{"service 'cert-manager': only one of 'release' or 'branch' can be set, not both"},
@@ -888,6 +891,9 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 					Enabled: true,
 					Release: "v1.0.0",
 				}
+				// Provide required secrets to avoid validation errors
+				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."
+				cfg.Secrets.CertManager.AWSSecretAccessKey = "secret"
 				return cfg
 			},
 			expectErrs: []string{},
@@ -901,6 +907,9 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 					Enabled: true,
 					Branch:  "main",
 				}
+				// Provide required secrets to avoid validation errors
+				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."
+				cfg.Secrets.CertManager.AWSSecretAccessKey = "secret"
 				return cfg
 			},
 			expectErrs: []string{},
@@ -913,6 +922,9 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				cfg.OpenCenter.Services["cert-manager"] = ServiceCfg{
 					Enabled: true,
 				}
+				// Provide required secrets to avoid validation errors
+				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."
+				cfg.Secrets.CertManager.AWSSecretAccessKey = "secret"
 				return cfg
 			},
 			expectErrs: []string{},
@@ -979,6 +991,9 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				}
 				cfg.OpenCenter.GitOps.Release = "v1.0.0"
 				cfg.OpenCenter.GitOps.Branch = "main"
+				// Provide required secrets to avoid validation errors
+				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."
+				cfg.Secrets.CertManager.AWSSecretAccessKey = "secret"
 				return cfg
 			},
 			expectErrs: []string{

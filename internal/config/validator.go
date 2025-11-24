@@ -413,6 +413,9 @@ func (cv *ClusterConfigValidator) validateSemanticsWithResult(ctx context.Contex
 	for serviceName, svc := range config.OpenCenter.ManagedService {
 		cv.validateManagedService(serviceName, svc, config.Secrets, result)
 	}
+
+	// Validate service secrets (consolidated validation)
+	cv.validateServiceSecrets(config, result)
 }
 
 // validateNetworkingWithResult validates network plugin configuration.
@@ -704,39 +707,14 @@ func (cv *ClusterConfigValidator) isValidDomain(domain string) bool {
 	return domainRegex.MatchString(domain)
 }
 
-// validateService validates service-specific configuration and secrets.
+// validateService validates service-specific configuration (non-secret fields).
 func (cv *ClusterConfigValidator) validateService(serviceName string, svc ServiceCfg, secrets Secrets, result *ConfigValidationResult) {
 	if !svc.Enabled {
 		return
 	}
 
-	// Validate service-specific required fields and secrets
+	// Validate service-specific required configuration fields (non-secrets)
 	switch serviceName {
-	case "cert-manager":
-		// Check required secrets
-		if secrets.CertManager.AWSAccessKey == "" {
-			result.Errors = append(result.Errors, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "secrets.cert_manager.aws_access_key",
-				Message: "AWS access key is required when cert-manager is enabled",
-				Suggestions: []string{
-					"Set secrets.cert_manager.aws_access_key for Route53 DNS validation",
-					"Use SOPS to encrypt sensitive credentials",
-				},
-			})
-		}
-		if secrets.CertManager.AWSSecretAccessKey == "" {
-			result.Errors = append(result.Errors, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "secrets.cert_manager.aws_secret_access_key",
-				Message: "AWS secret access key is required when cert-manager is enabled",
-				Suggestions: []string{
-					"Set secrets.cert_manager.aws_secret_access_key for Route53 DNS validation",
-					"Use SOPS to encrypt sensitive credentials",
-				},
-			})
-		}
-
 	case "loki":
 		// Check required configuration
 		if svc.SwiftAuthURL == "" {
@@ -766,86 +744,6 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 				Message: "Swift project name is required when Loki is enabled",
 				Suggestions: []string{
 					"Set swift_project_name for Swift storage authentication",
-				},
-			})
-		}
-		// Check required secrets
-		if secrets.Loki.SwiftPassword == "" {
-			result.Errors = append(result.Errors, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "secrets.loki.swift_password",
-				Message: "Swift password is required when Loki is enabled",
-				Suggestions: []string{
-					"Set secrets.loki.swift_password for Swift storage authentication",
-					"Use SOPS to encrypt sensitive credentials",
-				},
-			})
-		}
-
-	case "keycloak":
-		// Check required secrets
-		if secrets.Keycloak.ClientSecret == "" {
-			result.Warnings = append(result.Warnings, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "secrets.keycloak.client_secret",
-				Message: "Keycloak client secret should be set when Keycloak is enabled",
-				Suggestions: []string{
-					"Set secrets.keycloak.client_secret for OIDC authentication",
-					"Use SOPS to encrypt sensitive credentials",
-				},
-			})
-		}
-		if secrets.Keycloak.AdminPassword == "" {
-			result.Errors = append(result.Errors, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "secrets.keycloak.admin_password",
-				Message: "Keycloak admin password is required when Keycloak is enabled",
-				Suggestions: []string{
-					"Set secrets.keycloak.admin_password for Keycloak admin user",
-					"Use SOPS to encrypt sensitive credentials",
-				},
-			})
-		}
-
-	case "headlamp":
-		// Check required secrets
-		if secrets.Headlamp.OIDCClientSecret == "" {
-			result.Errors = append(result.Errors, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "secrets.headlamp.oidc_client_secret",
-				Message: "Headlamp OIDC client secret is required when Headlamp is enabled",
-				Suggestions: []string{
-					"Set secrets.headlamp.oidc_client_secret for OIDC authentication",
-					"Use SOPS to encrypt sensitive credentials",
-				},
-			})
-		}
-
-	case "weave-gitops":
-		// Check required secrets
-		if secrets.WeaveGitOps.PasswordHash == "" {
-			result.Errors = append(result.Errors, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "secrets.weave_gitops.password_hash",
-				Message: "Weave GitOps password hash is required when Weave GitOps is enabled",
-				Suggestions: []string{
-					"Set secrets.weave_gitops.password_hash (bcrypt hash)",
-					"Use 'htpasswd -nbBC 10 admin <password>' to generate hash",
-					"Use SOPS to encrypt sensitive credentials",
-				},
-			})
-		}
-
-	case "kube-prometheus-stack":
-		// Check required secrets
-		if secrets.Grafana.AdminPassword == "" {
-			result.Errors = append(result.Errors, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "secrets.grafana.admin_password",
-				Message: "Grafana admin password is required when kube-prometheus-stack is enabled",
-				Suggestions: []string{
-					"Set secrets.grafana.admin_password for Grafana admin user",
-					"Use SOPS to encrypt sensitive credentials",
 				},
 			})
 		}
@@ -905,6 +803,123 @@ func (cv *ClusterConfigValidator) validateManagedService(serviceName string, svc
 				Suggestions: []string{
 					"Set alert_manager_base_url to your AlertManager endpoint",
 					"Example: http://observability-kube-prometh-alertmanager.observability.svc.cluster.local:9093/api/v2/alerts",
+				},
+			})
+		}
+	}
+}
+
+// validateServiceSecrets validates service-specific secrets configuration.
+// This function checks that required secrets are present when corresponding services are enabled.
+func (cv *ClusterConfigValidator) validateServiceSecrets(config *Config, result *ConfigValidationResult) {
+	// Validate cert-manager secrets
+	if svc, exists := config.OpenCenter.Services["cert-manager"]; exists && svc.Enabled {
+		if config.Secrets.CertManager.AWSAccessKey == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.cert_manager.aws_access_key",
+				Message: "cert-manager requires aws_access_key",
+				Suggestions: []string{
+					"Set secrets.cert_manager.aws_access_key for Route53 DNS validation",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		if config.Secrets.CertManager.AWSSecretAccessKey == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.cert_manager.aws_secret_access_key",
+				Message: "cert-manager requires aws_secret_access_key",
+				Suggestions: []string{
+					"Set secrets.cert_manager.aws_secret_access_key for Route53 DNS validation",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+	}
+
+	// Validate loki secrets
+	if svc, exists := config.OpenCenter.Services["loki"]; exists && svc.Enabled {
+		if config.Secrets.Loki.SwiftPassword == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.loki.swift_password",
+				Message: "loki requires swift_password",
+				Suggestions: []string{
+					"Set secrets.loki.swift_password for Swift storage authentication",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+	}
+
+	// Validate keycloak secrets
+	if svc, exists := config.OpenCenter.Services["keycloak"]; exists && svc.Enabled {
+		if config.Secrets.Keycloak.ClientSecret == "" {
+			result.Warnings = append(result.Warnings, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.keycloak.client_secret",
+				Message: "keycloak client_secret should be set",
+				Suggestions: []string{
+					"Set secrets.keycloak.client_secret for OIDC authentication",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+		if config.Secrets.Keycloak.AdminPassword == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.keycloak.admin_password",
+				Message: "keycloak requires admin_password",
+				Suggestions: []string{
+					"Set secrets.keycloak.admin_password for Keycloak admin user",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+	}
+
+	// Validate headlamp secrets
+	if svc, exists := config.OpenCenter.Services["headlamp"]; exists && svc.Enabled {
+		if config.Secrets.Headlamp.OIDCClientSecret == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.headlamp.oidc_client_secret",
+				Message: "Headlamp OIDC client secret is required when Headlamp is enabled",
+				Suggestions: []string{
+					"Set secrets.headlamp.oidc_client_secret for OIDC authentication",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+	}
+
+	// Validate weave-gitops secrets
+	if svc, exists := config.OpenCenter.Services["weave-gitops"]; exists && svc.Enabled {
+		if config.Secrets.WeaveGitOps.PasswordHash == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.weave_gitops.password_hash",
+				Message: "Weave GitOps password hash is required when Weave GitOps is enabled",
+				Suggestions: []string{
+					"Set secrets.weave_gitops.password_hash (bcrypt hash)",
+					"Use 'htpasswd -nbBC 10 admin <password>' to generate hash",
+					"Use SOPS to encrypt sensitive credentials",
+				},
+			})
+		}
+	}
+
+	// Validate kube-prometheus-stack (Grafana) secrets
+	if svc, exists := config.OpenCenter.Services["kube-prometheus-stack"]; exists && svc.Enabled {
+		if config.Secrets.Grafana.AdminPassword == "" {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "secrets.grafana.admin_password",
+				Message: "Grafana admin password is required when kube-prometheus-stack is enabled",
+				Suggestions: []string{
+					"Set secrets.grafana.admin_password for Grafana admin user",
+					"Use SOPS to encrypt sensitive credentials",
 				},
 			})
 		}

@@ -2032,6 +2032,41 @@ func Validate(cfg Config) []string {
 		errs = append(errs, "gitops: only one of 'release' or 'branch' can be set, not both")
 	}
 
+	// Validate service secrets
+	errs = append(errs, validateServiceSecretsSimple(cfg)...)
+
+	return errs
+}
+
+// validateServiceSecretsSimple validates service-specific secrets configuration.
+// This function checks that required secrets are present when corresponding services are enabled.
+func validateServiceSecretsSimple(cfg Config) []string {
+	var errs []string
+
+	// Validate cert-manager secrets
+	if svc, exists := cfg.OpenCenter.Services["cert-manager"]; exists && svc.Enabled {
+		if cfg.Secrets.CertManager.AWSAccessKey == "" {
+			errs = append(errs, "secrets.cert_manager.aws_access_key is required when cert-manager is enabled")
+		}
+		if cfg.Secrets.CertManager.AWSSecretAccessKey == "" {
+			errs = append(errs, "secrets.cert_manager.aws_secret_access_key is required when cert-manager is enabled")
+		}
+	}
+
+	// Validate loki secrets
+	if svc, exists := cfg.OpenCenter.Services["loki"]; exists && svc.Enabled {
+		if cfg.Secrets.Loki.SwiftPassword == "" {
+			errs = append(errs, "secrets.loki.swift_password is required when loki is enabled")
+		}
+	}
+
+	// Validate keycloak secrets
+	if svc, exists := cfg.OpenCenter.Services["keycloak"]; exists && svc.Enabled {
+		if cfg.Secrets.Keycloak.AdminPassword == "" {
+			errs = append(errs, "secrets.keycloak.admin_password is required when keycloak is enabled")
+		}
+	}
+
 	return errs
 }
 

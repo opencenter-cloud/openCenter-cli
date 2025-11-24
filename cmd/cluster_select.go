@@ -260,11 +260,57 @@ func validateClusterExists(clusterName string, pathResolver *config.PathResolver
 	// ConfigPath now handles organization/cluster format
 	path, err := config.ConfigPath(clusterName)
 	if err != nil {
-		return fmt.Errorf("failed to get config path for cluster %s: %w", clusterName, err)
+		// Get list of available clusters for helpful error message
+		availableClusters, listErr := config.List()
+		
+		// Build error message with organization-based structure reference
+		var errMsg strings.Builder
+		errMsg.WriteString(fmt.Sprintf("cluster configuration directory '%s' not found in clusters subdirectory", clusterName))
+		
+		// Add helpful suggestions
+		if listErr == nil && len(availableClusters) > 0 {
+			errMsg.WriteString("\n\nAvailable clusters:")
+			for _, cluster := range availableClusters {
+				errMsg.WriteString(fmt.Sprintf("\n  - %s", cluster))
+			}
+			errMsg.WriteString("\n\nUse 'openCenter cluster list' to see all available clusters")
+		} else {
+			errMsg.WriteString("\n\nUse 'openCenter cluster list' to see available clusters")
+		}
+		
+		// Add hint about organization format
+		if !strings.Contains(clusterName, "/") {
+			errMsg.WriteString("\n\nNote: If your cluster is in an organization, use the format: organization/cluster")
+		}
+		
+		return errors.New(errMsg.String())
 	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return fmt.Errorf("cluster configuration '%s' not found. Use 'openCenter cluster list' to see available clusters", clusterName)
+		// Get list of available clusters for helpful error message
+		availableClusters, listErr := config.List()
+		
+		// Build error message with organization-based structure reference
+		var errMsg strings.Builder
+		errMsg.WriteString(fmt.Sprintf("cluster configuration directory '%s' not found in clusters subdirectory", clusterName))
+		
+		// Add helpful suggestions
+		if listErr == nil && len(availableClusters) > 0 {
+			errMsg.WriteString("\n\nAvailable clusters:")
+			for _, cluster := range availableClusters {
+				errMsg.WriteString(fmt.Sprintf("\n  - %s", cluster))
+			}
+			errMsg.WriteString("\n\nUse 'openCenter cluster list' to see all available clusters")
+		} else {
+			errMsg.WriteString("\n\nUse 'openCenter cluster list' to see available clusters")
+		}
+		
+		// Add hint about organization format
+		if !strings.Contains(clusterName, "/") {
+			errMsg.WriteString("\n\nNote: If your cluster is in an organization, use the format: organization/cluster")
+		}
+		
+		return errors.New(errMsg.String())
 	}
 
 	return nil

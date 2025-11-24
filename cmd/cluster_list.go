@@ -52,6 +52,16 @@ func newClusterListCmd() *cobra.Command {
 				config.Debugf("cluster list: [%d] %s", i, name)
 			}
 
+			// Get active cluster to show indicator
+			activeCluster, err := config.GetActive()
+			if err != nil {
+				config.Debugf("cluster list: failed to get active cluster: %v", err)
+				// Continue without active indicator if we can't get it
+				activeCluster = ""
+			} else {
+				config.Debugf("cluster list: active cluster: %s", activeCluster)
+			}
+
 			jsonOutput, _ := cmd.Flags().GetBool("json")
 			config.Debugf("cluster list: json output mode: %v", jsonOutput)
 
@@ -68,7 +78,12 @@ func newClusterListCmd() *cobra.Command {
 
 			config.Debug("cluster list: outputting plain text format")
 			for _, n := range names {
-				fmt.Fprintln(cmd.OutOrStdout(), n)
+				// Show active indicator with asterisk
+				if activeCluster != "" && n == activeCluster {
+					fmt.Fprintf(cmd.OutOrStdout(), "* %s\n", n)
+				} else {
+					fmt.Fprintln(cmd.OutOrStdout(), n)
+				}
 			}
 			config.Debug("cluster list: operation completed successfully")
 			return nil

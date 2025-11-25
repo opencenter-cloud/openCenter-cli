@@ -17,6 +17,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -841,6 +842,80 @@ func TestConfigurationValidation(t *testing.T) {
 
 		if !foundError {
 			t.Errorf("Expected error about missing loki secrets, but got: %v", result.Errors)
+		}
+	})
+
+	t.Run("DetectLokiMixedStorageBackends", func(t *testing.T) {
+		config := NewDefault("test-cluster")
+		config.OpenCenter.Services["loki"] = ServiceCfg{
+			Enabled:                      true,
+			LokiStorageType:              "swift",
+			LokiBucketName:               "loki-logs",
+			SwiftAuthURL:                 "https://auth.cloud.ovh.net/v3",
+			SwiftRegion:                  "GRA9",
+			SwiftApplicationCredentialID: "test-app-cred-id",
+			// Also configure S3 (should fail)
+			LokiS3Region:   "us-east-1",
+			LokiS3Endpoint: "https://s3.amazonaws.com",
+		}
+		config.Secrets.Loki.SwiftApplicationCredentialSecret = "test-secret"
+
+		// Add other required secrets
+		addDefaultSecrets(&config)
+
+		validator := NewConfigValidator(false)
+		result := validator.Validate(ctx, &config)
+
+		if result.Valid {
+			t.Error("Configuration with both S3 and Swift backends should be invalid")
+		}
+
+		foundError := false
+		for _, err := range result.Errors {
+			if strings.Contains(err.Message, "Cannot configure both S3 and Swift") {
+				foundError = true
+				break
+			}
+		}
+
+		if !foundError {
+			t.Errorf("Expected error about mixed storage backends, but got: %v", result.Errors)
+		}
+	})
+
+	t.Run("DetectLokiStorageTypeMismatch", func(t *testing.T) {
+		config := NewDefault("test-cluster")
+		config.OpenCenter.Services["loki"] = ServiceCfg{
+			Enabled:         true,
+			LokiStorageType: "swift", // Set to swift
+			LokiBucketName:  "loki-logs",
+			// But only configure S3
+			LokiS3Region:   "us-east-1",
+			LokiS3Endpoint: "https://s3.amazonaws.com",
+		}
+		config.Secrets.Loki.S3AccessKeyID = "AKIA..."
+		config.Secrets.Loki.S3SecretAccessKey = "secret"
+
+		// Add other required secrets
+		addDefaultSecrets(&config)
+
+		validator := NewConfigValidator(false)
+		result := validator.Validate(ctx, &config)
+
+		if result.Valid {
+			t.Error("Configuration with storage type mismatch should be invalid")
+		}
+
+		foundError := false
+		for _, err := range result.Errors {
+			if strings.Contains(err.Message, "only S3 configuration is present") {
+				foundError = true
+				break
+			}
+		}
+
+		if !foundError {
+			t.Errorf("Expected error about storage type mismatch, but got: %v", result.Errors)
 		}
 	})
 

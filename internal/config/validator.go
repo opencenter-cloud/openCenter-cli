@@ -736,6 +736,47 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 			})
 		}
 
+		// Validate mutual exclusivity: only one storage backend can be configured
+		hasSwiftConfig := svc.SwiftAuthURL != "" || svc.SwiftRegion != "" || svc.SwiftApplicationCredentialID != "" || svc.SwiftUsername != ""
+		hasS3Config := svc.LokiS3Region != "" || svc.LokiS3Endpoint != ""
+
+		if hasSwiftConfig && hasS3Config {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.services.loki",
+				Message: "Cannot configure both S3 and Swift storage backends simultaneously",
+				Suggestions: []string{
+					"Choose either S3 or Swift storage by setting loki_storage_type",
+					"Remove configuration fields for the unused storage backend",
+				},
+			})
+		}
+
+		// Validate storage type matches configured fields
+		if storageType == "swift" && hasS3Config && !hasSwiftConfig {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.services.loki.loki_storage_type",
+				Message: "Storage type is set to 'swift' but only S3 configuration is present",
+				Suggestions: []string{
+					"Set loki_storage_type to 's3' to match your configuration",
+					"Or add Swift configuration fields",
+				},
+			})
+		}
+
+		if storageType == "s3" && hasSwiftConfig && !hasS3Config {
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.services.loki.loki_storage_type",
+				Message: "Storage type is set to 's3' but only Swift configuration is present",
+				Suggestions: []string{
+					"Set loki_storage_type to 'swift' to match your configuration",
+					"Or add S3 configuration fields",
+				},
+			})
+		}
+
 		// Validate bucket/container name
 		if svc.LokiBucketName == "" {
 			result.Errors = append(result.Errors, &ConfigValidationError{

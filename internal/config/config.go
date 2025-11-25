@@ -238,7 +238,13 @@ type CertManagerSecrets struct {
 
 // LokiSecrets holds Loki secret values
 type LokiSecrets struct {
-	SwiftPassword string `yaml:"swift_password" json:"swift_password" jsonschema:"secret=true,description=Swift storage password"`
+	// Swift secrets
+	SwiftPassword                    string `yaml:"swift_password" json:"swift_password" jsonschema:"secret=true,description=Swift storage password (deprecated: use application credentials)"`
+	SwiftApplicationCredentialSecret string `yaml:"swift_application_credential_secret" json:"swift_application_credential_secret" jsonschema:"secret=true,description=Swift application credential secret"`
+
+	// S3 secrets
+	S3AccessKeyID     string `yaml:"s3_access_key_id" json:"s3_access_key_id" jsonschema:"secret=true,description=S3 access key ID"`
+	S3SecretAccessKey string `yaml:"s3_secret_access_key" json:"s3_secret_access_key" jsonschema:"secret=true,description=S3 secret access key"`
 }
 
 // KeycloakSecrets holds Keycloak secret values
@@ -427,14 +433,29 @@ type ServiceCfg struct {
 	LetsEncryptServer string `yaml:"letsencrypt_server" json:"letsencrypt_server" jsonschema:"description=LetsEncrypt ACME server URL"`
 
 	// Loki fields
-	SwiftAuthURL     string `yaml:"swift_auth_url" json:"swift_auth_url" jsonschema:"description=Swift authentication URL"`
-	SwiftUsername    string `yaml:"swift_username" json:"swift_username" jsonschema:"description=Swift username"`
-	SwiftProjectName string `yaml:"swift_project_name" json:"swift_project_name" jsonschema:"description=Swift project name"`
-	SwiftRegion      string `yaml:"swift_region" json:"swift_region" jsonschema:"description=Swift region"`
-	SwiftDomainName  string `yaml:"swift_domain_name" json:"swift_domain_name" jsonschema:"description=Swift domain name"`
-	LokiBucketName   string `yaml:"loki_bucket_name" json:"loki_bucket_name" jsonschema:"description=Loki storage bucket name"`
+	LokiStorageType  string `yaml:"loki_storage_type" json:"loki_storage_type" jsonschema:"description=Loki storage backend type (s3 or swift),enum=s3,enum=swift,default=swift"`
+	LokiBucketName   string `yaml:"loki_bucket_name" json:"loki_bucket_name" jsonschema:"description=Loki storage bucket/container name"`
 	LokiVolumeSize   int    `yaml:"loki_volume_size" json:"loki_volume_size" jsonschema:"description=Loki persistent volume size in GB"`
 	LokiStorageClass string `yaml:"loki_storage_class" json:"loki_storage_class" jsonschema:"description=Loki storage class"`
+
+	// Swift storage fields
+	SwiftAuthURL                 string `yaml:"swift_auth_url" json:"swift_auth_url" jsonschema:"description=Swift Keystone V3 authentication URL (must end in /v3)"`
+	SwiftRegion                  string `yaml:"swift_region" json:"swift_region" jsonschema:"description=Swift region name"`
+	SwiftAuthVersion             int    `yaml:"swift_auth_version" json:"swift_auth_version" jsonschema:"description=Swift authentication version,default=3"`
+	SwiftApplicationCredentialID string `yaml:"swift_application_credential_id" json:"swift_application_credential_id" jsonschema:"description=Swift application credential ID (UUID)"`
+	SwiftContainerName           string `yaml:"swift_container_name" json:"swift_container_name" jsonschema:"description=Swift container name for Loki logs"`
+	SwiftUserDomainName          string `yaml:"swift_user_domain_name" json:"swift_user_domain_name" jsonschema:"description=Swift user domain name (optional, often implied by app credentials)"`
+
+	// Legacy Swift fields (deprecated, use application credentials instead)
+	SwiftUsername    string `yaml:"swift_username" json:"swift_username" jsonschema:"description=Swift username (deprecated: use application credentials)"`
+	SwiftProjectName string `yaml:"swift_project_name" json:"swift_project_name" jsonschema:"description=Swift project name (deprecated: use application credentials)"`
+	SwiftDomainName  string `yaml:"swift_domain_name" json:"swift_domain_name" jsonschema:"description=Swift domain name (deprecated: use application credentials)"`
+
+	// S3 storage fields
+	LokiS3Endpoint       string `yaml:"loki_s3_endpoint" json:"loki_s3_endpoint" jsonschema:"description=S3 endpoint URL (for MinIO, Ceph, DigitalOcean Spaces, etc.)"`
+	LokiS3Region         string `yaml:"loki_s3_region" json:"loki_s3_region" jsonschema:"description=S3 region (e.g., us-east-1)"`
+	LokiS3ForcePathStyle bool   `yaml:"loki_s3_force_path_style" json:"loki_s3_force_path_style" jsonschema:"description=Force S3 path style (required for MinIO and some S3-compatible services)"`
+	LokiS3Insecure       bool   `yaml:"loki_s3_insecure" json:"loki_s3_insecure" jsonschema:"description=Allow insecure S3 connections (not using HTTPS)"`
 
 	// Velero fields
 	VeleroBackupBucket string `yaml:"velero_backup_bucket" json:"velero_backup_bucket" jsonschema:"description=Velero backup bucket name"`

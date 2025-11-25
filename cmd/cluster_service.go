@@ -313,8 +313,25 @@ func validateService(serviceName string, serviceCfg *config.ServiceCfg, secretsC
 			return fmt.Errorf("missing required parameter 'email' for service 'cert-manager'.\nExample: --param=\"email=your-email@example.com\"")
 		}
 	case "loki":
-		if secretsCfg.Loki.SwiftPassword == "" {
-			return fmt.Errorf("missing required secret 'swift_password' for service 'loki'.\nExample: --secret=\"swift_password=your-password\"")
+		storageType := serviceCfg.LokiStorageType
+		if storageType == "" {
+			storageType = "swift" // default
+		}
+
+		if storageType == "swift" {
+			// Check for application credentials (recommended) or legacy credentials
+			hasAppCreds := serviceCfg.SwiftApplicationCredentialID != "" && secretsCfg.Loki.SwiftApplicationCredentialSecret != ""
+			hasLegacyCreds := serviceCfg.SwiftUsername != "" && secretsCfg.Loki.SwiftPassword != ""
+
+			if !hasAppCreds && !hasLegacyCreds {
+				return fmt.Errorf("missing required Swift credentials for service 'loki'.\nRecommended: --param=\"swift_application_credential_id=your-app-cred-id\" --secret=\"swift_application_credential_secret=your-secret\"\nOr legacy: --param=\"swift_username=your-username\" --secret=\"swift_password=your-password\"")
+			}
+		} else if storageType == "s3" {
+			// S3 credentials are optional (can use IAM roles), but if provided, both must be set
+			hasS3Creds := secretsCfg.Loki.S3AccessKeyID != "" || secretsCfg.Loki.S3SecretAccessKey != ""
+			if hasS3Creds && (secretsCfg.Loki.S3AccessKeyID == "" || secretsCfg.Loki.S3SecretAccessKey == "") {
+				return fmt.Errorf("both S3 access key and secret key must be provided for service 'loki'.\nExample: --secret=\"s3_access_key_id=AKIA...\" --secret=\"s3_secret_access_key=your-secret\"")
+			}
 		}
 	case "keycloak":
 		if secretsCfg.Keycloak.AdminPassword == "" {

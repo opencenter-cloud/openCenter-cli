@@ -719,36 +719,86 @@ func (cv *ClusterConfigValidator) validateService(serviceName string, svc Servic
 	// Validate service-specific required configuration fields (non-secrets)
 	switch serviceName {
 	case "loki":
-		// Check required configuration
-		if svc.SwiftAuthURL == "" {
+		storageType := svc.LokiStorageType
+		if storageType == "" {
+			storageType = "swift" // default
+		}
+
+		// Validate storage type
+		if storageType != "s3" && storageType != "swift" {
 			result.Errors = append(result.Errors, &ConfigValidationError{
 				Type:    "validation",
-				Field:   "opencenter.services.loki.swift_auth_url",
-				Message: "Swift auth URL is required when Loki is enabled",
+				Field:   "opencenter.services.loki.loki_storage_type",
+				Message: "Invalid Loki storage type. Must be 's3' or 'swift'",
 				Suggestions: []string{
-					"Set swift_auth_url to your Swift/OpenStack Keystone endpoint",
+					"Set loki_storage_type to 's3' or 'swift'",
 				},
 			})
 		}
-		if svc.SwiftUsername == "" {
+
+		// Validate bucket/container name
+		if svc.LokiBucketName == "" {
 			result.Errors = append(result.Errors, &ConfigValidationError{
 				Type:    "validation",
-				Field:   "opencenter.services.loki.swift_username",
-				Message: "Swift username is required when Loki is enabled",
+				Field:   "opencenter.services.loki.loki_bucket_name",
+				Message: "Loki bucket/container name is required",
 				Suggestions: []string{
-					"Set swift_username for Swift storage authentication",
+					"Set loki_bucket_name to your storage bucket or container name",
 				},
 			})
 		}
-		if svc.SwiftProjectName == "" {
-			result.Errors = append(result.Errors, &ConfigValidationError{
-				Type:    "validation",
-				Field:   "opencenter.services.loki.swift_project_name",
-				Message: "Swift project name is required when Loki is enabled",
-				Suggestions: []string{
-					"Set swift_project_name for Swift storage authentication",
-				},
-			})
+
+		// Storage-specific validation
+		if storageType == "swift" {
+			// Swift validation
+			if svc.SwiftAuthURL == "" {
+				result.Errors = append(result.Errors, &ConfigValidationError{
+					Type:    "validation",
+					Field:   "opencenter.services.loki.swift_auth_url",
+					Message: "Swift auth URL is required when using Swift storage",
+					Suggestions: []string{
+						"Set swift_auth_url to your Swift/OpenStack Keystone endpoint (must end in /v3)",
+					},
+				})
+			}
+			if svc.SwiftRegion == "" {
+				result.Errors = append(result.Errors, &ConfigValidationError{
+					Type:    "validation",
+					Field:   "opencenter.services.loki.swift_region",
+					Message: "Swift region is required when using Swift storage",
+					Suggestions: []string{
+						"Set swift_region to your Swift region name",
+					},
+				})
+			}
+			// Check for either application credentials or legacy username/password
+			hasAppCreds := svc.SwiftApplicationCredentialID != "" && secrets.Loki.SwiftApplicationCredentialSecret != ""
+			hasLegacyCreds := svc.SwiftUsername != "" && svc.SwiftProjectName != "" && secrets.Loki.SwiftPassword != ""
+
+			if !hasAppCreds && !hasLegacyCreds {
+				result.Errors = append(result.Errors, &ConfigValidationError{
+					Type:    "validation",
+					Field:   "opencenter.services.loki",
+					Message: "Swift authentication credentials are required",
+					Suggestions: []string{
+						"Recommended: Set swift_application_credential_id and swift_application_credential_secret (in secrets)",
+						"Or use legacy: Set swift_username, swift_project_name, and swift_password (in secrets)",
+					},
+				})
+			}
+		} else if storageType == "s3" {
+			// S3 validation
+			if svc.LokiS3Region == "" && svc.LokiS3Endpoint == "" {
+				result.Errors = append(result.Errors, &ConfigValidationError{
+					Type:    "validation",
+					Field:   "opencenter.services.loki.loki_s3_region",
+					Message: "S3 region or custom endpoint is required when using S3 storage",
+					Suggestions: []string{
+						"Set loki_s3_region for AWS S3 (e.g., us-east-1)",
+						"Or set loki_s3_endpoint for S3-compatible services (MinIO, Ceph, etc.)",
+					},
+				})
+			}
 		}
 	}
 }

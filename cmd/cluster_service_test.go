@@ -141,7 +141,7 @@ func TestClusterServiceEnable(t *testing.T) {
 			serviceName: "loki",
 			args:        []string{"loki"},
 			expectError: true,
-			errorMsg:    "missing required secret 'swift_password'",
+			errorMsg:    "missing required Swift credentials",
 			validate:    nil,
 		},
 		{

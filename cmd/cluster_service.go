@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/gitops"
 	"github.com/spf13/cobra"
 )
 
@@ -49,6 +50,7 @@ func newClusterServiceEnableCmd() *cobra.Command {
 		secrets   []string
 		cluster   string
 		force     bool
+		render    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "enable <service-name>",
@@ -65,7 +67,10 @@ Examples:
   openCenter cluster service enable my-managed-service --managed --secret="api_key=some_secret_value"
 
   # Force re-enable (re-render) an already enabled service
-  openCenter cluster service enable prometheus --force`,
+  openCenter cluster service enable prometheus --force
+
+  # Enable a service and immediately render its templates
+  openCenter cluster service enable loki --render`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			serviceName := args[0]
@@ -138,6 +143,21 @@ Examples:
 				return fmt.Errorf("failed to save updated configuration: %w", err)
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Successfully enabled service '%s' in cluster '%s'.\n", serviceName, clusterName)
+
+			// Render the service if --render flag is set
+			if render {
+				// Validate git_dir is set before rendering
+				if cfg.OpenCenter.GitOps.GitDir == "" {
+					return fmt.Errorf("git_dir is not configured. Run 'openCenter cluster setup' first or set git_dir in the configuration")
+				}
+
+				fmt.Fprintf(cmd.OutOrStdout(), "Rendering service '%s'...\n", serviceName)
+				if err := gitops.RenderSingleService(cfg, serviceName, isManaged); err != nil {
+					return fmt.Errorf("failed to render service: %w", err)
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "Service '%s' rendered successfully.\n", serviceName)
+			}
+
 			return nil
 		},
 	}
@@ -146,6 +166,7 @@ Examples:
 	cmd.Flags().StringSliceVar(&secrets, "secret", []string{}, "Set a service secret (e.g., --secret key=value)")
 	cmd.Flags().StringVar(&cluster, "cluster", "", "Specify the cluster name")
 	cmd.Flags().BoolVar(&force, "force", false, "Force re-enable an already enabled service to re-render configuration")
+	cmd.Flags().BoolVar(&render, "render", false, "Render the service templates immediately after enabling")
 	return cmd
 }
 

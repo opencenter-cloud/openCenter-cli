@@ -373,3 +373,93 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 		return copyFile(path, dst)
 	})
 }
+
+// RenderSingleService renders only the specified service to the cluster apps directory.
+// This is useful for updating a single service without re-rendering the entire cluster.
+func RenderSingleService(cfg config.Config, serviceName string, isManaged bool) error {
+	clusterName := cfg.ClusterName()
+	if clusterName == "" {
+		return fmt.Errorf("cluster name is empty")
+	}
+
+	target := filepath.Join(cfg.GitOps().GitDir, "applications", "overlays", clusterName)
+
+	// Create target directory
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		return err
+	}
+
+	// Determine the service directory prefix
+	servicePrefix := "services"
+	if isManaged {
+		servicePrefix = "managed-services"
+	}
+
+	// Walk embedded cluster-apps-base files and only process the specified service
+	return fs.WalkDir(Files, "templates/cluster-apps-base", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		rel, err := filepath.Rel("templates/cluster-apps-base", path)
+		if err != nil {
+			return err
+		}
+
+		pathParts := strings.Split(rel, string(filepath.Separator))
+
+		// Only process files for the specified service
+		shouldProcess := false
+
+		// Check if this file belongs to the service directory
+		if len(pathParts) >= 2 && pathParts[0] == servicePrefix && pathParts[1] == serviceName {
+			shouldProcess = true
+		}
+
+		// Check if this is a source file for the service
+		if len(pathParts) >= 3 && pathParts[0] == servicePrefix && pathParts[1] == "sources" {
+			filename := pathParts[len(pathParts)-1]
+			expectedFilename := fmt.Sprintf("opencenter-%s.yaml", serviceName)
+			expectedFilenameTPL := fmt.Sprintf("opencenter-%s.yaml.tpl", serviceName)
+			if filename == expectedFilename || filename == expectedFilenameTPL {
+				shouldProcess = true
+			}
+		}
+
+		// Check if this is a fluxcd file for the service
+		if len(pathParts) >= 3 && pathParts[0] == servicePrefix && pathParts[1] == "fluxcd" {
+			filename := pathParts[len(pathParts)-1]
+			expectedFilename := fmt.Sprintf("%s.yaml", serviceName)
+			expectedFilenameTPL := fmt.Sprintf("%s.yaml.tpl", serviceName)
+			if filename == expectedFilename || filename == expectedFilenameTPL {
+				shouldProcess = true
+			}
+		}
+
+		if !shouldProcess {
+			return nil
+		}
+
+		// Replace cluster-name and cluster_name placeholders in filename
+		relWithClusterName := strings.ReplaceAll(rel, "cluster-name", clusterName)
+		relWithClusterName = strings.ReplaceAll(relWithClusterName, "cluster_name", clusterName)
+
+		dst := filepath.Join(target, relWithClusterName)
+
+		// If template file, process and strip template extension
+		if strings.HasSuffix(d.Name(), ".tmpl") || strings.HasSuffix(d.Name(), ".tpl") {
+			if strings.HasSuffix(d.Name(), ".tmpl") {
+				dst = strings.TrimSuffix(dst, ".tmpl")
+			} else {
+				dst = strings.TrimSuffix(dst, ".tpl")
+			}
+			return renderTemplate(path, dst, cfg)
+		}
+
+		// Copy file as-is
+		return copyFile(path, dst)
+	})
+}

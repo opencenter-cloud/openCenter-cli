@@ -52,6 +52,13 @@ func newClusterInfoCmd() *cobra.Command {
 				return err
 			}
 
+			// Handle --export-only flag
+			exportOnly, _ := cmd.Flags().GetBool("export-only")
+			if exportOnly {
+				shellOverride, _ := cmd.Flags().GetString("shell")
+				return handleExportOnly(cmd, name, shellOverride)
+			}
+
 			// Handle --validate flag
 			validate, _ := cmd.Flags().GetBool("validate")
 			if validate {
@@ -148,5 +155,23 @@ func newClusterInfoCmd() *cobra.Command {
 	}
 	cmd.Flags().Bool("validate", false, "validate cluster configuration invariants")
 	cmd.Flags().Bool("json", false, "output JSON instead of YAML")
+	cmd.Flags().Bool("export-only", false, "only output export commands for shell evaluation")
+	cmd.Flags().String("shell", "", "override shell detection (bash, zsh, fish, powershell)")
 	return cmd
+}
+
+// handleExportOnly handles the --export-only flag for cluster info command.
+func handleExportOnly(cmd *cobra.Command, clusterName string, shellOverride string) error {
+	// Generate cluster select output to get export commands
+	output, err := generateClusterSelectOutput(clusterName, shellOverride)
+	if err != nil {
+		return err
+	}
+
+	// Only output export commands
+	for _, command := range output.ExportCommands {
+		fmt.Fprintln(cmd.OutOrStdout(), command)
+	}
+
+	return nil
 }

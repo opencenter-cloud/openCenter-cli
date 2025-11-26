@@ -49,6 +49,7 @@ type ClusterSelectOutput struct {
 	Paths          config.ClusterPaths
 	ExportCommands []string
 	GitOpsInfo     GitOpsInfo
+	Shell          string
 }
 
 // GitOpsInfo represents GitOps repository information.
@@ -166,7 +167,8 @@ func loadClusterMetadata(clusterName string) (ClusterMetadata, error) {
 
 // generateClusterSelectOutput generates the complete output for cluster select command.
 // The clusterName parameter can be in "cluster" or "organization/cluster" format.
-func generateClusterSelectOutput(clusterName string) (ClusterSelectOutput, error) {
+// The shellOverride parameter allows overriding automatic shell detection (empty string for auto-detect).
+func generateClusterSelectOutput(clusterName string, shellOverride string) (ClusterSelectOutput, error) {
 	// Parse the cluster identifier to extract organization and cluster name
 	organization, actualClusterName, err := config.ParseClusterIdentifier(clusterName)
 	if err != nil {
@@ -209,10 +211,24 @@ func generateClusterSelectOutput(clusterName string) (ClusterSelectOutput, error
 		SecretsDir:        paths.SecretsDir,
 	}
 
+	// Detect shell (or use override)
+	shell := shellOverride
+	if shell == "" {
+		shell = detectShell()
+	}
+
+	// Validate shell override if provided
+	if shellOverride != "" {
+		validShells := map[string]bool{"bash": true, "zsh": true, "fish": true, "powershell": true}
+		if !validShells[shell] {
+			return ClusterSelectOutput{}, fmt.Errorf("invalid shell: %s (valid options: bash, zsh, fish, powershell)", shell)
+		}
+	}
+
 	// Generate export commands if cluster is deployed
 	var exportCommands []string
 	if strings.ToLower(metadata.Status) == "deployed" {
-		exportCommands = generateExportCommands(paths)
+		exportCommands = generateExportCommands(paths, shell)
 	}
 
 	return ClusterSelectOutput{
@@ -220,34 +236,93 @@ func generateClusterSelectOutput(clusterName string) (ClusterSelectOutput, error
 		Paths:          paths,
 		ExportCommands: exportCommands,
 		GitOpsInfo:     gitOpsInfo,
+		Shell:          shell,
 	}, nil
 }
 
-// generateExportCommands generates shell export commands for cluster environment setup.
-func generateExportCommands(paths config.ClusterPaths) []string {
-	var commands []string
-
-	// KUBECONFIG export
-	if _, err := os.Stat(paths.KubeconfigPath); err == nil {
-		commands = append(commands, fmt.Sprintf("export KUBECONFIG=%s", paths.KubeconfigPath))
-	}
-
-	// ANSIBLE_INVENTORY export
-	if _, err := os.Stat(paths.InventoryPath); err == nil {
-		commands = append(commands, fmt.Sprintf("export ANSIBLE_INVENTORY=%s", paths.InventoryPath))
-	}
-
-	// Virtual environment activation
-	if _, err := os.Stat(paths.VenvPath); err == nil {
-		activateScript := filepath.Join(paths.VenvPath, "bin", "activate")
-		if _, err := os.Stat(activateScript); err == nil {
-			commands = append(commands, fmt.Sprintf("source %s", activateScript))
+// detectShell detects the current shell from environment variables.
+// Returns one of: bash, zsh, fish, powershell, or unknown.
+func detectShell() string {
+	// Check SHELL environment variable (Unix-like systems)
+	if shell := os.Getenv("SHELL"); shell != "" {
+		if strings.Contains(shell, "fish") {
+			return "fish"
+		}
+		if strings.Contains(shell, "zsh") {
+			return "zsh"
+		}
+		if strings.Contains(shell, "bash") {
+			return "bash"
 		}
 	}
 
-	// PATH update for .bin directory
-	if _, err := os.Stat(paths.BinPath); err == nil {
-		commands = append(commands, fmt.Sprintf("export PATH=%s:$PATH", paths.BinPath))
+	// Check for PowerShell on Windows
+	if psModulePath := os.Getenv("PSModulePath"); psModulePath != "" {
+		return "powershell"
+	}
+
+	// Default to bash for unknown shells
+	return "bash"
+}
+
+// generateExportCommands generates shell-specific export commands for cluster environment setup.
+func generateExportCommands(paths config.ClusterPaths, shell string) []string {
+	var commands []string
+
+	switch shell {
+	case "fish":
+		// Fish shell syntax
+		if _, err := os.Stat(paths.KubeconfigPath); err == nil {
+			commands = append(commands, fmt.Sprintf("set -gx KUBECONFIG %s", paths.KubeconfigPath))
+		}
+		if _, err := os.Stat(paths.InventoryPath); err == nil {
+			commands = append(commands, fmt.Sprintf("set -gx ANSIBLE_INVENTORY %s", paths.InventoryPath))
+		}
+		if _, err := os.Stat(paths.VenvPath); err == nil {
+			activateScript := filepath.Join(paths.VenvPath, "bin", "activate.fish")
+			if _, err := os.Stat(activateScript); err == nil {
+				commands = append(commands, fmt.Sprintf("source %s", activateScript))
+			}
+		}
+		if _, err := os.Stat(paths.BinPath); err == nil {
+			commands = append(commands, fmt.Sprintf("set -gx PATH %s $PATH", paths.BinPath))
+		}
+
+	case "powershell":
+		// PowerShell syntax
+		if _, err := os.Stat(paths.KubeconfigPath); err == nil {
+			commands = append(commands, fmt.Sprintf("$env:KUBECONFIG = '%s'", paths.KubeconfigPath))
+		}
+		if _, err := os.Stat(paths.InventoryPath); err == nil {
+			commands = append(commands, fmt.Sprintf("$env:ANSIBLE_INVENTORY = '%s'", paths.InventoryPath))
+		}
+		if _, err := os.Stat(paths.VenvPath); err == nil {
+			activateScript := filepath.Join(paths.VenvPath, "Scripts", "Activate.ps1")
+			if _, err := os.Stat(activateScript); err == nil {
+				commands = append(commands, fmt.Sprintf(". %s", activateScript))
+			}
+		}
+		if _, err := os.Stat(paths.BinPath); err == nil {
+			commands = append(commands, fmt.Sprintf("$env:PATH = '%s;' + $env:PATH", paths.BinPath))
+		}
+
+	default:
+		// Bash/Zsh syntax (POSIX-compatible)
+		if _, err := os.Stat(paths.KubeconfigPath); err == nil {
+			commands = append(commands, fmt.Sprintf("export KUBECONFIG=%s", paths.KubeconfigPath))
+		}
+		if _, err := os.Stat(paths.InventoryPath); err == nil {
+			commands = append(commands, fmt.Sprintf("export ANSIBLE_INVENTORY=%s", paths.InventoryPath))
+		}
+		if _, err := os.Stat(paths.VenvPath); err == nil {
+			activateScript := filepath.Join(paths.VenvPath, "bin", "activate")
+			if _, err := os.Stat(activateScript); err == nil {
+				commands = append(commands, fmt.Sprintf("source %s", activateScript))
+			}
+		}
+		if _, err := os.Stat(paths.BinPath); err == nil {
+			commands = append(commands, fmt.Sprintf("export PATH=%s:$PATH", paths.BinPath))
+		}
 	}
 
 	return commands
@@ -344,13 +419,22 @@ func displayClusterSelectOutput(output ClusterSelectOutput, cmd *cobra.Command) 
 
 	// Display export commands if available
 	if len(output.ExportCommands) > 0 {
-		fmt.Fprintf(cmd.OutOrStdout(), "Environment Setup Commands:\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "Environment Setup Commands (%s):\n", output.Shell)
 		for _, command := range output.ExportCommands {
 			fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", command)
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "\n")
 		fmt.Fprintf(cmd.OutOrStdout(), "To configure your shell environment, run:\n")
-		fmt.Fprintf(cmd.OutOrStdout(), "  eval \"$(openCenter cluster select %s)\"\n", output.Metadata.Name)
+		
+		// Provide shell-specific instructions
+		switch output.Shell {
+		case "fish":
+			fmt.Fprintf(cmd.OutOrStdout(), "  openCenter cluster select %s --export-only | source\n", output.Metadata.Name)
+		case "powershell":
+			fmt.Fprintf(cmd.OutOrStdout(), "  openCenter cluster select %s --export-only | Invoke-Expression\n", output.Metadata.Name)
+		default:
+			fmt.Fprintf(cmd.OutOrStdout(), "  eval \"$(openCenter cluster select %s --export-only)\"\n", output.Metadata.Name)
+		}
 	} else {
 		fmt.Fprintf(cmd.OutOrStdout(), "Environment Setup:\n")
 		fmt.Fprintf(cmd.OutOrStdout(), "  No environment setup commands available (cluster status: %s)\n", output.Metadata.Status)
@@ -375,6 +459,7 @@ func displayClusterSelectOutput(output ClusterSelectOutput, cmd *cobra.Command) 
 //   - *cobra.Command: A pointer to the configured `select` command.
 func newClusterSelectCmd() *cobra.Command {
 	var showExportOnly bool
+	var shellOverride string
 
 	cmd := &cobra.Command{
 		Use:   "select [name]",
@@ -458,7 +543,7 @@ KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.`,
 			}
 
 			// Generate enhanced cluster select output
-			output, err := generateClusterSelectOutput(name)
+			output, err := generateClusterSelectOutput(name, shellOverride)
 			if err != nil {
 				return err
 			}
@@ -486,6 +571,9 @@ KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.`,
 
 	// Add flag for export-only mode (useful for shell evaluation)
 	cmd.Flags().BoolVar(&showExportOnly, "export-only", false, "Only output export commands for shell evaluation")
+	
+	// Add flag to override shell detection
+	cmd.Flags().StringVar(&shellOverride, "shell", "", "Override shell detection (bash, zsh, fish, powershell)")
 
 	return cmd
 }

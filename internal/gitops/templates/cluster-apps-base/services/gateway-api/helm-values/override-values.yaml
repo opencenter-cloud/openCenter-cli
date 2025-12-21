@@ -1,1 +1,7 @@
 ---
+envoyGateway:
+  config:
+    envoyGateway:
+      logging:
+        level:
+          default: info

@@ -204,7 +204,7 @@ behavior:
   verbose: false
 defaults:
   provider: openstack
-  region: iad3
+  region: {{ .OpenCenter.Cluster.ClusterRegion }}
   environment: dev
 ```
 

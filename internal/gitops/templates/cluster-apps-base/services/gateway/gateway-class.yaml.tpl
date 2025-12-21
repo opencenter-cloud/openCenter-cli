@@ -6,7 +6,8 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
-  group: gateway.envoyproxy.io
-  kind: EnvoyProxy
-  name: custom-proxy-config
-  namespace: envoy-gateway-system
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: custom-proxy-config
+    namespace: envoy-gateway-system    
+

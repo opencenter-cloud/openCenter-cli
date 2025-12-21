@@ -4,7 +4,10 @@ kind: Kustomization
 namespace: metallb-system
 secretGenerator:
   - name: metallb-values-override
-  type: Opaque
-  files: [override.yaml=helm-values/override-values.yaml]
-  options:
-  disableNameSuffixHash: true
+    type: Opaque
+    files: [override.yaml=helm-values/override-values.yaml]
+    options:
+      disableNameSuffixHash: true
+resources:
+  - ipaddresspool.yaml
+  - l2advertisement.yaml

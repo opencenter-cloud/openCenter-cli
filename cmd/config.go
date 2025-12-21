@@ -230,7 +230,7 @@ Default values:
   - behavior.dryRun: false
   - behavior.verbose: false
   - defaults.provider: openstack
-  - defaults.region: iad3
+  - defaults.region: {{ .OpenCenter.Cluster.ClusterRegion }}
   - defaults.environment: dev`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Create config manager

@@ -1,9 +1,9 @@
 apiVersion: v1
 data:
-  admin-password: {{ .Secrets.Grafana.AdminPassword | b64enc }}
-  admin-user: {{ "admin" | b64enc }}
+    admin-password: {{ .Secrets.Grafana.password | quote }}
+    admin-user: {{ .Secrets.Grafana.User | quote }}
 kind: Secret
 metadata:
-  creationTimestamp: null
-  name: grafana-admin-password
-  namespace: observability
+    name: grafana-admin-password
+    namespace: observability
+

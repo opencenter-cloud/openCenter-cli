@@ -4,8 +4,9 @@ kind: Kustomization
 namespace: envoy-gateway-system
 secretGenerator:
   - name: envoy-gateway-api-values-override
-  namespace: envoy-gateway-system
-  type: Opaque
-  files: [override.yaml=helm-values/override-values.yaml]
-  options:
-  disableNameSuffixHash: true
+    namespace: envoy-gateway-system
+    type: Opaque
+    files: [override.yaml=helm-values/override-values.yaml]
+    options:
+      disableNameSuffixHash: true
+

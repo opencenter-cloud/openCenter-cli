@@ -4,7 +4,7 @@ kind: Kustomization
 namespace: observability
 secretGenerator:
   - name: opentelemetry-kube-stack-values-override
-  type: Opaque
-  files: [override.yaml=helm-values/override-values.yaml]
-  options:
-  disableNameSuffixHash: true
+    type: Opaque
+    files: [override.yaml=helm-values/override-values.yaml]
+    options:
+      disableNameSuffixHash: true

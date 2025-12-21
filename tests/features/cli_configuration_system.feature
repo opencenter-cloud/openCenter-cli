@@ -339,7 +339,7 @@ Feature: CLI Configuration System Integration
   @config @integration @cluster_lifecycle
   Scenario: Configuration system integrates with complete cluster lifecycle
     Given I run "openCenter config set defaults.provider openstack --config-dir <<tmp>>/conf"
-    And I run "openCenter config set defaults.region iad3 --config-dir <<tmp>>/conf"
+    And I run "openCenter config set defaults.region {{ .OpenCenter.Cluster.ClusterRegion }} --config-dir <<tmp>>/conf"
     And I run "openCenter config set behavior.autoConfirm true --config-dir <<tmp>>/conf"
     And the exit code should be 0
     

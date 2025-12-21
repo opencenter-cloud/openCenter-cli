@@ -4,8 +4,8 @@ kind: Kustomization
 namespace: postgres-operator
 secretGenerator:
   - name: postgres-operator-values-override
-  namespace: postgres-operator
-  type: Opaque
-  files: [override.yaml=helm-values/override-values.yaml]
-  options:
-  disableNameSuffixHash: true
+    namespace: postgres-operator
+    type: Opaque
+    files: [override.yaml=helm-values/override-values.yaml]
+    options:
+      disableNameSuffixHash: true

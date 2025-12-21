@@ -214,7 +214,7 @@ func DefaultCLIConfig() *CLIConfig {
 		},
 		Defaults: DefaultsConfig{
 			Provider:    "openstack",
-			Region:      "iad3",
+			Region:      "{{ .OpenCenter.Cluster.ClusterRegion }}",
 			Environment: "dev",
 		},
 	}

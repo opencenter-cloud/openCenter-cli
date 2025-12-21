@@ -1,11 +1,13 @@
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: velero
+namespace: vmware-system-csi
 resources:
-  - "velero-credentials.yaml"
+  - "./storageclass-retain.yaml"
+  - "./vsphere-config-secret.yaml"
+  - "./vsphere-cpi-secret.yaml"
 secretGenerator:
-  - name: velero-values-override
+  - name: vsphere-csi-values-override
     type: Opaque
     files: [override.yaml=helm-values/override-values.yaml]
     options:

@@ -251,6 +251,7 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 			"prometheus_storage_class":        map[string]any{"type": "string", "description": "Prometheus storage class"},
 			"alertmanager_volume_size":        map[string]any{"type": "integer", "description": "Alertmanager persistent volume size in GB"},
 			"alertmanager_storage_class":      map[string]any{"type": "string", "description": "Alertmanager storage class"},
+			"webhook_url":                     map[string]any{"type": "string", "description": "Webhook URL for alerting integrations"},
 			"headlamp_oidc_issuer_url":        map[string]any{"type": "string", "description": "Headlamp OIDC issuer URL"},
 			"headlamp_oidc_client_id":         map[string]any{"type": "string", "description": "Headlamp OIDC client ID"},
 			"calico_kube_api_server":          map[string]any{"type": "string", "description": "Calico Kubernetes API server address"},
@@ -1213,6 +1214,22 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 							"admin_password": map[string]any{
 								"type":        "string",
 								"description": "Grafana admin password",
+								"secret":      true,
+							},
+						},
+					},
+					"tempo": map[string]any{
+						"type":        "object",
+						"description": "Tempo secret values",
+						"properties": map[string]any{
+							"access_key": map[string]any{
+								"type":        "string",
+								"description": "Tempo S3 access key",
+								"secret":      true,
+							},
+							"secret_key": map[string]any{
+								"type":        "string",
+								"description": "Tempo S3 secret key",
 								"secret":      true,
 							},
 						},

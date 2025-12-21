@@ -824,6 +824,10 @@
               "velero_region": {
                 "description": "Velero backup region",
                 "type": "string"
+              },
+              "webhook_url": {
+                "description": "Webhook URL for alerting integrations",
+                "type": "string"
               }
             },
             "type": "object"
@@ -1042,6 +1046,10 @@
                 },
                 "velero_region": {
                   "description": "Velero backup region",
+                  "type": "string"
+                },
+                "webhook_url": {
+                  "description": "Webhook URL for alerting integrations",
                   "type": "string"
                 }
               },
@@ -1314,6 +1322,10 @@
               },
               "velero_region": {
                 "description": "Velero backup region",
+                "type": "string"
+              },
+              "webhook_url": {
+                "description": "Webhook URL for alerting integrations",
                 "type": "string"
               }
             },
@@ -2531,6 +2543,22 @@
             "public": {
               "description": "Path to SSH public key file",
               "pattern": "^[~./].*\\.pub$",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "tempo": {
+          "description": "Tempo secret values",
+          "properties": {
+            "access_key": {
+              "description": "Tempo S3 access key",
+              "secret": true,
+              "type": "string"
+            },
+            "secret_key": {
+              "description": "Tempo S3 secret key",
+              "secret": true,
               "type": "string"
             }
           },

@@ -48,7 +48,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 clean:
-	rm -f cluster.rkestate kube_config_cluster.yml terraform.tfstate*
+	rm cluster.rkestate kube_config_cluster.yml terraform.tfstate*
 
 rke:
 
@@ -159,7 +159,7 @@ age-keygen: age
 		echo "Backup your existing key before generating a new one!"; \
 		exit 1; \
 	fi
-	@mkdir -p $(dirname $(SOPS_AGE_KEY_FILE))
+	@mkdir -p $$(dirname $(SOPS_AGE_KEY_FILE))
 	@age-keygen -o $(SOPS_AGE_KEY_FILE)
 	@echo ""
 	@echo "✓ Age key generated at: $(SOPS_AGE_KEY_FILE)"
@@ -167,7 +167,7 @@ age-keygen: age
 	@echo "IMPORTANT: Save your public key from above and add it to $(SOPS_CONFIG)"
 	@echo "Example .sops.yaml entry:"
 	@echo "  creation_rules:"
-	@echo "    - path_regex: '^.*\.ya?ml$'"
+	@echo "    - path_regex: '^.*\.ya?ml$$'"
 	@echo "      age: age1..."
 
 # List secrets that will be processed
@@ -181,8 +181,8 @@ secrets-status: secrets-list
 # Check secrets configuration
 secrets-check: .check-sops-script .check-age-key sops age
 	@echo "✓ SOPS script found: $(SOPS_SCRIPT)"
-	@echo "✓ SOPS installed: $(sops --version)"
-	@echo "✓ Age installed: $(age --version)"
+	@echo "✓ SOPS installed: $$(sops --version)"
+	@echo "✓ Age installed: $$(age --version)"
 	@echo "✓ Age key file: $(SOPS_AGE_KEY_FILE)"
 	@if [ -f "$(SOPS_CONFIG)" ]; then \
 		echo "✓ SOPS config found: $(SOPS_CONFIG)"; \
@@ -239,7 +239,7 @@ secrets-clean-backups:
 	@find . -type f \( -name "*.backup.*" -o -name "*.encrypted.*" \) -print
 	@echo ""
 	@read -p "Delete these files? [y/N] " confirm; \
-	if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then \
+	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
 		find . -type f \( -name "*.backup.*" -o -name "*.encrypted.*" \) -delete; \
 		echo "✓ Backup files cleaned"; \
 	else \

@@ -407,87 +407,192 @@ type Infrastructure struct {
 	Cloud    CloudConfig `yaml:"cloud" json:"cloud"`
 }
 
+// BaseServiceCfg contains common fields for all services
+type BaseServiceCfg struct {
+	Enabled   bool   `yaml:"enabled" json:"enabled"`
+	Status    string `yaml:"status,omitempty" json:"status,omitempty" jsonschema:"description=Service deployment status (pending/running/success/failed)"`
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`
+	Hostname  string `yaml:"hostname,omitempty" json:"hostname,omitempty" jsonschema:"description=Hostname for HTTPRoute configuration"`
+}
+
 // ServiceCfg captures the on/off toggle plus optional metadata for a service.
+// For backward compatibility, this still contains all fields but they should be
+// migrated to specific service types over time.
 type ServiceCfg struct {
 	Enabled  bool   `yaml:"enabled" json:"enabled"`
 	Status   string `yaml:"status,omitempty" json:"status,omitempty" jsonschema:"description=Service deployment status (pending/running/success/failed)"`
-	Email    string `yaml:"email" json:"email"`
-	Region   string `yaml:"region" json:"region"`
-	S3Host   string `yaml:"s3_host" json:"s3_host"`
-	S3Region string `yaml:"s3_region" json:"s3_region"`
-
-	// Alert-proxy specific fields (non-secret)
-	AlertManagerBaseUrl string `yaml:"alert_manager_base_url" json:"alert_manager_base_url"`
-	HTTPRouteFQDN       string `yaml:"http_route_fqdn" json:"http_route_fqdn"`
-
-	// Version control fields
-	Release string `yaml:"release" json:"release"`
-	Branch  string `yaml:"branch" json:"branch"`
-	Uri     string `yaml:"uri" json:"uri"`
-
-	// GitOps source fields (for managed services)
-	GitOpsSourceRepo    string `yaml:"gitops_source_repo" json:"gitops_source_repo" jsonschema:"description=GitOps source repository URL"`
-	GitOpsSourceRelease string `yaml:"gitops_source_release" json:"gitops_source_release" jsonschema:"description=GitOps source release tag"`
-	GitOpsSourceBranch  string `yaml:"gitops_source_branch" json:"gitops_source_branch" jsonschema:"description=GitOps source branch"`
-
+	
 	// Common service fields
-	Namespace       string `yaml:"namespace" json:"namespace" jsonschema:"description=Kubernetes namespace for the service"`
-	Hostname        string `yaml:"hostname" json:"hostname" jsonschema:"description=Hostname for HTTPRoute configuration"`
-	ImageRepository string `yaml:"image_repository" json:"image_repository" jsonschema:"description=Container image repository"`
-	ImageTag        string `yaml:"image_tag" json:"image_tag" jsonschema:"description=Container image tag"`
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`
+	Hostname  string `yaml:"hostname,omitempty" json:"hostname,omitempty" jsonschema:"description=Hostname for HTTPRoute configuration"`
+	
+	// Image configuration
+	ImageRepository string `yaml:"image_repository,omitempty" json:"image_repository,omitempty" jsonschema:"description=Container image repository"`
+	ImageTag        string `yaml:"image_tag,omitempty" json:"image_tag,omitempty" jsonschema:"description=Container image tag"`
+	
+	// Version control fields (for GitOps managed services)
+	Release string `yaml:"release,omitempty" json:"release,omitempty" jsonschema:"description=Release version"`
+	Branch  string `yaml:"branch,omitempty" json:"branch,omitempty" jsonschema:"description=Git branch"`
+	Uri     string `yaml:"uri,omitempty" json:"uri,omitempty" jsonschema:"description=Git repository URI"`
+	
+	// GitOps source fields (for managed services)
+	GitOpsSourceRepo    string `yaml:"gitops_source_repo,omitempty" json:"gitops_source_repo,omitempty" jsonschema:"description=GitOps source repository URL"`
+	GitOpsSourceRelease string `yaml:"gitops_source_release,omitempty" json:"gitops_source_release,omitempty" jsonschema:"description=GitOps source release tag"`
+	GitOpsSourceBranch  string `yaml:"gitops_source_branch,omitempty" json:"gitops_source_branch,omitempty" jsonschema:"description=GitOps source branch"`
 
-	// Cert-manager fields
-	LetsEncryptServer string `yaml:"letsencrypt_server" json:"letsencrypt_server" jsonschema:"description=LetsEncrypt ACME server URL"`
+	// Legacy fields - kept for backward compatibility but should be avoided in new services
+	// TODO: Remove these fields and migrate to service-specific configuration types
+	Email    string `yaml:"email,omitempty" json:"email,omitempty" jsonschema:"description=Email address (deprecated: use service-specific config)"`
+	Region   string `yaml:"region,omitempty" json:"region,omitempty" jsonschema:"description=Cloud region (deprecated: use service-specific config)"`
+	S3Host   string `yaml:"s3_host,omitempty" json:"s3_host,omitempty" jsonschema:"description=S3 host (deprecated: use service-specific config)"`
+	S3Region string `yaml:"s3_region,omitempty" json:"s3_region,omitempty" jsonschema:"description=S3 region (deprecated: use service-specific config)"`
 
-	// Loki fields
-	LokiStorageType  string `yaml:"loki_storage_type" json:"loki_storage_type" jsonschema:"description=Loki storage backend type (s3 or swift),enum=s3,enum=swift,default=swift"`
-	LokiBucketName   string `yaml:"loki_bucket_name" json:"loki_bucket_name" jsonschema:"description=Loki storage bucket/container name"`
-	LokiVolumeSize   int    `yaml:"loki_volume_size" json:"loki_volume_size" jsonschema:"description=Loki persistent volume size in GB"`
-	LokiStorageClass string `yaml:"loki_storage_class" json:"loki_storage_class" jsonschema:"description=Loki storage class"`
+	// Alert-proxy specific fields (deprecated: should be in alert-proxy specific config)
+	AlertManagerBaseUrl string `yaml:"alert_manager_base_url,omitempty" json:"alert_manager_base_url,omitempty" jsonschema:"description=Alert manager base URL (deprecated)"`
+	HTTPRouteFQDN       string `yaml:"http_route_fqdn,omitempty" json:"http_route_fqdn,omitempty" jsonschema:"description=HTTPRoute FQDN (deprecated)"`
 
+	// Cert-manager fields (deprecated: should be in cert-manager specific config)
+	LetsEncryptServer string `yaml:"letsencrypt_server,omitempty" json:"letsencrypt_server,omitempty" jsonschema:"description=LetsEncrypt ACME server URL (deprecated)"`
+
+	// Loki fields (deprecated: should be in loki specific config)
+	LokiStorageType  string `yaml:"loki_storage_type,omitempty" json:"loki_storage_type,omitempty" jsonschema:"description=Loki storage backend type (deprecated)"`
+	LokiBucketName   string `yaml:"loki_bucket_name,omitempty" json:"loki_bucket_name,omitempty" jsonschema:"description=Loki storage bucket/container name (deprecated)"`
+	LokiVolumeSize   int    `yaml:"loki_volume_size,omitempty" json:"loki_volume_size,omitempty" jsonschema:"description=Loki persistent volume size in GB (deprecated)"`
+	LokiStorageClass string `yaml:"loki_storage_class,omitempty" json:"loki_storage_class,omitempty" jsonschema:"description=Loki storage class (deprecated)"`
+
+	// Swift storage fields (deprecated: should be in loki specific config)
+	SwiftAuthURL                 string `yaml:"swift_auth_url,omitempty" json:"swift_auth_url,omitempty" jsonschema:"description=Swift Keystone V3 authentication URL (deprecated)"`
+	SwiftRegion                  string `yaml:"swift_region,omitempty" json:"swift_region,omitempty" jsonschema:"description=Swift region name (deprecated)"`
+	SwiftAuthVersion             int    `yaml:"swift_auth_version,omitempty" json:"swift_auth_version,omitempty" jsonschema:"description=Swift authentication version (deprecated)"`
+	SwiftApplicationCredentialID string `yaml:"swift_application_credential_id,omitempty" json:"swift_application_credential_id,omitempty" jsonschema:"description=Swift application credential ID (deprecated)"`
+	SwiftContainerName           string `yaml:"swift_container_name,omitempty" json:"swift_container_name,omitempty" jsonschema:"description=Swift container name for Loki logs (deprecated)"`
+	SwiftUserDomainName          string `yaml:"swift_user_domain_name,omitempty" json:"swift_user_domain_name,omitempty" jsonschema:"description=Swift user domain name (deprecated)"`
+
+	// Legacy Swift fields (deprecated)
+	SwiftUsername    string `yaml:"swift_username,omitempty" json:"swift_username,omitempty" jsonschema:"description=Swift username (deprecated)"`
+	SwiftProjectName string `yaml:"swift_project_name,omitempty" json:"swift_project_name,omitempty" jsonschema:"description=Swift project name (deprecated)"`
+	SwiftDomainName  string `yaml:"swift_domain_name,omitempty" json:"swift_domain_name,omitempty" jsonschema:"description=Swift domain name (deprecated)"`
+
+	// S3 storage fields (deprecated: should be in loki specific config)
+	LokiS3Endpoint       string `yaml:"loki_s3_endpoint,omitempty" json:"loki_s3_endpoint,omitempty" jsonschema:"description=S3 endpoint URL (deprecated)"`
+	LokiS3Region         string `yaml:"loki_s3_region,omitempty" json:"loki_s3_region,omitempty" jsonschema:"description=S3 region (deprecated)"`
+	LokiS3ForcePathStyle bool   `yaml:"loki_s3_force_path_style,omitempty" json:"loki_s3_force_path_style,omitempty" jsonschema:"description=Force S3 path style (deprecated)"`
+	LokiS3Insecure       bool   `yaml:"loki_s3_insecure,omitempty" json:"loki_s3_insecure,omitempty" jsonschema:"description=Allow insecure S3 connections (deprecated)"`
+
+	// Velero fields (deprecated: should be in velero specific config)
+	VeleroBackupBucket string `yaml:"velero_backup_bucket,omitempty" json:"velero_backup_bucket,omitempty" jsonschema:"description=Velero backup bucket name (deprecated)"`
+	VeleroRegion       string `yaml:"velero_region,omitempty" json:"velero_region,omitempty" jsonschema:"description=Velero backup region (deprecated)"`
+
+	// Keycloak fields (deprecated: should be in keycloak specific config)
+	KeycloakRealm       string `yaml:"keycloak_realm,omitempty" json:"keycloak_realm,omitempty" jsonschema:"description=Keycloak realm name (deprecated)"`
+	KeycloakFrontendURL string `yaml:"keycloak_frontend_url,omitempty" json:"keycloak_frontend_url,omitempty" jsonschema:"description=Keycloak frontend URL (deprecated)"`
+	KeycloakClientID    string `yaml:"keycloak_client_id,omitempty" json:"keycloak_client_id,omitempty" jsonschema:"description=Keycloak client ID (deprecated)"`
+
+	// Grafana/Prometheus fields (deprecated: should be in prometheus-stack specific config)
+	GrafanaVolumeSize        int    `yaml:"grafana_volume_size,omitempty" json:"grafana_volume_size,omitempty" jsonschema:"description=Grafana persistent volume size in GB (deprecated)"`
+	GrafanaStorageClass      string `yaml:"grafana_storage_class,omitempty" json:"grafana_storage_class,omitempty" jsonschema:"description=Grafana storage class (deprecated)"`
+	PrometheusVolumeSize     int    `yaml:"prometheus_volume_size,omitempty" json:"prometheus_volume_size,omitempty" jsonschema:"description=Prometheus persistent volume size in GB (deprecated)"`
+	PrometheusStorageClass   string `yaml:"prometheus_storage_class,omitempty" json:"prometheus_storage_class,omitempty" jsonschema:"description=Prometheus storage class (deprecated)"`
+	AlertmanagerVolumeSize   int    `yaml:"alertmanager_volume_size,omitempty" json:"alertmanager_volume_size,omitempty" jsonschema:"description=Alertmanager persistent volume size in GB (deprecated)"`
+	AlertmanagerStorageClass string `yaml:"alertmanager_storage_class,omitempty" json:"alertmanager_storage_class,omitempty" jsonschema:"description=Alertmanager storage class (deprecated)"`
+	WebhookURL               string `yaml:"webhook_url,omitempty" json:"webhook_url,omitempty" jsonschema:"description=Webhook URL for alerting integrations (deprecated)"`
+
+	// Headlamp fields (deprecated: should be in headlamp specific config)
+	HeadlampOIDCIssuerURL string `yaml:"headlamp_oidc_issuer_url,omitempty" json:"headlamp_oidc_issuer_url,omitempty" jsonschema:"description=Headlamp OIDC issuer URL (deprecated)"`
+	HeadlampOIDCClientID  string `yaml:"headlamp_oidc_client_id,omitempty" json:"headlamp_oidc_client_id,omitempty" jsonschema:"description=Headlamp OIDC client ID (deprecated)"`
+
+	// Calico fields (deprecated: should be in calico specific config)
+	CalicoKubeAPIServer string `yaml:"calico_kube_api_server,omitempty" json:"calico_kube_api_server,omitempty" jsonschema:"description=Calico Kubernetes API server address (deprecated)"`
+}
+
+// Specific service configuration types for services that need additional fields
+
+// LokiServiceCfg extends BaseServiceCfg with Loki-specific configuration
+type LokiServiceCfg struct {
+	BaseServiceCfg `yaml:",inline"`
+	
+	// Storage configuration
+	StorageType  string `yaml:"loki_storage_type,omitempty" json:"loki_storage_type,omitempty" jsonschema:"description=Loki storage backend type (s3 or swift),enum=s3,enum=swift,default=swift"`
+	BucketName   string `yaml:"loki_bucket_name,omitempty" json:"loki_bucket_name,omitempty" jsonschema:"description=Loki storage bucket/container name"`
+	VolumeSize   int    `yaml:"loki_volume_size,omitempty" json:"loki_volume_size,omitempty" jsonschema:"description=Loki persistent volume size in GB"`
+	StorageClass string `yaml:"loki_storage_class,omitempty" json:"loki_storage_class,omitempty" jsonschema:"description=Loki storage class"`
+	
 	// Swift storage fields
-	SwiftAuthURL                 string `yaml:"swift_auth_url" json:"swift_auth_url" jsonschema:"description=Swift Keystone V3 authentication URL (must end in /v3)"`
-	SwiftRegion                  string `yaml:"swift_region" json:"swift_region" jsonschema:"description=Swift region name"`
-	SwiftAuthVersion             int    `yaml:"swift_auth_version" json:"swift_auth_version" jsonschema:"description=Swift authentication version,default=3"`
-	SwiftApplicationCredentialID string `yaml:"swift_application_credential_id" json:"swift_application_credential_id" jsonschema:"description=Swift application credential ID (UUID)"`
-	SwiftContainerName           string `yaml:"swift_container_name" json:"swift_container_name" jsonschema:"description=Swift container name for Loki logs"`
-	SwiftUserDomainName          string `yaml:"swift_user_domain_name" json:"swift_user_domain_name" jsonschema:"description=Swift user domain name (optional, often implied by app credentials)"`
-
-	// Legacy Swift fields (deprecated, use application credentials instead)
-	SwiftUsername    string `yaml:"swift_username" json:"swift_username" jsonschema:"description=Swift username (deprecated: use application credentials)"`
-	SwiftProjectName string `yaml:"swift_project_name" json:"swift_project_name" jsonschema:"description=Swift project name (deprecated: use application credentials)"`
-	SwiftDomainName  string `yaml:"swift_domain_name" json:"swift_domain_name" jsonschema:"description=Swift domain name (deprecated: use application credentials)"`
-
+	SwiftAuthURL                 string `yaml:"swift_auth_url,omitempty" json:"swift_auth_url,omitempty" jsonschema:"description=Swift Keystone V3 authentication URL (must end in /v3)"`
+	SwiftRegion                  string `yaml:"swift_region,omitempty" json:"swift_region,omitempty" jsonschema:"description=Swift region name"`
+	SwiftAuthVersion             int    `yaml:"swift_auth_version,omitempty" json:"swift_auth_version,omitempty" jsonschema:"description=Swift authentication version,default=3"`
+	SwiftApplicationCredentialID string `yaml:"swift_application_credential_id,omitempty" json:"swift_application_credential_id,omitempty" jsonschema:"description=Swift application credential ID (UUID)"`
+	SwiftContainerName           string `yaml:"swift_container_name,omitempty" json:"swift_container_name,omitempty" jsonschema:"description=Swift container name for Loki logs"`
+	SwiftUserDomainName          string `yaml:"swift_user_domain_name,omitempty" json:"swift_user_domain_name,omitempty" jsonschema:"description=Swift user domain name"`
+	SwiftDomainName              string `yaml:"swift_domain_name,omitempty" json:"swift_domain_name,omitempty" jsonschema:"description=Swift domain name"`
+	
 	// S3 storage fields
-	LokiS3Endpoint       string `yaml:"loki_s3_endpoint" json:"loki_s3_endpoint" jsonschema:"description=S3 endpoint URL (for MinIO, Ceph, DigitalOcean Spaces, etc.)"`
-	LokiS3Region         string `yaml:"loki_s3_region" json:"loki_s3_region" jsonschema:"description=S3 region (e.g., us-east-1)"`
-	LokiS3ForcePathStyle bool   `yaml:"loki_s3_force_path_style" json:"loki_s3_force_path_style" jsonschema:"description=Force S3 path style (required for MinIO and some S3-compatible services)"`
-	LokiS3Insecure       bool   `yaml:"loki_s3_insecure" json:"loki_s3_insecure" jsonschema:"description=Allow insecure S3 connections (not using HTTPS)"`
+	S3Endpoint       string `yaml:"loki_s3_endpoint,omitempty" json:"loki_s3_endpoint,omitempty" jsonschema:"description=S3 endpoint URL"`
+	S3Region         string `yaml:"loki_s3_region,omitempty" json:"loki_s3_region,omitempty" jsonschema:"description=S3 region"`
+	S3ForcePathStyle bool   `yaml:"loki_s3_force_path_style,omitempty" json:"loki_s3_force_path_style,omitempty" jsonschema:"description=Force S3 path style"`
+	S3Insecure       bool   `yaml:"loki_s3_insecure,omitempty" json:"loki_s3_insecure,omitempty" jsonschema:"description=Allow insecure S3 connections"`
+}
 
-	// Velero fields
-	VeleroBackupBucket string `yaml:"velero_backup_bucket" json:"velero_backup_bucket" jsonschema:"description=Velero backup bucket name"`
-	VeleroRegion       string `yaml:"velero_region" json:"velero_region" jsonschema:"description=Velero backup region"`
+// PrometheusStackServiceCfg extends BaseServiceCfg with Prometheus stack configuration
+type PrometheusStackServiceCfg struct {
+	BaseServiceCfg `yaml:",inline"`
+	
+	// Storage configuration for each component
+	GrafanaVolumeSize        int    `yaml:"grafana_volume_size,omitempty" json:"grafana_volume_size,omitempty" jsonschema:"description=Grafana persistent volume size in GB"`
+	GrafanaStorageClass      string `yaml:"grafana_storage_class,omitempty" json:"grafana_storage_class,omitempty" jsonschema:"description=Grafana storage class"`
+	PrometheusVolumeSize     int    `yaml:"prometheus_volume_size,omitempty" json:"prometheus_volume_size,omitempty" jsonschema:"description=Prometheus persistent volume size in GB"`
+	PrometheusStorageClass   string `yaml:"prometheus_storage_class,omitempty" json:"prometheus_storage_class,omitempty" jsonschema:"description=Prometheus storage class"`
+	AlertmanagerVolumeSize   int    `yaml:"alertmanager_volume_size,omitempty" json:"alertmanager_volume_size,omitempty" jsonschema:"description=Alertmanager persistent volume size in GB"`
+	AlertmanagerStorageClass string `yaml:"alertmanager_storage_class,omitempty" json:"alertmanager_storage_class,omitempty" jsonschema:"description=Alertmanager storage class"`
+	WebhookURL               string `yaml:"webhook_url,omitempty" json:"webhook_url,omitempty" jsonschema:"description=Webhook URL for alerting integrations"`
+}
 
-	// Keycloak fields
-	KeycloakRealm       string `yaml:"keycloak_realm" json:"keycloak_realm" jsonschema:"description=Keycloak realm name"`
-	KeycloakFrontendURL string `yaml:"keycloak_frontend_url" json:"keycloak_frontend_url" jsonschema:"description=Keycloak frontend URL"`
-	KeycloakClientID    string `yaml:"keycloak_client_id" json:"keycloak_client_id" jsonschema:"description=Keycloak client ID"`
+// KeycloakServiceCfg extends BaseServiceCfg with Keycloak-specific configuration
+type KeycloakServiceCfg struct {
+	BaseServiceCfg `yaml:",inline"`
+	
+	Realm       string `yaml:"keycloak_realm,omitempty" json:"keycloak_realm,omitempty" jsonschema:"description=Keycloak realm name"`
+	FrontendURL string `yaml:"keycloak_frontend_url,omitempty" json:"keycloak_frontend_url,omitempty" jsonschema:"description=Keycloak frontend URL"`
+	ClientID    string `yaml:"keycloak_client_id,omitempty" json:"keycloak_client_id,omitempty" jsonschema:"description=Keycloak client ID"`
+}
 
-	// Grafana/Prometheus fields
-	GrafanaVolumeSize        int    `yaml:"grafana_volume_size" json:"grafana_volume_size" jsonschema:"description=Grafana persistent volume size in GB"`
-	GrafanaStorageClass      string `yaml:"grafana_storage_class" json:"grafana_storage_class" jsonschema:"description=Grafana storage class"`
-	PrometheusVolumeSize     int    `yaml:"prometheus_volume_size" json:"prometheus_volume_size" jsonschema:"description=Prometheus persistent volume size in GB"`
-	PrometheusStorageClass   string `yaml:"prometheus_storage_class" json:"prometheus_storage_class" jsonschema:"description=Prometheus storage class"`
-	AlertmanagerVolumeSize   int    `yaml:"alertmanager_volume_size" json:"alertmanager_volume_size" jsonschema:"description=Alertmanager persistent volume size in GB"`
-	AlertmanagerStorageClass string `yaml:"alertmanager_storage_class" json:"alertmanager_storage_class" jsonschema:"description=Alertmanager storage class"`
-	WebhookURL               string `yaml:"webhook_url" json:"webhook_url" jsonschema:"description=Webhook URL for alerting integrations"`
+// HeadlampServiceCfg extends BaseServiceCfg with Headlamp-specific configuration
+type HeadlampServiceCfg struct {
+	BaseServiceCfg `yaml:",inline"`
+	
+	OIDCIssuerURL string `yaml:"headlamp_oidc_issuer_url,omitempty" json:"headlamp_oidc_issuer_url,omitempty" jsonschema:"description=Headlamp OIDC issuer URL"`
+	OIDCClientID  string `yaml:"headlamp_oidc_client_id,omitempty" json:"headlamp_oidc_client_id,omitempty" jsonschema:"description=Headlamp OIDC client ID"`
+}
 
-	// Headlamp fields
-	HeadlampOIDCIssuerURL string `yaml:"headlamp_oidc_issuer_url" json:"headlamp_oidc_issuer_url" jsonschema:"description=Headlamp OIDC issuer URL"`
-	HeadlampOIDCClientID  string `yaml:"headlamp_oidc_client_id" json:"headlamp_oidc_client_id" jsonschema:"description=Headlamp OIDC client ID"`
+// VeleroServiceCfg extends BaseServiceCfg with Velero-specific configuration
+type VeleroServiceCfg struct {
+	BaseServiceCfg `yaml:",inline"`
+	
+	BackupBucket string `yaml:"velero_backup_bucket,omitempty" json:"velero_backup_bucket,omitempty" jsonschema:"description=Velero backup bucket name"`
+	Region       string `yaml:"velero_region,omitempty" json:"velero_region,omitempty" jsonschema:"description=Velero backup region"`
+}
 
-	// Calico fields
-	CalicoKubeAPIServer string `yaml:"calico_kube_api_server" json:"calico_kube_api_server" jsonschema:"description=Calico Kubernetes API server address"`
+// CertManagerServiceCfg extends BaseServiceCfg with cert-manager configuration
+type CertManagerServiceCfg struct {
+	BaseServiceCfg `yaml:",inline"`
+	
+	LetsEncryptServer string `yaml:"letsencrypt_server,omitempty" json:"letsencrypt_server,omitempty" jsonschema:"description=LetsEncrypt ACME server URL"`
+	Email             string `yaml:"email,omitempty" json:"email,omitempty" jsonschema:"description=Email for LetsEncrypt registration"`
+}
+
+// VSphereCSIServiceCfg extends BaseServiceCfg with vSphere CSI configuration
+type VSphereCSIServiceCfg struct {
+	BaseServiceCfg `yaml:",inline"`
+	
+	ImageRepository string `yaml:"image_repository,omitempty" json:"image_repository,omitempty" jsonschema:"description=vSphere CSI image repository"`
+	ImageTag        string `yaml:"image_tag,omitempty" json:"image_tag,omitempty" jsonschema:"description=vSphere CSI image tag"`
+}
+
+// CalicoServiceCfg extends BaseServiceCfg with Calico-specific configuration
+type CalicoServiceCfg struct {
+	BaseServiceCfg `yaml:",inline"`
+	
+	KubeAPIServer string `yaml:"calico_kube_api_server,omitempty" json:"calico_kube_api_server,omitempty" jsonschema:"description=Calico Kubernetes API server address"`
 }
 
 // CloudConfig represents the cloud configuration within opencenter

@@ -245,6 +245,34 @@ clean = [
   "rm -rf bin"
 ]
 
+# Generate Terraform main.tf from cluster configuration
+terraform-generate = '''
+#!/usr/bin/env bash
+set -e
+
+if [ $# -eq 0 ]; then
+  echo "Usage: mise run terraform-generate <cluster-name> [output-dir]"
+  echo "Example: mise run terraform-generate my-cluster ./output"
+  exit 1
+fi
+
+CLUSTER_NAME="$1"
+OUTPUT_DIR="${2:-./terraform-output}"
+
+echo "Generating Terraform configuration for cluster: ${CLUSTER_NAME}"
+echo "Output directory: ${OUTPUT_DIR}"
+
+# Build the binary first
+mise run build
+
+# Generate the Terraform files
+./bin/openCenter cluster terraform-generate "${CLUSTER_NAME}" --output-dir="${OUTPUT_DIR}"
+
+echo "Terraform files generated successfully in ${OUTPUT_DIR}"
+echo "Files created:"
+ls -la "${OUTPUT_DIR}/"
+'''
+
 # Comprehensive schema change verification task
 # Use this task whenever making changes to:
 # - internal/config/schema.go (schema definition)

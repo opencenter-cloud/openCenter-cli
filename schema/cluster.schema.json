@@ -613,157 +613,19 @@
           "additionalProperties": {
             "additionalProperties": false,
             "properties": {
-              "alert_manager_base_url": {
-                "description": "Alert manager base URL",
-                "type": "string"
-              },
-              "alertmanager_storage_class": {
-                "description": "Alertmanager storage class",
-                "type": "string"
-              },
-              "alertmanager_volume_size": {
-                "description": "Alertmanager persistent volume size in GB",
-                "type": "integer"
-              },
               "branch": {
-                "description": "Git branch (mutually exclusive with release)",
-                "type": "string"
-              },
-              "calico_kube_api_server": {
-                "description": "Calico Kubernetes API server address",
-                "type": "string"
-              },
-              "email": {
-                "description": "Email address for service notifications",
+                "description": "Git branch for this service (mutually exclusive with release)",
+                "pattern": "^[a-zA-Z0-9/_-]+$",
                 "type": "string"
               },
               "enabled": {
+                "default": false,
                 "description": "Enable or disable this service",
                 "type": "boolean"
               },
-              "gitops_source_branch": {
-                "description": "GitOps source branch",
-                "type": "string"
-              },
-              "gitops_source_release": {
-                "description": "GitOps source release tag",
-                "type": "string"
-              },
-              "gitops_source_repo": {
-                "description": "GitOps source repository URL",
-                "type": "string"
-              },
-              "grafana_storage_class": {
-                "description": "Grafana storage class",
-                "type": "string"
-              },
-              "grafana_volume_size": {
-                "description": "Grafana persistent volume size in GB",
-                "type": "integer"
-              },
-              "headlamp_oidc_client_id": {
-                "description": "Headlamp OIDC client ID",
-                "type": "string"
-              },
-              "headlamp_oidc_issuer_url": {
-                "description": "Headlamp OIDC issuer URL",
-                "type": "string"
-              },
-              "hostname": {
-                "description": "Hostname for HTTPRoute configuration",
-                "type": "string"
-              },
-              "http_route_fqdn": {
-                "description": "HTTPRoute fully qualified domain name",
-                "type": "string"
-              },
-              "image_repository": {
-                "description": "Container image repository",
-                "type": "string"
-              },
-              "image_tag": {
-                "description": "Container image tag",
-                "type": "string"
-              },
-              "keycloak_client_id": {
-                "description": "Keycloak client ID",
-                "type": "string"
-              },
-              "keycloak_frontend_url": {
-                "description": "Keycloak frontend URL",
-                "type": "string"
-              },
-              "keycloak_realm": {
-                "description": "Keycloak realm name",
-                "type": "string"
-              },
-              "letsencrypt_server": {
-                "description": "LetsEncrypt ACME server URL",
-                "type": "string"
-              },
-              "loki_bucket_name": {
-                "description": "Loki storage bucket/container name",
-                "type": "string"
-              },
-              "loki_s3_endpoint": {
-                "description": "S3 endpoint URL (for MinIO, Ceph, etc.)",
-                "type": "string"
-              },
-              "loki_s3_force_path_style": {
-                "description": "Force S3 path style (required for MinIO)",
-                "type": "boolean"
-              },
-              "loki_s3_insecure": {
-                "description": "Allow insecure S3 connections",
-                "type": "boolean"
-              },
-              "loki_s3_region": {
-                "description": "S3 region (e.g., us-east-1)",
-                "type": "string"
-              },
-              "loki_storage_class": {
-                "description": "Loki storage class",
-                "type": "string"
-              },
-              "loki_storage_type": {
-                "default": "swift",
-                "description": "Loki storage backend type",
-                "enum": [
-                  "s3",
-                  "swift"
-                ],
-                "type": "string"
-              },
-              "loki_volume_size": {
-                "description": "Loki persistent volume size in GB",
-                "type": "integer"
-              },
-              "namespace": {
-                "description": "Kubernetes namespace for the service",
-                "type": "string"
-              },
-              "prometheus_storage_class": {
-                "description": "Prometheus storage class",
-                "type": "string"
-              },
-              "prometheus_volume_size": {
-                "description": "Prometheus persistent volume size in GB",
-                "type": "integer"
-              },
-              "region": {
-                "description": "Cloud region for service resources",
-                "type": "string"
-              },
               "release": {
-                "description": "Release version or tag (mutually exclusive with branch)",
-                "type": "string"
-              },
-              "s3_host": {
-                "description": "S3-compatible storage endpoint",
-                "type": "string"
-              },
-              "s3_region": {
-                "description": "S3 region",
+                "description": "Release version or tag for this service (mutually exclusive with branch)",
+                "pattern": "^[a-zA-Z0-9._-]+$",
                 "type": "string"
               },
               "status": {
@@ -776,57 +638,9 @@
                 ],
                 "type": "string"
               },
-              "swift_application_credential_id": {
-                "description": "Swift application credential ID (UUID)",
-                "type": "string"
-              },
-              "swift_auth_url": {
-                "description": "Swift Keystone V3 authentication URL (must end in /v3)",
-                "type": "string"
-              },
-              "swift_auth_version": {
-                "default": 3,
-                "description": "Swift authentication version",
-                "type": "integer"
-              },
-              "swift_container_name": {
-                "description": "Swift container name for Loki logs",
-                "type": "string"
-              },
-              "swift_domain_name": {
-                "description": "Swift domain name (deprecated: use application credentials)",
-                "type": "string"
-              },
-              "swift_project_name": {
-                "description": "Swift project name (deprecated: use application credentials)",
-                "type": "string"
-              },
-              "swift_region": {
-                "description": "Swift region name",
-                "type": "string"
-              },
-              "swift_user_domain_name": {
-                "description": "Swift user domain name (optional)",
-                "type": "string"
-              },
-              "swift_username": {
-                "description": "Swift username (deprecated: use application credentials)",
-                "type": "string"
-              },
               "uri": {
-                "description": "Git repository URI",
-                "type": "string"
-              },
-              "velero_backup_bucket": {
-                "description": "Velero backup bucket name",
-                "type": "string"
-              },
-              "velero_region": {
-                "description": "Velero backup region",
-                "type": "string"
-              },
-              "webhook_url": {
-                "description": "Webhook URL for alerting integrations",
+                "description": "Git repository URI for this service",
+                "pattern": "^(https?://|git@|ssh://)",
                 "type": "string"
               }
             },
@@ -836,157 +650,19 @@
             "alert-proxy": {
               "additionalProperties": false,
               "properties": {
-                "alert_manager_base_url": {
-                  "description": "Alert manager base URL",
-                  "type": "string"
-                },
-                "alertmanager_storage_class": {
-                  "description": "Alertmanager storage class",
-                  "type": "string"
-                },
-                "alertmanager_volume_size": {
-                  "description": "Alertmanager persistent volume size in GB",
-                  "type": "integer"
-                },
                 "branch": {
-                  "description": "Git branch (mutually exclusive with release)",
-                  "type": "string"
-                },
-                "calico_kube_api_server": {
-                  "description": "Calico Kubernetes API server address",
-                  "type": "string"
-                },
-                "email": {
-                  "description": "Email address for service notifications",
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
                   "type": "string"
                 },
                 "enabled": {
+                  "default": false,
                   "description": "Enable or disable this service",
                   "type": "boolean"
                 },
-                "gitops_source_branch": {
-                  "description": "GitOps source branch",
-                  "type": "string"
-                },
-                "gitops_source_release": {
-                  "description": "GitOps source release tag",
-                  "type": "string"
-                },
-                "gitops_source_repo": {
-                  "description": "GitOps source repository URL",
-                  "type": "string"
-                },
-                "grafana_storage_class": {
-                  "description": "Grafana storage class",
-                  "type": "string"
-                },
-                "grafana_volume_size": {
-                  "description": "Grafana persistent volume size in GB",
-                  "type": "integer"
-                },
-                "headlamp_oidc_client_id": {
-                  "description": "Headlamp OIDC client ID",
-                  "type": "string"
-                },
-                "headlamp_oidc_issuer_url": {
-                  "description": "Headlamp OIDC issuer URL",
-                  "type": "string"
-                },
-                "hostname": {
-                  "description": "Hostname for HTTPRoute configuration",
-                  "type": "string"
-                },
-                "http_route_fqdn": {
-                  "description": "HTTPRoute fully qualified domain name",
-                  "type": "string"
-                },
-                "image_repository": {
-                  "description": "Container image repository",
-                  "type": "string"
-                },
-                "image_tag": {
-                  "description": "Container image tag",
-                  "type": "string"
-                },
-                "keycloak_client_id": {
-                  "description": "Keycloak client ID",
-                  "type": "string"
-                },
-                "keycloak_frontend_url": {
-                  "description": "Keycloak frontend URL",
-                  "type": "string"
-                },
-                "keycloak_realm": {
-                  "description": "Keycloak realm name",
-                  "type": "string"
-                },
-                "letsencrypt_server": {
-                  "description": "LetsEncrypt ACME server URL",
-                  "type": "string"
-                },
-                "loki_bucket_name": {
-                  "description": "Loki storage bucket/container name",
-                  "type": "string"
-                },
-                "loki_s3_endpoint": {
-                  "description": "S3 endpoint URL (for MinIO, Ceph, etc.)",
-                  "type": "string"
-                },
-                "loki_s3_force_path_style": {
-                  "description": "Force S3 path style (required for MinIO)",
-                  "type": "boolean"
-                },
-                "loki_s3_insecure": {
-                  "description": "Allow insecure S3 connections",
-                  "type": "boolean"
-                },
-                "loki_s3_region": {
-                  "description": "S3 region (e.g., us-east-1)",
-                  "type": "string"
-                },
-                "loki_storage_class": {
-                  "description": "Loki storage class",
-                  "type": "string"
-                },
-                "loki_storage_type": {
-                  "default": "swift",
-                  "description": "Loki storage backend type",
-                  "enum": [
-                    "s3",
-                    "swift"
-                  ],
-                  "type": "string"
-                },
-                "loki_volume_size": {
-                  "description": "Loki persistent volume size in GB",
-                  "type": "integer"
-                },
-                "namespace": {
-                  "description": "Kubernetes namespace for the service",
-                  "type": "string"
-                },
-                "prometheus_storage_class": {
-                  "description": "Prometheus storage class",
-                  "type": "string"
-                },
-                "prometheus_volume_size": {
-                  "description": "Prometheus persistent volume size in GB",
-                  "type": "integer"
-                },
-                "region": {
-                  "description": "Cloud region for service resources",
-                  "type": "string"
-                },
                 "release": {
-                  "description": "Release version or tag (mutually exclusive with branch)",
-                  "type": "string"
-                },
-                "s3_host": {
-                  "description": "S3-compatible storage endpoint",
-                  "type": "string"
-                },
-                "s3_region": {
-                  "description": "S3 region",
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
                   "type": "string"
                 },
                 "status": {
@@ -999,57 +675,9 @@
                   ],
                   "type": "string"
                 },
-                "swift_application_credential_id": {
-                  "description": "Swift application credential ID (UUID)",
-                  "type": "string"
-                },
-                "swift_auth_url": {
-                  "description": "Swift Keystone V3 authentication URL (must end in /v3)",
-                  "type": "string"
-                },
-                "swift_auth_version": {
-                  "default": 3,
-                  "description": "Swift authentication version",
-                  "type": "integer"
-                },
-                "swift_container_name": {
-                  "description": "Swift container name for Loki logs",
-                  "type": "string"
-                },
-                "swift_domain_name": {
-                  "description": "Swift domain name (deprecated: use application credentials)",
-                  "type": "string"
-                },
-                "swift_project_name": {
-                  "description": "Swift project name (deprecated: use application credentials)",
-                  "type": "string"
-                },
-                "swift_region": {
-                  "description": "Swift region name",
-                  "type": "string"
-                },
-                "swift_user_domain_name": {
-                  "description": "Swift user domain name (optional)",
-                  "type": "string"
-                },
-                "swift_username": {
-                  "description": "Swift username (deprecated: use application credentials)",
-                  "type": "string"
-                },
                 "uri": {
-                  "description": "Git repository URI",
-                  "type": "string"
-                },
-                "velero_backup_bucket": {
-                  "description": "Velero backup bucket name",
-                  "type": "string"
-                },
-                "velero_region": {
-                  "description": "Velero backup region",
-                  "type": "string"
-                },
-                "webhook_url": {
-                  "description": "Webhook URL for alerting integrations",
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
                   "type": "string"
                 }
               },
@@ -1112,157 +740,19 @@
           "additionalProperties": {
             "additionalProperties": false,
             "properties": {
-              "alert_manager_base_url": {
-                "description": "Alert manager base URL",
-                "type": "string"
-              },
-              "alertmanager_storage_class": {
-                "description": "Alertmanager storage class",
-                "type": "string"
-              },
-              "alertmanager_volume_size": {
-                "description": "Alertmanager persistent volume size in GB",
-                "type": "integer"
-              },
               "branch": {
-                "description": "Git branch (mutually exclusive with release)",
-                "type": "string"
-              },
-              "calico_kube_api_server": {
-                "description": "Calico Kubernetes API server address",
-                "type": "string"
-              },
-              "email": {
-                "description": "Email address for service notifications",
+                "description": "Git branch for this service (mutually exclusive with release)",
+                "pattern": "^[a-zA-Z0-9/_-]+$",
                 "type": "string"
               },
               "enabled": {
+                "default": false,
                 "description": "Enable or disable this service",
                 "type": "boolean"
               },
-              "gitops_source_branch": {
-                "description": "GitOps source branch",
-                "type": "string"
-              },
-              "gitops_source_release": {
-                "description": "GitOps source release tag",
-                "type": "string"
-              },
-              "gitops_source_repo": {
-                "description": "GitOps source repository URL",
-                "type": "string"
-              },
-              "grafana_storage_class": {
-                "description": "Grafana storage class",
-                "type": "string"
-              },
-              "grafana_volume_size": {
-                "description": "Grafana persistent volume size in GB",
-                "type": "integer"
-              },
-              "headlamp_oidc_client_id": {
-                "description": "Headlamp OIDC client ID",
-                "type": "string"
-              },
-              "headlamp_oidc_issuer_url": {
-                "description": "Headlamp OIDC issuer URL",
-                "type": "string"
-              },
-              "hostname": {
-                "description": "Hostname for HTTPRoute configuration",
-                "type": "string"
-              },
-              "http_route_fqdn": {
-                "description": "HTTPRoute fully qualified domain name",
-                "type": "string"
-              },
-              "image_repository": {
-                "description": "Container image repository",
-                "type": "string"
-              },
-              "image_tag": {
-                "description": "Container image tag",
-                "type": "string"
-              },
-              "keycloak_client_id": {
-                "description": "Keycloak client ID",
-                "type": "string"
-              },
-              "keycloak_frontend_url": {
-                "description": "Keycloak frontend URL",
-                "type": "string"
-              },
-              "keycloak_realm": {
-                "description": "Keycloak realm name",
-                "type": "string"
-              },
-              "letsencrypt_server": {
-                "description": "LetsEncrypt ACME server URL",
-                "type": "string"
-              },
-              "loki_bucket_name": {
-                "description": "Loki storage bucket/container name",
-                "type": "string"
-              },
-              "loki_s3_endpoint": {
-                "description": "S3 endpoint URL (for MinIO, Ceph, etc.)",
-                "type": "string"
-              },
-              "loki_s3_force_path_style": {
-                "description": "Force S3 path style (required for MinIO)",
-                "type": "boolean"
-              },
-              "loki_s3_insecure": {
-                "description": "Allow insecure S3 connections",
-                "type": "boolean"
-              },
-              "loki_s3_region": {
-                "description": "S3 region (e.g., us-east-1)",
-                "type": "string"
-              },
-              "loki_storage_class": {
-                "description": "Loki storage class",
-                "type": "string"
-              },
-              "loki_storage_type": {
-                "default": "swift",
-                "description": "Loki storage backend type",
-                "enum": [
-                  "s3",
-                  "swift"
-                ],
-                "type": "string"
-              },
-              "loki_volume_size": {
-                "description": "Loki persistent volume size in GB",
-                "type": "integer"
-              },
-              "namespace": {
-                "description": "Kubernetes namespace for the service",
-                "type": "string"
-              },
-              "prometheus_storage_class": {
-                "description": "Prometheus storage class",
-                "type": "string"
-              },
-              "prometheus_volume_size": {
-                "description": "Prometheus persistent volume size in GB",
-                "type": "integer"
-              },
-              "region": {
-                "description": "Cloud region for service resources",
-                "type": "string"
-              },
               "release": {
-                "description": "Release version or tag (mutually exclusive with branch)",
-                "type": "string"
-              },
-              "s3_host": {
-                "description": "S3-compatible storage endpoint",
-                "type": "string"
-              },
-              "s3_region": {
-                "description": "S3 region",
+                "description": "Release version or tag for this service (mutually exclusive with branch)",
+                "pattern": "^[a-zA-Z0-9._-]+$",
                 "type": "string"
               },
               "status": {
@@ -1275,57 +765,9 @@
                 ],
                 "type": "string"
               },
-              "swift_application_credential_id": {
-                "description": "Swift application credential ID (UUID)",
-                "type": "string"
-              },
-              "swift_auth_url": {
-                "description": "Swift Keystone V3 authentication URL (must end in /v3)",
-                "type": "string"
-              },
-              "swift_auth_version": {
-                "default": 3,
-                "description": "Swift authentication version",
-                "type": "integer"
-              },
-              "swift_container_name": {
-                "description": "Swift container name for Loki logs",
-                "type": "string"
-              },
-              "swift_domain_name": {
-                "description": "Swift domain name (deprecated: use application credentials)",
-                "type": "string"
-              },
-              "swift_project_name": {
-                "description": "Swift project name (deprecated: use application credentials)",
-                "type": "string"
-              },
-              "swift_region": {
-                "description": "Swift region name",
-                "type": "string"
-              },
-              "swift_user_domain_name": {
-                "description": "Swift user domain name (optional)",
-                "type": "string"
-              },
-              "swift_username": {
-                "description": "Swift username (deprecated: use application credentials)",
-                "type": "string"
-              },
               "uri": {
-                "description": "Git repository URI",
-                "type": "string"
-              },
-              "velero_backup_bucket": {
-                "description": "Velero backup bucket name",
-                "type": "string"
-              },
-              "velero_region": {
-                "description": "Velero backup region",
-                "type": "string"
-              },
-              "webhook_url": {
-                "description": "Webhook URL for alerting integrations",
+                "description": "Git repository URI for this service",
+                "pattern": "^(https?://|git@|ssh://)",
                 "type": "string"
               }
             },
@@ -1733,6 +1175,42 @@
               "type": "object"
             },
             "kyverno": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "loki": {
               "additionalProperties": false,
               "properties": {
                 "branch": {

@@ -200,65 +200,6 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 		"additionalProperties": false,
 	}
 
-	// Generic service schema for services with all possible fields
-	serviceSchema := map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"enabled":                         map[string]any{"type": "boolean", "description": "Enable or disable this service"},
-			"status":                          map[string]any{"type": "string", "description": "Service deployment status", "enum": []string{"pending", "running", "success", "failed"}},
-			"email":                           map[string]any{"type": "string", "description": "Email address for service notifications"},
-			"region":                          map[string]any{"type": "string", "description": "Cloud region for service resources"},
-			"s3_host":                         map[string]any{"type": "string", "description": "S3-compatible storage endpoint"},
-			"s3_region":                       map[string]any{"type": "string", "description": "S3 region"},
-			"release":                         map[string]any{"type": "string", "description": "Release version or tag (mutually exclusive with branch)"},
-			"branch":                          map[string]any{"type": "string", "description": "Git branch (mutually exclusive with release)"},
-			"uri":                             map[string]any{"type": "string", "description": "Git repository URI"},
-			"alert_manager_base_url":          map[string]any{"type": "string", "description": "Alert manager base URL"},
-			"http_route_fqdn":                 map[string]any{"type": "string", "description": "HTTPRoute fully qualified domain name"},
-			"gitops_source_repo":              map[string]any{"type": "string", "description": "GitOps source repository URL"},
-			"gitops_source_release":           map[string]any{"type": "string", "description": "GitOps source release tag"},
-			"gitops_source_branch":            map[string]any{"type": "string", "description": "GitOps source branch"},
-			"namespace":                       map[string]any{"type": "string", "description": "Kubernetes namespace for the service"},
-			"hostname":                        map[string]any{"type": "string", "description": "Hostname for HTTPRoute configuration"},
-			"image_repository":                map[string]any{"type": "string", "description": "Container image repository"},
-			"image_tag":                       map[string]any{"type": "string", "description": "Container image tag"},
-			"letsencrypt_server":              map[string]any{"type": "string", "description": "LetsEncrypt ACME server URL"},
-			"loki_storage_type":               map[string]any{"type": "string", "description": "Loki storage backend type", "enum": []string{"s3", "swift"}, "default": "swift"},
-			"loki_bucket_name":                map[string]any{"type": "string", "description": "Loki storage bucket/container name"},
-			"loki_volume_size":                map[string]any{"type": "integer", "description": "Loki persistent volume size in GB"},
-			"loki_storage_class":              map[string]any{"type": "string", "description": "Loki storage class"},
-			"swift_auth_url":                  map[string]any{"type": "string", "description": "Swift Keystone V3 authentication URL (must end in /v3)"},
-			"swift_region":                    map[string]any{"type": "string", "description": "Swift region name"},
-			"swift_auth_version":              map[string]any{"type": "integer", "description": "Swift authentication version", "default": 3},
-			"swift_application_credential_id": map[string]any{"type": "string", "description": "Swift application credential ID (UUID)"},
-			"swift_container_name":            map[string]any{"type": "string", "description": "Swift container name for Loki logs"},
-			"swift_user_domain_name":          map[string]any{"type": "string", "description": "Swift user domain name (optional)"},
-			"swift_username":                  map[string]any{"type": "string", "description": "Swift username (deprecated: use application credentials)"},
-			"swift_project_name":              map[string]any{"type": "string", "description": "Swift project name (deprecated: use application credentials)"},
-			"swift_domain_name":               map[string]any{"type": "string", "description": "Swift domain name (deprecated: use application credentials)"},
-			"loki_s3_endpoint":                map[string]any{"type": "string", "description": "S3 endpoint URL (for MinIO, Ceph, etc.)"},
-			"loki_s3_region":                  map[string]any{"type": "string", "description": "S3 region (e.g., us-east-1)"},
-			"loki_s3_force_path_style":        map[string]any{"type": "boolean", "description": "Force S3 path style (required for MinIO)"},
-			"loki_s3_insecure":                map[string]any{"type": "boolean", "description": "Allow insecure S3 connections"},
-			"velero_backup_bucket":            map[string]any{"type": "string", "description": "Velero backup bucket name"},
-			"velero_region":                   map[string]any{"type": "string", "description": "Velero backup region"},
-			"keycloak_realm":                  map[string]any{"type": "string", "description": "Keycloak realm name"},
-			"keycloak_frontend_url":           map[string]any{"type": "string", "description": "Keycloak frontend URL"},
-			"keycloak_client_id":              map[string]any{"type": "string", "description": "Keycloak client ID"},
-			"grafana_volume_size":             map[string]any{"type": "integer", "description": "Grafana persistent volume size in GB"},
-			"grafana_storage_class":           map[string]any{"type": "string", "description": "Grafana storage class"},
-			"prometheus_volume_size":          map[string]any{"type": "integer", "description": "Prometheus persistent volume size in GB"},
-			"prometheus_storage_class":        map[string]any{"type": "string", "description": "Prometheus storage class"},
-			"alertmanager_volume_size":        map[string]any{"type": "integer", "description": "Alertmanager persistent volume size in GB"},
-			"alertmanager_storage_class":      map[string]any{"type": "string", "description": "Alertmanager storage class"},
-			"webhook_url":                     map[string]any{"type": "string", "description": "Webhook URL for alerting integrations"},
-			"headlamp_oidc_issuer_url":        map[string]any{"type": "string", "description": "Headlamp OIDC issuer URL"},
-			"headlamp_oidc_client_id":         map[string]any{"type": "string", "description": "Headlamp OIDC client ID"},
-			"calico_kube_api_server":          map[string]any{"type": "string", "description": "Calico Kubernetes API server address"},
-		},
-		"additionalProperties": false,
-	}
-
 	infrastructure := map[string]any{
 		"type":        "object",
 		"description": "Infrastructure provider configuration",
@@ -745,10 +686,13 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 	managedService := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
-			"alert-proxy": serviceSchema,
+			"alert-proxy": baseServiceSchema, // Use baseServiceSchema instead of the removed serviceSchema
 		},
-		"additionalProperties": serviceSchema,
+		"additionalProperties": baseServiceSchema,
 	}
+
+	// Remove the generic serviceSchema that contains all fields from all services
+	// This was causing schema bloat where every service got every possible field
 
 	services := map[string]any{
 		"type": "object",
@@ -764,6 +708,7 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 			"keycloak":              baseServiceSchema,
 			"kube-prometheus-stack": baseServiceSchema,
 			"kyverno":               baseServiceSchema,
+			"loki":                  baseServiceSchema, // TODO: Create specific loki schema when needed
 			"olm":                   baseServiceSchema,
 			"opencenter_release":    baseServiceSchema,
 			"openstack-ccm":         baseServiceSchema,
@@ -771,11 +716,12 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 			"postgres-operator":     baseServiceSchema,
 			"rbac-manager":          baseServiceSchema,
 			"sources":               baseServiceSchema,
-			"velero":                baseServiceSchema,
+			"velero":                baseServiceSchema, // TODO: Create specific velero schema when needed
 			"vsphere-csi":           baseServiceSchema,
 			"weave-gitops":          baseServiceSchema,
 		},
-		"additionalProperties": serviceSchema,
+		// Use baseServiceSchema for any additional services instead of the bloated serviceSchema
+		"additionalProperties": baseServiceSchema,
 	}
 
 	schema := map[string]any{

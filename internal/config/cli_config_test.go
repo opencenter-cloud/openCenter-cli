@@ -741,7 +741,7 @@ behavior:
   verbose: false
 defaults:
   provider: openstack
-  region: {{ .OpenCenter.Cluster.ClusterRegion }}
+  region: "{{ .OpenCenter.Cluster.ClusterRegion }}"
   environment: dev
 `
 
@@ -815,7 +815,7 @@ behavior:
   verbose: false
 defaults:
   provider: openstack
-  region: {{ .OpenCenter.Cluster.ClusterRegion }}
+  region: "{{ .OpenCenter.Cluster.ClusterRegion }}"
   environment: dev
 `
 

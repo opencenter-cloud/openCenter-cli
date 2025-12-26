@@ -124,6 +124,8 @@ func (w *world) runOpenCenter(args []string) error {
 	env := os.Environ()
 	// propagate config dir
 	env = append(env, fmt.Sprintf("OPENCENTER_CONFIG_DIR=%s", w.configDir))
+	// Enable test mode to populate required fields during init
+	env = append(env, "OPENCENTER_TEST_MODE=true")
 	if w.tmpDir != "" {
 		env = append(env, fmt.Sprintf("OPENCENTER_TEST_TMP=%s", w.tmpDir))
 	}
@@ -201,10 +203,16 @@ func (w *world) resolveClusterConfigPath(clusterName string) (string, error) {
 				continue // This is a different legacy cluster
 			}
 
-			// Check if cluster exists in this organization
+			// Check if cluster exists in this organization (infrastructure location)
 			clusterConfigPath := filepath.Join(clustersDir, orgName, "infrastructure", "clusters", clusterName, "."+clusterName+"-config.yaml")
 			if _, err := os.Stat(clusterConfigPath); err == nil {
 				return clusterConfigPath, nil
+			}
+
+			// Check if cluster exists in this organization (root location)
+			orgClusterConfigPath := filepath.Join(clustersDir, orgName, "."+clusterName+"-config.yaml")
+			if _, err := os.Stat(orgClusterConfigPath); err == nil {
+				return orgClusterConfigPath, nil
 			}
 		}
 	}
@@ -290,6 +298,7 @@ func (w *world) createCluster(name string) error {
 	// Inject required values for tests since defaults were removed
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://identity.example.com/v3"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "RegionOne"
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "admin"
 	cfg.OpenCenter.Secrets.Barbican.AuthURL = "https://identity.example.com/v3"
 
 	// Save using w.configDir; temporarily override env
@@ -1062,10 +1071,16 @@ func (w *world) findClusterConfigPath(clusterName string) (string, error) {
 				continue // This is a legacy cluster, not an organization
 			}
 
-			// Check if cluster exists in this organization
+			// Check if cluster exists in this organization (infrastructure location)
 			clusterConfigPath := filepath.Join(clustersDir, orgName, "infrastructure", "clusters", clusterName, "."+clusterName+"-config.yaml")
 			if _, err := os.Stat(clusterConfigPath); err == nil {
 				return clusterConfigPath, nil
+			}
+
+			// Check if cluster exists in this organization (root location)
+			orgClusterConfigPath := filepath.Join(clustersDir, orgName, "."+clusterName+"-config.yaml")
+			if _, err := os.Stat(orgClusterConfigPath); err == nil {
+				return orgClusterConfigPath, nil
 			}
 		}
 	}

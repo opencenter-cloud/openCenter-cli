@@ -19,13 +19,14 @@ import (
 	"testing"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config/services"
 )
 
 func TestProvision_ServiceDisabled(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
 	cfg.OpenCenter.GitOps.GitDir = t.TempDir()
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
-		"ansible": {Enabled: false},
+	cfg.OpenCenter.Services = config.ServiceMap{
+		"ansible": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 	}
 
 	err := Provision(cfg)
@@ -43,7 +44,7 @@ func TestProvision_ServiceDisabled(t *testing.T) {
 func TestProvision_ServiceNotConfigured(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
 	cfg.OpenCenter.GitOps.GitDir = t.TempDir()
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{}
+	cfg.OpenCenter.Services = config.ServiceMap{}
 
 	err := Provision(cfg)
 	if err != nil {
@@ -60,8 +61,8 @@ func TestProvision_ServiceNotConfigured(t *testing.T) {
 func TestProvision_MissingGitDir(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
 	cfg.OpenCenter.GitOps.GitDir = ""
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
-		"ansible": {Enabled: true},
+	cfg.OpenCenter.Services = config.ServiceMap{
+		"ansible": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 	}
 
 	err := Provision(cfg)
@@ -76,8 +77,8 @@ func TestProvision_MissingGitDir(t *testing.T) {
 func TestProvision_WhitespaceOnlyGitDir(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
 	cfg.OpenCenter.GitOps.GitDir = "   \t\n  "
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
-		"ansible": {Enabled: true},
+	cfg.OpenCenter.Services = config.ServiceMap{
+		"ansible": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 	}
 
 	err := Provision(cfg)
@@ -95,8 +96,8 @@ func TestProvision_DirectoryCreationFailure(t *testing.T) {
 	// Create a file where we want to create the ansible directory
 	tempDir := t.TempDir()
 	cfg.OpenCenter.GitOps.GitDir = tempDir
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
-		"ansible": {Enabled: true},
+	cfg.OpenCenter.Services = config.ServiceMap{
+		"ansible": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 	}
 
 	// Create a file with the same name as the directory we want to create
@@ -120,8 +121,8 @@ func TestProvision_FileCreationFailure(t *testing.T) {
 	// Create a directory structure where file creation will fail
 	tempDir := t.TempDir()
 	cfg.OpenCenter.GitOps.GitDir = tempDir
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
-		"ansible": {Enabled: true},
+	cfg.OpenCenter.Services = config.ServiceMap{
+		"ansible": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 	}
 
 	// Create ansible directory with restrictive permissions
@@ -143,8 +144,8 @@ func TestProvision_FileCreationFailure(t *testing.T) {
 func TestProvision_DirectoryPermissions(t *testing.T) {
 	cfg := config.NewDefault("test-cluster")
 	cfg.OpenCenter.GitOps.GitDir = t.TempDir()
-	cfg.OpenCenter.Services = map[string]config.ServiceCfg{
-		"ansible": {Enabled: true},
+	cfg.OpenCenter.Services = config.ServiceMap{
+		"ansible": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 	}
 
 	// This test will fail due to template execution, but we can test that

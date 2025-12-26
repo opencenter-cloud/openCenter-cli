@@ -18,6 +18,8 @@ import (
 	"strings"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config/registry"
+	"github.com/rackerlabs/openCenter-cli/internal/config/services"
 	"github.com/rackerlabs/openCenter-cli/internal/gitops"
 	"github.com/spf13/cobra"
 )
@@ -94,10 +96,21 @@ Examples:
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration for '%s': %w", clusterName, err)
 			}
-			// Create new service config
-			newService := config.ServiceCfg{Enabled: true}
+			// Create new service config using registry to get correct type
+			configType := registry.GetServiceConfigType(serviceName)
+			if configType == nil {
+				configType = reflect.TypeOf(services.DefaultServiceConfig{})
+			}
+			// Create new instance
+			newService := reflect.New(configType).Interface()
+			
+			// Set Enabled = true
+			if err := setEnabled(newService, true); err != nil {
+				return fmt.Errorf("failed to enable service: %w", err)
+			}
+
 			// Process parameters
-			if err := processParams(params, &newService); err != nil {
+			if err := processParams(params, newService); err != nil {
 				return err
 			}
 			// Process secrets
@@ -105,22 +118,22 @@ Examples:
 				return err
 			}
 			// Custom validation logic (validate before checking if already enabled)
-			if err := validateService(serviceName, &newService, &cfg.Secrets); err != nil {
+			if err := validateService(serviceName, newService, &cfg.Secrets); err != nil {
 				return err
 			}
 			// Check if service already exists and is enabled (unless --force is used)
 			if !force {
-				if svc, exists := cfg.OpenCenter.Services[serviceName]; exists && svc.Enabled {
+				if svc, exists := cfg.OpenCenter.Services[serviceName]; exists && isEnabled(svc) {
 					return fmt.Errorf("service '%s' is already enabled. Use --force to re-enable", serviceName)
 				}
-				if svc, exists := cfg.OpenCenter.ManagedService[serviceName]; exists && svc.Enabled {
+				if svc, exists := cfg.OpenCenter.ManagedService[serviceName]; exists && isEnabled(svc) {
 					return fmt.Errorf("managed service '%s' is already enabled. Use --force to re-enable", serviceName)
 				}
 			}
 			// Enable service in the appropriate map
 			if isManaged {
 				if cfg.OpenCenter.ManagedService == nil {
-					cfg.OpenCenter.ManagedService = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.ManagedService = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.ManagedService[serviceName] = newService
 				if force {
@@ -130,7 +143,7 @@ Examples:
 				}
 			} else {
 				if cfg.OpenCenter.Services == nil {
-					cfg.OpenCenter.Services = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.Services[serviceName] = newService
 				if force {
@@ -216,22 +229,27 @@ Examples:
 				if !exists {
 					return fmt.Errorf("managed service '%s' not found", serviceName)
 				}
-				if !svc.Enabled {
+				if !isEnabled(svc) {
 					return fmt.Errorf("managed service '%s' is already disabled", serviceName)
 				}
-				svc.Enabled = false
-				cfg.OpenCenter.ManagedService[serviceName] = svc
+				if err := setEnabled(svc, false); err != nil {
+					return fmt.Errorf("failed to disable service: %w", err)
+				}
+				// Map holds a pointer/interface so modifying it modifies the value in the map if it's a pointer.
+				// But svc is 'any'. If it's a pointer, we are good.
+				// ServiceMap values are pointers to structs.
 				fmt.Fprintf(cmd.OutOrStdout(), "Disabling managed service '%s' in cluster '%s'...\n", serviceName, clusterName)
 			} else {
 				svc, exists := cfg.OpenCenter.Services[serviceName]
 				if !exists {
 					return fmt.Errorf("service '%s' not found", serviceName)
 				}
-				if !svc.Enabled {
+				if !isEnabled(svc) {
 					return fmt.Errorf("service '%s' is already disabled", serviceName)
 				}
-				svc.Enabled = false
-				cfg.OpenCenter.Services[serviceName] = svc
+				if err := setEnabled(svc, false); err != nil {
+					return fmt.Errorf("failed to disable service: %w", err)
+				}
 				fmt.Fprintf(cmd.OutOrStdout(), "Disabling service '%s' in cluster '%s'...\n", serviceName, clusterName)
 			}
 			// Save the updated configuration
@@ -246,8 +264,11 @@ Examples:
 	cmd.Flags().StringVar(&cluster, "cluster", "", "Specify the cluster name")
 	return cmd
 }
-func processParams(params []string, serviceCfg *config.ServiceCfg) error {
-	v := reflect.ValueOf(serviceCfg).Elem()
+func processParams(params []string, serviceCfg any) error {
+	v := reflect.ValueOf(serviceCfg)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
 	t := v.Type()
 	paramMap := make(map[string]string)
 	for _, p := range params {
@@ -328,31 +349,35 @@ func processSecrets(secrets []string, serviceName string, secretsCfg *config.Sec
 }
 
 // validateService performs custom validation for specific services.
-func validateService(serviceName string, serviceCfg *config.ServiceCfg, secretsCfg *config.Secrets) error {
+func validateService(serviceName string, serviceCfg any, secretsCfg *config.Secrets) error {
 	switch serviceName {
 	case "cert-manager":
-		if serviceCfg.Email == "" {
-			return fmt.Errorf("missing required parameter 'email' for service 'cert-manager'.\nExample: --param=\"email=your-email@example.com\"")
+		if cfg, ok := serviceCfg.(*services.CertManagerConfig); ok {
+			if cfg.Email == "" {
+				return fmt.Errorf("missing required parameter 'email' for service 'cert-manager'.\nExample: --param=\"email=your-email@example.com\"")
+			}
 		}
 	case "loki":
-		storageType := serviceCfg.LokiStorageType
-		if storageType == "" {
-			storageType = "swift" // default
-		}
-
-		if storageType == "swift" {
-			// Check for application credentials (recommended) or legacy credentials
-			hasAppCreds := serviceCfg.SwiftApplicationCredentialID != "" && secretsCfg.Loki.SwiftApplicationCredentialSecret != ""
-			hasLegacyCreds := serviceCfg.SwiftUsername != "" && secretsCfg.Loki.SwiftPassword != ""
-
-			if !hasAppCreds && !hasLegacyCreds {
-				return fmt.Errorf("missing required Swift credentials for service 'loki'.\nRecommended: --param=\"swift_application_credential_id=your-app-cred-id\" --secret=\"swift_application_credential_secret=your-secret\"\nOr legacy: --param=\"swift_username=your-username\" --secret=\"swift_password=your-password\"")
+		if cfg, ok := serviceCfg.(*services.LokiConfig); ok {
+			storageType := cfg.StorageType
+			if storageType == "" {
+				storageType = "swift" // default
 			}
-		} else if storageType == "s3" {
-			// S3 credentials are optional (can use IAM roles), but if provided, both must be set
-			hasS3Creds := secretsCfg.Loki.S3AccessKeyID != "" || secretsCfg.Loki.S3SecretAccessKey != ""
-			if hasS3Creds && (secretsCfg.Loki.S3AccessKeyID == "" || secretsCfg.Loki.S3SecretAccessKey == "") {
-				return fmt.Errorf("both S3 access key and secret key must be provided for service 'loki'.\nExample: --secret=\"s3_access_key_id=AKIA...\" --secret=\"s3_secret_access_key=your-secret\"")
+
+			if storageType == "swift" {
+				// Check for application credentials (recommended) or legacy credentials
+				hasAppCreds := cfg.SwiftApplicationCredentialID != "" && secretsCfg.Loki.SwiftApplicationCredentialSecret != ""
+				hasLegacyCreds := cfg.SwiftUsername != "" && secretsCfg.Loki.SwiftPassword != ""
+
+				if !hasAppCreds && !hasLegacyCreds {
+					return fmt.Errorf("missing required Swift credentials for service 'loki'.\nRecommended: --param=\"swift_application_credential_id=your-app-cred-id\" --secret=\"swift_application_credential_secret=your-secret\"\nOr legacy: --param=\"swift_username=your-username\" --secret=\"swift_password=your-password\"")
+				}
+			} else if storageType == "s3" {
+				// S3 credentials are optional (can use IAM roles), but if provided, both must be set
+				hasS3Creds := secretsCfg.Loki.S3AccessKeyID != "" || secretsCfg.Loki.S3SecretAccessKey != ""
+				if hasS3Creds && (secretsCfg.Loki.S3AccessKeyID == "" || secretsCfg.Loki.S3SecretAccessKey == "") {
+					return fmt.Errorf("both S3 access key and secret key must be provided for service 'loki'.\nExample: --secret=\"s3_access_key_id=AKIA...\" --secret=\"s3_secret_access_key=your-secret\"")
+				}
 			}
 		}
 	case "keycloak":
@@ -407,10 +432,10 @@ Examples:
 			// Print standard services
 			for name, svc := range cfg.OpenCenter.Services {
 				enabledStr := "disabled"
-				if svc.Enabled {
+				if isEnabled(svc) {
 					enabledStr = "enabled"
 				}
-				status := svc.Status
+				status := getStatus(svc)
 				if status == "" {
 					status = "-"
 				}
@@ -420,10 +445,10 @@ Examples:
 			// Print managed services
 			for name, svc := range cfg.OpenCenter.ManagedService {
 				enabledStr := "disabled"
-				if svc.Enabled {
+				if isEnabled(svc) {
 					enabledStr = "enabled"
 				}
-				status := svc.Status
+				status := getStatus(svc)
 				if status == "" {
 					status = "-"
 				}
@@ -650,4 +675,53 @@ func getServiceSecrets(serviceName string) []ServiceOption {
 	default:
 		return []ServiceOption{}
 	}
+}
+
+// isEnabled checks if a service is enabled using reflection
+func isEnabled(svc any) bool {
+	val := reflect.ValueOf(svc)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	if val.Kind() == reflect.Struct {
+		enabledField := val.FieldByName("Enabled")
+		if enabledField.IsValid() && enabledField.Kind() == reflect.Bool {
+			return enabledField.Bool()
+		}
+	}
+	return false
+}
+
+// setEnabled sets the Enabled field of a service using reflection
+func setEnabled(svc any, enabled bool) error {
+	val := reflect.ValueOf(svc)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	} else {
+		return fmt.Errorf("service config must be a pointer to set fields")
+	}
+	
+	if val.Kind() == reflect.Struct {
+		enabledField := val.FieldByName("Enabled")
+		if enabledField.IsValid() && enabledField.CanSet() && enabledField.Kind() == reflect.Bool {
+			enabledField.SetBool(enabled)
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot set Enabled field")
+}
+
+// getStatus gets the Status field of a service using reflection
+func getStatus(svc any) string {
+	val := reflect.ValueOf(svc)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	if val.Kind() == reflect.Struct {
+		statusField := val.FieldByName("Status")
+		if statusField.IsValid() && statusField.Kind() == reflect.String {
+			return statusField.String()
+		}
+	}
+	return ""
 }

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config/services"
 )
 
 func setupServiceTestEnv(t *testing.T, clusterName string) (string, func()) {
@@ -79,11 +80,12 @@ func TestClusterServiceEnable(t *testing.T) {
 			args:        []string{"prometheus"},
 			expectError: false,
 			validate: func(t *testing.T, cfg *config.Config) {
-				if _, exists := cfg.OpenCenter.Services["prometheus"]; !exists {
+				if svc, exists := cfg.OpenCenter.Services["prometheus"]; !exists {
 					t.Error("expected prometheus service to exist")
-				}
-				if !cfg.OpenCenter.Services["prometheus"].Enabled {
-					t.Error("expected prometheus service to be enabled")
+				} else {
+					if !isEnabled(svc) {
+						t.Error("expected prometheus service to be enabled")
+					}
 				}
 			},
 		},
@@ -94,11 +96,12 @@ func TestClusterServiceEnable(t *testing.T) {
 			args:        []string{"custom-app", "--managed"},
 			expectError: false,
 			validate: func(t *testing.T, cfg *config.Config) {
-				if _, exists := cfg.OpenCenter.ManagedService["custom-app"]; !exists {
+				if svc, exists := cfg.OpenCenter.ManagedService["custom-app"]; !exists {
 					t.Error("expected custom-app managed service to exist")
-				}
-				if !cfg.OpenCenter.ManagedService["custom-app"].Enabled {
-					t.Error("expected custom-app managed service to be enabled")
+				} else {
+					if !isEnabled(svc) {
+						t.Error("expected custom-app managed service to be enabled")
+					}
 				}
 			},
 		},
@@ -118,11 +121,12 @@ func TestClusterServiceEnable(t *testing.T) {
 			args:        []string{"prometheus", "--force"},
 			expectError: false,
 			validate: func(t *testing.T, cfg *config.Config) {
-				if _, exists := cfg.OpenCenter.Services["prometheus"]; !exists {
+				if svc, exists := cfg.OpenCenter.Services["prometheus"]; !exists {
 					t.Error("expected prometheus service to exist")
-				}
-				if !cfg.OpenCenter.Services["prometheus"].Enabled {
-					t.Error("expected prometheus service to be enabled")
+				} else {
+					if !isEnabled(svc) {
+						t.Error("expected prometheus service to be enabled")
+					}
 				}
 			},
 		},
@@ -172,9 +176,9 @@ func TestClusterServiceEnable(t *testing.T) {
 					t.Fatalf("failed to load config: %v", err)
 				}
 				if cfg.OpenCenter.Services == nil {
-					cfg.OpenCenter.Services = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
-				cfg.OpenCenter.Services[tt.serviceName] = config.ServiceCfg{Enabled: true}
+				cfg.OpenCenter.Services[tt.serviceName] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -245,9 +249,9 @@ func TestClusterServiceDisable(t *testing.T) {
 					t.Fatalf("failed to load config: %v", err)
 				}
 				if cfg.OpenCenter.Services == nil {
-					cfg.OpenCenter.Services = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
-				cfg.OpenCenter.Services["prometheus"] = config.ServiceCfg{Enabled: true}
+				cfg.OpenCenter.Services["prometheus"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -256,7 +260,7 @@ func TestClusterServiceDisable(t *testing.T) {
 			validate: func(t *testing.T, cfg *config.Config) {
 				if svc, exists := cfg.OpenCenter.Services["prometheus"]; !exists {
 					t.Error("expected prometheus service to still exist")
-				} else if svc.Enabled {
+				} else if isEnabled(svc) {
 					t.Error("expected prometheus service to be disabled")
 				}
 			},
@@ -272,9 +276,9 @@ func TestClusterServiceDisable(t *testing.T) {
 					t.Fatalf("failed to load config: %v", err)
 				}
 				if cfg.OpenCenter.ManagedService == nil {
-					cfg.OpenCenter.ManagedService = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.ManagedService = make(config.ServiceMap)
 				}
-				cfg.OpenCenter.ManagedService["custom-app"] = config.ServiceCfg{Enabled: true}
+				cfg.OpenCenter.ManagedService["custom-app"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -283,7 +287,7 @@ func TestClusterServiceDisable(t *testing.T) {
 			validate: func(t *testing.T, cfg *config.Config) {
 				if svc, exists := cfg.OpenCenter.ManagedService["custom-app"]; !exists {
 					t.Error("expected custom-app managed service to still exist")
-				} else if svc.Enabled {
+				} else if isEnabled(svc) {
 					t.Error("expected custom-app managed service to be disabled")
 				}
 			},
@@ -309,9 +313,9 @@ func TestClusterServiceDisable(t *testing.T) {
 					t.Fatalf("failed to load config: %v", err)
 				}
 				if cfg.OpenCenter.Services == nil {
-					cfg.OpenCenter.Services = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
-				cfg.OpenCenter.Services["prometheus"] = config.ServiceCfg{Enabled: false}
+				cfg.OpenCenter.Services["prometheus"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}}
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -331,9 +335,9 @@ func TestClusterServiceDisable(t *testing.T) {
 					t.Fatalf("failed to load config: %v", err)
 				}
 				if cfg.OpenCenter.Services == nil {
-					cfg.OpenCenter.Services = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
-				cfg.OpenCenter.Services["grafana"] = config.ServiceCfg{Enabled: true}
+				cfg.OpenCenter.Services["grafana"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -342,7 +346,7 @@ func TestClusterServiceDisable(t *testing.T) {
 			validate: func(t *testing.T, cfg *config.Config) {
 				if svc, exists := cfg.OpenCenter.Services["grafana"]; !exists {
 					t.Error("expected grafana service to still exist")
-				} else if svc.Enabled {
+				} else if isEnabled(svc) {
 					t.Error("expected grafana service to be disabled")
 				}
 			},
@@ -454,7 +458,7 @@ func TestClusterServiceEnableDisableRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
-	if !cfg.OpenCenter.Services["prometheus"].Enabled {
+	if svc, ok := cfg.OpenCenter.Services["prometheus"]; !ok || !isEnabled(svc) {
 		t.Error("expected prometheus to be enabled after enable command")
 	}
 
@@ -473,7 +477,7 @@ func TestClusterServiceEnableDisableRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
-	if cfg.OpenCenter.Services["prometheus"].Enabled {
+	if svc, ok := cfg.OpenCenter.Services["prometheus"]; ok && isEnabled(svc) {
 		t.Error("expected prometheus to be disabled after disable command")
 	}
 
@@ -492,7 +496,7 @@ func TestClusterServiceEnableDisableRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
-	if !cfg.OpenCenter.Services["prometheus"].Enabled {
+	if svc, ok := cfg.OpenCenter.Services["prometheus"]; !ok || !isEnabled(svc) {
 		t.Error("expected prometheus to be enabled after re-enable command")
 	}
 }
@@ -532,16 +536,10 @@ func TestClusterServiceStatus(t *testing.T) {
 					t.Fatalf("failed to load config: %v", err)
 				}
 				if cfg.OpenCenter.Services == nil {
-					cfg.OpenCenter.Services = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
-				cfg.OpenCenter.Services["prometheus"] = config.ServiceCfg{
-					Enabled: true,
-					Status:  "running",
-				}
-				cfg.OpenCenter.Services["grafana"] = config.ServiceCfg{
-					Enabled: false,
-					Status:  "pending",
-				}
+				cfg.OpenCenter.Services["prometheus"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: "running"}}
+				cfg.OpenCenter.Services["grafana"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false, Status: "pending"}}
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -574,12 +572,9 @@ func TestClusterServiceStatus(t *testing.T) {
 					t.Fatalf("failed to load config: %v", err)
 				}
 				if cfg.OpenCenter.ManagedService == nil {
-					cfg.OpenCenter.ManagedService = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.ManagedService = make(config.ServiceMap)
 				}
-				cfg.OpenCenter.ManagedService["custom-app"] = config.ServiceCfg{
-					Enabled: true,
-					Status:  "success",
-				}
+				cfg.OpenCenter.ManagedService["custom-app"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: "success"}}
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -606,12 +601,9 @@ func TestClusterServiceStatus(t *testing.T) {
 					t.Fatalf("failed to load config: %v", err)
 				}
 				if cfg.OpenCenter.Services == nil {
-					cfg.OpenCenter.Services = make(map[string]config.ServiceCfg)
+					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
-				cfg.OpenCenter.Services["loki"] = config.ServiceCfg{
-					Enabled: true,
-					Status:  "",
-				}
+				cfg.OpenCenter.Services["loki"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: ""}}
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -703,3 +695,4 @@ func TestClusterServiceStatus(t *testing.T) {
 		})
 	}
 }
+

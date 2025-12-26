@@ -13,8 +13,8 @@ installation:
   - "{{ .OpenCenter.Cluster.Kubernetes.SubnetServices }}"
 
 # Optionally configure the host and port used to access the Kubernetes API server.
-{{- if .OpenCenter.Services.calico.CalicoKubeAPIServer }}
+{{- if .OpenCenter.Services.calico.KubeAPIServer }}
 kubernetesServiceEndpoint:
-  host: "{{ .OpenCenter.Services.calico.CalicoKubeAPIServer }}"
+  host: "{{ .OpenCenter.Services.calico.KubeAPIServer }}"
   port: "443"
 {{- end }}

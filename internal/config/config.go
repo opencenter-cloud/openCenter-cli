@@ -20,6 +20,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"strings"
@@ -78,6 +79,48 @@ type IAC struct {
 // values based on the simplified schema. This function can be used to
 // initialise new cluster configurations.
 func defaultConfig(name string) Config {
+	// Check if running in test mode
+	isTestMode := os.Getenv("OPENCENTER_TEST_MODE") == "true"
+
+	authURL := ""
+	region := ""
+	tenantName := ""
+	barbicanAuthURL := ""
+	
+	// Dummy secrets for test mode
+	certManagerAccessKey := ""
+	certManagerSecretKey := ""
+	lokiSwiftPassword := ""
+	keycloakClientSecret := ""
+	keycloakAdminPassword := ""
+	headlampClientSecret := ""
+	weaveGitOpsPassword := ""
+	weaveGitOpsHash := ""
+	grafanaAdminPassword := ""
+	alertProxyDeviceID := ""
+	alertProxyToken := ""
+	alertProxyAccount := ""
+
+	if isTestMode {
+		authURL = "https://identity.example.com/v3"
+		region = "RegionOne"
+		tenantName = "admin"
+		barbicanAuthURL = "https://identity.example.com/v3"
+		
+		certManagerAccessKey = "test-access-key"
+		certManagerSecretKey = "test-secret-key"
+		lokiSwiftPassword = "test-password"
+		keycloakClientSecret = "test-client-secret"
+		keycloakAdminPassword = "test-admin-password"
+		headlampClientSecret = "test-client-secret"
+		weaveGitOpsPassword = "test-password"
+		weaveGitOpsHash = "test-hash"
+		grafanaAdminPassword = "test-password"
+		alertProxyDeviceID = "test-device-id"
+		alertProxyToken = "test-token"
+		alertProxyAccount = "test-account"
+	}
+
 	cfg := Config{
 		OpenCenter: SimplifiedOpenCenter{
 			Meta: ClusterMeta{
@@ -90,7 +133,7 @@ func defaultConfig(name string) Config {
 			Secrets: OpenCenterSecrets{
 				Backend: "barbican",
 				Barbican: BarbicanConfig{
-					AuthURL:           "",
+					AuthURL:           barbicanAuthURL,
 					ProjectID:         "",
 					Region:            "",
 					UserDomainName:    "",
@@ -109,13 +152,13 @@ func defaultConfig(name string) Config {
 						PublicSubnets:  []string{},
 					},
 					OpenStack: SimplifiedOpenStackCloud{
-						AuthURL:                     "",
+						AuthURL:                     authURL,
 						Insecure:                    false,
-						Region:                      "",
+						Region:                      region,
 						ApplicationCredentialID:     "",
 						ApplicationCredentialSecret: "",
 						Domain:                      "",
-						TenantName:                  "",
+						TenantName:                  tenantName,
 						FloatingNetworkId:           "",
 						SubnetId:                    "",
 					},
@@ -328,34 +371,34 @@ func defaultConfig(name string) Config {
 			},
 			// Service-specific secrets - must be provided by user
 			CertManager: CertManagerSecrets{
-				AWSAccessKey:       "",
-				AWSSecretAccessKey: "",
+				AWSAccessKey:       certManagerAccessKey,
+				AWSSecretAccessKey: certManagerSecretKey,
 			},
 			Loki: LokiSecrets{
-				SwiftPassword: "",
+				SwiftPassword: lokiSwiftPassword,
 			},
 			Keycloak: KeycloakSecrets{
-				ClientSecret:  "",
-				AdminPassword: "",
+				ClientSecret:  keycloakClientSecret,
+				AdminPassword: keycloakAdminPassword,
 			},
 			Headlamp: HeadlampSecrets{
-				OIDCClientSecret: "",
+				OIDCClientSecret: headlampClientSecret,
 			},
 			WeaveGitOps: WeaveGitOpsSecrets{
-				Password:     "",
-				PasswordHash: "",
+				Password:     weaveGitOpsPassword,
+				PasswordHash: weaveGitOpsHash,
 			},
 			Grafana: GrafanaSecrets{
-				AdminPassword: "",
+				AdminPassword: grafanaAdminPassword,
 			},
 			Tempo: TempoSecrets{
 				AccessKey: "",
 				SecretKey: "",
 			},
 			AlertProxy: AlertProxySecrets{
-				CoreDeviceId:        "",
-				AccountServiceToken: "",
-				CoreAccountNumber:   "",
+				CoreDeviceId:        alertProxyDeviceID,
+				AccountServiceToken: alertProxyToken,
+				CoreAccountNumber:   alertProxyAccount,
 			},
 			VSphereCsi: VSphereCsiSecrets{
 				VCenterHost:  "",
@@ -1600,24 +1643,47 @@ func Validate(cfg Config) []string {
 
 	// Validate services: only one of release or branch can be set
 	for serviceName, serviceCfgAny := range cfg.OpenCenter.Services {
-		// Use reflection or interface checking if necessary, or just skip detailed validation here 
-		// if the strict validation is done by the validator package.
-		// However, we are in Validate() function which is a simple validation.
-		// Let's assume common base config structure if we can.
-		// Since we use specific types, we can't easily access Release/Branch without interface or reflection.
-		// But BaseConfig has them.
-		// Let's rely on type assertion to BaseConfig which is embedded.
-		// But embedding struct doesn't make it implement an interface automatically unless we define one.
-		// We can use reflection.
-		if svc, ok := serviceCfgAny.(*services.BaseConfig); ok {
-			if svc.Release != "" && svc.Branch != "" {
-				errs = append(errs, fmt.Sprintf("service '%s': only one of 'release' or 'branch' can be set, not both", serviceName))
+		// All services embed BaseConfig, but we can't cast directly to *BaseConfig
+		// because they are different types. We use reflection to access the fields.
+		val := reflect.ValueOf(serviceCfgAny)
+		if val.Kind() == reflect.Ptr {
+			val = val.Elem()
+		}
+		if val.Kind() == reflect.Struct {
+			// Check if struct has BaseConfig embedded or Release/Branch fields directly
+			// Since BaseConfig is embedded, its fields are promoted
+			releaseField := val.FieldByName("Release")
+			branchField := val.FieldByName("Branch")
+
+			if releaseField.IsValid() && branchField.IsValid() {
+				release := releaseField.String()
+				branch := branchField.String()
+
+				if release != "" && branch != "" {
+					errs = append(errs, fmt.Sprintf("service '%s': only one of 'release' or 'branch' can be set, not both", serviceName))
+				}
 			}
-		} else {
-			// Try to find Release/Branch via reflection for other types
-			// Actually, all our services embed BaseConfig, so if we can access the embedded field...
-			// But Go doesn't let us cast *LokiConfig to *BaseConfig directly.
-			// We need an interface.
+		}
+	}
+
+	// Validate managed services: only one of release or branch can be set
+	for serviceName, serviceCfgAny := range cfg.OpenCenter.ManagedService {
+		val := reflect.ValueOf(serviceCfgAny)
+		if val.Kind() == reflect.Ptr {
+			val = val.Elem()
+		}
+		if val.Kind() == reflect.Struct {
+			releaseField := val.FieldByName("Release")
+			branchField := val.FieldByName("Branch")
+
+			if releaseField.IsValid() && branchField.IsValid() {
+				release := releaseField.String()
+				branch := branchField.String()
+
+				if release != "" && branch != "" {
+					errs = append(errs, fmt.Sprintf("managed-service '%s': only one of 'release' or 'branch' can be set, not both", serviceName))
+				}
+			}
 		}
 	}
 

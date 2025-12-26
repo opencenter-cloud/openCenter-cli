@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
@@ -34,10 +35,21 @@ import (
 //   - error: An error if one occurred during file generation.
 func Provision(cfg config.Config) error {
 	svc, ok := cfg.OpenCenter.Services["ansible"]
-	if ok && !svc.Enabled {
-		return nil
-	}
-	if !ok {
+	if ok {
+		// Check if enabled using reflection
+		val := reflect.ValueOf(svc)
+		if val.Kind() == reflect.Ptr {
+			val = val.Elem()
+		}
+		if val.Kind() == reflect.Struct {
+			enabledField := val.FieldByName("Enabled")
+			if enabledField.IsValid() && enabledField.Kind() == reflect.Bool {
+				if !enabledField.Bool() {
+					return nil
+				}
+			}
+		}
+	} else {
 		// ansible not requested
 		return nil
 	}

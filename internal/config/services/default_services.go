@@ -16,6 +16,7 @@ func init() {
 		"fluxcd",
 		"gateway",
 		"gateway-api",
+		"kyverno",
 		"olm",
 		"openstack-ccm",
 		"openstack-csi",

@@ -36,6 +36,12 @@ func addDefaultSecrets(config *Config) {
 	config.Secrets.AlertProxy.CoreDeviceId = "test-device-id"
 	config.Secrets.AlertProxy.AccountServiceToken = "test-service-token"
 	config.Secrets.AlertProxy.CoreAccountNumber = "test-account-number"
+
+	// Add infrastructure fields
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://auth.example.com"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "test-tenant"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "test-region"
+	config.OpenCenter.Secrets.Barbican.AuthURL = "https://barbican.example.com"
 }
 
 func TestConfigurationManagerIntegration(t *testing.T) {

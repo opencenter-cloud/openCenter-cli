@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config/services"
 )
 
 func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
@@ -31,8 +32,8 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 			relPath: "services/sources/opencenter-cert-manager.yaml.tpl",
 			cfg: config.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
-					Services: map[string]config.ServiceCfg{
-						"cert-manager": {Enabled: false},
+					Services: config.ServiceMap{
+						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 					},
 				},
 			},
@@ -43,8 +44,8 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 			relPath: "services/sources/opencenter-cert-manager.yaml.tpl",
 			cfg: config.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
-					Services: map[string]config.ServiceCfg{
-						"cert-manager": {Enabled: true},
+					Services: config.ServiceMap{
+						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 					},
 				},
 			},
@@ -55,8 +56,8 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 			relPath: "managed-services/sources/opencenter-alert-proxy.yaml.tpl",
 			cfg: config.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
-					ManagedService: map[string]config.ServiceCfg{
-						"alert-proxy": {Enabled: false},
+					ManagedService: config.ServiceMap{
+						"alert-proxy": &services.AlertProxyConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 					},
 				},
 			},
@@ -67,8 +68,8 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 			relPath: "managed-services/sources/opencenter-alert-proxy.yaml.tpl",
 			cfg: config.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
-					ManagedService: map[string]config.ServiceCfg{
-						"alert-proxy": {Enabled: true},
+					ManagedService: config.ServiceMap{
+						"alert-proxy": &services.AlertProxyConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 					},
 				},
 			},
@@ -79,8 +80,8 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 			relPath: "services/cert-manager/kustomization.yaml",
 			cfg: config.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
-					Services: map[string]config.ServiceCfg{
-						"cert-manager": {Enabled: false},
+					Services: config.ServiceMap{
+						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 					},
 				},
 			},
@@ -91,8 +92,8 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 			relPath: "services/cert-manager/kustomization.yaml",
 			cfg: config.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
-					Services: map[string]config.ServiceCfg{
-						"cert-manager": {Enabled: true},
+					Services: config.ServiceMap{
+						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 					},
 				},
 			},
@@ -103,7 +104,7 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 			relPath: "services/sources/opencenter-unknown-service.yaml.tpl",
 			cfg: config.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
-					Services: map[string]config.ServiceCfg{},
+					Services: config.ServiceMap{},
 				},
 			},
 			expected: false,
@@ -113,8 +114,8 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 			relPath: "services/sources/kustomization.yaml.tpl",
 			cfg: config.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
-					Services: map[string]config.ServiceCfg{
-						"cert-manager": {Enabled: false},
+					Services: config.ServiceMap{
+						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 					},
 				},
 			},

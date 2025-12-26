@@ -17,7 +17,28 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"github.com/rackerlabs/openCenter-cli/internal/config/services"
 )
+
+// Helper function to add default secrets and infrastructure fields to avoid validation errors unrelated to the test
+func addDefaultSecretsAndInfra(config *Config) {
+	// Add secrets
+	config.Secrets.CertManager.AWSAccessKey = "test-key"
+	config.Secrets.CertManager.AWSSecretAccessKey = "test-secret"
+	config.Secrets.Keycloak.AdminPassword = "test-password"
+	config.Secrets.Grafana.AdminPassword = "test-password"
+	config.Secrets.WeaveGitOps.PasswordHash = "test-hash"
+	config.Secrets.Headlamp.OIDCClientSecret = "test-headlamp-secret"
+	config.Secrets.AlertProxy.CoreDeviceId = "test-device-id"
+	config.Secrets.AlertProxy.AccountServiceToken = "test-service-token"
+	config.Secrets.AlertProxy.CoreAccountNumber = "test-account-number"
+
+	// Add infrastructure fields
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://auth.example.com"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "test-tenant"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "test-region"
+	config.OpenCenter.Secrets.Barbican.AuthURL = "https://barbican.example.com"
+}
 
 // TestNewValidationRules tests the three new validation rules:
 // 1. Secrets are validated only if the service/managed service is enabled
@@ -29,14 +50,30 @@ func TestNewValidationRules(t *testing.T) {
 	t.Run("SecretsValidatedOnlyWhenServiceEnabled", func(t *testing.T) {
 		// Test that secrets are NOT required when service is disabled
 		config := NewDefault("test-cluster")
-		config.OpenCenter.Services["headlamp"] = ServiceCfg{Enabled: false}
-		config.OpenCenter.Services["cert-manager"] = ServiceCfg{Enabled: false}
-		config.OpenCenter.Services["keycloak"] = ServiceCfg{Enabled: false}
-		config.OpenCenter.Services["kube-prometheus-stack"] = ServiceCfg{Enabled: false}
-		config.OpenCenter.Services["weave-gitops"] = ServiceCfg{Enabled: false}
-		config.OpenCenter.ManagedService["alert-proxy"] = ServiceCfg{Enabled: false}
+		addDefaultSecretsAndInfra(&config)
 
-		// Clear all secrets
+		// Disable all services that require secrets
+		// Services Map contains *services.<Service>Config, so we need to set Enabled field on struct
+		if s, ok := config.OpenCenter.Services["headlamp"].(*services.HeadlampConfig); ok {
+			s.Enabled = false
+		}
+		if s, ok := config.OpenCenter.Services["cert-manager"].(*services.CertManagerConfig); ok {
+			s.Enabled = false
+		}
+		if s, ok := config.OpenCenter.Services["keycloak"].(*services.KeycloakConfig); ok {
+			s.Enabled = false
+		}
+		if s, ok := config.OpenCenter.Services["kube-prometheus-stack"].(*services.PrometheusStackConfig); ok {
+			s.Enabled = false
+		}
+		if s, ok := config.OpenCenter.Services["weave-gitops"].(*services.WeaveGitOpsConfig); ok {
+			s.Enabled = false
+		}
+		if s, ok := config.OpenCenter.ManagedService["alert-proxy"].(*services.AlertProxyConfig); ok {
+			s.Enabled = false
+		}
+
+		// Clear all secrets to ensure they are not required
 		config.Secrets = Secrets{}
 
 		validator := NewConfigValidator(false)
@@ -48,7 +85,9 @@ func TestNewValidationRules(t *testing.T) {
 		}
 
 		// Test that secrets ARE required when service is enabled
-		config.OpenCenter.Services["headlamp"] = ServiceCfg{Enabled: true}
+		if s, ok := config.OpenCenter.Services["headlamp"].(*services.HeadlampConfig); ok {
+			s.Enabled = true
+		}
 		result = validator.Validate(ctx, &config)
 
 		// Should be invalid since headlamp is enabled but secrets are missing
@@ -71,7 +110,7 @@ func TestNewValidationRules(t *testing.T) {
 
 	t.Run("OnlyOneCNICanBeEnabled", func(t *testing.T) {
 		config := NewDefault("test-cluster")
-		addDefaultSecrets(&config)
+		addDefaultSecretsAndInfra(&config)
 
 		// Enable multiple CNIs
 		config.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = true
@@ -113,7 +152,7 @@ func TestNewValidationRules(t *testing.T) {
 
 	t.Run("S3BucketMustBeLowercase", func(t *testing.T) {
 		config := NewDefault("test-cluster")
-		addDefaultSecrets(&config)
+		addDefaultSecretsAndInfra(&config)
 
 		// Enable OpenTofu with S3 backend
 		config.OpenTofu.Enabled = true

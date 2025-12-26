@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config/services"
 	"github.com/rackerlabs/openCenter-cli/internal/provision"
 )
 
@@ -103,9 +104,9 @@ func TestRenderClusterAppsSkipsDisabledServices(t *testing.T) {
 	cfg.OpenCenter.GitOps.GitDir = dst
 
 	// Disable some services
-	cfg.OpenCenter.Services["cert-manager"] = config.ServiceCfg{Enabled: false}
-	cfg.OpenCenter.Services["velero"] = config.ServiceCfg{Enabled: false}
-	cfg.OpenCenter.ManagedService["alert-proxy"] = config.ServiceCfg{Enabled: false}
+	cfg.OpenCenter.Services["cert-manager"] = &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: false}}
+	cfg.OpenCenter.Services["velero"] = &services.VeleroConfig{BaseConfig: services.BaseConfig{Enabled: false}}
+	cfg.OpenCenter.ManagedService["alert-proxy"] = &services.AlertProxyConfig{BaseConfig: services.BaseConfig{Enabled: false}}
 
 	if err := RenderClusterApps(cfg); err != nil {
 		t.Fatalf("RenderClusterApps returned error: %v", err)

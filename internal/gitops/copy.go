@@ -18,6 +18,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"text/template"
 
@@ -200,14 +201,18 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml.tpl")
 
 				// Check if this service is disabled
-				if service, exists := cfg.OpenCenter.Services[extractedServiceName]; exists && !service.Enabled {
-					return true
+				if service, exists := cfg.OpenCenter.Services[extractedServiceName]; exists {
+					if isServiceDisabled(service) {
+						return true
+					}
 				}
 			}
 		} else {
 			// Regular service directory check
-			if service, exists := cfg.OpenCenter.Services[serviceName]; exists && !service.Enabled {
-				return true
+			if service, exists := cfg.OpenCenter.Services[serviceName]; exists {
+				if isServiceDisabled(service) {
+					return true
+				}
 			}
 		}
 	}
@@ -226,14 +231,18 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml.tpl")
 
 				// Check if this managed service is disabled
-				if service, exists := cfg.OpenCenter.ManagedService[extractedServiceName]; exists && !service.Enabled {
-					return true
+				if service, exists := cfg.OpenCenter.ManagedService[extractedServiceName]; exists {
+					if isServiceDisabled(service) {
+						return true
+					}
 				}
 			}
 		} else {
 			// Regular managed service directory check
-			if service, exists := cfg.OpenCenter.ManagedService[serviceName]; exists && !service.Enabled {
-				return true
+			if service, exists := cfg.OpenCenter.ManagedService[serviceName]; exists {
+				if isServiceDisabled(service) {
+					return true
+				}
 			}
 		}
 	}
@@ -462,4 +471,20 @@ func RenderSingleService(cfg config.Config, serviceName string, isManaged bool) 
 		// Copy file as-is
 		return copyFile(path, dst)
 	})
+}
+
+// isServiceDisabled checks if a service configuration has Enabled set to false.
+// It uses reflection to access the Enabled field since the service config is an interface{}.
+func isServiceDisabled(serviceCfg any) bool {
+	val := reflect.ValueOf(serviceCfg)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	if val.Kind() == reflect.Struct {
+		enabledField := val.FieldByName("Enabled")
+		if enabledField.IsValid() && enabledField.Kind() == reflect.Bool {
+			return !enabledField.Bool()
+		}
+	}
+	return false
 }

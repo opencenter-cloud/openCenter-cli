@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config/flags"
 	"github.com/rackerlabs/openCenter-cli/internal/sops"
 	"github.com/rackerlabs/openCenter-cli/internal/util"
 	"github.com/rackerlabs/openCenter-cli/internal/util/crypto"
@@ -296,28 +297,31 @@ Troubleshooting:
 			}
 
 			// Apply overrides from flags to the config struct (for validation) and map (for output)
-			// We parse os.Args manually here because cobra does not support
-			// unknown flags in a way that allows us to capture them.
-			// FParseErrWhitelist.UnknownFlags = true makes cobra ignore them,
-			// but it does not provide a way to access them.
+			// Use enhanced flag parser for better flag handling while maintaining backward compatibility
+			flagIntegration, err := flags.NewCLIIntegration()
+			if err != nil {
+				return fmt.Errorf("failed to initialize flag integration: %w", err)
+			}
+			
+			// Filter out cobra-handled flags from os.Args
+			var filteredArgs []string
 			for _, arg := range os.Args {
 				if strings.HasPrefix(arg, "--") {
 					parts := strings.SplitN(strings.TrimPrefix(arg, "--"), "=", 2)
 					if len(parts) == 2 {
-						key, value := parts[0], parts[1]
+						key := parts[0]
 						// Skip flags that are handled by cobra
 						if cmd.Flags().Lookup(key) != nil {
 							continue
 						}
-						if err := setField(&cfg, key, value); err != nil {
-							return fmt.Errorf("error setting config from flag '%s': %w", key, err)
-						}
-						// Also apply to the map for final output
-						if err := setMapField(configMap, key, value); err != nil {
-							return fmt.Errorf("error setting config map from flag '%s': %w", key, err)
-						}
+						filteredArgs = append(filteredArgs, arg)
 					}
 				}
+			}
+			
+			// Process flags using enhanced parser
+			if err := flagIntegration.ProcessFlags(filteredArgs, &cfg, configMap); err != nil {
+				return fmt.Errorf("error processing flags: %w", err)
 			}
 
 			// Determine organization from --org flag, configuration, or use cluster name as default

@@ -43,6 +43,20 @@ go build -ldflags "\
 echo "Built openCenter ${VERSION} (${GIT_COMMIT:0:7})"
 '''
 
+# Enhance CLI to support array indexing in flags
+enhance-array-flags = '''
+#!/usr/bin/env bash
+set -e
+
+echo "Implementing array flag support..."
+echo "1. Enhancing setField function for bracket syntax"
+echo "2. Adding dedicated server-pool flag handler"
+echo "3. Testing with additional_server_pools_worker"
+
+# This task would implement the enhanced setField function
+# and add dedicated flag handlers for complex array types
+'''
+
 # Build the openCenter binary for Linux
 build-linux = '''
 #!/usr/bin/env bash

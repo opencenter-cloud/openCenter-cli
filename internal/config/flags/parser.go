@@ -373,7 +373,8 @@ func (p *EnhancedFlagParser) detectArrayType(flagName string) string {
 	if strings.Contains(flagName, "dns-server") {
 		return "dns-server"
 	}
-	if strings.Contains(flagName, "subnet") {
+	// Only match specific subnet array flags, not subnet fields like subnet_pods
+	if flagName == "subnet" || strings.HasPrefix(flagName, "subnet-") {
 		return "subnet"
 	}
 	return "unknown"

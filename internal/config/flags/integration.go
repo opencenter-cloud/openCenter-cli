@@ -42,7 +42,7 @@ func NewCLIIntegration() (*CLIIntegration, error) {
 		return nil, fmt.Errorf("failed to register dns-server handler: %w", err)
 	}
 	
-	if err := parser.RegisterHandler("subnet", NewSubnetFlagHandler()); err != nil {
+	if err := parser.RegisterHandler("^subnet$|^subnet-", NewSubnetFlagHandler()); err != nil {
 		return nil, fmt.Errorf("failed to register subnet handler: %w", err)
 	}
 	

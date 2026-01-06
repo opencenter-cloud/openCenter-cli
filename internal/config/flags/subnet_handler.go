@@ -29,7 +29,9 @@ func NewSubnetFlagHandler() *SubnetFlagHandler {
 
 // CanHandle returns true if this handler can process the given flag
 func (h *SubnetFlagHandler) CanHandle(flagName string) bool {
-	return strings.Contains(flagName, "subnet")
+	// Only handle flags that are specifically for subnet configuration arrays
+	// Not simple subnet fields like subnet_pods, subnet_services, etc.
+	return flagName == "subnet" || strings.HasPrefix(flagName, "subnet-")
 }
 
 // ParseFlag processes a single flag and returns the parsed result

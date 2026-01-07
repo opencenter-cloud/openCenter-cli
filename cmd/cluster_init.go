@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -278,23 +279,50 @@ Troubleshooting:
 			}
 
 			// Initialize path resolver
-			pathResolver := config.NewPathResolver(configManager)
+			pathResolver := config.NewPathResolverImpl(configManager)
 
-			// Generate configuration using schema-based defaults to match testdata/schema.yaml structure
-			schemaDefaultYAML, err := config.GenerateDefaultFromSchema(name)
-			if err != nil {
-				return fmt.Errorf("failed to generate schema-based defaults: %w", err)
-			}
-
+			// Check if a configuration file was provided via --config flag
+			var cfg config.Config
 			var configMap map[string]any
-			if err := yaml.Unmarshal(schemaDefaultYAML, &configMap); err != nil {
-				return fmt.Errorf("failed to parse schema defaults to map: %w", err)
-			}
+			
+			configFile, _ := cmd.Flags().GetString("config")
+			if configFile != "" {
+				// Load configuration from the specified file
+				data, err := os.ReadFile(configFile)
+				if err != nil {
+					return fmt.Errorf("failed to read configuration file '%s': %w", configFile, err)
+				}
+				
+				loader := config.NewConfigLoader(pathResolver)
+				loadedCfg, err := loader.LoadFromBytes(context.Background(), data, name)
+				if err != nil {
+					return fmt.Errorf("failed to load configuration from file '%s': %w", configFile, err)
+				}
+				cfg = *loadedCfg
+				
+				// Convert loaded config to map for YAML output
+				cfgYAML, err := yaml.Marshal(cfg)
+				if err != nil {
+					return fmt.Errorf("failed to marshal loaded configuration: %w", err)
+				}
+				if err := yaml.Unmarshal(cfgYAML, &configMap); err != nil {
+					return fmt.Errorf("failed to parse loaded configuration to map: %w", err)
+				}
+			} else {
+				// Generate configuration using schema-based defaults to match testdata/schema.yaml structure
+				schemaDefaultYAML, err := config.GenerateDefaultFromSchema(name)
+				if err != nil {
+					return fmt.Errorf("failed to generate schema-based defaults: %w", err)
+				}
 
-			// Also create a struct version for validation (unmarshal the schema defaults into a Config struct)
-			cfg := config.Config{}
-			if err := yaml.Unmarshal(schemaDefaultYAML, &cfg); err != nil {
-				return fmt.Errorf("failed to parse schema defaults to struct: %w", err)
+				if err := yaml.Unmarshal(schemaDefaultYAML, &configMap); err != nil {
+					return fmt.Errorf("failed to parse schema defaults to map: %w", err)
+				}
+
+				// Also create a struct version for validation (unmarshal the schema defaults into a Config struct)
+				if err := yaml.Unmarshal(schemaDefaultYAML, &cfg); err != nil {
+					return fmt.Errorf("failed to parse schema defaults to struct: %w", err)
+				}
 			}
 
 			// Apply overrides from flags to the config struct (for validation) and map (for output)
@@ -381,7 +409,10 @@ Troubleshooting:
 			}
 
 			// Resolve cluster paths using organization structure
-			clusterPaths := pathResolver.ResolveClusterPaths(name, organization)
+			clusterPaths, err := pathResolver.ResolveClusterPaths(context.Background(), name, organization)
+			if err != nil {
+				return fmt.Errorf("failed to resolve cluster paths: %w", err)
+			}
 
 			// Update GitOps directory to point to organization root
 			// Check if user explicitly set a custom git_dir via command line flags
@@ -452,7 +483,7 @@ Troubleshooting:
 			}
 
 			// Create organization structure
-			if err := pathResolver.CreateOrganizationStructure(organization); err != nil {
+			if err := pathResolver.CreateOrganizationStructure(context.Background(), organization); err != nil {
 				return fmt.Errorf("failed to create organization structure: %w", err)
 			}
 
@@ -462,7 +493,7 @@ Troubleshooting:
 			}
 
 			// Create cluster directories
-			if err := pathResolver.CreateClusterDirectories(name, organization); err != nil {
+			if err := pathResolver.CreateClusterDirectories(context.Background(), name, organization); err != nil {
 				return fmt.Errorf("failed to create cluster directories: %w", err)
 			}
 
@@ -796,9 +827,12 @@ func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
 
 // generateOrganizationSOPSKey creates an age key file using the organization-based directory structure
 // and updates cfg.Secrets.SopsAgeKeyFile to point to the generated file.
-func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Config, pathResolver *config.PathResolver) error {
+func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Config, pathResolver config.PathResolverInterface) error {
 	// Resolve cluster paths for the organization
-	clusterPaths := pathResolver.ResolveClusterPaths(cluster, organization)
+	clusterPaths, err := pathResolver.ResolveClusterPaths(context.Background(), cluster, organization)
+	if err != nil {
+		return fmt.Errorf("failed to resolve cluster paths: %w", err)
+	}
 
 	// Create the secrets directory with proper permissions (0755 for directories)
 	secretsKeyDir := filepath.Dir(clusterPaths.SOPSKeyPath)

@@ -31,7 +31,17 @@ import (
 func newClusterSetupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "setup [name]",
-		Short: "Setup GitOps directory (copy or render templates and initialise git)",
+		Short: "Setup GitOps directory (one-time initialization with Git)",
+		Long: `Setup GitOps directory structure and initialize Git repository.
+
+This command performs one-time GitOps repository initialization including:
+- Creating organization-based directory structure
+- Rendering all templates
+- Initializing Git repository
+- Setting up SOPS configuration
+- Making initial commit
+
+For iterative development and template re-rendering, use 'cluster render' instead.`,
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name
@@ -140,7 +150,10 @@ func setupOrganizationGitOps(cfg config.Config, organization string, render, for
 		if initialized {
 			fmt.Fprintln(cmd.OutOrStdout(), "GitOps directory already initialized")
 			fmt.Fprintf(cmd.OutOrStdout(), "GitOps directory: %s\n", updatedCfg.GitOps().GitDir)
-			fmt.Fprintln(cmd.OutOrStdout(), "Use --force to reinitialize and overwrite existing files")
+			fmt.Fprintln(cmd.OutOrStdout(), "")
+			fmt.Fprintln(cmd.OutOrStdout(), "Options:")
+			fmt.Fprintln(cmd.OutOrStdout(), "  --force                    Reinitialize and overwrite existing files")
+			fmt.Fprintln(cmd.OutOrStdout(), "  openCenter cluster render  Render templates without Git operations (recommended for development)")
 			return nil
 		}
 	} else {
@@ -229,9 +242,9 @@ func setupOrganizationSOPS(cfg config.Config, paths config.ClusterPaths, organiz
 	// Try to load existing SOPS key first (created during cluster init)
 	keyPair, err := keyManager.LoadAgeKey(clusterName)
 	if err != nil {
-		return fmt.Errorf("SOPS key for cluster %s not found: %w\n\n"+
+		return fmt.Errorf("SOPS key for cluster %s not found: %v\n\n"+
 			"Please run 'openCenter cluster init %s' first to create the required SOPS key, "+
-			"or ensure the key exists at: %s", clusterName, clusterName, paths.SOPSKeyPath)
+			"or ensure the key exists at: %s", clusterName, err, clusterName, paths.SOPSKeyPath)
 	}
 
 	fmt.Printf("Using existing SOPS key for cluster %s\n", clusterName)

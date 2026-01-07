@@ -24,19 +24,30 @@ import (
 
 // newClusterRenderCmd creates the command for rendering GitOps templates.
 //
-// This command specifically handles the template rendering part of the setup process.
-// It populates the GitOps directory by processing all `.tmpl` files, but unlike
-// the `setup` command, it does not perform any Git operations. This is useful
-// for inspecting the output of the templates without committing them to a repository.
+// This command handles template rendering with full organization-based structure support.
+// It always renders templates (no skip logic) making it ideal for iterative development.
+// Unlike `setup`, it does not perform Git operations or initialization checks.
 //
 // Returns:
 //   - *cobra.Command: A pointer to the configured `render` command.
 func newClusterRenderCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "render [name]",
-		Short: "Render templates into the GitOps directory without initializing git",
-		Args:  cobra.MaximumNArgs(1),
+		Short: "Render templates into the GitOps directory (always overwrites)",
+		Long: `Render cluster templates into the GitOps directory structure.
+
+This command always renders templates without any initialization checks,
+making it perfect for iterative development and testing configuration changes.
+It handles organization-based directory structures and overwrites existing files.
+
+Unlike 'cluster setup', this command:
+- Always renders templates (no skip logic)
+- Does not perform Git operations
+- Does not check if directory already exists
+- Ideal for development and testing`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Resolve cluster name
 			var name string
 			if len(args) > 0 {
 				name = args[0]
@@ -50,22 +61,22 @@ func newClusterRenderCmd() *cobra.Command {
 					return fmt.Errorf("no active cluster; specify name")
 				}
 			}
+
+			// Load configuration
 			cfg, err := config.Load(name)
 			if err != nil {
 				return err
 			}
-			if err := gitops.CopyBase(cfg, true); err != nil {
-				return fmt.Errorf("failed to render base templates: %w", err)
+
+			// Get organization from cluster metadata
+			organization := cfg.OpenCenter.Meta.Organization
+			if organization == "" {
+				organization = "opencenter"
 			}
-			if err := gitops.RenderClusterApps(cfg); err != nil {
-				return fmt.Errorf("failed to render cluster apps templates: %w", err)
-			}
-			if err := gitops.RenderInfrastructureCluster(cfg); err != nil {
-				return fmt.Errorf("failed to render infrastructure cluster templates: %w", err)
-			}
-			// Provision OpenTofu (renders provider.tf)
-			if err := tofu.Provision(cfg); err != nil {
-				return fmt.Errorf("failed to provision opentofu: %w", err)
+
+			// Render templates with organization-based structure
+			if err := renderClusterTemplates(cfg, organization, cmd); err != nil {
+				return fmt.Errorf("failed to render cluster templates: %w", err)
 			}
 
 			// Update stage and status
@@ -78,4 +89,69 @@ func newClusterRenderCmd() *cobra.Command {
 			return nil
 		},
 	}
+	return cmd
+}
+
+// renderClusterTemplates renders all cluster templates with organization-based structure support.
+// This function handles the same organization-based GitOps structure as cluster setup,
+// but without Git initialization or skip logic.
+func renderClusterTemplates(cfg config.Config, organization string, cmd *cobra.Command) error {
+	// Get CLI configuration manager for path resolution
+	cliConfigManager, err := config.NewConfigManager("")
+	if err != nil {
+		return fmt.Errorf("failed to create config manager: %w", err)
+	}
+
+	// Create path resolver for organization-based paths
+	pathResolver := config.NewPathResolver(cliConfigManager)
+
+	// Get organization-based paths
+	clusterName := cfg.ClusterName()
+	paths := pathResolver.ResolveClusterPaths(clusterName, organization)
+
+	// Update configuration to use organization-based GitOps directory
+	updatedCfg := cfg
+	originalGitDir := cfg.GitOps().GitDir
+
+	// If user specified a custom git_dir, use it; otherwise use organization-based path
+	if originalGitDir != "" && originalGitDir != paths.GitOpsDir {
+		// User has specified a custom git_dir, use it instead of organization path
+		updatedCfg.OpenCenter.GitOps.GitDir = originalGitDir
+	} else {
+		// Use organization-based path
+		updatedCfg.OpenCenter.GitOps.GitDir = paths.GitOpsDir
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "Rendering templates to: %s\n", updatedCfg.GitOps().GitDir)
+
+	// Create organization directory structure
+	if err := pathResolver.CreateOrganizationStructure(organization); err != nil {
+		return fmt.Errorf("failed to create organization structure: %w", err)
+	}
+
+	// Create cluster-specific directories
+	if err := pathResolver.CreateClusterDirectories(clusterName, organization); err != nil {
+		return fmt.Errorf("failed to create cluster directories: %w", err)
+	}
+
+	// Render GitOps base structure at organization level
+	if err := gitops.CopyBase(updatedCfg, true); err != nil {
+		return fmt.Errorf("failed to render base templates: %w", err)
+	}
+
+	// Render cluster-specific templates to organization structure
+	if err := gitops.RenderClusterApps(updatedCfg); err != nil {
+		return fmt.Errorf("failed to render cluster apps templates: %w", err)
+	}
+
+	if err := gitops.RenderInfrastructureCluster(updatedCfg); err != nil {
+		return fmt.Errorf("failed to render infrastructure cluster templates: %w", err)
+	}
+
+	// Provision OpenTofu (renders main.tf and provider.tf)
+	if err := tofu.Provision(updatedCfg); err != nil {
+		return fmt.Errorf("failed to provision opentofu: %w", err)
+	}
+
+	return nil
 }

@@ -240,7 +240,8 @@ func setupOrganizationSOPS(cfg config.Config, paths config.ClusterPaths, organiz
 	clusterName := cfg.ClusterName()
 
 	// Load existing SOPS key (created during cluster init)
-	keyPair, err := keyManager.LoadAgeKey(clusterName)
+	keyName := clusterName + "-key"
+	keyPair, err := keyManager.LoadAgeKey(keyName)
 	if err != nil {
 		return fmt.Errorf("SOPS key for cluster %s not found: %v\n\n"+
 			"Please run 'openCenter cluster init %s' first to create the required SOPS key, "+

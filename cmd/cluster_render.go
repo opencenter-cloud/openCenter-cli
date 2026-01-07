@@ -79,11 +79,8 @@ Unlike 'cluster setup', this command:
 				return fmt.Errorf("failed to render cluster templates: %w", err)
 			}
 
-			// Update stage and status
-			if err := config.UpdateStatus(name, config.StageRender, config.StatusSuccess); err != nil {
-				// Don't fail the command if status update fails, just warn
-				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)
-			}
+			// Note: We don't update status for render command to keep it truly read-only
+			// The render command should not modify the cluster configuration file
 
 			fmt.Fprintln(cmd.OutOrStdout(), "Render complete.")
 			return nil

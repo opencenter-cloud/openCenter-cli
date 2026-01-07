@@ -385,6 +385,41 @@ Troubleshooting:
 					}
 				}
 			}
+
+			// Handle --server-pool flags to set additional server pools
+			serverPools, _ := cmd.Flags().GetStringArray("server-pool")
+			if len(serverPools) > 0 {
+				var additionalServerPools []config.AdditionalServerPool
+				for _, poolStr := range serverPools {
+					pool, err := parseServerPoolString(poolStr)
+					if err != nil {
+						return fmt.Errorf("failed to parse server pool '%s': %w", poolStr, err)
+					}
+					additionalServerPools = append(additionalServerPools, pool)
+				}
+				
+				// Update the configuration struct
+				cfg.OpenCenter.Cluster.Kubernetes.AdditionalServerPoolsWorker = additionalServerPools
+				
+				// Also update the map for consistency
+				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
+					if cluster, ok := opencenter["cluster"].(map[string]any); ok {
+						if kubernetes, ok := cluster["kubernetes"].(map[string]any); ok {
+							kubernetes["additional_server_pools_worker"] = convertServerPoolsToMap(additionalServerPools)
+						} else {
+							cluster["kubernetes"] = map[string]any{
+								"additional_server_pools_worker": convertServerPoolsToMap(additionalServerPools),
+							}
+						}
+					} else {
+						opencenter["cluster"] = map[string]any{
+							"kubernetes": map[string]any{
+								"additional_server_pools_worker": convertServerPoolsToMap(additionalServerPools),
+							},
+						}
+					}
+				}
+			}
 			// Also update the map
 			if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
 				if meta, ok := opencenter["meta"].(map[string]any); ok {
@@ -698,6 +733,7 @@ Troubleshooting:
 	cmd.Flags().Bool("no-keygen", false, "do not auto-generate SOPS age keys and SSH key pairs")
 	cmd.Flags().Bool("no-sops-keygen", false, "do not auto-generate SOPS age keys (alias for no-keygen)")
 	cmd.Flags().Bool("regenerate-keys", false, "regenerate SOPS age keys and SSH key pairs even if they already exist")
+	cmd.Flags().StringArray("server-pool", []string{}, "additional server pool configuration (format: name=value,key=value,...)")
 	return cmd
 }
 
@@ -1048,4 +1084,137 @@ func validateOrganizationName(organization string) error {
 
 	// Use the same validation as cluster names since they both become directory names
 	return config.ValidateClusterName(organization)
+}
+// parseServerPoolString parses a server pool configuration string in the format:
+// "name=value,key=value,..." and returns an AdditionalServerPool struct
+func parseServerPoolString(poolStr string) (config.AdditionalServerPool, error) {
+	pool := config.AdditionalServerPool{}
+	
+	// Split by comma to get key=value pairs
+	pairs := strings.Split(poolStr, ",")
+	for _, pair := range pairs {
+		// Split by = to get key and value
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 {
+			return pool, fmt.Errorf("invalid key=value pair: %s", pair)
+		}
+		
+		key := strings.TrimSpace(kv[0])
+		value := strings.TrimSpace(kv[1])
+		
+		// Map the key to the appropriate field
+		switch key {
+		case "name":
+			pool.Name = value
+		case "worker_count":
+			count, err := strconv.Atoi(value)
+			if err != nil {
+				return pool, fmt.Errorf("invalid worker_count '%s': %w", value, err)
+			}
+			pool.WorkerCount = count
+		case "flavor_worker":
+			pool.FlavorWorker = value
+		case "node_worker":
+			pool.NodeWorker = value
+		case "server_group_affinity":
+			pool.ServerGroupAffinity = value
+		case "image_id":
+			pool.ImageID = value
+		case "image_name":
+			pool.ImageName = value
+		case "worker_node_bfv_volume_size":
+			size, err := strconv.Atoi(value)
+			if err != nil {
+				return pool, fmt.Errorf("invalid worker_node_bfv_volume_size '%s': %w", value, err)
+			}
+			pool.WorkerNodeBFVVolumeSize = size
+		case "worker_node_bfv_destination_type":
+			pool.WorkerNodeBFVDestinationType = value
+		case "worker_node_bfv_source_type":
+			pool.WorkerNodeBFVSourceType = value
+		case "worker_node_bfv_volume_type":
+			pool.WorkerNodeBFVVolumeType = value
+		case "worker_node_bfv_delete_on_termination":
+			delete, err := strconv.ParseBool(value)
+			if err != nil {
+				return pool, fmt.Errorf("invalid worker_node_bfv_delete_on_termination '%s': %w", value, err)
+			}
+			pool.WorkerNodeBFVDeleteOnTermination = delete
+		case "pf9_onboard":
+			onboard, err := strconv.ParseBool(value)
+			if err != nil {
+				return pool, fmt.Errorf("invalid pf9_onboard '%s': %w", value, err)
+			}
+			pool.PF9Onboard = onboard
+		case "subnet_id":
+			pool.SubnetID = value
+		default:
+			return pool, fmt.Errorf("unknown server pool field: %s", key)
+		}
+	}
+	
+	// Validate required fields
+	if pool.Name == "" {
+		return pool, fmt.Errorf("server pool name is required")
+	}
+	if pool.WorkerCount == 0 {
+		return pool, fmt.Errorf("server pool worker_count is required and must be > 0")
+	}
+	if pool.FlavorWorker == "" {
+		return pool, fmt.Errorf("server pool flavor_worker is required")
+	}
+	if pool.NodeWorker == "" {
+		return pool, fmt.Errorf("server pool node_worker is required")
+	}
+	
+	return pool, nil
+}
+
+// convertServerPoolsToMap converts a slice of AdditionalServerPool structs to a slice of maps
+// for use in the configuration map structure
+func convertServerPoolsToMap(pools []config.AdditionalServerPool) []map[string]any {
+	var result []map[string]any
+	for _, pool := range pools {
+		poolMap := map[string]any{
+			"name":         pool.Name,
+			"worker_count": pool.WorkerCount,
+			"flavor_worker": pool.FlavorWorker,
+			"node_worker":  pool.NodeWorker,
+		}
+		
+		// Add optional fields if they're set
+		if pool.ServerGroupAffinity != "" {
+			poolMap["server_group_affinity"] = pool.ServerGroupAffinity
+		}
+		if pool.ImageID != "" {
+			poolMap["image_id"] = pool.ImageID
+		}
+		if pool.ImageName != "" {
+			poolMap["image_name"] = pool.ImageName
+		}
+		if pool.WorkerNodeBFVVolumeSize > 0 {
+			poolMap["worker_node_bfv_volume_size"] = pool.WorkerNodeBFVVolumeSize
+		}
+		if pool.WorkerNodeBFVDestinationType != "" {
+			poolMap["worker_node_bfv_destination_type"] = pool.WorkerNodeBFVDestinationType
+		}
+		if pool.WorkerNodeBFVSourceType != "" {
+			poolMap["worker_node_bfv_source_type"] = pool.WorkerNodeBFVSourceType
+		}
+		if pool.WorkerNodeBFVVolumeType != "" {
+			poolMap["worker_node_bfv_volume_type"] = pool.WorkerNodeBFVVolumeType
+		}
+		if pool.WorkerNodeBFVDeleteOnTermination {
+			poolMap["worker_node_bfv_delete_on_termination"] = pool.WorkerNodeBFVDeleteOnTermination
+		}
+		if pool.PF9Onboard {
+			poolMap["pf9_onboard"] = pool.PF9Onboard
+		}
+		if pool.SubnetID != "" {
+			poolMap["subnet_id"] = pool.SubnetID
+		}
+		
+		result = append(result, poolMap)
+	}
+	return result
 }

@@ -483,14 +483,14 @@ func (v *EnhancedConfigValidator) validateOpenTofuConfiguration(config *Config, 
 				"Use 'terraform.tfstate' for default",
 			))
 		}
-	case "s3":
+	case "s3", "aws":
 		v.validateS3BackendConfiguration(config, aggregator)
 	default:
 		aggregator.AddError(errors.CreateValidationError(
 			"opentofu.backend.type",
-			fmt.Sprintf("backend type must be 'local' or 's3', got '%s'", backendType),
+			fmt.Sprintf("backend type must be 'local', 's3', or 'aws', got '%s'", backendType),
 			"Use 'local' for local state storage",
-			"Use 's3' for remote state in AWS S3",
+			"Use 's3' or 'aws' for remote state in AWS S3",
 		))
 	}
 }
@@ -507,13 +507,13 @@ func (v *EnhancedConfigValidator) validateS3BackendConfiguration(config *Config,
 		))
 	}
 
-	// Validate AWS credentials for S3 backend
-	if strings.TrimSpace(config.OpenCenter.Cluster.AWSAccessKey) == "" ||
-		strings.TrimSpace(config.OpenCenter.Cluster.AWSSecretAccessKey) == "" {
+	// Validate AWS credentials for S3 backend (with fallback support)
+	accessKey, secretKey := config.GetS3BackendCredentials()
+	if accessKey == "" || secretKey == "" {
 		aggregator.AddError(errors.CreateCredentialError(
 			"AWS",
-			"opencenter.cluster.aws_access_key",
-			"AWS credentials required for S3 backend",
+			"opencenter.cluster.aws_access_key or secrets.aws.access_key",
+			"AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.aws.access_key/secret_access_key",
 			nil,
 		))
 	}

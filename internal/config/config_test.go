@@ -313,7 +313,7 @@ func TestValidateExtended(t *testing.T) {
 				populateInfraFields(&cfg)
 				return cfg
 			},
-			expectErrs: []string{"AWS credentials required for S3 backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.aws.access_key/secret_access_key"},
+			expectErrs: []string{"AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.aws.access_key/secret_access_key"},
 		},
 		{
 			name: "s3 backend missing bucket info",
@@ -341,7 +341,7 @@ func TestValidateExtended(t *testing.T) {
 				populateInfraFields(&cfg)
 				return cfg
 			},
-			expectErrs: []string{"opentofu.backend.type must be 'local' or 's3'"},
+			expectErrs: []string{"opentofu.backend.type must be 'local', 's3', or 'aws'"},
 		},
 		{
 			name: "local backend without path",

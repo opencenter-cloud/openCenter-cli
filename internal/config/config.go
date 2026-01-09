@@ -1602,22 +1602,22 @@ func Validate(cfg Config) []string {
 			if cfg.OpenTofu.Backend.Local.Path == "" {
 				errs = append(errs, "opentofu.backend.local.path must be set for local backend")
 			}
-		case "s3":
+		case "s3", "aws":
 			s3 := cfg.OpenTofu.Backend.S3
 			if s3.Bucket == "" || s3.Key == "" || s3.Region == "" {
 				errs = append(errs, "opentofu.backend.s3 requires bucket, key, and region")
 			}
-			// When using S3 backend, AWS credentials must be provided via opencenter cluster or global AWS secrets
+			// When using S3/AWS backend, AWS credentials must be provided via opencenter cluster or global AWS secrets
 			clusterAccessKey := strings.TrimSpace(cfg.OpenCenter.Cluster.AWSAccessKey)
 			clusterSecretKey := strings.TrimSpace(cfg.OpenCenter.Cluster.AWSSecretAccessKey)
 			globalAccessKey := strings.TrimSpace(cfg.Secrets.AWS.AccessKey)
 			globalSecretKey := strings.TrimSpace(cfg.Secrets.AWS.SecretAccessKey)
 			
 			if (clusterAccessKey == "" && globalAccessKey == "") || (clusterSecretKey == "" && globalSecretKey == "") {
-				errs = append(errs, "AWS credentials required for S3 backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.aws.access_key/secret_access_key")
+				errs = append(errs, "AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.aws.access_key/secret_access_key")
 			}
 		default:
-			errs = append(errs, "opentofu.backend.type must be 'local' or 's3'")
+			errs = append(errs, "opentofu.backend.type must be 'local', 's3', or 'aws'")
 		}
 	}
 	// iac validation is intentionally minimal for variables.tf-aligned shape
@@ -1873,5 +1873,17 @@ func (c Config) GetTempoS3AccessKey() string {
 // GetTempoS3SecretKey returns Tempo S3 secret key with fallback.
 func (c Config) GetTempoS3SecretKey() string {
 	_, secretKey := c.GetTempoS3Credentials()
+	return secretKey
+}
+
+// GetS3BackendAccessKey returns S3 backend access key with fallback.
+func (c Config) GetS3BackendAccessKey() string {
+	accessKey, _ := c.GetS3BackendCredentials()
+	return accessKey
+}
+
+// GetS3BackendSecretKey returns S3 backend secret key with fallback.
+func (c Config) GetS3BackendSecretKey() string {
+	_, secretKey := c.GetS3BackendCredentials()
 	return secretKey
 }

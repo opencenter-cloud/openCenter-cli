@@ -25,9 +25,9 @@ type KubernetesConfig struct {
 	WindowsWorkers       WindowsWorkers `yaml:"windows_workers" json:"windows_workers"`
 	Modules              KubernetesModulesConfig `yaml:"modules" json:"modules"`
 	// AdditionalServerPoolsWorker defines additional worker node pools with custom configurations
-	AdditionalServerPoolsWorker []AdditionalServerPool `yaml:"additional_server_pools_worker,omitempty" json:"additional_server_pools_worker,omitempty"`
+	AdditionalServerPoolsWorker []AdditionalServerPool `yaml:"additional_server_pools_worker" json:"additional_server_pools_worker,omitempty"`
 	// AdditionalServerPoolsWorkerWindows defines additional Windows worker node pools
-	AdditionalServerPoolsWorkerWindows []AdditionalServerPoolWindows `yaml:"additional_server_pools_worker_windows,omitempty" json:"additional_server_pools_worker_windows,omitempty"`
+	AdditionalServerPoolsWorkerWindows []AdditionalServerPoolWindows `yaml:"additional_server_pools_worker_windows" json:"additional_server_pools_worker_windows,omitempty"`
 }
 
 // NodeConfig represents a baremetal node configuration with id, name, and IP

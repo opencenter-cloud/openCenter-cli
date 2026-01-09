@@ -23,6 +23,7 @@ type KubernetesConfig struct {
 	NetworkPlugin        NetworkPlugin  `yaml:"network_plugin" json:"network_plugin"`
 	OIDC                 OIDCConfig     `yaml:"oidc" json:"oidc"`
 	WindowsWorkers       WindowsWorkers `yaml:"windows_workers" json:"windows_workers"`
+	Modules              KubernetesModulesConfig `yaml:"modules" json:"modules"`
 	// AdditionalServerPoolsWorker defines additional worker node pools with custom configurations
 	AdditionalServerPoolsWorker []AdditionalServerPool `yaml:"additional_server_pools_worker,omitempty" json:"additional_server_pools_worker,omitempty"`
 	// AdditionalServerPoolsWorkerWindows defines additional Windows worker node pools
@@ -45,25 +46,28 @@ type NetworkPlugin struct {
 
 // CalicoConfig represents the Calico configuration
 type CalicoConfig struct {
-	Enabled                   bool   `yaml:"enabled" json:"enabled"`
-	CNIIface                  string `yaml:"cni_iface" json:"cni_iface"`
-	CalicoInterfaceAutodetect string `yaml:"calico_interface_autodetect" json:"calico_interface_autodetect"`
-	AutodetectCIDR            string `yaml:"autodetect_cidr" json:"autodetect_cidr"`
-	EncapsulationType         string `yaml:"encapsulation_type" json:"encapsulation_type"`
-	NATOutgoing               bool   `yaml:"nat_outgoing" json:"nat_outgoing"`
+	Enabled                   bool                    `yaml:"enabled" json:"enabled"`
+	CNIIface                  string                  `yaml:"cni_iface" json:"cni_iface"`
+	CalicoInterfaceAutodetect string                  `yaml:"calico_interface_autodetect" json:"calico_interface_autodetect"`
+	AutodetectCIDR            string                  `yaml:"autodetect_cidr" json:"autodetect_cidr"`
+	EncapsulationType         string                  `yaml:"encapsulation_type" json:"encapsulation_type"`
+	NATOutgoing               bool                    `yaml:"nat_outgoing" json:"nat_outgoing"`
+	Modules                   CalicoModulesConfig     `yaml:"modules" json:"modules"`
 }
 
 // CiliumConfig represents the Cilium configuration
 type CiliumConfig struct {
-	Enabled              bool `yaml:"enabled" json:"enabled"`
-	OperatorEnabled      bool `yaml:"operator_enabled" json:"operator_enabled"`
-	KubeProxyReplacement bool `yaml:"kubeProxyReplacement" json:"kubeProxyReplacement"`
+	Enabled              bool                   `yaml:"enabled" json:"enabled"`
+	OperatorEnabled      bool                   `yaml:"operator_enabled" json:"operator_enabled"`
+	KubeProxyReplacement bool                   `yaml:"kubeProxyReplacement" json:"kubeProxyReplacement"`
+	Modules              CiliumModulesConfig    `yaml:"modules" json:"modules"`
 }
 
 // KubeOVNConfig represents the Kube-OVN configuration
 type KubeOVNConfig struct {
-	Enabled           bool `yaml:"enabled" json:"enabled"`
-	CiliumIntegration bool `yaml:"cilium_integration" json:"cilium_integration"`
+	Enabled           bool                   `yaml:"enabled" json:"enabled"`
+	CiliumIntegration bool                   `yaml:"cilium_integration" json:"cilium_integration"`
+	Modules           KubeOVNModulesConfig   `yaml:"modules" json:"modules"`
 }
 
 // OIDCConfig represents the OIDC configuration
@@ -135,4 +139,43 @@ type AdditionalServerPoolWindows struct {
 	ServerGroupAffinity string `yaml:"server_group_affinity,omitempty" json:"server_group_affinity,omitempty" jsonschema:"enum=affinity;anti-affinity;soft-affinity;soft-anti-affinity,description=Server group affinity policy for this Windows worker pool"`
 	// ImageID is the OpenStack Windows image ID for this worker pool
 	ImageID string `yaml:"image_id,omitempty" json:"image_id,omitempty" jsonschema:"pattern=^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$,description=OpenStack Windows image ID for this worker pool"`
+}
+// KubernetesModulesConfig represents the Kubernetes module configurations
+type KubernetesModulesConfig struct {
+	KubesprayCluster KubesprayClusterModuleConfig `yaml:"kubespray_cluster" json:"kubespray_cluster"`
+}
+
+// KubesprayClusterModuleConfig represents the kubespray-cluster module configuration
+type KubesprayClusterModuleConfig struct {
+	Source string `yaml:"source" json:"source"`
+}
+
+// CalicoModulesConfig represents the Calico module configurations
+type CalicoModulesConfig struct {
+	Calico CalicoModuleConfig `yaml:"calico" json:"calico"`
+}
+
+// CalicoModuleConfig represents the calico module configuration
+type CalicoModuleConfig struct {
+	Source string `yaml:"source" json:"source"`
+}
+
+// CiliumModulesConfig represents the Cilium module configurations
+type CiliumModulesConfig struct {
+	Cilium CiliumModuleConfig `yaml:"cilium" json:"cilium"`
+}
+
+// CiliumModuleConfig represents the cilium module configuration
+type CiliumModuleConfig struct {
+	Source string `yaml:"source" json:"source"`
+}
+
+// KubeOVNModulesConfig represents the Kube-OVN module configurations
+type KubeOVNModulesConfig struct {
+	KubeOVN KubeOVNModuleConfig `yaml:"kube_ovn" json:"kube_ovn"`
+}
+
+// KubeOVNModuleConfig represents the kube-ovn module configuration
+type KubeOVNModuleConfig struct {
+	Source string `yaml:"source" json:"source"`
 }

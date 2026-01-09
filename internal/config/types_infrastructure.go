@@ -69,24 +69,25 @@ type SimplifiedCloud struct {
 
 // SimplifiedOpenStackCloud represents the OpenStack configuration
 type SimplifiedOpenStackCloud struct {
-	AuthURL                     string `yaml:"auth_url" json:"auth_url"`
-	Insecure                    bool   `yaml:"insecure" json:"insecure"`
-	Region                      string `yaml:"region" json:"region"`
-	ApplicationCredentialID     string `yaml:"application_credential_id" json:"application_credential_id"`
-	ApplicationCredentialSecret string `yaml:"application_credential_secret" json:"application_credential_secret"`
-	Domain                      string `yaml:"domain" json:"domain"`
-	TenantName                  string `yaml:"tenant_name" json:"tenant_name"`
-	FloatingNetworkId           string `yaml:"floating_network_id" json:"floating_network_id"`
-	SubnetId                    string `yaml:"subnet_id" json:"subnet_id"`
-	NetworkID                   string `yaml:"network_id" json:"network_id"`
-	AvailabilityZone            string `yaml:"availability_zone" json:"availability_zone"`
-	ProjectDomainName           string `yaml:"project_domain_name" json:"project_domain_name"`
-	UserDomainName              string `yaml:"user_domain_name" json:"user_domain_name"`
-	FloatingIPPool              string `yaml:"floating_ip_pool" json:"floating_ip_pool"`
-	RouterExternalNetworkID     string `yaml:"router_external_network_id" json:"router_external_network_id"`
-	CA                          string `yaml:"ca" json:"ca"`
-	ImageID                     string `yaml:"image_id" json:"image_id"`
-	ImageIDWindows              string `yaml:"image_id_windows" json:"image_id_windows"`
+	AuthURL                     string                    `yaml:"auth_url" json:"auth_url"`
+	Insecure                    bool                      `yaml:"insecure" json:"insecure"`
+	Region                      string                    `yaml:"region" json:"region"`
+	ApplicationCredentialID     string                    `yaml:"application_credential_id" json:"application_credential_id"`
+	ApplicationCredentialSecret string                    `yaml:"application_credential_secret" json:"application_credential_secret"`
+	Domain                      string                    `yaml:"domain" json:"domain"`
+	TenantName                  string                    `yaml:"tenant_name" json:"tenant_name"`
+	FloatingNetworkId           string                    `yaml:"floating_network_id" json:"floating_network_id"`
+	SubnetId                    string                    `yaml:"subnet_id" json:"subnet_id"`
+	NetworkID                   string                    `yaml:"network_id" json:"network_id"`
+	AvailabilityZone            string                    `yaml:"availability_zone" json:"availability_zone"`
+	ProjectDomainName           string                    `yaml:"project_domain_name" json:"project_domain_name"`
+	UserDomainName              string                    `yaml:"user_domain_name" json:"user_domain_name"`
+	FloatingIPPool              string                    `yaml:"floating_ip_pool" json:"floating_ip_pool"`
+	RouterExternalNetworkID     string                    `yaml:"router_external_network_id" json:"router_external_network_id"`
+	CA                          string                    `yaml:"ca" json:"ca"`
+	ImageID                     string                    `yaml:"image_id" json:"image_id"`
+	ImageIDWindows              string                    `yaml:"image_id_windows" json:"image_id_windows"`
+	Modules                     OpenStackModulesConfig    `yaml:"modules" json:"modules"`
 }
 
 // SimplifiedAWSCloud represents the AWS configuration
@@ -96,4 +97,13 @@ type SimplifiedAWSCloud struct {
 	VPCID          string   `yaml:"vpc_id" json:"vpc_id"`
 	PrivateSubnets []string `yaml:"private_subnets" json:"private_subnets"`
 	PublicSubnets  []string `yaml:"public_subnets" json:"public_subnets"`
+}
+// OpenStackModulesConfig represents the OpenStack module configurations
+type OpenStackModulesConfig struct {
+	OpenstackNova OpenstackNovaModuleConfig `yaml:"openstack_nova" json:"openstack_nova"`
+}
+
+// OpenstackNovaModuleConfig represents the openstack-nova module configuration
+type OpenstackNovaModuleConfig struct {
+	Source string `yaml:"source" json:"source"`
 }

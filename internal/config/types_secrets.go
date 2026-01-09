@@ -18,9 +18,6 @@ type Secrets struct {
 	Tempo       TempoSecrets       `yaml:"tempo" json:"tempo"`
 	AlertProxy  AlertProxySecrets  `yaml:"alert_proxy" json:"alert_proxy"`
 	VSphereCsi  VSphereCsiSecrets  `yaml:"vsphere_csi" json:"vsphere_csi"`
-
-	// Deprecated: Use Global.AWS.Infrastructure instead
-	AWS AWSSecrets `yaml:"aws,omitempty" json:"aws,omitempty" jsonschema:"deprecated=true,description=Deprecated: Use global.aws.infrastructure instead"`
 }
 
 // SSHKey holds SSH key configuration for cluster access

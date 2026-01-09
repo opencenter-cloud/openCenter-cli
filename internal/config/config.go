@@ -403,11 +403,20 @@ func defaultConfig(name string) Config {
 				Public:  fmt.Sprintf("./testdata/test-git-repo-%s/%s/secrets/ssh/%s.pub", name, name, name),
 				Cypher:  "ed25519",
 			},
-			// Global AWS credentials (fallback for services)
-			AWS: AWSSecrets{
-				AccessKey:       awsAccessKey,
-				SecretAccessKey: awsSecretKey,
-				Region:          "us-east-1",
+			// Global secrets organized by scope
+			Global: GlobalSecrets{
+				AWS: AWSGlobalSecrets{
+					Infrastructure: AWSSecrets{
+						AccessKey:       awsAccessKey,
+						SecretAccessKey: awsSecretKey,
+						Region:          "us-east-1",
+					},
+					Application: AWSSecrets{
+						AccessKey:       "",
+						SecretAccessKey: "",
+						Region:          "",
+					},
+				},
 			},
 			// Service-specific secrets - must be provided by user
 			CertManager: CertManagerSecrets{
@@ -1537,17 +1546,12 @@ func Validate(cfg Config) []string {
 			globalInfraAccessKey := strings.TrimSpace(cfg.Secrets.Global.AWS.Infrastructure.AccessKey)
 			globalInfraSecretKey := strings.TrimSpace(cfg.Secrets.Global.AWS.Infrastructure.SecretAccessKey)
 			
-			// Check deprecated global AWS credentials for backward compatibility
-			globalAccessKey := strings.TrimSpace(cfg.Secrets.AWS.AccessKey)
-			globalSecretKey := strings.TrimSpace(cfg.Secrets.AWS.SecretAccessKey)
-			
 			// Check if any valid credential combination exists
 			hasClusterCreds := clusterAccessKey != "" && clusterSecretKey != ""
 			hasInfraCreds := globalInfraAccessKey != "" && globalInfraSecretKey != ""
-			hasDeprecatedCreds := globalAccessKey != "" && globalSecretKey != ""
 			
-			if !hasClusterCreds && !hasInfraCreds && !hasDeprecatedCreds {
-				errs = append(errs, "AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key or secrets.aws.access_key/secret_access_key (deprecated)")
+			if !hasClusterCreds && !hasInfraCreds {
+				errs = append(errs, "AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key")
 			}
 		default:
 			errs = append(errs, "opentofu.backend.type must be 'local', 's3', or 'aws'")
@@ -1681,10 +1685,10 @@ func validateServiceSecretsSimple(cfg Config) []string {
 	if isEnabled("cert-manager") {
 		accessKey, secretKey := cfg.GetCertManagerAWSCredentials()
 		if accessKey == "" {
-			errs = append(errs, "AWS credentials required for cert-manager: either set secrets.cert_manager.aws_access_key or secrets.global.aws.application.access_key or secrets.global.aws.infrastructure.access_key or secrets.aws.access_key (deprecated)")
+			errs = append(errs, "AWS credentials required for cert-manager: either set secrets.cert_manager.aws_access_key or secrets.global.aws.application.access_key or secrets.global.aws.infrastructure.access_key")
 		}
 		if secretKey == "" {
-			errs = append(errs, "AWS credentials required for cert-manager: either set secrets.cert_manager.aws_secret_access_key or secrets.global.aws.application.secret_access_key or secrets.global.aws.infrastructure.secret_access_key or secrets.aws.secret_access_key (deprecated)")
+			errs = append(errs, "AWS credentials required for cert-manager: either set secrets.cert_manager.aws_secret_access_key or secrets.global.aws.application.secret_access_key or secrets.global.aws.infrastructure.secret_access_key")
 		}
 	}
 
@@ -1695,7 +1699,7 @@ func validateServiceSecretsSimple(cfg Config) []string {
 			// If no Swift password, check for S3 credentials (with fallback)
 			accessKey, secretKey := cfg.GetLokiS3Credentials()
 			if accessKey == "" || secretKey == "" {
-				errs = append(errs, "Loki requires either Swift password (secrets.loki.swift_password) or S3 credentials (secrets.loki.s3_access_key_id/secrets.loki.s3_secret_access_key or secrets.global.aws.application.access_key/secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key or secrets.aws.access_key/secret_access_key (deprecated))")
+				errs = append(errs, "Loki requires either Swift password (secrets.loki.swift_password) or S3 credentials (secrets.loki.s3_access_key_id/secrets.loki.s3_secret_access_key or secrets.global.aws.application.access_key/secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key)")
 			}
 		}
 	}
@@ -1704,10 +1708,10 @@ func validateServiceSecretsSimple(cfg Config) []string {
 	if isEnabled("tempo") {
 		accessKey, secretKey := cfg.GetTempoS3Credentials()
 		if accessKey == "" {
-			errs = append(errs, "S3 credentials required for Tempo: either set secrets.tempo.access_key or secrets.global.aws.application.access_key or secrets.global.aws.infrastructure.access_key or secrets.aws.access_key (deprecated)")
+			errs = append(errs, "S3 credentials required for Tempo: either set secrets.tempo.access_key or secrets.global.aws.application.access_key or secrets.global.aws.infrastructure.access_key")
 		}
 		if secretKey == "" {
-			errs = append(errs, "S3 credentials required for Tempo: either set secrets.tempo.secret_key or secrets.global.aws.application.secret_access_key or secrets.global.aws.infrastructure.secret_access_key or secrets.aws.secret_access_key (deprecated)")
+			errs = append(errs, "S3 credentials required for Tempo: either set secrets.tempo.secret_key or secrets.global.aws.application.secret_access_key or secrets.global.aws.infrastructure.secret_access_key")
 		}
 	}
 
@@ -1732,8 +1736,7 @@ func (c Config) ToJSON() ([]byte, error) {
 }
 
 // GetAWSCredentials returns AWS credentials with service-specific override and fallback logic.
-// It first tries service-specific credentials, then falls back to global infrastructure credentials,
-// and finally to the deprecated global AWS credentials for backward compatibility.
+// It first tries service-specific credentials, then falls back to global infrastructure credentials.
 //
 // Parameters:
 //   - serviceAccessKey: Service-specific AWS access key
@@ -1748,13 +1751,8 @@ func (c Config) GetAWSCredentials(serviceAccessKey, serviceSecretKey string) (ac
 		return serviceAccessKey, serviceSecretKey
 	}
 	
-	// Fall back to global infrastructure AWS credentials (new structure)
-	if c.Secrets.Global.AWS.Infrastructure.AccessKey != "" && c.Secrets.Global.AWS.Infrastructure.SecretAccessKey != "" {
-		return c.Secrets.Global.AWS.Infrastructure.AccessKey, c.Secrets.Global.AWS.Infrastructure.SecretAccessKey
-	}
-	
-	// Fall back to deprecated global AWS credentials for backward compatibility
-	return c.Secrets.AWS.AccessKey, c.Secrets.AWS.SecretAccessKey
+	// Fall back to global infrastructure AWS credentials
+	return c.Secrets.Global.AWS.Infrastructure.AccessKey, c.Secrets.Global.AWS.Infrastructure.SecretAccessKey
 }
 
 // GetCertManagerAWSCredentials returns cert-manager AWS credentials with fallback to global AWS application credentials.
@@ -1796,8 +1794,7 @@ func (c Config) GetS3BackendCredentials() (accessKey, secretKey string) {
 }
 
 // GetAWSApplicationCredentials returns AWS application credentials with fallback logic.
-// It first tries the new global application credentials, then falls back to infrastructure credentials,
-// and finally to the deprecated global AWS credentials for backward compatibility.
+// It first tries the global application credentials, then falls back to infrastructure credentials.
 //
 // Returns:
 //   - accessKey: The resolved AWS access key
@@ -1809,12 +1806,7 @@ func (c Config) GetAWSApplicationCredentials() (accessKey, secretKey string) {
 	}
 	
 	// Fall back to infrastructure credentials
-	if c.Secrets.Global.AWS.Infrastructure.AccessKey != "" && c.Secrets.Global.AWS.Infrastructure.SecretAccessKey != "" {
-		return c.Secrets.Global.AWS.Infrastructure.AccessKey, c.Secrets.Global.AWS.Infrastructure.SecretAccessKey
-	}
-	
-	// Fall back to deprecated global AWS credentials for backward compatibility
-	return c.Secrets.AWS.AccessKey, c.Secrets.AWS.SecretAccessKey
+	return c.Secrets.Global.AWS.Infrastructure.AccessKey, c.Secrets.Global.AWS.Infrastructure.SecretAccessKey
 }
 
 // Template-friendly functions that return single values for use in Go templates

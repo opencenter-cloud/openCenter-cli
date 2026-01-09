@@ -513,7 +513,7 @@ func (v *EnhancedConfigValidator) validateS3BackendConfiguration(config *Config,
 		aggregator.AddError(errors.CreateCredentialError(
 			"AWS",
 			"opencenter.cluster.aws_access_key or secrets.global.aws.infrastructure.access_key",
-			"AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key or secrets.aws.access_key/secret_access_key (deprecated)",
+			"AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key",
 			nil,
 		))
 	}

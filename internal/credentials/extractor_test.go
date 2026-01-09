@@ -38,10 +38,14 @@ func TestExtractAWS(t *testing.T) {
 			},
 		},
 		Secrets: config.Secrets{
-			AWS: config.AWSSecrets{
-				AccessKey:       "AKIATEST456",
-				SecretAccessKey: "test-secret-key-2",
-				Region:          "us-east-1",
+			Global: config.GlobalSecrets{
+				AWS: config.AWSGlobalSecrets{
+					Infrastructure: config.AWSSecrets{
+						AccessKey:       "AKIATEST456",
+						SecretAccessKey: "test-secret-key-2",
+						Region:          "us-east-1",
+					},
+				},
 			},
 		},
 	}

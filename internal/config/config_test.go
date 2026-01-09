@@ -313,7 +313,7 @@ func TestValidateExtended(t *testing.T) {
 				populateInfraFields(&cfg)
 				return cfg
 			},
-			expectErrs: []string{"AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key or secrets.aws.access_key/secret_access_key (deprecated)"},
+			expectErrs: []string{"AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key"},
 		},
 		{
 			name: "s3 backend missing bucket info",
@@ -2048,8 +2048,6 @@ func TestAWSCredentialFallback(t *testing.T) {
 		cfg := NewDefault("test")
 		cfg.Secrets.Global.AWS.Infrastructure.AccessKey = "infra-access-key"
 		cfg.Secrets.Global.AWS.Infrastructure.SecretAccessKey = "infra-secret-key"
-		cfg.Secrets.AWS.AccessKey = "deprecated-access-key"
-		cfg.Secrets.AWS.SecretAccessKey = "deprecated-secret-key"
 
 		accessKey, secretKey := cfg.GetAWSCredentials("", "")
 		if accessKey != "infra-access-key" {
@@ -2057,20 +2055,6 @@ func TestAWSCredentialFallback(t *testing.T) {
 		}
 		if secretKey != "infra-secret-key" {
 			t.Errorf("expected infra-secret-key, got %s", secretKey)
-		}
-	})
-
-	t.Run("GetAWSCredentials fallback to deprecated credentials", func(t *testing.T) {
-		cfg := NewDefault("test")
-		cfg.Secrets.AWS.AccessKey = "deprecated-access-key"
-		cfg.Secrets.AWS.SecretAccessKey = "deprecated-secret-key"
-
-		accessKey, secretKey := cfg.GetAWSCredentials("", "")
-		if accessKey != "deprecated-access-key" {
-			t.Errorf("expected deprecated-access-key, got %s", accessKey)
-		}
-		if secretKey != "deprecated-secret-key" {
-			t.Errorf("expected deprecated-secret-key, got %s", secretKey)
 		}
 	})
 

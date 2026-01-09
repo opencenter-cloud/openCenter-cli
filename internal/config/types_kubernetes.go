@@ -98,27 +98,27 @@ type AdditionalServerPool struct {
 	// NodeWorker is the node suffix identifier for this worker pool
 	NodeWorker string `yaml:"node_worker" json:"node_worker" jsonschema:"required,minLength=1,description=Node suffix identifier for this worker pool"`
 	// ServerGroupAffinity defines the server group affinity policy
-	ServerGroupAffinity string `yaml:"server_group_affinity,omitempty" json:"server_group_affinity,omitempty" jsonschema:"enum=affinity;anti-affinity;soft-affinity;soft-anti-affinity,description=Server group affinity policy for this worker pool"`
+	ServerGroupAffinity string `yaml:"server_group_affinity" json:"server_group_affinity" jsonschema:"enum=affinity;anti-affinity;soft-affinity;soft-anti-affinity,description=Server group affinity policy for this worker pool"`
 	// ImageID is the OpenStack image ID for this worker pool
-	ImageID string `yaml:"image_id,omitempty" json:"image_id,omitempty" jsonschema:"pattern=^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$,description=OpenStack image ID for this worker pool"`
+	ImageID string `yaml:"image_id" json:"image_id" jsonschema:"pattern=^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$,description=OpenStack image ID for this worker pool"`
 	// ImageName is the OpenStack image name (alternative to ImageID)
-	ImageName string `yaml:"image_name,omitempty" json:"image_name,omitempty" jsonschema:"description=OpenStack image name (alternative to image_id)"`
+	ImageName string `yaml:"image_name" json:"image_name" jsonschema:"description=OpenStack image name (alternative to image_id)"`
 	// WorkerNodeBFVVolumeSize is the boot volume size in GB
-	WorkerNodeBFVVolumeSize int `yaml:"worker_node_bfv_volume_size,omitempty" json:"worker_node_bfv_volume_size,omitempty" jsonschema:"default=40,minimum=10,maximum=1000,description=Boot volume size in GB"`
+	WorkerNodeBFVVolumeSize int `yaml:"worker_node_bfv_volume_size" json:"worker_node_bfv_volume_size" jsonschema:"default=40,minimum=10,maximum=1000,description=Boot volume size in GB"`
 	// WorkerNodeBFVDestinationType is the boot volume destination type
-	WorkerNodeBFVDestinationType string `yaml:"worker_node_bfv_destination_type,omitempty" json:"worker_node_bfv_destination_type,omitempty" jsonschema:"default=volume,enum=volume;local,description=Boot volume destination type"`
+	WorkerNodeBFVDestinationType string `yaml:"worker_node_bfv_destination_type" json:"worker_node_bfv_destination_type" jsonschema:"default=volume,enum=volume;local,description=Boot volume destination type"`
 	// WorkerNodeBFVSourceType is the boot volume source type
-	WorkerNodeBFVSourceType string `yaml:"worker_node_bfv_source_type,omitempty" json:"worker_node_bfv_source_type,omitempty" jsonschema:"default=image,enum=image;volume;snapshot,description=Boot volume source type"`
+	WorkerNodeBFVSourceType string `yaml:"worker_node_bfv_source_type" json:"worker_node_bfv_source_type" jsonschema:"default=image,enum=image;volume;snapshot,description=Boot volume source type"`
 	// WorkerNodeBFVVolumeType is the boot volume type
-	WorkerNodeBFVVolumeType string `yaml:"worker_node_bfv_volume_type,omitempty" json:"worker_node_bfv_volume_type,omitempty" jsonschema:"description=Boot volume type (e.g. HA-Standard HA-Performance)"`
+	WorkerNodeBFVVolumeType string `yaml:"worker_node_bfv_volume_type" json:"worker_node_bfv_volume_type" jsonschema:"description=Boot volume type (e.g. HA-Standard HA-Performance)"`
 	// WorkerNodeBFVDeleteOnTermination controls whether to delete boot volume when instance is terminated
-	WorkerNodeBFVDeleteOnTermination bool `yaml:"worker_node_bfv_delete_on_termination,omitempty" json:"worker_node_bfv_delete_on_termination,omitempty" jsonschema:"default=true,description=Delete boot volume when instance is terminated"`
+	WorkerNodeBFVDeleteOnTermination bool `yaml:"worker_node_bfv_delete_on_termination" json:"worker_node_bfv_delete_on_termination" jsonschema:"default=true,description=Delete boot volume when instance is terminated"`
 	// AdditionalBlockDevicesWorker defines additional block devices for this worker pool
-	AdditionalBlockDevicesWorker []map[string]any `yaml:"additional_block_devices_worker,omitempty" json:"additional_block_devices_worker,omitempty" jsonschema:"description=Additional block devices for this worker pool"`
+	AdditionalBlockDevicesWorker []map[string]any `yaml:"additional_block_devices_worker" json:"additional_block_devices_worker" jsonschema:"description=Additional block devices for this worker pool"`
 	// PF9Onboard enables Platform9 onboarding for this pool
-	PF9Onboard bool `yaml:"pf9_onboard,omitempty" json:"pf9_onboard,omitempty" jsonschema:"default=false,description=Enable Platform9 onboarding for this pool"`
+	PF9Onboard bool `yaml:"pf9_onboard" json:"pf9_onboard" jsonschema:"default=false,description=Enable Platform9 onboarding for this pool"`
 	// SubnetID is the specific subnet ID for this worker pool (optional)
-	SubnetID string `yaml:"subnet_id,omitempty" json:"subnet_id,omitempty" jsonschema:"pattern=^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$,description=Specific subnet ID for this worker pool (optional)"`
+	SubnetID string `yaml:"subnet_id" json:"subnet_id" jsonschema:"pattern=^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$,description=Specific subnet ID for this worker pool (optional)"`
 }
 
 // AdditionalServerPoolWindows defines configuration for an additional Windows worker node pool

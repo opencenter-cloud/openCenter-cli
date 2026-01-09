@@ -78,6 +78,7 @@ type SimplifiedOpenStackCloud struct {
 	TenantName                  string `yaml:"tenant_name" json:"tenant_name"`
 	FloatingNetworkId           string `yaml:"floating_network_id" json:"floating_network_id"`
 	SubnetId                    string `yaml:"subnet_id" json:"subnet_id"`
+	NetworkID                   string `yaml:"network_id" json:"network_id"`
 	AvailabilityZone            string `yaml:"availability_zone" json:"availability_zone"`
 	ProjectDomainName           string `yaml:"project_domain_name" json:"project_domain_name"`
 	UserDomainName              string `yaml:"user_domain_name" json:"user_domain_name"`

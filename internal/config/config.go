@@ -976,6 +976,34 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 			cfg.IAC.Main["openstack_project_domain_name"] = os.Domain
 			cfg.IAC.Main["openstack_user_domain_name"] = os.Domain
 		}
+		// Map additional OpenStack fields
+		if os.ProjectDomainName != "" {
+			cfg.IAC.Main["openstack_project_domain_name"] = os.ProjectDomainName
+		}
+		if os.UserDomainName != "" {
+			cfg.IAC.Main["openstack_user_domain_name"] = os.UserDomainName
+		}
+		if os.AvailabilityZone != "" {
+			cfg.IAC.Main["availability_zone"] = os.AvailabilityZone
+		}
+		if os.FloatingIPPool != "" {
+			cfg.IAC.Main["floatingip_pool"] = os.FloatingIPPool
+		}
+		if os.RouterExternalNetworkID != "" {
+			cfg.IAC.Main["router_external_network_id"] = os.RouterExternalNetworkID
+		}
+		if os.NetworkID != "" {
+			cfg.IAC.Main["network_id"] = os.NetworkID
+		}
+		if os.ImageID != "" {
+			cfg.IAC.Main["image_id"] = os.ImageID
+		}
+		if os.ImageIDWindows != "" {
+			cfg.IAC.Main["image_id_windows"] = os.ImageIDWindows
+		}
+		if os.CA != "" {
+			cfg.IAC.Main["openstack_ca"] = os.CA
+		}
 		cfg.IAC.Main["openstack_insecure"] = os.Insecure
 		if os.ApplicationCredentialID != "" {
 			cfg.IAC.Main["openstack_user_name"] = os.ApplicationCredentialID
@@ -988,11 +1016,92 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 		}
 	}
 
+	// Map Networking configuration
+	if cfg.Networking.SubnetNodes != "" {
+		cfg.IAC.Main["subnet_nodes"] = cfg.Networking.SubnetNodes
+	}
+	if cfg.Networking.AllocationPoolEnd != "" {
+		cfg.IAC.Main["allocation_pool_end"] = cfg.Networking.AllocationPoolEnd
+	}
+	cfg.IAC.Main["vrrp_enabled"] = cfg.Networking.VRRPEnabled
+	cfg.IAC.Main["use_octavia"] = cfg.Networking.UseOctavia
+	cfg.IAC.Main["use_designate"] = cfg.Networking.UseDesignate
+	if len(cfg.Networking.DNSNameservers) > 0 {
+		cfg.IAC.Main["dns_nameservers"] = cfg.Networking.DNSNameservers
+	}
+	if len(cfg.Networking.NTPServers) > 0 {
+		cfg.IAC.Main["ntp_servers"] = cfg.Networking.NTPServers
+	}
+	if cfg.Networking.VLAN.ID != "" {
+		cfg.IAC.Main["vlan_id"] = cfg.Networking.VLAN.ID
+	}
+	if cfg.Networking.VLAN.MTU > 0 {
+		cfg.IAC.Main["mtu"] = cfg.Networking.VLAN.MTU
+	}
+	if cfg.Networking.VLAN.Provider != "" {
+		cfg.IAC.Main["network_provider"] = cfg.Networking.VLAN.Provider
+	}
+
+	// Map Infrastructure configuration
+	if cfg.OpenCenter.Infrastructure.SSHUser != "" {
+		cfg.IAC.Main["ssh_user"] = cfg.OpenCenter.Infrastructure.SSHUser
+	}
+	if cfg.OpenCenter.Infrastructure.OSVersion != "" {
+		cfg.IAC.Main["ub_version"] = cfg.OpenCenter.Infrastructure.OSVersion
+	}
+	if cfg.OpenCenter.Infrastructure.NodeNaming.Worker != "" {
+		cfg.IAC.Main["node_worker"] = cfg.OpenCenter.Infrastructure.NodeNaming.Worker
+	}
+	if cfg.OpenCenter.Infrastructure.NodeNaming.Master != "" {
+		cfg.IAC.Main["node_master"] = cfg.OpenCenter.Infrastructure.NodeNaming.Master
+	}
+	if cfg.OpenCenter.Infrastructure.NodeNaming.WorkerWindows != "" {
+		cfg.IAC.Main["node_worker_windows"] = cfg.OpenCenter.Infrastructure.NodeNaming.WorkerWindows
+	}
+
+	// Map Security configuration
+	if cfg.Security.CACertificates != "" {
+		cfg.IAC.Main["ca_certificates"] = cfg.Security.CACertificates
+	}
+	cfg.IAC.Main["k8s_hardening_enabled"] = cfg.Security.K8sHardening
+	cfg.IAC.Main["os_hardening_enabled"] = cfg.Security.OSHardening
+	cfg.IAC.Main["kubelet_rotate_server_certificates"] = cfg.Security.KubeletRotateCerts
+	if len(cfg.Security.PodSecurityExemptions) > 0 {
+		cfg.IAC.Main["kube_pod_security_exemptions_namespaces"] = cfg.Security.PodSecurityExemptions
+	}
+
+	// Map Storage configuration
+	if cfg.OpenCenter.Storage.WorkerVolumeSize > 0 {
+		cfg.IAC.Main["worker_node_bfv_volume_size"] = cfg.OpenCenter.Storage.WorkerVolumeSize
+	}
+	if cfg.OpenCenter.Storage.WorkerVolumeDestinationType != "" {
+		cfg.IAC.Main["worker_node_bfv_destination_type"] = cfg.OpenCenter.Storage.WorkerVolumeDestinationType
+	}
+	if cfg.OpenCenter.Storage.WorkerVolumeSourceType != "" {
+		cfg.IAC.Main["worker_node_bfv_source_type"] = cfg.OpenCenter.Storage.WorkerVolumeSourceType
+	}
+	if cfg.OpenCenter.Storage.WorkerVolumeType != "" {
+		cfg.IAC.Main["worker_node_bfv_volume_type"] = cfg.OpenCenter.Storage.WorkerVolumeType
+	}
+	if len(cfg.OpenCenter.Storage.AdditionalBlockDevices) > 0 {
+		cfg.IAC.Main["additional_block_devices_worker"] = cfg.OpenCenter.Storage.AdditionalBlockDevices
+	}
+
+	// Map Deployment configuration
+	cfg.IAC.Main["deploy_cluster"] = cfg.Deployment.AutoDeploy
+
 	// Map Kubernetes configuration
 	k8s := cfg.OpenCenter.Cluster.Kubernetes
 	if k8s.Version != "" {
 		cfg.IAC.Main["kubernetes_version"] = k8s.Version
 	}
+	if k8s.KubesprayVersion != "" {
+		cfg.IAC.Main["kubespray_version"] = k8s.KubesprayVersion
+	}
+	if k8s.APIPort > 0 {
+		cfg.IAC.Main["k8s_api_port"] = k8s.APIPort
+	}
+	cfg.IAC.Main["kube_vip_enabled"] = k8s.KubeVIPEnabled
 	if k8s.MasterCount > 0 {
 		cfg.IAC.Main["master_count"] = k8s.MasterCount
 	}
@@ -1010,6 +1119,9 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 	}
 	if k8s.FlavorWorker != "" {
 		cfg.IAC.Main["flavor_worker"] = k8s.FlavorWorker
+	}
+	if k8s.FlavorWorkerWindows != "" {
+		cfg.IAC.Main["flavor_worker_windows"] = k8s.FlavorWorkerWindows
 	}
 	if k8s.SubnetPods != "" {
 		cfg.IAC.Main["subnet_pods"] = k8s.SubnetPods
@@ -1033,6 +1145,13 @@ func mergeUserConfigIntoIAC(cfg *Config) error {
 		if k8s.NetworkPlugin.Calico.CalicoInterfaceAutodetect != "" {
 			cfg.IAC.Main["calico_interface_autodetect"] = k8s.NetworkPlugin.Calico.CalicoInterfaceAutodetect
 		}
+		if k8s.NetworkPlugin.Calico.AutodetectCIDR != "" {
+			cfg.IAC.Main["calico_interface_autodetect_cidr"] = k8s.NetworkPlugin.Calico.AutodetectCIDR
+		}
+		if k8s.NetworkPlugin.Calico.EncapsulationType != "" {
+			cfg.IAC.Main["calico_encapsulation_type"] = k8s.NetworkPlugin.Calico.EncapsulationType
+		}
+		cfg.IAC.Main["calico_nat_outgoing"] = k8s.NetworkPlugin.Calico.NATOutgoing
 	} else if k8s.NetworkPlugin.Cilium.Enabled {
 		cfg.IAC.Main["network_plugin"] = "cilium"
 		cfg.IAC.Main["cilium_operator_enabled"] = k8s.NetworkPlugin.Cilium.OperatorEnabled

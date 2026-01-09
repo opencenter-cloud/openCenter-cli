@@ -1,158 +1,55 @@
 locals:
-  cluster_name: "dev-cluster"
-  naming_prefix: "local.cluster_name"
-  openstack_auth_url: "https://keystone.api.sjc3.rackspacecloud.com/v3/"
-  openstack_insecure: false
-  openstack_region: "SJC3"
+  # OpenStack provider infrastructure defaults (rarely changed by users)
   availability_zone: "az1"
-  openstack_user_name: 'var.openstack_user_name == "" ? local.cluster_name : var.openstack_user_name'
-  openstack_user_password: "var.openstack_user_password"
-  openstack_admin_password: "var.openstack_admin_password"
   openstack_project_domain_name: "rackspace_cloud_domain"
   openstack_user_domain_name: "rackspace_cloud_domain"
   openstack_tenant_name: "981977_Flex"
   floatingip_pool: "PUBLICNET"
   router_external_network_id: "723f8fa2-dbf7-4cec-8d5f-017e62c12f79"
-  vlan_id: ""
-  mtu: ""
+  
+  # Network infrastructure defaults
   network_provider: "physnet1"
   subnet_nodes: "10.2.184.0/22"
-  subnet_nodes_oct: 'join(".", slice(split(".", split("/", local.subnet_nodes)[0]), 0, 3))'
-  allocation_pool_start: "${local.subnet_nodes_oct}.50"
-  allocation_pool_end: ""
-  vrrp_ip: "${local.subnet_nodes_oct}.10"
-  subnet_pods: "10.42.0.0/16"
-  subnet_services: "10.43.0.0/16"
+  
+  # Service defaults
   use_octavia: false
-  loadbalancer_provider: "amphora"
-  vrrp_enabled: true
   use_designate: false
-  dns_zone_name: "${local.cluster_name}.demo.mk8s.net"
   dns_nameservers: ["8.8.8.8", "8.8.4.4"]
+  ntp_servers: ["time.dfw3.rackspace.com", "time2.dfw3.rackspace.com"]
+  
+  # Image defaults (provider-specific)
   image_id: "56277265-8f0c-40dc-87e2-944b7d320dae"
   image_id_windows: "899af84f-d98f-4255-bf98-ceba5e3a8257"
-  k8s_api_port: 443
-  worker_count: 2
-  worker_count_windows: 0
-  master_count: 3
-  ssh_user: "ubuntu"
-  ssh_authorized_keys: []
-  node_worker: "-wn"
-  node_master: "-cp"
-  node_worker_windows: "-win"
-  ub_version: "24"
-  flavor_bastion: "gp.0.2.2"
-  flavor_master: "gp.0.4.4"
-  flavor_worker: "gp.0.4.8"
-  worker_node_bfv_volume_size: 40
-  worker_node_bfv_destination_type: "volume"
-  worker_node_bfv_source_type: "image"
-  worker_node_bfv_volume_type: "HA-Standard"
-  ca_certificates: ""
-  openstack_ca: ""
-  kubespray_version: "v2.28.1"
-  kubernetes_version: "1.31.4"
-  network_plugin: "calico"
-  deploy_cluster: true
-  kube_vip_enabled: true
-  k8s_hardening_enabled: true
-  kube_pod_security_exemptions_namespaces: ["trivy-temp"]
-  kubelet_rotate_server_certificates: true
-  os_hardening_enabled: true
-  cni_iface: "enp3s0"
-  calico_interface_autodetect: "interface"
-  calico_interface_autodetect_cidr: ""
-  calico_encapsulation_type: "VXLAN"
-  calico_nat_outgoing: true
+
 modules:
   openstack-nova:
     source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/infra/openstack-nova?ref=main"
     availability_zone: "local.availability_zone"
-    ca_certificates: "local.ca_certificates"
     use_octavia: "local.use_octavia"
     use_designate: "local.use_designate"
     dns_nameservers: "local.dns_nameservers"
-    dns_zone_name: "local.dns_zone_name"
-    flavor_bastion: "local.flavor_bastion"
-    openstack_auth_url: "local.openstack_auth_url"
-    openstack_ca: "local.openstack_ca"
-    openstack_insecure: "local.openstack_insecure"
-    openstack_region: "local.openstack_region"
-    openstack_tenant_name: "local.openstack_tenant_name"
-    openstack_user_name: "local.openstack_user_name"
-    openstack_password: "local.openstack_user_password"
+    floatingip_pool: "local.floatingip_pool"
     openstack_project_domain_name: "local.openstack_project_domain_name"
     openstack_user_domain_name: "local.openstack_user_domain_name"
-    naming_prefix: "local.naming_prefix"
-    ssh_user: "local.ssh_user"
-    floatingip_pool: "local.floatingip_pool"
+    openstack_tenant_name: "local.openstack_tenant_name"
+    router_external_network_id: "local.router_external_network_id"
+    network_provider: "local.network_provider"
+    subnet_nodes: "local.subnet_nodes"
     image_id: "local.image_id"
     image_id_windows: "local.image_id_windows"
-    router_external_network_id: "local.router_external_network_id"
-    network_id: ""
-    vlan_id: "local.vlan_id"
-    vrrp_enabled: "local.vrrp_enabled"
-    vrrp_ip: "local.vrrp_ip"
-    ssh_authorized_keys: "local.ssh_authorized_keys"
-    subnet_nodes: "local.subnet_nodes"
-    subnet_services: "local.subnet_services"
-    subnet_pods: "local.subnet_pods"
-    allocation_pool_start: "local.allocation_pool_start"
-    allocation_pool_end: "local.allocation_pool_end"
-    k8s_api_port: "local.k8s_api_port"
-    size_master:
-      count: "local.master_count"
-      flavor: "local.flavor_master"
-    size_worker:
-      count: "local.worker_count"
-      flavor: "local.flavor_worker"
-    node_master: "local.node_master"
-    node_worker: "local.node_worker"
-    node_worker_windows: "local.node_worker_windows"
-    ub_version: "local.ub_version"
-    worker_node_bfv_volume_size: "local.worker_node_bfv_volume_size"
-    worker_node_bfv_destination_type: "local.worker_node_bfv_destination_type"
-    worker_node_bfv_source_type: "local.worker_node_bfv_source_type"
-    worker_node_bfv_volume_type: "local.worker_node_bfv_volume_type"
   kubespray-cluster:
     source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/kubespray?ref=main"
     address_bastion: "module.openstack-nova.bastion_floating_ip"
     cluster_name: "local.cluster_name"
-    cni_iface: "local.cni_iface"
-    deploy_cluster: "local.deploy_cluster"
-    dns_zone_name: "local.dns_zone_name"
     master_nodes: "module.openstack-nova.master_nodes"
-    network_plugin: "local.network_plugin"
-    k8s_hardening_enabled: "local.k8s_hardening_enabled"
-    os_hardening_enabled: "local.os_hardening_enabled"
-    ssh_user: "local.ssh_user"
-    subnet_nodes: "local.subnet_nodes"
-    subnet_pods: "local.subnet_pods"
-    subnet_services: "local.subnet_services"
-    kubernetes_version: "local.kubernetes_version"
-    kubespray_version: "local.kubespray_version"
-    kube_vip_enabled: "local.kube_vip_enabled"
-    kube_pod_security_exemptions_namespaces: "local.kube_pod_security_exemptions_namespaces"
-    kubelet_rotate_server_certificates: "local.kubelet_rotate_server_certificates"
     worker_nodes: "module.openstack-nova.worker_nodes"
     k8s_api_ip: "module.openstack-nova.k8s_api_ip"
-    k8s_api_port: "local.k8s_api_port"
-    vrrp_ip: "local.vrrp_ip"
-    vrrp_enabled: "local.vrrp_enabled"
+    k8s_internal_ip: "module.openstack-nova.k8s_internal_ip"
     windows_nodes: "module.openstack-nova.windows_nodes"
     use_octavia: "local.use_octavia"
   calico:
     source: "github.com/rackerlabs/openCenter-gitops-base.git//install/iac/calico?ref=main"
-    calico_interface_autodetect: "local.calico_interface_autodetect"
-    calico_encapsulation_type: "local.calico_encapsulation_type"
-    calico_nat_outgoing: "local.calico_nat_outgoing"
-    calico_interface_autodetect_cidr: 'local.calico_interface_autodetect_cidr == "" ? local.subnet_nodes : local.calico_interface_autodetect_cidr'
-    cni_iface: "local.cni_iface"
     cluster_name: "local.cluster_name"
-    deploy_cluster: "local.deploy_cluster"
     k8s_internal_ip: "module.openstack-nova.k8s_internal_ip"
-    k8s_api_port: "local.k8s_api_port"
     subnet_nodes: "local.subnet_nodes"
-    subnet_pods: "local.subnet_pods"
-    subnet_services: "local.subnet_services"
     windows_dataplane: 'length(module.openstack-nova.windows_nodes) > 0 ? "HSN" : "Disabled"'

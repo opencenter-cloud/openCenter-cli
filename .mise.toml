@@ -287,6 +287,66 @@ echo "Files created:"
 ls -la "${OUTPUT_DIR}/"
 '''
 
+# Export AWS credentials for current cluster
+export-aws-creds = "./bin/openCenter cluster credentials export --provider aws --format env"
+
+# Export OpenStack credentials for current cluster  
+export-os-creds = "./bin/openCenter cluster credentials export --provider openstack --format env"
+
+# Export all credentials for current cluster
+export-all-creds = "./bin/openCenter cluster credentials export --provider all --format env"
+
+# Export AWS credentials in Terraform format
+export-aws-terraform = "./bin/openCenter cluster credentials export --provider aws --format terraform"
+
+# Export OpenStack credentials as clouds.yaml
+export-os-clouds = "./bin/openCenter cluster credentials export --provider openstack --format clouds-yaml"
+
+# Clear AWS credentials from environment
+unset-aws-creds = "./bin/openCenter cluster credentials unset --provider aws"
+
+# Clear OpenStack credentials from environment
+unset-os-creds = "./bin/openCenter cluster credentials unset --provider openstack"
+
+# Clear all cloud credentials from environment
+unset-all-creds = "./bin/openCenter cluster credentials unset --provider all"
+
+# Setup development environment with credentials
+dev-env-setup = '''
+#!/usr/bin/env bash
+set -e
+
+echo "Setting up development environment..."
+
+# Check if there's an active cluster
+ACTIVE_CLUSTER=$(./bin/openCenter cluster current 2>/dev/null || echo "")
+
+if [ -z "$ACTIVE_CLUSTER" ]; then
+  echo "No active cluster found. Use 'openCenter cluster select <name>' to set one."
+  exit 1
+fi
+
+echo "Using active cluster: $ACTIVE_CLUSTER"
+
+# Export credentials
+echo "Exporting credentials..."
+eval $(./bin/openCenter cluster credentials export --provider all --format env)
+
+echo "Development environment ready!"
+echo "Available environment variables:"
+env | grep -E "^(AWS_|OS_)" | sort
+'''
+
+# Clean development environment credentials
+dev-env-clean = '''
+#!/usr/bin/env bash
+set -e
+
+echo "Cleaning development environment credentials..."
+eval $(./bin/openCenter cluster credentials unset --provider all)
+echo "Credentials cleared from environment."
+'''
+
 # Comprehensive schema change verification task
 # Use this task whenever making changes to:
 # - internal/config/schema.go (schema definition)

@@ -16,7 +16,7 @@ HELM_VERSION := 3.13.0
 export PATH := $(BIN):$(PATH)
 export TF_CLI_CONFIG_FILE=config.tfrc
 
-export ANSIBLE_INVENTORY = {{- if .OpenCenter.GitOps.GitDir }}{{ .OpenCenter.GitOps.GitDir }}/inventory/inventory.yaml{{- else }}/tmp/inventory/inventory.yaml{{- end }}
+export ANSIBLE_INVENTORY = {{- if .OpenCenter.GitOps.GitDir }}{{ .OpenCenter.GitOps.GitDir }}/infrastructure/clusters/{{ .OpenCenter.Cluster.ClusterName }}/inventory/inventory.yaml{{- else }}/tmp/inventory/inventory.yaml{{- end }}
 
 # SOPS Configuration
 SOPS_SCRIPT := ./sops_manager.sh

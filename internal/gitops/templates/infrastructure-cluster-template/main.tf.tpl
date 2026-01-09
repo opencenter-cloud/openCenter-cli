@@ -2,14 +2,14 @@ locals {
   # this will be the user's name and the DNS zone prefix
   cluster_name                            = "{{ .OpenCenter.Cluster.ClusterName }}"
   # Prefix to add to Openstack resource names
-  naming_prefix                           = local.cluster_name
+  naming_prefix                           = "${local.cluster_name}-"
   openstack_auth_url                      = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL | default "https://keystone.api.sjc3.rackspacecloud.com/v3/" }}"
   openstack_insecure                      = {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Insecure | default false }}
   openstack_region                        = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.Region | default "SJC3" }}"
   availability_zone                       = "{{ .IAC.Main.availability_zone | default "az1" }}"
-  openstack_user_name                     = var.openstack_user_name == "" ? local.cluster_name : var.openstack_user_name
-  openstack_user_password                 = var.openstack_user_password
-  openstack_admin_password                = var.openstack_admin_password
+  openstack_user_name                     = var.openstack_user_name == "" ? "" : var.openstack_user_name
+  openstack_user_password                 = var.openstack_user_password == "" ? "" : var.openstack_user_password 
+  openstack_admin_password                = var.openstack_admin_password == "" ? "" : var.openstack_admin_password
   application_credential_id               = var.os_application_credential_id
   application_credential_secret           = var.os_application_credential_secret
   openstack_project_domain_name           = "{{ .IAC.Main.openstack_project_domain_name | default "rackspace_cloud_domain" }}"
@@ -177,7 +177,7 @@ locals {
 }
 
 module "openstack-nova" {
-  source = "{{ (index .IAC.Modules "openstack-nova").source | default "github.com/rackerlabs/openCenter.git//install/iac/infra/openstack-nova?ref=main" }}"
+  source = "{{ (index .IAC.Modules "openstack-nova").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/cloud/openstack/openstack-nova?ref=main" }}"
   availability_zone             = local.availability_zone
   {{- if .IAC.Main.additional_block_devices_worker }}
   additional_block_devices_worker      = local.additional_block_devices_worker
@@ -251,7 +251,7 @@ module "openstack-nova" {
 }
 
 module "kubespray-cluster" {
-  source = "{{ (index .IAC.Modules "kubespray-cluster").source | default "github.com/rackerlabs/openCenter.git//install/iac/kubespray?ref=main" }}"
+  source = "{{ (index .IAC.Modules "kubespray-cluster").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/provider/kubespray?ref=main" }}"
   address_bastion                         = module.openstack-nova.bastion_floating_ip
   cluster_name                            = local.cluster_name
   cni_iface                               = local.cni_iface
@@ -294,7 +294,7 @@ module "kubespray-cluster" {
 
 {{- if .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled }}
 module "calico" {
-  source = "{{ (index .IAC.Modules "calico").source | default "github.com/rackerlabs/openCenter.git//install/iac/calico?ref=main" }}"
+  source = "{{ (index .IAC.Modules "calico").source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/cni/calico?ref=main" }}"
 
   calico_interface_autodetect      = local.calico_interface_autodetect
   calico_encapsulation_type        = local.calico_encapsulation_type

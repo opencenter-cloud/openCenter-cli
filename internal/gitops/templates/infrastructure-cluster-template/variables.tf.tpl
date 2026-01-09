@@ -8,7 +8,6 @@ variable "os_application_credential_secret" {
   default = ""
 }
 
-
 variable "openstack_admin_name" {
   type    = string
   default = "admin"

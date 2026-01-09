@@ -1,0 +1,12 @@
+{{- /*
+  OpenTofu provider configuration for local backend.
+  This file configures the Terraform/OpenTofu backend for local state storage.
+*/ -}}
+
+terraform {
+  required_version = ">= 1.6.0"
+
+  backend "local" {
+    path = "{{ .OpenTofu.Backend.Local.Path }}"
+  }
+}

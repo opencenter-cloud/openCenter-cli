@@ -1,0 +1,14 @@
+{{- /*
+  OpenTofu provider configuration for S3/AWS backend.
+  This file configures the Terraform/OpenTofu backend for S3 state storage.
+*/ -}}
+
+terraform {
+  backend "s3" {
+    bucket       = "{{ .OpenTofu.Backend.S3.Bucket }}"
+    key          = "{{ .OpenTofu.Backend.S3.Key }}"
+    region       = "{{ .OpenTofu.Backend.S3.Region }}"
+    use_lockfile = true
+    encrypt      = true
+  }
+}

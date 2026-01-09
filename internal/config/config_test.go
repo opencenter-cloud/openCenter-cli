@@ -313,7 +313,7 @@ func TestValidateExtended(t *testing.T) {
 				populateInfraFields(&cfg)
 				return cfg
 			},
-			expectErrs: []string{"AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.aws.access_key/secret_access_key"},
+			expectErrs: []string{"AWS credentials required for S3/AWS backend: either set opencenter.cluster.aws_access_key/aws_secret_access_key or secrets.global.aws.infrastructure.access_key/secret_access_key or secrets.aws.access_key/secret_access_key (deprecated)"},
 		},
 		{
 			name: "s3 backend missing bucket info",
@@ -2041,4 +2041,80 @@ func TestTemplateRenderingDefaultValues(t *testing.T) {
 			}
 		})
 	}
+}
+// TestAWSCredentialFallback tests the new AWS credential structure with fallback logic
+func TestAWSCredentialFallback(t *testing.T) {
+	t.Run("GetAWSCredentials with new infrastructure credentials", func(t *testing.T) {
+		cfg := NewDefault("test")
+		cfg.Secrets.Global.AWS.Infrastructure.AccessKey = "infra-access-key"
+		cfg.Secrets.Global.AWS.Infrastructure.SecretAccessKey = "infra-secret-key"
+		cfg.Secrets.AWS.AccessKey = "deprecated-access-key"
+		cfg.Secrets.AWS.SecretAccessKey = "deprecated-secret-key"
+
+		accessKey, secretKey := cfg.GetAWSCredentials("", "")
+		if accessKey != "infra-access-key" {
+			t.Errorf("expected infra-access-key, got %s", accessKey)
+		}
+		if secretKey != "infra-secret-key" {
+			t.Errorf("expected infra-secret-key, got %s", secretKey)
+		}
+	})
+
+	t.Run("GetAWSCredentials fallback to deprecated credentials", func(t *testing.T) {
+		cfg := NewDefault("test")
+		cfg.Secrets.AWS.AccessKey = "deprecated-access-key"
+		cfg.Secrets.AWS.SecretAccessKey = "deprecated-secret-key"
+
+		accessKey, secretKey := cfg.GetAWSCredentials("", "")
+		if accessKey != "deprecated-access-key" {
+			t.Errorf("expected deprecated-access-key, got %s", accessKey)
+		}
+		if secretKey != "deprecated-secret-key" {
+			t.Errorf("expected deprecated-secret-key, got %s", secretKey)
+		}
+	})
+
+	t.Run("GetAWSApplicationCredentials with application credentials", func(t *testing.T) {
+		cfg := NewDefault("test")
+		cfg.Secrets.Global.AWS.Application.AccessKey = "app-access-key"
+		cfg.Secrets.Global.AWS.Application.SecretAccessKey = "app-secret-key"
+		cfg.Secrets.Global.AWS.Infrastructure.AccessKey = "infra-access-key"
+		cfg.Secrets.Global.AWS.Infrastructure.SecretAccessKey = "infra-secret-key"
+
+		accessKey, secretKey := cfg.GetAWSApplicationCredentials()
+		if accessKey != "app-access-key" {
+			t.Errorf("expected app-access-key, got %s", accessKey)
+		}
+		if secretKey != "app-secret-key" {
+			t.Errorf("expected app-secret-key, got %s", secretKey)
+		}
+	})
+
+	t.Run("GetAWSApplicationCredentials fallback to infrastructure", func(t *testing.T) {
+		cfg := NewDefault("test")
+		cfg.Secrets.Global.AWS.Infrastructure.AccessKey = "infra-access-key"
+		cfg.Secrets.Global.AWS.Infrastructure.SecretAccessKey = "infra-secret-key"
+
+		accessKey, secretKey := cfg.GetAWSApplicationCredentials()
+		if accessKey != "infra-access-key" {
+			t.Errorf("expected infra-access-key, got %s", accessKey)
+		}
+		if secretKey != "infra-secret-key" {
+			t.Errorf("expected infra-secret-key, got %s", secretKey)
+		}
+	})
+
+	t.Run("Service-specific credentials override global", func(t *testing.T) {
+		cfg := NewDefault("test")
+		cfg.Secrets.Global.AWS.Infrastructure.AccessKey = "infra-access-key"
+		cfg.Secrets.Global.AWS.Infrastructure.SecretAccessKey = "infra-secret-key"
+
+		accessKey, secretKey := cfg.GetAWSCredentials("service-access-key", "service-secret-key")
+		if accessKey != "service-access-key" {
+			t.Errorf("expected service-access-key, got %s", accessKey)
+		}
+		if secretKey != "service-secret-key" {
+			t.Errorf("expected service-secret-key, got %s", secretKey)
+		}
+	})
 }

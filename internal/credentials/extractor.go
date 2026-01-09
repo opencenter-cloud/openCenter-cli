@@ -47,7 +47,7 @@ func (e *Extractor) ExtractAWS() (*AWSCredentials, error) {
 	creds.PrivateSubnets = awsCloud.PrivateSubnets
 	creds.PublicSubnets = awsCloud.PublicSubnets
 
-	// Extract from legacy cluster-level AWS credentials first (lower priority)
+	// Extract from legacy cluster-level AWS credentials first (lowest priority)
 	if e.config.OpenCenter.Cluster.AWSAccessKey != "" {
 		creds.AccessKeyID = e.config.OpenCenter.Cluster.AWSAccessKey
 	}
@@ -55,7 +55,7 @@ func (e *Extractor) ExtractAWS() (*AWSCredentials, error) {
 		creds.SecretAccessKey = e.config.OpenCenter.Cluster.AWSSecretAccessKey
 	}
 
-	// Extract from secrets configuration (higher priority - overwrites cluster-level)
+	// Extract from deprecated global AWS secrets (medium priority - overwrites cluster-level)
 	awsSecrets := e.config.Secrets.AWS
 	if awsSecrets.AccessKey != "" {
 		creds.AccessKeyID = awsSecrets.AccessKey
@@ -63,9 +63,20 @@ func (e *Extractor) ExtractAWS() (*AWSCredentials, error) {
 	if awsSecrets.SecretAccessKey != "" {
 		creds.SecretAccessKey = awsSecrets.SecretAccessKey
 	}
-	// Prefer region from secrets if available, otherwise use infrastructure region
 	if awsSecrets.Region != "" {
 		creds.Region = awsSecrets.Region
+	}
+
+	// Extract from new global infrastructure AWS secrets (highest priority - overwrites all others)
+	infraSecrets := e.config.Secrets.Global.AWS.Infrastructure
+	if infraSecrets.AccessKey != "" {
+		creds.AccessKeyID = infraSecrets.AccessKey
+	}
+	if infraSecrets.SecretAccessKey != "" {
+		creds.SecretAccessKey = infraSecrets.SecretAccessKey
+	}
+	if infraSecrets.Region != "" {
+		creds.Region = infraSecrets.Region
 	}
 
 	return creds, nil

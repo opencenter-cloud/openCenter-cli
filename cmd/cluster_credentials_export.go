@@ -38,7 +38,8 @@ sourced from both the infrastructure configuration and secrets sections.
 Credential Sources:
   AWS:
     • opencenter.infrastructure.cloud.aws (profile, region, vpc, subnets)
-    • secrets.aws (access_key, secret_access_key, region)
+    • secrets.global.aws.infrastructure (access_key, secret_access_key, region)
+    • secrets.aws (access_key, secret_access_key, region) - deprecated, use secrets.global.aws.infrastructure
 
   OpenStack:
     • opencenter.infrastructure.cloud.openstack (auth_url, region, etc.)

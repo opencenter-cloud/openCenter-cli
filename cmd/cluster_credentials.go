@@ -38,7 +38,7 @@ exported in various formats for use with other tools or unset from the
 current environment.
 
 Configuration sources:
-  • AWS: opencenter.infrastructure.cloud.aws and secrets.aws
+  • AWS: opencenter.infrastructure.cloud.aws and secrets.global.aws.infrastructure (or secrets.aws for backward compatibility)
   • OpenStack: opencenter.infrastructure.cloud.openstack
 
 Common workflow:

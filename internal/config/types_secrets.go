@@ -5,8 +5,8 @@ type Secrets struct {
 	SopsAgeKeyFile string `yaml:"sops_age_key_file" json:"sops_age_key_file"`
 	SSHKey         SSHKey `yaml:"ssh_key" json:"ssh_key"`
 
-	// Global AWS credentials (fallback for services)
-	AWS AWSSecrets `yaml:"aws" json:"aws"`
+	// Global secrets organized by scope
+	Global GlobalSecrets `yaml:"global" json:"global"`
 
 	// Service-specific secrets
 	CertManager CertManagerSecrets `yaml:"cert_manager" json:"cert_manager"`
@@ -18,6 +18,9 @@ type Secrets struct {
 	Tempo       TempoSecrets       `yaml:"tempo" json:"tempo"`
 	AlertProxy  AlertProxySecrets  `yaml:"alert_proxy" json:"alert_proxy"`
 	VSphereCsi  VSphereCsiSecrets  `yaml:"vsphere_csi" json:"vsphere_csi"`
+
+	// Deprecated: Use Global.AWS.Infrastructure instead
+	AWS AWSSecrets `yaml:"aws,omitempty" json:"aws,omitempty" jsonschema:"deprecated=true,description=Deprecated: Use global.aws.infrastructure instead"`
 }
 
 // SSHKey holds SSH key configuration for cluster access
@@ -43,11 +46,22 @@ type BarbicanConfig struct {
 	CACert            string `yaml:"ca_cert,omitempty" json:"ca_cert,omitempty"`
 }
 
-// AWSSecrets holds global AWS credentials that can be used as fallback for services
+// GlobalSecrets holds global secrets organized by scope and provider
+type GlobalSecrets struct {
+	AWS AWSGlobalSecrets `yaml:"aws" json:"aws"`
+}
+
+// AWSGlobalSecrets holds AWS credentials organized by purpose
+type AWSGlobalSecrets struct {
+	Infrastructure AWSSecrets `yaml:"infrastructure" json:"infrastructure"`
+	Application    AWSSecrets `yaml:"application" json:"application"`
+}
+
+// AWSSecrets holds AWS credentials that can be used as fallback for services
 type AWSSecrets struct {
-	AccessKey       string `yaml:"access_key" json:"access_key" jsonschema:"secret=true,description=Global AWS access key (fallback for services)"`
-	SecretAccessKey string `yaml:"secret_access_key" json:"secret_access_key" jsonschema:"secret=true,description=Global AWS secret access key (fallback for services)"`
-	Region          string `yaml:"region,omitempty" json:"region,omitempty" jsonschema:"description=Default AWS region"`
+	AccessKey       string `yaml:"access_key" json:"access_key" jsonschema:"secret=true,description=AWS access key"`
+	SecretAccessKey string `yaml:"secret_access_key" json:"secret_access_key" jsonschema:"secret=true,description=AWS secret access key"`
+	Region          string `yaml:"region,omitempty" json:"region,omitempty" jsonschema:"description=AWS region"`
 }
 
 // CertManagerSecrets holds cert-manager secret values

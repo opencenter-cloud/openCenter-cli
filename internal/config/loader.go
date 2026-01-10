@@ -75,11 +75,6 @@ func (cl *ConfigLoader) LoadFromBytes(ctx context.Context, data []byte, clusterN
 		return nil, fmt.Errorf("failed to parse YAML configuration: %w", err)
 	}
 
-	// Populate IAC field from defaults and user configuration
-	if err := populateIAC(&config); err != nil {
-		return nil, fmt.Errorf("failed to populate IAC configuration: %w", err)
-	}
-
 	return &config, nil
 }
 

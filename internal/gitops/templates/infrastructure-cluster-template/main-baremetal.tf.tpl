@@ -37,9 +37,9 @@ locals {
   ssh_user                                = "{{ .IAC.Main.ssh_user | default "ubuntu" }}"
   # these are the ssh public keys that will be able to connect to the cluster's bastion node
   ssh_authorized_keys                     = {{ if .OpenCenter.Cluster.SSHAuthorizedKeys }}[{{ range $i, $key := .OpenCenter.Cluster.SSHAuthorizedKeys }}{{if $i}}, {{end}}"{{ $key }}"{{ end }}]{{ else }}["ssh-rsa ..."]{{ end }}
-  node_worker                             = "{{ .IAC.Main.node_worker | default "wn" }}"
-  node_master                             = "{{ .IAC.Main.node_master | default "cp" }}"
-  node_worker_windows                     = "{{ .IAC.Main.node_worker_windows | default "win" }}"
+  node_worker                             = "{{ .OpenCenter.Infrastructure.NodeNaming.Worker | default "wn" }}"
+  node_master                             = "{{ .OpenCenter.Infrastructure.NodeNaming.Master | default "cp" }}"
+  node_worker_windows                     = "{{ .OpenCenter.Infrastructure.NodeNaming.WorkerWindows | default "win" }}"
   ub_version                              = "{{ .IAC.Main.ub_version | default "24" }}"
 
   worker_node_bfv_volume_size             = {{ .IAC.Main.worker_node_bfv_volume_size | default 20 }}

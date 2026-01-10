@@ -41,7 +41,6 @@ type Config struct {
 	Security   Security             `yaml:"security,omitempty" json:"security,omitempty"`
 	Deployment Deployment           `yaml:"deployment,omitempty" json:"deployment,omitempty"`
 	Overrides  map[string]any       `yaml:"overrides,omitempty" json:"overrides,omitempty"`
-	IAC        IAC                  `yaml:"-" json:"-"` // Hidden from YAML output, for template compatibility
 }
 
 // Cluster Stages
@@ -68,15 +67,6 @@ const (
 // Kubernetes groups settings for the Kubernetes cluster.
 // It nests further objects for counts, images, flavors, and networking.
 // Default values are applied at load time.
-// IAC groups settings for infrastructure-as-code driven cluster provisioning.
-// It retains the detailed node/layout fields and adds engine/stack selectors.
-type IAC struct {
-	// Main contains the values for the Terraform locals (rendered into main.tf)
-	Main map[string]any `yaml:"main,omitempty" json:"main,omitempty"`
-	// Modules contains per-module attribute maps (rendered into main.tf)
-	Modules map[string]any `yaml:"modules,omitempty" json:"modules,omitempty"`
-}
-
 // defaultConfig returns a Config pre-populated with the default
 // values based on the simplified schema. This function can be used to
 // initialise new cluster configurations.
@@ -490,32 +480,6 @@ func defaultConfig(name string) Config {
 		},
 	}
 
-	// Populate IAC field from defaults
-	if err := populateIAC(&cfg); err != nil {
-		// If IAC population fails, return config with minimal IAC structure
-		cfg.IAC = IAC{
-			Main: map[string]any{
-				"cluster_name":    name,
-				"master_count":    3,
-				"worker_count":    2,
-				"subnet_nodes":    "10.2.184.0/22",
-				"subnet_pods":     "10.42.0.0/16",
-				"subnet_services": "10.43.0.0/16",
-			},
-			Modules: map[string]any{
-				"calico": map[string]any{
-					"source": "",
-				},
-				"kubespray-cluster": map[string]any{
-					"source": "",
-				},
-				"openstack-nova": map[string]any{
-					"source": "",
-				},
-			},
-		}
-	}
-
 	return cfg
 }
 
@@ -896,11 +860,6 @@ func Load(name string) (Config, error) {
 	// Apply organization-based defaults if not explicitly set
 	applyOrganizationDefaults(&cfg)
 
-	// Populate IAC field from defaults and user configuration
-	if err := populateIAC(&cfg); err != nil {
-		return Config{}, fmt.Errorf("failed to populate IAC configuration: %w", err)
-	}
-
 	return cfg, nil
 }
 
@@ -925,17 +884,7 @@ func applyOrganizationDefaults(cfg *Config) {
 	}
 }
 
-// populateIAC initializes an empty IAC field for backward compatibility with templates.
-// The IAC system is now deprecated in favor of OpenCenter configuration.
-func populateIAC(cfg *Config) error {
-	// Initialize empty IAC field for backward compatibility with templates
-	cfg.IAC = IAC{
-		Main:    make(map[string]any),
-		Modules: make(map[string]any),
-	}
 
-	return nil
-}
 
 // GenerateCompleteConfig generates a complete configuration by merging schema defaults
 // with the actual cluster configuration. The opencenter values take precedence over

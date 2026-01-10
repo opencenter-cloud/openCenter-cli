@@ -120,7 +120,7 @@ locals {
   # ====================================
   #Kubespray Settings
   kubespray_version                       = "{{ .OpenCenter.Cluster.Kubernetes.KubesprayVersion | default "v2.29.1" }}"
-  kubernetes_version                      = "{{ .OpenCenter.Cluster.Kubernetes.Version | default "1.32.8" }}"
+  kubernetes_version                      = "{{ .OpenCenter.Cluster.Kubernetes.Version | default "1.33.7" }}"
   network_plugin                          = "{{ if .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled }}calico{{ else if .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled }}cilium{{ else if .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled }}kube-ovn{{ else }}calico{{ end }}"
   deploy_cluster                          = {{ .Deployment.AutoDeploy | default true }}
   #kub-vip settings

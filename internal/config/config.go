@@ -186,8 +186,8 @@ func defaultConfig(name string) Config {
 				ClusterFQDN:        fmt.Sprintf("%s.sjc3.k8s.opencenter.cloud", name),
 				AdminEmail:         "",
 				Kubernetes: KubernetesConfig{
-					Version:              "1.31.4",
-					KubesprayVersion:     "v2.28.1",
+					Version:              "1.33.7",
+					KubesprayVersion:     "v2.29.1",
 					APIPort:              443,
 					KubeVIPEnabled:       true,
 					FlavorBastion:        "gp.0.2.2",

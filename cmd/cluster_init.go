@@ -716,7 +716,7 @@ Troubleshooting:
 			}
 
 			// Check if the configuration contains sensitive data and encrypt it with SOPS if needed
-			if err := encryptConfigIfNeeded(configPath, cfg, cmd); err != nil {
+			if err := encryptConfigIfNeeded(configPath, cfg, clusterPaths.SOPSConfigPath, cmd); err != nil {
 				return fmt.Errorf("failed to encrypt configuration file: %w", err)
 			}
 
@@ -1121,9 +1121,10 @@ func createOrganizationSOPSConfig(sopsConfigPath, publicKey string, clusterName 
 	rootSOPSConfigPath := sopsConfigPath
 
 	// Define the path patterns for this cluster
-	clusterRule := fmt.Sprintf(`  - path_regex: (applications/overlays/%s/.*|infrastructure/clusters/%s/.*)\.ya?ml$
+	clusterRule := fmt.Sprintf(`  - path_regex: >-
+      (applications/overlays/%s/.*|infrastructure/clusters/%s/.*|\.%s-config)\.ya?ml$
     age: >-
-      %s`, clusterName, clusterName, publicKey)
+      %s`, clusterName, clusterName, clusterName, publicKey)
 
 	// Check if .sops.yaml already exists at organization root
 	var existingContent string
@@ -1436,7 +1437,7 @@ func convertServerPoolsToMap(pools []config.AdditionalServerPool) []map[string]a
 
 // encryptConfigIfNeeded checks if the configuration file contains sensitive data
 // and encrypts it with SOPS if needed and if SOPS key is available
-func encryptConfigIfNeeded(configPath string, cfg config.Config, cmd *cobra.Command) error {
+func encryptConfigIfNeeded(configPath string, cfg config.Config, sopsConfigPath string, cmd *cobra.Command) error {
 	// Check if SOPS key is available
 	if cfg.Secrets.SopsAgeKeyFile == "" {
 		// No SOPS key available, skip encryption
@@ -1454,8 +1455,10 @@ func encryptConfigIfNeeded(configPath string, cfg config.Config, cmd *cobra.Comm
 
 	// Create encryption config
 	encryptConfig := sops.EncryptionConfig{
-		AgeKeys: []string{cfg.Secrets.SopsAgeKeyFile},
-		DryRun:  false,
+		ConfigFile: sopsConfigPath,
+		InPlace:    true,
+		Verbose:    true,
+		DryRun:     false,
 	}
 
 	// Encrypt the file in place

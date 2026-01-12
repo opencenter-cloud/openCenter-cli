@@ -70,6 +70,8 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterListCmd())
 	cmd.AddCommand(newClusterSelectCmd())
 	cmd.AddCommand(newClusterCurrentCmd())
+	cmd.AddCommand(newClusterActiveFastCmd())
+	cmd.AddCommand(newClusterStatusCmd())
 	cmd.AddCommand(newClusterInfoCmd())
 	cmd.AddCommand(newClusterInitCmd())
 	cmd.AddCommand(newClusterEditCmd())

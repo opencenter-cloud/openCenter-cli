@@ -27,11 +27,12 @@ import (
 
 // GlobalFlags represents the global flags available across all commands.
 type GlobalFlags struct {
-	Config   string   // --config: alternative cluster configuration file path
-	DryRun   bool     // --dry-run: enable dry-run mode
-	LogLevel string   // --log-level: set log level explicitly
-	Set      []string // --set: override configuration values using dot notation
-	Verbose  bool     // --verbose: enable verbose logging
+	Config     string   // --config: alternative cluster configuration file path
+	DryRun     bool     // --dry-run: enable dry-run mode
+	LogLevel   string   // --log-level: set log level explicitly
+	Set        []string // --set: override configuration values using dot notation
+	Verbose    bool     // --verbose: enable verbose logging
+	ShowActive bool     // --show-active: display the current active cluster
 }
 
 // configManager holds the global configuration manager instance
@@ -70,6 +71,9 @@ Support: https://github.com/rackerlabs/openCenter-cli/issues`,
   openCenter cluster bootstrap my-cluster`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		return initializeGlobalConfig(cmd)
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
 	},
 }
 
@@ -124,6 +128,7 @@ func addGlobalFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("log-level", "warn", "set log level explicitly (debug, info, warn, error)")
 	cmd.PersistentFlags().StringArray("set", []string{}, "override configuration values using dot notation (e.g., --set spec.provider=openstack)")
 	cmd.PersistentFlags().Bool("verbose", false, "enable verbose logging by setting log level to debug")
+	cmd.PersistentFlags().Bool("show-active", false, "display the current active cluster")
 }
 
 // parseGlobalFlags extracts global flags from the command.
@@ -133,6 +138,7 @@ func parseGlobalFlags(cmd *cobra.Command) (*GlobalFlags, error) {
 	logLevel, _ := cmd.Flags().GetString("log-level")
 	set, _ := cmd.Flags().GetStringArray("set")
 	verbose, _ := cmd.Flags().GetBool("verbose")
+	showActive, _ := cmd.Flags().GetBool("show-active")
 
 	// If verbose is set, override log level to debug
 	if verbose {
@@ -140,11 +146,12 @@ func parseGlobalFlags(cmd *cobra.Command) (*GlobalFlags, error) {
 	}
 
 	return &GlobalFlags{
-		Config:   config,
-		DryRun:   dryRun,
-		LogLevel: logLevel,
-		Set:      set,
-		Verbose:  verbose,
+		Config:     config,
+		DryRun:     dryRun,
+		LogLevel:   logLevel,
+		Set:        set,
+		Verbose:    verbose,
+		ShowActive: showActive,
 	}, nil
 }
 
@@ -162,6 +169,11 @@ func initializeGlobalConfig(cmd *cobra.Command) error {
 	globalFlags, err := parseGlobalFlags(cmd)
 	if err != nil {
 		return fmt.Errorf("failed to parse global flags: %w", err)
+	}
+
+	// Handle --show-active flag early, before other initialization
+	if globalFlags.ShowActive {
+		return displayActiveCluster(cmd)
 	}
 
 	// Initialize configuration manager
@@ -285,6 +297,23 @@ func applySetFlagOverrides(cliConfig *config.CLIConfig, setFlags []string) error
 // GetConfigManager returns the global configuration manager instance.
 func GetConfigManager() *config.ConfigManager {
 	return configManager
+}
+
+// displayActiveCluster displays the current active cluster and exits.
+func displayActiveCluster(cmd *cobra.Command) error {
+	activeCluster, err := config.GetActive()
+	if err != nil {
+		return fmt.Errorf("failed to get active cluster: %w", err)
+	}
+
+	if activeCluster == "" {
+		fmt.Fprintf(cmd.OutOrStdout(), "No active cluster set\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "Use 'openCenter cluster select <name>' to set an active cluster\n")
+	} else {
+		fmt.Fprintf(cmd.OutOrStdout(), "Active cluster: %s\n", activeCluster)
+	}
+
+	return nil
 }
 
 // GetRootCmd returns the root cobra command.

@@ -383,6 +383,27 @@ schema-verify = [
   "echo '5. Test with existing cluster configurations'",
   "echo '=== Schema verification complete ==='",
 ]
+# Show the current active cluster status
+active = "./bin/openCenter cluster status"
+
+# Show just the active cluster name (quiet mode)
+active-name = "./bin/openCenter cluster status --quiet"
+
+# Show active cluster with detailed paths
+active-paths = "./bin/openCenter cluster status --paths"
+
+# Fast active cluster lookup (optimized for shell prompts)
+active-fast = "./bin/openCenter cluster active-fast"
+
+# Fast active cluster for prompt (with brackets)
+active-prompt = "./bin/openCenter cluster active-fast --prompt"
+
+# Fast active cluster short name
+active-short = "./bin/openCenter cluster active-fast --short"
+
+# Install shell integration
+install-shell-integration = "./hack/install-shell-integration.sh"
+
 # Install git hooks for development
 install-hooks = '''
 #!/usr/bin/env bash

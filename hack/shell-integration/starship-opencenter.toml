@@ -1,0 +1,32 @@
+# openCenter Starship Integration
+# Add this to your ~/.config/starship.toml file
+
+# openCenter cluster module
+[custom.opencenter]
+command = "cat ~/.config/openCenter/.active 2>/dev/null || echo ''"
+when = "test -f ~/.config/openCenter/.active"
+format = "[$symbol$output]($style) "
+symbol = "🚀 "
+style = "bold blue"
+description = "Show active openCenter cluster"
+
+# Alternative minimal version (just cluster name, no org)
+[custom.opencenter_short]
+command = "cat ~/.config/openCenter/.active 2>/dev/null | sed 's|.*/||' || echo ''"
+when = "test -f ~/.config/openCenter/.active"
+format = "[$output]($style) "
+style = "bold cyan"
+description = "Show active openCenter cluster (short name)"
+disabled = true  # Enable this and disable the above if you prefer short names
+
+# Example full format string with openCenter module
+# Uncomment and customize as needed:
+# format = """
+# $username\
+# $hostname\
+# $directory\
+# $git_branch\
+# $git_state\
+# $git_status\
+# $custom.opencenter\
+# $character"""

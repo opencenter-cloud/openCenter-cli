@@ -715,11 +715,6 @@ Troubleshooting:
 				return fmt.Errorf("failed to write cluster configuration file to '%s': %w", configPath, err)
 			}
 
-			// Check if the configuration contains sensitive data and encrypt it with SOPS if needed
-			if err := encryptConfigIfNeeded(configPath, cfg, clusterPaths.SOPSConfigPath, cmd); err != nil {
-				return fmt.Errorf("failed to encrypt configuration file: %w", err)
-			}
-
 			// Initialize git repository in the GitOps directory
 			if err := initializeGitRepository(clusterPaths.GitOpsDir, cmd); err != nil {
 				return fmt.Errorf("failed to initialize git repository: %w", err)
@@ -1435,88 +1430,3 @@ func convertServerPoolsToMap(pools []config.AdditionalServerPool) []map[string]a
 	return result
 }
 
-// encryptConfigIfNeeded checks if the configuration file contains sensitive data
-// and encrypts it with SOPS if needed and if SOPS key is available
-func encryptConfigIfNeeded(configPath string, cfg config.Config, sopsConfigPath string, cmd *cobra.Command) error {
-	// Check if SOPS key is available
-	if cfg.Secrets.SopsAgeKeyFile == "" {
-		// No SOPS key available, skip encryption
-		return nil
-	}
-
-	// Check if the file contains sensitive data using the same logic as the pre-commit hook
-	if !containsSensitiveData(configPath) {
-		// No sensitive data found, no need to encrypt
-		return nil
-	}
-
-	// Initialize SOPS manager
-	sopsManager := sops.NewSOPSManager()
-
-	// Create encryption config
-	encryptConfig := sops.EncryptionConfig{
-		ConfigFile: sopsConfigPath,
-		InPlace:    true,
-		Verbose:    true,
-		DryRun:     false,
-	}
-
-	// Encrypt the file in place
-	ctx := context.Background()
-	if err := sopsManager.GetEncryptor().EncryptFile(ctx, configPath, encryptConfig); err != nil {
-		return fmt.Errorf("failed to encrypt configuration file with SOPS: %w", err)
-	}
-
-	fmt.Fprintf(cmd.OutOrStdout(), "Encrypted configuration file with SOPS: %s\n", configPath)
-	return nil
-}
-
-// containsSensitiveData checks if a file contains sensitive data that should be encrypted
-// This uses the same logic as the pre-commit hook
-func containsSensitiveData(filePath string) bool {
-	// List of sensitive field patterns that should be encrypted
-	sensitivePatterns := []string{
-		"application_credential_secret:",
-		"application_credential_id:",
-		"aws_access_key:",
-		"aws_secret_access_key:",
-		"password:",
-		"secret:",
-		"token:",
-		"key:",
-		"credential:",
-	}
-
-	// Read the file
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return false
-	}
-
-	fileContent := string(content)
-	lines := strings.Split(fileContent, "\n")
-
-	// Check each line for sensitive patterns
-	for _, line := range lines {
-		for _, pattern := range sensitivePatterns {
-			if strings.Contains(line, pattern) {
-				// Extract the value part after the colon
-				parts := strings.SplitN(line, pattern, 2)
-				if len(parts) == 2 {
-					value := strings.TrimSpace(parts[1])
-					// Remove quotes and whitespace
-					value = strings.Trim(value, `"' `)
-
-					// Skip empty values or common placeholders
-					if value != "" && value != `""` && value != "''" &&
-						value != "<placeholder>" && value != "PLACEHOLDER" &&
-						value != "TODO" && value != "CHANGEME" {
-						return true // Contains sensitive data
-					}
-				}
-			}
-		}
-	}
-
-	return false // No sensitive data found
-}

@@ -112,10 +112,10 @@ using kubectl, cloud CLI tools, and local binaries downloaded by openCenter.`,
 
 			// Set BIN directory
 			output.WriteString("export BIN=${PWD}/.bin\n")
-			
+
 			// Extend PATH to include BIN directory
 			output.WriteString("export PATH=${BIN}:${PATH}\n")
-			
+
 			// Set KUBECONFIG
 			output.WriteString("export KUBECONFIG=${PWD}/kubeconfig.yaml\n")
 

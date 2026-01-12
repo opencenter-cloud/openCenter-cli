@@ -55,7 +55,13 @@ Configuration files are stored in organization-based directories:
   openCenter cluster select my-cluster
 
   # Show current cluster
-  openCenter cluster current`,
+  openCenter cluster current
+
+  # Activate cluster environment
+  eval $(openCenter cluster activate myorg/my-cluster)
+
+  # Deactivate cluster environment
+  eval $(openCenter cluster deactivate myorg/my-cluster)`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -78,5 +84,7 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterConfigUpdateCmd())
 	cmd.AddCommand(newClusterServiceCmd())
 	cmd.AddCommand(newClusterCredentialsCmd())
+	cmd.AddCommand(newClusterActivateCmd())
+	cmd.AddCommand(newClusterDeactivateCmd())
 	return cmd
 }

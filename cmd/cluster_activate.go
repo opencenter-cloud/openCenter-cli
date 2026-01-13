@@ -34,9 +34,9 @@ This command combines credential export with additional environment setup needed
 for cluster operations. It sets up:
 
 1. Cloud provider credentials (from cluster configuration)
-2. Local binary path (BIN=${PWD}/.bin)
-3. Extended PATH to include local binaries
-4. Kubernetes configuration (KUBECONFIG=${PWD}/kubeconfig.yaml)
+2. Cluster binary path (BIN=<cluster-dir>/<organization>/infrastructure/clusters/<cluster>/.bin)
+3. Extended PATH to include cluster binaries
+4. Kubernetes configuration (KUBECONFIG=<cluster-dir>/<organization>/infrastructure/clusters/<cluster>/kubeconfig.yaml)
 
 The command outputs shell export statements that should be evaluated in the
 current shell to activate the cluster environment:
@@ -45,9 +45,9 @@ current shell to activate the cluster environment:
 
 This is equivalent to running:
   eval $(openCenter cluster credentials export --provider all)
-  export BIN=${PWD}/.bin
+  export BIN=<cluster-dir>/<organization>/infrastructure/clusters/<cluster>/.bin
   export PATH=${BIN}:${PATH}
-  export KUBECONFIG=${PWD}/kubeconfig.yaml
+  export KUBECONFIG=<cluster-dir>/<organization>/infrastructure/clusters/<cluster>/kubeconfig.yaml
 
 The activated environment provides everything needed to work with the cluster
 using kubectl, cloud CLI tools, and local binaries downloaded by openCenter.`,
@@ -83,6 +83,27 @@ using kubectl, cloud CLI tools, and local binaries downloaded by openCenter.`,
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
 
+			// Get cluster paths
+			configManager, err := config.NewConfigManager("")
+			if err != nil {
+				return fmt.Errorf("failed to create config manager: %w", err)
+			}
+			pathResolver := config.NewPathResolver(configManager)
+			
+			// Parse cluster identifier to get organization and cluster name
+			organization, actualClusterName, err := config.ParseClusterIdentifier(name)
+			if err != nil {
+				return fmt.Errorf("invalid cluster identifier: %w", err)
+			}
+
+			// Use organization from config if available
+			if cfg.OpenCenter.Meta.Organization != "" {
+				organization = cfg.OpenCenter.Meta.Organization
+			}
+
+			// Resolve cluster paths
+			paths := pathResolver.ResolveClusterPaths(actualClusterName, organization)
+
 			// Create credentials extractor
 			extractor := credentials.NewExtractor(cfg)
 
@@ -110,14 +131,14 @@ using kubectl, cloud CLI tools, and local binaries downloaded by openCenter.`,
 				output.WriteString("\n")
 			}
 
-			// Set BIN directory
-			output.WriteString("export BIN=${PWD}/.bin\n")
+			// Set BIN directory to full cluster path
+			output.WriteString(fmt.Sprintf("export BIN=%s\n", paths.BinPath))
 
 			// Extend PATH to include BIN directory
 			output.WriteString("export PATH=${BIN}:${PATH}\n")
 
-			// Set KUBECONFIG
-			output.WriteString("export KUBECONFIG=${PWD}/kubeconfig.yaml\n")
+			// Set KUBECONFIG to full cluster path
+			output.WriteString(fmt.Sprintf("export KUBECONFIG=%s\n", paths.KubeconfigPath))
 
 			fmt.Fprint(cmd.OutOrStdout(), output.String())
 			return nil

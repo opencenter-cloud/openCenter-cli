@@ -77,7 +77,7 @@ func newClusterBootstrapCmd() *cobra.Command {
 				clusterDir = filepath.Join(gitDir, "infrastructure", "clusters", cfg.ClusterName())
 			}
 			if logPath == "" && clusterDir != "" {
-				logPath = filepath.Join(clusterDir, "bootstrap.log")
+				logPath = filepath.Join(clusterDir, "logs", "bootstrap.log")
 			}
 
 			runner, err := newBootstrapRunner(cmd, cfg.ClusterName(), clusterDir, logPath, dryRun)
@@ -161,7 +161,7 @@ func newClusterBootstrapCmd() *cobra.Command {
 
 	cmd.Flags().Bool("dry-run", false, "show planned actions without executing")
 	cmd.Flags().String("kubeconfig", "./kubeconfig.yaml", "path to kubeconfig used by bootstrap actions")
-	cmd.Flags().String("log", "", "log file path (defaults to <git_dir>/infrastructure/clusters/<name>/bootstrap.log)")
+	cmd.Flags().String("log", "", "log file path (defaults to <git_dir>/infrastructure/clusters/<name>/logs/bootstrap.log)")
 	cmd.Flags().String("container-runtime", "", "container runtime for kind clusters (docker or podman)")
 
 	return cmd

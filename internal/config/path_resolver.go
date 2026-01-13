@@ -195,7 +195,6 @@ func (pr *PathResolver) CreateClusterDirectories(clusterName, organization strin
 		filepath.Join(paths.SecretsDir, "age"),
 		filepath.Dir(paths.SOPSKeyPath), // age/keys directory
 		paths.InventoryPath,
-		paths.VenvPath,
 		paths.BinPath,
 	}
 

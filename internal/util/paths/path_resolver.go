@@ -135,7 +135,6 @@ func (r *DefaultPathResolver) CreateClusterDirectories(clusterName, organization
 		paths.ClusterDir,
 		paths.ApplicationsDir,
 		paths.InventoryPath,
-		paths.VenvPath,
 		paths.BinPath,
 		filepath.Dir(paths.SOPSKeyPath), // age/keys directory
 	}

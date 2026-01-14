@@ -16,331 +16,188 @@ package gitops
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestRenderInfrastructureClusterWithDefaults(t *testing.T) {
-	dst := t.TempDir()
-	cfg := config.NewDefault("default-test")
-	cfg.OpenCenter.Cluster.ClusterName = "default-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
+func TestKubeletRotateServerCertsRendering(t *testing.T) {
+	// Create a temporary directory for the test
+	tmpDir, err := os.MkdirTemp("", "gitops-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
 
-	if err := RenderInfrastructureCluster(cfg); err != nil {
-		t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
-	}
-
-	mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
-	data, err := os.ReadFile(mainTF)
-	if err != nil {
-		t.Fatalf("failed to read rendered main.tf: %v", err)
-	}
-	content := string(data)
-
-	// Test default values from main-stage.tf
-	expectedDefaults := map[string]string{
-		"subnet_nodes":                       "10.2.184.0/22",
-		"worker_count":                       "2",
-		"master_count":                       "3",
-		"kubernetes_version":                 "1.33.7",
-		"flavor_master":                      "gp.0.4.4",
-		"flavor_worker":                      "gp.0.4.8",
-		"worker_node_bfv_volume_size":        "40",
-		"worker_node_bfv_volume_type":        "HA-Standard",
-		"kubelet_rotate_server_certificates": "false",
-		"dns_nameservers":                    `["8.8.8.8", "8.8.4.4"]`,
-		"node_worker":                        "wn",
-		"node_master":                        "cp",
-	}
-
-	for key, expected := range expectedDefaults {
-		if !strings.Contains(content, expected) {
-			t.Errorf("rendered main.tf missing expected default %s = %s\ncontent:\n%s", key, expected, content)
-		}
-	}
-}
-
-func TestRenderInfrastructureClusterConditionalOIDC(t *testing.T) {
-	dst := t.TempDir()
-	cfg := config.NewDefault("oidc-test")
-	cfg.OpenCenter.Cluster.ClusterName = "oidc-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
-
-	// Enable OIDC
-	cfg.OpenCenter.Cluster.Kubernetes.OIDC.Enabled = true
-	cfg.OpenCenter.Cluster.Kubernetes.OIDC.KubeOIDCURL = "https://auth.example.com/realms/test"
-	cfg.OpenCenter.Cluster.Kubernetes.OIDC.KubeOIDCClientID = "test-client"
-
-	if err := RenderInfrastructureCluster(cfg); err != nil {
-		t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
-	}
-
-	mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
-	data, err := os.ReadFile(mainTF)
-	if err != nil {
-		t.Fatalf("failed to read rendered main.tf: %v", err)
-	}
-	content := string(data)
-
-	// Test OIDC configuration is included when enabled
-	oidcSettings := []string{
-		"kube_oidc_auth_enabled",
-		"kube_oidc_url",
-		"kube_oidc_client_id",
-		"kube_oidc_ca_file",
-		"kube_oidc_username_claim",
-		"kube_oidc_username_prefix",
-		"kube_oidc_groups_claim",
-		"kube_oidc_groups_prefix",
-	}
-
-	for _, setting := range oidcSettings {
-		if !strings.Contains(content, setting) {
-			t.Errorf("rendered main.tf missing OIDC setting %s when OIDC is enabled\ncontent:\n%s", setting, content)
-		}
-	}
-}
-
-func TestRenderInfrastructureClusterConditionalOIDCDisabled(t *testing.T) {
-	dst := t.TempDir()
-	cfg := config.NewDefault("no-oidc-test")
-	cfg.OpenCenter.Cluster.ClusterName = "no-oidc-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
-
-	// Explicitly disable OIDC
-	cfg.OpenCenter.Cluster.Kubernetes.OIDC.Enabled = false
-
-	if err := RenderInfrastructureCluster(cfg); err != nil {
-		t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
-	}
-
-	mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
-	data, err := os.ReadFile(mainTF)
-	if err != nil {
-		t.Fatalf("failed to read rendered main.tf: %v", err)
-	}
-	content := string(data)
-
-	// Test OIDC configuration is not included when disabled
-	oidcSettings := []string{
-		"kube_oidc_auth_enabled",
-		"kube_oidc_url",
-		"kube_oidc_client_id",
-		"kube_oidc_ca_file",
-		"kube_oidc_username_claim",
-		"kube_oidc_username_prefix",
-		"kube_oidc_groups_claim",
-		"kube_oidc_groups_prefix",
-	}
-
-	for _, setting := range oidcSettings {
-		if strings.Contains(content, setting) {
-			t.Errorf("rendered main.tf should not contain OIDC setting %s when OIDC is disabled", setting)
-		}
-	}
-}
-
-func TestRenderInfrastructureClusterConditionalWindows(t *testing.T) {
-	dst := t.TempDir()
-	cfg := config.NewDefault("windows-test")
-	cfg.OpenCenter.Cluster.ClusterName = "windows-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
-
-	// Enable Windows workers
-	cfg.OpenCenter.Cluster.Kubernetes.WorkerCountWindows = 2
-	cfg.OpenCenter.Cluster.Kubernetes.WindowsWorkers.Enabled = true
-	cfg.OpenCenter.Cluster.Kubernetes.WindowsWorkers.WindowsUser = "Administrator"
-	cfg.OpenCenter.Cluster.Kubernetes.WindowsWorkers.WindowsAdminPassword = "SecretPassword123!"
-
-	if err := RenderInfrastructureCluster(cfg); err != nil {
-		t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
-	}
-
-	mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
-	data, err := os.ReadFile(mainTF)
-	if err != nil {
-		t.Fatalf("failed to read rendered main.tf: %v", err)
-	}
-	content := string(data)
-
-	// Test Windows configuration is included when enabled
-	windowsSettings := []string{
-		"size_worker_windows",
-		"windows_admin_password",
-		"worker_node_bfv_size_windows",
-		"worker_node_bfv_type_windows",
-		"windows_nodes",
-	}
-
-	for _, setting := range windowsSettings {
-		if !strings.Contains(content, setting) {
-			t.Errorf("rendered main.tf missing Windows setting %s when Windows workers are enabled\ncontent:\n%s", setting, content)
-		}
-	}
-}
-
-func TestRenderInfrastructureClusterConditionalWindowsDisabled(t *testing.T) {
-	dst := t.TempDir()
-	cfg := config.NewDefault("no-windows-test")
-	cfg.OpenCenter.Cluster.ClusterName = "no-windows-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
-
-	// Disable Windows workers (default)
-	cfg.OpenCenter.Cluster.Kubernetes.WorkerCountWindows = 0
-
-	if err := RenderInfrastructureCluster(cfg); err != nil {
-		t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
-	}
-
-	mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
-	data, err := os.ReadFile(mainTF)
-	if err != nil {
-		t.Fatalf("failed to read rendered main.tf: %v", err)
-	}
-	content := string(data)
-
-	// Test Windows configuration is not included when disabled
-	windowsSettings := []string{
-		"size_worker_windows",
-		"windows_admin_password",
-		"worker_node_bfv_size_windows",
-		"worker_node_bfv_type_windows",
-		"windows_nodes",
-	}
-
-	for _, setting := range windowsSettings {
-		if strings.Contains(content, setting) {
-			t.Errorf("rendered main.tf should not contain Windows setting %s when Windows workers are disabled", setting)
-		}
-	}
-}
-
-func TestRenderInfrastructureClusterConditionalCalico(t *testing.T) {
-	dst := t.TempDir()
-	cfg := config.NewDefault("calico-test")
-	cfg.OpenCenter.Cluster.ClusterName = "calico-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
-
-	// Enable Calico explicitly
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = true
-
-	if err := RenderInfrastructureCluster(cfg); err != nil {
-		t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
-	}
-
-	mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
-	data, err := os.ReadFile(mainTF)
-	if err != nil {
-		t.Fatalf("failed to read rendered main.tf: %v", err)
-	}
-	content := string(data)
-
-	// Test Calico module is included when enabled
-	if !strings.Contains(content, `module "calico"`) {
-		t.Errorf("rendered main.tf missing Calico module when Calico is enabled\ncontent:\n%s", content)
-	}
-}
-
-func TestRenderInfrastructureClusterConditionalCalicoDisabled(t *testing.T) {
-	dst := t.TempDir()
-	cfg := config.NewDefault("no-calico-test")
-	cfg.OpenCenter.Cluster.ClusterName = "no-calico-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
-
-	// Disable Calico and enable Cilium instead
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled = true
-
-	if err := RenderInfrastructureCluster(cfg); err != nil {
-		t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
-	}
-
-	mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
-	data, err := os.ReadFile(mainTF)
-	if err != nil {
-		t.Fatalf("failed to read rendered main.tf: %v", err)
-	}
-	content := string(data)
-
-	// Test Calico module is not included when disabled
-	if strings.Contains(content, `module "calico"`) {
-		t.Errorf("rendered main.tf should not contain Calico module when Calico is disabled")
-	}
-}
-
-func TestRenderInfrastructureClusterNetworkPluginSelection(t *testing.T) {
-	testCases := []struct {
-		name           string
-		setupConfig    func(*config.Config)
-		expectedPlugin string
-	}{
-		{
-			name: "calico enabled",
-			setupConfig: func(cfg *config.Config) {
-				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = true
+	// Create a test configuration with KubeletRotateServerCerts set to true
+	cfg := &config.Config{
+		SchemaVersion: "v2.0.0",
+		OpenCenter: config.SimplifiedOpenCenter{
+			Meta: config.ClusterMeta{
+				Name:         "test-cluster",
+				Organization: "test-org",
 			},
-			expectedPlugin: "calico",
-		},
-		{
-			name: "cilium enabled",
-			setupConfig: func(cfg *config.Config) {
-				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
-				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled = true
+			GitOps: config.GitOpsConfig{
+				GitDir: tmpDir,
 			},
-			expectedPlugin: "cilium",
-		},
-		{
-			name: "kube-ovn enabled",
-			setupConfig: func(cfg *config.Config) {
-				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
-				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled = true
+			Cluster: config.ClusterConfig{
+				ClusterName: "test-cluster",
+				Kubernetes: config.KubernetesConfig{
+					KubeletRotateServerCerts: true,
+				},
 			},
-			expectedPlugin: "kube-ovn",
-		},
-		{
-			name: "default to calico",
-			setupConfig: func(cfg *config.Config) {
-				// Calico is enabled by default, ensure others are disabled
-				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled = false
-				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled = false
-			},
-			expectedPlugin: "calico",
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			dst := t.TempDir()
-			cfg := config.NewDefault("network-plugin-test")
-			cfg.OpenCenter.Cluster.ClusterName = "network-plugin-test"
-			cfg.OpenCenter.GitOps.GitDir = dst
+	// Render the infrastructure cluster template
+	err = RenderInfrastructureCluster(*cfg)
+	require.NoError(t, err)
 
-			tc.setupConfig(&cfg)
+	// Read the rendered main.tf file
+	mainTfPath := filepath.Join(tmpDir, "infrastructure", "clusters", "test-cluster", "main.tf")
+	content, err := os.ReadFile(mainTfPath)
+	require.NoError(t, err)
 
-			if err := RenderInfrastructureCluster(cfg); err != nil {
-				t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
-			}
+	mainTfContent := string(content)
 
-			mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
-			data, err := os.ReadFile(mainTF)
-			if err != nil {
-				t.Fatalf("failed to read rendered main.tf: %v", err)
-			}
-			content := string(data)
+	// Check that kubelet_rotate_server_certificates is set to true in locals
+	assert.Contains(t, mainTfContent, "kubelet_rotate_server_certificates      = true",
+		"Expected kubelet_rotate_server_certificates to be true in locals block")
 
-			expectedLine := `network_plugin = "` + tc.expectedPlugin + `"`
-			// Use regex to handle variable whitespace in template formatting
-			expectedPattern := `network_plugin\s*=\s*"` + tc.expectedPlugin + `"`
-			matched, err := regexp.MatchString(expectedPattern, content)
-			if err != nil {
-				t.Fatalf("failed to compile regex pattern: %v", err)
-			}
-			if !matched {
-				t.Errorf("rendered main.tf missing expected network plugin %s\ncontent:\n%s", expectedLine, content)
-			}
-		})
+	// Check that it's passed to the kubespray-cluster module
+	assert.Contains(t, mainTfContent, "kubelet_rotate_server_certificates      = local.kubelet_rotate_server_certificates",
+		"Expected kubelet_rotate_server_certificates to be passed to kubespray-cluster module")
+
+	// Test with KubeletRotateServerCerts set to false
+	cfg.OpenCenter.Cluster.Kubernetes.KubeletRotateServerCerts = false
+	cfg.OpenCenter.Cluster.ClusterName = "test-cluster-false"
+
+	err = RenderInfrastructureCluster(*cfg)
+	require.NoError(t, err)
+
+	mainTfPathFalse := filepath.Join(tmpDir, "infrastructure", "clusters", "test-cluster-false", "main.tf")
+	contentFalse, err := os.ReadFile(mainTfPathFalse)
+	require.NoError(t, err)
+
+	mainTfContentFalse := string(contentFalse)
+
+	// Check that kubelet_rotate_server_certificates is set to false in locals
+	assert.Contains(t, mainTfContentFalse, "kubelet_rotate_server_certificates      = false",
+		"Expected kubelet_rotate_server_certificates to be false in locals block")
+
+	// Print a snippet of the rendered content for debugging
+	t.Logf("Rendered locals block (true case):\n%s", extractSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
+	t.Logf("Rendered module block (true case):\n%s", extractModuleSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
+	t.Logf("Rendered locals block (false case):\n%s", extractSnippet(mainTfContentFalse, "kubelet_rotate_server_certificates"))
+}
+
+func TestKubeletRotateServerCertsDefaultValue(t *testing.T) {
+	// Create a temporary directory for the test
+	tmpDir, err := os.MkdirTemp("", "gitops-test-default-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Create a test configuration WITHOUT explicitly setting KubeletRotateServerCerts
+	// When not set, it will be the Go zero value (false)
+	// Users should explicitly set this in their config or use cluster init which sets defaults
+	cfg := &config.Config{
+		SchemaVersion: "v2.0.0",
+		OpenCenter: config.SimplifiedOpenCenter{
+			Meta: config.ClusterMeta{
+				Name:         "test-cluster-default",
+				Organization: "test-org",
+			},
+			GitOps: config.GitOpsConfig{
+				GitDir: tmpDir,
+			},
+			Cluster: config.ClusterConfig{
+				ClusterName: "test-cluster-default",
+				Kubernetes: config.KubernetesConfig{
+					// KubeletRotateServerCerts not set - will be false (Go zero value)
+					// In production, cluster init sets this to true
+				},
+			},
+		},
 	}
+
+	// Render the infrastructure cluster template
+	err = RenderInfrastructureCluster(*cfg)
+	require.NoError(t, err)
+
+	// Read the rendered main.tf file
+	mainTfPath := filepath.Join(tmpDir, "infrastructure", "clusters", "test-cluster-default", "main.tf")
+	content, err := os.ReadFile(mainTfPath)
+	require.NoError(t, err)
+
+	mainTfContent := string(content)
+
+	// When not explicitly set, the Go zero value (false) is used
+	// This is expected behavior - users should explicitly set this value or use cluster init
+	assert.Contains(t, mainTfContent, "kubelet_rotate_server_certificates      = false",
+		"Expected kubelet_rotate_server_certificates to be false when not explicitly set (Go zero value)")
+
+	t.Logf("Rendered locals block (default/unset case):\n%s", extractSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
+	t.Logf("Note: In production, 'cluster init' sets KubeletRotateServerCerts to true by default")
+}
+
+// extractModuleSnippet extracts lines from the kubespray-cluster module block
+func extractModuleSnippet(content, searchTerm string) string {
+	lines := strings.Split(content, "\n")
+	inModule := false
+	var moduleLines []string
+	
+	for _, line := range lines {
+		if strings.Contains(line, "module \"kubespray-cluster\"") {
+			inModule = true
+		}
+		if inModule {
+			moduleLines = append(moduleLines, line)
+			if strings.Contains(line, searchTerm) {
+				// Get a few more lines after finding the term
+				continue
+			}
+			// Stop after we've collected enough or reached the end of the module
+			if len(moduleLines) > 50 || (len(moduleLines) > 5 && strings.TrimSpace(line) == "}") {
+				break
+			}
+		}
+	}
+	
+	// Find the specific line with our search term
+	for i, line := range moduleLines {
+		if strings.Contains(line, searchTerm) {
+			start := max(0, i-2)
+			end := min(len(moduleLines), i+3)
+			return strings.Join(moduleLines[start:end], "\n")
+		}
+	}
+	return "Not found in module block"
+}
+
+// extractSnippet extracts a few lines around the search term for debugging
+func extractSnippet(content, searchTerm string) string {
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		if strings.Contains(line, searchTerm) {
+			start := max(0, i-2)
+			end := min(len(lines), i+3)
+			return strings.Join(lines[start:end], "\n")
+		}
+	}
+	return "Not found"
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

@@ -128,7 +128,7 @@ locals {
   #Hardening
   k8s_hardening_enabled                   = {{ .Security.K8sHardening | default true }}
   kube_pod_security_exemptions_namespaces = {{ if .Security.PodSecurityExemptions }}[{{ range $i, $ns := .Security.PodSecurityExemptions }}{{if $i}}, {{end}}"{{ $ns }}"{{ end }}]{{ else }}["trivy-temp"]{{ end }}
-  kubelet_rotate_server_certificates      = {{ .OpenCenter.Cluster.Kubernetes.KubeletRotateServerCerts | default true }}
+  kubelet_rotate_server_certificates      = {{ .OpenCenter.Cluster.Kubernetes.KubeletRotateServerCerts }}
   os_hardening_enabled                    = {{ .Security.OSHardening | default true }}
 
   {{- if .OpenCenter.Cluster.Kubernetes.OIDC.Enabled }}
@@ -270,12 +270,7 @@ module "kubespray-cluster" {
   kube_vip_enabled                        = local.kube_vip_enabled
   kube_pod_security_exemptions_namespaces = local.kube_pod_security_exemptions_namespaces
   kubelet_rotate_server_certificates      = local.kubelet_rotate_server_certificates
-  worker_nodes = concat(
-    module.openstack-nova.worker_nodes,
-    flatten([
-      for pool_name, pool_nodes in module.openstack-nova.additional_worker_pools_nodes : pool_nodes
-    ])
-  )
+  worker_nodes                            = module.openstack-nova.worker_node
   k8s_api_ip                              = module.openstack-nova.k8s_api_ip
   k8s_api_port                            = local.k8s_api_port
   k8s_internal_ip                         = module.openstack-nova.k8s_internal_ip

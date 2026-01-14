@@ -380,4 +380,20 @@ The new template engine is designed to coexist with the existing `internal/util/
 2. **Phase 2**: Gradual migration of existing code
 3. **Phase 3**: Deprecate and remove legacy package
 
-See the migration guide in `docs/migration/template-engine.md` for details.
+### Migration Documentation
+
+- **Full Migration Guide**: `docs/migration/template-engine.md` - Comprehensive guide with examples, strategies, and best practices
+- **Quick Reference**: `docs/migration/template-engine-quick-reference.md` - Quick decision tree and common patterns
+- **Test Examples**: `internal/template/migration_test.go` - Working code examples and test cases
+
+### Quick Start
+
+Most existing code requires **no changes** - the legacy compatibility layer automatically uses the new engine. For new code:
+
+```go
+// Simple migration - use helper function
+engine := template.NewGoTemplateEngine()
+err := template.RenderWithEngine(engine, fsys, "template.yaml", "output.yaml", data)
+```
+
+See the migration documentation for detailed guidance on different migration paths and strategies.

@@ -270,7 +270,7 @@ module "kubespray-cluster" {
   kube_vip_enabled                        = local.kube_vip_enabled
   kube_pod_security_exemptions_namespaces = local.kube_pod_security_exemptions_namespaces
   kubelet_rotate_server_certificates      = local.kubelet_rotate_server_certificates
-  worker_nodes                            = module.openstack-nova.worker_node
+  worker_nodes                            = module.openstack-nova.worker_nodes
   k8s_api_ip                              = module.openstack-nova.k8s_api_ip
   k8s_api_port                            = local.k8s_api_port
   k8s_internal_ip                         = module.openstack-nova.k8s_internal_ip

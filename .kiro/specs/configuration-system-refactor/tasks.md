@@ -294,11 +294,11 @@ This document breaks down the configuration system refactor into discrete, imple
 5. Validate output compatibility with legacy system
 
 **Acceptance Criteria:**
-- [ ] Existing template calls work without modification
-- [ ] All embedded templates are registered in new system
-- [ ] Template output is identical to legacy system
-- [ ] Feature flag allows switching between old and new systems
-- [ ] Migration path is documented and tested
+- [x] Existing template calls work without modification
+- [x] All embedded templates are registered in new system
+- [x] Template output is identical to legacy system
+- [x] Feature flag allows switching between old and new systems
+- [x] Migration path is documented and tested
 
 **Files to Create/Modify:**
 - `internal/template/legacy.go` (new)

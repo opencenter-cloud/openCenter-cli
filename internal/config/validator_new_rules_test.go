@@ -33,10 +33,14 @@ func addDefaultSecretsAndInfra(config *Config) {
 	config.Secrets.AlertProxy.AccountServiceToken = "test-service-token"
 	config.Secrets.AlertProxy.CoreAccountNumber = "test-account-number"
 
-	// Add infrastructure fields
-	config.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://auth.example.com"
+	// Add complete OpenStack infrastructure fields to satisfy provider-specific validation
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://auth.example.com/v3/"
 	config.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "test-tenant"
 	config.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "test-region"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.Domain = "Default"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.FloatingNetworkId = "12345678-1234-1234-1234-123456789012"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "12345678-1234-1234-1234-123456789012"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "test-app-cred-secret"
 	config.OpenCenter.Secrets.Barbican.AuthURL = "https://barbican.example.com"
 }
 

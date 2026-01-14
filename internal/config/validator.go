@@ -24,13 +24,21 @@ import (
 
 // ClusterConfigValidator implements the ConfigValidatorInterface for comprehensive configuration validation.
 type ClusterConfigValidator struct {
-	autoRepair bool
+	autoRepair         bool
+	openstackValidator *OpenStackValidator
+	awsValidator       *AWSValidator
+	vsphereValidator   *VSphereValidator
+	suggestionEngine   *SuggestionEngine
 }
 
 // NewConfigValidator creates a new configuration validator.
 func NewConfigValidator(autoRepair bool) *ClusterConfigValidator {
 	return &ClusterConfigValidator{
-		autoRepair: autoRepair,
+		autoRepair:         autoRepair,
+		openstackValidator: NewOpenStackValidator(),
+		awsValidator:       NewAWSValidator(),
+		vsphereValidator:   NewVSphereValidator(),
+		suggestionEngine:   NewSuggestionEngine(),
 	}
 }
 
@@ -544,9 +552,11 @@ func (cv *ClusterConfigValidator) validateCloudProviderWithResult(ctx context.Co
 
 	switch provider {
 	case "openstack":
-		cv.validateOpenStackConfig(config, result)
+		cv.validateOpenStackWithProviderValidator(ctx, config, result)
 	case "aws":
-		cv.validateAWSConfig(config, result)
+		cv.validateAWSWithProviderValidator(ctx, config, result)
+	case "vsphere":
+		cv.validateVSphereWithProviderValidator(ctx, config, result)
 	case "kind":
 		// Kind has minimal configuration requirements
 		break
@@ -660,6 +670,90 @@ func (cv *ClusterConfigValidator) validateAWSConfig(config *Config, result *Conf
 			},
 		})
 	}
+}
+
+// validateOpenStackWithProviderValidator validates OpenStack configuration using the dedicated validator.
+func (cv *ClusterConfigValidator) validateOpenStackWithProviderValidator(ctx context.Context, config *Config, result *ConfigValidationResult) {
+	// Run configuration validation
+	configErrors := cv.openstackValidator.ValidateConfiguration(ctx, config)
+	for _, err := range configErrors {
+		result.Errors = append(result.Errors, &ConfigValidationError{
+			Type:        "validation",
+			Field:       err.Field,
+			Message:     err.Message,
+			Suggestions: err.Suggestions,
+		})
+	}
+
+	// Run credential validation
+	credErrors := cv.openstackValidator.ValidateCredentials(ctx, config)
+	for _, err := range credErrors {
+		result.Errors = append(result.Errors, &ConfigValidationError{
+			Type:        "validation",
+			Field:       err.Field,
+			Message:     err.Message,
+			Suggestions: err.Suggestions,
+		})
+	}
+
+	// Note: Connectivity validation is intentionally not run here as it requires network access
+	// and should be run separately via the preflight command
+}
+
+// validateAWSWithProviderValidator validates AWS configuration using the dedicated validator.
+func (cv *ClusterConfigValidator) validateAWSWithProviderValidator(ctx context.Context, config *Config, result *ConfigValidationResult) {
+	// Run configuration validation
+	configErrors := cv.awsValidator.ValidateConfiguration(ctx, config)
+	for _, err := range configErrors {
+		result.Errors = append(result.Errors, &ConfigValidationError{
+			Type:        "validation",
+			Field:       err.Field,
+			Message:     err.Message,
+			Suggestions: err.Suggestions,
+		})
+	}
+
+	// Run credential validation
+	credErrors := cv.awsValidator.ValidateCredentials(ctx, config)
+	for _, err := range credErrors {
+		result.Errors = append(result.Errors, &ConfigValidationError{
+			Type:        "validation",
+			Field:       err.Field,
+			Message:     err.Message,
+			Suggestions: err.Suggestions,
+		})
+	}
+
+	// Note: Connectivity validation is intentionally not run here as it requires network access
+	// and should be run separately via the preflight command
+}
+
+// validateVSphereWithProviderValidator validates vSphere configuration using the dedicated validator.
+func (cv *ClusterConfigValidator) validateVSphereWithProviderValidator(ctx context.Context, config *Config, result *ConfigValidationResult) {
+	// Run configuration validation
+	configErrors := cv.vsphereValidator.ValidateConfiguration(ctx, config)
+	for _, err := range configErrors {
+		result.Errors = append(result.Errors, &ConfigValidationError{
+			Type:        "validation",
+			Field:       err.Field,
+			Message:     err.Message,
+			Suggestions: err.Suggestions,
+		})
+	}
+
+	// Run credential validation
+	credErrors := cv.vsphereValidator.ValidateCredentials(ctx, config)
+	for _, err := range credErrors {
+		result.Errors = append(result.Errors, &ConfigValidationError{
+			Type:        "validation",
+			Field:       err.Field,
+			Message:     err.Message,
+			Suggestions: err.Suggestions,
+		})
+	}
+
+	// Note: Connectivity validation is intentionally not run here as it requires network access
+	// and should be run separately via the preflight command
 }
 
 // isValidKubernetesVersion checks if a Kubernetes version string is valid.
@@ -1077,4 +1171,37 @@ func (cv *ClusterConfigValidator) SetAutoRepair(autoRepair bool) {
 // IsAutoRepairEnabled returns whether automatic repair is enabled.
 func (cv *ClusterConfigValidator) IsAutoRepairEnabled() bool {
 	return cv.autoRepair
+}
+
+// GetSuggestionEngine returns the suggestion engine for generating helpful suggestions.
+func (cv *ClusterConfigValidator) GetSuggestionEngine() *SuggestionEngine {
+	return cv.suggestionEngine
+}
+
+// enhanceSuggestions enhances error suggestions using the suggestion engine.
+func (cv *ClusterConfigValidator) enhanceSuggestions(field string, value interface{}, existingSuggestions []string) []string {
+	// Get suggestions from the engine
+	engineSuggestions := cv.suggestionEngine.GetSuggestionsForField(field, value)
+	
+	// Combine with existing suggestions, avoiding duplicates
+	suggestionMap := make(map[string]bool)
+	var combined []string
+	
+	// Add existing suggestions first
+	for _, s := range existingSuggestions {
+		if !suggestionMap[s] {
+			suggestionMap[s] = true
+			combined = append(combined, s)
+		}
+	}
+	
+	// Add engine suggestions
+	for _, s := range engineSuggestions {
+		if !suggestionMap[s] {
+			suggestionMap[s] = true
+			combined = append(combined, s)
+		}
+	}
+	
+	return combined
 }

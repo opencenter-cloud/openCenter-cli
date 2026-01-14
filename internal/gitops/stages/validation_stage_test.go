@@ -17,6 +17,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
@@ -46,10 +47,14 @@ func TestValidationStage_Execute_ValidStructure(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create required files
+	// Create required files including kustomization files
 	files := map[string]string{
 		".gitignore": "*.tmp\n",
 		"README.md":  "# Test Repository\n",
+		"infrastructure/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"infrastructure/clusters/test-cluster/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/kustomization.yaml":                         "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/overlays/test-cluster/kustomization.yaml":   "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
 	}
 
 	for name, content := range files {
@@ -168,10 +173,12 @@ func TestValidationStage_Execute_MissingClusterDirectories(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create required files
+	// Create required files including kustomization files (but not cluster-specific ones)
 	files := map[string]string{
 		".gitignore": "*.tmp\n",
 		"README.md":  "# Test Repository\n",
+		"infrastructure/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/kustomization.yaml":   "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
 	}
 
 	for name, content := range files {
@@ -195,7 +202,11 @@ func TestValidationStage_Execute_MissingClusterDirectories(t *testing.T) {
 	// Execute validation
 	err := stage.Execute(context.Background(), workspace)
 	assert.Error(t, err, "Validation should fail for missing cluster directories")
-	assert.Contains(t, err.Error(), "cluster structure validation failed")
+	// The error could be about missing kustomization files or cluster directories
+	assert.True(t, 
+		strings.Contains(err.Error(), "cluster structure validation failed") ||
+		strings.Contains(err.Error(), "kustomization files validation failed"),
+		"Error should mention cluster structure or kustomization files")
 }
 
 func TestValidationStage_Execute_MissingSOPSConfig(t *testing.T) {
@@ -219,10 +230,14 @@ func TestValidationStage_Execute_MissingSOPSConfig(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create required files
+	// Create required files including kustomization files but NOT SOPS config
 	files := map[string]string{
 		".gitignore": "*.tmp\n",
 		"README.md":  "# Test Repository\n",
+		"infrastructure/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"infrastructure/clusters/test-cluster/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/kustomization.yaml":                         "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/overlays/test-cluster/kustomization.yaml":   "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
 	}
 
 	for name, content := range files {
@@ -271,11 +286,15 @@ func TestValidationStage_Execute_WithSOPSConfig(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create required files including SOPS config
+	// Create required files including SOPS config and kustomization files
 	files := map[string]string{
 		".gitignore": "*.tmp\n",
 		"README.md":  "# Test Repository\n",
 		".sops.yaml": "creation_rules:\n  - age: test-key\n",
+		"infrastructure/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"infrastructure/clusters/test-cluster/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/kustomization.yaml":                         "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/overlays/test-cluster/kustomization.yaml":   "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
 	}
 
 	for name, content := range files {
@@ -299,6 +318,224 @@ func TestValidationStage_Execute_WithSOPSConfig(t *testing.T) {
 	// Execute validation
 	err := stage.Execute(context.Background(), workspace)
 	assert.NoError(t, err, "Validation should pass with SOPS config when secrets backend is configured")
+}
+
+func TestValidationStage_Execute_MissingKustomizationFiles(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	// Create complete structure
+	dirs := []string{
+		"applications",
+		"applications/base",
+		"applications/overlays",
+		"applications/overlays/test-cluster",
+		"infrastructure",
+		"infrastructure/base",
+		"infrastructure/clusters",
+		"infrastructure/clusters/test-cluster",
+	}
+
+	for _, dir := range dirs {
+		err := os.MkdirAll(filepath.Join(tmpDir, dir), 0o755)
+		require.NoError(t, err)
+	}
+
+	// Create required files but NOT kustomization files
+	files := map[string]string{
+		".gitignore": "*.tmp\n",
+		"README.md":  "# Test Repository\n",
+	}
+
+	for name, content := range files {
+		err := os.WriteFile(filepath.Join(tmpDir, name), []byte(content), 0o644)
+		require.NoError(t, err)
+	}
+
+	// Create test configuration
+	cfg := createTestConfig("openstack")
+
+	// Create workspace
+	workspace := &gitops.GitOpsWorkspace{
+		ID:      "test-workspace",
+		RootDir: tmpDir,
+		Config:  cfg,
+	}
+
+	// Create validation stage
+	stage := NewValidationStage([]string{})
+
+	// Execute validation
+	err := stage.Execute(context.Background(), workspace)
+	assert.Error(t, err, "Validation should fail for missing kustomization files")
+	assert.Contains(t, err.Error(), "kustomization files validation failed")
+}
+
+func TestValidationStage_Execute_WithKustomizationFiles(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	// Create complete structure
+	dirs := []string{
+		"applications",
+		"applications/base",
+		"applications/overlays",
+		"applications/overlays/test-cluster",
+		"infrastructure",
+		"infrastructure/base",
+		"infrastructure/clusters",
+		"infrastructure/clusters/test-cluster",
+	}
+
+	for _, dir := range dirs {
+		err := os.MkdirAll(filepath.Join(tmpDir, dir), 0o755)
+		require.NoError(t, err)
+	}
+
+	// Create required files including kustomization files
+	files := map[string]string{
+		".gitignore": "*.tmp\n",
+		"README.md":  "# Test Repository\n",
+		"infrastructure/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"infrastructure/clusters/test-cluster/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/kustomization.yaml":                         "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/overlays/test-cluster/kustomization.yaml":   "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+	}
+
+	for name, content := range files {
+		err := os.WriteFile(filepath.Join(tmpDir, name), []byte(content), 0o644)
+		require.NoError(t, err)
+	}
+
+	// Create test configuration
+	cfg := createTestConfig("openstack")
+
+	// Create workspace
+	workspace := &gitops.GitOpsWorkspace{
+		ID:      "test-workspace",
+		RootDir: tmpDir,
+		Config:  cfg,
+	}
+
+	// Create validation stage
+	stage := NewValidationStage([]string{})
+
+	// Execute validation
+	err := stage.Execute(context.Background(), workspace)
+	assert.NoError(t, err, "Validation should pass with all required files including kustomization files")
+}
+
+func TestValidationStage_Execute_FluxSystemValidation(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	// Create complete structure
+	dirs := []string{
+		"applications",
+		"applications/base",
+		"applications/overlays",
+		"applications/overlays/test-cluster",
+		"infrastructure",
+		"infrastructure/base",
+		"infrastructure/clusters",
+		"infrastructure/clusters/test-cluster",
+		".flux-system",
+	}
+
+	for _, dir := range dirs {
+		err := os.MkdirAll(filepath.Join(tmpDir, dir), 0o755)
+		require.NoError(t, err)
+	}
+
+	// Create required files including Flux system kustomization
+	files := map[string]string{
+		".gitignore": "*.tmp\n",
+		"README.md":  "# Test Repository\n",
+		"infrastructure/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"infrastructure/clusters/test-cluster/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/kustomization.yaml":                         "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/overlays/test-cluster/kustomization.yaml":   "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		".flux-system/kustomization.yaml":                         "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+	}
+
+	for name, content := range files {
+		err := os.WriteFile(filepath.Join(tmpDir, name), []byte(content), 0o644)
+		require.NoError(t, err)
+	}
+
+	// Create test configuration
+	cfg := createTestConfig("openstack")
+
+	// Create workspace
+	workspace := &gitops.GitOpsWorkspace{
+		ID:      "test-workspace",
+		RootDir: tmpDir,
+		Config:  cfg,
+	}
+
+	// Create validation stage
+	stage := NewValidationStage([]string{})
+
+	// Execute validation
+	err := stage.Execute(context.Background(), workspace)
+	assert.NoError(t, err, "Validation should pass with Flux system directory and kustomization")
+}
+
+func TestValidationStage_Execute_FluxSystemMissingKustomization(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	// Create complete structure including .flux-system directory
+	dirs := []string{
+		"applications",
+		"applications/base",
+		"applications/overlays",
+		"applications/overlays/test-cluster",
+		"infrastructure",
+		"infrastructure/base",
+		"infrastructure/clusters",
+		"infrastructure/clusters/test-cluster",
+		".flux-system", // Flux system directory exists
+	}
+
+	for _, dir := range dirs {
+		err := os.MkdirAll(filepath.Join(tmpDir, dir), 0o755)
+		require.NoError(t, err)
+	}
+
+	// Create required files but NOT Flux system kustomization
+	files := map[string]string{
+		".gitignore": "*.tmp\n",
+		"README.md":  "# Test Repository\n",
+		"infrastructure/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"infrastructure/clusters/test-cluster/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/kustomization.yaml":                         "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		"applications/overlays/test-cluster/kustomization.yaml":   "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n",
+		// Note: .flux-system/kustomization.yaml is intentionally missing
+	}
+
+	for name, content := range files {
+		err := os.WriteFile(filepath.Join(tmpDir, name), []byte(content), 0o644)
+		require.NoError(t, err)
+	}
+
+	// Create test configuration
+	cfg := createTestConfig("openstack")
+
+	// Create workspace
+	workspace := &gitops.GitOpsWorkspace{
+		ID:      "test-workspace",
+		RootDir: tmpDir,
+		Config:  cfg,
+	}
+
+	// Create validation stage
+	stage := NewValidationStage([]string{})
+
+	// Execute validation
+	err := stage.Execute(context.Background(), workspace)
+	assert.Error(t, err, "Validation should fail when Flux system directory exists but kustomization is missing")
+	assert.Contains(t, err.Error(), "flux system")
 }
 
 func TestValidationStage_Rollback(t *testing.T) {

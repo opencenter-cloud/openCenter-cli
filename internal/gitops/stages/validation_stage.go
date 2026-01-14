@@ -55,6 +55,16 @@ func (vs *ValidationStage) Execute(ctx context.Context, workspace *gitops.GitOps
 		return fmt.Errorf("required files validation failed: %w", err)
 	}
 
+	// Validate kustomization files
+	if err := vs.validateKustomizationFiles(workspace); err != nil {
+		return fmt.Errorf("kustomization files validation failed: %w", err)
+	}
+
+	// Validate Flux system
+	if err := vs.validateFluxSystem(workspace); err != nil {
+		return fmt.Errorf("flux system validation failed: %w", err)
+	}
+
 	// Validate cluster-specific structure
 	if err := vs.validateClusterStructure(workspace); err != nil {
 		return fmt.Errorf("cluster structure validation failed: %w", err)
@@ -109,6 +119,48 @@ func (vs *ValidationStage) validateRequiredFiles(workspace *gitops.GitOpsWorkspa
 
 	if len(missing) > 0 {
 		return fmt.Errorf("missing required files: %s", strings.Join(missing, ", "))
+	}
+
+	return nil
+}
+
+// validateKustomizationFiles checks that required kustomization files exist and are valid.
+func (vs *ValidationStage) validateKustomizationFiles(workspace *gitops.GitOpsWorkspace) error {
+	clusterName := workspace.Config.ClusterName()
+	if clusterName == "" {
+		return fmt.Errorf("cluster name is empty")
+	}
+
+	// Required kustomization files
+	requiredKustomizations := []string{
+		"infrastructure/kustomization.yaml",
+		filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml"),
+		"applications/kustomization.yaml",
+		filepath.Join("applications", "overlays", clusterName, "kustomization.yaml"),
+	}
+
+	var missing []string
+	for _, file := range requiredKustomizations {
+		if !workspace.Exists(file) {
+			missing = append(missing, file)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required kustomization files: %s", strings.Join(missing, ", "))
+	}
+
+	return nil
+}
+
+// validateFluxSystem checks that Flux system directory exists if configured.
+func (vs *ValidationStage) validateFluxSystem(workspace *gitops.GitOpsWorkspace) error {
+	// Check if Flux system directory exists
+	if workspace.Exists(".flux-system") {
+		// If it exists, validate it has a kustomization file
+		if !workspace.Exists(".flux-system/kustomization.yaml") {
+			return fmt.Errorf("flux system directory exists but missing kustomization.yaml")
+		}
 	}
 
 	return nil

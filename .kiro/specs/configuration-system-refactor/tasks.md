@@ -266,11 +266,11 @@ This document breaks down the configuration system refactor into discrete, imple
 5. Implement service plugin tests and integration tests
 
 **Acceptance Criteria:**
-- [ ] Service plugins can be loaded dynamically from manifests
-- [ ] Service dependencies are resolved correctly with cycle detection
-- [ ] Plugin lifecycle hooks execute at appropriate times
-- [ ] Built-in services are migrated to plugin architecture
-- [ ] Service status reporting provides accurate information
+- [x] Service plugins can be loaded dynamically from manifests
+- [x] Service dependencies are resolved correctly with cycle detection
+- [x] Plugin lifecycle hooks execute at appropriate times
+- [x] Built-in services are migrated to plugin architecture
+- [x] Service status reporting provides accurate information
 
 **Files to Create/Modify:**
 - `internal/services/registry.go` (new)

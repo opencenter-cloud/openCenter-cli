@@ -1344,6 +1344,37 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 				"type":                 "object",
 				"additionalProperties": true,
 			},
+			"metadata": map[string]any{
+				"type":        "object",
+				"description": "Configuration metadata for tracking lifecycle and provenance",
+				"properties": map[string]any{
+					"created_at": map[string]any{
+						"type":        "string",
+						"description": "Timestamp when the configuration was created",
+						"format":      "date-time",
+					},
+					"updated_at": map[string]any{
+						"type":        "string",
+						"description": "Timestamp when the configuration was last updated",
+						"format":      "date-time",
+					},
+					"created_by": map[string]any{
+						"type":        "string",
+						"description": "User or system that created the configuration",
+						"minLength":   1,
+					},
+					"tags": map[string]any{
+						"type":                 "object",
+						"description":          "Custom tags for categorization and filtering",
+						"additionalProperties": map[string]any{"type": "string"},
+					},
+					"annotations": map[string]any{
+						"type":                 "object",
+						"description":          "Custom annotations for additional metadata",
+						"additionalProperties": map[string]any{"type": "string"},
+					},
+				},
+			},
 		},
 	}
 
@@ -1374,4 +1405,87 @@ func ValidateSchemaVersion(version string) bool {
 	// For now, we only support exact version match
 	// In the future, this could implement semantic versioning compatibility checks
 	return version == SchemaVersion
+}
+
+// DetectSchemaMigrationNeeded checks if a configuration needs schema migration.
+// It compares the config's schema version with the current schema version.
+//
+// Inputs:
+//   - config: The configuration to check
+//
+// Outputs:
+//   - bool: true if migration is needed, false otherwise
+//   - string: The current schema version of the config (empty if not set)
+//   - error: An error if version comparison fails
+func DetectSchemaMigrationNeeded(config Config) (bool, string, error) {
+	configVersion := config.SchemaVersion
+	
+	// If no schema version is set, assume it's an old config that needs migration
+	if configVersion == "" {
+		return true, "", nil
+	}
+	
+	// If versions match, no migration needed
+	if configVersion == SchemaVersion {
+		return false, configVersion, nil
+	}
+	
+	// Versions differ - migration may be needed
+	// In the future, this could use semantic versioning to determine
+	// if the difference requires migration or is backward compatible
+	return true, configVersion, nil
+}
+
+// GetMigrationPath determines the migration path from one schema version to another.
+// Returns a list of intermediate versions that need to be migrated through.
+//
+// Inputs:
+//   - fromVersion: The starting schema version
+//   - toVersion: The target schema version
+//
+// Outputs:
+//   - []string: List of versions to migrate through (empty if no migration needed)
+//   - error: An error if the migration path is invalid
+func GetMigrationPath(fromVersion, toVersion string) ([]string, error) {
+	// If versions are the same, no migration needed
+	if fromVersion == toVersion {
+		return []string{}, nil
+	}
+	
+	// If fromVersion is empty, treat as pre-versioned config
+	if fromVersion == "" {
+		fromVersion = "0.0.0"
+	}
+	
+	// For now, we only support direct migration to current version
+	// In the future, this could support multi-step migrations
+	if toVersion != SchemaVersion {
+		return nil, fmt.Errorf("can only migrate to current schema version %s, requested %s", SchemaVersion, toVersion)
+	}
+	
+	// Return single-step migration path
+	return []string{toVersion}, nil
+}
+
+// NeedsMigration is a convenience function that checks if a config needs migration
+// to the current schema version.
+//
+// Inputs:
+//   - config: The configuration to check
+//
+// Outputs:
+//   - bool: true if migration is needed, false otherwise
+func NeedsMigration(config Config) bool {
+	needed, _, _ := DetectSchemaMigrationNeeded(config)
+	return needed
+}
+
+// SetSchemaVersion updates the schema version field in a configuration.
+// This should be called after successful migration.
+//
+// Inputs:
+//   - config: Pointer to the configuration to update
+//   - version: The new schema version to set
+func SetSchemaVersion(config *Config, version string) {
+	config.SchemaVersion = version
 }

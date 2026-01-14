@@ -1,4 +1,4 @@
-// Copyright 2025 Victor Palma <victor.palma@rackspace.com>
+// Copyrigho 2025 Victor Palma <victor.palma@rackspace.com>
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -34,13 +34,15 @@ import (
 // The structure matches the testdata/schema.yaml format with opencenter, opentofu, cloud, and secrets sections.
 // IAC field is included for backward compatibility with existing templates.
 type Config struct {
-	OpenCenter SimplifiedOpenCenter `yaml:"opencenter" json:"opencenter"`
-	OpenTofu   SimplifiedOpenTofu   `yaml:"opentofu" json:"opentofu"`
-	Secrets    Secrets              `yaml:"secrets" json:"secrets"`
-	Networking Networking           `yaml:"networking,omitempty" json:"networking,omitempty"`
-	Security   Security             `yaml:"security,omitempty" json:"security,omitempty"`
-	Deployment Deployment           `yaml:"deployment,omitempty" json:"deployment,omitempty"`
-	Overrides  map[string]any       `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+	SchemaVersion string                 `yaml:"schema_version,omitempty" json:"schema_version,omitempty"`
+	OpenCenter    SimplifiedOpenCenter   `yaml:"opencenter" json:"opencenter"`
+	OpenTofu      SimplifiedOpenTofu     `yaml:"opentofu" json:"opentofu"`
+	Secrets       Secrets                `yaml:"secrets" json:"secrets"`
+	Networking    Networking             `yaml:"networking,omitempty" json:"networking,omitempty"`
+	Security      Security               `yaml:"security,omitempty" json:"security,omitempty"`
+	Deployment    Deployment             `yaml:"deployment,omitempty" json:"deployment,omitempty"`
+	Overrides     map[string]any         `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+	Metadata      ConfigMetadata         `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 }
 
 // Cluster Stages
@@ -118,6 +120,7 @@ func defaultConfig(name string) Config {
 	}
 
 	cfg := Config{
+		SchemaVersion: SchemaVersion,
 		OpenCenter: SimplifiedOpenCenter{
 			Meta: ClusterMeta{
 				Name:         name,
@@ -186,21 +189,22 @@ func defaultConfig(name string) Config {
 				ClusterFQDN:        fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
 				AdminEmail:         "",
 				Kubernetes: KubernetesConfig{
-					Version:              "1.33.7",
-					KubesprayVersion:     "v2.29.1",
-					APIPort:              443,
-					KubeVIPEnabled:       true,
-					FlavorBastion:        "gp.0.2.2",
-					FlavorMaster:         "gp.0.4.4",
-					FlavorWorker:         "gp.0.4.8",
-					FlavorWorkerWindows:  "gp.5.4.16",
-					SubnetPods:           "10.42.0.0/16",
-					SubnetServices:       "10.43.0.0/16",
-					LoadbalancerProvider: "ovn",
-					DNSZoneName:          fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
-					MasterCount:          3,
-					WorkerCount:          2,
-					WorkerCountWindows:   0,
+					Version:                  "1.33.7",
+					KubesprayVersion:         "v2.29.1",
+					APIPort:                  443,
+					KubeVIPEnabled:           true,
+					KubeletRotateServerCerts: true,
+					FlavorBastion:            "gp.0.2.2",
+					FlavorMaster:             "gp.0.4.4",
+					FlavorWorker:             "gp.0.4.8",
+					FlavorWorkerWindows:      "gp.5.4.16",
+					SubnetPods:               "10.42.0.0/16",
+					SubnetServices:           "10.43.0.0/16",
+					LoadbalancerProvider:     "ovn",
+					DNSZoneName:              fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
+					MasterCount:              3,
+					WorkerCount:              2,
+					WorkerCountWindows:       0,
 					NetworkPlugin: NetworkPlugin{
 						Calico: CalicoConfig{
 							Enabled:                   true,
@@ -386,6 +390,36 @@ func defaultConfig(name string) Config {
 				},
 			},
 		},
+		Networking: Networking{
+			SubnetNodes:          "10.2.184.0/22",
+			AllocationPoolStart:  "${local.subnet_nodes_oct}.50",
+			AllocationPoolEnd:    "${local.subnet_nodes_oct}.254",
+			VRRPEnabled:          true,
+			VRRPIP:               "${local.subnet_nodes_oct}.10",
+			SubnetServices:       "10.43.0.0/16",
+			SubnetPods:           "10.42.0.0/16",
+			UseOctavia:           false,
+			LoadbalancerProvider: "amphora",
+			UseDesignate:         false,
+			DNSZoneName:          fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
+			DNSNameservers:       []string{"8.8.8.8", "8.8.4.4"},
+			NTPServers:           []string{fmt.Sprintf("time.%s.rackspace.com", strings.ToLower(region)), fmt.Sprintf("time2.%s.rackspace.com", strings.ToLower(region))},
+			VLAN: VLAN{
+				ID:       "",
+				MTU:      0,
+				Provider: "physnet1",
+			},
+		},
+		Security: Security{
+			CACertificates:        "",
+			K8sHardening:          true,
+			OSHardening:           true,
+			PodSecurityExemptions: []string{"trivy-temp"},
+		},
+		Deployment: Deployment{
+			AutoDeploy: true,
+		},
+		Metadata: NewConfigMetadata(),
 		Secrets: Secrets{
 			SopsAgeKeyFile: "",
 			SSHKey: SSHKey{
@@ -447,36 +481,6 @@ func defaultConfig(name string) Config {
 				InsecureFlag: "false",
 				Port:         "443",
 			},
-		},
-		Networking: Networking{
-			SubnetNodes:          "10.2.184.0/22",
-			AllocationPoolStart:  "${local.subnet_nodes_oct}.50",
-			AllocationPoolEnd:    "${local.subnet_nodes_oct}.254",
-			VRRPEnabled:          true,
-			VRRPIP:               "${local.subnet_nodes_oct}.10",
-			SubnetServices:       "10.43.0.0/16",
-			SubnetPods:           "10.42.0.0/16",
-			UseOctavia:           false,
-			LoadbalancerProvider: "amphora",
-			UseDesignate:         false,
-			DNSZoneName:          fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
-			DNSNameservers:       []string{"8.8.8.8", "8.8.4.4"},
-			NTPServers:           []string{fmt.Sprintf("time.%s.rackspace.com", strings.ToLower(region)), fmt.Sprintf("time2.%s.rackspace.com", strings.ToLower(region))},
-			VLAN: VLAN{
-				ID:       "",
-				MTU:      0,
-				Provider: "physnet1",
-			},
-		},
-		Security: Security{
-			CACertificates:        "",
-			K8sHardening:          true,
-			OSHardening:           true,
-			KubeletRotateCerts:    false,
-			PodSecurityExemptions: []string{"trivy-temp"},
-		},
-		Deployment: Deployment{
-			AutoDeploy: true,
 		},
 	}
 
@@ -824,6 +828,12 @@ func ConfigPath(name string) (string, error) {
 // It supports both organization-based and legacy directory structures.
 // The name parameter can be in "cluster" or "organization/cluster" format.
 //
+// Metadata Preservation:
+// - If the configuration file contains metadata (created_at, created_by, tags, annotations),
+//   it will be preserved when loading.
+// - If metadata is missing (for backward compatibility with old configs), new metadata
+//   will be initialized with current timestamps.
+//
 // Inputs:
 //   - name: The name of the cluster (can be "cluster" or "organization/cluster").
 //
@@ -858,8 +868,22 @@ func Load(name string) (Config, error) {
 		return Config{}, fmt.Errorf("failed to parse YAML configuration from '%s': %w", path, unmarshalErr)
 	}
 
+	// Detect schema version mismatch and log warning
+	if needsMigration, configVersion, _ := DetectSchemaMigrationNeeded(cfg); needsMigration {
+		if configVersion == "" {
+			fmt.Fprintf(os.Stderr, "Warning: Configuration file '%s' does not have a schema version. Current schema version is %s. Consider running migration.\n", path, SchemaVersion)
+		} else {
+			fmt.Fprintf(os.Stderr, "Warning: Configuration file '%s' has schema version %s but current version is %s. Migration may be needed.\n", path, configVersion, SchemaVersion)
+		}
+	}
+
 	// Apply organization-based defaults if not explicitly set
 	applyOrganizationDefaults(&cfg)
+
+	// Initialize metadata if it's missing (for backward compatibility with old configs)
+	if cfg.Metadata.CreatedAt.IsZero() {
+		cfg.Metadata = NewConfigMetadata()
+	}
 
 	return cfg, nil
 }
@@ -1076,10 +1100,16 @@ func SaveWithOmitEmpty(cfg Config) error {
 }
 
 // saveConfig is the internal implementation for saving configurations.
+// It preserves the CreatedAt timestamp and CreatedBy field from the original
+// configuration while updating the UpdatedAt timestamp to the current time.
+// Tags and Annotations are also preserved during the save operation.
 func saveConfig(cfg Config, omitEmpty bool) error {
 	if cfg.ClusterName() == "" {
 		return errors.New("cluster_name must not be empty")
 	}
+
+	// Update the UpdatedAt timestamp before saving
+	cfg.Metadata.Touch()
 
 	// Try to get existing config path first
 	path, err := ConfigPath(cfg.ClusterName())

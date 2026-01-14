@@ -2169,3 +2169,155 @@ func TestApplicationServicesUseApplicationCredentials(t *testing.T) {
 		}
 	})
 }
+
+// TestConfigMetadata tests that configuration metadata is properly initialized and updated
+func TestConfigMetadata(t *testing.T) {
+	t.Run("NewDefault initializes metadata", func(t *testing.T) {
+		cfg := NewDefault("test-cluster")
+
+		// Check that metadata is initialized
+		if cfg.Metadata.CreatedAt.IsZero() {
+			t.Error("CreatedAt should be initialized")
+		}
+		if cfg.Metadata.UpdatedAt.IsZero() {
+			t.Error("UpdatedAt should be initialized")
+		}
+		if cfg.Metadata.CreatedBy == "" {
+			t.Error("CreatedBy should be initialized")
+		}
+		if cfg.Metadata.Tags == nil {
+			t.Error("Tags map should be initialized")
+		}
+		if cfg.Metadata.Annotations == nil {
+			t.Error("Annotations map should be initialized")
+		}
+
+		// CreatedAt and UpdatedAt should be equal for new configs
+		if !cfg.Metadata.CreatedAt.Equal(cfg.Metadata.UpdatedAt) {
+			t.Error("CreatedAt and UpdatedAt should be equal for new configs")
+		}
+	})
+
+	t.Run("Load initializes metadata for old configs", func(t *testing.T) {
+		dir := t.TempDir()
+		os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+		defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+		// Create a config without metadata (simulating old config file)
+		cfg := NewDefault("test-cluster")
+		cfg.Metadata = ConfigMetadata{} // Clear metadata
+
+		// Save it
+		if err := Save(cfg); err != nil {
+			t.Fatalf("Failed to save config: %v", err)
+		}
+
+		// Load it back
+		loaded, err := Load("test-cluster")
+		if err != nil {
+			t.Fatalf("Failed to load config: %v", err)
+		}
+
+		// Metadata should be initialized
+		if loaded.Metadata.CreatedAt.IsZero() {
+			t.Error("CreatedAt should be initialized after loading old config")
+		}
+		if loaded.Metadata.UpdatedAt.IsZero() {
+			t.Error("UpdatedAt should be initialized after loading old config")
+		}
+	})
+
+	t.Run("Save updates UpdatedAt timestamp", func(t *testing.T) {
+		dir := t.TempDir()
+		os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+		defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+		// Create and save initial config
+		cfg := NewDefault("test-cluster")
+		originalUpdatedAt := cfg.Metadata.UpdatedAt
+
+		if err := Save(cfg); err != nil {
+			t.Fatalf("Failed to save config: %v", err)
+		}
+
+		// Load it back
+		loaded, err := Load("test-cluster")
+		if err != nil {
+			t.Fatalf("Failed to load config: %v", err)
+		}
+
+		// Modify and save again
+		loaded.OpenCenter.Cluster.AdminEmail = "test@example.com"
+		if err := Save(loaded); err != nil {
+			t.Fatalf("Failed to save modified config: %v", err)
+		}
+
+		// Load again
+		reloaded, err := Load("test-cluster")
+		if err != nil {
+			t.Fatalf("Failed to reload config: %v", err)
+		}
+
+		// UpdatedAt should be different from original
+		if reloaded.Metadata.UpdatedAt.Equal(originalUpdatedAt) || reloaded.Metadata.UpdatedAt.Before(originalUpdatedAt) {
+			t.Error("UpdatedAt should be updated after saving")
+		}
+
+		// CreatedAt should remain the same
+		if !reloaded.Metadata.CreatedAt.Equal(loaded.Metadata.CreatedAt) {
+			t.Error("CreatedAt should not change after updates")
+		}
+	})
+
+	t.Run("Metadata Touch method updates timestamp", func(t *testing.T) {
+		metadata := NewConfigMetadata()
+		originalUpdatedAt := metadata.UpdatedAt
+
+		// Wait a tiny bit to ensure time difference
+		// Note: In real tests, you might want to use a time mock
+		metadata.Touch()
+
+		if metadata.UpdatedAt.Equal(originalUpdatedAt) || metadata.UpdatedAt.Before(originalUpdatedAt) {
+			t.Error("Touch should update UpdatedAt timestamp")
+		}
+	})
+
+	t.Run("Metadata persists through save and load", func(t *testing.T) {
+		dir := t.TempDir()
+		os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+		defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
+
+		// Create config with custom metadata
+		cfg := NewDefault("test-cluster")
+		cfg.Metadata.Tags = map[string]string{
+			"environment": "production",
+			"team":        "platform",
+		}
+		cfg.Metadata.Annotations = map[string]string{
+			"description": "Test cluster for metadata",
+		}
+
+		if err := Save(cfg); err != nil {
+			t.Fatalf("Failed to save config: %v", err)
+		}
+
+		// Load it back
+		loaded, err := Load("test-cluster")
+		if err != nil {
+			t.Fatalf("Failed to load config: %v", err)
+		}
+
+		// Check tags
+		if loaded.Metadata.Tags["environment"] != "production" {
+			t.Error("Tags should persist through save and load")
+		}
+		if loaded.Metadata.Tags["team"] != "platform" {
+			t.Error("Tags should persist through save and load")
+		}
+
+		// Check annotations
+		if loaded.Metadata.Annotations["description"] != "Test cluster for metadata" {
+			t.Error("Annotations should persist through save and load")
+		}
+	})
+}

@@ -128,7 +128,7 @@ locals {
   #Hardening
   k8s_hardening_enabled                   = {{ .Security.K8sHardening | default true }}
   kube_pod_security_exemptions_namespaces = {{ if .Security.PodSecurityExemptions }}[{{ range $i, $ns := .Security.PodSecurityExemptions }}{{if $i}}, {{end}}"{{ $ns }}"{{ end }}]{{ else }}["trivy-temp"]{{ end }}
-  kubelet_rotate_server_certificates      = {{ .Security.KubeletRotateCerts | default true }}
+  kubelet_rotate_server_certificates      = {{ .OpenCenter.Cluster.Kubernetes.KubeletRotateServerCerts | default true }}
   os_hardening_enabled                    = {{ .Security.OSHardening | default true }}
 
   {{- if .OpenCenter.Cluster.Kubernetes.OIDC.Enabled }}

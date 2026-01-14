@@ -75,7 +75,7 @@ func defaultConfig(name string) Config {
 	isTestMode := os.Getenv("OPENCENTER_TEST_MODE") == "true"
 
 	authURL := ""
-	region := ""
+	region := "sjc3" // Default region
 	tenantName := ""
 	barbicanAuthURL := ""
 
@@ -122,7 +122,7 @@ func defaultConfig(name string) Config {
 			Meta: ClusterMeta{
 				Name:         name,
 				Env:          "",
-				Region:       "",
+				Region:       region,
 				Status:       "",
 				Organization: "opencenter",
 			},
@@ -183,7 +183,7 @@ func defaultConfig(name string) Config {
 				K8sAPIPortACL:      []string{"0.0.0.0/0"},
 				SSHAuthorizedKeys:  []string{""},
 				BaseDomain:         "k8s.opencenter.cloud",
-				ClusterFQDN:        fmt.Sprintf("%s.sjc3.k8s.opencenter.cloud", name),
+				ClusterFQDN:        fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
 				AdminEmail:         "",
 				Kubernetes: KubernetesConfig{
 					Version:              "1.33.7",
@@ -197,7 +197,7 @@ func defaultConfig(name string) Config {
 					SubnetPods:           "10.42.0.0/16",
 					SubnetServices:       "10.43.0.0/16",
 					LoadbalancerProvider: "ovn",
-					DNSZoneName:          fmt.Sprintf("%s.sjc3.k8s.opencenter.cloud", name),
+					DNSZoneName:          fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
 					MasterCount:          3,
 					WorkerCount:          2,
 					WorkerCountWindows:   0,
@@ -273,7 +273,7 @@ func defaultConfig(name string) Config {
 						GitOpsSourceBranch:  "main",
 					},
 					AlertManagerBaseUrl: "",
-					HTTPRouteFQDN:       fmt.Sprintf("https://alerts.%s.sjc3.k8s.opencenter.cloud", name),
+					HTTPRouteFQDN:       fmt.Sprintf("https://alerts.%s.%s.k8s.opencenter.cloud", name, region),
 				},
 			},
 			Services: ServiceMap{
@@ -281,7 +281,7 @@ func defaultConfig(name string) Config {
 					BaseConfig: services.BaseConfig{
 						Enabled: true,
 					},
-					KubeAPIServer: fmt.Sprintf("https://api.%s.sjc3.k8s.opencenter.cloud:6443", name),
+					KubeAPIServer: fmt.Sprintf("https://api.%s.%s.k8s.opencenter.cloud:6443", name, region),
 				},
 				"cert-manager": &services.CertManagerConfig{
 					BaseConfig: services.BaseConfig{
@@ -305,19 +305,19 @@ func defaultConfig(name string) Config {
 				"headlamp": &services.HeadlampConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled:  true,
-						Hostname: fmt.Sprintf("dashboard.%s.sjc3.k8s.opencenter.cloud", name),
+						Hostname: fmt.Sprintf("dashboard.%s.%s.k8s.opencenter.cloud", name, region),
 					},
-					OIDCIssuerURL: fmt.Sprintf("https://auth.%s.sjc3.k8s.opencenter.cloud/realms/opencenter", name),
+					OIDCIssuerURL: fmt.Sprintf("https://auth.%s.%s.k8s.opencenter.cloud/realms/opencenter", name, region),
 					OIDCClientID:  "kubernetes",
 				},
 				"keycloak": &services.KeycloakConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled:  false,
-						Hostname: fmt.Sprintf("auth.%s.sjc3.k8s.opencenter.cloud", name),
+						Hostname: fmt.Sprintf("auth.%s.%s.k8s.opencenter.cloud", name, region),
 					},
 					Realm:       "opencenter",
 					ClientID:    "kubernetes",
-					FrontendURL: fmt.Sprintf("https://auth.%s.sjc3.k8s.opencenter.cloud", name),
+					FrontendURL: fmt.Sprintf("https://auth.%s.%s.k8s.opencenter.cloud", name, region),
 				},
 				"kube-prometheus-stack": &services.PrometheusStackConfig{
 					BaseConfig: services.BaseConfig{
@@ -338,8 +338,8 @@ func defaultConfig(name string) Config {
 					VolumeSize:      20,
 					StorageClass:    "csi-cinder-sc-delete",
 					BucketName:      fmt.Sprintf("%s-loki", name),
-					SwiftAuthURL:    "https://keystone.api.sjc3.rackspacecloud.com/v3/",
-					SwiftRegion:     "SJC3",
+					SwiftAuthURL:    fmt.Sprintf("https://keystone.api.%s.rackspacecloud.com/v3/", strings.ToLower(region)),
+					SwiftRegion:     strings.ToUpper(region),
 					SwiftDomainName: "Default",
 				},
 				"olm":               &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
@@ -366,7 +366,7 @@ func defaultConfig(name string) Config {
 				"weave-gitops": &services.WeaveGitOpsConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled:  true,
-						Hostname: fmt.Sprintf("gitops.%s.sjc3.k8s.opencenter.cloud", name),
+						Hostname: fmt.Sprintf("gitops.%s.%s.k8s.opencenter.cloud", name, region),
 					},
 				},
 			},
@@ -450,18 +450,18 @@ func defaultConfig(name string) Config {
 		},
 		Networking: Networking{
 			SubnetNodes:          "10.2.184.0/22",
-			AllocationPoolStart:  "",
-			AllocationPoolEnd:    "10.2.131.254",
+			AllocationPoolStart:  "${local.subnet_nodes_oct}.50",
+			AllocationPoolEnd:    "${local.subnet_nodes_oct}.254",
 			VRRPEnabled:          true,
-			VRRPIP:               "10.2.184.10",
+			VRRPIP:               "${local.subnet_nodes_oct}.10",
 			SubnetServices:       "10.43.0.0/16",
 			SubnetPods:           "10.42.0.0/16",
 			UseOctavia:           false,
 			LoadbalancerProvider: "amphora",
 			UseDesignate:         false,
-			DNSZoneName:          fmt.Sprintf("gdo.prod.sjc3.k8s.opencenter.cloud"),
+			DNSZoneName:          fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
 			DNSNameservers:       []string{"8.8.8.8", "8.8.4.4"},
-			NTPServers:           []string{"time.dfw3.rackspace.com", "time2.dfw3.rackspace.com"},
+			NTPServers:           []string{fmt.Sprintf("time.%s.rackspace.com", strings.ToLower(region)), fmt.Sprintf("time2.%s.rackspace.com", strings.ToLower(region))},
 			VLAN: VLAN{
 				ID:       "",
 				MTU:      0,
@@ -503,10 +503,11 @@ func NewDefault(name string) Config {
 // Outputs:
 //   - *TalosConfig: A new TalosConfig object with default values.
 func DefaultTalosConfig(clusterName string) *TalosConfig {
+	talosVersion := "v1.8.0"
 	return &TalosConfig{
 		Enabled:        true,
-		Version:        "v1.8.0",
-		ImageURL:       "https://github.com/siderolabs/talos/releases/download/v1.8.0/openstack-amd64.raw.xz",
+		Version:        talosVersion,
+		ImageURL:       fmt.Sprintf("https://github.com/siderolabs/talos/releases/download/%s/openstack-amd64.raw.xz", talosVersion),
 		ImageSignature: "",
 		MachineConfig: TalosMachineConfig{
 			AppArmorEnabled:  true,

@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/rackerlabs/openCenter-cli/internal/gitops"
+	"github.com/rackerlabs/openCenter-cli/internal/provision"
 )
 
 var (
@@ -49,14 +50,20 @@ func GetGlobalRegistry() (TemplateRegistry, error) {
 
 // initializeGlobalRegistry registers all embedded templates into the provided registry
 func initializeGlobalRegistry(registry TemplateRegistry) error {
-	// Register GitOps templates
+	// Register GitOps templates (from templates/ directory)
 	if err := RegisterGitOpsTemplates(registry, gitops.Files); err != nil {
 		return fmt.Errorf("failed to register gitops templates: %w", err)
 	}
 
-	// Note: provision templates use an unexported embed.FS variable (templatesFS)
-	// so they cannot be registered here. They are already parsed into provision.Templates
-	// and can be accessed directly through that package.
+	// Register GitOps base directory templates (from gitops-base-dir/)
+	if err := RegisterGitOpsBaseTemplates(registry, gitops.Files); err != nil {
+		return fmt.Errorf("failed to register gitops base templates: %w", err)
+	}
+
+	// Register provision templates
+	if err := RegisterProvisionTemplates(registry, provision.TemplatesFS); err != nil {
+		return fmt.Errorf("failed to register provision templates: %w", err)
+	}
 
 	return nil
 }

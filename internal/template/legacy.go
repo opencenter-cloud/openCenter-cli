@@ -29,23 +29,13 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-)
-
-// Feature flag environment variable for controlling template engine selection
-const (
-	// EnvUseNewTemplateEngine controls whether to use the new template engine (true)
-	// or the legacy direct text/template implementation (false/unset).
-	// This allows gradual migration and rollback capability.
-	EnvUseNewTemplateEngine = "OPENCENTER_USE_NEW_TEMPLATE_ENGINE"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
 )
 
 // UseNewTemplateEngine returns true if the new template engine should be used.
-// This checks the OPENCENTER_USE_NEW_TEMPLATE_ENGINE environment variable.
-// Valid values for enabling: "true", "1", "yes", "on" (case-insensitive)
-// Any other value or unset means use legacy system.
+// This delegates to the centralized feature flag system.
 func UseNewTemplateEngine() bool {
-	value := strings.ToLower(strings.TrimSpace(os.Getenv(EnvUseNewTemplateEngine)))
-	return value == "true" || value == "1" || value == "yes" || value == "on"
+	return config.UseNewTemplateEngine()
 }
 
 // LegacyTemplateRenderer provides backward compatibility for existing template rendering code.

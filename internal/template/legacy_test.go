@@ -20,6 +20,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -126,11 +127,14 @@ func TestUseNewTemplateEngine(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set environment variable
 			if tt.envValue != "" {
-				t.Setenv(EnvUseNewTemplateEngine, tt.envValue)
+				t.Setenv(config.EnvUseNewTemplateEngine, tt.envValue)
 			} else {
 				// Ensure it's unset
-				os.Unsetenv(EnvUseNewTemplateEngine)
+				os.Unsetenv(config.EnvUseNewTemplateEngine)
 			}
+
+			// Clear cache to ensure fresh evaluation
+			config.GetFeatureFlags().ClearCache()
 
 			result := UseNewTemplateEngine()
 			assert.Equal(t, tt.expected, result,
@@ -141,14 +145,17 @@ func TestUseNewTemplateEngine(t *testing.T) {
 
 // TestEnvUseNewTemplateEngineConstant verifies the constant value is correct.
 func TestEnvUseNewTemplateEngineConstant(t *testing.T) {
-	assert.Equal(t, "OPENCENTER_USE_NEW_TEMPLATE_ENGINE", EnvUseNewTemplateEngine,
+	assert.Equal(t, "OPENCENTER_USE_NEW_TEMPLATE_ENGINE", config.EnvUseNewTemplateEngine,
 		"Environment variable constant should match expected value")
 }
 
 // TestFeatureFlagDefault verifies the default behavior when env var is not set.
 func TestFeatureFlagDefault(t *testing.T) {
 	// Ensure env var is not set
-	os.Unsetenv(EnvUseNewTemplateEngine)
+	os.Unsetenv(config.EnvUseNewTemplateEngine)
+	
+	// Clear cache to ensure fresh evaluation
+	config.GetFeatureFlags().ClearCache()
 
 	// Default should be false (use legacy system)
 	assert.False(t, UseNewTemplateEngine(),
@@ -166,7 +173,11 @@ func TestFeatureFlagCaseInsensitive(t *testing.T) {
 
 	for _, value := range testCases {
 		t.Run(value, func(t *testing.T) {
-			t.Setenv(EnvUseNewTemplateEngine, value)
+			t.Setenv(config.EnvUseNewTemplateEngine, value)
+			
+			// Clear cache to ensure fresh evaluation
+			config.GetFeatureFlags().ClearCache()
+			
 			assert.True(t, UseNewTemplateEngine(),
 				"Value %q should enable new template engine (case-insensitive)", value)
 		})
@@ -192,7 +203,11 @@ func TestFeatureFlagWhitespaceHandling(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("whitespace_"+tc.value, func(t *testing.T) {
-			t.Setenv(EnvUseNewTemplateEngine, tc.value)
+			t.Setenv(config.EnvUseNewTemplateEngine, tc.value)
+			
+			// Clear cache to ensure fresh evaluation
+			config.GetFeatureFlags().ClearCache()
+			
 			assert.Equal(t, tc.expected, UseNewTemplateEngine(),
 				"Value %q should return %v after trimming whitespace", tc.value, tc.expected)
 		})

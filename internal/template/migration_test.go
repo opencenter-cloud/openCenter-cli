@@ -26,10 +26,10 @@ import (
 	"testing"
 	"testing/fstest"
 	"text/template"
-
 	"time"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -392,8 +392,11 @@ func TestFeatureFlagEnvironmentVariable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set environment variable
 			if tt.envValue != "" {
-				t.Setenv(EnvUseNewTemplateEngine, tt.envValue)
+				t.Setenv(config.EnvUseNewTemplateEngine, tt.envValue)
 			}
+
+			// Clear cache to ensure fresh evaluation
+			config.GetFeatureFlags().ClearCache()
 
 			// Verify UseNewTemplateEngine returns expected value
 			assert.Equal(t, tt.expectNew, UseNewTemplateEngine(), tt.description)
@@ -462,13 +465,13 @@ func TestFeatureFlagOutputIdentity(t *testing.T) {
 			tmpDir := t.TempDir()
 
 			// Render with legacy system (feature flag off)
-			t.Setenv(EnvUseNewTemplateEngine, "false")
+			t.Setenv(config.EnvUseNewTemplateEngine, "false")
 			legacyOutput := filepath.Join(tmpDir, "legacy.txt")
 			err := RenderTemplateToFile(fsys, "test.tmpl", legacyOutput, tt.data)
 			require.NoError(t, err)
 
 			// Render with new system (feature flag on)
-			t.Setenv(EnvUseNewTemplateEngine, "true")
+			t.Setenv(config.EnvUseNewTemplateEngine, "true")
 			newOutput := filepath.Join(tmpDir, "new.txt")
 			err = RenderTemplateToFile(fsys, "test.tmpl", newOutput, tt.data)
 			require.NoError(t, err)
@@ -509,7 +512,11 @@ data:
 
 	// Phase 1: Deploy with new engine enabled
 	t.Run("phase1_new_engine", func(t *testing.T) {
-		t.Setenv(EnvUseNewTemplateEngine, "true")
+		t.Setenv(config.EnvUseNewTemplateEngine, "true")
+		
+		// Clear cache to ensure fresh evaluation
+		config.GetFeatureFlags().ClearCache()
+		
 		assert.True(t, UseNewTemplateEngine(), "Feature flag should be enabled")
 
 		outputPath := filepath.Join(tmpDir, "phase1.yaml")
@@ -524,7 +531,11 @@ data:
 
 	// Phase 2: Rollback to legacy system (disable feature flag)
 	t.Run("phase2_rollback_to_legacy", func(t *testing.T) {
-		t.Setenv(EnvUseNewTemplateEngine, "false")
+		t.Setenv(config.EnvUseNewTemplateEngine, "false")
+		
+		// Clear cache to ensure fresh evaluation
+		config.GetFeatureFlags().ClearCache()
+		
 		assert.False(t, UseNewTemplateEngine(), "Feature flag should be disabled")
 
 		outputPath := filepath.Join(tmpDir, "phase2.yaml")
@@ -570,7 +581,7 @@ func TestFeatureFlagWithRenderTemplateToWriter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(EnvUseNewTemplateEngine, tt.envValue)
+			t.Setenv(config.EnvUseNewTemplateEngine, tt.envValue)
 
 			var buf strings.Builder
 			err := RenderTemplateToWriter(fsys, "test.tmpl", data, &buf)
@@ -586,7 +597,11 @@ func TestFeatureFlagWithRenderTemplateToWriter(t *testing.T) {
 func TestFeatureFlagDocumentation(t *testing.T) {
 	t.Run("example_basic_usage", func(t *testing.T) {
 		// Example 1: Check if new engine is enabled
-		t.Setenv(EnvUseNewTemplateEngine, "true")
+		t.Setenv(config.EnvUseNewTemplateEngine, "true")
+		
+		// Clear cache to ensure fresh evaluation
+		config.GetFeatureFlags().ClearCache()
+		
 		if UseNewTemplateEngine() {
 			t.Log("✓ New template engine is enabled")
 		} else {
@@ -598,11 +613,13 @@ func TestFeatureFlagDocumentation(t *testing.T) {
 	t.Run("example_gradual_rollout", func(t *testing.T) {
 		// Example 2: Gradual rollout strategy
 		// Step 1: Deploy with flag disabled (default)
-		t.Setenv(EnvUseNewTemplateEngine, "")
+		t.Setenv(config.EnvUseNewTemplateEngine, "")
+		config.GetFeatureFlags().ClearCache()
 		assert.False(t, UseNewTemplateEngine(), "Step 1: Default to legacy")
 
 		// Step 2: Enable for development/staging
-		t.Setenv(EnvUseNewTemplateEngine, "true")
+		t.Setenv(config.EnvUseNewTemplateEngine, "true")
+		config.GetFeatureFlags().ClearCache()
 		assert.True(t, UseNewTemplateEngine(), "Step 2: Enable for dev/staging")
 
 		// Step 3: Monitor and validate
@@ -615,7 +632,8 @@ func TestFeatureFlagDocumentation(t *testing.T) {
 	t.Run("example_rollback_procedure", func(t *testing.T) {
 		// Example 3: Rollback procedure
 		// If issues are detected, immediately disable the flag
-		t.Setenv(EnvUseNewTemplateEngine, "false")
+		t.Setenv(config.EnvUseNewTemplateEngine, "false")
+		config.GetFeatureFlags().ClearCache()
 		assert.False(t, UseNewTemplateEngine(), "Rollback: Disable feature flag")
 
 		// System automatically falls back to legacy implementation

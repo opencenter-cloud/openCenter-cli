@@ -28,6 +28,10 @@ import (
 //go:embed all:templates
 var templatesFS embed.FS
 
+// TemplatesFS exposes the embedded templates filesystem for external use,
+// particularly for template registry integration.
+var TemplatesFS = templatesFS
+
 // Templates holds the parsed templates, ready for execution.
 var (
 	Templates *template.Template

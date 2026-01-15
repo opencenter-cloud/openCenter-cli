@@ -283,3 +283,23 @@ func RegisterProvisionTemplates(registry TemplateRegistry, fsys fs.FS) error {
 
 	return nil
 }
+
+// RegisterGitOpsBaseTemplates registers all templates from the gitops-base-dir embedded filesystem
+func RegisterGitOpsBaseTemplates(registry TemplateRegistry, fsys fs.FS) error {
+	registrar := NewEmbeddedTemplateRegistrar(registry)
+
+	// Register base directory structure templates
+	baseOpts := RegistrationOptions{
+		Type:        TemplateTypeBase,
+		Description: "GitOps base directory structure templates",
+		Version:     "1.0.0",
+		Priority:    200, // Higher priority than other templates
+		Tags:        []string{"gitops", "base", "structure"},
+	}
+
+	if err := registrar.RegisterFromFS(fsys, "gitops-base-dir", baseOpts); err != nil {
+		return fmt.Errorf("failed to register gitops base templates: %w", err)
+	}
+
+	return nil
+}

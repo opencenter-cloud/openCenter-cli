@@ -15,20 +15,14 @@ package gitops
 
 import (
 	"context"
-	"os"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
 )
 
-// Feature flag for enabling the new pipeline-based generation system.
-// Set OPENCENTER_USE_PIPELINE_GENERATOR=true to enable the new system.
-// Default is false to maintain backward compatibility.
-const usePipelineGeneratorEnvVar = "OPENCENTER_USE_PIPELINE_GENERATOR"
-
 // usePipelineGenerator checks if the new pipeline-based generation system should be used.
-// This allows for gradual migration from the legacy system to the new pipeline system.
+// This delegates to the centralized feature flag system.
 func usePipelineGenerator() bool {
-	return os.Getenv(usePipelineGeneratorEnvVar) == "true"
+	return config.UsePipelineGenerator()
 }
 
 // GenerateGitOpsRepository is a compatibility wrapper that provides a unified interface

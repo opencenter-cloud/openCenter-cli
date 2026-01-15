@@ -372,3 +372,60 @@ func TestRegistrationWithInference(t *testing.T) {
 	assert.Equal(t, TemplateTypeService, lokiTemplate.Type)
 	assert.Contains(t, lokiTemplate.Services, "loki")
 }
+
+func TestRegisterGitOpsBaseTemplates(t *testing.T) {
+	t.Run("with structure files only", func(t *testing.T) {
+		// Create a mock filesystem that simulates the gitops-base-dir structure
+		// Note: gitops-base-dir contains only structure files (.gitignore, .gitkeep)
+		// which are not considered templates
+		fsys := fstest.MapFS{
+			"gitops-base-dir/.gitignore": &fstest.MapFile{
+				Data: []byte("# gitignore content"),
+			},
+			"gitops-base-dir/applications/overlays/.gitkeep": &fstest.MapFile{
+				Data: []byte(""),
+			},
+			"gitops-base-dir/infrastructure/clusters/.gitkeep": &fstest.MapFile{
+				Data: []byte(""),
+			},
+		}
+
+		registry := NewInMemoryTemplateRegistry()
+		err := RegisterGitOpsBaseTemplates(registry, fsys)
+		require.NoError(t, err)
+
+		// Since gitops-base-dir only contains structure files (not templates),
+		// no templates should be registered
+		templates := registry.ListTemplates()
+		assert.Equal(t, 0, len(templates), "structure files should not be registered as templates")
+	})
+
+	t.Run("with actual template files", func(t *testing.T) {
+		// Create a mock filesystem with actual template files
+		fsys := fstest.MapFS{
+			"gitops-base-dir/config.yaml": &fstest.MapFile{
+				Data: []byte("# config template"),
+			},
+			"gitops-base-dir/base/kustomization.yaml": &fstest.MapFile{
+				Data: []byte("# kustomization"),
+			},
+		}
+
+		registry := NewInMemoryTemplateRegistry()
+		err := RegisterGitOpsBaseTemplates(registry, fsys)
+		require.NoError(t, err)
+
+		// Verify templates were registered
+		templates := registry.ListTemplates()
+		assert.Equal(t, 2, len(templates), "should have registered template files")
+
+		// Verify all are base type
+		baseTemplates := registry.GetTemplatesForType(TemplateTypeBase)
+		assert.Equal(t, 2, len(baseTemplates), "should have base type templates")
+
+		// Verify high priority
+		for _, tmpl := range baseTemplates {
+			assert.Equal(t, 200, tmpl.Metadata.Priority, "base templates should have priority 200")
+		}
+	})
+}

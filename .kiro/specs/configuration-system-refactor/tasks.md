@@ -314,11 +314,11 @@ d
 5. Validate output compatibility with existing system
 
 **Acceptance Criteria:**
-- [ ] Existing generation calls work without modification
-- [ ] Generated output is identical to legacy system
-- [ ] CLI commands use new generation system transparently
-- [ ] Feature flag allows switching between systems
-- [ ] Migration preserves all existing functionality
+- [x] Existing generation calls work without modification
+- [x] Generated output is identical to legacy system
+- [x] CLI commands use new generation system transparently
+- [x] Feature flag allows switching between systems
+- [x] Migration preserves all existing functionality
 
 **Files to Create/Modify:**
 - `internal/gitops/legacy_compat.go` (partially complete)

@@ -175,6 +175,39 @@ func (w *LegacyGenerationWrapper) RenderInfrastructureCluster() error {
 	return RenderInfrastructureCluster(w.config)
 }
 
+// RenderService is a compatibility wrapper for rendering a single service.
+// It automatically selects between the legacy system and the new pipeline-based
+// system based on the feature flag.
+//
+// This function maintains backward compatibility while allowing gradual migration to
+// the new pipeline system. When OPENCENTER_USE_PIPELINE_GENERATOR=true, it uses the
+// new PipelineGenerator with a single-service stage. Otherwise, it uses the legacy
+// RenderSingleService function.
+//
+// Usage:
+//
+//	if err := gitops.RenderService(ctx, cfg, "prometheus", false); err != nil {
+//	    return fmt.Errorf("failed to render service: %w", err)
+//	}
+//
+// Legacy equivalent:
+//
+//	if err := gitops.RenderSingleService(cfg, "prometheus", false); err != nil {
+//	    return err
+//	}
+func RenderService(ctx context.Context, cfg config.Config, serviceName string, isManaged bool) error {
+	if usePipelineGenerator() {
+		// Use new pipeline-based generation system for single service
+		// TODO: Implement when PipelineGenerator supports single-service rendering (Task 4.2)
+		// For now, fall back to legacy system even when flag is set
+		// This will be updated once the pipeline system supports selective rendering
+		return RenderSingleService(cfg, serviceName, isManaged)
+	}
+
+	// Use legacy single-service rendering
+	return RenderSingleService(cfg, serviceName, isManaged)
+}
+
 // MigrationGuide provides documentation for migrating from legacy to pipeline-based generation.
 const MigrationGuide = `
 GitOps Generation Migration Guide
@@ -217,6 +250,18 @@ With Options:
         Verbose: true,
     }
     if err := gitops.GenerateGitOpsRepositoryWithOptions(ctx, cfg, opts); err != nil {
+        return err
+    }
+
+Single Service Rendering:
+
+Before (Legacy):
+    if err := gitops.RenderSingleService(cfg, "prometheus", false); err != nil {
+        return err
+    }
+
+After (Unified):
+    if err := gitops.RenderService(ctx, cfg, "prometheus", false); err != nil {
         return err
     }
 

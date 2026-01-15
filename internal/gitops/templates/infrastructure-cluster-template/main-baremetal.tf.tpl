@@ -7,10 +7,10 @@ locals {
   subnet_nodes                            = "{{ .IAC.Main.subnet_nodes | default "172.23.0.0/24" }}"
   subnet_nodes_oct                       = join(".", slice(split(".", split("/", local.subnet_nodes)[0]), 0, 3))
   #Leave some IPs free for the VRRP IP and the MetalLB Range
-  allocation_pool_start                   = "{{ .IAC.Main.allocation_pool_start | default "" }}" != "" ? "{{ .IAC.Main.allocation_pool_start }}" : "${local.subnet_nodes_oct}.50"
-  allocation_pool_end                     = "{{ .IAC.Main.allocation_pool_end | default "" }}" != "" ? "{{ .IAC.Main.allocation_pool_end }}" : "${local.subnet_nodes_oct}.254"
+  allocation_pool_start                   = "{{ .IAC.Main.allocation_pool_start | default "" }}" != "" ? "{{ .IAC.Main.allocation_pool_start }}" : "$${local.subnet_nodes_oct}.50"
+  allocation_pool_end                     = "{{ .IAC.Main.allocation_pool_end | default "" }}" != "" ? "{{ .IAC.Main.allocation_pool_end }}" : "$${local.subnet_nodes_oct}.254"
   # vrrp_ip Must be an IP from subnet_nodes and will be used as  the internal Kubernetes API VIP.
-  vrrp_ip                                 = "{{ .IAC.Main.vrrp_ip | default "" }}" != "" ? "{{ .IAC.Main.vrrp_ip }}" : "${local.subnet_nodes_oct}.10"
+  vrrp_ip                                 = "{{ .IAC.Main.vrrp_ip | default "" }}" != "" ? "{{ .IAC.Main.vrrp_ip }}" : "$${local.subnet_nodes_oct}.10"
   #CIDR that will be used by kubernetes pods. Not an openstack network.
   subnet_pods                             = "{{ .OpenCenter.Cluster.Kubernetes.SubnetPods | default "10.42.0.0/16" }}"
   #CIDR that will be used for kubernetes services. Not an openstack network.

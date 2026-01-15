@@ -24,10 +24,10 @@ locals {
   subnet_nodes                            = "{{ .Networking.SubnetNodes | default "10.2.128.0/22" }}"
   subnet_nodes_oct                       = join(".", slice(split(".", split("/", local.subnet_nodes)[0]), 0, 3))
   #Leave some IPs free for the VRRP IP and the MetalLB Range
-  allocation_pool_start                   = "{{ .Networking.AllocationPoolStart | default "${local.subnet_nodes_oct}.50" }}"
+  allocation_pool_start                   = "{{ .Networking.AllocationPoolStart | default "$${local.subnet_nodes_oct}.50" }}"
   allocation_pool_end                     = "{{ .Networking.AllocationPoolEnd | default "10.2.131.254" }}"
   # vrrp_ip Must be an IP from subnet_nodes and will be used as the internal Kubernetes API VIP.
-  vrrp_ip                                 = "{{ .Networking.VRRPIP | default "${local.subnet_nodes_oct}.10" }}"
+  vrrp_ip                                 = "{{ .Networking.VRRPIP | default "$${local.subnet_nodes_oct}.10" }}"
   #CIDR that will be used by kubernetes pods. Not an openstack network.
   subnet_pods                             = "{{ .Networking.SubnetPods | default .OpenCenter.Cluster.Kubernetes.SubnetPods | default "10.42.0.0/16" }}"
   #CIDR that will be used for kubernetes services. Not an openstack network.

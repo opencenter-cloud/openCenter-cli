@@ -392,10 +392,10 @@ func defaultConfig(name string) Config {
 		},
 		Networking: Networking{
 			SubnetNodes:          "10.2.184.0/22",
-			AllocationPoolStart:  "$${local.subnet_nodes_oct}.50",
-			AllocationPoolEnd:    "$${local.subnet_nodes_oct}.254",
+			AllocationPoolStart:  "$$${local.subnet_nodes_oct}.50",
+			AllocationPoolEnd:    "$$${local.subnet_nodes_oct}.254",
 			VRRPEnabled:          true,
-			VRRPIP:               "$${local.subnet_nodes_oct}.10",
+			VRRPIP:               "$$${local.subnet_nodes_oct}.10",
 			SubnetServices:       "10.43.0.0/16",
 			SubnetPods:           "10.42.0.0/16",
 			UseOctavia:           false,

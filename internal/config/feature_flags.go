@@ -17,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Feature flag environment variables for controlling system behavior during migration.
@@ -61,6 +63,7 @@ type FeatureFlags struct {
 	cache                 map[string]bool
 	debugEnabled          bool
 	allNewFeaturesEnabled bool
+	logger                *logrus.Logger
 }
 
 var (
@@ -77,7 +80,11 @@ func GetFeatureFlags() *FeatureFlags {
 			cache:                 make(map[string]bool),
 			debugEnabled:          parseBoolEnv(EnvFeatureFlagDebug),
 			allNewFeaturesEnabled: parseBoolEnv(EnvEnableAllNewFeatures),
+			logger:                GetGlobalLogger(),
 		}
+		
+		// Log initialization with all feature flag states
+		globalFeatureFlags.logInitialization()
 	})
 	return globalFeatureFlags
 }
@@ -120,15 +127,8 @@ func (ff *FeatureFlags) isEnabled(envVar, featureName string) bool {
 	ff.cache[envVar] = enabled
 	ff.mu.Unlock()
 
-	// Debug logging
-	if ff.debugEnabled {
-		status := "disabled"
-		if enabled {
-			status = "enabled"
-		}
-		// Use stderr to avoid interfering with command output
-		os.Stderr.WriteString("[FEATURE FLAG] " + featureName + " is " + status + " (" + envVar + ")\n")
-	}
+	// Structured logging for feature flag evaluation
+	ff.logFlagEvaluation(envVar, featureName, enabled)
 
 	return enabled
 }
@@ -150,9 +150,23 @@ func (ff *FeatureFlags) evaluateFlag(envVar string) bool {
 func (ff *FeatureFlags) ClearCache() {
 	ff.mu.Lock()
 	defer ff.mu.Unlock()
+	
+	oldAllNewFeatures := ff.allNewFeaturesEnabled
+	oldDebugEnabled := ff.debugEnabled
+	
 	ff.cache = make(map[string]bool)
 	ff.allNewFeaturesEnabled = parseBoolEnv(EnvEnableAllNewFeatures)
 	ff.debugEnabled = parseBoolEnv(EnvFeatureFlagDebug)
+	
+	// Log cache clear event
+	ff.logger.WithFields(logrus.Fields{
+		"component":                "feature_flags",
+		"operation":                "cache_clear",
+		"all_new_features_before":  oldAllNewFeatures,
+		"all_new_features_after":   ff.allNewFeaturesEnabled,
+		"debug_enabled_before":     oldDebugEnabled,
+		"debug_enabled_after":      ff.debugEnabled,
+	}).Info("Feature flag cache cleared and reloaded")
 }
 
 // GetStatus returns a map of all feature flags and their current status.
@@ -215,6 +229,73 @@ func UseNewConfigBuilder() bool {
 // This is a convenience function that uses the global feature flags instance.
 func UseServiceRegistry() bool {
 	return GetFeatureFlags().UseServiceRegistry()
+}
+
+// logInitialization logs the initial feature flag configuration at startup.
+// This provides visibility into which systems are active when the application starts.
+func (ff *FeatureFlags) logInitialization() {
+	status := ff.GetStatus()
+	
+	ff.logger.WithFields(logrus.Fields{
+		"component":           "feature_flags",
+		"operation":           "initialization",
+		"new_template_engine": status["new_template_engine"],
+		"pipeline_generator":  status["pipeline_generator"],
+		"new_config_builder":  status["new_config_builder"],
+		"service_registry":    status["service_registry"],
+		"all_new_features":    status["all_new_features"],
+		"debug_enabled":       status["debug_enabled"],
+	}).Info("Feature flags initialized")
+	
+	// Count active features
+	activeCount := 0
+	for key, enabled := range status {
+		if enabled && key != "all_new_features" && key != "debug_enabled" {
+			activeCount++
+		}
+	}
+	
+	ff.logger.WithFields(logrus.Fields{
+		"component":       "feature_flags",
+		"active_features": activeCount,
+		"total_features":  4, // new_template_engine, pipeline_generator, new_config_builder, service_registry
+	}).Info("Feature flag summary")
+}
+
+// logFlagEvaluation logs each feature flag evaluation with structured data.
+// This tracks which systems are being used during execution.
+func (ff *FeatureFlags) logFlagEvaluation(envVar, featureName string, enabled bool) {
+	// Determine the source of the flag value
+	source := "default"
+	if os.Getenv(envVar) != "" {
+		source = "environment"
+	} else if ff.allNewFeaturesEnabled {
+		source = "all_new_features"
+	}
+	
+	// Log at debug level for normal operation, info level if debug is enabled
+	logLevel := logrus.DebugLevel
+	if ff.debugEnabled {
+		logLevel = logrus.InfoLevel
+	}
+	
+	ff.logger.WithFields(logrus.Fields{
+		"component":    "feature_flags",
+		"operation":    "evaluation",
+		"feature_name": featureName,
+		"env_var":      envVar,
+		"enabled":      enabled,
+		"source":       source,
+	}).Log(logLevel, "Feature flag evaluated")
+	
+	// Also write to stderr if debug is enabled (for backward compatibility)
+	if ff.debugEnabled {
+		status := "disabled"
+		if enabled {
+			status = "enabled"
+		}
+		os.Stderr.WriteString("[FEATURE FLAG] " + featureName + " is " + status + " (" + envVar + ", source: " + source + ")\n")
+	}
 }
 
 // MigrationGuide provides documentation for using feature flags during migration.

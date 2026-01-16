@@ -189,14 +189,14 @@ func defaultConfig(name string) Config {
 				ClusterFQDN:        fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
 				AdminEmail:         "",
 				Kubernetes: KubernetesConfig{
-					Version:                  "1.33.7",
+					Version:                  "1.33.5",
 					KubesprayVersion:         "v2.29.1",
 					APIPort:                  443,
 					KubeVIPEnabled:           true,
-					KubeletRotateServerCerts: true,
+					KubeletRotateServerCerts: false,
 					FlavorBastion:            "gp.0.2.2",
-					FlavorMaster:             "gp.0.4.4",
-					FlavorWorker:             "gp.0.4.8",
+					FlavorMaster:             "gp.0.4.8",
+					FlavorWorker:             "gp.0.4.16",
 					FlavorWorkerWindows:      "gp.5.4.16",
 					SubnetPods:               "10.42.0.0/16",
 					SubnetServices:           "10.43.0.0/16",
@@ -289,7 +289,7 @@ func defaultConfig(name string) Config {
 				},
 				"cert-manager": &services.CertManagerConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled: false,
+						Enabled: true,
 					},
 					Email:             "mpk-support@rackspace.com",
 					Region:            "us-east-1",
@@ -316,7 +316,7 @@ func defaultConfig(name string) Config {
 				},
 				"keycloak": &services.KeycloakConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:  false,
+						Enabled:  true,
 						Hostname: fmt.Sprintf("auth.%s.%s.k8s.opencenter.cloud", name, region),
 					},
 					Realm:       "opencenter",
@@ -369,7 +369,7 @@ func defaultConfig(name string) Config {
 				},
 				"weave-gitops": &services.WeaveGitOpsConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:  true,
+						Enabled:  false,
 						Hostname: fmt.Sprintf("gitops.%s.%s.k8s.opencenter.cloud", name, region),
 					},
 				},
@@ -392,10 +392,10 @@ func defaultConfig(name string) Config {
 		},
 		Networking: Networking{
 			SubnetNodes:          "10.2.184.0/22",
-			AllocationPoolStart:  "${local.subnet_nodes_oct}.50",
-			AllocationPoolEnd:    "${local.subnet_nodes_oct}.254",
+			AllocationPoolStart:  "$${local.subnet_nodes_oct}.50",
+			AllocationPoolEnd:    "$${local.subnet_nodes_oct}.254",
 			VRRPEnabled:          true,
-			VRRPIP:               "${local.subnet_nodes_oct}.10",
+			VRRPIP:               "$${local.subnet_nodes_oct}.10",
 			SubnetServices:       "10.43.0.0/16",
 			SubnetPods:           "10.42.0.0/16",
 			UseOctavia:           false,

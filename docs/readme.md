@@ -99,8 +99,14 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 ### Development
 - [Architecture](architecture.md) - Technical architecture
 - [Current Status](current-status.md) - Development status
+- [Developer Guide](dev/readme.md) - CLI architecture and implementation
 - [Contributing](../CONTRIBUTING.md) - Contribution guidelines (Coming Soon)
 - Development Setup (Coming Soon)
+
+### Internal Documentation
+- [Internal Packages](dev/internal/README.md) - Implementation details for internal packages
+- [Completed Tasks](dev/completed-tasks/README.md) - Historical task completion records
+- [Testing Documentation](dev/testing/README.md) - Testing infrastructure and practices
 
 ## By Role
 
@@ -121,9 +127,11 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 ### For Developers
 1. [Architecture](architecture.md)
 2. [Current Status](current-status.md)
-3. [Plugin Reference](reference/plugins.md)
-4. Contributing Guide (Coming Soon)
-5. Development Setup (Coming Soon)
+3. [Developer Guide](dev/readme.md)
+4. [Internal Packages](dev/internal/README.md)
+5. [Testing Documentation](dev/testing/README.md)
+6. Contributing Guide (Coming Soon)
+7. Development Setup (Coming Soon)
 
 ### For Decision Makers
 1. [Overview](overview.md)

@@ -36,6 +36,7 @@ that were set by the 'cluster activate' command. This includes:
 1. Cloud provider credentials (AWS and OpenStack)
 2. Local binary path (BIN)
 3. Kubernetes configuration (KUBECONFIG)
+4. Active cluster tracking (OPENCENTER_ACTIVE_CLUSTER)
 
 Note: The PATH variable is not automatically restored to its previous value.
 You may need to restart your shell or manually restore PATH if needed.
@@ -91,6 +92,7 @@ to switch to a different cluster or work in a clean environment.`,
 			// Unset cluster-specific environment variables
 			output.WriteString("unset BIN\n")
 			output.WriteString("unset KUBECONFIG\n")
+			output.WriteString("unset OPENCENTER_ACTIVE_CLUSTER\n")
 
 			fmt.Fprint(cmd.OutOrStdout(), output.String())
 			return nil

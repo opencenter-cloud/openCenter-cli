@@ -382,8 +382,8 @@ func createVeryLargeTestConfig() *Config {
 	}
 
 	// Add networking configuration
-	cfg.Networking.UseOctavia = true
-	cfg.Networking.VRRPEnabled = false
+	cfg.OpenCenter.Cluster.Kubernetes.Networking.UseOctavia = true
+	cfg.OpenCenter.Cluster.Kubernetes.Networking.VRRPEnabled = false
 
 	return cfg
 }

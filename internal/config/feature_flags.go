@@ -82,7 +82,7 @@ func GetFeatureFlags() *FeatureFlags {
 			allNewFeaturesEnabled: parseBoolEnv(EnvEnableAllNewFeatures),
 			logger:                GetGlobalLogger(),
 		}
-		
+
 		// Log initialization with all feature flag states
 		globalFeatureFlags.logInitialization()
 	})
@@ -150,22 +150,22 @@ func (ff *FeatureFlags) evaluateFlag(envVar string) bool {
 func (ff *FeatureFlags) ClearCache() {
 	ff.mu.Lock()
 	defer ff.mu.Unlock()
-	
+
 	oldAllNewFeatures := ff.allNewFeaturesEnabled
 	oldDebugEnabled := ff.debugEnabled
-	
+
 	ff.cache = make(map[string]bool)
 	ff.allNewFeaturesEnabled = parseBoolEnv(EnvEnableAllNewFeatures)
 	ff.debugEnabled = parseBoolEnv(EnvFeatureFlagDebug)
-	
+
 	// Log cache clear event
 	ff.logger.WithFields(logrus.Fields{
-		"component":                "feature_flags",
-		"operation":                "cache_clear",
-		"all_new_features_before":  oldAllNewFeatures,
-		"all_new_features_after":   ff.allNewFeaturesEnabled,
-		"debug_enabled_before":     oldDebugEnabled,
-		"debug_enabled_after":      ff.debugEnabled,
+		"component":               "feature_flags",
+		"operation":               "cache_clear",
+		"all_new_features_before": oldAllNewFeatures,
+		"all_new_features_after":  ff.allNewFeaturesEnabled,
+		"debug_enabled_before":    oldDebugEnabled,
+		"debug_enabled_after":     ff.debugEnabled,
 	}).Info("Feature flag cache cleared and reloaded")
 }
 
@@ -235,7 +235,7 @@ func UseServiceRegistry() bool {
 // This provides visibility into which systems are active when the application starts.
 func (ff *FeatureFlags) logInitialization() {
 	status := ff.GetStatus()
-	
+
 	ff.logger.WithFields(logrus.Fields{
 		"component":           "feature_flags",
 		"operation":           "initialization",
@@ -246,7 +246,7 @@ func (ff *FeatureFlags) logInitialization() {
 		"all_new_features":    status["all_new_features"],
 		"debug_enabled":       status["debug_enabled"],
 	}).Info("Feature flags initialized")
-	
+
 	// Count active features
 	activeCount := 0
 	for key, enabled := range status {
@@ -254,7 +254,7 @@ func (ff *FeatureFlags) logInitialization() {
 			activeCount++
 		}
 	}
-	
+
 	ff.logger.WithFields(logrus.Fields{
 		"component":       "feature_flags",
 		"active_features": activeCount,
@@ -272,13 +272,13 @@ func (ff *FeatureFlags) logFlagEvaluation(envVar, featureName string, enabled bo
 	} else if ff.allNewFeaturesEnabled {
 		source = "all_new_features"
 	}
-	
+
 	// Log at debug level for normal operation, info level if debug is enabled
 	logLevel := logrus.DebugLevel
 	if ff.debugEnabled {
 		logLevel = logrus.InfoLevel
 	}
-	
+
 	ff.logger.WithFields(logrus.Fields{
 		"component":    "feature_flags",
 		"operation":    "evaluation",
@@ -287,7 +287,7 @@ func (ff *FeatureFlags) logFlagEvaluation(envVar, featureName string, enabled bo
 		"enabled":      enabled,
 		"source":       source,
 	}).Log(logLevel, "Feature flag evaluated")
-	
+
 	// Also write to stderr if debug is enabled (for backward compatibility)
 	if ff.debugEnabled {
 		status := "disabled"

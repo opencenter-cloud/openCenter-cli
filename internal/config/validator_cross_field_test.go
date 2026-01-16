@@ -442,9 +442,9 @@ func TestCrossFieldValidation(t *testing.T) {
 		addDefaultSecretsAndInfra(&config)
 
 		// Enable VRRP without Octavia and without IP
-		config.Networking.UseOctavia = false
-		config.Networking.VRRPEnabled = true
-		config.Networking.VRRPIP = ""
+		config.OpenCenter.Cluster.Kubernetes.Networking.UseOctavia = false
+		config.OpenCenter.Cluster.Kubernetes.Networking.VRRPEnabled = true
+		config.OpenCenter.Cluster.Kubernetes.Networking.VRRPIP = ""
 
 		validator := NewConfigValidator(false)
 		result := validator.Validate(ctx, &config)

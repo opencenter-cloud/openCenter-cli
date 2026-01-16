@@ -2,29 +2,31 @@ package config
 
 // KubernetesConfig represents the kubernetes configuration
 type KubernetesConfig struct {
-	Version                  string                  `yaml:"version" json:"version"`
-	KubesprayVersion         string                  `yaml:"kubespray_version" json:"kubespray_version"`
-	APIPort                  int                     `yaml:"api_port" json:"api_port"`
-	KubeVIPEnabled           bool                    `yaml:"kube_vip_enabled" json:"kube_vip_enabled"`
-	KubeletRotateServerCerts bool                    `yaml:"kubelet_rotate_server_certificates" json:"kubelet_rotate_server_certificates"`
-	FlavorBastion            string                  `yaml:"flavor_bastion" json:"flavor_bastion"`
-	FlavorMaster             string                  `yaml:"flavor_master" json:"flavor_master"`
-	FlavorWorker             string                  `yaml:"flavor_worker" json:"flavor_worker"`
-	FlavorWorkerWindows      string                  `yaml:"flavor_worker_windows" json:"flavor_worker_windows"`
-	SubnetPods               string                  `yaml:"subnet_pods" json:"subnet_pods"`
-	SubnetServices           string                  `yaml:"subnet_services" json:"subnet_services"`
-	LoadbalancerProvider     string                  `yaml:"loadbalancer_provider" json:"loadbalancer_provider"`
-	DNSZoneName              string                  `yaml:"dns_zone_name" json:"dns_zone_name"`
-	MasterCount              int                     `yaml:"master_count" json:"master_count"`
-	WorkerCount              int                     `yaml:"worker_count" json:"worker_count"`
-	WorkerCountWindows       int                     `yaml:"worker_count_windows" json:"worker_count_windows"`
-	MasterNodes              []NodeConfig            `yaml:"master_nodes,omitempty" json:"master_nodes,omitempty"`
-	WorkerNodes              []NodeConfig            `yaml:"worker_nodes,omitempty" json:"worker_nodes,omitempty"`
-	WindowsNodes             []NodeConfig            `yaml:"windows_nodes,omitempty" json:"windows_nodes,omitempty"`
-	NetworkPlugin            NetworkPlugin           `yaml:"network_plugin" json:"network_plugin"`
-	OIDC                     OIDCConfig              `yaml:"oidc" json:"oidc"`
-	WindowsWorkers           WindowsWorkers          `yaml:"windows_workers" json:"windows_workers"`
-	Modules                  KubernetesModulesConfig `yaml:"modules" json:"modules"`
+	Version                  string                   `yaml:"version" json:"version"`
+	KubesprayVersion         string                   `yaml:"kubespray_version" json:"kubespray_version"`
+	APIPort                  int                      `yaml:"api_port" json:"api_port"`
+	KubeVIPEnabled           bool                     `yaml:"kube_vip_enabled" json:"kube_vip_enabled"`
+	KubeletRotateServerCerts bool                     `yaml:"kubelet_rotate_server_certificates" json:"kubelet_rotate_server_certificates"`
+	FlavorBastion            string                   `yaml:"flavor_bastion" json:"flavor_bastion"`
+	FlavorMaster             string                   `yaml:"flavor_master" json:"flavor_master"`
+	FlavorWorker             string                   `yaml:"flavor_worker" json:"flavor_worker"`
+	FlavorWorkerWindows      string                   `yaml:"flavor_worker_windows" json:"flavor_worker_windows"`
+	SubnetPods               string                   `yaml:"subnet_pods" json:"subnet_pods"`
+	SubnetServices           string                   `yaml:"subnet_services" json:"subnet_services"`
+	LoadbalancerProvider     string                   `yaml:"loadbalancer_provider" json:"loadbalancer_provider"`
+	DNSZoneName              string                   `yaml:"dns_zone_name" json:"dns_zone_name"`
+	MasterCount              int                      `yaml:"master_count" json:"master_count"`
+	WorkerCount              int                      `yaml:"worker_count" json:"worker_count"`
+	WorkerCountWindows       int                      `yaml:"worker_count_windows" json:"worker_count_windows"`
+	MasterNodes              []NodeConfig             `yaml:"master_nodes,omitempty" json:"master_nodes,omitempty"`
+	WorkerNodes              []NodeConfig             `yaml:"worker_nodes,omitempty" json:"worker_nodes,omitempty"`
+	WindowsNodes             []NodeConfig             `yaml:"windows_nodes,omitempty" json:"windows_nodes,omitempty"`
+	NetworkPlugin            NetworkPlugin            `yaml:"network_plugin" json:"network_plugin"`
+	OIDC                     OIDCConfig               `yaml:"oidc" json:"oidc"`
+	WindowsWorkers           WindowsWorkers           `yaml:"windows_workers" json:"windows_workers"`
+	Security                 KubernetesSecurityConfig `yaml:"security" json:"security"`
+	Networking               Networking               `yaml:"networking" json:"networking"`
+	Modules                  KubernetesModulesConfig  `yaml:"modules" json:"modules"`
 	// AdditionalServerPoolsWorker defines additional worker node pools with custom configurations
 	AdditionalServerPoolsWorker []AdditionalServerPool `yaml:"additional_server_pools_worker" json:"additional_server_pools_worker,omitempty"`
 	// AdditionalServerPoolsWorkerWindows defines additional Windows worker node pools

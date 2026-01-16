@@ -69,25 +69,37 @@ type SimplifiedCloud struct {
 
 // SimplifiedOpenStackCloud represents the OpenStack configuration
 type SimplifiedOpenStackCloud struct {
-	AuthURL                     string                 `yaml:"auth_url" json:"auth_url"`
-	Insecure                    bool                   `yaml:"insecure" json:"insecure"`
-	Region                      string                 `yaml:"region" json:"region"`
-	ApplicationCredentialID     string                 `yaml:"application_credential_id" json:"application_credential_id"`
-	ApplicationCredentialSecret string                 `yaml:"application_credential_secret" json:"application_credential_secret"`
-	Domain                      string                 `yaml:"domain" json:"domain"`
-	TenantName                  string                 `yaml:"tenant_name" json:"tenant_name"`
-	FloatingNetworkId           string                 `yaml:"floating_network_id" json:"floating_network_id"`
-	SubnetId                    string                 `yaml:"subnet_id" json:"subnet_id"`
-	NetworkID                   string                 `yaml:"network_id" json:"network_id"`
-	AvailabilityZone            string                 `yaml:"availability_zone" json:"availability_zone"`
-	ProjectDomainName           string                 `yaml:"project_domain_name" json:"project_domain_name"`
-	UserDomainName              string                 `yaml:"user_domain_name" json:"user_domain_name"`
-	FloatingIPPool              string                 `yaml:"floating_ip_pool" json:"floating_ip_pool"`
-	RouterExternalNetworkID     string                 `yaml:"router_external_network_id" json:"router_external_network_id"`
-	CA                          string                 `yaml:"ca" json:"ca"`
-	ImageID                     string                 `yaml:"image_id" json:"image_id"`
-	ImageIDWindows              string                 `yaml:"image_id_windows" json:"image_id_windows"`
-	Modules                     OpenStackModulesConfig `yaml:"modules" json:"modules"`
+	AuthURL                     string                    `yaml:"auth_url" json:"auth_url"`
+	Insecure                    bool                      `yaml:"insecure" json:"insecure"`
+	Region                      string                    `yaml:"region" json:"region"`
+	ApplicationCredentialID     string                    `yaml:"application_credential_id" json:"application_credential_id"`
+	ApplicationCredentialSecret string                    `yaml:"application_credential_secret" json:"application_credential_secret"`
+	Domain                      string                    `yaml:"domain" json:"domain"`
+	TenantName                  string                    `yaml:"tenant_name" json:"tenant_name"`
+	AvailabilityZone            string                    `yaml:"availability_zone" json:"availability_zone"`
+	ProjectDomainName           string                    `yaml:"project_domain_name" json:"project_domain_name"`
+	UserDomainName              string                    `yaml:"user_domain_name" json:"user_domain_name"`
+	CA                          string                    `yaml:"ca" json:"ca"`
+	ImageID                     string                    `yaml:"image_id" json:"image_id"`
+	ImageIDWindows              string                    `yaml:"image_id_windows" json:"image_id_windows"`
+	Networking                  OpenStackNetworkingConfig `yaml:"networking" json:"networking"`
+	Modules                     OpenStackModulesConfig    `yaml:"modules" json:"modules"`
+}
+
+// OpenStackNetworkingConfig represents OpenStack networking configuration
+type OpenStackNetworkingConfig struct {
+	FloatingIPPool          string          `yaml:"floating_ip_pool" json:"floating_ip_pool"`
+	FloatingNetworkId       string          `yaml:"floating_network_id" json:"floating_network_id"`
+	NetworkID               string          `yaml:"network_id" json:"network_id"`
+	RouterExternalNetworkID string          `yaml:"router_external_network_id" json:"router_external_network_id"`
+	SubnetId                string          `yaml:"subnet_id" json:"subnet_id"`
+	Designate               DesignateConfig `yaml:"designate" json:"designate"`
+	VLAN                    VLAN            `yaml:"vlan" json:"vlan"`
+}
+
+// DesignateConfig represents OpenStack Designate DNS configuration
+type DesignateConfig struct {
+	DNSZoneName string `yaml:"dns_zone_name" json:"dns_zone_name"`
 }
 
 // SimplifiedAWSCloud represents the AWS configuration

@@ -17,33 +17,33 @@ locals {
   floatingip_pool                         = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.FloatingIPPool | default "PUBLICNET" }}"
   router_external_network_id              = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.RouterExternalNetworkID | default "723f8fa2-dbf7-4cec-8d5f-017e62c12f79" }}"
   # VLAN settings
-  vlan_id                                 = "{{ .Networking.VLAN.ID | default "" }}"
-  mtu                                     = "{{ .Networking.VLAN.MTU | default "" }}"
-  network_provider                        = "{{ .Networking.VLAN.Provider | default "physnet1" }}"
+  vlan_id                                 = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VLAN.ID | default "" }}"
+  mtu                                     = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VLAN.MTU | default "" }}"
+  network_provider                        = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VLAN.Provider | default "physnet1" }}"
   #CIDR that the openstack VMs will use for K8s nodes
-  subnet_nodes                            = "{{ .Networking.SubnetNodes | default "10.2.128.0/22" }}"
+  subnet_nodes                            = "{{ .OpenCenter.Cluster.Kubernetes.Networking.SubnetNodes | default "10.2.128.0/22" }}"
   subnet_nodes_oct                       = join(".", slice(split(".", split("/", local.subnet_nodes)[0]), 0, 3))
   #Leave some IPs free for the VRRP IP and the MetalLB Range
-  allocation_pool_start                   = "{{ .Networking.AllocationPoolStart | default "$${local.subnet_nodes_oct}.50" }}"
-  allocation_pool_end                     = "{{ .Networking.AllocationPoolEnd | default "$${local.subnet_nodes_oct}.254" }}"
+  allocation_pool_start                   = "{{ .OpenCenter.Cluster.Kubernetes.Networking.AllocationPoolStart | default "$${local.subnet_nodes_oct}.50" }}"
+  allocation_pool_end                     = "{{ .OpenCenter.Cluster.Kubernetes.Networking.AllocationPoolEnd | default "$${local.subnet_nodes_oct}.254" }}"
   # vrrp_ip Must be an IP from subnet_nodes and will be used as the internal Kubernetes API VIP.
-  vrrp_ip                                 = "{{ .Networking.VRRPIP | default "$${local.subnet_nodes_oct}.10" }}"
+  vrrp_ip                                 = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VRRPIP | default "$${local.subnet_nodes_oct}.10" }}"
   #CIDR that will be used by kubernetes pods. Not an openstack network.
-  subnet_pods                             = "{{ .Networking.SubnetPods | default .OpenCenter.Cluster.Kubernetes.SubnetPods | default "10.42.0.0/16" }}"
+  subnet_pods                             = "{{ .OpenCenter.Cluster.Kubernetes.Networking.SubnetPods | default .OpenCenter.Cluster.Kubernetes.SubnetPods | default "10.42.0.0/16" }}"
   #CIDR that will be used for kubernetes services. Not an openstack network.
-  subnet_services                         = "{{ .Networking.SubnetServices | default .OpenCenter.Cluster.Kubernetes.SubnetServices | default "10.43.0.0/16" }}"
+  subnet_services                         = "{{ .OpenCenter.Cluster.Kubernetes.Networking.SubnetServices | default .OpenCenter.Cluster.Kubernetes.SubnetServices | default "10.43.0.0/16" }}"
   # use_octavia set to false to create a floating IP associated with the vrrp_ip port. true will create an octavia LB with a floating IP
-  use_octavia                             = {{ .Networking.UseOctavia | default false }}
-  loadbalancer_provider                   = "{{ .Networking.LoadbalancerProvider | default .OpenCenter.Cluster.Kubernetes.LoadbalancerProvider | default "amphora" }}"
+  use_octavia                             = {{ .OpenCenter.Cluster.Kubernetes.Networking.UseOctavia | default false }}
+  loadbalancer_provider                   = "{{ .OpenCenter.Cluster.Kubernetes.Networking.LoadbalancerProvider | default .OpenCenter.Cluster.Kubernetes.LoadbalancerProvider | default "amphora" }}"
   # vrrp_enabled cannot be set to true if use_octavia is true
-  vrrp_enabled                            = {{ .Networking.VRRPEnabled | default true }}
+  vrrp_enabled                            = {{ .OpenCenter.Cluster.Kubernetes.Networking.VRRPEnabled | default true }}
   # Creates a DNS record using the LB floating IP and dns_zone_name
-  use_designate                           = {{ .Networking.UseDesignate | default false }}
+  use_designate                           = {{ .OpenCenter.Cluster.Kubernetes.Networking.UseDesignate | default false }}
   # dns_zone_name is the dns zone to create if use_designate is true
-  dns_zone_name                           = "{{ .Networking.DNSZoneName | default .OpenCenter.Cluster.Kubernetes.DNSZoneName | default "gdo.prod.sjc3.k8s.opencenter.cloud" }}"
+  dns_zone_name                           = "{{ .OpenCenter.Cluster.Kubernetes.Networking.DNSZoneName | default .OpenCenter.Cluster.Kubernetes.DNSZoneName | default "gdo.prod.sjc3.k8s.opencenter.cloud" }}"
   # DNS servers to configure on the nodes
-  dns_nameservers                         = {{ if .Networking.DNSNameservers }}[{{ range $i, $dns := .Networking.DNSNameservers }}{{if $i}}, {{end}}"{{ $dns }}"{{ end }}]{{ else }}["1.1.1.1","8.8.8.8"]{{ end }}
-  ntp_servers                             = {{ if .Networking.NTPServers }}[{{ range $i, $ntp := .Networking.NTPServers }}{{if $i}}, {{end}}"{{ $ntp }}"{{ end }}]{{ else }}["time.dfw3.rackspace.com","time2.dfw3.rackspace.com"]{{ end }}
+  dns_nameservers                         = {{ if .OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers }}[{{ range $i, $dns := .OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers }}{{if $i}}, {{end}}"{{ $dns }}"{{ end }}]{{ else }}["1.1.1.1","8.8.8.8"]{{ end }}
+  ntp_servers                             = {{ if .OpenCenter.Cluster.Kubernetes.Networking.NTPServers }}[{{ range $i, $ntp := .OpenCenter.Cluster.Kubernetes.Networking.NTPServers }}{{if $i}}, {{end}}"{{ $ntp }}"{{ end }}]{{ else }}["time.dfw3.rackspace.com","time2.dfw3.rackspace.com"]{{ end }}
   image_id                                = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.ImageID | default "799dcf97-3656-4361-8187-13ab1b295e33" }}"
   image_id_windows                        = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.ImageIDWindows | default "a2083759-f341-445b-b717-dafb5e31fa6b" }}"
   k8s_api_port                            = {{ .OpenCenter.Cluster.Kubernetes.APIPort | default 443 }}

@@ -309,11 +309,11 @@ func (s MetricsSummary) String() string {
 
 // Timer provides a convenient way to measure operation duration.
 type Timer struct {
-	startTime time.Time
-	collector *MetricsCollector
+	startTime  time.Time
+	collector  *MetricsCollector
 	metricType MetricType
-	name      string
-	metadata  map[string]interface{}
+	name       string
+	metadata   map[string]interface{}
 }
 
 // NewTimer creates a new timer that will record a metric when stopped.
@@ -405,8 +405,8 @@ func RecordGitOpsGeneration(clusterName string, duration time.Duration, filesGen
 		Name:     clusterName,
 		Duration: duration,
 		Metadata: map[string]interface{}{
-			"cluster_name":     clusterName,
-			"files_generated":  filesGenerated,
+			"cluster_name":    clusterName,
+			"files_generated": filesGenerated,
 		},
 		Success: success,
 		Error:   err,

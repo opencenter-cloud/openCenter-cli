@@ -76,12 +76,12 @@ func TestMigrationPreservesUserValues(t *testing.T) {
 					t.Logf("Provider changed: expected %s, got %s", provider, migrated.OpenCenter.Infrastructure.Provider)
 					return false
 				}
-				if migrated.Networking.SubnetPods != podSubnet {
-					t.Logf("Pod subnet changed: expected %s, got %s", podSubnet, migrated.Networking.SubnetPods)
+				if migrated.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods != podSubnet {
+					t.Logf("Pod subnet changed: expected %s, got %s", podSubnet, migrated.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods)
 					return false
 				}
-				if migrated.Networking.SubnetServices != serviceSubnet {
-					t.Logf("Service subnet changed: expected %s, got %s", serviceSubnet, migrated.Networking.SubnetServices)
+				if migrated.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices != serviceSubnet {
+					t.Logf("Service subnet changed: expected %s, got %s", serviceSubnet, migrated.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices)
 					return false
 				}
 			}
@@ -243,8 +243,8 @@ func TestMigrationRoundTrip(t *testing.T) {
 	require.Equal(t, original.OpenCenter.Meta.Name, rolledBack.OpenCenter.Meta.Name)
 	require.Equal(t, original.OpenCenter.Meta.Organization, rolledBack.OpenCenter.Meta.Organization)
 	require.Equal(t, original.OpenCenter.Infrastructure.Provider, rolledBack.OpenCenter.Infrastructure.Provider)
-	require.Equal(t, original.Networking.SubnetPods, rolledBack.Networking.SubnetPods)
-	require.Equal(t, original.Networking.SubnetServices, rolledBack.Networking.SubnetServices)
+	require.Equal(t, original.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods, rolledBack.Networking.SubnetPods)
+	require.Equal(t, original.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices, rolledBack.Networking.SubnetServices)
 }
 
 // genCIDR generates valid CIDR notation strings for testing

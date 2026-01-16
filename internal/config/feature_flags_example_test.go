@@ -26,23 +26,23 @@ func Example_featureFlagsStructuredLogging() {
 	// Set up feature flags
 	os.Setenv(config.EnvUseNewTemplateEngine, "true")
 	os.Setenv(config.EnvUsePipelineGenerator, "false")
-	
+
 	// Initialize logging (in production, this would be done at startup)
 	loggingConfig := config.DefaultCLIConfig().Logging
 	loggingConfig.Level = "info"
 	loggingConfig.Format = "json"
 	config.InitializeLogging(&loggingConfig)
-	
+
 	// Get feature flags instance
 	ff := config.GetFeatureFlags()
-	
+
 	// Check feature flags - this will produce structured logs
 	templateEngineEnabled := ff.UseNewTemplateEngine()
 	pipelineGeneratorEnabled := ff.UsePipelineGenerator()
-	
+
 	fmt.Printf("Template Engine: %v\n", templateEngineEnabled)
 	fmt.Printf("Pipeline Generator: %v\n", pipelineGeneratorEnabled)
-	
+
 	// The structured logs will include:
 	// - component: "feature_flags"
 	// - operation: "evaluation"
@@ -50,11 +50,11 @@ func Example_featureFlagsStructuredLogging() {
 	// - env_var: the environment variable name
 	// - enabled: true or false
 	// - source: "environment", "all_new_features", or "default"
-	
+
 	// Clean up
 	os.Unsetenv(config.EnvUseNewTemplateEngine)
 	os.Unsetenv(config.EnvUsePipelineGenerator)
-	
+
 	// Output:
 	// Template Engine: true
 	// Pipeline Generator: false
@@ -66,22 +66,22 @@ func Example_featureFlagsDebugMode() {
 	// Enable debug mode
 	os.Setenv(config.EnvFeatureFlagDebug, "true")
 	os.Setenv(config.EnvUseNewTemplateEngine, "true")
-	
+
 	// Get feature flags instance
 	ff := config.GetFeatureFlags()
-	
+
 	// This will produce both structured logs AND stderr output
 	enabled := ff.UseNewTemplateEngine()
-	
+
 	fmt.Printf("Enabled: %v\n", enabled)
-	
+
 	// Debug mode produces stderr output like:
 	// [FEATURE FLAG] new template engine is enabled (OPENCENTER_USE_NEW_TEMPLATE_ENGINE, source: environment)
-	
+
 	// Clean up
 	os.Unsetenv(config.EnvFeatureFlagDebug)
 	os.Unsetenv(config.EnvUseNewTemplateEngine)
-	
+
 	// Output:
 	// Enabled: true
 }
@@ -95,27 +95,27 @@ func Example_featureFlagsGetStatus() {
 	os.Unsetenv(config.EnvUseNewConfigBuilder)
 	os.Unsetenv(config.EnvUseServiceRegistry)
 	os.Unsetenv(config.EnvEnableAllNewFeatures)
-	
+
 	// Set up some feature flags
 	os.Setenv(config.EnvUseNewTemplateEngine, "true")
 	os.Setenv(config.EnvUsePipelineGenerator, "true")
-	
+
 	// Get feature flags instance and clear cache to pick up new env vars
 	ff := config.GetFeatureFlags()
 	ff.ClearCache()
-	
+
 	// Get status of all flags
 	status := ff.GetStatus()
-	
+
 	fmt.Printf("New Template Engine: %v\n", status["new_template_engine"])
 	fmt.Printf("Pipeline Generator: %v\n", status["pipeline_generator"])
 	fmt.Printf("New Config Builder: %v\n", status["new_config_builder"])
 	fmt.Printf("Service Registry: %v\n", status["service_registry"])
-	
+
 	// Clean up
 	os.Unsetenv(config.EnvUseNewTemplateEngine)
 	os.Unsetenv(config.EnvUsePipelineGenerator)
-	
+
 	// Output:
 	// New Template Engine: true
 	// Pipeline Generator: true

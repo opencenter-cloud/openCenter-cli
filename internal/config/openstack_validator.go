@@ -192,16 +192,16 @@ func (v *OpenStackValidator) GetRequiredFields() []string {
 // validateNetworkConfiguration validates OpenStack network configuration.
 func (v *OpenStackValidator) validateNetworkConfiguration(os SimplifiedOpenStackCloud, validationErrors *[]*errors.StructuredError) {
 	// Validate floating network ID
-	if os.FloatingNetworkId == "" {
+	if os.Networking.FloatingNetworkId == "" {
 		*validationErrors = append(*validationErrors, errors.CreateValidationError(
-			"opencenter.infrastructure.cloud.openstack.floating_network_id",
+			"opencenter.infrastructure.cloud.openstack.networking.floating_network_id",
 			"floating network ID is required",
 			"Set floating_network_id to your OpenStack external network ID",
 			"Use 'openstack network list --external' to see external networks",
 		))
-	} else if !v.isValidUUID(os.FloatingNetworkId) {
+	} else if !v.isValidUUID(os.Networking.FloatingNetworkId) {
 		*validationErrors = append(*validationErrors, errors.CreateValidationError(
-			"opencenter.infrastructure.cloud.openstack.floating_network_id",
+			"opencenter.infrastructure.cloud.openstack.networking.floating_network_id",
 			"invalid floating network ID format",
 			"Use valid UUID format for floating_network_id",
 			"Check OpenStack console for correct network ID",
@@ -209,9 +209,9 @@ func (v *OpenStackValidator) validateNetworkConfiguration(os SimplifiedOpenStack
 	}
 
 	// Validate subnet ID if provided
-	if os.SubnetId != "" && !v.isValidUUID(os.SubnetId) {
+	if os.Networking.SubnetId != "" && !v.isValidUUID(os.Networking.SubnetId) {
 		*validationErrors = append(*validationErrors, errors.CreateValidationError(
-			"opencenter.infrastructure.cloud.openstack.subnet_id",
+			"opencenter.infrastructure.cloud.openstack.networking.subnet_id",
 			"invalid subnet ID format",
 			"Use valid UUID format for subnet_id",
 			"Check OpenStack console for correct subnet ID",

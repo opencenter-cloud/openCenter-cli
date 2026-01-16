@@ -37,7 +37,9 @@ func ExampleEnhancedValidation() {
 						Domain:                      "Default",
 						ApplicationCredentialID:     "invalid-uuid", // Invalid format
 						ApplicationCredentialSecret: "",             // Missing
-						FloatingNetworkId:           "",             // Missing
+						Networking: OpenStackNetworkingConfig{
+							FloatingNetworkId: "", // Missing
+						},
 					},
 				},
 			},
@@ -118,7 +120,9 @@ func ExamplePreFlightValidation() {
 						Domain:                      "Default",
 						ApplicationCredentialID:     "12345678-1234-1234-1234-123456789012",
 						ApplicationCredentialSecret: "valid-secret",
-						FloatingNetworkId:           "87654321-4321-4321-4321-210987654321",
+						Networking: OpenStackNetworkingConfig{
+							FloatingNetworkId: "87654321-4321-4321-4321-210987654321",
+						},
 					},
 				},
 			},

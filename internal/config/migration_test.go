@@ -321,8 +321,8 @@ func TestSchemaManager_MigrateConfig_PreservesUserData(t *testing.T) {
 	assert.Equal(t, "production-cluster", result.OpenCenter.Meta.Name)
 	assert.Equal(t, "acme-corp", result.OpenCenter.Meta.Organization)
 	assert.Equal(t, "openstack", result.OpenCenter.Infrastructure.Provider)
-	assert.Equal(t, "10.100.0.0/16", result.Networking.SubnetPods)
-	assert.Equal(t, "10.200.0.0/16", result.Networking.SubnetServices)
+	assert.Equal(t, "10.100.0.0/16", result.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods)
+	assert.Equal(t, "10.200.0.0/16", result.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices)
 }
 
 func TestSchemaManager_MigrateConfigDryRun(t *testing.T) {
@@ -472,8 +472,8 @@ func TestSchemaManager_MigrateConfigDryRun_PreservesOriginal(t *testing.T) {
 	assert.Equal(t, configCopy.OpenCenter.Meta.Name, originalConfig.OpenCenter.Meta.Name)
 	assert.Equal(t, configCopy.OpenCenter.Meta.Organization, originalConfig.OpenCenter.Meta.Organization)
 	assert.Equal(t, configCopy.OpenCenter.Infrastructure.Provider, originalConfig.OpenCenter.Infrastructure.Provider)
-	assert.Equal(t, configCopy.Networking.SubnetPods, originalConfig.Networking.SubnetPods)
-	assert.Equal(t, configCopy.Networking.SubnetServices, originalConfig.Networking.SubnetServices)
+	assert.Equal(t, configCopy.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods, originalConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods)
+	assert.Equal(t, configCopy.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices, originalConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices)
 	assert.True(t, originalConfig.Metadata.CreatedAt.IsZero(), "metadata should not be added to original")
 }
 
@@ -1017,8 +1017,8 @@ func TestSchemaManager_RollbackConfig_PreservesUserData(t *testing.T) {
 	assert.Equal(t, "production-cluster", result.OpenCenter.Meta.Name)
 	assert.Equal(t, "acme-corp", result.OpenCenter.Meta.Organization)
 	assert.Equal(t, "openstack", result.OpenCenter.Infrastructure.Provider)
-	assert.Equal(t, "10.100.0.0/16", result.Networking.SubnetPods)
-	assert.Equal(t, "10.200.0.0/16", result.Networking.SubnetServices)
+	assert.Equal(t, "10.100.0.0/16", result.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods)
+	assert.Equal(t, "10.200.0.0/16", result.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices)
 
 	// Metadata should be removed
 	assert.True(t, result.Metadata.CreatedAt.IsZero())
@@ -1078,8 +1078,8 @@ func TestSchemaManager_MigrateAndRollback_RoundTrip(t *testing.T) {
 	assert.Equal(t, originalConfig.OpenCenter.Meta.Name, rolledBack.OpenCenter.Meta.Name)
 	assert.Equal(t, originalConfig.OpenCenter.Meta.Organization, rolledBack.OpenCenter.Meta.Organization)
 	assert.Equal(t, originalConfig.OpenCenter.Infrastructure.Provider, rolledBack.OpenCenter.Infrastructure.Provider)
-	assert.Equal(t, originalConfig.Networking.SubnetPods, rolledBack.Networking.SubnetPods)
-	assert.Equal(t, originalConfig.Networking.SubnetServices, rolledBack.Networking.SubnetServices)
+	assert.Equal(t, originalConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods, rolledBack.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods)
+	assert.Equal(t, originalConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices, rolledBack.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices)
 
 	// Verify metadata is removed
 	assert.True(t, rolledBack.Metadata.CreatedAt.IsZero())

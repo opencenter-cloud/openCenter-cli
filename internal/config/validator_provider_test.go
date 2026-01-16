@@ -112,12 +112,12 @@ func TestProviderSpecificValidation_OpenStack(t *testing.T) {
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "RegionOne"
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "test-tenant"
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.Domain = "Default"
-		config.OpenCenter.Infrastructure.Cloud.OpenStack.FloatingNetworkId = ""
+		config.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.FloatingNetworkId = ""
 
 		result := validator.Validate(ctx, &config)
 
 		require.False(t, result.Valid)
-		assert.True(t, hasErrorForField(result.Errors, "opencenter.infrastructure.cloud.openstack.floating_network_id"))
+		assert.True(t, hasErrorForField(result.Errors, "opencenter.infrastructure.cloud.openstack.networking.floating_network_id"))
 	})
 
 	t.Run("invalid floating network ID format", func(t *testing.T) {
@@ -127,12 +127,12 @@ func TestProviderSpecificValidation_OpenStack(t *testing.T) {
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "RegionOne"
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "test-tenant"
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.Domain = "Default"
-		config.OpenCenter.Infrastructure.Cloud.OpenStack.FloatingNetworkId = "not-a-uuid"
+		config.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.FloatingNetworkId = "not-a-uuid"
 
 		result := validator.Validate(ctx, &config)
 
 		require.False(t, result.Valid)
-		assert.True(t, hasErrorForField(result.Errors, "opencenter.infrastructure.cloud.openstack.floating_network_id"))
+		assert.True(t, hasErrorForField(result.Errors, "opencenter.infrastructure.cloud.openstack.networking.floating_network_id"))
 	})
 
 	t.Run("valid OpenStack configuration", func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestProviderSpecificValidation_OpenStack(t *testing.T) {
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "RegionOne"
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "test-tenant"
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.Domain = "Default"
-		config.OpenCenter.Infrastructure.Cloud.OpenStack.FloatingNetworkId = "12345678-1234-1234-1234-123456789012"
+		config.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.FloatingNetworkId = "12345678-1234-1234-1234-123456789012"
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "12345678-1234-1234-1234-123456789012"
 		config.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "test-secret"
 

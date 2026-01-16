@@ -54,10 +54,10 @@ func TestConfigGenerator_GenerateConfig(t *testing.T) {
 	t.Run("generates valid networking config", func(t *testing.T) {
 		cfg := gen.GenerateConfig("openstack")
 
-		assert.NotEmpty(t, cfg.Networking.SubnetPods)
-		assert.NotEmpty(t, cfg.Networking.SubnetServices)
-		assert.NotEmpty(t, cfg.Networking.DNSNameservers)
-		assert.Greater(t, len(cfg.Networking.DNSNameservers), 0)
+		assert.NotEmpty(t, cfg.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods)
+		assert.NotEmpty(t, cfg.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices)
+		assert.NotEmpty(t, cfg.OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers)
+		assert.Greater(t, len(cfg.OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers), 0)
 	})
 
 	t.Run("generates valid secrets config", func(t *testing.T) {
@@ -241,7 +241,7 @@ func TestGenerators_Realistic(t *testing.T) {
 		assert.Regexp(t, `^1\.\d+\.\d+$`, cfg.OpenCenter.Cluster.Kubernetes.Version)
 
 		// DNS servers should be valid IPs
-		for _, dns := range cfg.Networking.DNSNameservers {
+		for _, dns := range cfg.OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers {
 			assert.Regexp(t, `^\d+\.\d+\.\d+\.\d+$`, dns)
 		}
 

@@ -170,9 +170,9 @@ func TestValidationErrorsIncludeFieldPathsAndSuggestions(t *testing.T) {
 			name: "VRRP missing IP when required",
 			setupConfig: func() *Config {
 				config := NewDefault("test-cluster")
-				config.Networking.UseOctavia = false
-				config.Networking.VRRPEnabled = true
-				config.Networking.VRRPIP = ""
+				config.OpenCenter.Cluster.Kubernetes.Networking.UseOctavia = false
+				config.OpenCenter.Cluster.Kubernetes.Networking.VRRPEnabled = true
+				config.OpenCenter.Cluster.Kubernetes.Networking.VRRPIP = ""
 				return &config
 			},
 			expectedErrors: 1,

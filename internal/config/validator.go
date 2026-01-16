@@ -1147,8 +1147,8 @@ func (cv *ClusterConfigValidator) validateServiceSecrets(config *Config, result 
 // When use_octavia is false and vrrp_enabled is true, vrrp_ip must be set.
 func (cv *ClusterConfigValidator) validateVRRP(config *Config, result *ConfigValidationResult) {
 	// Check if VRRP validation is applicable
-	if !config.Networking.UseOctavia && config.Networking.VRRPEnabled {
-		if config.Networking.VRRPIP == "" {
+	if !config.OpenCenter.Cluster.Kubernetes.Networking.UseOctavia && config.OpenCenter.Cluster.Kubernetes.Networking.VRRPEnabled {
+		if config.OpenCenter.Cluster.Kubernetes.Networking.VRRPIP == "" {
 			result.Errors = append(result.Errors, &ConfigValidationError{
 				Type:    "validation",
 				Field:   "networking.vrrp_ip",

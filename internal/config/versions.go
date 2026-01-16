@@ -172,11 +172,11 @@ func migrateV1_2_to_V2_0(ctx context.Context, config Config) (Config, error) {
 	}
 
 	// Migrate networking configuration to new structure
-	if config.Networking.SubnetPods == "" {
-		config.Networking.SubnetPods = "10.244.0.0/16" // Default pod CIDR
+	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods == "" {
+		config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = "10.244.0.0/16" // Default pod CIDR
 	}
-	if config.Networking.SubnetServices == "" {
-		config.Networking.SubnetServices = "10.96.0.0/12" // Default service CIDR
+	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices == "" {
+		config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = "10.96.0.0/12" // Default service CIDR
 	}
 
 	// Add v2.0.0 specific defaults

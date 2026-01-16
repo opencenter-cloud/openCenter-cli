@@ -89,16 +89,16 @@ func TestFluentAPIMethodChaining(t *testing.T) {
 		t.Errorf("Expected worker count 5, got %d", config.OpenCenter.Cluster.Kubernetes.WorkerCount)
 	}
 
-	if config.Networking.SubnetNodes != "10.0.0.0/24" {
-		t.Errorf("Expected subnet nodes '10.0.0.0/24', got '%s'", config.Networking.SubnetNodes)
+	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetNodes != "10.0.0.0/24" {
+		t.Errorf("Expected subnet nodes '10.0.0.0/24', got '%s'", config.OpenCenter.Cluster.Kubernetes.Networking.SubnetNodes)
 	}
 
-	if config.Networking.SubnetPods != "10.42.0.0/16" {
-		t.Errorf("Expected subnet pods '10.42.0.0/16', got '%s'", config.Networking.SubnetPods)
+	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods != "10.42.0.0/16" {
+		t.Errorf("Expected subnet pods '10.42.0.0/16', got '%s'", config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods)
 	}
 
-	if config.Networking.SubnetServices != "10.43.0.0/16" {
-		t.Errorf("Expected subnet services '10.43.0.0/16', got '%s'", config.Networking.SubnetServices)
+	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices != "10.43.0.0/16" {
+		t.Errorf("Expected subnet services '10.43.0.0/16', got '%s'", config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices)
 	}
 
 	if config.OpenCenter.Infrastructure.SSHUser != "ubuntu" {

@@ -202,39 +202,39 @@ func (b *FluentConfigBuilder) WithWindowsWorkerCount(count int) ConfigBuilder {
 
 // WithNetworking sets the complete networking configuration.
 func (b *FluentConfigBuilder) WithNetworking(config Networking) ConfigBuilder {
-	b.config.Networking = config
+	b.config.OpenCenter.Cluster.Kubernetes.Networking = config
 	return b
 }
 
 // WithSubnetNodes sets the node subnet.
 func (b *FluentConfigBuilder) WithSubnetNodes(subnet string) ConfigBuilder {
-	b.config.Networking.SubnetNodes = subnet
+	b.config.OpenCenter.Cluster.Kubernetes.Networking.SubnetNodes = subnet
 	return b
 }
 
 // WithSubnetPods sets the pod subnet.
 func (b *FluentConfigBuilder) WithSubnetPods(subnet string) ConfigBuilder {
-	b.config.Networking.SubnetPods = subnet
+	b.config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = subnet
 	b.config.OpenCenter.Cluster.Kubernetes.SubnetPods = subnet
 	return b
 }
 
 // WithSubnetServices sets the service subnet.
 func (b *FluentConfigBuilder) WithSubnetServices(subnet string) ConfigBuilder {
-	b.config.Networking.SubnetServices = subnet
+	b.config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = subnet
 	b.config.OpenCenter.Cluster.Kubernetes.SubnetServices = subnet
 	return b
 }
 
 // WithDNSNameservers sets the DNS nameservers.
 func (b *FluentConfigBuilder) WithDNSNameservers(nameservers []string) ConfigBuilder {
-	b.config.Networking.DNSNameservers = nameservers
+	b.config.OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers = nameservers
 	return b
 }
 
 // WithNTPServers sets the NTP servers.
 func (b *FluentConfigBuilder) WithNTPServers(servers []string) ConfigBuilder {
-	b.config.Networking.NTPServers = servers
+	b.config.OpenCenter.Cluster.Kubernetes.Networking.NTPServers = servers
 	return b
 }
 
@@ -755,7 +755,7 @@ func (b *FluentConfigBuilder) validateNodeCounts() {
 
 // validateNetworking checks networking configuration.
 func (b *FluentConfigBuilder) validateNetworking() {
-	if b.config.Networking.SubnetNodes == "" {
+	if b.config.OpenCenter.Cluster.Kubernetes.Networking.SubnetNodes == "" {
 		b.errors = append(b.errors, ValidationError{
 			Field:   "networking.subnet_nodes",
 			Message: "node subnet is required",
@@ -768,7 +768,7 @@ func (b *FluentConfigBuilder) validateNetworking() {
 		})
 	}
 
-	if b.config.Networking.SubnetPods == "" {
+	if b.config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods == "" {
 		b.errors = append(b.errors, ValidationError{
 			Field:   "networking.subnet_pods",
 			Message: "pod subnet is required",
@@ -781,7 +781,7 @@ func (b *FluentConfigBuilder) validateNetworking() {
 		})
 	}
 
-	if b.config.Networking.SubnetServices == "" {
+	if b.config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices == "" {
 		b.errors = append(b.errors, ValidationError{
 			Field:   "networking.subnet_services",
 			Message: "service subnet is required",

@@ -38,7 +38,7 @@ func addDefaultSecretsAndInfra(config *Config) {
 	config.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "test-tenant"
 	config.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "test-region"
 	config.OpenCenter.Infrastructure.Cloud.OpenStack.Domain = "Default"
-	config.OpenCenter.Infrastructure.Cloud.OpenStack.FloatingNetworkId = "12345678-1234-1234-1234-123456789012"
+	config.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.FloatingNetworkId = "12345678-1234-1234-1234-123456789012"
 	config.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "12345678-1234-1234-1234-123456789012"
 	config.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "test-app-cred-secret"
 	config.OpenCenter.Secrets.Barbican.AuthURL = "https://barbican.example.com"

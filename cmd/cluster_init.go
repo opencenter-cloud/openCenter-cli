@@ -189,6 +189,11 @@ This command creates a new cluster configuration file with sensible defaults
 based on the JSON schema. You can override any configuration value using
 command-line flags with dot notation.
 
+When using --config flag, the cluster name is automatically extracted from the
+configuration file (opencenter.cluster.cluster_name), so you don't need to
+specify it as an argument. You can still provide a name argument to override
+the name in the config file.
+
 The configuration is created in an organization-based directory structure:
   ~/.config/openCenter/clusters/<organization>/<cluster>/
 
@@ -220,6 +225,12 @@ Troubleshooting:
   • Check ~/.config/openCenter/clusters/ for created files`,
 		Example: `  # Initialize with defaults (uses "opencenter" as organization)
 	  openCenter cluster init my-cluster
+
+  # Initialize from existing config file (cluster name extracted from config)
+  openCenter cluster init --config my-cluster-config.yaml
+
+  # Initialize from config file with explicit name (overrides config file name)
+  openCenter cluster init my-cluster --config template-config.yaml
 
   # Initialize bare metal cluster
   openCenter cluster init my-cluster --org myorg --type baremetal
@@ -256,18 +267,44 @@ Troubleshooting:
 			UnknownFlags: true,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Resolve cluster name from args or active cluster
+			// Check if a configuration file was provided via --config flag
+			configFile, _ := cmd.Flags().GetString("config")
+
+			// Resolve cluster name from args, config file, or active cluster
 			var name string
 			if len(args) > 0 {
 				name = args[0]
+			} else if configFile != "" {
+				// When using --config, extract cluster name from the config file
+				data, err := os.ReadFile(configFile)
+				if err != nil {
+					return fmt.Errorf("failed to read configuration file '%s': %w", configFile, err)
+				}
+
+				// Parse just enough to get the cluster name
+				var tempCfg struct {
+					OpenCenter struct {
+						Cluster struct {
+							ClusterName string `yaml:"cluster_name"`
+						} `yaml:"cluster"`
+					} `yaml:"opencenter"`
+				}
+				if err := yaml.Unmarshal(data, &tempCfg); err != nil {
+					return fmt.Errorf("failed to parse configuration file '%s': %w", configFile, err)
+				}
+
+				name = tempCfg.OpenCenter.Cluster.ClusterName
+				if name == "" {
+					return fmt.Errorf("cluster name not found in configuration file '%s' (opencenter.cluster.cluster_name)", configFile)
+				}
 			} else {
-				// No name provided, try to use active cluster
+				// No name provided and no config file, try to use active cluster
 				activeName, err := config.GetActive()
 				if err != nil {
 					return fmt.Errorf("failed to get active cluster: %w", err)
 				}
 				if activeName == "" {
-					return fmt.Errorf("no cluster name provided and no active cluster set; specify a cluster name or use 'openCenter cluster use <name>' to set an active cluster")
+					return fmt.Errorf("no cluster name provided and no active cluster set; specify a cluster name, use --config with a config file, or use 'openCenter cluster use <name>' to set an active cluster")
 				}
 				name = activeName
 			}
@@ -281,11 +318,10 @@ Troubleshooting:
 			// Initialize path resolver
 			pathResolver := config.NewPathResolverImpl(configManager)
 
-			// Check if a configuration file was provided via --config flag
+			// Load configuration from file or generate defaults
 			var cfg config.Config
 			var configMap map[string]any
 
-			configFile, _ := cmd.Flags().GetString("config")
 			if configFile != "" {
 				// Load configuration from the specified file
 				data, err := os.ReadFile(configFile)

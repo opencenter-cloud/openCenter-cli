@@ -223,7 +223,7 @@ func BenchmarkConfigBuilding_Complex(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			builder := config.NewConfigBuilder("test-cluster")
 			builder.WithProvider("baremetal"). // Use baremetal to avoid cloud validation
-				WithOrganization("test-org")
+								WithOrganization("test-org")
 
 			// Add many overrides
 			for j := 0; j < 50; j++ {

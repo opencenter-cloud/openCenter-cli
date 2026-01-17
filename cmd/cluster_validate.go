@@ -92,10 +92,15 @@ Troubleshooting:
 			if err != nil {
 				return err
 			}
-			errs := config.Validate(cfg)
-			if len(errs) > 0 {
-				for _, e := range errs {
-					fmt.Fprintln(cmd.ErrOrStderr(), e)
+			
+			// Use comprehensive validator for thorough validation including service secrets
+			validator := config.NewConfigValidator(false)
+			result := validator.Validate(cmd.Context(), &cfg)
+			
+			if !result.Valid {
+				// Print all validation errors
+				for _, e := range result.Errors {
+					fmt.Fprintln(cmd.ErrOrStderr(), e.Message)
 				}
 				return fmt.Errorf("validation failed")
 			}

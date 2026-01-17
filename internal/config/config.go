@@ -79,21 +79,11 @@ func defaultConfig(name string) Config {
 	tenantName := ""
 	barbicanAuthURL := ""
 
-	// Dummy secrets for test mode
+	// Infrastructure credentials for test mode (OpenStack, AWS infrastructure)
+	// Note: Service-specific secrets (cert-manager, loki, etc.) are NOT populated
+	// in test mode to ensure validation tests work correctly
 	awsAccessKey := ""
 	awsSecretKey := ""
-	certManagerAccessKey := ""
-	certManagerSecretKey := ""
-	lokiSwiftPassword := ""
-	keycloakClientSecret := ""
-	keycloakAdminPassword := ""
-	headlampClientSecret := ""
-	weaveGitOpsPassword := ""
-	weaveGitOpsHash := ""
-	grafanaAdminPassword := ""
-	alertProxyDeviceID := ""
-	alertProxyToken := ""
-	alertProxyAccount := ""
 
 	if isTestMode {
 		authURL = "https://identity.example.com/v3"
@@ -101,20 +91,10 @@ func defaultConfig(name string) Config {
 		tenantName = "admin"
 		barbicanAuthURL = "https://identity.example.com/v3"
 
+		// Only populate infrastructure-level AWS credentials for test mode
+		// This allows OpenTofu S3 backend tests to work
 		awsAccessKey = "test-aws-access-key"
 		awsSecretKey = "test-aws-secret-key"
-		certManagerAccessKey = "test-access-key"
-		certManagerSecretKey = "test-secret-key"
-		lokiSwiftPassword = "test-password"
-		keycloakClientSecret = "test-client-secret"
-		keycloakAdminPassword = "test-admin-password"
-		headlampClientSecret = "test-client-secret"
-		weaveGitOpsPassword = "test-password"
-		weaveGitOpsHash = "test-hash"
-		grafanaAdminPassword = "test-password"
-		alertProxyDeviceID = "test-device-id"
-		alertProxyToken = "test-token"
-		alertProxyAccount = "test-account"
 	}
 
 	cfg := Config{
@@ -437,35 +417,37 @@ func defaultConfig(name string) Config {
 				},
 			},
 			// Service-specific secrets - must be provided by user
+			// These are intentionally left empty even in test mode to ensure
+			// validation tests work correctly
 			CertManager: CertManagerSecrets{
-				AWSAccessKey:       certManagerAccessKey,
-				AWSSecretAccessKey: certManagerSecretKey,
+				AWSAccessKey:       "",
+				AWSSecretAccessKey: "",
 			},
 			Loki: LokiSecrets{
-				SwiftPassword: lokiSwiftPassword,
+				SwiftPassword: "",
 			},
 			Keycloak: KeycloakSecrets{
-				ClientSecret:  keycloakClientSecret,
-				AdminPassword: keycloakAdminPassword,
+				ClientSecret:  "",
+				AdminPassword: "",
 			},
 			Headlamp: HeadlampSecrets{
-				OIDCClientSecret: headlampClientSecret,
+				OIDCClientSecret: "",
 			},
 			WeaveGitOps: WeaveGitOpsSecrets{
-				Password:     weaveGitOpsPassword,
-				PasswordHash: weaveGitOpsHash,
+				Password:     "",
+				PasswordHash: "",
 			},
 			Grafana: GrafanaSecrets{
-				AdminPassword: grafanaAdminPassword,
+				AdminPassword: "",
 			},
 			Tempo: TempoSecrets{
 				AccessKey: "",
 				SecretKey: "",
 			},
 			AlertProxy: AlertProxySecrets{
-				CoreDeviceId:        alertProxyDeviceID,
-				AccountServiceToken: alertProxyToken,
-				CoreAccountNumber:   alertProxyAccount,
+				CoreDeviceId:        "",
+				AccountServiceToken: "",
+				CoreAccountNumber:   "",
 			},
 			VSphereCsi: VSphereCsiSecrets{
 				VCenterHost:  "",

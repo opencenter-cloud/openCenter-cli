@@ -141,6 +141,7 @@ func (pr *PathResolverImpl) CreateClusterDirectories(ctx context.Context, cluste
 		paths.ClusterDir,
 		paths.ApplicationsDir,
 		paths.InventoryPath,
+		paths.VenvPath,
 		paths.BinPath,
 		filepath.Dir(paths.SOPSKeyPath), // age/keys directory
 	}

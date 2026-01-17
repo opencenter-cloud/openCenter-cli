@@ -507,9 +507,17 @@ func (v *EnhancedConfigValidator) validateS3BackendConfiguration(config *Config,
 		))
 	}
 
-	// Validate AWS credentials for S3 backend (with fallback support)
-	accessKey, secretKey := config.GetS3BackendCredentials()
-	if accessKey == "" || secretKey == "" {
+	// Validate AWS credentials for S3 backend - check actual fields without fallback
+	// During validation, we require explicit credentials to be set
+	legacyAccessKey := strings.TrimSpace(config.OpenCenter.Cluster.AWSAccessKey)
+	legacySecretKey := strings.TrimSpace(config.OpenCenter.Cluster.AWSSecretAccessKey)
+	infraAccessKey := strings.TrimSpace(config.Secrets.Global.AWS.Infrastructure.AccessKey)
+	infraSecretKey := strings.TrimSpace(config.Secrets.Global.AWS.Infrastructure.SecretAccessKey)
+
+	hasLegacyCredentials := legacyAccessKey != "" && legacySecretKey != ""
+	hasInfraCredentials := infraAccessKey != "" && infraSecretKey != ""
+
+	if !hasLegacyCredentials && !hasInfraCredentials {
 		aggregator.AddError(errors.CreateCredentialError(
 			"AWS",
 			"opencenter.cluster.aws_access_key or secrets.global.aws.infrastructure.access_key",

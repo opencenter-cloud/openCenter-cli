@@ -29,6 +29,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/config/services"
 	"github.com/rackerlabs/openCenter-cli/internal/util"
 	yaml "gopkg.in/yaml.v3"
 	"regexp"
@@ -300,6 +301,18 @@ func (w *world) createCluster(name string) error {
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "RegionOne"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName = "admin"
 	cfg.OpenCenter.Secrets.Barbican.AuthURL = "https://identity.example.com/v3"
+
+	// Disable services that require credentials to avoid validation failures
+	// These services require service-specific secrets that are no longer populated in test mode
+	if keycloak, ok := cfg.OpenCenter.Services["keycloak"].(*services.KeycloakConfig); ok {
+		keycloak.Enabled = false
+	}
+	if certManager, ok := cfg.OpenCenter.Services["cert-manager"].(*services.CertManagerConfig); ok {
+		certManager.Enabled = false
+	}
+	if loki, ok := cfg.OpenCenter.Services["loki"].(*services.LokiConfig); ok {
+		loki.Enabled = false
+	}
 
 	// Save using w.configDir; temporarily override env
 	orig := os.Getenv("OPENCENTER_CONFIG_DIR")

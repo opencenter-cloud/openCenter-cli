@@ -33,19 +33,26 @@ func newClusterDestroyCmd() *cobra.Command {
 				return err
 			}
 
-			// Remove gitops directory
-			if err := os.RemoveAll(cfg.GitOps().GitDir); err != nil {
-				return fmt.Errorf("failed to remove gitops directory: %w", err)
+			// Remove gitops directory if it exists
+			gitopsDir := cfg.GitOps().GitDir
+			if gitopsDir != "" {
+				if err := os.RemoveAll(gitopsDir); err != nil && !os.IsNotExist(err) {
+					return fmt.Errorf("failed to remove gitops directory: %w", err)
+				}
 			}
 
-			// Instead of deleting the config file, we mark the cluster as destroyed
-			// Update stage and status
-			if err := config.UpdateStatus(name, config.StageDestroy, config.StatusSuccess); err != nil {
-				// Don't fail the command if status update fails, just warn
-				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)
+			// Get the config file path
+			configPath, err := config.ConfigPath(name)
+			if err != nil {
+				return fmt.Errorf("failed to resolve config path: %w", err)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Cluster %q marked as destroyed.\n", name)
+			// Delete the config file
+			if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("failed to delete config file: %w", err)
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Cluster %q destroyed successfully.\n", name)
 			return nil
 		},
 	}

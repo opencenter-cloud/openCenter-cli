@@ -1394,6 +1394,45 @@ func GenerateDefaultFromSchema(name string) ([]byte, error) {
 	return out, nil
 }
 
+// GenerateFullSchemaDefaults returns a YAML configuration with all available fields
+// including examples of Terraform local value references for advanced users.
+// This is used when the --full-schema flag is specified during cluster init.
+func GenerateFullSchemaDefaults(name string) ([]byte, error) {
+	cfg := defaultConfig(name)
+
+	// Convert to map for easier manipulation
+	cfgYAML, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	var configMap map[string]any
+	if err := yaml.Unmarshal(cfgYAML, &configMap); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config to map: %w", err)
+	}
+
+	// Add iac section with local value examples
+	configMap["iac"] = map[string]any{
+		"main": map[string]any{
+			"local": map[string]any{
+				"cluster_name":                       fmt.Sprintf("local.cluster_name = \"%s\"", name),
+				"region":                             "local.region = \"sjc3\"",
+				"environment":                        "local.environment = \"dev\"",
+				"kubelet_rotate_server_certificates": "local.kubelet_rotate_server_certificates = false",
+				"example_comment":                    "# Terraform local values can be referenced in your infrastructure code",
+			},
+		},
+	}
+
+	// Marshal back to YAML with the iac section
+	out, err := yaml.Marshal(configMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal full schema config: %w", err)
+	}
+
+	return out, nil
+}
+
 // GetSchemaVersion returns the current schema version for backward compatibility tracking.
 func GetSchemaVersion() string {
 	return SchemaVersion

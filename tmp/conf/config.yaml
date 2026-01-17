@@ -1,0 +1,21 @@
+logging:
+    level: warn
+    format: text
+    output: stderr
+    file:
+        maxSize: 100
+        maxBackups: 3
+        maxAge: 28
+        compress: true
+paths:
+    configDir: /Users/victor.palma/projects/rackspace/openCenter-cli/tmp/conf
+    clustersDir: /Users/victor.palma/projects/rackspace/openCenter-cli/tmp/conf/clusters
+    pluginsDir: /Users/victor.palma/projects/rackspace/openCenter-cli/tmp/conf/plugins
+behavior:
+    autoConfirm: false
+    dryRun: false
+    verbose: false
+defaults:
+    provider: openstack
+    region: '{{ .OpenCenter.Cluster.ClusterRegion }}'
+    environment: dev

@@ -27,18 +27,16 @@ Feature: Organization-based minimal network workflow (VRRP) from init to bootstr
 
     # minimal network choice: use_octavia=false -> must set vrrp_ip (first show the failure)
     # Configure minimal fields with missing vrrp_ip to ensure validator catches it.
-    Given I update the YAML "tmp/conf/clusters/my-org/.demo-config.yaml" to set:
+    Given I update the YAML "tmp/conf/clusters/my-org/infrastructure/clusters/demo/.demo-config.yaml" to set:
       """
-gitops:
-  git_dir: tmp/repo-demo
-  git_url: tmp/remote.git
-iac:
-  counts: {}
-  flavors: {}
-  networking:
-    use_octavia: false
-    vrrp_enabled: true
-    vrrp_ip: ""
+opencenter:
+  gitops:
+    git_dir: tmp/repo-demo
+    git_url: tmp/remote.git
+networking:
+  use_octavia: false
+  vrrp_enabled: true
+  vrrp_ip: ""
 """
     # ./openCenter cluster validate  (expect failure due to missing vrrp_ip)
     When I run "openCenter cluster validate --config-dir tmp/conf"
@@ -47,11 +45,10 @@ iac:
     And stderr should contain "must be set"
 
     # Fix the config: set a proper vrrp_ip and validate again
-    Given I update the YAML "tmp/conf/clusters/my-org/.demo-config.yaml" to set:
+    Given I update the YAML "tmp/conf/clusters/my-org/infrastructure/clusters/demo/.demo-config.yaml" to set:
       """
-iac:
-  networking:
-    vrrp_ip: 10.0.0.10
+networking:
+  vrrp_ip: 10.0.0.10
 """
     When I run "openCenter cluster validate --config-dir tmp/conf"
     Then the exit code should be 0

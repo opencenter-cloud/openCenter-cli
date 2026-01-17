@@ -270,6 +270,10 @@ Troubleshooting:
 			// Check if a configuration file was provided via --config flag
 			configFile, _ := cmd.Flags().GetString("config")
 
+			// Check if --config-dir was explicitly provided for legacy flat structure
+			configDirFlag, _ := cmd.Flags().GetString("config-dir")
+			useLegacyFlatStructure := configDirFlag != ""
+
 			// Resolve cluster name from args, config file, or active cluster
 			var name string
 			if len(args) > 0 {
@@ -346,7 +350,19 @@ Troubleshooting:
 				}
 			} else {
 				// Generate configuration using schema-based defaults to match testdata/schema.yaml structure
-				schemaDefaultYAML, err := config.GenerateDefaultFromSchema(name)
+				fullSchema, _ := cmd.Flags().GetBool("full-schema")
+
+				var schemaDefaultYAML []byte
+				var err error
+
+				if fullSchema {
+					// Generate full schema with local value examples
+					schemaDefaultYAML, err = config.GenerateFullSchemaDefaults(name)
+				} else {
+					// Generate standard defaults
+					schemaDefaultYAML, err = config.GenerateDefaultFromSchema(name)
+				}
+
 				if err != nil {
 					return fmt.Errorf("failed to generate schema-based defaults: %w", err)
 				}
@@ -477,6 +493,12 @@ Troubleshooting:
 						"status":       config.StatusSuccess,
 					},
 				}
+			}
+
+			// Handle legacy flat file structure for backward compatibility
+			// This must be done BEFORE resolving cluster paths to avoid creating org structure
+			if useLegacyFlatStructure {
+				return handleLegacyFlatInit(cmd, name, configMap, configDirFlag)
 			}
 
 			// Resolve cluster paths using organization structure
@@ -770,6 +792,7 @@ Troubleshooting:
 	cmd.Flags().Bool("no-sops-keygen", false, "do not auto-generate SOPS age keys (alias for no-keygen)")
 	cmd.Flags().Bool("regenerate-keys", false, "regenerate SOPS age keys and SSH key pairs even if they already exist")
 	cmd.Flags().StringArray("server-pool", []string{}, "additional server pool configuration (format: name=value,key=value,...)")
+	cmd.Flags().Bool("full-schema", false, "generate configuration with all available fields including Terraform local value examples")
 	return cmd
 }
 
@@ -1464,4 +1487,37 @@ func convertServerPoolsToMap(pools []config.AdditionalServerPool) []map[string]a
 		result = append(result, poolMap)
 	}
 	return result
+}
+
+// handleLegacyFlatInit handles the legacy flat file structure for backward compatibility
+// when --config-dir is specified. This creates config files directly in the specified
+// directory as <cluster-name>.yaml instead of using the organization-based structure.
+func handleLegacyFlatInit(cmd *cobra.Command, name string, configMap map[string]any, configDir string) error {
+	// Ensure the config directory exists
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create config directory '%s': %w", configDir, err)
+	}
+
+	// Create config file path in flat structure
+	configPath := filepath.Join(configDir, name+".yaml")
+
+	// Check if file exists and handle --force flag
+	force, _ := cmd.Flags().GetBool("force")
+	if _, err := os.Stat(configPath); err == nil && !force {
+		return fmt.Errorf("configuration file '%s' already exists, use --force to overwrite", configPath)
+	}
+
+	// Convert the map to YAML
+	finalYAML, err := yaml.Marshal(configMap)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Write the config file
+	if err := os.WriteFile(configPath, finalYAML, 0o600); err != nil {
+		return fmt.Errorf("failed to write config file to '%s': %w", configPath, err)
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "Created cluster configuration at '%s'\n", configPath)
+	return nil
 }

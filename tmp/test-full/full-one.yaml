@@ -1,0 +1,328 @@
+deployment:
+    auto_deploy: true
+iac:
+    main:
+        local:
+            cluster_name: local.cluster_name = "full-one"
+            environment: local.environment = "dev"
+            example_comment: '# Terraform local values can be referenced in your infrastructure code'
+            kubelet_rotate_server_certificates: local.kubelet_rotate_server_certificates = false
+            region: local.region = "sjc3"
+metadata:
+    created_at: 2026-01-17T00:56:50.340919-06:00
+    created_by: victor.palma
+    updated_at: 2026-01-17T00:56:50.340919-06:00
+opencenter:
+    cluster:
+        aws_access_key: ""
+        aws_secret_access_key: ""
+        base_domain: k8s.opencenter.cloud
+        cluster_fqdn: full-one.sjc3.k8s.opencenter.cloud
+        cluster_name: full-one
+        kubernetes:
+            additional_server_pools_worker: []
+            additional_server_pools_worker_windows: []
+            api_port: 443
+            dns_zone_name: ""
+            flavor_bastion: gp.0.2.2
+            flavor_master: gp.0.4.8
+            flavor_worker: gp.0.4.16
+            flavor_worker_windows: gp.5.4.16
+            kube_vip_enabled: true
+            kubelet_rotate_server_certificates: false
+            kubespray_version: v2.29.1
+            loadbalancer_provider: ovn
+            master_count: 3
+            modules:
+                kubespray_cluster:
+                    source: ""
+            network_plugin:
+                calico:
+                    autodetect_cidr: ""
+                    calico_interface_autodetect: interface
+                    cni_iface: enp3s0
+                    enabled: true
+                    encapsulation_type: VXLAN
+                    modules:
+                        calico:
+                            source: ""
+                    nat_outgoing: true
+                cilium:
+                    enabled: false
+                    kubeProxyReplacement: true
+                    modules:
+                        cilium:
+                            source: ""
+                    operator_enabled: true
+                kube-ovn:
+                    cilium_integration: true
+                    enabled: false
+                    modules:
+                        kube_ovn:
+                            source: ""
+            networking:
+                allocation_pool_end: ""
+                allocation_pool_start: ""
+                dns_nameservers: []
+                dns_zone_name: ""
+                loadbalancer_provider: ""
+                ntp_servers: []
+                subnet_nodes: ""
+                subnet_pods: ""
+                subnet_services: ""
+                use_designate: false
+                use_octavia: false
+                vlan:
+                    id: ""
+                    mtu: 0
+                    provider: ""
+                vrrp_enabled: false
+                vrrp_ip: ""
+            oidc:
+                enabled: false
+                kube_oidc_ca_file: ""
+                kube_oidc_client_id: kubernetes
+                kube_oidc_groups_claim: groups
+                kube_oidc_groups_prefix: 'oidc:'
+                kube_oidc_url: ""
+                kube_oidc_username_claim: sub
+                kube_oidc_username_prefix: 'oidc:'
+            security:
+                k8s_hardening: true
+                pod_security_exemptions:
+                    - trivy-temp
+                    - tigera-operator
+                    - kube-system
+            subnet_pods: 10.42.0.0/16
+            subnet_services: 10.43.0.0/16
+            version: 1.33.5
+            windows_workers:
+                enabled: false
+                windows_admin_password: ""
+                windows_user: Administrator
+                worker_node_bfv_size_windows: 0
+                worker_node_bfv_type_windows: ""
+            worker_count: 2
+            worker_count_windows: 0
+        networking:
+            dns_nameservers:
+                - 8.8.8.8
+                - 8.8.4.4
+            k8s_api_port_acl:
+                - 0.0.0.0/0
+            ntp_servers:
+                - time.sjc3.rackspace.com
+                - time2.sjc3.rackspace.com
+            security:
+                ca_certificates: ""
+                os_hardening: true
+        ssh_authorized_keys:
+            - ""
+    gitops:
+        flux:
+            interval: 15m
+            prune: true
+        git_branch: main
+        git_dir: ./testdata/test-git-repo-full-one
+        git_url: ""
+        gitops_base_release: v0.1.0
+        gitops_base_repo: ssh://git@github.com/rackerlabs/openCenter-gitops-base.git
+        gitops_branch: main
+    infrastructure:
+        cloud:
+            aws:
+                private_subnets: []
+                profile: ""
+                public_subnets: []
+                region: ""
+                vpc_id: ""
+            openstack:
+                application_credential_id: ""
+                application_credential_secret: ""
+                auth_url: ""
+                availability_zone: az1
+                ca: ""
+                domain: ""
+                image_id: 799dcf97-3656-4361-8187-13ab1b295e33
+                image_id_windows: a2083759-f341-445b-b717-dafb5e31fa6b
+                insecure: false
+                modules:
+                    openstack_nova:
+                        source: ""
+                networking:
+                    designate:
+                        dns_zone_name: ""
+                    floating_ip_pool: PUBLICNET
+                    floating_network_id: ""
+                    network_id: ""
+                    router_external_network_id: 723f8fa2-dbf7-4cec-8d5f-017e62c12f79
+                    subnet_id: ""
+                    vlan:
+                        id: ""
+                        mtu: 0
+                        provider: physnet1
+                project_domain_name: rackspace_cloud_domain
+                region: sjc3
+                tenant_name: ""
+                user_domain_name: rackspace_cloud_domain
+        node_naming:
+            master: cp
+            worker: wn
+            worker_windows: win
+        os_version: "24"
+        provider: openstack
+        server_group_affinity:
+            - anti-affinity
+        ssh_user: ubuntu
+    managed-service:
+        alert-proxy:
+            enabled: true
+            gitops_source_branch: main
+            gitops_source_release: v0.1.0
+            gitops_source_repo: ssh://git@github.com/rackerlabs/openCenter-gitops-base.git
+            http_route_fqdn: https://alerts.full-one.sjc3.k8s.opencenter.cloud
+            image_repository: ghcr.io/rackerlabs/alert-proxy
+            image_tag: latest
+    meta:
+        env: ""
+        name: full-one
+        organization: opencenter
+        region: sjc3
+        stage: init
+        status: success
+    secrets:
+        backend: barbican
+    services:
+        calico:
+            calico_kube_api_server: https://api.full-one.sjc3.k8s.opencenter.cloud:6443
+            enabled: true
+        cert-manager:
+            email: mpk-support@rackspace.com
+            enabled: true
+            letsencrypt_server: https://acme-v02.api.letsencrypt.org/directory
+            region: us-east-1
+        etcd-backup:
+            enabled: true
+            s3_host: https://swift.api.dfw3.rackspacecloud.com
+            s3_region: DFW3
+        external-snapshotter:
+            enabled: true
+        fluxcd:
+            enabled: true
+        gateway:
+            enabled: true
+        gateway-api:
+            enabled: true
+        headlamp:
+            enabled: true
+            headlamp_oidc_client_id: kubernetes
+            headlamp_oidc_issuer_url: https://auth.full-one.sjc3.k8s.opencenter.cloud/realms/opencenter
+            hostname: dashboard.full-one.sjc3.k8s.opencenter.cloud
+        keycloak:
+            enabled: true
+            hostname: auth.full-one.sjc3.k8s.opencenter.cloud
+            keycloak_client_id: kubernetes
+            keycloak_frontend_url: https://auth.full-one.sjc3.k8s.opencenter.cloud
+            keycloak_realm: opencenter
+        kube-prometheus-stack:
+            alertmanager_storage_class: csi-cinder-sc-delete
+            alertmanager_volume_size: 10
+            enabled: true
+            grafana_storage_class: csi-cinder-sc-delete
+            grafana_volume_size: 10
+            prometheus_storage_class: csi-cinder-sc-delete
+            prometheus_volume_size: 50
+        kyverno:
+            enabled: true
+        loki:
+            enabled: false
+            loki_bucket_name: full-one-loki
+            loki_storage_class: csi-cinder-sc-delete
+            loki_volume_size: 20
+            swift_auth_url: https://keystone.api.sjc3.rackspacecloud.com/v3/
+            swift_domain_name: Default
+            swift_region: SJC3
+        olm:
+            enabled: true
+        openstack-ccm:
+            enabled: true
+        openstack-csi:
+            enabled: true
+        postgres-operator:
+            enabled: true
+        rbac-manager:
+            enabled: true
+        sources:
+            enabled: true
+        velero:
+            enabled: true
+            velero_backup_bucket: full-one-backups
+            velero_region: us-east-1
+        vsphere-csi:
+            enabled: false
+            image_repository: registry.k8s.io/csi-vsphere
+            image_tag: v3.3.0
+        weave-gitops:
+            enabled: false
+            hostname: gitops.full-one.sjc3.k8s.opencenter.cloud
+    storage:
+        default_storage_class: csi-cinder-sc-delete
+        worker_volume_destination_type: volume
+        worker_volume_size: 40
+        worker_volume_source_type: image
+        worker_volume_type: HA-Standard
+opentofu:
+    backend:
+        local:
+            path: ./testdata/test-git-repo-full-one/terraform.tfstate
+        type: local
+    enabled: true
+    path: opentofu
+schema_version: 1.0.0
+secrets:
+    alert_proxy:
+        account_service_token: ""
+        core_account_number: ""
+        core_device_id: ""
+    cert_manager:
+        aws_access_key: ""
+        aws_secret_access_key: ""
+    global:
+        aws:
+            application:
+                access_key: ""
+                secret_access_key: ""
+            infrastructure:
+                access_key: ""
+                region: us-east-1
+                secret_access_key: ""
+    grafana:
+        admin_password: ""
+    headlamp:
+        oidc_client_secret: ""
+    keycloak:
+        admin_password: ""
+        client_secret: ""
+    loki:
+        s3_access_key_id: ""
+        s3_secret_access_key: ""
+        swift_application_credential_secret: ""
+        swift_password: ""
+    sops_age_key_file: ""
+    ssh_key:
+        cypher: ed25519
+        private: ./testdata/test-git-repo-full-one/full-one/secrets/ssh/full-one
+        public: ./testdata/test-git-repo-full-one/full-one/secrets/ssh/full-one.pub
+    tempo:
+        access_key: ""
+        secret_key: ""
+    vsphere_csi:
+        datacenters: ""
+        insecure_flag: "false"
+        password: ""
+        port: "443"
+        username: ""
+        vcenter_host: ""
+    weave_gitops:
+        password: ""
+        password_hash: ""

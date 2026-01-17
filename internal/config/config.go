@@ -32,7 +32,6 @@ import (
 
 // Config represents the simplified root configuration for a cluster based on the new schema.
 // The structure matches the testdata/schema.yaml format with opencenter, opentofu, cloud, and secrets sections.
-// IAC field is included for backward compatibility with existing templates.
 type Config struct {
 	SchemaVersion string               `yaml:"schema_version,omitempty" json:"schema_version,omitempty"`
 	OpenCenter    SimplifiedOpenCenter `yaml:"opencenter" json:"opencenter"`

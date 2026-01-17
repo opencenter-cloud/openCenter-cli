@@ -3,6 +3,7 @@ locals {
   cluster_name                            = "{{ .OpenCenter.Cluster.ClusterName }}"
   # Prefix to add to Openstack resource names
   naming_prefix                           = "${local.cluster_name}-"
+{{- if ne (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
   openstack_auth_url                      = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL | default "https://keystone.api.sjc3.rackspacecloud.com/v3/" }}"
   openstack_insecure                      = {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Insecure | default false }}
   openstack_region                        = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.Region | default "SJC3" }}"
@@ -20,6 +21,7 @@ locals {
   vlan_id                                 = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VLAN.ID | default "" }}"
   mtu                                     = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VLAN.MTU | default "" }}"
   network_provider                        = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VLAN.Provider | default "physnet1" }}"
+{{- end }}
   #CIDR that the openstack VMs will use for K8s nodes
   subnet_nodes                            = "{{ .OpenCenter.Cluster.Kubernetes.Networking.SubnetNodes | default "10.2.128.0/22" }}"
   subnet_nodes_oct                       = join(".", slice(split(".", split("/", local.subnet_nodes)[0]), 0, 3))
@@ -44,8 +46,10 @@ locals {
   # DNS servers to configure on the nodes
   dns_nameservers                         = {{ if .OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers }}[{{ range $i, $dns := .OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers }}{{if $i}}, {{end}}"{{ $dns }}"{{ end }}]{{ else }}["1.1.1.1","8.8.8.8"]{{ end }}
   ntp_servers                             = {{ if .OpenCenter.Cluster.Kubernetes.Networking.NTPServers }}[{{ range $i, $ntp := .OpenCenter.Cluster.Kubernetes.Networking.NTPServers }}{{if $i}}, {{end}}"{{ $ntp }}"{{ end }}]{{ else }}["time.dfw3.rackspace.com","time2.dfw3.rackspace.com"]{{ end }}
+{{- if ne (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
   image_id                                = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.ImageID | default "799dcf97-3656-4361-8187-13ab1b295e33" }}"
   image_id_windows                        = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.ImageIDWindows | default "a2083759-f341-445b-b717-dafb5e31fa6b" }}"
+{{- end }}
   k8s_api_port                            = {{ .OpenCenter.Cluster.Kubernetes.APIPort | default 443 }}
   k8s_api_port_acl                        = {{ if .OpenCenter.Cluster.K8sAPIPortACL }}[{{ range $i, $acl := .OpenCenter.Cluster.K8sAPIPortACL }}{{if $i}}, {{end}}"{{ $acl }}"{{ end }}]{{ else }}["0.0.0.0/0"]{{ end }}
   worker_count                            = {{ .OpenCenter.Cluster.Kubernetes.WorkerCount | default 4 }}
@@ -59,6 +63,7 @@ locals {
   node_master                             = "{{ .OpenCenter.Infrastructure.NodeNaming.Master | default "cp" }}"
   node_worker_windows                     = "{{ .OpenCenter.Infrastructure.NodeNaming.WorkerWindows | default "win" }}"
   ub_version                              = "{{ .OpenCenter.Infrastructure.OSVersion | default "24" }}"
+{{- if ne (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
   #FLEX Flavor Settings ==========================
   flavor_bastion                          = "{{ .OpenCenter.Cluster.Kubernetes.FlavorBastion | default "gp.0.2.2" }}"
   flavor_master                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorMaster | default "gp.0.4.8" }}"
@@ -70,6 +75,12 @@ locals {
   worker_node_bfv_source_type             = "{{ .OpenCenter.Storage.WorkerVolumeSourceType | default "image" }}"
   worker_node_bfv_volume_type             = "{{ .OpenCenter.Storage.WorkerVolumeType | default "HA-Performance" }}"
   wn_server_group_affinity                = {{ if .OpenCenter.Infrastructure.ServerGroupAffinity }}[{{ range $i, $affinity := .OpenCenter.Infrastructure.ServerGroupAffinity }}{{if $i}}, {{end}}"{{ $affinity }}"{{ end }}]{{ else }}["anti-affinity"]{{ end }}
+{{- else }}
+  worker_node_bfv_volume_size             = {{ .OpenCenter.Storage.WorkerVolumeSize | default 20 }}
+  worker_node_bfv_destination_type        = "{{ .OpenCenter.Storage.WorkerVolumeDestinationType | default "volume" }}"
+  worker_node_bfv_source_type             = "{{ .OpenCenter.Storage.WorkerVolumeSourceType | default "image" }}"
+  worker_node_bfv_volume_type             = "{{ .OpenCenter.Storage.WorkerVolumeType | default "Standard" }}"
+{{- end }}
   additional_block_devices_worker = {{ if .OpenCenter.Storage.AdditionalBlockDevices }}[{{ range $i, $device := .OpenCenter.Storage.AdditionalBlockDevices }}{{if $i}}, {{end}}{{ $device }}{{ end }}]{{ else }}[]{{ end }}
 
   additional_server_pools_worker = {{ if .OpenCenter.Cluster.Kubernetes.AdditionalServerPoolsWorker }}[{{ range $i, $pool := .OpenCenter.Cluster.Kubernetes.AdditionalServerPoolsWorker }}{{if $i}}, {{end}}{
@@ -175,8 +186,61 @@ locals {
   {{- else }}
   additional_server_pools_worker_windows = []
   {{- end }}
+
+{{- if eq (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
+######################
+# Baremetal-specific settings
+######################
+  address_bastion                        = "{{ .OpenCenter.Infrastructure.Bastion.Address | default "50.56.158.76" }}" ##Or Public IP NATed to Bastion
+  windows_dataplane                       = {{ if gt (.OpenCenter.Cluster.Kubernetes.WorkerCountWindows | default 0) 0 }}"HSN"{{ else }}"Disabled"{{ end }}
+  k8s_api_ip                              = "{{ .OpenCenter.Infrastructure.K8sAPIIP | default "" }}" != "" ? "{{ .OpenCenter.Infrastructure.K8sAPIIP }}" : local.vrrp_ip
+  ssh_key_path                            = "{{ .OpenCenter.Infrastructure.SSHKeyPath | default "" }}" 
+
+  {{- if .OpenCenter.Cluster.Kubernetes.MasterNodes }}
+  master_nodes = [
+  {{- range .OpenCenter.Cluster.Kubernetes.MasterNodes }}
+  {
+  id = "{{ .ID }}"
+  name = "{{ .Name }}"
+  access_ip_v4 = "{{ .AccessIPv4 }}"
+  },
+  {{- end }}
+  ]
+  {{- else }}
+  master_nodes = []
+  {{- end }}
+
+  {{- if .OpenCenter.Cluster.Kubernetes.WorkerNodes }}
+  worker_nodes = [
+  {{- range .OpenCenter.Cluster.Kubernetes.WorkerNodes }}
+  {
+  id = "{{ .ID }}"
+  name = "{{ .Name }}"
+  access_ip_v4 = "{{ .AccessIPv4 }}"
+  },
+  {{- end }}
+  ]
+  {{- else }}
+  worker_nodes = []
+  {{- end }}
+
+  {{- if .OpenCenter.Cluster.Kubernetes.WindowsNodes }}
+  windows_nodes = [
+  {{- range .OpenCenter.Cluster.Kubernetes.WindowsNodes }}
+  {
+  id = "{{ .ID }}"
+  name = "{{ .Name }}"
+  access_ip_v4 = "{{ .AccessIPv4 }}"
+  },
+  {{- end }}
+  ]
+  {{- else }}
+  windows_nodes = []
+  {{- end }}
+{{- end }}
 }
 
+{{- if ne (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
 module "openstack-nova" {
   source = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.Modules.OpenstackNova.Source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/cloud/openstack/openstack-nova?ref=main" }}"
   # source = "../../../gitclones/openCenter-gitops-base/iac/cloud/openstack/openstack-nova"
@@ -249,15 +313,24 @@ module "openstack-nova" {
   worker_node_bfv_volume_type = local.worker_node_bfv_volume_type
   wn_server_group_affinity = local.wn_server_group_affinity
 }
+{{- end }}
 
 module "kubespray-cluster" {
   source = "{{ .OpenCenter.Cluster.Kubernetes.Modules.KubesprayCluster.Source | default "github.com/rackerlabs/openCenter-gitops-base.git//iac/provider/kubespray?ref=main" }}"
+{{- if eq (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
+  address_bastion                         = local.address_bastion
+{{- else }}
   address_bastion                         = module.openstack-nova.bastion_floating_ip
+{{- end }}
   cluster_name                            = local.cluster_name
   cni_iface                               = local.cni_iface
   deploy_cluster                          = local.deploy_cluster
   dns_zone_name                           = local.dns_zone_name
+{{- if eq (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
+  master_nodes                            = local.master_nodes
+{{- else }}
   master_nodes                            = module.openstack-nova.master_nodes
+{{- end }}
   network_plugin                          = local.network_plugin
   k8s_hardening_enabled                   = local.k8s_hardening_enabled
   os_hardening_enabled                    = local.os_hardening_enabled
@@ -270,12 +343,27 @@ module "kubespray-cluster" {
   kube_vip_enabled                        = local.kube_vip_enabled
   kube_pod_security_exemptions_namespaces = local.kube_pod_security_exemptions_namespaces
   kubelet_rotate_server_certificates      = local.kubelet_rotate_server_certificates
+{{- if eq (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
+  worker_nodes                            = local.worker_nodes
+  k8s_api_ip                              = local.k8s_api_ip
+  k8s_internal_ip                         = local.vrrp_ip
+{{- else }}
   worker_nodes                            = module.openstack-nova.worker_nodes
   k8s_api_ip                              = module.openstack-nova.k8s_api_ip
-  k8s_api_port                            = local.k8s_api_port
   k8s_internal_ip                         = module.openstack-nova.k8s_internal_ip
+{{- end }}
+  k8s_api_port                            = local.k8s_api_port
   vrrp_ip                                 = local.vrrp_ip
   vrrp_enabled                            = local.vrrp_enabled
+{{- if eq (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
+  {{- if gt (.OpenCenter.Cluster.Kubernetes.WorkerCountWindows | default 0) 0 }}
+  windows_nodes                           = local.windows_nodes
+  {{- else }}
+  windows_nodes                           = []
+  {{- end }}
+  ssh_key_path                            = local.ssh_key_path
+  use_octavia                             = local.use_octavia
+{{- else }}
   {{- if gt (.OpenCenter.Cluster.Kubernetes.WorkerCountWindows | default 0) 0 }}
   windows_nodes = concat(
     module.openstack-nova.windows_nodes,
@@ -283,8 +371,11 @@ module "kubespray-cluster" {
       for pool_name, pool_nodes in module.openstack-nova.additional_worker_pools_windows_nodes : pool_nodes
     ])
   )
+  {{- else }}
+  windows_nodes                           = []
   {{- end }}
   use_octavia                             = local.use_octavia
+{{- end }}
   {{- if .OpenCenter.Cluster.Kubernetes.OIDC.Enabled }}
   kube_oidc_auth_enabled                  = local.kube_oidc_auth_enabled
   kube_oidc_url                           = local.kube_oidc_url

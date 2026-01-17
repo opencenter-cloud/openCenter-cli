@@ -392,12 +392,6 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 		provider = "openstack" // default
 	}
 
-	// Map provider to template filename
-	mainTfTemplate := "main.tf.tpl" // default for openstack
-	if provider == "baremetal" {
-		mainTfTemplate = "main-baremetal.tf.tpl"
-	}
-
 	// Walk embedded infrastructure-cluster-template files
 	return fs.WalkDir(Files, "templates/infrastructure-cluster-template", func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -414,14 +408,9 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 
 		filename := d.Name()
 
-		// Skip main.tf templates that don't match the provider
-		if strings.HasPrefix(filename, "main") && strings.HasSuffix(filename, ".tf.tpl") {
-			if filename != mainTfTemplate {
-				// Skip this template as it's not for the current provider
-				return nil
-			}
-			// Rename to main.tf for the selected provider template
-			rel = "main.tf.tpl"
+		// Skip the old baremetal-specific template if it exists
+		if filename == "main-baremetal.tf.tpl" {
+			return nil
 		}
 
 		// Replace cluster-name and cluster_name placeholders in filename
@@ -683,12 +672,6 @@ func RenderInfrastructureClusterAtomic(cfg config.Config, workspace *GitOpsWorks
 		provider = "openstack" // default
 	}
 
-	// Map provider to template filename
-	mainTfTemplate := "main.tf.tpl" // default for openstack
-	if provider == "baremetal" {
-		mainTfTemplate = "main-baremetal.tf.tpl"
-	}
-
 	// Walk embedded infrastructure-cluster-template files
 	return fs.WalkDir(Files, "templates/infrastructure-cluster-template", func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -705,14 +688,9 @@ func RenderInfrastructureClusterAtomic(cfg config.Config, workspace *GitOpsWorks
 
 		filename := d.Name()
 
-		// Skip main.tf templates that don't match the provider
-		if strings.HasPrefix(filename, "main") && strings.HasSuffix(filename, ".tf.tpl") {
-			if filename != mainTfTemplate {
-				// Skip this template as it's not for the current provider
-				return nil
-			}
-			// Rename to main.tf for the selected provider template
-			rel = "main.tf.tpl"
+		// Skip the old baremetal-specific template if it exists
+		if filename == "main-baremetal.tf.tpl" {
+			return nil
 		}
 
 		// Replace cluster-name and cluster_name placeholders in filename

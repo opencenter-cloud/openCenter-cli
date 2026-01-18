@@ -92,11 +92,11 @@ Troubleshooting:
 			if err != nil {
 				return err
 			}
-			
+
 			// Use comprehensive validator for thorough validation including service secrets
 			validator := config.NewConfigValidator(false)
 			result := validator.Validate(cmd.Context(), &cfg)
-			
+
 			if !result.Valid {
 				// Print all validation errors
 				for _, e := range result.Errors {

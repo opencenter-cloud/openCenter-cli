@@ -272,10 +272,10 @@ Troubleshooting:
 
 			// Check if --config-dir was explicitly provided
 			configDirFlag, _ := cmd.Flags().GetString("config-dir")
-			
+
 			// Check if organization was explicitly specified via --org flag or dot notation
 			orgFlagValue, _ := cmd.Flags().GetString("org")
-			
+
 			// Check if organization was specified via dot notation by looking at the args
 			hasOrgInDotNotation := false
 			for _, arg := range os.Args {
@@ -284,7 +284,7 @@ Troubleshooting:
 					break
 				}
 			}
-			
+
 			// Use legacy flat structure only if --config-dir is specified AND no organization is explicitly set
 			// This maintains backward compatibility while allowing organization-based structure when needed
 			useLegacyFlatStructure := configDirFlag != "" && orgFlagValue == "" && !hasOrgInDotNotation

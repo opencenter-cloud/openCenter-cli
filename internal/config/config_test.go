@@ -75,7 +75,7 @@ func TestConfig(t *testing.T) {
 		if err := Save(cfg); err != nil {
 			t.Fatal(err)
 		}
-		
+
 		names, err := List()
 		if err != nil {
 			t.Fatal(err)

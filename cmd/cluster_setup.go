@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -123,17 +122,20 @@ Configuration must have opencenter.gitops.git_dir set.`,
 }
 
 // setupGitOpsRepository performs the actual GitOps repository setup.
-// This uses the unified generation interface which automatically selects between
-// the legacy system and the new pipeline-based system based on feature flags.
 func setupGitOpsRepository(cfg config.Config, cmd *cobra.Command) error {
-	// Use the unified GitOps generation interface
-	ctx := cmd.Context()
-	if ctx == nil {
-		ctx = context.Background()
+	// Copy base GitOps structure (always render for generation)
+	if err := gitops.CopyBase(cfg, true); err != nil {
+		return fmt.Errorf("failed to copy base GitOps structure: %w", err)
 	}
 
-	if err := gitops.GenerateGitOpsRepository(ctx, cfg); err != nil {
-		return fmt.Errorf("failed to generate GitOps repository: %w", err)
+	// Render cluster-specific applications
+	if err := gitops.RenderClusterApps(cfg); err != nil {
+		return fmt.Errorf("failed to render cluster apps: %w", err)
+	}
+
+	// Render infrastructure templates
+	if err := gitops.RenderInfrastructureCluster(cfg); err != nil {
+		return fmt.Errorf("failed to render infrastructure cluster: %w", err)
 	}
 
 	// Provision OpenTofu (renders main.tf and provider.tf)

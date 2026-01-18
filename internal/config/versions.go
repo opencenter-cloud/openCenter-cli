@@ -178,7 +178,7 @@ func migrateV1_2_to_V2_0(ctx context.Context, config Config) (Config, error) {
 	} else if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods == "" {
 		config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = "10.244.0.0/16" // Default pod CIDR
 	}
-	
+
 	if config.Networking.SubnetServices != "" {
 		config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = config.Networking.SubnetServices
 	} else if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices == "" {

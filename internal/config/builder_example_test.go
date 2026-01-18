@@ -76,6 +76,9 @@ func ExampleConfigBuilder_aws() {
 		WithRegion("us-west-2").
 		WithKubernetesVersion("1.33.7").
 		WithNodeCounts(3, 3).
+		WithSubnetNodes("10.0.0.0/24").
+		WithSubnetPods("10.42.0.0/16").
+		WithSubnetServices("10.43.0.0/16").
 		WithAWSConfig(config.SimplifiedAWSCloud{
 			Region:         "us-west-2",
 			VPCID:          "vpc-12345678",
@@ -104,6 +107,9 @@ func ExampleConfigBuilder_modifyExisting() {
 	existingConfig.OpenCenter.Meta.Organization = "acme-corp"
 	existingConfig.OpenCenter.Infrastructure.Provider = "aws"
 	existingConfig.OpenCenter.Infrastructure.Cloud.AWS.Region = "us-east-1"
+	existingConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetNodes = "10.0.0.0/24"
+	existingConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = "10.42.0.0/16"
+	existingConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = "10.43.0.0/16"
 
 	// Create a builder from the existing config and modify it
 	builder := config.NewConfigBuilderFromConfig(existingConfig).

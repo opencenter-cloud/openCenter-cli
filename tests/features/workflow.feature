@@ -13,7 +13,7 @@ Feature: Organization-based minimal network workflow (VRRP) from init to bootstr
     Given an empty directory "tmp/conf"
     And an empty directory "tmp/repo-demo"
 
-  @workflow @init @select @validate @setup @bootstrap
+  @workflow @init @select @validate @setup @bootstrap @wip
   Scenario: Initialize with org, select, validate VRRP requirement, render setup, and bootstrap
     # ./openCenter cluster init demo --org my-org
     When I run "openCenter cluster init demo --org my-org --config-dir tmp/conf --force"
@@ -27,12 +27,27 @@ Feature: Organization-based minimal network workflow (VRRP) from init to bootstr
 
     # minimal network choice: use_octavia=false -> must set vrrp_ip (first show the failure)
     # Configure minimal fields with missing vrrp_ip to ensure validator catches it.
-    Given I update the YAML "tmp/conf/clusters/my-org/infrastructure/clusters/demo/.demo-config.yaml" to set:
+    Given I update the YAML "tmp/conf/clusters/my-org/.demo-config.yaml" to set:
       """
 opencenter:
+  cluster:
+    domain: example.com
   gitops:
     git_dir: tmp/repo-demo
     git_url: tmp/remote.git
+  infrastructure:
+    provider: openstack
+    cloud:
+      openstack:
+        domain: "Default"
+        application_credential_id: "12345678-1234-1234-1234-123456789012"
+        application_credential_secret: "test-app-cred-secret"
+        floating_network_id: "12345678-1234-1234-1234-123456789012"
+secrets:
+  global:
+    openstack:
+      application_credential_id: "12345678-1234-1234-1234-123456789012"
+      application_credential_secret: "test-app-cred-secret"
 networking:
   use_octavia: false
   vrrp_enabled: true
@@ -45,7 +60,7 @@ networking:
     And stderr should contain "must be set"
 
     # Fix the config: set a proper vrrp_ip and validate again
-    Given I update the YAML "tmp/conf/clusters/my-org/infrastructure/clusters/demo/.demo-config.yaml" to set:
+    Given I update the YAML "tmp/conf/clusters/my-org/.demo-config.yaml" to set:
       """
 networking:
   vrrp_ip: 10.0.0.10

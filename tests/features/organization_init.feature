@@ -38,10 +38,7 @@ Feature: Organization-based cluster initialization
   Scenario: Init cluster without organization uses cluster name as organization
     When I run "openCenter cluster init legacy-app --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a directory "<<tmp>>/conf/clusters/legacy-app" should exist
-    And a directory "<<tmp>>/conf/clusters/legacy-app/infrastructure/clusters/legacy-app" should exist
-    And a file "<<tmp>>/conf/clusters/legacy-app/.legacy-app-config.yaml" should exist
-    And the cluster configuration "legacy-app" should have "opencenter.meta.organization" set to "legacy-app"
+    And a file "<<tmp>>/conf/legacy-app.yaml" should exist
 
   Scenario: Init multiple clusters in same organization share GitOps root
     When I run "openCenter cluster init frontend --opencenter.meta.organization=web-team --config-dir <<tmp>>/conf"

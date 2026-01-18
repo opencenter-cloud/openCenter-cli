@@ -118,34 +118,35 @@ func TestInfrastructureStageProviderFiltering(t *testing.T) {
 			engine := template.NewGoTemplateEngine()
 			registry := template.NewInMemoryTemplateRegistry()
 
-			// Register templates for different providers
+			// Create temporary workspace first
+			tempDir := t.TempDir()
+			workspace := createTestWorkspace(t, tempDir, cfg)
+
+			// Create template files for all providers first
 			providers := []string{"openstack", "aws", "baremetal"}
 			for _, provider := range providers {
+				templatePath := filepath.Join(tempDir, provider+"-template.yaml")
+				templateContent := `provider: ` + provider + "\n"
+				err := os.WriteFile(templatePath, []byte(templateContent), 0o644)
+				require.NoError(t, err)
+			}
+
+			// Register templates for different providers with absolute paths
+			for _, provider := range providers {
+				templatePath := filepath.Join(tempDir, provider+"-template.yaml")
 				err := registry.RegisterTemplate(template.TemplateDefinition{
 					Name:     provider + "-config",
-					Path:     provider + "-template.yaml",
+					Path:     templatePath, // Use absolute path
 					Type:     template.TemplateTypeInfrastructure,
 					Provider: provider,
 				})
 				require.NoError(t, err)
 			}
 
-			// Create temporary workspace
-			tempDir := t.TempDir()
-			workspace := createTestWorkspace(t, tempDir, cfg)
-
 			// Create init stage directories
 			initStage := NewInitStage()
 			err := initStage.Execute(context.Background(), workspace)
 			require.NoError(t, err)
-
-			// Create template files for all providers
-			for _, provider := range providers {
-				templatePath := filepath.Join(tempDir, provider+"-template.yaml")
-				templateContent := `provider: ` + provider + "\n"
-				err = os.WriteFile(templatePath, []byte(templateContent), 0o644)
-				require.NoError(t, err)
-			}
 
 			// Execute infrastructure stage
 			stage := NewInfrastructureStage(engine, registry)
@@ -176,10 +177,23 @@ func TestInfrastructureStageTemplateDependencies(t *testing.T) {
 	engine := template.NewGoTemplateEngine()
 	registry := template.NewInMemoryTemplateRegistry()
 
-	// Register templates with dependencies
-	err := registry.RegisterTemplate(template.TemplateDefinition{
+	// Create temporary workspace first
+	tempDir := t.TempDir()
+	workspace := createTestWorkspace(t, tempDir, cfg)
+
+	// Create template files first
+	baseTemplatePath := filepath.Join(tempDir, "base-template.yaml")
+	err := os.WriteFile(baseTemplatePath, []byte("base: config\n"), 0o644)
+	require.NoError(t, err)
+
+	networkTemplatePath := filepath.Join(tempDir, "network-template.yaml")
+	err = os.WriteFile(networkTemplatePath, []byte("network: config\n"), 0o644)
+	require.NoError(t, err)
+
+	// Register templates with dependencies using absolute paths
+	err = registry.RegisterTemplate(template.TemplateDefinition{
 		Name:         "base-config",
-		Path:         "base-template.yaml",
+		Path:         baseTemplatePath, // Use absolute path
 		Type:         template.TemplateTypeInfrastructure,
 		Provider:     "openstack",
 		Dependencies: []string{},
@@ -188,29 +202,16 @@ func TestInfrastructureStageTemplateDependencies(t *testing.T) {
 
 	err = registry.RegisterTemplate(template.TemplateDefinition{
 		Name:         "network-config",
-		Path:         "network-template.yaml",
+		Path:         networkTemplatePath, // Use absolute path
 		Type:         template.TemplateTypeInfrastructure,
 		Provider:     "openstack",
 		Dependencies: []string{"base-config"},
 	})
 	require.NoError(t, err)
 
-	// Create temporary workspace
-	tempDir := t.TempDir()
-	workspace := createTestWorkspace(t, tempDir, cfg)
-
 	// Create init stage directories
 	initStage := NewInitStage()
 	err = initStage.Execute(context.Background(), workspace)
-	require.NoError(t, err)
-
-	// Create template files
-	baseTemplate := filepath.Join(tempDir, "base-template.yaml")
-	err = os.WriteFile(baseTemplate, []byte("base: config\n"), 0o644)
-	require.NoError(t, err)
-
-	networkTemplate := filepath.Join(tempDir, "network-template.yaml")
-	err = os.WriteFile(networkTemplate, []byte("network: config\n"), 0o644)
 	require.NoError(t, err)
 
 	// Execute infrastructure stage
@@ -235,27 +236,27 @@ func TestInfrastructureStageRollback(t *testing.T) {
 	engine := template.NewGoTemplateEngine()
 	registry := template.NewInMemoryTemplateRegistry()
 
-	// Register template
-	err := registry.RegisterTemplate(template.TemplateDefinition{
+	// Create temporary workspace first
+	tempDir := t.TempDir()
+	workspace := createTestWorkspace(t, tempDir, cfg)
+
+	// Create template file first
+	templatePath := filepath.Join(tempDir, "test-template.yaml")
+	err := os.WriteFile(templatePath, []byte("test: config\n"), 0o644)
+	require.NoError(t, err)
+
+	// Register template with absolute path
+	err = registry.RegisterTemplate(template.TemplateDefinition{
 		Name:     "test-config",
-		Path:     "test-template.yaml",
+		Path:     templatePath, // Use absolute path
 		Type:     template.TemplateTypeInfrastructure,
 		Provider: "openstack",
 	})
 	require.NoError(t, err)
 
-	// Create temporary workspace
-	tempDir := t.TempDir()
-	workspace := createTestWorkspace(t, tempDir, cfg)
-
 	// Create init stage directories
 	initStage := NewInitStage()
 	err = initStage.Execute(context.Background(), workspace)
-	require.NoError(t, err)
-
-	// Create template file
-	templatePath := filepath.Join(tempDir, "test-template.yaml")
-	err = os.WriteFile(templatePath, []byte("test: config\n"), 0o644)
 	require.NoError(t, err)
 
 	// Execute infrastructure stage
@@ -303,18 +304,23 @@ func TestInfrastructureStageValidation(t *testing.T) {
 			engine := template.NewGoTemplateEngine()
 			registry := template.NewInMemoryTemplateRegistry()
 
-			// Register template
-			err := registry.RegisterTemplate(template.TemplateDefinition{
+			// Create temporary workspace first
+			tempDir := t.TempDir()
+			workspace := createTestWorkspace(t, tempDir, cfg)
+
+			// Create template file first
+			templatePath := filepath.Join(tempDir, "test-template.yaml")
+			err := os.WriteFile(templatePath, []byte("test: config\n"), 0o644)
+			require.NoError(t, err)
+
+			// Register template with absolute path
+			err = registry.RegisterTemplate(template.TemplateDefinition{
 				Name:     "test-config",
-				Path:     "test-template.yaml",
+				Path:     templatePath, // Use absolute path
 				Type:     template.TemplateTypeInfrastructure,
 				Provider: "openstack",
 			})
 			require.NoError(t, err)
-
-			// Create temporary workspace
-			tempDir := t.TempDir()
-			workspace := createTestWorkspace(t, tempDir, cfg)
 
 			// Create init stage directories
 			initStage := NewInitStage()
@@ -322,11 +328,6 @@ func TestInfrastructureStageValidation(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.setupStage {
-				// Create template file
-				templatePath := filepath.Join(tempDir, "test-template.yaml")
-				err = os.WriteFile(templatePath, []byte("test: config\n"), 0o644)
-				require.NoError(t, err)
-
 				// Execute infrastructure stage
 				stage := NewInfrastructureStage(engine, registry)
 				err = stage.Execute(context.Background(), workspace)
@@ -445,28 +446,28 @@ func TestInfrastructureStageConditions(t *testing.T) {
 			engine := template.NewGoTemplateEngine()
 			registry := template.NewInMemoryTemplateRegistry()
 
-			// Register template with condition
-			err := registry.RegisterTemplate(template.TemplateDefinition{
+			// Create temporary workspace first
+			tempDir := t.TempDir()
+			workspace := createTestWorkspace(t, tempDir, cfg)
+
+			// Create template file first
+			templatePath := filepath.Join(tempDir, "conditional-template.yaml")
+			err := os.WriteFile(templatePath, []byte("conditional: config\n"), 0o644)
+			require.NoError(t, err)
+
+			// Register template with condition using absolute path
+			err = registry.RegisterTemplate(template.TemplateDefinition{
 				Name:       "conditional-config",
-				Path:       "conditional-template.yaml",
+				Path:       templatePath, // Use absolute path
 				Type:       template.TemplateTypeInfrastructure,
 				Provider:   tt.provider,
 				Conditions: []template.RenderCondition{tt.condition},
 			})
 			require.NoError(t, err)
 
-			// Create temporary workspace
-			tempDir := t.TempDir()
-			workspace := createTestWorkspace(t, tempDir, cfg)
-
 			// Create init stage directories
 			initStage := NewInitStage()
 			err = initStage.Execute(context.Background(), workspace)
-			require.NoError(t, err)
-
-			// Create template file
-			templatePath := filepath.Join(tempDir, "conditional-template.yaml")
-			err = os.WriteFile(templatePath, []byte("conditional: config\n"), 0o644)
 			require.NoError(t, err)
 
 			// Execute infrastructure stage

@@ -290,7 +290,7 @@ func TestValidateExtended(t *testing.T) {
 				populateInfraFields(&cfg)
 				return cfg
 			},
-			expectErrs: []string{"opencenter.gitops.git_dir must be set"},
+			expectErrs: []string{"GitOps directory must be set"},
 		},
 		{
 			name: "opentofu enabled without path",
@@ -1704,7 +1704,7 @@ func TestValidateMissingRequiredFields(t *testing.T) {
 				populateInfraFields(&cfg)
 				return cfg
 			},
-			expectErrs: []string{"opencenter.gitops.git_dir must be set"},
+			expectErrs: []string{"GitOps directory must be set"},
 		},
 	}
 

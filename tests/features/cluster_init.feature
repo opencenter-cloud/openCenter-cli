@@ -42,7 +42,7 @@ Feature: Cluster initialisation
     Then a directory "~/.config/openCenter/clusters" should exist
     And a directory "~/.config/openCenter/clusters/opencenter" should exist
     And a directory "~/.config/openCenter/clusters/opencenter/infrastructure/clusters/new-cluster" should exist
-    And a file "~/.config/openCenter/clusters/opencenter/infrastructure/clusters/new-cluster/.new-cluster-config.yaml" should exist
+    And a file "~/.config/openCenter/clusters/opencenter/.new-cluster-config.yaml" should exist
 
   Scenario: Init creates cluster-specific secrets directory structure
     When I run "openCenter cluster init secrets-test"
@@ -77,7 +77,7 @@ Feature: Cluster initialisation
   Scenario: Cluster directory creation with special characters in name
     When I run "openCenter cluster init test-cluster-123"
     Then a directory "~/.config/openCenter/clusters/opencenter/infrastructure/clusters/test-cluster-123" should exist
-    And a file "~/.config/openCenter/clusters/opencenter/infrastructure/clusters/test-cluster-123/.test-cluster-123-config.yaml" should exist
+    And a file "~/.config/openCenter/clusters/opencenter/.test-cluster-123-config.yaml" should exist
 
   # Organization-based cluster initialization tests
 
@@ -96,7 +96,7 @@ Feature: Cluster initialisation
 
   Scenario: Init cluster with organization creates cluster configuration in correct location
     When I run "openCenter cluster init api-service --opencenter.meta.organization=prod-team"
-    Then a file "~/.config/openCenter/clusters/prod-team/infrastructure/clusters/api-service/.api-service-config.yaml" should exist
+    Then a file "~/.config/openCenter/clusters/prod-team/.api-service-config.yaml" should exist
     And the cluster configuration "api-service" should have "opencenter.meta.organization" set to "prod-team"
     And the cluster configuration "api-service" should have "opencenter.gitops.git_dir" containing "clusters/prod-team"
 
@@ -112,7 +112,7 @@ Feature: Cluster initialisation
     When I run "openCenter cluster init legacy-app"
     Then a directory "~/.config/openCenter/clusters/opencenter" should exist
     And a directory "~/.config/openCenter/clusters/opencenter/infrastructure/clusters/legacy-app" should exist
-    And a file "~/.config/openCenter/clusters/opencenter/infrastructure/clusters/legacy-app/.legacy-app-config.yaml" should exist
+    And a file "~/.config/openCenter/clusters/opencenter/.legacy-app-config.yaml" should exist
     And the cluster configuration "legacy-app" should have "opencenter.meta.organization" set to "opencenter"
 
   Scenario: Init multiple clusters in same organization share GitOps root
@@ -120,8 +120,8 @@ Feature: Cluster initialisation
     And I run "openCenter cluster init backend --opencenter.meta.organization=web-team"
     Then a directory "~/.config/openCenter/clusters/web-team/infrastructure/clusters/frontend" should exist
     And a directory "~/.config/openCenter/clusters/web-team/infrastructure/clusters/backend" should exist
-    And a file "~/.config/openCenter/clusters/web-team/infrastructure/clusters/frontend/.frontend-config.yaml" should exist
-    And a file "~/.config/openCenter/clusters/web-team/infrastructure/clusters/backend/.backend-config.yaml" should exist
+    And a file "~/.config/openCenter/clusters/web-team/.frontend-config.yaml" should exist
+    And a file "~/.config/openCenter/clusters/web-team/.backend-config.yaml" should exist
     And the cluster configuration "frontend" should have "opencenter.gitops.git_dir" containing "clusters/web-team"
     And the cluster configuration "backend" should have "opencenter.gitops.git_dir" containing "clusters/web-team"
 
@@ -129,7 +129,7 @@ Feature: Cluster initialisation
     When I run "openCenter cluster init test-service --opencenter.meta.organization=qa-team"
     And I run "openCenter cluster init test-service --opencenter.meta.organization=qa-team --force"
     Then the command should succeed
-    And a file "~/.config/openCenter/clusters/qa-team/infrastructure/clusters/test-service/.test-service-config.yaml" should exist
+    And a file "~/.config/openCenter/clusters/qa-team/.test-service-config.yaml" should exist
     And the cluster configuration "test-service" should have "opencenter.meta.organization" set to "qa-team"
 
   Scenario: Init cluster with organization fails when cluster exists without force

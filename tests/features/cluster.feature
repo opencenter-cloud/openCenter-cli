@@ -4,8 +4,8 @@ Feature: openCenter cluster basics
 
   Scenario: Initialize a cluster with defaults
     When I run "openCenter cluster init demo --config-dir <<tmp>>/conf"
-    Then a file "<<tmp>>/conf/clusters/demo/.demo-config.yaml" should exist
-    And the file "<<tmp>>/conf/clusters/demo/.demo-config.yaml" should contain "cluster_name: demo"
+    Then a file "<<tmp>>/conf/demo.yaml" should exist
+    And the file "<<tmp>>/conf/demo.yaml" should contain "cluster_name: demo"
 
   Scenario: Select the cluster
     Given a file "<<tmp>>/conf/demo.yaml" with content:
@@ -94,8 +94,23 @@ Feature: openCenter cluster basics
       opencenter:
         cluster:
           cluster_name: demo
+          domain: example.com
         gitops:
           git_dir: "<<tmp>>/repo"
+        infrastructure:
+          provider: openstack
+          cloud:
+            openstack:
+              domain: "Default"
+              networking:
+                floating_network_id: "12345678-1234-1234-1234-123456789012"
+              application_credential_id: "12345678-1234-1234-1234-123456789012"
+              application_credential_secret: "test-secret"
+      secrets:
+        global:
+          openstack:
+            application_credential_id: "12345678-1234-1234-1234-123456789012"
+            application_credential_secret: "test-secret"
       """
     When I run "openCenter cluster validate demo --config-dir <<tmp>>/conf"
     Then the exit code should be 0
@@ -112,7 +127,7 @@ Feature: openCenter cluster basics
       """
     When I run "openCenter cluster validate demo --config-dir <<tmp>>/conf"
     Then exit code should be 1
-    And stderr should contain "opencenter.gitops.git_dir must be set"
+    And stderr should contain "GitOps directory must be set"
 
   Scenario: Preflight
     Given a file "<<tmp>>/conf/demo.yaml" with content:
@@ -144,7 +159,7 @@ Feature: openCenter cluster basics
         gitops:
           git_url: "git@localhost:newuser/gitops-repo.git"
       """
-    And I run "openCenter cluster setup demo --config-dir <<tmp>>/conf"
+    And I run "openCenter cluster render demo --config-dir <<tmp>>/conf"
     When I run "openCenter cluster bootstrap demo --force --config-dir <<tmp>>/conf"
     Then the command should succeed
     And the remote git repository should contain a "Bootstrap commit"
@@ -161,7 +176,7 @@ Feature: openCenter cluster basics
       opentofu:
         enabled: true
       """
-    When I run "openCenter cluster setup demo --config-dir <<tmp>>/conf"
+    When I run "openCenter cluster render demo --config-dir <<tmp>>/conf"
     Then a file "<<tmp>>/opencenter-demo/infrastructure/clusters/demo/main.tf" should exist
     And a file "<<tmp>>/opencenter-demo/infrastructure/clusters/demo/provider.tf" should exist
 

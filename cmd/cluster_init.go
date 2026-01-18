@@ -270,9 +270,24 @@ Troubleshooting:
 			// Check if a configuration file was provided via --config flag
 			configFile, _ := cmd.Flags().GetString("config")
 
-			// Check if --config-dir was explicitly provided for legacy flat structure
+			// Check if --config-dir was explicitly provided
 			configDirFlag, _ := cmd.Flags().GetString("config-dir")
-			useLegacyFlatStructure := configDirFlag != ""
+			
+			// Check if organization was explicitly specified via --org flag or dot notation
+			orgFlagValue, _ := cmd.Flags().GetString("org")
+			
+			// Check if organization was specified via dot notation by looking at the args
+			hasOrgInDotNotation := false
+			for _, arg := range os.Args {
+				if strings.Contains(arg, "--opencenter.meta.organization=") || strings.Contains(arg, "--set") && strings.Contains(arg, "opencenter.meta.organization") {
+					hasOrgInDotNotation = true
+					break
+				}
+			}
+			
+			// Use legacy flat structure only if --config-dir is specified AND no organization is explicitly set
+			// This maintains backward compatibility while allowing organization-based structure when needed
+			useLegacyFlatStructure := configDirFlag != "" && orgFlagValue == "" && !hasOrgInDotNotation
 
 			// Resolve cluster name from args, config file, or active cluster
 			var name string

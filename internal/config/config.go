@@ -269,7 +269,7 @@ func defaultConfig(name string) Config {
 			ManagedService: ServiceMap{
 				"alert-proxy": &services.AlertProxyConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:             true,
+						Enabled:             false, // Disabled by default - requires device ID, service token, and account number
 						ImageRepository:     "ghcr.io/rackerlabs/alert-proxy",
 						ImageTag:            "latest",
 						GitOpsSourceRepo:    "ssh://git@github.com/rackerlabs/openCenter-gitops-base.git",
@@ -289,7 +289,7 @@ func defaultConfig(name string) Config {
 				},
 				"cert-manager": &services.CertManagerConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled: true,
+						Enabled: false, // Disabled by default - requires AWS credentials
 					},
 					Email:             "mpk-support@rackspace.com",
 					Region:            "us-east-1",
@@ -308,7 +308,7 @@ func defaultConfig(name string) Config {
 				"gateway-api":          &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 				"headlamp": &services.HeadlampConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:  true,
+						Enabled:  false, // Disabled by default - requires OIDC client secret
 						Hostname: fmt.Sprintf("dashboard.%s.%s.k8s.opencenter.cloud", name, region),
 					},
 					OIDCIssuerURL: fmt.Sprintf("https://auth.%s.%s.k8s.opencenter.cloud/realms/opencenter", name, region),
@@ -316,7 +316,7 @@ func defaultConfig(name string) Config {
 				},
 				"keycloak": &services.KeycloakConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:  true,
+						Enabled:  false, // Disabled by default - requires admin password and client secret
 						Hostname: fmt.Sprintf("auth.%s.%s.k8s.opencenter.cloud", name, region),
 					},
 					Realm:       "opencenter",
@@ -325,7 +325,7 @@ func defaultConfig(name string) Config {
 				},
 				"kube-prometheus-stack": &services.PrometheusStackConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled: true,
+						Enabled: false, // Disabled by default - requires Grafana admin password
 					},
 					PrometheusVolumeSize:     50,
 					PrometheusStorageClass:   "csi-cinder-sc-delete",
@@ -354,7 +354,7 @@ func defaultConfig(name string) Config {
 				"sources":           &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 				"velero": &services.VeleroConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled: true,
+						Enabled: false, // Disabled by default - may require cloud credentials
 					},
 					BackupBucket: fmt.Sprintf("%s-backups", name),
 					Region:       "us-east-1",
@@ -1471,7 +1471,7 @@ func Validate(cfg Config) []string {
 		errs = append(errs, "opencenter.cluster.cluster_name must be set")
 	}
 	if cfg.GitOps().GitDir == "" {
-		errs = append(errs, "opencenter.gitops.git_dir must be set")
+		errs = append(errs, "GitOps directory must be set")
 	}
 	// OpenTofu validation
 	if cfg.OpenTofu.Enabled {

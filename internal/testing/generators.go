@@ -173,6 +173,14 @@ func (g *ConfigGenerator) generateOpenCenter(provider string) config.SimplifiedO
 				SubnetServices:           g.randomCIDR("10.43.0.0/16"),
 				KubeletRotateServerCerts: true,
 				Networking:               g.generateNetworking(provider),
+				Security: config.KubernetesSecurityConfig{
+					K8sHardening: true,
+				},
+			},
+			Networking: config.ClusterNetworkingConfig{
+				Security: config.ClusterSecurityConfig{
+					OSHardening: true,
+				},
 			},
 		},
 		Services: g.generateServices(),

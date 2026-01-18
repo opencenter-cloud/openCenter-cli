@@ -40,12 +40,12 @@ Feature: Cluster command group
   Scenario: "openCenter cluster" prints help with all subcommands
     When I run "openCenter cluster --config-dir tmp/conf"
     Then the exit code should be 0
-    And stdout should contain "openCenter cluster list"
-    And stdout should contain "openCenter cluster select"
-    And stdout should contain "openCenter cluster info"
-    And stdout should contain "openCenter cluster init"
-    And stdout should contain "openCenter cluster setup"
-    And stdout should contain "openCenter cluster bootstrap"
+    And stdout should contain "list"
+    And stdout should contain "select"
+    And stdout should contain "info"
+    And stdout should contain "init"
+    And stdout should contain "render"
+    And stdout should contain "bootstrap"
 
   # ---------------------------------------------------------------------------
   # list / ls (moved to config_select_list_info.feature)

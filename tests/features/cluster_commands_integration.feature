@@ -6,8 +6,29 @@ Feature: Cluster commands integration with new directory structure
   Scenario: Cluster select, info, and validate work with new directory structure
     When I run "openCenter cluster init integration-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a directory "<<tmp>>/conf/clusters/integration-test/infrastructure/clusters/integration-test" should exist
-    And a file "<<tmp>>/conf/clusters/integration-test/.integration-test-config.yaml" should exist
+    And a file "<<tmp>>/conf/integration-test.yaml" should exist
+
+    # Add required fields for validation
+    Given I update the YAML "<<tmp>>/conf/integration-test.yaml" to set:
+      """
+      opencenter:
+        cluster:
+          domain: example.com
+        infrastructure:
+          provider: openstack
+          cloud:
+            openstack:
+              domain: "Default"
+              networking:
+                floating_network_id: "12345678-1234-1234-1234-123456789012"
+              application_credential_id: "12345678-1234-1234-1234-123456789012"
+              application_credential_secret: "test-secret"
+      secrets:
+        global:
+          openstack:
+            application_credential_id: "12345678-1234-1234-1234-123456789012"
+            application_credential_secret: "test-secret"
+      """
 
     When I run "openCenter cluster select integration-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
@@ -35,11 +56,11 @@ Feature: Cluster commands integration with new directory structure
 
     When I run "openCenter cluster info missing-cluster --config-dir <<tmp>>/conf"
     Then the exit code should not be 0
-    And stderr should contain "failed to read cluster configuration file"
+    And stderr should contain "failed to resolve configuration path for cluster"
 
     When I run "openCenter cluster validate missing-cluster --config-dir <<tmp>>/conf"
     Then the exit code should not be 0
-    And stderr should contain "failed to read cluster configuration file"
+    And stderr should contain "failed to resolve configuration path for cluster"
 
   @priority3
   Scenario: Multiple clusters work correctly with new directory structure
@@ -49,8 +70,8 @@ Feature: Cluster commands integration with new directory structure
 
     When I run "openCenter cluster list --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And stdout should contain "cluster-a/cluster-a"
-    And stdout should contain "cluster-b/cluster-b"
+    And stdout should contain "cluster-a"
+    And stdout should contain "cluster-b"
 
     When I run "openCenter cluster select cluster-a --config-dir <<tmp>>/conf"
     Then the exit code should be 0

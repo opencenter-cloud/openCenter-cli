@@ -65,11 +65,17 @@ func TestProperty_BuilderImmutability(t *testing.T) {
 			// Create two independent builders with kind provider (no special requirements)
 			builder1 := NewConfigBuilder(name1).
 				WithOrganization(org1).
-				WithProvider("kind")
+				WithProvider("kind").
+				WithSubnetNodes("10.0.0.0/24").
+				WithSubnetPods("10.244.0.0/16").
+				WithSubnetServices("10.96.0.0/12")
 
 			builder2 := NewConfigBuilder(name2).
 				WithOrganization(org2).
-				WithProvider("baremetal")
+				WithProvider("baremetal").
+				WithSubnetNodes("10.1.0.0/24").
+				WithSubnetPods("10.245.0.0/16").
+				WithSubnetServices("10.97.0.0/12")
 
 			// Build both configurations
 			config1, err1 := builder1.
@@ -318,7 +324,10 @@ func TestProperty_BuildSuccessWithValidConfig(t *testing.T) {
 				WithOrganization(org).
 				WithProvider("kind"). // kind has no specific requirements
 				WithMasterCount(masterCount).
-				WithWorkerCount(workerCount)
+				WithWorkerCount(workerCount).
+				WithSubnetNodes("10.0.0.0/24").    // Required networking config
+				WithSubnetPods("10.244.0.0/16").   // Required networking config
+				WithSubnetServices("10.96.0.0/12") // Required networking config
 
 			config, err := builder.Build()
 

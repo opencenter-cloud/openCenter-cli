@@ -592,8 +592,20 @@ Feature: Configuration-driven template rendering
           admin_email: admin@example.com
           cluster_fqdn: test.example.com
           base_domain: example.com
+          domain: example.com
         gitops:
           git_dir: <<tmp>>/gitops-repo
+        infrastructure:
+          cloud:
+            openstack:
+              application_credential_id: "12345678-1234-1234-1234-123456789012"
+              application_credential_secret: "test-app-cred-secret"
+              auth_url: "https://identity.example.com/v3"
+              region: "RegionOne"
+              domain: "Default"
+              networking:
+                floating_network_id: "12345678-1234-1234-1234-123456789012"
+          provider: openstack
       secrets:
         cert_manager:
           aws_access_key: AKIATEST123
@@ -604,6 +616,10 @@ Feature: Configuration-driven template rendering
           admin_password: password123
         weave_gitops:
           password_hash: $2a$10$hash
+        global:
+          openstack:
+            application_credential_id: "12345678-1234-1234-1234-123456789012"
+            application_credential_secret: "test-app-cred-secret"
       """
     When I run "openCenter cluster validate test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0

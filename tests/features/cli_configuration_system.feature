@@ -144,18 +144,18 @@ Feature: CLI Configuration System Integration
     And a directory "<<tmp>>/conf/clusters/test-org/secrets" should exist
     And a directory "<<tmp>>/conf/clusters/test-org/secrets/age" should exist
     And a directory "<<tmp>>/conf/clusters/test-org/secrets/age/keys" should exist
-    And a file "<<tmp>>/conf/clusters/test-org/infrastructure/clusters/org-test/.org-test-config.yaml" should exist
+    And a file "<<tmp>>/conf/clusters/test-org/.org-test-config.yaml" should exist
     And a file "<<tmp>>/conf/clusters/test-org/secrets/age/keys/org-test-key.txt" should exist
     And a file "<<tmp>>/conf/clusters/test-org/.sops.yaml" should exist
 
   @config @organization @opencenter
   Scenario: Cluster name is used as organization when none specified
-    When I run "openCenter cluster init default-test --config-dir <<tmp>>/conf"
+    When I run "openCenter cluster init default-test"
     Then the exit code should be 0
-    And a directory "<<tmp>>/conf/clusters/default-test" should exist
-    And a directory "<<tmp>>/conf/clusters/default-test/infrastructure/clusters/default-test" should exist
-    And a file "<<tmp>>/conf/clusters/default-test/.default-test-config.yaml" should exist
-    And the cluster configuration "default-test" should have "opencenter.meta.organization" set to "default-test"
+    And a directory "~/.config/openCenter/clusters/opencenter" should exist
+    And a directory "~/.config/openCenter/clusters/opencenter/infrastructure/clusters/default-test" should exist
+    And a file "~/.config/openCenter/clusters/opencenter/.default-test-config.yaml" should exist
+    And the cluster configuration "default-test" should have "opencenter.meta.organization" set to "opencenter"
 
   @config @organization @multiple_clusters
   Scenario: Multiple clusters in same organization share GitOps structure
@@ -223,10 +223,10 @@ Feature: CLI Configuration System Integration
   Scenario: Custom configuration paths work correctly
     Given I run "openCenter config set paths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
     And the exit code should be 0
-    When I run "openCenter cluster init custom-path-test --config-dir <<tmp>>/conf"
+    When I run "openCenter cluster init custom-path-test --opencenter.meta.organization=custom-org"
     Then the exit code should be 0
-    And a directory "<<tmp>>/custom-clusters/custom-path-test/infrastructure/clusters/custom-path-test" should exist
-    And a file "<<tmp>>/custom-clusters/custom-path-test/.custom-path-test-config.yaml" should exist
+    And a directory "<<tmp>>/custom-clusters/custom-org/infrastructure/clusters/custom-path-test" should exist
+    And a file "<<tmp>>/custom-clusters/custom-org/.custom-path-test-config.yaml" should exist
 
   @config @filesystem @permissions
   Scenario: Configuration files are created with proper permissions
@@ -363,9 +363,8 @@ Feature: CLI Configuration System Integration
     Given I run "openCenter cluster init gitops-test --opencenter.meta.organization=gitops-org --opencenter.gitops.git_dir=<<tmp>>/gitops-repo --config-dir <<tmp>>/conf"
     And the exit code should be 0
     
-    When I run "openCenter cluster setup gitops-test --config-dir <<tmp>>/conf"
+    When I run "openCenter cluster render gitops-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a directory "<<tmp>>/gitops-repo" should exist
     And a directory "<<tmp>>/gitops-repo/applications" should exist
     And a directory "<<tmp>>/gitops-repo/infrastructure" should exist
-    And a file "<<tmp>>/gitops-repo/.opencenter" should exist

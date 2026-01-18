@@ -171,11 +171,17 @@ func migrateV1_2_to_V2_0(ctx context.Context, config Config) (Config, error) {
 		config.OpenCenter.Infrastructure.Provider = "openstack" // Default provider
 	}
 
-	// Migrate networking configuration to new structure
-	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods == "" {
+	// Migrate networking configuration from old location to new structure
+	// Preserve user-specified values from the old Networking struct
+	if config.Networking.SubnetPods != "" {
+		config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = config.Networking.SubnetPods
+	} else if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods == "" {
 		config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = "10.244.0.0/16" // Default pod CIDR
 	}
-	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices == "" {
+	
+	if config.Networking.SubnetServices != "" {
+		config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = config.Networking.SubnetServices
+	} else if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices == "" {
 		config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = "10.96.0.0/12" // Default service CIDR
 	}
 
@@ -222,7 +228,13 @@ func rollbackV2_0_to_V1_2(ctx context.Context, config Config) (Config, error) {
 	}
 
 	// Rollback to v1.2.0 structure
-	// This removes v2.0.0-specific features while preserving core configuration
+	// Preserve user-specified networking values by moving them back to the old location
+	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods != "" {
+		config.Networking.SubnetPods = config.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods
+	}
+	if config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices != "" {
+		config.Networking.SubnetServices = config.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices
+	}
 
 	return config, nil
 }

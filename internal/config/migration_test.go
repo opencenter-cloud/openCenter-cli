@@ -996,10 +996,14 @@ func TestSchemaManager_RollbackConfig_PreservesUserData(t *testing.T) {
 			Infrastructure: Infrastructure{
 				Provider: "openstack",
 			},
-		},
-		Networking: Networking{
-			SubnetPods:     "10.100.0.0/16",
-			SubnetServices: "10.200.0.0/16",
+			Cluster: ClusterConfig{
+				Kubernetes: KubernetesConfig{
+					Networking: Networking{
+						SubnetPods:     "10.100.0.0/16",
+						SubnetServices: "10.200.0.0/16",
+					},
+				},
+			},
 		},
 		Metadata: ConfigMetadata{
 			CreatedAt: time.Now(),

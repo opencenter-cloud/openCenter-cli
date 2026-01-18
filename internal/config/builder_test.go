@@ -210,6 +210,9 @@ func TestBuilderValidation(t *testing.T) {
 					WithProvider("openstack").
 					WithMasterCount(3).
 					WithWorkerCount(2).
+					WithSubnetNodes("10.0.0.0/24").
+					WithSubnetPods("10.244.0.0/16").
+					WithSubnetServices("10.96.0.0/12").
 					WithOpenStackConfig(SimplifiedOpenStackCloud{
 						AuthURL:    "https://identity.example.com/v3",
 						Region:     "us-east-1",
@@ -306,6 +309,9 @@ func TestBuilderFromExistingConfig(t *testing.T) {
 	originalConfig.OpenCenter.Meta.Organization = "original-org"
 	originalConfig.OpenCenter.Infrastructure.Provider = "aws"
 	originalConfig.OpenCenter.Infrastructure.Cloud.AWS.Region = "us-east-1"
+	originalConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetNodes = "10.0.0.0/24"
+	originalConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = "10.244.0.0/16"
+	originalConfig.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = "10.96.0.0/12"
 
 	// Create a builder from the existing config
 	builder := NewConfigBuilderFromConfig(originalConfig)
@@ -348,6 +354,9 @@ func TestBuilderMetadataTimestamps(t *testing.T) {
 	builder := NewConfigBuilder("test-cluster").
 		WithOrganization("test-org").
 		WithProvider("aws").
+		WithSubnetNodes("10.0.0.0/24").
+		WithSubnetPods("10.244.0.0/16").
+		WithSubnetServices("10.96.0.0/12").
 		WithAWSConfig(SimplifiedAWSCloud{
 			Region: "us-east-1",
 		})
@@ -794,6 +803,9 @@ func TestConditionalConfigurationChaining(t *testing.T) {
 		WithProvider("openstack").
 		WithMasterCount(3).
 		WithWorkerCount(5).
+		WithSubnetNodes("10.0.0.0/24").
+		WithSubnetPods("10.244.0.0/16").
+		WithSubnetServices("10.96.0.0/12").
 		WhenProvider("openstack", func(b ConfigBuilder) ConfigBuilder {
 			return b.WithOpenStackConfig(SimplifiedOpenStackCloud{
 				AuthURL:    "https://identity.example.com/v3",
@@ -940,6 +952,8 @@ func TestConditionalConfigurationRealWorldScenario(t *testing.T) {
 			WithKubernetesVersion("1.33.7").
 			WithBaseDomain("acme.com").
 			WithAdminEmail("admin@acme.com").
+			WithSubnetPods("10.244.0.0/16").
+			WithSubnetServices("10.96.0.0/12").
 			// Cloud provider specific configuration
 			WhenProvider("openstack", func(b ConfigBuilder) ConfigBuilder {
 				return b.

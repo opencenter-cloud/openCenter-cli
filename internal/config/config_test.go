@@ -69,6 +69,13 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
+		// Save a config first so List has something to find
+		cfg := NewDefault("test")
+		cfg.OpenCenter.GitOps.GitDir = ""
+		if err := Save(cfg); err != nil {
+			t.Fatal(err)
+		}
+		
 		names, err := List()
 		if err != nil {
 			t.Fatal(err)
@@ -1104,8 +1111,10 @@ func TestDefaultConfigNewFields(t *testing.T) {
 		if cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL != "https://identity.example.com/v3" {
 			t.Errorf("Expected AuthURL to be populated in test mode")
 		}
-		if cfg.Secrets.CertManager.AWSAccessKey != "test-access-key" {
-			t.Errorf("Expected CertManager.AWSAccessKey to be populated in test mode")
+		// Service-specific secrets (like CertManager) are intentionally NOT populated in test mode
+		// Only infrastructure-level AWS credentials are populated
+		if cfg.Secrets.Global.AWS.Infrastructure.AccessKey != "test-aws-access-key" {
+			t.Errorf("Expected Infrastructure AWS AccessKey to be populated in test mode")
 		}
 	})
 

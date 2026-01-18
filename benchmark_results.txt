@@ -1,0 +1,28 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/rackerlabs/openCenter-cli/internal/benchmarks
+cpu: Apple M4
+BenchmarkTemplateRendering_Legacy/simple-10  	    8588	    120890 ns/op	   73221 B/op	      86 allocs/op
+BenchmarkTemplateRendering_Legacy/medium-10  	    9238	    122157 ns/op	   74651 B/op	     127 allocs/op
+BenchmarkTemplateRendering_Legacy/complex-10 	    8662	    128900 ns/op	   76893 B/op	     172 allocs/op
+BenchmarkTemplateRendering_New/simple-10     	 1403800	       899.4 ns/op	    1129 B/op	       9 allocs/op
+BenchmarkTemplateRendering_New/medium-10     	  598777	      1727 ns/op	    1318 B/op	      20 allocs/op
+BenchmarkTemplateRendering_New/complex-10    	  446642	      3063 ns/op	    2444 B/op	      30 allocs/op
+BenchmarkTemplateRendering_Parallel-10       	 1497654	       752.0 ns/op	    1529 B/op	      16 allocs/op
+BenchmarkConfigBuilding_Legacy/openstack-10  	1000000000	         0.4848 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConfigBuilding_Legacy/aws-10        	1000000000	         0.4846 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConfigBuilding_Legacy/baremetal-10  	1000000000	         0.4854 ns/op	       0 B/op	       0 allocs/op
+BenchmarkConfigBuilding_New/baremetal-10     	   81763	     14630 ns/op	   15632 B/op	     127 allocs/op
+BenchmarkConfigBuilding_Complex/Legacy-10    	   66638	     16025 ns/op	    8258 B/op	     179 allocs/op
+BenchmarkConfigBuilding_Complex/New-10       	   49264	     26446 ns/op	   22424 B/op	     286 allocs/op
+BenchmarkGitOpsGeneration_Legacy-10          	    1260	    894043 ns/op	    7988 B/op	      77 allocs/op
+BenchmarkGitOpsGeneration_New-10             	    3843	    312350 ns/op	   10201 B/op	      45 allocs/op
+BenchmarkGitOpsGeneration_MultiCluster/Legacy-10         	     244	   4552779 ns/op	   49325 B/op	     501 allocs/op
+BenchmarkGitOpsGeneration_MultiCluster/New-10            	     759	   1658026 ns/op	   59248 B/op	     335 allocs/op
+BenchmarkCaching_TemplateReuse/WithCache-10              	  684333	      2304 ns/op	    2341 B/op	      13 allocs/op
+BenchmarkCaching_TemplateReuse/WithoutCache-10           	    9697	    114601 ns/op	   45696 B/op	      81 allocs/op
+BenchmarkMemoryUsage_TemplateEngine/Size100-10           	   43723	     25822 ns/op	    7794 B/op	     214 allocs/op
+BenchmarkMemoryUsage_TemplateEngine/Size1000-10          	    3673	    293694 ns/op	   65408 B/op	    2019 allocs/op
+BenchmarkMemoryUsage_TemplateEngine/Size10000-10         	     163	   6206145 ns/op	  878485 B/op	   20573 allocs/op
+PASS
+ok  	github.com/rackerlabs/openCenter-cli/internal/benchmarks	84.110s

@@ -47,10 +47,14 @@ func TestMigrationPreservesUserValues(t *testing.T) {
 					Infrastructure: Infrastructure{
 						Provider: provider,
 					},
-				},
-				Networking: Networking{
-					SubnetPods:     podSubnet,
-					SubnetServices: serviceSubnet,
+					Cluster: ClusterConfig{
+						Kubernetes: KubernetesConfig{
+							Networking: Networking{
+								SubnetPods:     podSubnet,
+								SubnetServices: serviceSubnet,
+							},
+						},
+					},
 				},
 			}
 
@@ -224,10 +228,14 @@ func TestMigrationRoundTrip(t *testing.T) {
 			Infrastructure: Infrastructure{
 				Provider: "openstack",
 			},
-		},
-		Networking: Networking{
-			SubnetPods:     "10.100.0.0/16",
-			SubnetServices: "10.200.0.0/16",
+			Cluster: ClusterConfig{
+				Kubernetes: KubernetesConfig{
+					Networking: Networking{
+						SubnetPods:     "10.100.0.0/16",
+						SubnetServices: "10.200.0.0/16",
+					},
+				},
+			},
 		},
 	}
 
@@ -243,8 +251,8 @@ func TestMigrationRoundTrip(t *testing.T) {
 	require.Equal(t, original.OpenCenter.Meta.Name, rolledBack.OpenCenter.Meta.Name)
 	require.Equal(t, original.OpenCenter.Meta.Organization, rolledBack.OpenCenter.Meta.Organization)
 	require.Equal(t, original.OpenCenter.Infrastructure.Provider, rolledBack.OpenCenter.Infrastructure.Provider)
-	require.Equal(t, original.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods, rolledBack.Networking.SubnetPods)
-	require.Equal(t, original.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices, rolledBack.Networking.SubnetServices)
+	require.Equal(t, original.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods, rolledBack.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods)
+	require.Equal(t, original.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices, rolledBack.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices)
 }
 
 // genCIDR generates valid CIDR notation strings for testing

@@ -26,19 +26,47 @@ func TestVRRPValidation(t *testing.T) {
 		config := &Config{
 			OpenCenter: SimplifiedOpenCenter{
 				Meta: ClusterMeta{
-					Name: "test-cluster",
+					Name:         "test-cluster",
+					Organization: "test-org",
 				},
 				Cluster: ClusterConfig{
 					ClusterName: "test-cluster",
+					Kubernetes: KubernetesConfig{
+						MasterCount: 3,
+						NetworkPlugin: NetworkPlugin{
+							Calico: CalicoConfig{
+								Enabled: true,
+							},
+						},
+						Networking: Networking{
+							SubnetNodes:    "10.0.0.0/24",
+							SubnetPods:     "10.244.0.0/16",
+							SubnetServices: "10.96.0.0/12",
+							UseOctavia:     false,
+							VRRPEnabled:    true,
+							VRRPIP:         "",
+						},
+					},
+				},
+				Infrastructure: Infrastructure{
+					Provider: "openstack",
+					Cloud: CloudConfig{
+						OpenStack: SimplifiedOpenStackCloud{
+							AuthURL:                     "https://identity.example.com/v3",
+							Region:                      "RegionOne",
+							TenantName:                  "admin",
+							Domain:                      "Default",
+							ApplicationCredentialID:     "12345678-1234-1234-1234-123456789abc",
+							ApplicationCredentialSecret: "test-cred-secret",
+							Networking: OpenStackNetworkingConfig{
+								FloatingNetworkId: "87654321-4321-4321-4321-cba987654321",
+							},
+						},
+					},
 				},
 				GitOps: GitOpsConfig{
 					GitDir: "/tmp/test",
 				},
-			},
-			Networking: Networking{
-				UseOctavia:  false,
-				VRRPEnabled: true,
-				VRRPIP:      "",
 			},
 		}
 
@@ -72,19 +100,47 @@ func TestVRRPValidation(t *testing.T) {
 		config := &Config{
 			OpenCenter: SimplifiedOpenCenter{
 				Meta: ClusterMeta{
-					Name: "test-cluster",
+					Name:         "test-cluster",
+					Organization: "test-org",
 				},
 				Cluster: ClusterConfig{
 					ClusterName: "test-cluster",
+					Kubernetes: KubernetesConfig{
+						MasterCount: 3,
+						NetworkPlugin: NetworkPlugin{
+							Calico: CalicoConfig{
+								Enabled: true,
+							},
+						},
+						Networking: Networking{
+							SubnetNodes:    "10.0.0.0/24",
+							SubnetPods:     "10.244.0.0/16",
+							SubnetServices: "10.96.0.0/12",
+							UseOctavia:     false,
+							VRRPEnabled:    true,
+							VRRPIP:         "10.0.4.10",
+						},
+					},
+				},
+				Infrastructure: Infrastructure{
+					Provider: "openstack",
+					Cloud: CloudConfig{
+						OpenStack: SimplifiedOpenStackCloud{
+							AuthURL:                     "https://identity.example.com/v3",
+							Region:                      "RegionOne",
+							TenantName:                  "admin",
+							Domain:                      "Default",
+							ApplicationCredentialID:     "12345678-1234-1234-1234-123456789abc",
+							ApplicationCredentialSecret: "test-cred-secret",
+							Networking: OpenStackNetworkingConfig{
+								FloatingNetworkId: "87654321-4321-4321-4321-cba987654321",
+							},
+						},
+					},
 				},
 				GitOps: GitOpsConfig{
 					GitDir: "/tmp/test",
 				},
-			},
-			Networking: Networking{
-				UseOctavia:  false,
-				VRRPEnabled: true,
-				VRRPIP:      "10.0.4.10",
 			},
 		}
 
@@ -102,19 +158,47 @@ func TestVRRPValidation(t *testing.T) {
 		config := &Config{
 			OpenCenter: SimplifiedOpenCenter{
 				Meta: ClusterMeta{
-					Name: "test-cluster",
+					Name:         "test-cluster",
+					Organization: "test-org",
 				},
 				Cluster: ClusterConfig{
 					ClusterName: "test-cluster",
+					Kubernetes: KubernetesConfig{
+						MasterCount: 3,
+						NetworkPlugin: NetworkPlugin{
+							Calico: CalicoConfig{
+								Enabled: true,
+							},
+						},
+						Networking: Networking{
+							SubnetNodes:    "10.0.0.0/24",
+							SubnetPods:     "10.244.0.0/16",
+							SubnetServices: "10.96.0.0/12",
+							UseOctavia:     true,
+							VRRPEnabled:    true,
+							VRRPIP:         "",
+						},
+					},
+				},
+				Infrastructure: Infrastructure{
+					Provider: "openstack",
+					Cloud: CloudConfig{
+						OpenStack: SimplifiedOpenStackCloud{
+							AuthURL:                     "https://identity.example.com/v3",
+							Region:                      "RegionOne",
+							TenantName:                  "admin",
+							Domain:                      "Default",
+							ApplicationCredentialID:     "12345678-1234-1234-1234-123456789abc",
+							ApplicationCredentialSecret: "test-cred-secret",
+							Networking: OpenStackNetworkingConfig{
+								FloatingNetworkId: "87654321-4321-4321-4321-cba987654321",
+							},
+						},
+					},
 				},
 				GitOps: GitOpsConfig{
 					GitDir: "/tmp/test",
 				},
-			},
-			Networking: Networking{
-				UseOctavia:  true,
-				VRRPEnabled: true,
-				VRRPIP:      "",
 			},
 		}
 
@@ -132,19 +216,47 @@ func TestVRRPValidation(t *testing.T) {
 		config := &Config{
 			OpenCenter: SimplifiedOpenCenter{
 				Meta: ClusterMeta{
-					Name: "test-cluster",
+					Name:         "test-cluster",
+					Organization: "test-org",
 				},
 				Cluster: ClusterConfig{
 					ClusterName: "test-cluster",
+					Kubernetes: KubernetesConfig{
+						MasterCount: 3,
+						NetworkPlugin: NetworkPlugin{
+							Calico: CalicoConfig{
+								Enabled: true,
+							},
+						},
+						Networking: Networking{
+							SubnetNodes:    "10.0.0.0/24",
+							SubnetPods:     "10.244.0.0/16",
+							SubnetServices: "10.96.0.0/12",
+							UseOctavia:     false,
+							VRRPEnabled:    false,
+							VRRPIP:         "",
+						},
+					},
+				},
+				Infrastructure: Infrastructure{
+					Provider: "openstack",
+					Cloud: CloudConfig{
+						OpenStack: SimplifiedOpenStackCloud{
+							AuthURL:                     "https://identity.example.com/v3",
+							Region:                      "RegionOne",
+							TenantName:                  "admin",
+							Domain:                      "Default",
+							ApplicationCredentialID:     "12345678-1234-1234-1234-123456789abc",
+							ApplicationCredentialSecret: "test-cred-secret",
+							Networking: OpenStackNetworkingConfig{
+								FloatingNetworkId: "87654321-4321-4321-4321-cba987654321",
+							},
+						},
+					},
 				},
 				GitOps: GitOpsConfig{
 					GitDir: "/tmp/test",
 				},
-			},
-			Networking: Networking{
-				UseOctavia:  false,
-				VRRPEnabled: false,
-				VRRPIP:      "",
 			},
 		}
 

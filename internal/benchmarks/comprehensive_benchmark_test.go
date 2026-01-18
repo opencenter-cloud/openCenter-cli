@@ -182,6 +182,9 @@ func BenchmarkConfigBuilding_New(b *testing.B) {
 				cfg, err := builder.
 					WithProvider(provider).
 					WithOrganization("test-org").
+					WithSubnetNodes("10.0.0.0/24").
+					WithSubnetPods("10.244.0.0/16").
+					WithSubnetServices("10.96.0.0/12").
 					Build()
 				if err != nil {
 					b.Fatalf("config build failed: %v", err)
@@ -223,7 +226,10 @@ func BenchmarkConfigBuilding_Complex(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			builder := config.NewConfigBuilder("test-cluster")
 			builder.WithProvider("baremetal"). // Use baremetal to avoid cloud validation
-								WithOrganization("test-org")
+								WithOrganization("test-org").
+								WithSubnetNodes("10.0.0.0/24").
+								WithSubnetPods("10.244.0.0/16").
+								WithSubnetServices("10.96.0.0/12")
 
 			// Add many overrides
 			for j := 0; j < 50; j++ {

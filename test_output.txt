@@ -1,0 +1,32 @@
+[test] $ go test ./internal/...
+ok  	github.com/rackerlabs/openCenter-cli/internal/ansible	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/barbican	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/benchmarks	(cached) [no tests to run]
+ok  	github.com/rackerlabs/openCenter-cli/internal/cloud/openstack	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/config	1.152s
+ok  	github.com/rackerlabs/openCenter-cli/internal/config/flags	(cached)
+?   	github.com/rackerlabs/openCenter-cli/internal/config/registry	[no test files]
+?   	github.com/rackerlabs/openCenter-cli/internal/config/services	[no test files]
+ok  	github.com/rackerlabs/openCenter-cli/internal/credentials	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/gitops	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/gitops/stages	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/plugins	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/provision	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/services	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/services/plugins	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/sops	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/talos	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/talos/generator	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/talos/pulumi	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/talos/validator	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/template	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/testing	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/tofu	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/util	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/util/crypto	(cached)
+ok  	github.com/rackerlabs/openCenter-cli/internal/util/errors	(cached)
+?   	github.com/rackerlabs/openCenter-cli/internal/util/files	[no test files]
+ok  	github.com/rackerlabs/openCenter-cli/internal/util/metrics	(cached)
+?   	github.com/rackerlabs/openCenter-cli/internal/util/paths	[no test files]
+?   	github.com/rackerlabs/openCenter-cli/internal/util/security	[no test files]
+ok  	github.com/rackerlabs/openCenter-cli/internal/util/template	(cached)

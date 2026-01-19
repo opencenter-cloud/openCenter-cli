@@ -397,10 +397,10 @@ func (v *EnhancedConfigValidator) validateClusterNameFormat(name string) error {
 		return fmt.Errorf("cluster name too long (max 255 characters)")
 	}
 
-	// Check for valid characters (alphanumeric, hyphens, underscores)
-	validName := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
+	// Check for valid characters (alphanumeric, hyphens, underscores, dots)
+	validName := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
 	if !validName.MatchString(name) {
-		return fmt.Errorf("cluster name must start with alphanumeric character and contain only alphanumeric, hyphens, and underscores")
+		return fmt.Errorf("cluster name must start with alphanumeric character and contain only alphanumeric, hyphens, underscores, and dots")
 	}
 
 	return nil

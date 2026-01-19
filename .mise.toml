@@ -152,11 +152,97 @@ godog = "go test ./... -v args --godog.tags=~@wip --godog.paths=tests/features"
 # Run only @wip scenarios for focused development
 godog-wip = "go test ./... -v args --godog.tags=@wip --godog.paths=tests/features"
 
+# Check documentation for broken links
+doc-check = "./hack/check-doc-links.sh docs"
+
 # Detect failing scenarios and tag them with @wip
 tag-wip-failures = "python3 hack/tag_wip_failures.py"
 
 # Run all BDD tests (alias for godog)
 test-bdd = "go test ./... -v args --godog.tags=~@wip --godog.paths=tests/features"
+
+# Run all security-related tests (Phase 1 security components)
+test-security = '''
+#!/usr/bin/env bash
+set -e
+
+echo "=== Running Security Tests ==="
+echo ""
+
+echo "1. Testing Input Validator (unit + property tests)..."
+go test -v ./internal/security -run "TestInputValidator|TestProperty.*InputValidation"
+
+echo ""
+echo "2. Testing Command Sanitizer (unit + property tests)..."
+go test -v ./internal/security -run "TestCommandSanitizer|TestProperty.*CommandExecution"
+
+echo ""
+echo "3. Testing Credential Masker (unit + property tests)..."
+go test -v ./internal/security -run "TestCredentialMasker|TestProperty.*CredentialMasking"
+
+echo ""
+echo "4. Testing Audit Logger (unit + property tests)..."
+go test -v ./internal/security -run "TestAuditLogger|TestProperty.*AuditLogging"
+
+echo ""
+echo "5. Testing Template Sandbox (unit + property tests)..."
+go test -v ./internal/template -run "TestSandbox|TestProperty.*Template"
+
+echo ""
+echo "6. Testing SOPS Key Manager (unit + property tests)..."
+go test -v ./internal/sops -run "TestKeyManager|TestProperty.*Key"
+
+echo ""
+echo "=== Security Tests Complete ==="
+echo ""
+echo "Summary:"
+echo "  ✓ Input validation and sanitization"
+echo "  ✓ Command injection prevention"
+echo "  ✓ Credential masking"
+echo "  ✓ Audit logging"
+echo "  ✓ Template sandboxing"
+echo "  ✓ Secure key storage"
+'''
+
+# Run all operational readiness tests (Phase 2 operational components)
+test-integration = '''
+#!/usr/bin/env bash
+set -e
+
+echo "=== Running Operational Readiness Tests ==="
+echo ""
+
+echo "1. Testing Retry Handler (unit + property tests)..."
+go test -v ./internal/resilience -run "TestRetry|TestProperty.*Retry"
+
+echo ""
+echo "2. Testing Circuit Breaker (unit + property tests)..."
+go test -v ./internal/resilience -run "TestCircuitBreaker|TestProperty.*CircuitBreaker"
+
+echo ""
+echo "3. Testing Lock Manager (unit + property tests)..."
+go test -v ./internal/resilience -run "TestLockManager|TestProperty.*Lock"
+
+echo ""
+echo "4. Testing Drift Detector (unit + property tests)..."
+go test -v ./internal/operations -run "TestDriftDetector|TestProperty.*Drift"
+
+echo ""
+echo "5. Testing Backup Manager (unit + property tests)..."
+go test -v ./internal/operations -run "TestBackupManager|TestProperty.*Backup"
+
+echo ""
+echo "=== Operational Readiness Tests Complete ==="
+echo ""
+echo "Summary:"
+echo "  ✓ Retry logic with exponential backoff"
+echo "  ✓ Circuit breaker pattern"
+echo "  ✓ Distributed locking"
+echo "  ✓ Drift detection and reconciliation"
+echo "  ✓ Backup and disaster recovery"
+echo ""
+echo "Note: Observability components (metrics, logging) are in separate observability spec"
+'''
 
 # Run regression tests (non-WIP scenarios)
 test-regression = "go test ./... -v args --godog.tags=~@wip --godog.paths=tests/features"
@@ -549,4 +635,28 @@ rm -rf "$TEST_DIR"
 echo ""
 echo "🎉 All pre-commit hook tests passed!"
 echo "The hook is working correctly and will protect against committing unencrypted secrets."
+'''
+
+# Run file scanner and generate cleanup report
+cleanup-scan = '''
+#!/usr/bin/env bash
+set -e
+
+echo "=== Repository Cleanup Scanner ==="
+echo ""
+echo "Building scanner utility..."
+mise run build
+
+echo ""
+echo "Running file scanner..."
+go run ./internal/cleanup/cmd/scanner/main.go > cleanup-report.md
+
+echo ""
+echo "✅ Scan complete!"
+echo "Report generated: cleanup-report.md"
+echo ""
+echo "Next steps:"
+echo "  1. Review cleanup-report.md"
+echo "  2. Identify files to keep, move, or remove"
+echo "  3. Document decisions in report annotations"
 '''

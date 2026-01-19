@@ -14,14 +14,17 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/resilience"
 	"github.com/spf13/cobra"
 )
 
@@ -150,6 +153,28 @@ func newClusterInfoCmd() *cobra.Command {
 				return err
 			}
 			fmt.Fprint(cmd.OutOrStdout(), string(data))
+
+			// Check lock status
+			lockMgr, err := resilience.NewLockManager(resilience.DefaultLockConfig)
+			if err == nil {
+				// Try to acquire lock with very short timeout to check if it's held
+				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+				defer cancel()
+
+				lock, err := lockMgr.Acquire(ctx, name, 1*time.Second)
+				if err != nil {
+					// Lock is held by another process
+					fmt.Fprintln(cmd.OutOrStdout(), "\nLock Status:")
+					fmt.Fprintln(cmd.OutOrStdout(), "  status: locked")
+					fmt.Fprintln(cmd.OutOrStdout(), "  message: Another operation is in progress on this cluster")
+				} else {
+					// Lock is available
+					lockMgr.Release(lock)
+					fmt.Fprintln(cmd.OutOrStdout(), "\nLock Status:")
+					fmt.Fprintln(cmd.OutOrStdout(), "  status: available")
+				}
+			}
+
 			return nil
 		},
 	}

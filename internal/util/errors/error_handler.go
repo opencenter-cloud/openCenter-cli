@@ -20,17 +20,21 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/rackerlabs/openCenter-cli/internal/security"
 )
 
 // DefaultErrorHandler implements ErrorHandler interface
 type DefaultErrorHandler struct {
 	suggestionMap map[ErrorType][]string
+	masker        security.CredentialMasker
 }
 
 // NewDefaultErrorHandler creates a new default error handler
 func NewDefaultErrorHandler() *DefaultErrorHandler {
 	handler := &DefaultErrorHandler{
 		suggestionMap: make(map[ErrorType][]string),
+		masker:        security.NewDefaultCredentialMasker(),
 	}
 	handler.initializeSuggestions()
 	return handler
@@ -44,15 +48,20 @@ func (h *DefaultErrorHandler) HandleError(err error) *StructuredError {
 
 	// Check if it's already a structured error
 	if structuredErr, ok := err.(*StructuredError); ok {
+		// Mask the error message
+		structuredErr.Message = h.masker.MaskString(structuredErr.Message)
 		return structuredErr
 	}
 
 	// Determine error type based on error message
 	errorType := h.determineErrorType(err)
 
+	// Mask the error message
+	maskedMessage := h.masker.MaskString(err.Error())
+
 	return &StructuredError{
 		Type:        errorType,
-		Message:     err.Error(),
+		Message:     maskedMessage,
 		Cause:       err,
 		Suggestions: h.GetSuggestions(err),
 		Retryable:   h.IsRetryable(err),
@@ -96,8 +105,9 @@ func (h *DefaultErrorHandler) FormatError(err error) string {
 		parts = append(parts, fmt.Sprintf("Field '%s':", structuredErr.Field))
 	}
 
-	// Add message
-	parts = append(parts, structuredErr.Message)
+	// Add masked message
+	maskedMessage := h.masker.MaskString(structuredErr.Message)
+	parts = append(parts, maskedMessage)
 
 	result := strings.Join(parts, " ")
 

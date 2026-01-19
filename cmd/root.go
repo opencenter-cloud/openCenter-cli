@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -22,8 +23,23 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/di"
 	"github.com/rackerlabs/openCenter-cli/internal/plugins"
 )
+
+// ContainerKey is the context key for the DI container
+type contextKey string
+
+const ContainerKey contextKey = "container"
+
+// GetContainer retrieves the DI container from the context
+func GetContainer(ctx context.Context) (di.Container, error) {
+	container, ok := ctx.Value(ContainerKey).(di.Container)
+	if !ok || container == nil {
+		return nil, fmt.Errorf("DI container not found in context")
+	}
+	return container, nil
+}
 
 // GlobalFlags represents the global flags available across all commands.
 type GlobalFlags struct {
@@ -34,9 +50,6 @@ type GlobalFlags struct {
 	Verbose    bool     // --verbose: enable verbose logging
 	ShowActive bool     // --show-active: display the current active cluster
 }
-
-// configManager holds the global configuration manager instance
-var configManager *config.ConfigManager
 
 var rootCmd = &cobra.Command{
 	Use:   "openCenter",
@@ -69,9 +82,6 @@ Support: https://github.com/rackerlabs/openCenter-cli/issues`,
 
   # Bootstrap a cluster with GitOps
   openCenter cluster bootstrap my-cluster`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return initializeGlobalConfig(cmd)
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -86,6 +96,18 @@ Support: https://github.com/rackerlabs/openCenter-cli/issues`,
 // Outputs:
 //   - error: An error if one occurred during execution.
 func Execute(version string) error {
+	return ExecuteWithContext(context.Background(), version)
+}
+
+// ExecuteWithContext runs the root command with a context containing the DI container.
+//
+// Inputs:
+//   - ctx: Context containing the DI container
+//   - version: The version string for the application.
+//
+// Outputs:
+//   - error: An error if one occurred during execution.
+func ExecuteWithContext(ctx context.Context, version string) error {
 	rootCmd.Version = version
 
 	// Add global persistent flags
@@ -114,7 +136,9 @@ func Execute(version string) error {
 	rootCmd.AddCommand(NewVersionCmd())
 	// Discover and attach external plugins as subcommands
 	plugins.LoadExternalPlugins(rootCmd)
-	return rootCmd.Execute()
+	
+	// Execute with context
+	return rootCmd.ExecuteContext(ctx)
 }
 
 // addGlobalFlags adds global persistent flags to the root command.
@@ -155,25 +179,30 @@ func parseGlobalFlags(cmd *cobra.Command) (*GlobalFlags, error) {
 	}, nil
 }
 
-// initializeGlobalConfig initializes the global configuration manager and applies overrides.
-func initializeGlobalConfig(cmd *cobra.Command) error {
+// initializeGlobalConfig initializes the configuration manager and applies overrides.
+// It returns the initialized config manager instead of storing it globally.
+func initializeGlobalConfig(cmd *cobra.Command) (*config.ConfigManager, error) {
 	// Handle legacy config-dir flag
 	if cfgDir, _ := cmd.Flags().GetString("config-dir"); cfgDir != "" {
 		// Set environment variable so that config.ResolveConfigDir picks it up
 		if err := os.Setenv("OPENCENTER_CONFIG_DIR", cfgDir); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// Parse global flags
 	globalFlags, err := parseGlobalFlags(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to parse global flags: %w", err)
+		return nil, fmt.Errorf("failed to parse global flags: %w", err)
 	}
 
 	// Handle --show-active flag early, before other initialization
 	if globalFlags.ShowActive {
-		return displayActiveCluster(cmd)
+		if err := displayActiveCluster(cmd); err != nil {
+			return nil, err
+		}
+		// Return nil to indicate early exit
+		return nil, nil
 	}
 
 	// Initialize configuration manager
@@ -182,14 +211,14 @@ func initializeGlobalConfig(cmd *cobra.Command) error {
 		configPath = globalFlags.Config
 	}
 
-	configManager, err = config.NewConfigManager(configPath)
+	configManager, err := config.NewConfigManager(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to initialize configuration: %w", err)
+		return nil, fmt.Errorf("failed to initialize configuration: %w", err)
 	}
 
 	// Apply global flag overrides
-	if err := applyGlobalFlagOverrides(globalFlags); err != nil {
-		return fmt.Errorf("failed to apply global flag overrides: %w", err)
+	if err := applyGlobalFlagOverrides(configManager, globalFlags); err != nil {
+		return nil, fmt.Errorf("failed to apply global flag overrides: %w", err)
 	}
 
 	// Log that configuration has been initialized
@@ -201,11 +230,11 @@ func initializeGlobalConfig(cmd *cobra.Command) error {
 		"log_output":  configManager.GetConfig().Logging.Output,
 	}).Debug("Configuration details")
 
-	return nil
+	return configManager, nil
 }
 
 // applyGlobalFlagOverrides applies global flag overrides to the configuration.
-func applyGlobalFlagOverrides(globalFlags *GlobalFlags) error {
+func applyGlobalFlagOverrides(configManager *config.ConfigManager, globalFlags *GlobalFlags) error {
 	cliConfig := configManager.GetConfig()
 
 	// Create a copy to apply overrides
@@ -294,11 +323,6 @@ func applySetFlagOverrides(cliConfig *config.CLIConfig, setFlags []string) error
 	return nil
 }
 
-// GetConfigManager returns the global configuration manager instance.
-func GetConfigManager() *config.ConfigManager {
-	return configManager
-}
-
 // displayActiveCluster displays the current active cluster and exits.
 func displayActiveCluster(cmd *cobra.Command) error {
 	activeCluster, err := config.GetActive()
@@ -326,4 +350,98 @@ func GetRootCmd() *cobra.Command {
 // code. Use fmt.Errorf to wrap underlying errors.
 func failf(format string, a ...interface{}) error {
 	return fmt.Errorf(format, a...)
+}
+
+// GetConfigManager is a temporary stub that returns nil.
+// This will be replaced with DI container access in subtask 17.4.
+// Deprecated: Use DI container instead.
+func GetConfigManager() *config.ConfigManager {
+	return nil
+}
+
+// formatError formats an error (temporary stub).
+// This will be replaced with DI container access.
+// Deprecated: Use DI container instead.
+func formatError(err error) error {
+	return err
+}
+
+// formatErrorWithCode formats an error with an error code (temporary stub).
+// This will be replaced with DI container access.
+// Deprecated: Use DI container instead.
+func formatErrorWithCode(err error, code string) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("[%s] %w", code, err)
+}
+
+// formatErrorWithFix formats an error with a fix suggestion (temporary stub).
+// This will be replaced with DI container access.
+// Deprecated: Use DI container instead.
+func formatErrorWithFix(err error, fix string) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%w\nFix: %s", err, fix)
+}
+
+// formatMultipleErrors formats multiple errors (temporary stub).
+// This will be replaced with DI container access.
+// Deprecated: Use DI container instead.
+func formatMultipleErrors(errs []error, verbose bool) error {
+	if len(errs) == 0 {
+		return nil
+	}
+	
+	maxErrors := 5
+	if verbose {
+		maxErrors = len(errs)
+	}
+	
+	var msg strings.Builder
+	for i, err := range errs {
+		if i >= maxErrors {
+			msg.WriteString(fmt.Sprintf("\n... and %d more errors", len(errs)-maxErrors))
+			break
+		}
+		if i > 0 {
+			msg.WriteString("\n")
+		}
+		msg.WriteString(fmt.Sprintf("%d. %v", i+1, err))
+	}
+	
+	return fmt.Errorf("%s", msg.String())
+}
+
+// formatErrorWithInfo formats an error with complete error information.
+// This is a temporary stub that provides basic formatting.
+// This will be replaced with DI container access.
+// Deprecated: Use DI container instead.
+// Requirements: 15.1, 15.2, 15.3, 15.4, 15.8
+func formatErrorWithInfo(err error, code string) error {
+	if err == nil {
+		return nil
+	}
+	
+	// Provide basic error info for known codes
+	switch code {
+	case "E1001":
+		return fmt.Errorf(`Error: OpenStack region not configured (%s)
+
+The OpenStack provider requires a region to be specified.
+
+Fix: Add region to your configuration:
+  openCenter cluster update my-cluster \
+    --opencenter.infrastructure.cloud.openstack.region=RegionOne
+
+Hint: List available regions:
+  openstack region list
+
+Learn more: https://docs.opencenter.cloud/errors/E1001
+
+Original error: %w`, code, err)
+	default:
+		return formatErrorWithCode(err, code)
+	}
 }

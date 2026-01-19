@@ -54,14 +54,14 @@ Configuration files are stored in organization-based directories:
   # Select active cluster
   openCenter cluster select my-cluster
 
-  # Show current cluster
-  openCenter cluster current
-
-  # Activate cluster environment
-  eval $(openCenter cluster activate myorg/my-cluster)
+  # Select and activate cluster environment
+  eval $(openCenter cluster select my-cluster --activate --export-only)
 
   # Deactivate cluster environment
-  eval $(openCenter cluster deactivate myorg/my-cluster)`,
+  eval $(openCenter cluster select --clear --export-only)
+
+  # Show current cluster
+  openCenter cluster current`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -70,7 +70,6 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterListCmd())
 	cmd.AddCommand(newClusterSelectCmd())
 	cmd.AddCommand(newClusterCurrentCmd())
-	cmd.AddCommand(newClusterActiveFastCmd())
 	cmd.AddCommand(newClusterStatusCmd())
 	cmd.AddCommand(newClusterInfoCmd())
 	cmd.AddCommand(newClusterInitCmd())
@@ -83,10 +82,9 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterSchemaCmd())
 	cmd.AddCommand(newClusterDestroyCmd())
 	cmd.AddCommand(newClusterUpdateCmd())
-	cmd.AddCommand(newClusterConfigUpdateCmd())
 	cmd.AddCommand(newClusterServiceCmd())
 	cmd.AddCommand(newClusterCredentialsCmd())
-	cmd.AddCommand(newClusterActivateCmd())
-	cmd.AddCommand(newClusterDeactivateCmd())
+	cmd.AddCommand(newClusterDriftCmd())
+	cmd.AddCommand(newClusterBackupCmd())
 	return cmd
 }

@@ -25,12 +25,15 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/keymanager/v1/secrets"
 	"github.com/gophercloud/gophercloud/pagination"
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/resilience"
 )
 
 // Client is a wrapper around the Barbican client from gophercloud.
 type Client struct {
-	client *gophercloud.ServiceClient
-	config *config.BarbicanConfig
+	client         *gophercloud.ServiceClient
+	config         *config.BarbicanConfig
+	retryHandler   resilience.RetryHandler
+	circuitBreaker resilience.CircuitBreaker
 }
 
 // NewClient creates a new Barbican client.
@@ -70,9 +73,17 @@ func NewClient(cfg *config.BarbicanConfig) (*Client, error) {
 		return nil, fmt.Errorf("could not create Barbican client: %w", err)
 	}
 
+	// Create retry handler with API call configuration
+	retryHandler := resilience.NewRetryHandler(resilience.DefaultConfig)
+
+	// Create circuit breaker for OpenStack API calls
+	circuitBreaker := resilience.NewCircuitBreaker(resilience.DefaultCircuitBreakerConfig)
+
 	return &Client{
-		client: client,
-		config: cfg,
+		client:         client,
+		config:         cfg,
+		retryHandler:   retryHandler,
+		circuitBreaker: circuitBreaker,
 	}, nil
 }
 
@@ -94,58 +105,71 @@ func (c *Client) Login(ctx context.Context, username, password string) (string, 
 
 // GetSecret retrieves a secret from Barbican.
 func (c *Client) GetSecret(ctx context.Context, name string) ([]byte, error) {
-	listOpts := secrets.ListOpts{
-		Name: name,
-	}
-	allPages, err := secrets.List(c.client, listOpts).AllPages()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list secrets for retrieval: %w", err)
-	}
-	allSecrets, err := secrets.ExtractSecrets(allPages)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract secrets: %w", err)
-	}
-	if len(allSecrets) == 0 {
-		return nil, fmt.Errorf("secret '%s' not found", name)
-	}
+	var result []byte
+	// Wrap with circuit breaker
+	err := c.circuitBreaker.Call(ctx, func() error {
+		// Then wrap with retry handler
+		return c.retryHandler.Do(ctx, func() error {
+			listOpts := secrets.ListOpts{
+				Name: name,
+			}
+			allPages, err := secrets.List(c.client, listOpts).AllPages()
+			if err != nil {
+				return fmt.Errorf("failed to list secrets for retrieval: %w", err)
+			}
+			allSecrets, err := secrets.ExtractSecrets(allPages)
+			if err != nil {
+				return fmt.Errorf("failed to extract secrets: %w", err)
+			}
+			if len(allSecrets) == 0 {
+				return fmt.Errorf("secret '%s' not found", name)
+			}
 
-	payload, err := secrets.GetPayload(c.client, allSecrets[0].SecretRef, nil).Extract()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get secret payload: %w", err)
-	}
-	return []byte(strings.Trim(string(payload), `"`)), nil
+			payload, err := secrets.GetPayload(c.client, allSecrets[0].SecretRef, nil).Extract()
+			if err != nil {
+				return fmt.Errorf("failed to get secret payload: %w", err)
+			}
+			result = []byte(strings.Trim(string(payload), `"`))
+			return nil
+		})
+	})
+	return result, err
 }
 
 // PutSecret creates or updates a secret in Barbican.
 func (c *Client) PutSecret(ctx context.Context, name string, payload []byte, labels map[string]string, secretType, payloadContentEncoding string) error {
-	existingSecret, err := c.DescribeSecret(ctx, name)
-	if err == nil && existingSecret != nil {
-		err = c.DeleteSecret(ctx, name)
-		if err != nil {
-			return fmt.Errorf("failed to delete existing secret %s for update: %w", name, err)
-		}
-	}
+	return c.circuitBreaker.Call(ctx, func() error {
+		return c.retryHandler.Do(ctx, func() error {
+			existingSecret, err := c.DescribeSecret(ctx, name)
+			if err == nil && existingSecret != nil {
+				err = c.DeleteSecret(ctx, name)
+				if err != nil {
+					return fmt.Errorf("failed to delete existing secret %s for update: %w", name, err)
+				}
+			}
 
-	var tags []string
-	for k, v := range labels {
-		tags = append(tags, fmt.Sprintf("%s=%s", k, v))
-	}
+			var tags []string
+			for k, v := range labels {
+				tags = append(tags, fmt.Sprintf("%s=%s", k, v))
+			}
 
-	createOpts := createOptsWithTags{
-		CreateOpts: secrets.CreateOpts{
-			Name:                   name,
-			Payload:                string(payload),
-			SecretType:             secrets.SecretType(secretType),
-			PayloadContentEncoding: payloadContentEncoding,
-		},
-		Tags: tags,
-	}
+			createOpts := createOptsWithTags{
+				CreateOpts: secrets.CreateOpts{
+					Name:                   name,
+					Payload:                string(payload),
+					SecretType:             secrets.SecretType(secretType),
+					PayloadContentEncoding: payloadContentEncoding,
+				},
+				Tags: tags,
+			}
 
-	_, err = secrets.Create(c.client, createOpts).Extract()
-	if err != nil {
-		return fmt.Errorf("failed to create secret: %w", err)
-	}
-	return nil
+			_, err = secrets.Create(c.client, createOpts).Extract()
+			if err != nil {
+				return fmt.Errorf("failed to create secret: %w", err)
+			}
+			return nil
+		})
+	})
 }
 
 type createOptsWithTags struct {
@@ -166,79 +190,94 @@ func (opts createOptsWithTags) ToSecretCreateMap() (map[string]interface{}, erro
 
 // ListSecrets lists secrets in Barbican.
 func (c *Client) ListSecrets(ctx context.Context, labels map[string]string) ([]secrets.Secret, error) {
-	listURL := c.client.ServiceURL("secrets")
-
-	if len(labels) > 0 {
-		query := url.Values{}
-		for k, v := range labels {
-			query.Add("tag", fmt.Sprintf("%s=%s", k, v))
-		}
-		listURL += "?" + query.Encode()
-	}
-
 	var allSecrets []secrets.Secret
-	pager := pagination.NewPager(c.client, listURL, func(r pagination.PageResult) pagination.Page {
-		return secrets.SecretPage{LinkedPageBase: pagination.LinkedPageBase{PageResult: r}}
-	})
+	err := c.circuitBreaker.Call(ctx, func() error {
+		return c.retryHandler.Do(ctx, func() error {
+			listURL := c.client.ServiceURL("secrets")
 
-	err := pager.EachPage(func(page pagination.Page) (bool, error) {
-		secretList, err := secrets.ExtractSecrets(page)
-		if err != nil {
-			return false, err
-		}
-		allSecrets = append(allSecrets, secretList...)
-		return true, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list secrets: %w", err)
-	}
+			if len(labels) > 0 {
+				query := url.Values{}
+				for k, v := range labels {
+					query.Add("tag", fmt.Sprintf("%s=%s", k, v))
+				}
+				listURL += "?" + query.Encode()
+			}
 
-	return allSecrets, nil
+			allSecrets = nil // Reset on retry
+			pager := pagination.NewPager(c.client, listURL, func(r pagination.PageResult) pagination.Page {
+				return secrets.SecretPage{LinkedPageBase: pagination.LinkedPageBase{PageResult: r}}
+			})
+
+			err := pager.EachPage(func(page pagination.Page) (bool, error) {
+				secretList, err := secrets.ExtractSecrets(page)
+				if err != nil {
+					return false, err
+				}
+				allSecrets = append(allSecrets, secretList...)
+				return true, nil
+			})
+			if err != nil {
+				return fmt.Errorf("failed to list secrets: %w", err)
+			}
+			return nil
+		})
+	})
+	return allSecrets, err
 }
 
 // DescribeSecret describes a secret in Barbican.
 func (c *Client) DescribeSecret(ctx context.Context, name string) (*secrets.Secret, error) {
-	listOpts := secrets.ListOpts{
-		Name: name,
-	}
-	allPages, err := secrets.List(c.client, listOpts).AllPages()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list secrets for description: %w", err)
-	}
-	allSecrets, err := secrets.ExtractSecrets(allPages)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract secrets: %w", err)
-	}
-	if len(allSecrets) == 0 {
-		return nil, fmt.Errorf("secret '%s' not found", name)
-	}
-	detailedSecret, err := secrets.Get(c.client, allSecrets[0].SecretRef).Extract()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get secret details: %w", err)
-	}
-	return detailedSecret, nil
+	var detailedSecret *secrets.Secret
+	err := c.circuitBreaker.Call(ctx, func() error {
+		return c.retryHandler.Do(ctx, func() error {
+			listOpts := secrets.ListOpts{
+				Name: name,
+			}
+			allPages, err := secrets.List(c.client, listOpts).AllPages()
+			if err != nil {
+				return fmt.Errorf("failed to list secrets for description: %w", err)
+			}
+			allSecrets, err := secrets.ExtractSecrets(allPages)
+			if err != nil {
+				return fmt.Errorf("failed to extract secrets: %w", err)
+			}
+			if len(allSecrets) == 0 {
+				return fmt.Errorf("secret '%s' not found", name)
+			}
+			detailedSecret, err = secrets.Get(c.client, allSecrets[0].SecretRef).Extract()
+			if err != nil {
+				return fmt.Errorf("failed to get secret details: %w", err)
+			}
+			return nil
+		})
+	})
+	return detailedSecret, err
 }
 
 // DeleteSecret deletes a secret from Barbican.
 func (c *Client) DeleteSecret(ctx context.Context, name string) error {
-	listOpts := secrets.ListOpts{
-		Name: name,
-	}
-	allPages, err := secrets.List(c.client, listOpts).AllPages()
-	if err != nil {
-		return fmt.Errorf("failed to list secrets for deletion: %w", err)
-	}
-	allSecrets, err := secrets.ExtractSecrets(allPages)
-	if err != nil {
-		return fmt.Errorf("failed to extract secrets: %w", err)
-	}
-	if len(allSecrets) == 0 {
-		return fmt.Errorf("secret '%s' not found", name)
-	}
+	return c.circuitBreaker.Call(ctx, func() error {
+		return c.retryHandler.Do(ctx, func() error {
+			listOpts := secrets.ListOpts{
+				Name: name,
+			}
+			allPages, err := secrets.List(c.client, listOpts).AllPages()
+			if err != nil {
+				return fmt.Errorf("failed to list secrets for deletion: %w", err)
+			}
+			allSecrets, err := secrets.ExtractSecrets(allPages)
+			if err != nil {
+				return fmt.Errorf("failed to extract secrets: %w", err)
+			}
+			if len(allSecrets) == 0 {
+				return fmt.Errorf("secret '%s' not found", name)
+			}
 
-	err = secrets.Delete(c.client, allSecrets[0].SecretRef).ExtractErr()
-	if err != nil {
-		return fmt.Errorf("failed to delete secret: %w", err)
-	}
-	return nil
+			err = secrets.Delete(c.client, allSecrets[0].SecretRef).ExtractErr()
+			if err != nil {
+				return fmt.Errorf("failed to delete secret: %w", err)
+			}
+			return nil
+		})
+	})
 }

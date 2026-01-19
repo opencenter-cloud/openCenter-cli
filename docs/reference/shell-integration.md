@@ -70,29 +70,27 @@ style = "bold blue"
 
 - `$OPENCENTER_ACTIVE_CLUSTER` - Automatically updated with current active cluster
 
-## CLI Commands (Performance Optimized)
+## CLI Commands
 
-For maximum performance in shell prompts:
+For cluster management:
 
 ```bash
-# Fast commands (bypass full config loading)
-openCenter cluster active-fast                    # Get active cluster
-openCenter cluster active-fast --short           # Get short name
-openCenter cluster active-fast --prompt          # Get formatted for prompt
+# Get active cluster
+openCenter cluster current                        # Get active cluster
 
 # Mise tasks
-mise run active-fast        # Fast active cluster lookup
-mise run active-prompt      # Fast prompt format
-mise run active-short       # Fast short name
+mise run active-fast        # Fast active cluster lookup (internal)
+mise run active-prompt      # Fast prompt format (internal)
+mise run active-short       # Fast short name (internal)
 ```
 
 ## Performance Comparison
 
 | Method | Speed | Use Case |
 |--------|-------|----------|
-| `active-fast` | ~1ms | Shell prompts, scripts |
 | `cluster current` | ~50ms | Interactive use |
 | `cluster status` | ~100ms | Detailed information |
+| Shell functions | ~1ms | Shell prompts (uses cached .active file) |
 
 ## Example Prompt Configurations
 
@@ -104,9 +102,6 @@ PS1="\$(opencenter_prompt)$PS1"
 
 # With colors
 PS1="\[\033[36m\]\$(opencenter_prompt)\[\033[0m\]$PS1"
-
-# Using fast command
-PS1="\$(openCenter cluster active-fast --prompt 2>/dev/null)$PS1"
 ```
 
 ### Zsh
@@ -117,9 +112,6 @@ PROMPT="\$(opencenter_prompt)$PROMPT"
 
 # With colors
 PROMPT="%F{cyan}\$(opencenter_prompt)%f$PROMPT"
-
-# Using fast command
-PROMPT="\$(openCenter cluster active-fast --prompt 2>/dev/null)$PROMPT"
 ```
 
 ### Fish
@@ -139,7 +131,7 @@ Add to your custom theme or modify existing one:
 ```zsh
 # Add this to your theme file
 opencenter_prompt_info() {
-    local cluster=$(openCenter cluster active-fast 2>/dev/null)
+    local cluster=$(opencenter_active 2>/dev/null)
     if [[ -n "$cluster" ]]; then
         echo "%{$fg[cyan]%}[$cluster]%{$reset_color%} "
     fi
@@ -179,14 +171,11 @@ The shell integration uses intelligent caching:
 
 ### Performance Issues
 
-Use the fast commands for shell prompts:
+Use the shell functions for shell prompts (they use cached .active file):
 
 ```bash
-# Instead of this (slow)
-PS1="\$(openCenter cluster current 2>/dev/null | sed 's/^/[/' | sed 's/$/] /')$PS1"
-
 # Use this (fast)
-PS1="\$(openCenter cluster active-fast --prompt 2>/dev/null)$PS1"
+PS1="\$(opencenter_prompt)$PS1"
 ```
 
 ### Fish Shell Issues

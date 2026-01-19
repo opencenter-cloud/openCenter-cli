@@ -456,11 +456,16 @@ func displayClusterSelectOutput(output ClusterSelectOutput, cmd *cobra.Command) 
 // - Cluster-specific paths (SOPS keys, configuration, etc.)
 // - Environment setup commands for deployed clusters
 //
+// The --clear flag can be used to deactivate the current cluster without selecting a new one.
+// The --activate flag can be used to automatically activate the cluster environment.
+//
 // Returns:
 //   - *cobra.Command: A pointer to the configured `select` command.
 func newClusterSelectCmd() *cobra.Command {
 	var showExportOnly bool
 	var shellOverride string
+	var clearActive bool
+	var activateEnv bool
 
 	cmd := &cobra.Command{
 		Use:   "select [name]",
@@ -473,9 +478,48 @@ func newClusterSelectCmd() *cobra.Command {
 
 If no cluster name is provided, an interactive selection menu is displayed.
 For deployed clusters, environment setup commands are generated to configure
-KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.`,
+KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.
+
+Use --clear to deactivate the current cluster without selecting a new one.
+Use --activate to automatically activate the cluster environment (sets environment variables).`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Handle --clear flag to deactivate current cluster
+			if clearActive {
+				// Unset AWS credentials
+				var deactivateOutput strings.Builder
+				awsVars := credentials.GetAWSEnvVars()
+				for _, envVar := range awsVars {
+					deactivateOutput.WriteString(fmt.Sprintf("unset %s\n", envVar))
+				}
+
+				// Unset OpenStack credentials
+				osVars := credentials.GetOpenStackEnvVars()
+				for _, envVar := range osVars {
+					deactivateOutput.WriteString(fmt.Sprintf("unset %s\n", envVar))
+				}
+
+				// Unset cluster-specific environment variables
+				deactivateOutput.WriteString("unset BIN\n")
+				deactivateOutput.WriteString("unset KUBECONFIG\n")
+				deactivateOutput.WriteString("unset OPENCENTER_ACTIVE_CLUSTER\n")
+
+				// Clear active cluster
+				if err := config.SetActive(""); err != nil {
+					return fmt.Errorf("failed to clear active cluster: %w", err)
+				}
+
+				if showExportOnly {
+					// Output deactivation commands for shell evaluation
+					fmt.Fprint(cmd.OutOrStdout(), deactivateOutput.String())
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "Active cluster cleared\n\n")
+					fmt.Fprintf(cmd.OutOrStdout(), "To deactivate the cluster environment, run:\n")
+					fmt.Fprintf(cmd.OutOrStdout(), "  eval $(openCenter cluster select --clear --export-only)\n")
+				}
+				return nil
+			}
+
 			var name string
 			if len(args) > 0 {
 				name = args[0]
@@ -549,29 +593,90 @@ KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.`,
 				return err
 			}
 
-			// Deactivate any existing cluster environment first
-			// This ensures old environment variables are cleared before switching
-			var deactivateOutput strings.Builder
-
-			// Unset AWS credentials
-			awsVars := credentials.GetAWSEnvVars()
-			for _, envVar := range awsVars {
-				deactivateOutput.WriteString(fmt.Sprintf("unset %s\n", envVar))
-			}
-
-			// Unset OpenStack credentials
-			osVars := credentials.GetOpenStackEnvVars()
-			for _, envVar := range osVars {
-				deactivateOutput.WriteString(fmt.Sprintf("unset %s\n", envVar))
-			}
-
-			// Unset cluster-specific environment variables
-			deactivateOutput.WriteString("unset BIN\n")
-			deactivateOutput.WriteString("unset KUBECONFIG\n")
-
 			// Set active cluster
 			if err := config.SetActive(name); err != nil {
 				return fmt.Errorf("failed to set active cluster: %w", err)
+			}
+
+			// Handle --activate flag to automatically activate environment
+			if activateEnv {
+				// Load cluster configuration
+				cfg, err := config.Load(name)
+				if err != nil {
+					return fmt.Errorf("failed to load cluster configuration: %w", err)
+				}
+
+				// Get cluster paths
+				configManager, err := config.NewConfigManager("")
+				if err != nil {
+					return fmt.Errorf("failed to create config manager: %w", err)
+				}
+				pathResolver := config.NewPathResolver(configManager)
+
+				// Parse cluster identifier to get organization and cluster name
+				organization, actualClusterName, err := config.ParseClusterIdentifier(name)
+				if err != nil {
+					return fmt.Errorf("invalid cluster identifier: %w", err)
+				}
+
+				// Use organization from config if available
+				if cfg.OpenCenter.Meta.Organization != "" {
+					organization = cfg.OpenCenter.Meta.Organization
+				}
+
+				// Resolve cluster paths
+				paths := pathResolver.ResolveClusterPaths(actualClusterName, organization)
+
+				// Create credentials extractor
+				extractor := credentials.NewExtractor(cfg)
+
+				var activateOutput strings.Builder
+
+				// Export cloud provider credentials
+				awsCreds, awsErr := extractor.ExtractAWS()
+				osCreds, osErr := extractor.ExtractOpenStack()
+
+				hasAWS := awsErr == nil && !awsCreds.IsEmpty()
+				hasOS := osErr == nil && !osCreds.IsEmpty()
+
+				if hasAWS {
+					activateOutput.WriteString(awsCreds.ToEnvVars())
+				}
+				if hasOS {
+					if hasAWS {
+						activateOutput.WriteString("\n")
+					}
+					activateOutput.WriteString(osCreds.ToEnvVars())
+				}
+
+				// Add cluster-specific environment variables
+				if hasAWS || hasOS {
+					activateOutput.WriteString("\n")
+				}
+
+				// Set BIN directory to full cluster path
+				activateOutput.WriteString(fmt.Sprintf("export BIN=%s\n", paths.BinPath))
+
+				// Extend PATH to include BIN directory
+				activateOutput.WriteString("export PATH=${BIN}:${PATH}\n")
+
+				// Set KUBECONFIG to full cluster path
+				activateOutput.WriteString(fmt.Sprintf("export KUBECONFIG=%s\n", paths.KubeconfigPath))
+
+				// Set active cluster environment variable
+				activateOutput.WriteString(fmt.Sprintf("export OPENCENTER_ACTIVE_CLUSTER=%s\n", name))
+
+				if showExportOnly {
+					// Only show activation commands for shell evaluation
+					fmt.Fprint(cmd.OutOrStdout(), activateOutput.String())
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "Active cluster set to %s\n\n", name)
+					displayClusterSelectOutput(output, cmd)
+					fmt.Fprintf(cmd.OutOrStdout(), "\nCluster environment activated\n")
+					fmt.Fprintf(cmd.OutOrStdout(), "\nTo apply these settings to your shell, run:\n")
+					fmt.Fprintf(cmd.OutOrStdout(), "  eval $(openCenter cluster select %s --activate --export-only)\n", name)
+				}
+				return nil
 			}
 
 			// Display output based on flags
@@ -585,9 +690,9 @@ KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.`,
 				fmt.Fprintf(cmd.OutOrStdout(), "Active cluster set to %s\n\n", name)
 				displayClusterSelectOutput(output, cmd)
 
-				// Inform user to activate the environment
-				fmt.Fprintf(cmd.OutOrStdout(), "\nTo activate the cluster environment, run:\n")
-				fmt.Fprintf(cmd.OutOrStdout(), "  eval $(openCenter cluster activate)\n")
+				// Inform user about activation
+				fmt.Fprintf(cmd.OutOrStdout(), "\nTo activate the cluster environment with credentials, run:\n")
+				fmt.Fprintf(cmd.OutOrStdout(), "  eval $(openCenter cluster select %s --activate --export-only)\n", name)
 			}
 
 			return nil
@@ -599,6 +704,12 @@ KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.`,
 
 	// Add flag to override shell detection
 	cmd.Flags().StringVar(&shellOverride, "shell", "", "Override shell detection (bash, zsh, fish, powershell)")
+
+	// Add flag to clear active cluster (deactivate)
+	cmd.Flags().BoolVar(&clearActive, "clear", false, "Clear the active cluster (deactivate)")
+
+	// Add flag to activate cluster environment
+	cmd.Flags().BoolVar(&activateEnv, "activate", false, "Activate cluster environment (set credentials and paths)")
 
 	return cmd
 }

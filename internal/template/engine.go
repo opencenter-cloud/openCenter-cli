@@ -96,6 +96,8 @@ type GoTemplateEngine struct {
 	mu           sync.RWMutex
 	fsys         fs.FS              // Optional embedded filesystem
 	rootTemplate *template.Template // Root template for named template collections
+	sandbox      *DefaultTemplateSandbox // Optional sandbox for secure rendering
+	sandboxed    bool               // Whether sandboxing is enabled
 }
 
 // NewGoTemplateEngine creates a new Go template engine with default settings.
@@ -106,6 +108,7 @@ func NewGoTemplateEngine() *GoTemplateEngine {
 		funcMap:      make(template.FuncMap),
 		cache:        make(map[string]*template.Template),
 		cacheEnabled: true,
+		sandboxed:    false,
 	}
 
 	// Register Sprig functions by default for compatibility with existing templates
@@ -114,6 +117,52 @@ func NewGoTemplateEngine() *GoTemplateEngine {
 	}
 
 	return engine
+}
+
+// EnableSandbox enables template sandboxing for secure rendering.
+// When enabled, only safe template functions are available and dangerous functions
+// (env, readFile, exec, etc.) are disabled. Templates are also subject to timeout enforcement.
+func (e *GoTemplateEngine) EnableSandbox() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.sandboxed = true
+	e.sandbox = NewTemplateSandbox()
+
+	// Replace function map with safe functions
+	e.funcMap = e.sandbox.GetSafeFunctions()
+
+	// Clear cache to ensure new function map is used
+	if e.cacheEnabled {
+		e.cache = make(map[string]*template.Template)
+	}
+}
+
+// DisableSandbox disables template sandboxing and restores full Sprig functions.
+func (e *GoTemplateEngine) DisableSandbox() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.sandboxed = false
+	e.sandbox = nil
+
+	// Restore Sprig functions
+	e.funcMap = make(template.FuncMap)
+	for name, fn := range sprig.TxtFuncMap() {
+		e.funcMap[name] = fn
+	}
+
+	// Clear cache to ensure new function map is used
+	if e.cacheEnabled {
+		e.cache = make(map[string]*template.Template)
+	}
+}
+
+// IsSandboxed returns whether sandboxing is currently enabled.
+func (e *GoTemplateEngine) IsSandboxed() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.sandboxed
 }
 
 // Render renders a template with the given data.
@@ -144,6 +193,26 @@ func (e *GoTemplateEngine) Render(ctx context.Context, templatePath string, data
 		return nil, renderErr
 	}
 
+	// If sandboxed, validate the template before rendering
+	e.mu.RLock()
+	sandboxed := e.sandboxed
+	sandbox := e.sandbox
+	e.mu.RUnlock()
+
+	if sandboxed && sandbox != nil {
+		// Read template content for validation
+		content, err := e.readTemplateContent(templatePath)
+		if err != nil {
+			renderErr = fmt.Errorf("failed to read template for validation: %w", err)
+			return nil, renderErr
+		}
+
+		if err := sandbox.ValidateTemplate(string(content)); err != nil {
+			renderErr = fmt.Errorf("template validation failed: %w", err)
+			return nil, renderErr
+		}
+	}
+
 	// Execute template to buffer
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -152,6 +221,25 @@ func (e *GoTemplateEngine) Render(ctx context.Context, templatePath string, data
 	}
 
 	return buf.Bytes(), nil
+}
+
+// readTemplateContent reads the template content from filesystem or embedded FS.
+func (e *GoTemplateEngine) readTemplateContent(templatePath string) ([]byte, error) {
+	e.mu.RLock()
+	fsys := e.fsys
+	e.mu.RUnlock()
+
+	if fsys != nil {
+		content, err := fs.ReadFile(fsys, templatePath)
+		if err != nil {
+			// If not found in embedded FS, try regular file system
+			return os.ReadFile(templatePath)
+		}
+		return content, nil
+	}
+
+	// Try regular file system
+	return os.ReadFile(templatePath)
 }
 
 // RenderString renders a template string with the given data.
@@ -164,11 +252,21 @@ func (e *GoTemplateEngine) RenderString(ctx context.Context, templateName, templ
 	default:
 	}
 
-	// Parse template string
+	// Get function map and sandbox status
 	e.mu.RLock()
 	funcMap := e.funcMap
+	sandboxed := e.sandboxed
+	sandbox := e.sandbox
 	e.mu.RUnlock()
 
+	// If sandboxed, validate the template before rendering
+	if sandboxed && sandbox != nil {
+		if err := sandbox.ValidateTemplate(templateContent); err != nil {
+			return nil, fmt.Errorf("template validation failed: %w", err)
+		}
+	}
+
+	// Parse template string
 	tmpl, err := template.New(templateName).Funcs(funcMap).Parse(templateContent)
 	if err != nil {
 		return nil, wrapTemplateError(err, templateName)

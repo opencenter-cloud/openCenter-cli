@@ -236,5 +236,4 @@ git push
 - `openCenter cluster validate` - Validate configuration after updates
 - `openCenter cluster edit` - Edit configuration file directly
 - `openCenter cluster info` - Show current configuration
-- `openCenter cluster config-update` - Update with current defaults
 - `openCenter cluster setup` - Re-render GitOps templates

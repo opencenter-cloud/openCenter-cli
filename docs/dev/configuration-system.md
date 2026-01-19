@@ -13,7 +13,7 @@ This guide explains how to extend and work with openCenter's refactored configur
 
 **Prerequisites:**
 - Familiarity with Go programming
-- Understanding of openCenter's architecture (see [Architecture Documentation](../architecture.md))
+- Understanding of openCenter's architecture (see [Architecture Documentation](../explanation/architecture.md))
 - Basic knowledge of Kubernetes and GitOps concepts
 
 ## Table of Contents
@@ -1867,9 +1867,8 @@ type MyServiceConfig struct {
 
 ### Documentation
 
-- **Architecture Documentation**: [docs/architecture.md](../architecture.md) - Complete system architecture
+- **Architecture Documentation**: [docs/explanation/architecture.md](../explanation/architecture.md) - Complete system architecture
 - **Migration Guide**: [docs/migration/configuration-system-refactor.md](../migration/configuration-system-refactor.md) - Migration from legacy to refactored system
-- **Feature Flags**: [docs/reference/config/features.md](../reference/config/features.md) - Feature flag management
 - **Requirements**: [.kiro/specs/configuration-system-refactor/requirements.md](../../.kiro/specs/configuration-system-refactor/requirements.md) - System requirements
 - **Design**: [.kiro/specs/configuration-system-refactor/design.md](../../.kiro/specs/configuration-system-refactor/design.md) - Detailed design document
 - **Tasks**: [.kiro/specs/configuration-system-refactor/tasks.md](../../.kiro/specs/configuration-system-refactor/tasks.md) - Implementation tasks

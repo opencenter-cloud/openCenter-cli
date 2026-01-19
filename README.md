@@ -19,7 +19,7 @@ It is designed to standardize how teams scaffold and validate Kubernetes and Ope
 
 ## Quickstart
 
-The fastest way to get started is to follow our end-to-end tutorial. You will need [Mise](https://mise.jdx.dev/) and [Git](https://git-scm.com/) installed.
+The fastest way to get started is to follow our getting started guide. You will need [Mise](https://mise.jdx.dev/) and [Git](https://git-scm.com/) installed.
 
 1.  **Install project tools**:
     ```bash
@@ -29,65 +29,49 @@ The fastest way to get started is to follow our end-to-end tutorial. You will ne
     ```bash
     mise run build
     ```
-3.  **Follow the full tutorial**:
-    For a complete walkthrough from initializing your first cluster to bootstrapping the GitOps repository, please see our [**Quickstart Tutorial**](./docs/tutorials/quickstart.md).
+3.  **Follow the getting started guide**:
+    For a complete walkthrough from installing openCenter to creating your first cluster, see our [**Getting Started Guide**](./docs/getting-started.md).
 
 ## Documentation
 
 Comprehensive documentation is available in the `docs/` directory, organized following the [Diátaxis framework](https://diataxis.fr/).
 
-### Quick Links
+### Quick Start
+*   **[Getting Started](./docs/getting-started.md)** - Your first cluster in 10 minutes
 *   **[Documentation Home](./docs/readme.md)** - Complete documentation guide
-*   **[Overview](./docs/overview.md)** - What is openCenter?
-*   **[Current Status](./docs/current-status.md)** - Implementation status and roadmap
-*   **[Architecture](./docs/architecture.md)** - Technical architecture and design
-*   **[Troubleshooting](./docs/troubleshooting.md)** - Common issues and solutions
 
-### Documentation Categories
+### Documentation by Type
 
-#### Getting Started
-*   **[Overview](./docs/overview.md)** - Introduction to openCenter
-*   **[IDE Integration](./docs/ide-integration.md)** - Setup your IDE for openCenter
-*   **[Adding Services](./docs/adding-services.md)** - Add services to your cluster
+#### 📚 Tutorials (Learning-Oriented)
+Step-by-step guides to help you learn openCenter:
+*   **[Getting Started](./docs/getting-started.md)** - Create your first cluster
+*   **[OpenStack Quickstart](./docs/tutorials/quickstart-openstack.md)** - Deploy on OpenStack
+*   **[AWS Quickstart](./docs/tutorials/quickstart-aws.md)** - Deploy on AWS
+*   **[Kind Quickstart](./docs/tutorials/quickstart-kind.md)** - Local development with Kind
 
-#### Reference - Information-Oriented
-*   **[CLI Reference](./docs/reference/readme.md)** - Complete CLI command reference
-*   **[Configuration Reference](./docs/reference/configuration.md)** - Configuration file structure
-*   **[CLI Commands Overview](./docs/reference/cli-commands.md)** - Command overview
+#### 🔧 How-To Guides (Task-Oriented)
+Practical guides for specific tasks:
+*   **[Troubleshooting](./docs/how-to/troubleshooting.md)** - Common issues and solutions
+*   **[Adding Services](./docs/how-to/adding-services.md)** - Add services to your cluster
+*   **[Managing Secrets](./docs/how-to/secrets.md)** - SOPS and secrets management
+*   **[IDE Integration](./docs/how-to/ide-integration.md)** - Setup your development environment
 
-##### Cluster Commands Reference
-Complete documentation for all cluster lifecycle commands:
-*   **[Cluster Commands Overview](./docs/reference/cluster/readme.md)** - Cluster management guide
-*   **Lifecycle Commands**
-    - [init](./docs/reference/cluster/init.md) - Initialize new cluster configuration
-    - [validate](./docs/reference/cluster/validate.md) - Validate cluster configuration
-    - [preflight](./docs/reference/cluster/preflight.md) - Run preflight checks
-    - [setup](./docs/reference/cluster/setup.md) - Setup GitOps repository
-    - [render](./docs/reference/cluster/render.md) - Render templates
-    - [bootstrap](./docs/reference/cluster/bootstrap.md) - Bootstrap cluster
-    - [destroy](./docs/reference/cluster/destroy.md) - Destroy cluster
-*   **Management Commands**
-    - [list](./docs/reference/cluster/list.md) - List all clusters
-    - [select](./docs/reference/cluster/select.md) - Select active cluster
-    - [current](./docs/reference/cluster/current.md) - Show current cluster
-    - [info](./docs/reference/cluster/info.md) - Show cluster information
-    - [edit](./docs/reference/cluster/edit.md) - Edit cluster configuration
-*   **Update Commands**
-    - [update](./docs/reference/cluster/update.md) - Update configuration fields
-    - [config-update](./docs/reference/cluster/config-update.md) - Update with defaults
-    - [migrate](./docs/reference/cluster/migrate.md) - Migrate to organization structure
-*   **Utility Commands**
-    - [schema](./docs/reference/cluster/schema.md) - Export JSON schema
+#### 📖 Reference (Information-Oriented)
+Technical specifications and detailed information:
+*   **[CLI Commands](./docs/reference/cli-commands.md)** - Complete command reference
+*   **[Configuration](./docs/reference/configuration.md)** - Configuration file structure
+*   **[Cluster Commands](./docs/reference/cluster/readme.md)** - Cluster lifecycle commands
+*   **[Shell Integration](./docs/reference/shell-integration.md)** - Shell completion and integration
 
-#### Developer Documentation
+#### 💡 Explanation (Understanding-Oriented)
+Conceptual explanations and background:
+*   **[Overview](./docs/explanation/overview.md)** - What is openCenter?
+*   **[Architecture](./docs/explanation/architecture.md)** - Technical architecture and design
+*   **[Current Status](./docs/explanation/current-status.md)** - Implementation status and roadmap
+
+### For Developers
 *   **[Developer Guide](./docs/dev/readme.md)** - CLI architecture and implementation
-*   **[Cluster Commands Dev](./docs/dev/cluster/readme.md)** - Cluster command internals
-
-### Configuration Resources
-*   **[Cluster Configuration File](./docs/cluster-config.md)** - Complete cluster config reference
-*   **[Configuration Schema](./CONFIG_SCHEMA_ADDITIONS.md)** - Complete field reference
-*   **[Template Analysis](./TEMPLATE_ANALYSIS_REPORT.md)** - Template implementation status
-*   **[Migration Guide](./MIGRATION_GUIDE.md)** - Upgrade from older configurations
+*   **[Contributing](./docs/contributing.md)** - Contribution guidelines
 
 ## CLI Commands Quick Reference
 

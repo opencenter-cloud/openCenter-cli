@@ -174,4 +174,3 @@ openCenter cluster edit my-cluster
 - `openCenter cluster validate` - Validate cluster configuration
 - `openCenter cluster info` - Show cluster information
 - `openCenter cluster update` - Update specific configuration fields
-- `openCenter cluster config-update` - Update configuration with current defaults

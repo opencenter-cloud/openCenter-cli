@@ -16,9 +16,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -54,11 +54,20 @@ Examples:
   openCenter cluster edit myorg/my-cluster`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Initialize security components
+			validator := security.NewDefaultInputValidator()
+			sanitizer := security.NewDefaultCommandSanitizer()
+
 			var clusterName string
 
 			// Determine cluster name
 			if len(args) > 0 {
 				clusterName = args[0]
+
+				// Validate cluster name (Requirements: 1.1, 1.5, 1.6)
+				if err := validator.ValidateClusterName(clusterName); err != nil {
+					return fmt.Errorf("invalid cluster name: %w", err)
+				}
 			} else {
 				// Use currently selected cluster
 				active, err := config.GetActive()
@@ -69,12 +78,22 @@ Examples:
 					return fmt.Errorf("no cluster selected. Use 'openCenter cluster select' to select a cluster or provide a cluster name")
 				}
 				clusterName = active
+
+				// Validate active cluster name (Requirements: 1.1, 1.5, 1.6)
+				if err := validator.ValidateClusterName(clusterName); err != nil {
+					return fmt.Errorf("invalid active cluster name: %w", err)
+				}
 			}
 
 			// Get the configuration file path
 			configPath, err := config.ConfigPath(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to get config path for cluster '%s': %w", clusterName, err)
+			}
+
+			// Validate the config path (Requirements: 1.8)
+			if err := validator.ValidatePath(configPath); err != nil {
+				return fmt.Errorf("invalid config path: %w", err)
 			}
 
 			// Check if the configuration file exists
@@ -91,10 +110,20 @@ Examples:
 				editor = "vi" // Default fallback
 			}
 
+			// Validate EDITOR environment variable (Requirements: 1.1, 1.2)
+			if err := sanitizer.ValidateEditor(editor); err != nil {
+				return fmt.Errorf("invalid EDITOR environment variable: %w", err)
+			}
+
 			// Open the editor
 			fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in %s...\n", configPath, editor)
 
-			editorCmd := exec.Command(editor, configPath)
+			// Use sanitized command execution (Requirements: 1.3, 1.4)
+			editorCmd, err := sanitizer.SanitizeCommand(editor, []string{configPath})
+			if err != nil {
+				return fmt.Errorf("failed to sanitize editor command: %w", err)
+			}
+
 			editorCmd.Stdin = os.Stdin
 			editorCmd.Stdout = os.Stdout
 			editorCmd.Stderr = os.Stderr

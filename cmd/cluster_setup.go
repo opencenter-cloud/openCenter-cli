@@ -14,11 +14,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/rackerlabs/openCenter-cli/internal/gitops"
+	"github.com/rackerlabs/openCenter-cli/internal/resilience"
 	"github.com/rackerlabs/openCenter-cli/internal/tofu"
 	"github.com/spf13/cobra"
 )
@@ -78,6 +81,19 @@ Configuration must have opencenter.gitops.git_dir set.`,
 					return fmt.Errorf("no active cluster; specify name or run 'openCenter cluster select' first")
 				}
 			}
+
+			// Acquire lock for setup operation
+			lockMgr, err := resilience.NewLockManager(resilience.DefaultLockConfig)
+			if err != nil {
+				return fmt.Errorf("failed to create lock manager: %w", err)
+			}
+
+			ctx := context.Background()
+			lock, err := lockMgr.Acquire(ctx, name, 1*time.Hour)
+			if err != nil {
+				return formatErrorWithInfo(err, "E6003")
+			}
+			defer lockMgr.Release(lock)
 
 			// Load configuration
 			cfg, err := config.Load(name)

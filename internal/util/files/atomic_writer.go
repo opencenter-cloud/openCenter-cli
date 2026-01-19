@@ -17,68 +17,76 @@ limitations under the License.
 package files
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/rackerlabs/openCenter-cli/internal/resilience"
 )
 
 // DefaultAtomicFileWriter implements AtomicFileWriter interface
 type DefaultAtomicFileWriter struct {
-	validator FileValidator
+	validator    FileValidator
+	retryHandler resilience.RetryHandler
 }
 
 // NewDefaultAtomicFileWriter creates a new default atomic file writer
 func NewDefaultAtomicFileWriter() *DefaultAtomicFileWriter {
 	return &DefaultAtomicFileWriter{
-		validator: NewDefaultFileValidator(),
+		validator:    NewDefaultFileValidator(),
+		retryHandler: resilience.NewRetryHandler(resilience.FileOperationConfig),
 	}
 }
 
 // WriteAtomic writes data to a file atomically
 func (w *DefaultAtomicFileWriter) WriteAtomic(filename string, data []byte, perm os.FileMode) error {
-	// Create temporary file in the same directory as the target file
-	dir := filepath.Dir(filename)
-	tempFile, err := w.CreateTempFile(dir, ".tmp-"+filepath.Base(filename)+"-")
-	if err != nil {
-		return fmt.Errorf("failed to create temporary file: %w", err)
-	}
+	ctx := context.Background()
+	return w.retryHandler.Do(ctx, func() error {
+		// Create temporary file in the same directory as the target file
+		dir := filepath.Dir(filename)
+		tempFile, err := w.CreateTempFile(dir, ".tmp-"+filepath.Base(filename)+"-")
+		if err != nil {
+			return fmt.Errorf("failed to create temporary file: %w", err)
+		}
 
-	tempPath := tempFile.Name()
+		tempPath := tempFile.Name()
 
-	// Ensure cleanup on failure
-	defer func() {
-		tempFile.Close()
-		os.Remove(tempPath)
-	}()
+		// Ensure cleanup on failure
+		defer func() {
+			tempFile.Close()
+			os.Remove(tempPath)
+		}()
 
-	// Write data to temporary file
-	if _, err := tempFile.Write(data); err != nil {
-		return fmt.Errorf("failed to write to temporary file: %w", err)
-	}
+		// Write data to temporary file
+		if _, err := tempFile.Write(data); err != nil {
+			return fmt.Errorf("failed to write to temporary file: %w", err)
+		}
 
-	// Set proper permissions
-	if err := tempFile.Chmod(perm); err != nil {
-		return fmt.Errorf("failed to set file permissions: %w", err)
-	}
+		// Set proper permissions
+		if err := tempFile.Chmod(perm); err != nil {
+			return fmt.Errorf("failed to set file permissions: %w", err)
+		}
 
-	// Sync to ensure data is written to disk
-	if err := tempFile.Sync(); err != nil {
-		return fmt.Errorf("failed to sync temporary file: %w", err)
-	}
+		// Sync to ensure data is written to disk
+		if err := tempFile.Sync(); err != nil {
+			return fmt.Errorf("failed to sync temporary file: %w", err)
+		}
 
-	// Close the temporary file
-	if err := tempFile.Close(); err != nil {
-		return fmt.Errorf("failed to close temporary file: %w", err)
-	}
+		// Close the temporary file
+		if err := tempFile.Close(); err != nil {
+			return fmt.Errorf("failed to close temporary file: %w", err)
+		}
 
-	// Atomically move temporary file to final location
-	if err := os.Rename(tempPath, filename); err != nil {
-		return fmt.Errorf("failed to move temporary file to final location: %w", err)
-	}
+		// Atomically move temporary file to final location
+		if err := os.Rename(tempPath, filename); err != nil {
+			return fmt.Errorf("failed to move temporary file to final location: %w", err)
+		}
 
-	// Don't remove tempPath in defer since rename succeeded
-	tempPath = ""
-	return nil
+		// Don't remove tempPath in defer since rename succeeded
+		tempPath = ""
+		return nil
+	})
 }
 
 // WriteAtomicWithBackup writes data to a file atomically with backup

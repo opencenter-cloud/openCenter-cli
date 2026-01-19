@@ -24,13 +24,15 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/rackerlabs/openCenter-cli/internal/security"
 )
 
 // DefaultAuditLogger implements AuditLogger interface
 type DefaultAuditLogger struct {
 	logPath  string
 	logLevel string
-	masker   *DefaultCredentialMasker
+	masker   security.CredentialMasker
 	mu       sync.Mutex
 	file     *os.File
 	enabled  bool
@@ -48,7 +50,7 @@ func NewDefaultAuditLogger(config AuditLoggerConfig) (*DefaultAuditLogger, error
 	logger := &DefaultAuditLogger{
 		logPath:  config.LogPath,
 		logLevel: config.LogLevel,
-		masker:   NewDefaultCredentialMasker(),
+		masker:   security.NewDefaultCredentialMasker(),
 		enabled:  config.Enabled,
 	}
 
@@ -90,7 +92,7 @@ func (l *DefaultAuditLogger) LogSecurityEvent(ctx context.Context, event Securit
 
 	// Mask sensitive data in event details
 	if event.Details != nil {
-		event.Details = l.masker.MaskMap(event.Details)
+		event.Details = l.maskMap(event.Details)
 	}
 
 	// Add context information if available
@@ -109,6 +111,68 @@ func (l *DefaultAuditLogger) LogSecurityEvent(ctx context.Context, event Securit
 	}
 
 	return l.writeEvent(event)
+}
+
+// maskMap masks sensitive data in a map using the credential masker
+func (l *DefaultAuditLogger) maskMap(data map[string]interface{}) map[string]interface{} {
+	if data == nil {
+		return nil
+	}
+
+	masked := make(map[string]interface{})
+	for key, value := range data {
+		switch v := value.(type) {
+		case string:
+			masked[key] = l.masker.MaskString(v)
+		case map[string]interface{}:
+			masked[key] = l.maskMap(v)
+		case []interface{}:
+			masked[key] = l.maskSlice(v)
+		default:
+			// For other types, convert to string, mask, and keep original type if possible
+			str := fmt.Sprintf("%v", v)
+			maskedStr := l.masker.MaskString(str)
+			if str == maskedStr {
+				// No masking occurred, keep original value
+				masked[key] = v
+			} else {
+				// Masking occurred, use masked string
+				masked[key] = maskedStr
+			}
+		}
+	}
+	return masked
+}
+
+// maskSlice masks sensitive data in a slice
+func (l *DefaultAuditLogger) maskSlice(data []interface{}) []interface{} {
+	if data == nil {
+		return nil
+	}
+
+	masked := make([]interface{}, len(data))
+	for i, item := range data {
+		switch v := item.(type) {
+		case string:
+			masked[i] = l.masker.MaskString(v)
+		case map[string]interface{}:
+			masked[i] = l.maskMap(v)
+		case []interface{}:
+			masked[i] = l.maskSlice(v)
+		default:
+			// For other types, convert to string, mask, and keep original type if possible
+			str := fmt.Sprintf("%v", v)
+			maskedStr := l.masker.MaskString(str)
+			if str == maskedStr {
+				// No masking occurred, keep original value
+				masked[i] = v
+			} else {
+				// Masking occurred, use masked string
+				masked[i] = maskedStr
+			}
+		}
+	}
+	return masked
 }
 
 // LogSOPSOperation logs a SOPS-related operation

@@ -1,0 +1,40 @@
+name: Docs P0 Checks
+
+on:
+  pull_request:
+    paths:
+      - '**/*.md'
+
+jobs:
+  docs-p0:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect changed markdown files
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_ref="${{ github.base_ref }}"
+          git fetch origin "$base_ref" --depth=1
+          files=$(git diff --name-only "origin/$base_ref"...HEAD | grep -E '\.md$' || true)
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$files" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Run P0 doc checks
+        if: steps.changed.outputs.files != ''
+        shell: bash
+        run: |
+          ./scripts/docs/p0-docs-check.sh ${{ steps.changed.outputs.files }}
+
+      - name: Vale
+        if: steps.changed.outputs.files != ''
+        uses: errata-ai/vale-action@v2
+        with:
+          files: ${{ steps.changed.outputs.files }}
+          fail_on_error: true

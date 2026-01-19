@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,6 +26,8 @@ import (
 	"time"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
+	"github.com/rackerlabs/openCenter-cli/internal/resilience"
+	"github.com/rackerlabs/openCenter-cli/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -86,6 +89,19 @@ func newClusterBootstrapCmd() *cobra.Command {
 			if strings.TrimSpace(name) == "" {
 				return fmt.Errorf("no active cluster; specify name or use 'select' to set it")
 			}
+
+			// Acquire lock for bootstrap operation
+			lockMgr, err := resilience.NewLockManager(resilience.DefaultLockConfig)
+			if err != nil {
+				return fmt.Errorf("failed to create lock manager: %w", err)
+			}
+
+			ctx := context.Background()
+			lock, err := lockMgr.Acquire(ctx, name, 1*time.Hour)
+			if err != nil {
+				return fmt.Errorf("failed to acquire lock for cluster %q: %w\nAnother operation may be in progress. Wait for it to complete or use 'openCenter cluster info %s' to check lock status", name, err, name)
+			}
+			defer lockMgr.Release(lock)
 
 			cfg, err := config.Load(name)
 			if err != nil {
@@ -334,6 +350,7 @@ type bootstrapRunner struct {
 	logFile *os.File
 	stdout  io.Writer
 	stderr  io.Writer
+	masker  security.CredentialMasker
 }
 
 func newBootstrapRunner(cmd *cobra.Command, clusterName, clusterDir, logPath string, dryRun bool) (*bootstrapRunner, error) {
@@ -359,6 +376,9 @@ func newBootstrapRunner(cmd *cobra.Command, clusterName, clusterDir, logPath str
 		f = file
 	}
 
+	// Create credential masker
+	masker := security.NewDefaultCredentialMasker()
+
 	out := cmd.OutOrStdout()
 	errOut := cmd.ErrOrStderr()
 	if f != nil {
@@ -371,6 +391,7 @@ func newBootstrapRunner(cmd *cobra.Command, clusterName, clusterDir, logPath str
 		logFile: f,
 		stdout:  out,
 		stderr:  errOut,
+		masker:  masker,
 	}, nil
 }
 
@@ -381,7 +402,9 @@ func (r *bootstrapRunner) Close() {
 }
 
 func (r *bootstrapRunner) Infof(format string, args ...interface{}) {
-	fmt.Fprintf(r.stdout, format+"\n", args...)
+	msg := fmt.Sprintf(format, args...)
+	maskedMsg := r.masker.MaskString(msg)
+	fmt.Fprintf(r.stdout, "%s\n", maskedMsg)
 }
 
 func (r *bootstrapRunner) Run(dir string, env map[string]string, name string, args ...string) error {
@@ -394,7 +417,8 @@ func (r *bootstrapRunner) RunLongRunning(dir string, env map[string]string, name
 
 func (r *bootstrapRunner) executeLongRunning(dir string, env map[string]string, stdin io.Reader, name string, args ...string) error {
 	printable := formatCommand(env, name, args)
-	fmt.Fprintf(r.stdout, "$ %s\n", printable)
+	maskedPrintable := r.masker.MaskString(printable)
+	fmt.Fprintf(r.stdout, "$ %s\n", maskedPrintable)
 
 	if r.dryRun {
 		return nil
@@ -416,7 +440,8 @@ func (r *bootstrapRunner) executeLongRunning(dir string, env map[string]string, 
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start command: %s: %w", printable, err)
+		maskedErr := r.masker.MaskString(err.Error())
+		return fmt.Errorf("failed to start command: %s: %s", maskedPrintable, maskedErr)
 	}
 
 	// Log progress for long-running commands
@@ -436,7 +461,8 @@ func (r *bootstrapRunner) executeLongRunning(dir string, env map[string]string, 
 			elapsed := time.Since(startTime)
 			if err != nil {
 				fmt.Fprintf(r.stdout, "Command completed with error after %v\n", elapsed.Round(time.Second))
-				return fmt.Errorf("command failed: %s: %w", printable, err)
+				maskedErr := r.masker.MaskString(err.Error())
+				return fmt.Errorf("command failed: %s: %s", maskedPrintable, maskedErr)
 			}
 			fmt.Fprintf(r.stdout, "Command completed successfully after %v\n", elapsed.Round(time.Second))
 			return nil
@@ -453,7 +479,8 @@ func (r *bootstrapRunner) RunWithInput(dir string, env map[string]string, input 
 
 func (r *bootstrapRunner) execute(dir string, env map[string]string, stdin io.Reader, name string, args ...string) error {
 	printable := formatCommand(env, name, args)
-	fmt.Fprintf(r.stdout, "$ %s\n", printable)
+	maskedPrintable := r.masker.MaskString(printable)
+	fmt.Fprintf(r.stdout, "$ %s\n", maskedPrintable)
 
 	if r.dryRun {
 		return nil
@@ -474,7 +501,8 @@ func (r *bootstrapRunner) execute(dir string, env map[string]string, stdin io.Re
 	cmd.Stderr = r.stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command failed: %s: %w", printable, err)
+		maskedErr := r.masker.MaskString(err.Error())
+		return fmt.Errorf("command failed: %s: %s", maskedPrintable, maskedErr)
 	}
 	return nil
 }

@@ -2,12 +2,12 @@
 
 Welcome to the openCenter documentation. This index will help you find the information you need.
 
-## Quick Links
+## Quick Start
 
-- **[Overview](overview.md)** - What is openCenter and what can it do?
-- **[Current Status](current-status.md)** - Implementation status and roadmap
-- **[Architecture](architecture.md)** - Technical architecture and design
-- **[Getting Started](tutorials/quickstart.md)** - Quick start tutorial
+- **[Getting Started](getting-started.md)** - Your first cluster in 10 minutes
+- **[Overview](explanation/overview.md)** - What is openCenter and what can it do?
+- **[Current Status](explanation/current-status.md)** - Implementation status and roadmap
+- **[Architecture](explanation/architecture.md)** - Technical architecture and design
 
 ## Documentation Structure
 
@@ -17,10 +17,10 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 
 **Learning-oriented:** Step-by-step guides to help you learn openCenter.
 
-- [Quickstart Tutorial](tutorials/quickstart.md) - Get started with your first cluster
-- Multi-Cluster Setup (Coming Soon)
-- Production Deployment (Coming Soon)
-- Disaster Recovery (Coming Soon)
+- [Getting Started](getting-started.md) - Your first cluster in 10 minutes
+- [OpenStack Quickstart](tutorials/quickstart-openstack.md) - Deploy on OpenStack
+- [AWS Quickstart](tutorials/quickstart-aws.md) - Deploy on AWS
+- [Kind Quickstart](tutorials/quickstart-kind.md) - Local development with Kind
 
 **When to use:** You're new to openCenter and want to learn by doing.
 
@@ -28,13 +28,10 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 
 **Task-oriented:** Practical guides for accomplishing specific goals.
 
-- [Configure a Cluster](how-to/configure-cluster.md) - Cluster configuration guide
-- [Manage Secrets with SOPS](how-to/manage-secrets.md) - Secrets management
-- [Setup GitOps Repository](how-to/setup-gitops.md) - GitOps integration
-- [Use Plugins](how-to/plugins.md) - Plugin system usage
-- Advanced Configurations (Coming Soon)
-- Troubleshooting (Coming Soon)
-- Migration Guides (Coming Soon)
+- [Troubleshooting](how-to/troubleshooting.md) - Common issues and solutions
+- [Adding Services](how-to/adding-services.md) - Add services to your cluster
+- [Managing Secrets](how-to/secrets.md) - SOPS and secrets management
+- [IDE Integration](how-to/ide-integration.md) - Setup your development environment
 
 **When to use:** You know what you want to do and need instructions.
 
@@ -44,10 +41,8 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 
 - [CLI Commands](reference/cli-commands.md) - Complete CLI reference
 - [Configuration](reference/configuration.md) - Configuration file reference
-- [Schema](reference/schema.md) - JSON schema reference (Coming Soon)
-- [Environment Variables](reference/environment.md) - Environment configuration
-- [Plugins](reference/plugins.md) - Plugin development reference
-- API Documentation (Coming Soon)
+- [Cluster Commands](reference/cluster/readme.md) - Cluster lifecycle commands
+- [Shell Integration](reference/shell-integration.md) - Shell completion and integration
 
 **When to use:** You need to look up specific details or specifications.
 
@@ -55,53 +50,39 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 
 **Understanding-oriented:** Conceptual explanations and background information.
 
-- [Overview](overview.md) - High-level overview of openCenter
-- [Architecture](architecture.md) - Technical architecture and design
-- [Current Status](current-status.md) - Implementation status and roadmap
-- Design Decisions (Coming Soon)
-- Best Practices (Coming Soon)
+- [Overview](explanation/overview.md) - High-level overview of openCenter
+- [Architecture](explanation/architecture.md) - Technical architecture and design
+- [Current Status](explanation/current-status.md) - Implementation status and roadmap
 
 **When to use:** You want to understand concepts and design decisions.
 
 ## By Topic
 
 ### Getting Started
-1. [Overview](overview.md) - Understand what openCenter is
-2. [Quickstart Tutorial](tutorials/quickstart.md) - Create your first cluster
+1. [Getting Started](getting-started.md) - Your first cluster in 10 minutes
+2. [Overview](explanation/overview.md) - Understand what openCenter is
 3. [CLI Commands](reference/cli-commands.md) - Learn available commands
 4. [Configuration](reference/configuration.md) - Understand configuration structure
 
 ### Configuration Management
 - [Configuration Reference](reference/configuration.md) - Complete configuration guide
-- [Configure a Cluster](how-to/configure-cluster.md) - Step-by-step configuration
-- [Schema Reference](reference/schema.md) - JSON schema details (Coming Soon)
+- [Cluster Configuration](cluster-config.md) - Cluster config details
 
 ### Secrets Management
-- [Manage Secrets with SOPS](how-to/manage-secrets.md) - SOPS integration guide
+- [Managing Secrets](how-to/secrets.md) - SOPS integration guide
 - [CLI Commands - SOPS](reference/cli-commands.md#sops-commands) - SOPS command reference
 
-### GitOps Integration
-- [Setup GitOps Repository](how-to/setup-gitops.md) - GitOps setup guide
-- [Architecture - GitOps](architecture.md#3-gitops-scaffolding-internalgitops) - GitOps architecture
-
 ### Provider Support
+- [OpenStack Quickstart](tutorials/quickstart-openstack.md) - Deploy on OpenStack
+- [AWS Quickstart](tutorials/quickstart-aws.md) - Deploy on AWS
+- [Kind Quickstart](tutorials/quickstart-kind.md) - Local development
 - [Configuration - Providers](reference/configuration.md#opencenterinfrastructure) - Provider configuration
-- [Architecture - Providers](architecture.md#5-provider-adapters-internalcloud-internalprovision) - Provider architecture
-- OpenStack Guide (Coming Soon)
-- AWS Guide (Coming Soon)
-- Kind Guide (Coming Soon)
-
-### Plugin Development
-- [Use Plugins](how-to/plugins.md) - Using plugins
-- [Plugin Reference](reference/plugins.md) - Plugin development
-- [Architecture - Plugins](architecture.md#7-plugin-system-internalplugins) - Plugin architecture
 
 ### Development
-- [Architecture](architecture.md) - Technical architecture
-- [Current Status](current-status.md) - Development status
+- [Architecture](explanation/architecture.md) - Technical architecture
+- [Current Status](explanation/current-status.md) - Development status
 - [Developer Guide](dev/readme.md) - CLI architecture and implementation
-- [Contributing](../CONTRIBUTING.md) - Contribution guidelines (Coming Soon)
-- Development Setup (Coming Soon)
+- [Contributing](contributing.md) - Contribution guidelines
 
 ### Internal Documentation
 - [Internal Packages](dev/internal/README.md) - Implementation details for internal packages
@@ -111,33 +92,29 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 ## By Role
 
 ### For Cluster Operators
-1. [Quickstart Tutorial](tutorials/quickstart.md)
-2. [Configure a Cluster](how-to/configure-cluster.md)
-3. [Manage Secrets](how-to/manage-secrets.md)
+1. [Getting Started](getting-started.md)
+2. [Troubleshooting](how-to/troubleshooting.md)
+3. [Managing Secrets](how-to/secrets.md)
 4. [CLI Commands](reference/cli-commands.md)
-5. Troubleshooting Guide (Coming Soon)
 
 ### For Platform Engineers
-1. [Overview](overview.md)
-2. [Architecture](architecture.md)
+1. [Overview](explanation/overview.md)
+2. [Architecture](explanation/architecture.md)
 3. [Configuration Reference](reference/configuration.md)
-4. [Setup GitOps](how-to/setup-gitops.md)
-5. [Plugin Development](reference/plugins.md)
+4. [Adding Services](how-to/adding-services.md)
 
 ### For Developers
-1. [Architecture](architecture.md)
-2. [Current Status](current-status.md)
+1. [Architecture](explanation/architecture.md)
+2. [Current Status](explanation/current-status.md)
 3. [Developer Guide](dev/readme.md)
 4. [Internal Packages](dev/internal/README.md)
 5. [Testing Documentation](dev/testing/README.md)
-6. Contributing Guide (Coming Soon)
-7. Development Setup (Coming Soon)
+6. [Contributing](contributing.md)
 
 ### For Decision Makers
-1. [Overview](overview.md)
-2. [Current Status](current-status.md)
-3. [Architecture](architecture.md)
-4. Best Practices (Coming Soon)
+1. [Overview](explanation/overview.md)
+2. [Current Status](explanation/current-status.md)
+3. [Architecture](explanation/architecture.md)
 
 ## Common Tasks
 
@@ -168,13 +145,8 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 ## Troubleshooting
 
 ### Common Issues
-- Configuration Validation Errors (Coming Soon)
-- SOPS Key Issues (Coming Soon)
-- Provider Connection Problems (Coming Soon)
-- GitOps Setup Issues (Coming Soon)
-
-### Getting Help
-- Check [Current Status](current-status.md#known-issues) for known issues
+- [Troubleshooting Guide](how-to/troubleshooting.md) - Complete troubleshooting reference
+- Check [Current Status](explanation/current-status.md#known-issues) for known issues
 - Review [CLI Commands](reference/cli-commands.md) for correct usage
 - Enable verbose logging with `--verbose` flag
 - Generate debug config with `--generate-debug-config`
@@ -195,7 +167,7 @@ openCenter documentation follows the [Diátaxis](https://diataxis.fr/) framework
 
 ## Contributing to Documentation
 
-We welcome documentation contributions! See our [Contributing Guide](../CONTRIBUTING.md) for details.
+We welcome documentation contributions! See our [Contributing Guide](contributing.md) for details.
 
 ### Documentation Standards
 - Follow the Diátaxis framework
@@ -207,14 +179,15 @@ We welcome documentation contributions! See our [Contributing Guide](../CONTRIBU
 ### Documentation Structure
 ```
 docs/
-├── INDEX.md              # This file
-├── overview.md           # High-level overview
-├── architecture.md       # Technical architecture
-├── current-status.md     # Implementation status
+├── readme.md             # This file
+├── getting-started.md    # Main entry point for new users
 ├── tutorials/            # Learning-oriented guides
 ├── how-to/              # Task-oriented guides
 ├── reference/           # Information-oriented docs
-└── explanation/         # Understanding-oriented docs
+├── explanation/         # Understanding-oriented docs
+├── dev/                 # Developer documentation
+├── operations/          # Operational guides
+└── providers/           # Provider-specific docs
 ```
 
 ## Version Information

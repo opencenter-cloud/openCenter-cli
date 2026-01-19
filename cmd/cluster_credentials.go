@@ -19,14 +19,19 @@ import (
 
 // newClusterCredentialsCmd creates the top-level "cluster credentials" command.
 // It has subcommands for export and unset operations.
+// Note: This command is now superseded by 'cluster select --activate' but kept for backward compatibility.
 func newClusterCredentialsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "credentials",
-		Short: "Manage cloud provider credentials from cluster configuration",
+		Use:    "credentials",
+		Short:  "Manage cloud provider credentials from cluster configuration",
+		Hidden: true, // Hidden from help - superseded by 'select --activate'
 		Long: `Manage cloud provider credentials extracted from cluster configuration.
 
 This command provides subcommands for exporting and unsetting cloud provider
 credentials that are stored in the cluster's SOPS-encrypted configuration.
+
+Note: This command is superseded by 'cluster select --activate' which provides
+the same functionality with a simpler interface.
 
 Supported providers:
   • aws - Amazon Web Services credentials

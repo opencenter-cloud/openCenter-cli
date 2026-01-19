@@ -46,7 +46,7 @@ Unlike 'cluster setup', this command:
 - Does not perform Git operations
 - Does not check if directory already exists
 - Ideal for development and testing`,
-		Args: cobra.MaximumNArgs(1),
+		Args:   cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name
 			var name string

@@ -14,9 +14,11 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/rackerlabs/openCenter-cli/cmd"
+	"github.com/rackerlabs/openCenter-cli/internal/di"
 )
 
 // Build information variables set at compile time via ldflags
@@ -36,8 +38,30 @@ func main() {
 	cmd.GitTag = gitTag
 	cmd.BuildDate = buildDate
 
-	// Execute with version for backward compatibility
-	if err := cmd.Execute(version); err != nil {
+	// Create and initialize DI container
+	container, err := di.SetupContainer()
+	if err != nil {
+		// If container setup fails, print error and exit
+		// We can't use the logger here since it's in the container
+		os.Stderr.WriteString("Failed to initialize application: " + err.Error() + "\n")
+		os.Exit(1)
+	}
+
+	// Create a context with the container
+	ctx := context.WithValue(context.Background(), cmd.ContainerKey, container)
+
+	// Execute with version and context
+	if err := cmd.ExecuteWithContext(ctx, version); err != nil {
+		// Shutdown container before exiting
+		if shutdownErr := container.Shutdown(); shutdownErr != nil {
+			os.Stderr.WriteString("Failed to shutdown container: " + shutdownErr.Error() + "\n")
+		}
+		os.Exit(1)
+	}
+
+	// Shutdown container on successful exit
+	if err := container.Shutdown(); err != nil {
+		os.Stderr.WriteString("Failed to shutdown container: " + err.Error() + "\n")
 		os.Exit(1)
 	}
 }

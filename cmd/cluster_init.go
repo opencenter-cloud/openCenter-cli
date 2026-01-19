@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/rackerlabs/openCenter-cli/internal/config/flags"
+	"github.com/rackerlabs/openCenter-cli/internal/security"
 	"github.com/rackerlabs/openCenter-cli/internal/sops"
 	"github.com/rackerlabs/openCenter-cli/internal/util"
 	"github.com/rackerlabs/openCenter-cli/internal/util/crypto"
@@ -267,8 +267,18 @@ Troubleshooting:
 			UnknownFlags: true,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Initialize security components (Requirements: 1.1, 1.2, 1.5, 1.6, 1.8)
+			validator := security.NewDefaultInputValidator()
+
 			// Check if a configuration file was provided via --config flag
 			configFile, _ := cmd.Flags().GetString("config")
+
+			// Validate config file path if provided (Requirements: 1.8)
+			if configFile != "" {
+				if err := validator.ValidatePath(configFile); err != nil {
+					return fmt.Errorf("invalid config file path: %w", err)
+				}
+			}
 
 			// Check if --config-dir was explicitly provided
 			configDirFlag, _ := cmd.Flags().GetString("config-dir")
@@ -326,6 +336,11 @@ Troubleshooting:
 					return fmt.Errorf("no cluster name provided and no active cluster set; specify a cluster name, use --config with a config file, or use 'openCenter cluster use <name>' to set an active cluster")
 				}
 				name = activeName
+			}
+
+			// Validate cluster name (Requirements: 1.1, 1.5, 1.6)
+			if err := validator.ValidateClusterName(name); err != nil {
+				return fmt.Errorf("invalid cluster name '%s': %w", name, err)
 			}
 
 			// Initialize CLI configuration manager
@@ -428,6 +443,11 @@ Troubleshooting:
 			}
 			if organization == "" {
 				organization = "opencenter"
+			}
+
+			// Validate organization name (Requirements: 1.1, 1.5, 6.2)
+			if err := validator.ValidateOrganizationName(organization); err != nil {
+				return fmt.Errorf("invalid organization name '%s': %w", organization, err)
 			}
 
 			// Always update configuration with the determined organization
@@ -881,8 +901,22 @@ Thumbs.db
 }
 
 // runGitCommand executes a git command in the specified directory
+// Uses CommandSanitizer to prevent command injection (Requirements: 1.3, 1.4)
 func runGitCommand(dir string, args []string, cmd *cobra.Command) error {
-	gitCmd := exec.Command("git", args...)
+	sanitizer := security.NewDefaultCommandSanitizer()
+
+	// Sanitize git arguments (Requirements: 1.3, 1.4)
+	sanitizedArgs, err := sanitizer.SanitizeGitArgs(args)
+	if err != nil {
+		return fmt.Errorf("failed to sanitize git arguments: %w", err)
+	}
+
+	// Create sanitized command (Requirements: 1.3, 1.4)
+	gitCmd, err := sanitizer.SanitizeCommand("git", sanitizedArgs)
+	if err != nil {
+		return fmt.Errorf("failed to sanitize git command: %w", err)
+	}
+
 	gitCmd.Dir = dir
 	gitCmd.Stdout = cmd.OutOrStdout()
 	gitCmd.Stderr = cmd.ErrOrStderr()
@@ -1361,13 +1395,10 @@ credentials/
 }
 
 // validateOrganizationName validates that an organization name is safe for use as a directory name.
+// Uses InputValidator for consistent validation (Requirements: 1.1, 1.5, 6.2)
 func validateOrganizationName(organization string) error {
-	if organization == "" {
-		return fmt.Errorf("organization name cannot be empty")
-	}
-
-	// Use the same validation as cluster names since they both become directory names
-	return config.ValidateClusterName(organization)
+	validator := security.NewDefaultInputValidator()
+	return validator.ValidateOrganizationName(organization)
 }
 
 // parseServerPoolString parses a server pool configuration string in the format:

@@ -1,0 +1,12 @@
+extends: existence
+message: "Avoid '%s'. Use a simpler, specific word."
+level: error
+ignorecase: true
+tokens:
+  - utilize
+  - leverage
+  - cutting-edge
+  - seamless
+  - robust
+  - "it is important to note"
+  - "in conclusion"

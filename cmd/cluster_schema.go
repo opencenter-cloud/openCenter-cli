@@ -24,8 +24,9 @@ import (
 
 func newClusterSchemaCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "schema",
-		Short: "Export cluster JSON schema with validation rules",
+		Use:    "schema",
+		Short:  "Export cluster JSON schema with validation rules",
+		Hidden: true, // Hidden from help - internal/development command
 		Long: `Export the JSON schema for openCenter cluster configuration.
 
 The schema includes comprehensive validation rules, constraints, and documentation

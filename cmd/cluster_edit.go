@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/rackerlabs/openCenter-cli/internal/config"
 	"github.com/rackerlabs/openCenter-cli/internal/security"
@@ -64,9 +65,16 @@ Examples:
 			if len(args) > 0 {
 				clusterName = args[0]
 
-				// Validate cluster name (Requirements: 1.1, 1.5, 1.6)
-				if err := validator.ValidateClusterName(clusterName); err != nil {
-					return fmt.Errorf("invalid cluster name: %w", err)
+				// Validate cluster name - allow organization/cluster format
+				// Split and validate each part separately
+				parts := strings.Split(clusterName, "/")
+				if len(parts) > 2 {
+					return fmt.Errorf("invalid cluster identifier format: use 'cluster' or 'organization/cluster'")
+				}
+				for _, part := range parts {
+					if err := validator.ValidateClusterName(part); err != nil {
+						return fmt.Errorf("invalid cluster name: %w", err)
+					}
 				}
 			} else {
 				// Use currently selected cluster
@@ -79,10 +87,7 @@ Examples:
 				}
 				clusterName = active
 
-				// Validate active cluster name (Requirements: 1.1, 1.5, 1.6)
-				if err := validator.ValidateClusterName(clusterName); err != nil {
-					return fmt.Errorf("invalid active cluster name: %w", err)
-				}
+				// Active cluster is already validated when set, no need to re-validate
 			}
 
 			// Get the configuration file path

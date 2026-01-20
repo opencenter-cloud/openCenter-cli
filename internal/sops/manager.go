@@ -108,23 +108,17 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 		}
 	}
 
-	// Generate fallback key if still no keys available
+	// Fail if no keys available - do not generate placeholder keys
 	if len(ageKeys) == 0 {
-		m.logger.Info("No existing keys found, generating fallback key")
-		if keyPair, err := m.keyManager.GenerateFallbackKey(); err == nil {
-			ageKeys = []string{keyPair.PublicKey}
-			m.logger.Info("Generated fallback key successfully")
-		} else {
-			return &errors.StructuredError{
-				Type:    errors.SOPSError,
-				Message: "Failed to generate fallback age key",
-				Cause:   err,
-				Suggestions: []string{
-					"Check that the key directory is writable",
-					"Ensure age is properly installed",
-					"Verify file system permissions",
-				},
-			}
+		return &errors.StructuredError{
+			Type:    errors.SOPSError,
+			Message: "No age encryption keys available",
+			Suggestions: []string{
+				"Generate an age key using: openCenter sops generate-key",
+				"Import an existing age key",
+				"Set SOPS_AGE_KEY_FILE environment variable to point to your key file",
+				"Configure secrets.sopsAgeKeyFile in your cluster configuration",
+			},
 		}
 	}
 
@@ -200,7 +194,10 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 func (m *DefaultSOPSManager) CreateSOPSConfig(overlayPath string, cfg *config.Config) error {
 	m.logger.Info("Creating SOPS configuration", "overlay_path", overlayPath)
 
-	sopsConfig := m.generateSOPSConfig(cfg)
+	sopsConfig, err := m.generateSOPSConfig(cfg)
+	if err != nil {
+		return err
+	}
 
 	// Validate that we're not using placeholder keys in production
 	if err := m.validator.ValidateKeyForProduction(sopsConfig); err != nil {
@@ -287,20 +284,20 @@ func (m *DefaultSOPSManager) EncryptRepositorySecrets(ctx context.Context, repoP
 
 		m.logger.Info("Encrypting repository secret file", "file", path)
 		if err := m.encryptor.EncryptFile(ctx, path, encryptConfig); err != nil {
-			// If SOPS fails, create a placeholder
-			content, readErr := os.ReadFile(path)
-			if readErr != nil {
-				return fmt.Errorf("failed to read file for placeholder: %w", readErr)
+			return &errors.StructuredError{
+				Type:    errors.SOPSError,
+				Field:   path,
+				Message: "Failed to encrypt repository secret file",
+				Cause:   err,
+				Suggestions: []string{
+					"Check that SOPS is installed and accessible in your PATH",
+					"Verify the age key is valid",
+					"Ensure you have the correct decryption keys",
+					"Install SOPS: https://github.com/mozilla/sops#download",
+				},
 			}
-
-			placeholderContent := m.createPlaceholderEncryptedContent(string(content), ageKey)
-			if writeErr := os.WriteFile(path, []byte(placeholderContent), 0o644); writeErr != nil {
-				return fmt.Errorf("failed to write placeholder: %w", writeErr)
-			}
-			m.logger.Warn("Created placeholder encrypted content (SOPS not available)", "file", path)
-		} else {
-			m.logger.Info("Successfully encrypted repository secret file", "file", path)
 		}
+		m.logger.Info("Successfully encrypted repository secret file", "file", path)
 
 		return nil
 	})
@@ -371,7 +368,7 @@ func (m *DefaultSOPSManager) getFilesToEncrypt(overlayPath string, cfg *config.C
 }
 
 // generateSOPSConfig generates the SOPS configuration content
-func (m *DefaultSOPSManager) generateSOPSConfig(cfg *config.Config) string {
+func (m *DefaultSOPSManager) generateSOPSConfig(cfg *config.Config) (string, error) {
 	var ageKey string
 	if cfg.Secrets.SopsAgeKeyFile != "" {
 		// Load the public key from the age key file
@@ -389,13 +386,17 @@ func (m *DefaultSOPSManager) generateSOPSConfig(cfg *config.Config) string {
 		}
 	}
 
+	// Fail if no keys available - do not use placeholder keys
 	if ageKey == "" {
-		// Generate a fallback key instead of using placeholder
-		if keyPair, err := m.keyManager.GenerateFallbackKey(); err == nil {
-			ageKey = keyPair.PublicKey
-		} else {
-			// Only use placeholder as last resort and add validation warning
-			ageKey = "age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" // Placeholder - DO NOT USE IN PRODUCTION
+		return "", &errors.StructuredError{
+			Type:    errors.SOPSError,
+			Message: "No age encryption keys available for SOPS configuration",
+			Suggestions: []string{
+				"Generate an age key using: openCenter sops generate-key",
+				"Import an existing age key",
+				"Set SOPS_AGE_KEY_FILE environment variable to point to your key file",
+				"Configure secrets.sopsAgeKeyFile in your cluster configuration",
+			},
 		}
 	}
 
@@ -420,7 +421,7 @@ creation_rules:
 `
 	}
 
-	return config
+	return config, nil
 }
 
 // loadAgeKeyFromFile loads an age key pair from a file path
@@ -472,10 +473,19 @@ func (m *DefaultSOPSManager) createSampleEncryptedSecretsForTemplate(ctx context
 		// Encrypt to the final file
 		finalFile := filepath.Join(samplesDir, filename)
 		if err := m.encryptFileToOutput(ctx, tempFile, finalFile, encryptConfig); err != nil {
-			// If SOPS is not available, create a placeholder encrypted file
-			placeholderContent := m.createPlaceholderEncryptedContent(content, ageKey)
-			if err := os.WriteFile(finalFile, []byte(placeholderContent), 0o644); err != nil {
-				return fmt.Errorf("failed to write placeholder encrypted file %s: %w", finalFile, err)
+			// Clean up temp file
+			os.Remove(tempFile)
+			return &errors.StructuredError{
+				Type:    errors.SOPSError,
+				Field:   finalFile,
+				Message: "Failed to encrypt sample secret file",
+				Cause:   err,
+				Suggestions: []string{
+					"Check that SOPS is installed and accessible in your PATH",
+					"Verify the age key is valid",
+					"Install SOPS: https://github.com/mozilla/sops#download",
+					"Ensure SOPS_AGE_KEY_FILE environment variable is set correctly",
+				},
 			}
 		}
 
@@ -491,35 +501,6 @@ func (m *DefaultSOPSManager) encryptFileToOutput(ctx context.Context, inputFile,
 	// This would use the encryptor to encrypt to a specific output file
 	// For now, we'll use a simple approach
 	return m.encryptor.EncryptFile(ctx, inputFile, config)
-}
-
-// createPlaceholderEncryptedContent creates a placeholder encrypted content when SOPS is not available
-func (m *DefaultSOPSManager) createPlaceholderEncryptedContent(originalContent, ageKey string) string {
-	return fmt.Sprintf(`# This file would be encrypted with SOPS in a real environment
-# To encrypt this file, run: sops --encrypt --age %s --in-place <filename>
-#
-# Original content (DO NOT COMMIT UNENCRYPTED):
-# %s
-#
-# SOPS encrypted content would appear here
-apiVersion: v1
-kind: Secret
-metadata:
-    name: placeholder-encrypted-secret
-    namespace: default
-type: Opaque
-data:
-    # Encrypted data would be here
-sops:
-    age:
-        - recipient: %s
-          enc: ENC[AES256_GCM,data:placeholder_encrypted_data_would_be_here,type:str]
-    lastmodified: "2024-01-01T00:00:00Z"
-    mac: ENC[AES256_GCM,data:placeholder_mac_would_be_here,type:str]
-    pgp: []
-    unencrypted_suffix: _unencrypted
-    version: 3.8.1
-`, ageKey, originalContent, ageKey)
 }
 
 // getSampleSecretsForTemplate returns sample secrets based on the template type

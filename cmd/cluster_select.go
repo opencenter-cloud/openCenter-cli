@@ -627,12 +627,18 @@ Use --activate to automatically activate the cluster environment (sets environme
 				// Resolve cluster paths
 				paths := pathResolver.ResolveClusterPaths(actualClusterName, organization)
 
+				// Detect shell (or use override)
+				shell := shellOverride
+				if shell == "" {
+					shell = detectShell()
+				}
+
 				// Create credentials extractor
 				extractor := credentials.NewExtractor(cfg)
 
 				var activateOutput strings.Builder
 
-				// Export cloud provider credentials
+				// Export cloud provider credentials (always bash-style for now, credentials package needs update)
 				awsCreds, awsErr := extractor.ExtractAWS()
 				osCreds, osErr := extractor.ExtractOpenStack()
 
@@ -649,22 +655,30 @@ Use --activate to automatically activate the cluster environment (sets environme
 					activateOutput.WriteString(osCreds.ToEnvVars())
 				}
 
-				// Add cluster-specific environment variables
+				// Add cluster-specific environment variables with shell-aware syntax
 				if hasAWS || hasOS {
 					activateOutput.WriteString("\n")
 				}
 
-				// Set BIN directory to full cluster path
-				activateOutput.WriteString(fmt.Sprintf("export BIN=%s\n", paths.BinPath))
-
-				// Extend PATH to include BIN directory
-				activateOutput.WriteString("export PATH=${BIN}:${PATH}\n")
-
-				// Set KUBECONFIG to full cluster path
-				activateOutput.WriteString(fmt.Sprintf("export KUBECONFIG=%s\n", paths.KubeconfigPath))
-
-				// Set active cluster environment variable
-				activateOutput.WriteString(fmt.Sprintf("export OPENCENTER_ACTIVE_CLUSTER=%s\n", name))
+				// Generate shell-specific export commands
+				switch shell {
+				case "fish":
+					activateOutput.WriteString(fmt.Sprintf("set -gx BIN %s\n", paths.BinPath))
+					activateOutput.WriteString(fmt.Sprintf("set -gx PATH %s $PATH\n", paths.BinPath))
+					activateOutput.WriteString(fmt.Sprintf("set -gx KUBECONFIG %s\n", paths.KubeconfigPath))
+					activateOutput.WriteString(fmt.Sprintf("set -gx OPENCENTER_ACTIVE_CLUSTER %s\n", name))
+				case "powershell":
+					activateOutput.WriteString(fmt.Sprintf("$env:BIN = '%s'\n", paths.BinPath))
+					activateOutput.WriteString(fmt.Sprintf("$env:PATH = '%s;' + $env:PATH\n", paths.BinPath))
+					activateOutput.WriteString(fmt.Sprintf("$env:KUBECONFIG = '%s'\n", paths.KubeconfigPath))
+					activateOutput.WriteString(fmt.Sprintf("$env:OPENCENTER_ACTIVE_CLUSTER = '%s'\n", name))
+				default:
+					// Bash/Zsh syntax
+					activateOutput.WriteString(fmt.Sprintf("export BIN=%s\n", paths.BinPath))
+					activateOutput.WriteString("export PATH=${BIN}:${PATH}\n")
+					activateOutput.WriteString(fmt.Sprintf("export KUBECONFIG=%s\n", paths.KubeconfigPath))
+					activateOutput.WriteString(fmt.Sprintf("export OPENCENTER_ACTIVE_CLUSTER=%s\n", name))
+				}
 
 				if showExportOnly {
 					// Only show activation commands for shell evaluation
@@ -674,7 +688,15 @@ Use --activate to automatically activate the cluster environment (sets environme
 					displayClusterSelectOutput(output, cmd)
 					fmt.Fprintf(cmd.OutOrStdout(), "\nCluster environment activated\n")
 					fmt.Fprintf(cmd.OutOrStdout(), "\nTo apply these settings to your shell, run:\n")
-					fmt.Fprintf(cmd.OutOrStdout(), "  eval $(openCenter cluster select %s --activate --export-only)\n", name)
+					// Provide shell-specific instructions
+					switch shell {
+					case "fish":
+						fmt.Fprintf(cmd.OutOrStdout(), "  openCenter cluster select %s --activate --export-only | source\n", name)
+					case "powershell":
+						fmt.Fprintf(cmd.OutOrStdout(), "  openCenter cluster select %s --activate --export-only | Invoke-Expression\n", name)
+					default:
+						fmt.Fprintf(cmd.OutOrStdout(), "  eval $(openCenter cluster select %s --activate --export-only)\n", name)
+					}
 				}
 				return nil
 			}

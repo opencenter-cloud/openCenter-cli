@@ -208,97 +208,114 @@ else
   COMMIT_RANGE="${LAST_TAG}..HEAD"
 fi
 
-# Generate release notes
+# Generate release notes following documentation steering guidelines
 RELEASE_NOTES_FILE="bin/release/RELEASE_NOTES_${VERSION}.md"
 
 cat > "$RELEASE_NOTES_FILE" << EOF
 # openCenter ${VERSION}
 
-Release candidate for openCenter 1.0.0.
+First release candidate for version 1.0.0.
 
-## What's New
+This release includes CLI defaults, cluster locking, and configuration precedence improvements.
 
-### Features
+## Changes in This Release
+
 EOF
 
-# Extract feature commits
-git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ feat" | sed 's/^[a-f0-9]* feat/- /' >> "$RELEASE_NOTES_FILE" || echo "- No new features" >> "$RELEASE_NOTES_FILE"
+# Extract and format feature commits
+FEATURES=$(git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ feat" | sed 's/^[a-f0-9]* feat//' || echo "")
+if [ -n "$FEATURES" ]; then
+  echo "**New Features**" >> "$RELEASE_NOTES_FILE"
+  echo "" >> "$RELEASE_NOTES_FILE"
+  echo "$FEATURES" | while IFS= read -r line; do
+    if [ -n "$line" ]; then
+      echo "- $line" >> "$RELEASE_NOTES_FILE"
+    fi
+  done
+  echo "" >> "$RELEASE_NOTES_FILE"
+fi
+
+# Extract and format fix commits
+FIXES=$(git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ fix" | sed 's/^[a-f0-9]* fix//' || echo "")
+if [ -n "$FIXES" ]; then
+  echo "**Bug Fixes**" >> "$RELEASE_NOTES_FILE"
+  echo "" >> "$RELEASE_NOTES_FILE"
+  echo "$FIXES" | while IFS= read -r line; do
+    if [ -n "$line" ]; then
+      echo "- $line" >> "$RELEASE_NOTES_FILE"
+    fi
+  done
+  echo "" >> "$RELEASE_NOTES_FILE"
+fi
+
+# Extract and format docs commits
+DOCS=$(git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ docs" | sed 's/^[a-f0-9]* docs//' || echo "")
+if [ -n "$DOCS" ]; then
+  echo "**Documentation**" >> "$RELEASE_NOTES_FILE"
+  echo "" >> "$RELEASE_NOTES_FILE"
+  echo "$DOCS" | while IFS= read -r line; do
+    if [ -n "$line" ]; then
+      echo "- $line" >> "$RELEASE_NOTES_FILE"
+    fi
+  done
+  echo "" >> "$RELEASE_NOTES_FILE"
+fi
 
 cat >> "$RELEASE_NOTES_FILE" << EOF
-
-### Bug Fixes
-EOF
-
-# Extract fix commits
-git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ fix" | sed 's/^[a-f0-9]* fix/- /' >> "$RELEASE_NOTES_FILE" || echo "- No bug fixes" >> "$RELEASE_NOTES_FILE"
-
-cat >> "$RELEASE_NOTES_FILE" << EOF
-
-### Documentation
-EOF
-
-# Extract docs commits
-git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ docs" | sed 's/^[a-f0-9]* docs/- /' >> "$RELEASE_NOTES_FILE" || echo "- No documentation updates" >> "$RELEASE_NOTES_FILE"
-
-cat >> "$RELEASE_NOTES_FILE" << EOF
-
-### Other Changes
-EOF
-
-# Extract other commits (chore, refactor, etc.)
-git log $COMMIT_RANGE --oneline --no-merges | grep -vE "^[a-f0-9]+ (feat|fix|docs)" | sed 's/^[a-f0-9]* /- /' >> "$RELEASE_NOTES_FILE" || echo "- No other changes" >> "$RELEASE_NOTES_FILE"
-
-cat >> "$RELEASE_NOTES_FILE" << EOF
-
 ## Installation
 
-### Linux (AMD64)
+Download the binary for your platform and move it to your PATH.
+
+**Linux (x86_64)**
 \`\`\`bash
 curl -L https://github.com/rackerlabs/openCenter-cli/releases/download/${TAG}/openCenter-${VERSION}-linux-amd64 -o openCenter
 chmod +x openCenter
 sudo mv openCenter /usr/local/bin/
 \`\`\`
 
-### Linux (ARM64)
+**Linux (ARM64)**
 \`\`\`bash
 curl -L https://github.com/rackerlabs/openCenter-cli/releases/download/${TAG}/openCenter-${VERSION}-linux-arm64 -o openCenter
 chmod +x openCenter
 sudo mv openCenter /usr/local/bin/
 \`\`\`
 
-### macOS (Intel)
+**macOS (Intel)**
 \`\`\`bash
 curl -L https://github.com/rackerlabs/openCenter-cli/releases/download/${TAG}/openCenter-${VERSION}-darwin-amd64 -o openCenter
 chmod +x openCenter
 sudo mv openCenter /usr/local/bin/
 \`\`\`
 
-### macOS (Apple Silicon)
+**macOS (Apple Silicon)**
 \`\`\`bash
 curl -L https://github.com/rackerlabs/openCenter-cli/releases/download/${TAG}/openCenter-${VERSION}-darwin-arm64 -o openCenter
 chmod +x openCenter
 sudo mv openCenter /usr/local/bin/
 \`\`\`
 
-## Verification
-
-After installation, verify the version:
+Check the installation:
 \`\`\`bash
 openCenter version
 \`\`\`
 
-## Supported Platforms
+## Platform Support
 
-- Linux AMD64
+This release includes binaries for:
+- Linux x86_64
 - Linux ARM64
-- macOS AMD64 (Intel)
-- macOS ARM64 (Apple Silicon)
+- macOS Intel
+- macOS Apple Silicon
 
-**Note:** Windows builds are not currently supported due to platform-specific dependencies.
+Windows is not supported in this release due to platform-specific file locking code.
+
+## Known Issues
+
+See the [issue tracker](https://github.com/rackerlabs/openCenter-cli/issues) for current known issues.
 
 ## Full Changelog
 
-**Full Changelog**: https://github.com/rackerlabs/openCenter-cli/compare/${LAST_TAG}...${TAG}
+Compare changes: https://github.com/rackerlabs/openCenter-cli/compare/${LAST_TAG}...${TAG}
 EOF
 
 echo "✅ Release notes generated: $RELEASE_NOTES_FILE"
@@ -323,7 +340,9 @@ echo "   OR manually at: https://github.com/rackerlabs/openCenter-cli/releases/n
 echo ""
 echo "4. Upload these binaries:"
 for binary in ${RELEASE_DIR}/openCenter-*; do
-  echo "   - $(basename $binary)"
+  if [[ $(basename "$binary") != RELEASE_NOTES* ]]; then
+    echo "   - $(basename $binary)"
+  fi
 done
 echo ""
 echo "Release artifacts ready in: ${RELEASE_DIR}/"

@@ -86,5 +86,7 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterCredentialsCmd())
 	cmd.AddCommand(newClusterDriftCmd())
 	cmd.AddCommand(newClusterBackupCmd())
+	cmd.AddCommand(newClusterLockCmd())
+	cmd.AddCommand(newClusterUnlockCmd())
 	return cmd
 }

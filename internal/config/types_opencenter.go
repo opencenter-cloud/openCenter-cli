@@ -15,6 +15,8 @@ type ClusterMeta struct {
 	Status       string `yaml:"status" json:"status"`
 	Stage        string `yaml:"stage" json:"stage"`
 	Organization string `yaml:"organization" json:"organization"`
+	Locked       bool   `yaml:"locked,omitempty" json:"locked,omitempty"`
+	LockReason   string `yaml:"lock_reason,omitempty" json:"lock_reason,omitempty"`
 }
 
 // SimplifiedOpenCenter represents the opencenter section of the new simplified schema

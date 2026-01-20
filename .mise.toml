@@ -176,9 +176,157 @@ echo "Note: Windows builds are not currently supported due to platform-specific 
 echo ""
 echo "Next steps:"
 echo "  1. Test binaries on target platforms"
-echo "  2. Create release notes"
-echo "  3. Tag release: git tag -a v${VERSION} -m 'Release ${VERSION}'"
-echo "  4. Push tag: git push origin v${VERSION}"
+echo "  2. Run 'mise run publish' to create GitHub release"
+'''
+
+# Publish release to GitHub with auto-generated release notes
+publish = '''
+#!/usr/bin/env bash
+set -e
+
+VERSION="1.0.0-rc1"
+TAG="v${VERSION}"
+RELEASE_DIR="bin/release"
+
+echo "=== Publishing Release ${VERSION} ==="
+echo ""
+
+# Check if release binaries exist
+if [ ! -d "$RELEASE_DIR" ] || [ -z "$(ls -A $RELEASE_DIR 2>/dev/null)" ]; then
+  echo "ERROR: No release binaries found in $RELEASE_DIR"
+  echo "Run 'mise run release' first to build binaries"
+  exit 1
+fi
+
+# Get the last tag to generate changelog
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+if [ -z "$LAST_TAG" ]; then
+  echo "No previous tag found, generating full changelog..."
+  COMMIT_RANGE="HEAD"
+else
+  echo "Generating changelog since ${LAST_TAG}..."
+  COMMIT_RANGE="${LAST_TAG}..HEAD"
+fi
+
+# Generate release notes
+RELEASE_NOTES_FILE="bin/release/RELEASE_NOTES_${VERSION}.md"
+
+cat > "$RELEASE_NOTES_FILE" << EOF
+# openCenter ${VERSION}
+
+Release candidate for openCenter 1.0.0.
+
+## What's New
+
+### Features
+EOF
+
+# Extract feature commits
+git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ feat" | sed 's/^[a-f0-9]* feat/- /' >> "$RELEASE_NOTES_FILE" || echo "- No new features" >> "$RELEASE_NOTES_FILE"
+
+cat >> "$RELEASE_NOTES_FILE" << EOF
+
+### Bug Fixes
+EOF
+
+# Extract fix commits
+git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ fix" | sed 's/^[a-f0-9]* fix/- /' >> "$RELEASE_NOTES_FILE" || echo "- No bug fixes" >> "$RELEASE_NOTES_FILE"
+
+cat >> "$RELEASE_NOTES_FILE" << EOF
+
+### Documentation
+EOF
+
+# Extract docs commits
+git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ docs" | sed 's/^[a-f0-9]* docs/- /' >> "$RELEASE_NOTES_FILE" || echo "- No documentation updates" >> "$RELEASE_NOTES_FILE"
+
+cat >> "$RELEASE_NOTES_FILE" << EOF
+
+### Other Changes
+EOF
+
+# Extract other commits (chore, refactor, etc.)
+git log $COMMIT_RANGE --oneline --no-merges | grep -vE "^[a-f0-9]+ (feat|fix|docs)" | sed 's/^[a-f0-9]* /- /' >> "$RELEASE_NOTES_FILE" || echo "- No other changes" >> "$RELEASE_NOTES_FILE"
+
+cat >> "$RELEASE_NOTES_FILE" << EOF
+
+## Installation
+
+### Linux (AMD64)
+\`\`\`bash
+curl -L https://github.com/rackerlabs/openCenter-cli/releases/download/${TAG}/openCenter-${VERSION}-linux-amd64 -o openCenter
+chmod +x openCenter
+sudo mv openCenter /usr/local/bin/
+\`\`\`
+
+### Linux (ARM64)
+\`\`\`bash
+curl -L https://github.com/rackerlabs/openCenter-cli/releases/download/${TAG}/openCenter-${VERSION}-linux-arm64 -o openCenter
+chmod +x openCenter
+sudo mv openCenter /usr/local/bin/
+\`\`\`
+
+### macOS (Intel)
+\`\`\`bash
+curl -L https://github.com/rackerlabs/openCenter-cli/releases/download/${TAG}/openCenter-${VERSION}-darwin-amd64 -o openCenter
+chmod +x openCenter
+sudo mv openCenter /usr/local/bin/
+\`\`\`
+
+### macOS (Apple Silicon)
+\`\`\`bash
+curl -L https://github.com/rackerlabs/openCenter-cli/releases/download/${TAG}/openCenter-${VERSION}-darwin-arm64 -o openCenter
+chmod +x openCenter
+sudo mv openCenter /usr/local/bin/
+\`\`\`
+
+## Verification
+
+After installation, verify the version:
+\`\`\`bash
+openCenter version
+\`\`\`
+
+## Supported Platforms
+
+- Linux AMD64
+- Linux ARM64
+- macOS AMD64 (Intel)
+- macOS ARM64 (Apple Silicon)
+
+**Note:** Windows builds are not currently supported due to platform-specific dependencies.
+
+## Full Changelog
+
+**Full Changelog**: https://github.com/rackerlabs/openCenter-cli/compare/${LAST_TAG}...${TAG}
+EOF
+
+echo "✅ Release notes generated: $RELEASE_NOTES_FILE"
+echo ""
+cat "$RELEASE_NOTES_FILE"
+echo ""
+echo "=== Next Steps ==="
+echo ""
+echo "1. Review release notes above"
+echo "2. Create and push git tag:"
+echo "   git tag -a ${TAG} -m 'Release ${VERSION}'"
+echo "   git push upstream ${TAG}"
+echo ""
+echo "3. Create GitHub release using gh CLI (if installed):"
+echo "   gh release create ${TAG} \\"
+echo "     --title 'openCenter ${VERSION}' \\"
+echo "     --notes-file ${RELEASE_NOTES_FILE} \\"
+echo "     --prerelease \\"
+echo "     ${RELEASE_DIR}/*"
+echo ""
+echo "   OR manually at: https://github.com/rackerlabs/openCenter-cli/releases/new?tag=${TAG}"
+echo ""
+echo "4. Upload these binaries:"
+for binary in ${RELEASE_DIR}/openCenter-*; do
+  echo "   - $(basename $binary)"
+done
+echo ""
+echo "Release artifacts ready in: ${RELEASE_DIR}/"
 '''
 
 # Build the openCenter binary

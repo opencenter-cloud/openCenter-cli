@@ -680,6 +680,16 @@ func TestFullClusterRendering(t *testing.T) {
 				t.Error("Weave GitOps password hash should not be empty when weave-gitops is enabled")
 			}
 		}
+
+		if isEnabled("tempo") {
+			accessKey, secretKey := config.GetTempoS3Credentials()
+			if accessKey == "" {
+				t.Error("Tempo S3 access key should not be empty when tempo is enabled")
+			}
+			if secretKey == "" {
+				t.Error("Tempo S3 secret key should not be empty when tempo is enabled")
+			}
+		}
 	})
 }
 

@@ -242,6 +242,12 @@ func (fb *fileLockBackend) acquire(ctx context.Context, resource string, owner s
 	// Create lock file path
 	lockPath := filepath.Join(fb.lockDir, resource+".lock")
 
+	// Ensure parent directory exists (in case resource contains path separators)
+	lockDir := filepath.Dir(lockPath)
+	if err := os.MkdirAll(lockDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create lock directory: %w", err)
+	}
+
 	// Open or create the lock file
 	file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {

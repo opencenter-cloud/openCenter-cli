@@ -453,12 +453,52 @@ Troubleshooting:
 			// Always update configuration with the determined organization
 			cfg.OpenCenter.Meta.Organization = organization
 
+			// Apply CLI config defaults for region and environment if not already set
+			cliConfig := configManager.GetConfig()
+
+			// Apply region default if not set or if it's the schema default
+			// Schema default is "sjc3", so we override it with CLI config default if available
+			if (cfg.OpenCenter.Meta.Region == "" || cfg.OpenCenter.Meta.Region == "sjc3") && cliConfig.Defaults.Region != "" {
+				cfg.OpenCenter.Meta.Region = cliConfig.Defaults.Region
+				// Also update the map
+				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
+					if meta, ok := opencenter["meta"].(map[string]any); ok {
+						meta["region"] = cliConfig.Defaults.Region
+					}
+				}
+			}
+
+			// Apply environment default if not set or if it's the schema default
+			// Schema default is "dev", so we override it with CLI config default if available
+			if (cfg.OpenCenter.Meta.Env == "" || cfg.OpenCenter.Meta.Env == "dev") && cliConfig.Defaults.Environment != "" {
+				cfg.OpenCenter.Meta.Env = cliConfig.Defaults.Environment
+				// Also update the map
+				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
+					if meta, ok := opencenter["meta"].(map[string]any); ok {
+						meta["env"] = cliConfig.Defaults.Environment
+					}
+				}
+			}
+
 			// Set initial stage and status
 			cfg.OpenCenter.Meta.Stage = config.StageInit
 			cfg.OpenCenter.Meta.Status = config.StatusSuccess
 
 			// Handle --type flag to set infrastructure provider
+			// Use CLI config defaults if flag is not explicitly set
 			typeFlag, _ := cmd.Flags().GetString("type")
+
+			// Check if the flag was explicitly set by the user
+			typeFlagChanged := cmd.Flags().Changed("type")
+
+			// If flag wasn't explicitly set, try to use CLI config default
+			if !typeFlagChanged {
+				cliConfig := configManager.GetConfig()
+				if cliConfig.Defaults.Provider != "" {
+					typeFlag = cliConfig.Defaults.Provider
+				}
+			}
+
 			if typeFlag != "" {
 				cfg.OpenCenter.Infrastructure.Provider = typeFlag
 				// Also update the map

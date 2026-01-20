@@ -16,7 +16,7 @@ locals {
   openstack_user_domain_name              = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.UserDomainName | default "rackspace_cloud_domain" }}"
   openstack_tenant_name                   = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.TenantName | default "f2823901-4194-40c7-9dc4-d56d2105e81a" }}"
   floatingip_pool                         = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.Networking.FloatingIPPool | default "PUBLICNET" }}"
-  router_external_network_id              = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.Networking.RouterExternalNetworkID | default "723f8fa2-dbf7-4cec-8d5f-017e62c12f79" }}"
+  router_external_network_id              = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.Networking.RouterExternalNetworkID | default "" }}"
   # VLAN settings
   vlan_id                                 = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VLAN.ID | default "" }}"
   mtu                                     = "{{ .OpenCenter.Cluster.Kubernetes.Networking.VLAN.MTU | default "" }}"
@@ -47,8 +47,8 @@ locals {
   dns_nameservers                         = {{ if .OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers }}[{{ range $i, $dns := .OpenCenter.Cluster.Kubernetes.Networking.DNSNameservers }}{{if $i}}, {{end}}"{{ $dns }}"{{ end }}]{{ else }}["1.1.1.1","8.8.8.8"]{{ end }}
   ntp_servers                             = {{ if .OpenCenter.Cluster.Kubernetes.Networking.NTPServers }}[{{ range $i, $ntp := .OpenCenter.Cluster.Kubernetes.Networking.NTPServers }}{{if $i}}, {{end}}"{{ $ntp }}"{{ end }}]{{ else }}["time.dfw3.rackspace.com","time2.dfw3.rackspace.com"]{{ end }}
 {{- if ne (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
-  image_id                                = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.ImageID | default "799dcf97-3656-4361-8187-13ab1b295e33" }}"
-  image_id_windows                        = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.ImageIDWindows | default "a2083759-f341-445b-b717-dafb5e31fa6b" }}"
+  image_id                                = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.ImageID | default "" }}"
+  image_id_windows                        = "{{ .OpenCenter.Infrastructure.Cloud.OpenStack.ImageIDWindows | default "" }}"
 {{- end }}
   k8s_api_port                            = {{ .OpenCenter.Cluster.Kubernetes.APIPort | default 443 }}
   k8s_api_port_acl                        = {{ if .OpenCenter.Cluster.Networking.K8sAPIPortACL }}[{{ range $i, $acl := .OpenCenter.Cluster.Networking.K8sAPIPortACL }}{{if $i}}, {{end}}"{{ $acl }}"{{ end }}]{{ else }}["0.0.0.0/0"]{{ end }}
@@ -65,10 +65,10 @@ locals {
   ub_version                              = "{{ .OpenCenter.Infrastructure.OSVersion | default "24" }}"
 {{- if ne (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
   #FLEX Flavor Settings ==========================
-  flavor_bastion                          = "{{ .OpenCenter.Cluster.Kubernetes.FlavorBastion | default "gp.0.2.2" }}"
-  flavor_master                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorMaster | default "gp.0.4.8" }}"
-  flavor_worker                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorWorker | default "gp.0.4.16" }}"
-  flavor_worker_windows                   = "{{ .OpenCenter.Cluster.Kubernetes.FlavorWorkerWindows | default "gp.5.4.16" }}"
+  flavor_bastion                          = "{{ .OpenCenter.Cluster.Kubernetes.FlavorBastion | default "" }}"
+  flavor_master                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorMaster | default "" }}"
+  flavor_worker                           = "{{ .OpenCenter.Cluster.Kubernetes.FlavorWorker | default "" }}"
+  flavor_worker_windows                   = "{{ .OpenCenter.Cluster.Kubernetes.FlavorWorkerWindows | default "" }}"
 
   worker_node_bfv_volume_size             = {{ .OpenCenter.Storage.WorkerVolumeSize | default 100 }}
   worker_node_bfv_destination_type        = "{{ .OpenCenter.Storage.WorkerVolumeDestinationType | default "volume" }}"

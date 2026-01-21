@@ -369,6 +369,13 @@ Troubleshooting:
 					return fmt.Errorf("failed to load configuration from file '%s': %w", configFile, err)
 				}
 				cfg = *loadedCfg
+
+				// Initialize configMap from the loaded configuration
+				// This is needed for flag processing and map-based updates later
+				configMap = make(map[string]any)
+				if err := yaml.Unmarshal(data, &configMap); err != nil {
+					return fmt.Errorf("failed to parse configuration file to map: %w", err)
+				}
 			} else {
 				// Generate configuration using schema-based defaults to match testdata/schema.yaml structure
 				fullSchema, _ := cmd.Flags().GetBool("full-schema")

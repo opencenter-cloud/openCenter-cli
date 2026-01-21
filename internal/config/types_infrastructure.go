@@ -2,12 +2,14 @@ package config
 
 // Infrastructure represents the infrastructure configuration block.
 type Infrastructure struct {
-	Provider            string      `yaml:"provider" json:"provider"`
-	Cloud               CloudConfig `yaml:"cloud" json:"cloud"`
-	SSHUser             string      `yaml:"ssh_user" json:"ssh_user"`
-	OSVersion           string      `yaml:"os_version" json:"os_version"`
-	ServerGroupAffinity []string    `yaml:"server_group_affinity" json:"server_group_affinity"`
-	NodeNaming          NodeNaming  `yaml:"node_naming" json:"node_naming"`
+	Provider            string         `yaml:"provider" json:"provider"`
+	Cloud               CloudConfig    `yaml:"cloud" json:"cloud"`
+	SSHUser             string         `yaml:"ssh_user" json:"ssh_user"`
+	OSVersion           string         `yaml:"os_version" json:"os_version"`
+	ServerGroupAffinity []string       `yaml:"server_group_affinity" json:"server_group_affinity"`
+	NodeNaming          NodeNaming     `yaml:"node_naming" json:"node_naming"`
+	Bastion             BastionConfig  `yaml:"bastion" json:"bastion"`
+	K8sAPIIP            string         `yaml:"k8s_api_ip" json:"k8s_api_ip"`
 }
 
 // NodeNaming represents node naming conventions
@@ -15,6 +17,11 @@ type NodeNaming struct {
 	Worker        string `yaml:"worker" json:"worker"`
 	Master        string `yaml:"master" json:"master"`
 	WorkerWindows string `yaml:"worker_windows" json:"worker_windows"`
+}
+
+// BastionConfig represents bastion host configuration
+type BastionConfig struct {
+	Address string `yaml:"address" json:"address"`
 }
 
 // CloudConfig represents the cloud configuration within opencenter

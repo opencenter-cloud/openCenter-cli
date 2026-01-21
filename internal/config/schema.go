@@ -211,6 +211,22 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 				"enum":        []string{"openstack", "aws", "vmware", "kind", "baremetal"},
 				"default":     "openstack",
 			},
+			"bastion": map[string]any{
+				"type":        "object",
+				"description": "Bastion host configuration for baremetal deployments",
+				"properties": map[string]any{
+					"address": map[string]any{
+						"type":        "string",
+						"description": "Bastion host address (defaults to localhost for baremetal)",
+						"default":     "localhost",
+					},
+				},
+			},
+			"k8s_api_ip": map[string]any{
+				"type":        "string",
+				"description": "Kubernetes API server IP address",
+				"format":      "ipv4",
+			},
 			"cloud": map[string]any{
 				"type":        "object",
 				"description": "Cloud provider specific configuration",

@@ -165,6 +165,10 @@ func defaultConfig(name string) Config {
 					Master:        "cp",
 					WorkerWindows: "win",
 				},
+				Bastion: BastionConfig{
+					Address: "localhost",
+				},
+				K8sAPIIP: "",
 				Cloud: CloudConfig{
 					AWS: SimplifiedAWSCloud{
 						Profile:        "",

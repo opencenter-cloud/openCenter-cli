@@ -688,6 +688,17 @@
         "infrastructure": {
           "description": "Infrastructure provider configuration",
           "properties": {
+            "bastion": {
+              "description": "Bastion host configuration for baremetal deployments",
+              "properties": {
+                "address": {
+                  "default": "localhost",
+                  "description": "Bastion host address (defaults to localhost for baremetal)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
             "cloud": {
               "description": "Cloud provider specific configuration",
               "properties": {
@@ -789,6 +800,11 @@
                 }
               },
               "type": "object"
+            },
+            "k8s_api_ip": {
+              "description": "Kubernetes API server IP address",
+              "format": "ipv4",
+              "type": "string"
             },
             "provider": {
               "default": "openstack",

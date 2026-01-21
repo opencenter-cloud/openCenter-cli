@@ -8,7 +8,7 @@ import (
 type CalicoConfig struct {
 	BaseConfig `yaml:",inline"`
 
-	KubeAPIServer string `yaml:"calico_kube_api_server,omitempty" json:"calico_kube_api_server,omitempty" jsonschema:"description=Calico Kubernetes API server address"`
+	KubeAPIServer string `yaml:"calico_kube_api_server" json:"calico_kube_api_server,omitempty" jsonschema:"description=Calico Kubernetes API server address"`
 }
 
 func init() {

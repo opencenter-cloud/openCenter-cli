@@ -1307,7 +1307,7 @@ spec:
 	data := map[string]interface{}{
 		"Name":        "myapp",
 		"Namespace":   "production",
-		"Image":       "myapp:v1.0.0",
+		"Image":       "myapp:1.0.0",
 		"Environment": "production",
 	}
 
@@ -1319,7 +1319,7 @@ spec:
 				{
 					Operation: "add",
 					Path:      "app: myapp",
-					Value:     "        version: v1.0.0",
+					Value:     "        version: 1.0.0",
 				},
 				// Replace the replica count
 				{
@@ -1354,7 +1354,7 @@ spec:
 
 		// Verify all patches were applied
 		assert.Contains(t, resultStr, "replicas: 5")
-		assert.Contains(t, resultStr, "version: v1.0.0")
+		assert.Contains(t, resultStr, "version: 1.0.0")
 		assert.Contains(t, resultStr, "ENV")
 		assert.Contains(t, resultStr, "resources:")
 		assert.Contains(t, resultStr, "cpu: \"1\"")

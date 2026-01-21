@@ -48,7 +48,7 @@ patch := TemplatePatch{
 patch := TemplatePatch{
     Operation: "add",
     Path:      "labels:",
-    Value:     "    version: v1.0.0",
+    Value:     "    version: 1.0.0",
 }
 ```
 
@@ -167,7 +167,7 @@ composition := TemplateComposition{
         {
             Operation: "add",
             Path:      "app: myapp",
-            Value:     "        version: v1.0.0",
+            Value:     "        version: 1.0.0",
         },
         // Replace replica count
         {

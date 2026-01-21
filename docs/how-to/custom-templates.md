@@ -193,7 +193,7 @@ opencenter:
       name: my-custom-service
       namespace: my-custom-service
       image: myregistry/my-app
-      tag: v1.0.0
+      tag: 1.0.0
       replicas: 3
       port: 8080
       env:

@@ -98,11 +98,11 @@ openCenter follows [Semantic Versioning 2.0.0](https://semver.org/):
   - [ ] Linux (AMD64, ARM64)
   - [ ] macOS (Intel, Apple Silicon)
   - [ ] Windows (AMD64)
-- [ ] **Create release branch**: `release/v1.0.0`
+- [ ] **Create release branch**: `release/1.0.0`
 
 ### Release Candidate (1 week before)
 
-- [ ] **Tag release candidate**: `v1.0.0-rc.1`
+- [ ] **Tag release candidate**: `1.0.0-rc.1`
 - [ ] **Build binaries**:
   ```bash
   mise run build-all
@@ -126,8 +126,8 @@ openCenter follows [Semantic Versioning 2.0.0](https://semver.org/):
 - [ ] **Update version**: Ensure version is correct
 - [ ] **Create git tag**:
   ```bash
-  git tag -a v1.0.0 -m "Release v1.0.0"
-  git push origin v1.0.0
+  git tag -a 1.0.0 -m "Release 1.0.0"
+  git push origin 1.0.0
   ```
 - [ ] **Build release binaries**:
   ```bash
@@ -379,7 +379,7 @@ For critical bugs in production:
 
 1. **Create hotfix branch** from release tag:
    ```bash
-   git checkout -b hotfix/v1.0.1 v1.0.0
+   git checkout -b hotfix/v1.0.1 1.0.0
    ```
 
 2. **Fix the bug** with minimal changes
@@ -462,8 +462,8 @@ If a release has critical issues:
 
 4. **Revert tag** (if necessary):
    ```bash
-   git tag -d v1.0.0
-   git push origin :refs/tags/v1.0.0
+   git tag -d 1.0.0
+   git push origin :refs/tags/1.0.0
    ```
 
 5. **Create hotfix**: Follow hotfix process
@@ -526,9 +526,9 @@ Use metrics to improve:
 ### Release Announcement Template
 
 ```markdown
-# openCenter v1.0.0 Released
+# openCenter 1.0.0 Released
 
-We're excited to announce the release of openCenter v1.0.0!
+We're excited to announce the release of openCenter 1.0.0!
 
 ## Highlights
 
@@ -544,7 +544,7 @@ We're excited to announce the release of openCenter v1.0.0!
 ## Installation
 
 Download from GitHub releases:
-https://github.com/rackerlabs/openCenter-cli/releases/tag/v1.0.0
+https://github.com/rackerlabs/openCenter-cli/releases/tag/1.0.0
 
 Or use Homebrew:
 ```bash

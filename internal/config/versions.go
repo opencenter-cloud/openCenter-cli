@@ -21,14 +21,14 @@ import (
 
 // Schema version constants
 const (
-	SchemaVersion1_0_0   = "v1.0.0"
+	SchemaVersion1_0_0   = "1.0.0"
 	SchemaVersion1_1_0   = "v1.1.0"
 	SchemaVersion1_2_0   = "v1.2.0"
 	SchemaVersion2_0_0   = "v2.0.0"
 	CurrentSchemaVersion = SchemaVersion1_0_0
 )
 
-// migrateV1_0_to_V1_1 migrates configuration from v1.0.0 to v1.1.0.
+// migrateV1_0_to_V1_1 migrates configuration from 1.0.0 to v1.1.0.
 // Changes:
 // - Add Metadata field to Config
 // - Add CreatedAt, UpdatedAt timestamps
@@ -60,7 +60,7 @@ func migrateV1_0_to_V1_1(ctx context.Context, config Config) (Config, error) {
 	return config, nil
 }
 
-// validateV1_0 validates a v1.0.0 configuration before migration.
+// validateV1_0 validates a 1.0.0 configuration before migration.
 func validateV1_0(ctx context.Context, config Config) error {
 	if config.SchemaVersion != "" && config.SchemaVersion != SchemaVersion1_0_0 {
 		return fmt.Errorf("expected schema version %s, got %s", SchemaVersion1_0_0, config.SchemaVersion)
@@ -77,12 +77,12 @@ func validateV1_0(ctx context.Context, config Config) error {
 	return nil
 }
 
-// rollbackV1_1_to_V1_0 rolls back configuration from v1.1.0 to v1.0.0.
+// rollbackV1_1_to_V1_0 rolls back configuration from v1.1.0 to 1.0.0.
 func rollbackV1_1_to_V1_0(ctx context.Context, config Config) (Config, error) {
 	// Update schema version
 	config.SchemaVersion = SchemaVersion1_0_0
 
-	// Remove metadata fields (they don't exist in v1.0.0)
+	// Remove metadata fields (they don't exist in 1.0.0)
 	config.Metadata = ConfigMetadata{}
 
 	return config, nil
@@ -261,7 +261,7 @@ func DetectSchemaVersion(config Config) string {
 		return SchemaVersion1_1_0
 	}
 
-	// No metadata field, must be v1.0.0
+	// No metadata field, must be 1.0.0
 	return SchemaVersion1_0_0
 }
 
@@ -274,7 +274,7 @@ func GetMigrationDescription(fromVersion, toVersion string) string {
 		migrationKey(SchemaVersion1_0_0, SchemaVersion1_1_0): "Adds metadata tracking (timestamps, tags, annotations) to your configuration",
 		migrationKey(SchemaVersion1_1_0, SchemaVersion1_2_0): "Adds service plugin support and template composition capabilities",
 		migrationKey(SchemaVersion1_2_0, SchemaVersion2_0_0): "Major upgrade with enhanced validation, new template engine, and MCP server support",
-		migrationKey(SchemaVersion1_1_0, SchemaVersion1_0_0): "Removes metadata fields (rollback to v1.0.0)",
+		migrationKey(SchemaVersion1_1_0, SchemaVersion1_0_0): "Removes metadata fields (rollback to 1.0.0)",
 		migrationKey(SchemaVersion1_2_0, SchemaVersion1_1_0): "Removes service plugin features (rollback to v1.1.0)",
 		migrationKey(SchemaVersion2_0_0, SchemaVersion1_2_0): "Removes v2.0.0 features (rollback to v1.2.0)",
 	}

@@ -21,7 +21,7 @@ import (
 )
 
 // SchemaVersion represents the current schema version for backward compatibility tracking
-const SchemaVersion = "v1.0.0"
+const SchemaVersion = "1.0.0"
 
 // GenerateSchema returns a JSON schema (Draft 2020-12) describing the current
 // cluster configuration structure. The schema mirrors the structure emitted by

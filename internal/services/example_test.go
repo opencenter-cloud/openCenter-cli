@@ -40,7 +40,7 @@ description: Example monitoring service
 	}
 
 	// Output:
-	// Loaded: example-service v1.0.0 (monitoring)
+	// Loaded: example-service 1.0.0 (monitoring)
 }
 
 // Example_dependencyResolution demonstrates dependency resolution

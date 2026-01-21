@@ -1,8 +1,8 @@
-# Documentation Content Checklist v1.0.0
+# Documentation Content Checklist 1.0.0
 
 **doc_type: reference**
 
-This checklist tracks documentation completion status for the v1.0.0 release. Use this to monitor progress and identify gaps.
+This checklist tracks documentation completion status for the 1.0.0 release. Use this to monitor progress and identify gaps.
 
 ## How to Use This Checklist
 
@@ -14,7 +14,7 @@ This checklist tracks documentation completion status for the v1.0.0 release. Us
 
 ## Priority 1: Pre-Release Blockers
 
-Must be complete before v1.0.0 release.
+Must be complete before 1.0.0 release.
 
 ### Tutorials
 - [x] ✅ `tutorials/README.md` - Tutorials index
@@ -23,14 +23,14 @@ Must be complete before v1.0.0 release.
 
 ### How-To Guides
 - [x] ✅ `how-to/README.md` - How-to guides index
-- [x] ✅ `how-to/troubleshooting.md` - Complete with v1.0.0 error codes
+- [x] ✅ `how-to/troubleshooting.md` - Complete with 1.0.0 error codes
 - [x] ✅ `how-to/upgrading-clusters.md` - Safe upgrade procedures
 - [x] ✅ `how-to/backup-recovery.md` - Backup and restore workflows
 - [x] ✅ `how-to/provider-setup.md` - Cloud provider configuration
 
 ### Reference
 - [x] ✅ `reference/README.md` - Reference documentation index
-- [x] ✅ `reference/cli-commands.md` - Complete v1.0.0 command reference
+- [x] ✅ `reference/cli-commands.md` - Complete 1.0.0 command reference
 - [x] ✅ `reference/configuration.md` - Complete schema documentation
 - [x] ✅ `reference/error-codes.md` - Complete error code reference
 
@@ -47,7 +47,7 @@ Must be complete before v1.0.0 release.
 
 ## Priority 2: Release Targets
 
-Should be complete for v1.0.0 release.
+Should be complete for 1.0.0 release.
 
 ### Tutorials
 - [x] ✅ `tutorials/kind-local-dev.md` - Local development with Kind
@@ -57,7 +57,7 @@ Should be complete for v1.0.0 release.
 - [x] ✅ `how-to/deploying-changes.md` - Deploy workflow
 - [x] ✅ `how-to/monitoring.md` - Monitoring setup
 - [x] ✅ `how-to/secrets-management.md` - Rename from secrets.md and update
-- [x] ✅ `how-to/adding-services.md` - Update for v1.0.0
+- [x] ✅ `how-to/adding-services.md` - Update for 1.0.0
 - [x] ✅ `how-to/ide-integration.md` - Update IDE setup
 
 ### Reference
@@ -98,7 +98,7 @@ Should be complete for v1.0.0 release.
 
 ## Priority 3: Post-Release
 
-Can be completed after v1.0.0 release.
+Can be completed after 1.0.0 release.
 
 ### Tutorials
 - [x] ✅ `tutorials/aws-deployment.md` - AWS production cluster
@@ -164,7 +164,7 @@ Can be completed after v1.0.0 release.
 
 ## Post-Verification Tasks
 
-These items should be completed after v1.0.0 verification is complete.
+These items should be completed after 1.0.0 verification is complete.
 
 ### Providers (Post-Verification)
 - [ ] 📝 `providers/kind/README.md` - Kind overview
@@ -257,7 +257,7 @@ These items should be completed after v1.0.0 verification is complete.
 
 ### Questions
 - Should we include video tutorials?
-- Do we need translations for v1.0.0?
+- Do we need translations for 1.0.0?
 - Should we create a PDF version?
 
 ## Sign-Off
@@ -272,7 +272,7 @@ These items should be completed after v1.0.0 verification is complete.
 - [ ] Documentation complete
 - [ ] All tests passing
 - [ ] Links verified
-- [ ] Ready for v1.0.0 release
+- [ ] Ready for 1.0.0 release
 
 ---
 
@@ -338,7 +338,7 @@ All 27 Priority 2 documentation items have been completed:
 - ✅ Created backup-recovery how-to guide (Priority 1)
 - ✅ Created upgrading-clusters how-to guide (Priority 1)
 - ✅ Updated troubleshooting guide with error codes (Priority 1)
-- ✅ Updated CLI commands reference for v1.0.0 (Priority 1)
+- ✅ Updated CLI commands reference for 1.0.0 (Priority 1)
 - ✅ Updated configuration reference with complete schema (Priority 1)
 - ✅ Created error-codes reference (Priority 1)
 - ✅ Created OpenStack provider overview (Priority 1)

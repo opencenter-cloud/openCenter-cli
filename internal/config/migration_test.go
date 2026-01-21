@@ -35,7 +35,7 @@ func TestSchemaManager_GetSupportedVersions(t *testing.T) {
 
 	versions := mgr.GetSupportedVersions()
 
-	// Should include at least the current version and v1.0.0
+	// Should include at least the current version and 1.0.0
 	assert.Contains(t, versions, CurrentSchemaVersion)
 	assert.Contains(t, versions, SchemaVersion1_0_0)
 	assert.GreaterOrEqual(t, len(versions), 2)
@@ -58,13 +58,13 @@ func TestSchemaManager_ValidateMigrationPath(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:        "direct migration v1.0.0 to v1.1.0",
+			name:        "direct migration 1.0.0 to v1.1.0",
 			fromVersion: SchemaVersion1_0_0,
 			toVersion:   SchemaVersion1_1_0,
 			wantErr:     false,
 		},
 		{
-			name:        "multi-step migration v1.0.0 to v2.0.0",
+			name:        "multi-step migration 1.0.0 to v2.0.0",
 			fromVersion: SchemaVersion1_0_0,
 			toVersion:   SchemaVersion2_0_0,
 			wantErr:     false,
@@ -112,7 +112,7 @@ func TestSchemaManager_ValidateMigrationPath(t *testing.T) {
 			errContains: "no migration path found",
 		},
 		{
-			name:        "rollback path v1.1.0 to v1.0.0",
+			name:        "rollback path v1.1.0 to 1.0.0",
 			fromVersion: SchemaVersion1_1_0,
 			toVersion:   SchemaVersion1_0_0,
 			wantErr:     false,
@@ -158,21 +158,21 @@ func TestSchemaManager_GetMigrationPath(t *testing.T) {
 			wantErr:       false,
 		},
 		{
-			name:          "single step v1.0.0 to v1.1.0",
+			name:          "single step 1.0.0 to v1.1.0",
 			fromVersion:   SchemaVersion1_0_0,
 			toVersion:     SchemaVersion1_1_0,
 			expectedSteps: 1,
 			wantErr:       false,
 		},
 		{
-			name:          "two steps v1.0.0 to v1.2.0",
+			name:          "two steps 1.0.0 to v1.2.0",
 			fromVersion:   SchemaVersion1_0_0,
 			toVersion:     SchemaVersion1_2_0,
 			expectedSteps: 2,
 			wantErr:       false,
 		},
 		{
-			name:          "three steps v1.0.0 to v2.0.0",
+			name:          "three steps 1.0.0 to v2.0.0",
 			fromVersion:   SchemaVersion1_0_0,
 			toVersion:     SchemaVersion2_0_0,
 			expectedSteps: 3,
@@ -345,7 +345,7 @@ func TestSchemaManager_MigrateConfigDryRun(t *testing.T) {
 	assert.NotNil(t, plan)
 	assert.Equal(t, SchemaVersion1_0_0, plan.FromVersion)
 	assert.Equal(t, SchemaVersion2_0_0, plan.ToVersion)
-	assert.Len(t, plan.Steps, 3) // v1.0.0 -> v1.1.0 -> v1.2.0 -> v2.0.0
+	assert.Len(t, plan.Steps, 3) // 1.0.0 -> v1.1.0 -> v1.2.0 -> v2.0.0
 
 	// Verify step continuity
 	assert.Equal(t, SchemaVersion1_0_0, plan.Steps[0].FromVersion)
@@ -551,14 +551,14 @@ func TestDetectConfigChanges(t *testing.T) {
 			},
 			after: Config{
 				Metadata: ConfigMetadata{
-					Annotations: map[string]string{"migrated_from": "v1.0.0"},
+					Annotations: map[string]string{"migrated_from": "1.0.0"},
 				},
 			},
 			expectedCount: 1,
 			checkChange: func(t *testing.T, changes []SchemaChange) {
 				assert.Equal(t, SchemaChangeTypeAdd, changes[0].Type)
 				assert.Equal(t, "metadata.annotations.migrated_from", changes[0].Path)
-				assert.Equal(t, "v1.0.0", changes[0].NewValue)
+				assert.Equal(t, "1.0.0", changes[0].NewValue)
 			},
 		},
 		{
@@ -578,7 +578,7 @@ func TestDetectConfigChanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			changes := detectConfigChanges(tt.before, tt.after, "v1.0.0", "v1.1.0")
+			changes := detectConfigChanges(tt.before, tt.after, "1.0.0", "v1.1.0")
 			assert.Len(t, changes, tt.expectedCount)
 			if tt.checkChange != nil {
 				tt.checkChange(t, changes)
@@ -626,9 +626,9 @@ func TestFormatMigrationPlan(t *testing.T) {
 				},
 			},
 			contains: []string{
-				"Migration Plan: v1.0.0 → v2.0.0",
+				"Migration Plan: 1.0.0 → v2.0.0",
 				"Migration Steps:",
-				"1. v1.0.0 → v1.1.0",
+				"1. 1.0.0 → v1.1.0",
 				"Add metadata fields",
 				"2. v1.1.0 → v2.0.0",
 				"Major refactor",
@@ -649,7 +649,7 @@ func TestFormatMigrationPlan(t *testing.T) {
 				Changes:     []SchemaChange{},
 			},
 			contains: []string{
-				"Migration Plan: v1.0.0 → v1.0.0",
+				"Migration Plan: 1.0.0 → 1.0.0",
 				"No migration steps required",
 				"No configuration changes detected",
 			},
@@ -779,7 +779,7 @@ func TestDetectSchemaVersion(t *testing.T) {
 			expected: SchemaVersion1_1_0,
 		},
 		{
-			name: "infer v1.0.0 from no metadata",
+			name: "infer 1.0.0 from no metadata",
 			config: Config{
 				OpenCenter: SimplifiedOpenCenter{
 					Meta: ClusterMeta{
@@ -807,7 +807,7 @@ func TestGetMigrationDescription(t *testing.T) {
 		contains    string
 	}{
 		{
-			name:        "v1.0.0 to v1.1.0",
+			name:        "1.0.0 to v1.1.0",
 			fromVersion: SchemaVersion1_0_0,
 			toVersion:   SchemaVersion1_1_0,
 			contains:    "metadata",
@@ -827,7 +827,7 @@ func TestGetMigrationDescription(t *testing.T) {
 		{
 			name:        "unknown migration",
 			fromVersion: "v99.0.0",
-			toVersion:   "v100.0.0",
+			toVersion:   "1.0.0.0",
 			contains:    "Migration from",
 		},
 	}
@@ -841,8 +841,8 @@ func TestGetMigrationDescription(t *testing.T) {
 }
 
 func TestMigrationKey(t *testing.T) {
-	key := migrationKey("v1.0.0", "v1.1.0")
-	assert.Equal(t, "v1.0.0->v1.1.0", key)
+	key := migrationKey("1.0.0", "v1.1.0")
+	assert.Equal(t, "1.0.0->v1.1.0", key)
 }
 
 func TestSchemaManager_RollbackConfig_V1_1_to_V1_0(t *testing.T) {
@@ -868,7 +868,7 @@ func TestSchemaManager_RollbackConfig_V1_1_to_V1_0(t *testing.T) {
 		},
 	}
 
-	// Rollback to v1.0.0
+	// Rollback to 1.0.0
 	result, err := mgr.RollbackConfig(ctx, config, SchemaVersion1_0_0)
 
 	require.NoError(t, err)
@@ -876,7 +876,7 @@ func TestSchemaManager_RollbackConfig_V1_1_to_V1_0(t *testing.T) {
 	assert.Equal(t, "test-cluster", result.OpenCenter.Meta.Name)
 	assert.Equal(t, "test-org", result.OpenCenter.Meta.Organization)
 
-	// Metadata should be removed in v1.0.0
+	// Metadata should be removed in 1.0.0
 	assert.True(t, result.Metadata.CreatedAt.IsZero())
 	assert.True(t, result.Metadata.UpdatedAt.IsZero())
 	assert.Nil(t, result.Metadata.Tags)
@@ -947,14 +947,14 @@ func TestSchemaManager_RollbackConfig_MultiStep(t *testing.T) {
 		},
 	}
 
-	// Rollback all the way to v1.0.0 (multi-step rollback)
+	// Rollback all the way to 1.0.0 (multi-step rollback)
 	result, err := mgr.RollbackConfig(ctx, config, SchemaVersion1_0_0)
 
 	require.NoError(t, err)
 	assert.Equal(t, SchemaVersion1_0_0, result.SchemaVersion)
 	assert.Equal(t, "test-cluster", result.OpenCenter.Meta.Name)
 
-	// All metadata should be removed in v1.0.0
+	// All metadata should be removed in 1.0.0
 	assert.True(t, result.Metadata.CreatedAt.IsZero())
 	assert.Nil(t, result.Metadata.Tags)
 	assert.Nil(t, result.Metadata.Annotations)
@@ -1012,7 +1012,7 @@ func TestSchemaManager_RollbackConfig_PreservesUserData(t *testing.T) {
 		},
 	}
 
-	// Rollback to v1.0.0
+	// Rollback to 1.0.0
 	result, err := mgr.RollbackConfig(ctx, config, SchemaVersion1_0_0)
 
 	require.NoError(t, err)
@@ -1049,7 +1049,7 @@ func TestSchemaManager_MigrateAndRollback_RoundTrip(t *testing.T) {
 	mgr := NewVersionedSchemaManager(CurrentSchemaVersion, nil)
 	ctx := context.Background()
 
-	// Start with v1.0.0 config
+	// Start with 1.0.0 config
 	originalConfig := Config{
 		SchemaVersion: SchemaVersion1_0_0,
 		OpenCenter: SimplifiedOpenCenter{
@@ -1073,7 +1073,7 @@ func TestSchemaManager_MigrateAndRollback_RoundTrip(t *testing.T) {
 	assert.Equal(t, SchemaVersion1_1_0, migrated.SchemaVersion)
 	assert.False(t, migrated.Metadata.CreatedAt.IsZero())
 
-	// Rollback to v1.0.0
+	// Rollback to 1.0.0
 	rolledBack, err := mgr.RollbackConfig(ctx, migrated, SchemaVersion1_0_0)
 	require.NoError(t, err)
 	assert.Equal(t, SchemaVersion1_0_0, rolledBack.SchemaVersion)
@@ -1094,7 +1094,7 @@ func TestSchemaManager_MigrateAndRollback_MultiStep_RoundTrip(t *testing.T) {
 	mgr := NewVersionedSchemaManager(CurrentSchemaVersion, nil)
 	ctx := context.Background()
 
-	// Start with v1.0.0 config
+	// Start with 1.0.0 config
 	originalConfig := Config{
 		SchemaVersion: SchemaVersion1_0_0,
 		OpenCenter: SimplifiedOpenCenter{
@@ -1110,7 +1110,7 @@ func TestSchemaManager_MigrateAndRollback_MultiStep_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, SchemaVersion2_0_0, migrated.SchemaVersion)
 
-	// Rollback to v1.0.0 (multi-step)
+	// Rollback to 1.0.0 (multi-step)
 	rolledBack, err := mgr.RollbackConfig(ctx, migrated, SchemaVersion1_0_0)
 	require.NoError(t, err)
 	assert.Equal(t, SchemaVersion1_0_0, rolledBack.SchemaVersion)

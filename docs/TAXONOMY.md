@@ -1,8 +1,8 @@
-# openCenter Documentation Taxonomy v1.0.0
+# openCenter Documentation Taxonomy 1.0.0
 
 **doc_type: reference**
 
-This document defines the complete documentation structure for openCenter v1.0.0 release. It serves as the master plan for documentation organization, content requirements, and maintenance guidelines.
+This document defines the complete documentation structure for openCenter 1.0.0 release. It serves as the master plan for documentation organization, content requirements, and maintenance guidelines.
 
 ## Purpose
 
@@ -197,7 +197,7 @@ docs/
 
 - **[NEW]**: Content needs to be created
 - **[EXISTS]**: Content exists and is current
-- **[NEEDS UPDATE]**: Content exists but requires updates for v1.0.0
+- **[NEEDS UPDATE]**: Content exists but requires updates for 1.0.0
 - **[RENAME]**: File should be renamed for clarity
 - **[CONSOLIDATE]**: Multiple files should be merged
 - **[MOVE]**: Content should move to different location
@@ -207,7 +207,7 @@ docs/
 ## Priority Levels
 
 ### Priority 1 (Pre-Release Blockers)
-Must be complete before v1.0.0 release:
+Must be complete before 1.0.0 release:
 - Getting Started tutorial
 - OpenStack deployment tutorial
 - Upgrading clusters how-to
@@ -220,7 +220,7 @@ Must be complete before v1.0.0 release:
 - OpenStack provider setup
 
 ### Priority 2 (Release Targets)
-Should be complete for v1.0.0 release:
+Should be complete for 1.0.0 release:
 - Kind local dev tutorial
 - Multi-cluster tutorial
 - Deploying changes how-to
@@ -237,7 +237,7 @@ Should be complete for v1.0.0 release:
 - Validation pipeline explanation
 
 ### Priority 3 (Post-Release)
-Can be completed after v1.0.0 release:
+Can be completed after 1.0.0 release:
 - AWS deployment tutorial
 - GitOps workflow tutorial
 - Custom templates how-to
@@ -411,4 +411,4 @@ Before marking content as complete:
 
 ## Version History
 
-- **1.0.0** (2026-01-19): Initial taxonomy for v1.0.0 release
+- **1.0.0** (2026-01-19): Initial taxonomy for 1.0.0 release

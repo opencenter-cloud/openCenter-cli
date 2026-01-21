@@ -354,7 +354,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: {{ .OpenCenter.Services.my-service.Namespace | default "my-service" }}
 resources:
-  - https://github.com/example/my-service/releases/download/v1.0.0/install.yaml
+  - https://github.com/example/my-service/releases/download/1.0.0/install.yaml
 ```
 
 ### Step 3: Create FluxCD Kustomization

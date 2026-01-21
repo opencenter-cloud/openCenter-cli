@@ -210,7 +210,7 @@ Found an error in the reference docs? See our [Contributing Guide](../../contrib
 
 ## Version Compatibility
 
-This reference documentation is for openCenter v1.0.0. For other versions:
+This reference documentation is for openCenter 1.0.0. For other versions:
 - Check the version tag in GitHub
 - Review the changelog for differences
 - Use `openCenter version` to check your installed version

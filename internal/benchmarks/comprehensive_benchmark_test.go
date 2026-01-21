@@ -118,7 +118,7 @@ func BenchmarkConfigBuilding_Legacy(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				// Legacy: Direct struct construction
 				cfg := config.Config{
-					SchemaVersion: "v1.0.0",
+					SchemaVersion: "1.0.0",
 					OpenCenter: config.SimplifiedOpenCenter{
 						Meta: config.ClusterMeta{
 							Name:         "test-cluster",

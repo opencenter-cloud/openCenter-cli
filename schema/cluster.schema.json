@@ -2266,5 +2266,5 @@
   ],
   "title": "openCenter Cluster Configuration",
   "type": "object",
-  "version": "v1.0.0"
+  "version": "1.0.0"
 }

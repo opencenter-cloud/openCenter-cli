@@ -132,7 +132,7 @@ func (m *VersionedSchemaManager) RollbackConfig(ctx context.Context, config Conf
 	// Get current version from config
 	currentVersion := config.SchemaVersion
 	if currentVersion == "" {
-		currentVersion = "v1.0.0" // Default to v1.0.0 if not specified
+		currentVersion = "1.0.0" // Default to 1.0.0 if not specified
 	}
 
 	// If already at target version, return as-is
@@ -183,7 +183,7 @@ func (m *VersionedSchemaManager) MigrateConfig(ctx context.Context, config Confi
 	// Get current version from config
 	currentVersion := config.SchemaVersion
 	if currentVersion == "" {
-		currentVersion = "v1.0.0" // Default to v1.0.0 if not specified
+		currentVersion = "1.0.0" // Default to 1.0.0 if not specified
 	}
 
 	// If already at target version, return as-is
@@ -238,7 +238,7 @@ func (m *VersionedSchemaManager) MigrateConfig(ctx context.Context, config Confi
 func (m *VersionedSchemaManager) MigrateConfigDryRun(ctx context.Context, config Config, targetVersion string) (*SchemaMigrationPlan, error) {
 	currentVersion := config.SchemaVersion
 	if currentVersion == "" {
-		currentVersion = "v1.0.0"
+		currentVersion = "1.0.0"
 	}
 
 	// Get migration path
@@ -654,9 +654,9 @@ func FormatMigrationPlan(plan *SchemaMigrationPlan) string {
 
 // registerMigrations registers all known schema migrations.
 func (m *VersionedSchemaManager) registerMigrations() {
-	// Register migration from v1.0.0 to v1.1.0
+	// Register migration from 1.0.0 to v1.1.0
 	m.RegisterMigration(SchemaVersionMigration{
-		FromVersion: "v1.0.0",
+		FromVersion: "1.0.0",
 		ToVersion:   "v1.1.0",
 		Description: "Add metadata fields and enhanced configuration structure",
 		Migrate:     migrateV1_0_to_V1_1,
@@ -664,11 +664,11 @@ func (m *VersionedSchemaManager) registerMigrations() {
 		Rollback:    rollbackV1_1_to_V1_0,
 	})
 
-	// Register rollback from v1.1.0 to v1.0.0
+	// Register rollback from v1.1.0 to 1.0.0
 	m.RegisterMigration(SchemaVersionMigration{
 		FromVersion: "v1.1.0",
-		ToVersion:   "v1.0.0",
-		Description: "Remove metadata fields (rollback to v1.0.0)",
+		ToVersion:   "1.0.0",
+		Description: "Remove metadata fields (rollback to 1.0.0)",
 		Migrate:     rollbackV1_1_to_V1_0,
 		Validate:    validateV1_1,
 		Rollback:    migrateV1_0_to_V1_1,

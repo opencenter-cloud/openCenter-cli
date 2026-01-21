@@ -414,7 +414,7 @@ When contributing to this package:
 
 ## Version History
 
-- **v1.0.0**: Initial release with legacy compatibility layer
+- **1.0.0**: Initial release with legacy compatibility layer
 - **v1.1.0**: Added template registry and caching
 - **v1.2.0**: Added template composition support
 - **v1.3.0**: Added feature flag system for gradual migration

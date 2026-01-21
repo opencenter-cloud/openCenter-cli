@@ -218,7 +218,7 @@ opencenter:
     git_ssh_key: ~/.ssh/id_ed25519-flux   # SSH private key path
     git_ssh_pub: ~/.ssh/id_ed25519-flux.pub  # SSH public key path
     git_branch: main                    # Git branch (default: main)
-    release: v1.0.0                     # GitOps base release version
+    release: 1.0.0                     # GitOps base release version
     flux:
       interval: 15m                     # Reconciliation interval
       prune: true                       # Enable resource pruning
@@ -276,7 +276,7 @@ opencenter:
       s3_region: us-east-1
       aws_access_key: ""
       aws_secret_access_key: ""
-      release: v1.0.0
+      release: 1.0.0
     external-snapshotter:
       enabled: true
     fluxcd:
@@ -451,8 +451,8 @@ opencenter:
       openstack:
         auth_url: https://keystone.example.com/v3/
         region: RegionOne
-        application_credential_id: "credential-id"
-        application_credential_secret: "credential-secret"
+        application_credential_id: ""
+        application_credential_secret: ""
         tenant_name: my-project
         floating_network_id: "network-id"
   cluster:

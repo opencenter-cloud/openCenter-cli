@@ -237,7 +237,7 @@ Found an issue or have improvements for operational procedures? See our [Contrib
 
 ## Version Compatibility
 
-This operations documentation is for openCenter v1.0.0. Procedures may vary for different versions:
+This operations documentation is for openCenter 1.0.0. Procedures may vary for different versions:
 - Check the version tag in GitHub
 - Review the changelog for operational changes
 - Use `openCenter version` to check your installed version

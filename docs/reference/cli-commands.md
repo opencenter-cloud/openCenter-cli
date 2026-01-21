@@ -771,7 +771,7 @@ Platform:           darwin/amd64
 ```
 
 **Version String Format:**
-- If built from a git tag: Uses the tag as version (e.g., `v1.0.0`)
+- If built from a git tag: Uses the tag as version (e.g., `1.0.0`)
 - If not from a tag: Uses `version-shortcommit` format (e.g., `0.0.1-3ddfb1c`)
 - Development builds: Shows `dev-shortcommit`
 

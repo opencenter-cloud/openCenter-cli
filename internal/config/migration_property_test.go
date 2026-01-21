@@ -36,7 +36,7 @@ func TestMigrationPreservesUserValues(t *testing.T) {
 			mgr := NewVersionedSchemaManager(CurrentSchemaVersion, nil)
 			ctx := context.Background()
 
-			// Create a v1.0.0 configuration with user-specified values
+			// Create a 1.0.0 configuration with user-specified values
 			config := Config{
 				SchemaVersion: SchemaVersion1_0_0,
 				OpenCenter: SimplifiedOpenCenter{
@@ -217,7 +217,7 @@ func TestMigrationRoundTrip(t *testing.T) {
 	mgr := NewVersionedSchemaManager(CurrentSchemaVersion, nil)
 	ctx := context.Background()
 
-	// Create a v1.0.0 configuration
+	// Create a 1.0.0 configuration
 	original := Config{
 		SchemaVersion: SchemaVersion1_0_0,
 		OpenCenter: SimplifiedOpenCenter{
@@ -243,7 +243,7 @@ func TestMigrationRoundTrip(t *testing.T) {
 	migrated, err := mgr.MigrateConfig(ctx, original, SchemaVersion1_1_0)
 	require.NoError(t, err)
 
-	// Rollback to v1.0.0
+	// Rollback to 1.0.0
 	rolledBack, err := mgr.MigrateConfig(ctx, migrated, SchemaVersion1_0_0)
 	require.NoError(t, err)
 
@@ -528,7 +528,7 @@ func TestMigrationErrorMessages(t *testing.T) {
 func genInvalidVersion() gopter.Gen {
 	return gen.OneConstOf(
 		"v99.0.0",
-		"v100.0.0",
+		"1.0.0.0",
 		"invalid",
 		"not-a-version",
 		"1.0.0", // Missing 'v' prefix
@@ -537,6 +537,6 @@ func genInvalidVersion() gopter.Gen {
 		"vX.Y.Z",
 		"",
 		"v-1.0.0",
-		"v1.0.0-beta", // Pre-release versions not supported
+		"1.0.0-beta", // Pre-release versions not supported
 	)
 }

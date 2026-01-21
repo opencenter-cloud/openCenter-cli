@@ -920,7 +920,7 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				cfg.OpenCenter.Services["cert-manager"] = &services.CertManagerConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled: true,
-						Release: "v1.0.0",
+						Release: "1.0.0",
 						Branch:  "main",
 					},
 				}
@@ -940,7 +940,7 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				cfg.OpenCenter.Services["cert-manager"] = &services.CertManagerConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled: true,
-						Release: "v1.0.0",
+						Release: "1.0.0",
 					},
 				}
 				// Provide required secrets to avoid validation errors
@@ -996,7 +996,7 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				cfg.OpenCenter.ManagedService["alert-proxy"] = &services.AlertProxyConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled: true,
-						Release: "v1.0.0",
+						Release: "1.0.0",
 						Branch:  "main",
 					},
 				}
@@ -1010,7 +1010,7 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				cfg := NewDefault("test")
 				cfg.OpenCenter.GitOps.GitDir = "test-dir"
 				populateInfraFields(&cfg)
-				cfg.OpenCenter.GitOps.Release = "v1.0.0"
+				cfg.OpenCenter.GitOps.Release = "1.0.0"
 				cfg.OpenCenter.GitOps.Branch = "main"
 				return cfg
 			},
@@ -1022,7 +1022,7 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				cfg := NewDefault("test")
 				cfg.OpenCenter.GitOps.GitDir = "test-dir"
 				populateInfraFields(&cfg)
-				cfg.OpenCenter.GitOps.Release = "v1.0.0"
+				cfg.OpenCenter.GitOps.Release = "1.0.0"
 				return cfg
 			},
 			expectErrs: []string{},
@@ -1047,7 +1047,7 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 				cfg.OpenCenter.Services["cert-manager"] = &services.CertManagerConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled: true,
-						Release: "v1.0.0",
+						Release: "1.0.0",
 						Branch:  "main",
 					},
 				}
@@ -1058,7 +1058,7 @@ func TestValidateServiceReleaseAndBranch(t *testing.T) {
 						Branch:  "develop",
 					},
 				}
-				cfg.OpenCenter.GitOps.Release = "v1.0.0"
+				cfg.OpenCenter.GitOps.Release = "1.0.0"
 				cfg.OpenCenter.GitOps.Branch = "main"
 				// Provide required secrets to avoid validation errors
 				cfg.Secrets.CertManager.AWSAccessKey = "AKIA..."

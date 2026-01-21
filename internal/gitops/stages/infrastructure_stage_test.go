@@ -490,7 +490,7 @@ func TestInfrastructureStageConditions(t *testing.T) {
 
 func createTestConfigInfra(provider string) config.Config {
 	return config.Config{
-		SchemaVersion: "v1.0.0",
+		SchemaVersion: "1.0.0",
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
 				Name:         "test-cluster",

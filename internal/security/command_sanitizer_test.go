@@ -310,8 +310,8 @@ func TestSanitizeGitArgs(t *testing.T) {
 		},
 		{
 			name:        "args with parentheses",
-			args:        []string{"tag", "v1.0.0(beta)"},
-			expected:    []string{"tag", "v1.0.0\\(beta\\)"},
+			args:        []string{"tag", "1.0.0(beta)"},
+			expected:    []string{"tag", "1.0.0\\(beta\\)"},
 			shouldError: false,
 		},
 		{

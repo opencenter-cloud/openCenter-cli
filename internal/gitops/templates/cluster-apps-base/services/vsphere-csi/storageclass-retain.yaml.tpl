@@ -2,7 +2,8 @@ allowVolumeExpansion: true
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: {{ printf "%s-retain" (( .OpenCenter.Storage.DefaultStorageClass | default "default") }}
+  name: {{ printf "%s-retain" (.OpenCenter.Storage.DefaultStorageClass | default "default-retain") }}
+
 parameters:
   datastoreurl: {{ .Secrets.VSphereCsi.Datastoreurl }}
 provisioner: csi.vsphere.vmware.com

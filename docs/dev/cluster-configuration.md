@@ -658,33 +658,57 @@ grep "new_field" ~/.config/openCenter/clusters/opencenter/.test-cluster-config.y
 
 ## Service Configuration Architecture
 
-Services use a polymorphic configuration system with a registry pattern. See [Service Registry Patterns](../service-registry-patterns.md) for detailed documentation.
+Services use a polymorphic configuration system with a registry pattern. See [Service Registry Patterns](./service-registry-patterns.md) for detailed documentation.
 
 ### Service Configuration Structure
 
 ```go
 // Base configuration (all services)
 type BaseConfig struct {
-    Enabled         bool
-    Status          string
-    Namespace       string
-    Hostname        string
+    Enabled   bool
+    Status    string
+    Namespace string
+    Hostname  string
+    
+    // Image configuration
     ImageRepository string
     ImageTag        string
-    Release         string
-    Branch          string
-    Uri             string
-    GitOpsSource*   string  // GitOps source fields
+    
+    // Version control fields (for GitOps managed services)
+    Release string
+    Branch  string
+    Uri     string
+    
+    // GitOps source fields (for managed services)
+    GitOpsSourceRepo    string
+    GitOpsSourceRelease string
+    GitOpsSourceBranch  string
 }
 
 // Service-specific configuration
 type LokiConfig struct {
     BaseConfig      `yaml:",inline"`
-    StorageType     string
+    
+    // Storage configuration
+    StorageType     string  // "s3" or "swift"
     BucketName      string
     VolumeSize      int
     StorageClass    string
-    // ... Loki-specific fields
+    
+    // Swift storage fields
+    SwiftAuthURL                 string
+    SwiftRegion                  string
+    SwiftAuthVersion             int
+    SwiftApplicationCredentialID string
+    SwiftContainerName           string
+    SwiftUserDomainName          string
+    SwiftDomainName              string
+    
+    // S3 storage fields
+    S3Endpoint       string
+    S3Region         string
+    S3ForcePathStyle bool
+    S3Insecure       bool
 }
 ```
 
@@ -697,6 +721,15 @@ type LokiConfig struct {
 package services
 
 import "github.com/rackerlabs/openCenter-cli/internal/config/registry"
+
+// LokiConfig extends BaseConfig with Loki-specific configuration
+type LokiConfig struct {
+    BaseConfig `yaml:",inline"`
+    
+    StorageType  string `yaml:"loki_storage_type" json:"loki_storage_type,omitempty"`
+    BucketName   string `yaml:"loki_bucket_name" json:"loki_bucket_name,omitempty"`
+    // ... other fields
+}
 
 func init() {
     registry.RegisterServiceConfig("loki", LokiConfig{})
@@ -712,10 +745,26 @@ type ServiceMap map[string]any
 
 // Custom unmarshaler looks up registered types
 func (sm *ServiceMap) UnmarshalYAML(node *yaml.Node) error {
-    // Lookup service type in registry
-    serviceType := registry.GetServiceConfig(serviceName)
-    // Create instance and unmarshal
-    // Falls back to BaseConfig if not registered
+    // Initialize map if nil, but don't replace existing services
+    if *sm == nil {
+        *sm = make(ServiceMap)
+    }
+    
+    // Iterate over keys and values from YAML
+    for i := 0; i < len(node.Content); i += 2 {
+        serviceName := node.Content[i]
+        
+        // Look up registered type
+        configType := registry.GetServiceConfigType(serviceName)
+        if configType == nil {
+            // Falls back to BaseConfig if not registered
+            configType = reflect.TypeOf(services.BaseConfig{})
+        }
+        
+        // Create instance and unmarshal
+        configPtr := reflect.New(configType).Interface()
+        // ... unmarshal logic
+    }
 }
 ```
 
@@ -744,10 +793,14 @@ func init() {
 2. **Add to default config** in `internal/config/config.go`:
 
 ```go
+// In defaultConfig() function
 Services: ServiceMap{
     "myservice": &services.MyServiceConfig{
         BaseConfig: services.BaseConfig{
-            Enabled: false,
+            Enabled:             false,
+            GitOpsSourceRepo:    "ssh://git@github.com/rackerlabs/openCenter-gitops-base.git",
+            GitOpsSourceRelease: "v0.1.0",
+            GitOpsSourceBranch:  "main",
         },
         MyField: "default-value",
     },
@@ -792,11 +845,43 @@ MyField: "default-value",
 #### Issue: Service Shows Only BaseConfig Fields
 
 **Symptoms**:
-- Service configuration only has 12 fields
+- Service configuration only has ~13 BaseConfig fields (enabled, status, namespace, hostname, image_repository, image_tag, release, branch, uri, gitops_source_*)
 - Service-specific fields are missing
-- No error messages
+- No error messages during init or marshaling
 
-**Cause**: Service not registered in registry
+**Cause**: Service not registered in the service registry
+
+**Solution**:
+```go
+// Add init() function to service file (e.g., internal/config/services/myservice.go)
+package services
+
+import "github.com/rackerlabs/openCenter-cli/internal/config/registry"
+
+type MyServiceConfig struct {
+    BaseConfig `yaml:",inline"`
+    MyField    string `yaml:"my_field" json:"my_field"`
+}
+
+func init() {
+    registry.RegisterServiceConfig("myservice", MyServiceConfig{})
+}
+```
+
+**Verification**:
+```bash
+# After adding registration, rebuild and test
+mise run build
+./bin/openCenter cluster init test-service --no-keygen
+
+# Count fields - should match struct definition
+grep -A 30 "myservice:" ~/.config/openCenter/clusters/opencenter/.test-service-config.yaml | wc -l
+
+# Should see all fields, not just BaseConfig fields
+grep -A 30 "myservice:" ~/.config/openCenter/clusters/opencenter/.test-service-config.yaml
+```
+
+See [Service Registry Patterns](./service-registry-patterns.md) for detailed debugging registered in registry
 
 **Solution**:
 ```go
@@ -946,9 +1031,39 @@ internal/
 ```
 
 
+## Configuration Precedence and Merging
+
+### Configuration Loading Order
+
+1. **Embedded defaults** - `defaultConfig()` in `internal/config/config.go`
+2. **CLI defaults** - `~/.config/openCenter/config.yaml` (user-level defaults)
+3. **Cluster config file** - `~/.config/openCenter/clusters/<org>/.<cluster>-config.yaml`
+4. **Environment variables** - `OPENCENTER_*` variables
+5. **Command-line flags** - Highest precedence
+
+### Service Configuration Merging
+
+Services use a merge strategy where:
+- Services defined in YAML override defaults
+- Services not in YAML are preserved from defaults
+- This allows partial configuration updates
+
+```go
+// UnmarshalYAML merges services from YAML with existing services
+func (sm *ServiceMap) UnmarshalYAML(node *yaml.Node) error {
+    // Initialize map if nil, but don't replace existing services
+    if *sm == nil {
+        *sm = make(ServiceMap)
+    }
+    
+    // Iterate and merge - YAML overrides defaults
+    // Services not in YAML are preserved
+}
+```
+
 ## Related Documentation
 
-- [Service Registry Patterns](./service-registry-patterns.md) - Service configuration architecture
+- [Service Registry Patterns](./service-registry-patterns.md) - Service configuration architecture and debugging
 - [Developer Commands](./developer-commands.md) - Hidden commands for development
 - [Architecture](./architecture.md) - Overall system architecture
 - [Configuration Reference](../reference/configuration.md) - User-facing configuration docs
@@ -962,13 +1077,17 @@ internal/
 | File | Purpose | Key Types |
 |------|---------|-----------|
 | `internal/config/config.go` | Root configuration | `Config`, `defaultConfig()` |
-| `internal/config/types_cluster.go` | Cluster config | `ClusterConfig`, `ClusterMeta` |
-| `internal/config/types_infrastructure.go` | Infrastructure | `Infrastructure`, `CloudConfig` |
-| `internal/config/types_kubernetes.go` | Kubernetes | `KubernetesConfig`, `NetworkPlugin` |
-| `internal/config/types_services.go` | Services | `ServiceCfg`, `BaseServiceCfg` |
-| `internal/config/types_gitops.go` | GitOps | `GitOpsConfig` |
-| `internal/config/types_opentofu.go` | OpenTofu | `SimplifiedOpenTofu` |
-| `internal/config/types_secrets.go` | Secrets | `Secrets`, service secrets |
+| `internal/config/types_opencenter.go` | OpenCenter section | `SimplifiedOpenCenter`, `ClusterMeta`, `TalosConfig` |
+| `internal/config/types_cluster.go` | Cluster config | `ClusterConfig`, `ClusterNetworkingConfig` |
+| `internal/config/types_infrastructure.go` | Infrastructure | `Infrastructure`, `CloudConfig`, `SimplifiedOpenStackCloud` |
+| `internal/config/types_kubernetes.go` | Kubernetes | `KubernetesConfig`, `NetworkPlugin`, `AdditionalServerPool` |
+| `internal/config/types_storage.go` | Storage | `StorageConfig` |
+| `internal/config/types_gitops.go` | GitOps | `GitOpsConfig`, `GitOpsFlux` |
+| `internal/config/types_opentofu.go` | OpenTofu | `SimplifiedOpenTofu`, `SimplifiedTofuBackend` |
+| `internal/config/types_secrets.go` | Secrets | `Secrets`, `GlobalSecrets`, service-specific secrets |
+| `internal/config/types_deployment.go` | Deployment | `Deployment` |
+| `internal/config/types_networking.go` | Networking | `Networking` |
+| `internal/config/types_security.go` | Security | `ClusterSecurityConfig`, `KubernetesSecurityConfig` |
 
 ### Service Configuration
 

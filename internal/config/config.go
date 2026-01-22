@@ -197,6 +197,7 @@ func defaultConfig(name string) Config {
 							NetworkID:               "",
 							RouterExternalNetworkID: "723f8fa2-dbf7-4cec-8d5f-017e62c12f79",
 							SubnetId:                "",
+							K8sAPIPortACL:           []string{"0.0.0.0/0"},
 							Designate: DesignateConfig{
 								DNSZoneName: "",
 							},
@@ -223,7 +224,6 @@ func defaultConfig(name string) Config {
 				ClusterFQDN:        fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
 				AdminEmail:         "",
 				Networking: ClusterNetworkingConfig{
-					K8sAPIPortACL:  []string{"0.0.0.0/0"},
 					NTPServers:     []string{fmt.Sprintf("time.%s.rackspace.com", strings.ToLower(region)), fmt.Sprintf("time2.%s.rackspace.com", strings.ToLower(region))},
 					DNSNameservers: []string{"8.8.8.8", "8.8.4.4"},
 					Security: ClusterSecurityConfig{

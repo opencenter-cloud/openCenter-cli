@@ -17,7 +17,6 @@ type ClusterConfig struct {
 
 // ClusterNetworkingConfig represents cluster-level networking configuration
 type ClusterNetworkingConfig struct {
-	K8sAPIPortACL        []string              `yaml:"k8s_api_port_acl" json:"k8s_api_port_acl"`
 	NTPServers           []string              `yaml:"ntp_servers" json:"ntp_servers"`
 	DNSNameservers       []string              `yaml:"dns_nameservers" json:"dns_nameservers"`
 	Security             ClusterSecurityConfig `yaml:"security" json:"security"`

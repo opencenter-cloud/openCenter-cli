@@ -103,6 +103,7 @@ type OpenStackNetworkingConfig struct {
 	SubnetId                string          `yaml:"subnet_id" json:"subnet_id"`
 	Designate               DesignateConfig `yaml:"designate" json:"designate"`
 	VLAN                    VLAN            `yaml:"vlan" json:"vlan"`
+	K8sAPIPortACL           []string        `yaml:"k8s_api_port_acl" json:"k8s_api_port_acl" jsonschema:"description=CIDR blocks allowed to access Kubernetes API server"`
 }
 
 // DesignateConfig represents OpenStack Designate DNS configuration

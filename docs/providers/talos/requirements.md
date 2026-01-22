@@ -1,5 +1,20 @@
 # Talos on OpenStack — Product Requirements Document
 
+
+## Table of Contents
+
+- [Background](#background)
+- [Goals](#goals)
+- [Non-Goals](#non-goals)
+- [Success Metrics](#success-metrics)
+- [Personas & Key Jobs](#personas-key-jobs)
+- [User Stories & Acceptance Criteria](#user-stories-acceptance-criteria)
+- [Functional Requirements](#functional-requirements)
+- [Non-Functional Requirements](#non-functional-requirements)
+- [Dependencies](#dependencies)
+- [Constraints & Assumptions](#constraints-assumptions)
+- [Open Questions](#open-questions)
+- [References](#references)
 ## Background
 Organizations operating in multi-tenant OpenStack clouds need an automated, auditable way to deploy Talos-backed Kubernetes clusters. The previous `readme.md` captured a narrative of Zero Trust controls (immutability, attestation, Barbican-backed secrets, WireGuard access). This PRD distills that narrative into implementable requirements for the openCenter CLI Talos provider.
 

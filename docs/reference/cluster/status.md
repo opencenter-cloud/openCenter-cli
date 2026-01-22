@@ -1,5 +1,18 @@
 # cluster status
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Flags](#flags)
+- [Examples](#examples)
+- [Output Format](#output-format)
+- [Information Displayed](#information-displayed)
+- [Status-Based Next Steps](#status-based-next-steps)
+- [Use Cases](#use-cases)
+- [Error Handling](#error-handling)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Show the current active cluster and its status information.

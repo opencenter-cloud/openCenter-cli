@@ -1,5 +1,20 @@
 # Service Lifecycle Hooks Implementation
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Implementation Details](#implementation-details)
+- [Execution Order](#execution-order)
+- [Usage Examples](#usage-examples)
+- [Hook Implementation Patterns](#hook-implementation-patterns)
+- [Error Handling](#error-handling)
+- [Testing](#testing)
+- [Design Decisions](#design-decisions)
+- [Future Enhancements](#future-enhancements)
+- [Acceptance Criteria Status](#acceptance-criteria-status)
+- [Files Modified](#files-modified)
+- [Conclusion](#conclusion)
 ## Overview
 
 This document describes the implementation of lifecycle hooks for the service plugin system. Lifecycle hooks allow services to execute custom logic at specific points during service operations (install, update, remove).

@@ -1,5 +1,23 @@
 # Secrets Management with SOPS and Age
 
+
+## Table of Contents
+
+- [What SOPS provides](#what-sops-provides)
+- [Prerequisites](#prerequisites)
+- [Quick start](#quick-start)
+- [Age key management](#age-key-management)
+- [SOPS configuration](#sops-configuration)
+- [Encrypting secrets](#encrypting-secrets)
+- [Decrypting secrets](#decrypting-secrets)
+- [Integration with openCenter](#integration-with-opencenter)
+- [Common workflows](#common-workflows)
+- [Troubleshooting](#troubleshooting)
+- [Security best practices](#security-best-practices)
+- [Advanced usage](#advanced-usage)
+- [Command reference](#command-reference)
+- [Related documentation](#related-documentation)
+- [External resources](#external-resources)
 **doc_type:** how-to
 
 This guide shows you how to manage secrets in openCenter using SOPS (Secrets OPerationS) with Age encryption.

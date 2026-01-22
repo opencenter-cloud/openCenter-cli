@@ -1,5 +1,27 @@
 # Deploy Production Kubernetes on AWS
 
+
+## Table of Contents
+
+- [What You'll Build](#what-youll-build)
+- [Prerequisites](#prerequisites)
+- [Step 1: Gather AWS Information](#step-1-gather-aws-information)
+- [Step 2: Initialize Cluster Configuration](#step-2-initialize-cluster-configuration)
+- [Step 3: Configure AWS Credentials](#step-3-configure-aws-credentials)
+- [Step 4: Configure Cluster Networking](#step-4-configure-cluster-networking)
+- [Step 5: Configure Storage](#step-5-configure-storage)
+- [Step 6: Enable SOPS Encryption](#step-6-enable-sops-encryption)
+- [Step 7: Configure Terraform Backend](#step-7-configure-terraform-backend)
+- [Step 8: Validate Configuration](#step-8-validate-configuration)
+- [Step 9: Generate GitOps Repository](#step-9-generate-gitops-repository)
+- [Step 10: Bootstrap Infrastructure](#step-10-bootstrap-infrastructure)
+- [Step 11: Verify Cluster Deployment](#step-11-verify-cluster-deployment)
+- [Step 12: Access Cluster Nodes](#step-12-access-cluster-nodes)
+- [What You Learned](#what-you-learned)
+- [Next Steps](#next-steps)
+- [Common Issues](#common-issues)
+- [Production Considerations](#production-considerations)
+- [Related Documentation](#related-documentation)
 **doc_type: tutorial**
 
 Deploy a production-ready Kubernetes cluster on AWS in 60 minutes. You'll configure AWS credentials, set up VPC networking, generate a GitOps repository, and bootstrap a highly available cluster using Kubespray.

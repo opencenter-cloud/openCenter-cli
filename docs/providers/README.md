@@ -1,5 +1,21 @@
 # Provider Documentation
 
+
+## Table of Contents
+
+- [Purpose](#purpose)
+- [Supported Providers](#supported-providers)
+- [Provider Comparison](#provider-comparison)
+- [Provider Selection Guide](#provider-selection-guide)
+- [Provider Documentation Structure](#provider-documentation-structure)
+- [Available Documentation](#available-documentation)
+- [Common Provider Concepts](#common-provider-concepts)
+- [Provider-Specific Configuration](#provider-specific-configuration)
+- [Migration Between Providers](#migration-between-providers)
+- [Provider Development](#provider-development)
+- [Getting Help](#getting-help)
+- [Related Documentation](#related-documentation)
+- [External Resources](#external-resources)
 **doc_type: reference**
 
 This directory contains provider-specific documentation for openCenter. Each provider has its own setup requirements, configuration options, and operational characteristics.

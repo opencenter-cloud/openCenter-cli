@@ -1,5 +1,22 @@
 # cluster bootstrap
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Flags](#flags)
+- [Examples](#examples)
+- [Provider-Specific Behavior](#provider-specific-behavior)
+- [State Management](#state-management)
+- [Logging](#logging)
+- [Long-Running Operations](#long-running-operations)
+- [Locking](#locking)
+- [Exit Codes](#exit-codes)
+- [Status Updates](#status-updates)
+- [Environment Variables](#environment-variables)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Run provider-specific bootstrap actions to deploy cluster infrastructure.

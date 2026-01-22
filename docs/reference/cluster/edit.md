@@ -1,5 +1,20 @@
 # cluster edit
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Examples](#examples)
+- [Editor Selection](#editor-selection)
+- [Security Validation](#security-validation)
+- [Output](#output)
+- [Error Handling](#error-handling)
+- [Common Editors](#common-editors)
+- [Configuration File Location](#configuration-file-location)
+- [Post-Edit Validation](#post-edit-validation)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Edit cluster configuration in your preferred editor.

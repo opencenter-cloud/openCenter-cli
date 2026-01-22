@@ -4,6 +4,19 @@ doc_type: reference
 
 # Error Code Reference
 
+
+## Table of Contents
+
+- [Error Code Format](#error-code-format)
+- [E1xxx: Configuration and Validation Errors](#e1xxx-configuration-and-validation-errors)
+- [E2xxx: Security Errors](#e2xxx-security-errors)
+- [E3xxx: Network Errors](#e3xxx-network-errors)
+- [E4xxx: File System Errors](#e4xxx-file-system-errors)
+- [E5xxx: Provider Errors](#e5xxx-provider-errors)
+- [E6xxx: Operational Errors](#e6xxx-operational-errors)
+- [Common Error Patterns](#common-error-patterns)
+- [Error Message Format](#error-message-format)
+- [Reporting Bugs](#reporting-bugs)
 Complete reference for openCenter CLI error codes, organized by category. Use this to diagnose and resolve issues.
 
 ## Error Code Format

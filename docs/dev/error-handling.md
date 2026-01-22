@@ -1,5 +1,22 @@
 # Error Handling Guide
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Error Types](#error-types)
+- [Error Codes](#error-codes)
+- [Creating Structured Errors](#creating-structured-errors)
+- [Using Error Helper Functions](#using-error-helper-functions)
+- [Error Wrapping](#error-wrapping)
+- [Error Middleware](#error-middleware)
+- [Error Formatting](#error-formatting)
+- [Common Patterns](#common-patterns)
+- [Error Handling Checklist](#error-handling-checklist)
+- [Testing Error Handling](#testing-error-handling)
+- [Migration Guide](#migration-guide)
+- [Best Practices](#best-practices)
+- [References](#references)
 **doc_type**: reference
 
 This document provides comprehensive guidance on error handling in openCenter CLI, including error classification, structured error usage, error codes, and common patterns.

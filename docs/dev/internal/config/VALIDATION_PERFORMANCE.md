@@ -1,5 +1,18 @@
 # Configuration Validation Performance Report
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Test Environment](#test-environment)
+- [Performance Benchmarks](#performance-benchmarks)
+- [Performance Thresholds](#performance-thresholds)
+- [Memory Usage Analysis](#memory-usage-analysis)
+- [Configuration Size Definitions](#configuration-size-definitions)
+- [Conclusions](#conclusions)
+- [Test Coverage](#test-coverage)
+- [Acceptance Criteria Status](#acceptance-criteria-status)
+- [References](#references)
 ## Overview
 
 This document summarizes the performance characteristics of the configuration validation system for the openCenter CLI. The validation system has been tested with configurations of varying sizes to ensure acceptable performance for large configurations.

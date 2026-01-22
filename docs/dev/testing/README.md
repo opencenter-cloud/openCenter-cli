@@ -4,6 +4,24 @@ doc_type: how-to
 
 # Testing Guide
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Testing Philosophy](#testing-philosophy)
+- [Test Organization](#test-organization)
+- [Unit Tests](#unit-tests)
+- [Property-Based Tests](#property-based-tests)
+- [BDD Tests](#bdd-tests)
+- [Integration Tests](#integration-tests)
+- [Test Fixtures](#test-fixtures)
+- [Mocking](#mocking)
+- [Test Coverage](#test-coverage)
+- [CI Integration](#ci-integration)
+- [Debugging Tests](#debugging-tests)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [See Also](#see-also)
 This guide covers testing strategies, frameworks, and best practices for openCenter.
 
 ## Who this is for

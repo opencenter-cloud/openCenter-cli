@@ -6,6 +6,23 @@ weight: 50
 
 # Cluster Configuration Architecture
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Configuration Structure Overview](#configuration-structure-overview)
+- [Core Configuration Types](#core-configuration-types)
+- [Complete Configuration to Terraform Mapping](#complete-configuration-to-terraform-mapping)
+- [Template Rendering Flow](#template-rendering-flow)
+- [Adding New Configuration Fields](#adding-new-configuration-fields)
+- [Service Configuration Architecture](#service-configuration-architecture)
+- [Debugging Configuration Issues](#debugging-configuration-issues)
+- [Configuration File Locations](#configuration-file-locations)
+- [Configuration Precedence and Merging](#configuration-precedence-and-merging)
+- [Related Documentation](#related-documentation)
+- [Key Files Reference](#key-files-reference)
+- [Testing Configuration Changes](#testing-configuration-changes)
+- [See Also](#see-also)
 This document provides a comprehensive reference for the openCenter cluster configuration structure, including how configuration values map to Terraform/OpenTofu templates and the underlying infrastructure.
 
 ## Who this is for

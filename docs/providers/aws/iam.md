@@ -1,5 +1,18 @@
 # AWS IAM Configuration
 
+
+## Table of Contents
+
+- [Purpose](#purpose)
+- [IAM Overview](#iam-overview)
+- [Minimum Required Permissions](#minimum-required-permissions)
+- [Optional Permissions](#optional-permissions)
+- [IAM Roles for Cluster Components](#iam-roles-for-cluster-components)
+- [IAM Roles for Service Accounts (IRSA)](#iam-roles-for-service-accounts-irsa)
+- [Security Best Practices](#security-best-practices)
+- [Troubleshooting IAM Issues](#troubleshooting-iam-issues)
+- [Related Documentation](#related-documentation)
+- [External Resources](#external-resources)
 **doc_type: reference**
 
 This document provides IAM policies, roles, and permissions required for openCenter to provision and manage Kubernetes clusters on AWS.

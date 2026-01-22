@@ -1,5 +1,18 @@
 # AWS Troubleshooting Guide
 
+
+## Table of Contents
+
+- [Quick Diagnostics](#quick-diagnostics)
+- [Authentication and Credentials](#authentication-and-credentials)
+- [VPC and Networking Issues](#vpc-and-networking-issues)
+- [EC2 Instance Issues](#ec2-instance-issues)
+- [Terraform/OpenTofu Issues](#terraformopentofu-issues)
+- [Configuration Validation Errors](#configuration-validation-errors)
+- [Cost and Billing Issues](#cost-and-billing-issues)
+- [Getting Help](#getting-help)
+- [Related Documentation](#related-documentation)
+- [External Resources](#external-resources)
 **doc_type: how-to**
 
 This guide provides solutions to common AWS-specific issues encountered when deploying and managing Kubernetes clusters with openCenter.

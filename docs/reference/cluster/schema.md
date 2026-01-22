@@ -1,5 +1,18 @@
 # cluster schema
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Flags](#flags)
+- [Examples](#examples)
+- [Schema Format](#schema-format)
+- [Schema Structure](#schema-structure)
+- [Use Cases](#use-cases)
+- [Schema Version](#schema-version)
+- [Output](#output)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Export cluster JSON schema with validation rules.

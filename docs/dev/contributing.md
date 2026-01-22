@@ -4,6 +4,22 @@ doc_type: how-to
 
 # Contributing to openCenter
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Getting Started](#getting-started)
+- [Development Workflow](#development-workflow)
+- [Code Style Guidelines](#code-style-guidelines)
+- [Testing Requirements](#testing-requirements)
+- [Pull Request Process](#pull-request-process)
+- [Adding New Features](#adding-new-features)
+- [Documentation Guidelines](#documentation-guidelines)
+- [Common Pitfalls](#common-pitfalls)
+- [Getting Help](#getting-help)
+- [Code of Conduct](#code-of-conduct)
+- [Recognition](#recognition)
+- [See Also](#see-also)
 This guide covers how to contribute code, documentation, and tests to openCenter.
 
 ## Who this is for

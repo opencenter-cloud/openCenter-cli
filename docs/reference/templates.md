@@ -7,6 +7,20 @@ weight: 30
 
 # Template System Reference
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Template Structure](#template-structure)
+- [Template Context](#template-context)
+- [Template Functions](#template-functions)
+- [Common Template Patterns](#common-template-patterns)
+- [Template Examples](#template-examples)
+- [Custom Templates](#custom-templates)
+- [Template Engine API](#template-engine-api)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [See Also](#see-also)
 This document provides complete reference information for the openCenter CLI template system, including template functions, variables, structure, and customization.
 
 ## Overview

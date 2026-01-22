@@ -1,5 +1,20 @@
 # Progress Reporting for GitOps Generation
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Progress Reporter Options](#progress-reporter-options)
+- [Integration with Pipeline Generator](#integration-with-pipeline-generator)
+- [Output Examples](#output-examples)
+- [Stage Icons](#stage-icons)
+- [Error Handling](#error-handling)
+- [Thread Safety](#thread-safety)
+- [CLI Integration](#cli-integration)
+- [Testing](#testing)
+- [Best Practices](#best-practices)
+- [Future Enhancements](#future-enhancements)
 This document describes how to use the progress reporting system for GitOps repository generation.
 
 ## Overview

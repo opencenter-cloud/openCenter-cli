@@ -4,6 +4,22 @@ doc_type: reference
 
 # Coding Standards
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Go Language Standards](#go-language-standards)
+- [Code Organization](#code-organization)
+- [Error Handling](#error-handling)
+- [Testing Standards](#testing-standards)
+- [Documentation Standards](#documentation-standards)
+- [Dependency Management](#dependency-management)
+- [Concurrency](#concurrency)
+- [Security Practices](#security-practices)
+- [Performance Considerations](#performance-considerations)
+- [Common Patterns](#common-patterns)
+- [Code Review Checklist](#code-review-checklist)
+- [See Also](#see-also)
 This document defines the code style, naming conventions, and best practices for openCenter development. These standards are derived from actual codebase patterns and Go community conventions.
 
 ## Who this is for

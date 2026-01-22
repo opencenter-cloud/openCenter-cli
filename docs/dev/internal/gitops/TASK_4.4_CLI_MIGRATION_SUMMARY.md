@@ -1,5 +1,22 @@
 # Task 4.4 Sub-task: CLI Commands Use New Generation System Transparently
 
+
+## Table of Contents
+
+- [Status: ✅ COMPLETE](#status-complete)
+- [Overview](#overview)
+- [Changes Summary](#changes-summary)
+- [Technical Details](#technical-details)
+- [Benefits](#benefits)
+- [Testing](#testing)
+- [Feature Flag Support](#feature-flag-support)
+- [Commands Analysis](#commands-analysis)
+- [Backward Compatibility](#backward-compatibility)
+- [Migration Path](#migration-path)
+- [Related Documentation](#related-documentation)
+- [Verification Checklist](#verification-checklist)
+- [Conclusion](#conclusion)
+- [Next Steps](#next-steps)
 ## Status: ✅ COMPLETE
 
 ## Overview

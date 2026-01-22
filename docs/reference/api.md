@@ -7,6 +7,18 @@ weight: 10
 
 # Go Package API Reference
 
+
+## Table of Contents
+
+- [Package Overview](#package-overview)
+- [config Package](#config-package)
+- [gitops Package](#gitops-package)
+- [sops Package](#sops-package)
+- [template Package](#template-package)
+- [services Package](#services-package)
+- [util Package](#util-package)
+- [Usage Examples](#usage-examples)
+- [See Also](#see-also)
 This document provides reference documentation for the internal Go packages in openCenter CLI. These packages form the core implementation of the CLI tool and can be used for extending functionality or understanding the codebase.
 
 ## Package Overview

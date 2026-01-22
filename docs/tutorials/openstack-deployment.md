@@ -1,5 +1,30 @@
 # Deploy Production Kubernetes on OpenStack
 
+
+## Table of Contents
+
+- [What You'll Build](#what-youll-build)
+- [Prerequisites](#prerequisites)
+- [Step 1: Gather OpenStack Information](#step-1-gather-openstack-information)
+- [Step 2: Initialize Cluster Configuration](#step-2-initialize-cluster-configuration)
+- [Step 3: Configure OpenStack Credentials](#step-3-configure-openstack-credentials)
+- [Step 4: Configure Cluster Networking](#step-4-configure-cluster-networking)
+- [Step 5: Configure Storage](#step-5-configure-storage)
+- [Step 6: Enable SOPS Encryption](#step-6-enable-sops-encryption)
+- [Step 7: Configure OpenTofu Backend](#step-7-configure-opentofu-backend)
+- [Step 8: Validate Configuration](#step-8-validate-configuration)
+- [Step 9: Generate GitOps Repository](#step-9-generate-gitops-repository)
+- [Step 10: Bootstrap Infrastructure](#step-10-bootstrap-infrastructure)
+- [Step 11: Verify Cluster Deployment](#step-11-verify-cluster-deployment)
+- [Step 12: Access Cluster Nodes](#step-12-access-cluster-nodes)
+- [What You Learned](#what-you-learned)
+- [Next Steps](#next-steps)
+- [Common Issues](#common-issues)
+- [Production Considerations](#production-considerations)
+- [Cleanup](#cleanup)
+- [Summary](#summary)
+- [Related Documentation](#related-documentation)
+- [Getting Help](#getting-help)
 **doc_type: tutorial**
 
 Deploy a production-ready Kubernetes cluster on OpenStack in 45 minutes. You'll configure OpenStack credentials, set up networking, generate a GitOps repository, and bootstrap a highly available cluster.

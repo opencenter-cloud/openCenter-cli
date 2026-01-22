@@ -1,5 +1,18 @@
 # Operational Runbooks
 
+
+## Table of Contents
+
+- [What Are Runbooks?](#what-are-runbooks)
+- [When to Use Runbooks](#when-to-use-runbooks)
+- [Available Runbooks](#available-runbooks)
+- [Runbook Structure](#runbook-structure)
+- [Using Runbooks Safely](#using-runbooks-safely)
+- [Rollback Decision Matrix](#rollback-decision-matrix)
+- [Related Documentation](#related-documentation)
+- [Runbook Maintenance](#runbook-maintenance)
+- [Emergency Contacts](#emergency-contacts)
+- [Compliance and Audit](#compliance-and-audit)
 **doc_type: reference**
 
 This directory contains step-by-step operational procedures for common cluster maintenance tasks. Each runbook provides a tested sequence of commands with verification steps and rollback procedures.

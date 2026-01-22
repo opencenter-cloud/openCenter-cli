@@ -1,5 +1,16 @@
 # Template Engine
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Components](#core-components)
+- [Usage Examples](#usage-examples)
+- [Design Decisions](#design-decisions)
+- [Performance Considerations](#performance-considerations)
+- [Testing](#testing)
+- [Future Enhancements](#future-enhancements)
+- [Migration from Legacy System](#migration-from-legacy-system)
 This package provides a clean, extensible template engine abstraction for rendering Go templates with caching, validation, and comprehensive error reporting.
 
 ## Overview

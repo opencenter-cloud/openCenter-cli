@@ -1,5 +1,15 @@
 # How-To Guides
 
+
+## Table of Contents
+
+- [Who These Are For](#who-these-are-for)
+- [Available Guides](#available-guides)
+- [How-To Guide Structure](#how-to-guide-structure)
+- [Quick Reference](#quick-reference)
+- [Getting Help](#getting-help)
+- [Related Documentation](#related-documentation)
+- [Contributing](#contributing)
 **doc_type: how-to**
 
 Practical guides for accomplishing specific tasks with openCenter. Each guide focuses on solving one problem with clear, tested steps.

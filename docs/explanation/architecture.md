@@ -1,5 +1,18 @@
 # System Architecture
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [The Core Concept](#the-core-concept)
+- [Why a Single YAML File?](#why-a-single-yaml-file)
+- [Architecture Layers](#architecture-layers)
+- [Data Flow: From YAML to Infrastructure](#data-flow-from-yaml-to-infrastructure)
+- [Design Rationale: Key Decisions](#design-rationale-key-decisions)
+- [Trade-offs and Limitations](#trade-offs-and-limitations)
+- [Component Interactions](#component-interactions)
+- [Related Concepts](#related-concepts)
+- [Conclusion](#conclusion)
 **doc_type**: explanation
 
 ## Overview

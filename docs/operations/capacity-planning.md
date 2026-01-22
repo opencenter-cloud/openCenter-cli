@@ -1,5 +1,23 @@
 # Capacity Planning
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Prerequisites](#prerequisites)
+- [Resource Planning Overview](#resource-planning-overview)
+- [Analyze Current Usage](#analyze-current-usage)
+- [Forecast Resource Needs](#forecast-resource-needs)
+- [Scaling Strategies](#scaling-strategies)
+- [Resource Optimization](#resource-optimization)
+- [Storage Capacity Planning](#storage-capacity-planning)
+- [Network Capacity Planning](#network-capacity-planning)
+- [Control Plane Scaling](#control-plane-scaling)
+- [Cost Optimization](#cost-optimization)
+- [Capacity Planning Checklist](#capacity-planning-checklist)
+- [Capacity Alerts](#capacity-alerts)
+- [Related Documentation](#related-documentation)
+- [Next Steps](#next-steps)
 **doc_type: how-to**
 
 Plan and forecast resource requirements for openCenter-managed Kubernetes clusters. This guide covers resource analysis, growth forecasting, scaling strategies, and cost optimization.

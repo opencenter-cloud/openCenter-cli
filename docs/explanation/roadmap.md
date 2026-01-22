@@ -1,5 +1,25 @@
 # Roadmap and Future Plans
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Current status](#current-status)
+- [Development philosophy](#development-philosophy)
+- [Near-term priorities (next 3-6 months)](#near-term-priorities-next-3-6-months)
+- [Medium-term goals (6-12 months)](#medium-term-goals-6-12-months)
+- [Long-term vision (12+ months)](#long-term-vision-12-months)
+- [Features we're not planning](#features-were-not-planning)
+- [How features are prioritized](#how-features-are-prioritized)
+- [Contributing to the roadmap](#contributing-to-the-roadmap)
+- [Migration and deprecation policy](#migration-and-deprecation-policy)
+- [Version numbering](#version-numbering)
+- [Release cadence](#release-cadence)
+- [Technology evolution](#technology-evolution)
+- [Community and governance](#community-and-governance)
+- [How to stay informed](#how-to-stay-informed)
+- [Conclusion](#conclusion)
+- [See also](#see-also)
 **doc_type**: explanation
 
 ## Who this is for

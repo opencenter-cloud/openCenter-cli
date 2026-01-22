@@ -1,5 +1,18 @@
 # Existing Generation Calls Compatibility
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Compatibility Guarantee](#compatibility-guarantee)
+- [Existing Code Patterns](#existing-code-patterns)
+- [Feature Flag Migration](#feature-flag-migration)
+- [Command Compatibility](#command-compatibility)
+- [Test Coverage](#test-coverage)
+- [Migration Timeline](#migration-timeline)
+- [Troubleshooting](#troubleshooting)
+- [Verification](#verification)
+- [Conclusion](#conclusion)
 ## Overview
 
 This document demonstrates that existing GitOps generation calls work without modification after the refactoring. The compatibility layer in `legacy_compat.go` ensures that all existing code continues to function correctly while providing a migration path to the new pipeline-based system.

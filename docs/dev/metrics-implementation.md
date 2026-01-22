@@ -1,5 +1,17 @@
 # Metrics Implementation Summary
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Implementation Details](#implementation-details)
+- [Usage Examples](#usage-examples)
+- [Testing](#testing)
+- [Performance Characteristics](#performance-characteristics)
+- [Requirements Satisfied](#requirements-satisfied)
+- [Future Enhancements](#future-enhancements)
+- [Documentation](#documentation)
+- [Conclusion](#conclusion)
 ## Overview
 
 This document summarizes the implementation of the performance metrics system for openCenter, which tracks template rendering times, configuration building times, and GitOps generation times.

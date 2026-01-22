@@ -1,5 +1,18 @@
 # cluster service
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Subcommands](#subcommands)
+- [Service Types](#service-types)
+- [Common Service Parameters](#common-service-parameters)
+- [Service-Specific Configuration](#service-specific-configuration)
+- [Validation](#validation)
+- [Rendering](#rendering)
+- [Use Cases](#use-cases)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Manage cluster services and their configurations.

@@ -1,5 +1,21 @@
 # `openCenter cluster init` - Developer Documentation
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Implementation Details](#implementation-details)
+- [Dynamic Flag Parsing](#dynamic-flag-parsing)
+- [Reflection-Based Field Setting](#reflection-based-field-setting)
+- [Key Generation](#key-generation)
+- [SOPS Configuration](#sops-configuration)
+- [Organization Structure](#organization-structure)
+- [Testing](#testing)
+- [Error Handling](#error-handling)
+- [Performance Considerations](#performance-considerations)
+- [Security Considerations](#security-considerations)
+- [See Also](#see-also)
 ## Synopsis
 
 ```bash

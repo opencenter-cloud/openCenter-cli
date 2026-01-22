@@ -1,5 +1,20 @@
 # Incident Response
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Prerequisites](#prerequisites)
+- [Incident Classification](#incident-classification)
+- [Incident Response Workflow](#incident-response-workflow)
+- [Common Incident Types](#common-incident-types)
+- [Escalation Procedures](#escalation-procedures)
+- [Communication Guidelines](#communication-guidelines)
+- [Post-Incident Review](#post-incident-review)
+- [Incident Response Checklist](#incident-response-checklist)
+- [Related Documentation](#related-documentation)
+- [Emergency Procedures](#emergency-procedures)
+- [Training and Preparedness](#training-and-preparedness)
 **doc_type: how-to**
 
 Procedures for responding to and resolving incidents in openCenter-managed Kubernetes clusters. This guide covers incident classification, response procedures, escalation paths, and post-incident reviews.

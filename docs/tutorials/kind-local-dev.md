@@ -6,6 +6,27 @@ weight: 20
 
 # Local Development with Kind
 
+
+## Table of Contents
+
+- [What You'll Learn](#what-youll-learn)
+- [Prerequisites](#prerequisites)
+- [Step 1: Install Kind](#step-1-install-kind)
+- [Step 2: Create a Kind Cluster](#step-2-create-a-kind-cluster)
+- [Step 3: Initialize openCenter Configuration](#step-3-initialize-opencenter-configuration)
+- [Step 4: Customize for Local Development](#step-4-customize-for-local-development)
+- [Step 5: Set Up GitOps Repository](#step-5-set-up-gitops-repository)
+- [Step 6: Validate Configuration](#step-6-validate-configuration)
+- [Step 7: Bootstrap the Cluster](#step-7-bootstrap-the-cluster)
+- [Step 8: Verify Cluster Status](#step-8-verify-cluster-status)
+- [Step 9: Test GitOps Workflow](#step-9-test-gitops-workflow)
+- [Step 10: Access Cluster Services](#step-10-access-cluster-services)
+- [Working with Multiple Local Clusters](#working-with-multiple-local-clusters)
+- [Debugging Tips](#debugging-tips)
+- [Cleaning Up](#cleaning-up)
+- [Next Steps](#next-steps)
+- [Troubleshooting](#troubleshooting)
+- [Additional Resources](#additional-resources)
 This tutorial walks you through setting up a local Kubernetes cluster using Kind (Kubernetes in Docker) for testing openCenter configurations without cloud infrastructure costs.
 
 ## What You'll Learn

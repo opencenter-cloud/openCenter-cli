@@ -1,5 +1,19 @@
 # Deploying Configuration Changes
 
+
+## Table of Contents
+
+- [When to use this guide](#when-to-use-this-guide)
+- [Prerequisites](#prerequisites)
+- [Workflow overview](#workflow-overview)
+- [Steps](#steps)
+- [GitOps workflow integration](#gitops-workflow-integration)
+- [Configuration change patterns](#configuration-change-patterns)
+- [Troubleshooting](#troubleshooting)
+- [Rollback procedure](#rollback-procedure)
+- [Best practices](#best-practices)
+- [Related commands](#related-commands)
+- [Next steps](#next-steps)
 **doc_type:** how-to
 
 This guide shows you how to deploy configuration changes to an existing cluster using the openCenter workflow.

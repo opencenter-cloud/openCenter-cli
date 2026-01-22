@@ -1,5 +1,18 @@
 # Provider Setup
 
+
+## Table of Contents
+
+- [Task Summary](#task-summary)
+- [Prerequisites](#prerequisites)
+- [OpenStack Setup](#openstack-setup)
+- [AWS Setup](#aws-setup)
+- [Kind Setup](#kind-setup)
+- [Talos Setup](#talos-setup)
+- [Multi-Provider Considerations](#multi-provider-considerations)
+- [Next Steps](#next-steps)
+- [Related Documentation](#related-documentation)
+- [External Resources](#external-resources)
 **doc_type: how-to**
 
 Configure cloud provider credentials, networking, and permissions for openCenter cluster deployments.

@@ -1,5 +1,20 @@
 # Developing Custom Plugins
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Understanding Plugin Types](#understanding-plugin-types)
+- [Task 1: Create an External Command Plugin](#task-1-create-an-external-command-plugin)
+- [Task 2: Create a Service Plugin](#task-2-create-a-service-plugin)
+- [Task 3: Add Plugin Lifecycle Hooks](#task-3-add-plugin-lifecycle-hooks)
+- [Task 4: Create Plugin Manifest](#task-4-create-plugin-manifest)
+- [Task 5: Test and Debug Plugins](#task-5-test-and-debug-plugins)
+- [Task 6: Package and Distribute Plugin](#task-6-package-and-distribute-plugin)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Next Steps](#next-steps)
 **doc_type**: how-to  
 **priority**: 3  
 **audience**: Developers extending openCenter functionality  

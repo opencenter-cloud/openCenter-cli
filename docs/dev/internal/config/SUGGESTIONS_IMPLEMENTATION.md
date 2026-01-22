@@ -1,5 +1,16 @@
 # Validation Suggestions Implementation
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Implementation](#implementation)
+- [Testing](#testing)
+- [Benefits](#benefits)
+- [Future Enhancements](#future-enhancements)
+- [Compliance](#compliance)
+- [Files Created](#files-created)
+- [Files Modified](#files-modified)
 ## Overview
 
 This document describes the implementation of the validation suggestions system that guides users to correct configuration errors in openCenter CLI.

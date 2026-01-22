@@ -1,5 +1,21 @@
 # AWS Setup Guide
 
+
+## Table of Contents
+
+- [Task Summary](#task-summary)
+- [Prerequisites](#prerequisites)
+- [Step 1: Configure AWS Credentials](#step-1-configure-aws-credentials)
+- [Step 2: Plan VPC and Network Configuration](#step-2-plan-vpc-and-network-configuration)
+- [Step 3: Select Instance Types](#step-3-select-instance-types)
+- [Step 4: Configure Storage](#step-4-configure-storage)
+- [Step 5: Create Cluster Configuration](#step-5-create-cluster-configuration)
+- [Step 6: Validate Configuration](#step-6-validate-configuration)
+- [Step 7: Configure Terraform Backend (Optional)](#step-7-configure-terraform-backend-optional)
+- [Common Configurations](#common-configurations)
+- [Troubleshooting](#troubleshooting)
+- [Next Steps](#next-steps)
+- [Related Documentation](#related-documentation)
 **doc_type: how-to**
 
 Configure openCenter to deploy Kubernetes clusters on AWS infrastructure. This guide walks through AWS account setup, IAM configuration, VPC planning, and cluster configuration.

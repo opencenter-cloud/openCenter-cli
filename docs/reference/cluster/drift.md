@@ -1,5 +1,16 @@
 # cluster drift
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Subcommands](#subcommands)
+- [Drift Severity Levels](#drift-severity-levels)
+- [Drift Detection Process](#drift-detection-process)
+- [Use Cases](#use-cases)
+- [Implementation Status](#implementation-status)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Detect and reconcile infrastructure drift between desired configuration and actual state.

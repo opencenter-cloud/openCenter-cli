@@ -1,5 +1,26 @@
 # Plugin System Architecture
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [What plugins solve](#what-plugins-solve)
+- [How plugin discovery works](#how-plugin-discovery-works)
+- [Plugin naming convention](#plugin-naming-convention)
+- [How plugins execute](#how-plugins-execute)
+- [Flag handling](#flag-handling)
+- [Service plugins vs command plugins](#service-plugins-vs-command-plugins)
+- [The service registry pattern](#the-service-registry-pattern)
+- [Lifecycle hooks](#lifecycle-hooks)
+- [Plugin manifest format](#plugin-manifest-format)
+- [Dependency injection integration](#dependency-injection-integration)
+- [Security considerations](#security-considerations)
+- [Performance characteristics](#performance-characteristics)
+- [Common patterns](#common-patterns)
+- [Extending the plugin system](#extending-the-plugin-system)
+- [Trade-offs and limitations](#trade-offs-and-limitations)
+- [Comparison with other plugin systems](#comparison-with-other-plugin-systems)
+- [See also](#see-also)
 **doc_type**: explanation
 
 ## Who this is for

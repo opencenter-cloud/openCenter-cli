@@ -1,5 +1,22 @@
 # Getting Started with openCenter
 
+
+## Table of Contents
+
+- [What You'll Build](#what-youll-build)
+- [Prerequisites](#prerequisites)
+- [Step 1: Install openCenter](#step-1-install-opencenter)
+- [Step 2: Initialize Your First Cluster](#step-2-initialize-your-first-cluster)
+- [Step 3: Explore the Configuration File](#step-3-explore-the-configuration-file)
+- [Step 4: Understand the Directory Structure](#step-4-understand-the-directory-structure)
+- [Step 5: Validate the Configuration](#step-5-validate-the-configuration)
+- [Step 6: Modify a Configuration Value](#step-6-modify-a-configuration-value)
+- [Step 7: Check What Files Were Created](#step-7-check-what-files-were-created)
+- [Verify Your Work](#verify-your-work)
+- [What You Learned](#what-you-learned)
+- [Next Steps](#next-steps)
+- [Common Questions](#common-questions)
+- [Troubleshooting](#troubleshooting)
 **doc_type: tutorial**
 
 Deploy your first Kubernetes cluster configuration in 15 minutes. You'll initialize a cluster, validate it, and understand the basic openCenter workflow.

@@ -1,5 +1,22 @@
 # Adding Services to Your Cluster
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Service Architecture](#service-architecture)
+- [Available Services](#available-services)
+- [Enabling Services](#enabling-services)
+- [Service Configuration Patterns](#service-configuration-patterns)
+- [Adding Custom Services](#adding-custom-services)
+- [Template Variables](#template-variables)
+- [Service Patterns](#service-patterns)
+- [Secrets Management](#secrets-management)
+- [Validation](#validation)
+- [Best Practices](#best-practices)
+- [Complete Examples](#complete-examples)
+- [Troubleshooting](#troubleshooting)
+- [Related Documentation](#related-documentation)
 **doc_type: how-to**
 
 This guide shows you how to enable, configure, and add services to your openCenter cluster. Services are Kubernetes applications deployed and managed through FluxCD.

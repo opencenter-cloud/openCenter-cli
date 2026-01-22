@@ -1,5 +1,19 @@
 # Documentation Content Checklist 1.0.0
 
+
+## Table of Contents
+
+- [How to Use This Checklist](#how-to-use-this-checklist)
+- [Priority 1: Pre-Release Blockers](#priority-1-pre-release-blockers)
+- [Priority 2: Release Targets](#priority-2-release-targets)
+- [Priority 3: Post-Release](#priority-3-post-release)
+- [Cleanup Tasks](#cleanup-tasks)
+- [Post-Verification Tasks](#post-verification-tasks)
+- [Progress Summary](#progress-summary)
+- [Review Schedule](#review-schedule)
+- [Notes and Issues](#notes-and-issues)
+- [Sign-Off](#sign-off)
+- [Recent Completions](#recent-completions)
 **doc_type: reference**
 
 This checklist tracks documentation completion status for the 1.0.0 release. Use this to monitor progress and identify gaps.

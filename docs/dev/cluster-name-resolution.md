@@ -1,5 +1,19 @@
 # Cluster Name Resolution Pattern
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Supported Formats](#supported-formats)
+- [Implementation](#implementation)
+- [Validation](#validation)
+- [Updated Commands](#updated-commands)
+- [Usage Examples](#usage-examples)
+- [Error Messages](#error-messages)
+- [Benefits](#benefits)
+- [Testing](#testing)
+- [Migration Notes](#migration-notes)
+- [Related Files](#related-files)
 ## Overview
 
 All `openCenter cluster` subcommands now consistently support two methods for specifying the target cluster:

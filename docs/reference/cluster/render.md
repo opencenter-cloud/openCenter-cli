@@ -1,5 +1,20 @@
 # cluster render
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Examples](#examples)
+- [Rendering Process](#rendering-process)
+- [Output Structure](#output-structure)
+- [Organization Support](#organization-support)
+- [Output](#output)
+- [Use Cases](#use-cases)
+- [Comparison with cluster setup](#comparison-with-cluster-setup)
+- [Error Handling](#error-handling)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Render cluster templates into the GitOps directory structure.

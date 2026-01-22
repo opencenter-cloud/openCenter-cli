@@ -1,5 +1,20 @@
 # `openCenter cluster setup` - Setup GitOps Directory
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Options](#options)
+- [Examples](#examples)
+- [Output](#output)
+- [GitOps Directory Structure](#gitops-directory-structure)
+- [Setup Process](#setup-process)
+- [Template Rendering](#template-rendering)
+- [SOPS Configuration](#sops-configuration)
+- [Notes](#notes)
+- [See Also](#see-also)
 ## Synopsis
 ```bash
 openCenter cluster setup [name] [OPTIONS]

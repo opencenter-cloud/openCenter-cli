@@ -1,5 +1,21 @@
 # Service Plugin System
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Service Manifest Format](#service-manifest-format)
+- [Service Types](#service-types)
+- [Usage](#usage)
+- [Dependency Resolution](#dependency-resolution)
+- [Configuration Schema](#configuration-schema)
+- [Lifecycle Hooks](#lifecycle-hooks)
+- [Testing](#testing)
+- [Example Manifests](#example-manifests)
+- [Future Enhancements](#future-enhancements)
+- [Contributing](#contributing)
+- [License](#license)
 The service plugin system provides a modular, extensible architecture for managing cluster services in openCenter. Services can be loaded dynamically from manifest files, with automatic dependency resolution and lifecycle management.
 
 ## Overview

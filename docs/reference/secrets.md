@@ -7,6 +7,20 @@ weight: 20
 
 # Secrets Management Reference
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Configuration Structure](#configuration-structure)
+- [SOPS Configuration](#sops-configuration)
+- [Age Encryption Keys](#age-encryption-keys)
+- [Secret Types](#secret-types)
+- [SSH Keys](#ssh-keys)
+- [Encryption Operations](#encryption-operations)
+- [Environment Variables](#environment-variables)
+- [Security Best Practices](#security-best-practices)
+- [Troubleshooting](#troubleshooting)
+- [See Also](#see-also)
 This document provides complete reference information for secrets management in openCenter CLI, including SOPS configuration, Age encryption keys, and secrets organization.
 
 ## Overview

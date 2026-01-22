@@ -1,5 +1,18 @@
 # Talos on OpenStack — Architecture Document
 
+
+## Table of Contents
+
+- [Scope](#scope)
+- [System Context](#system-context)
+- [Component Responsibilities](#component-responsibilities)
+- [Network & Security Architecture](#network-security-architecture)
+- [Control Flows](#control-flows)
+- [Availability & Scalability Considerations](#availability-scalability-considerations)
+- [Observability & Audit](#observability-audit)
+- [Pulumi State Management](#pulumi-state-management)
+- [Fallback Strategies](#fallback-strategies)
+- [Dependencies & Assumptions](#dependencies-assumptions)
 ## Scope
 This document captures the Pulumi-based system blueprint that implements the Talos provider for openCenter CLI. It translates the Zero Trust narrative from `readme.md` into concrete components, responsibilities, and integration points that AI agents must implement without relying on Terraform or Cluster API (CAPI/CAPO).
 

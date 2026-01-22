@@ -1,5 +1,22 @@
 # Monitoring and Observability
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Prerequisites](#prerequisites)
+- [Monitoring Stack Overview](#monitoring-stack-overview)
+- [Enable Monitoring Services](#enable-monitoring-services)
+- [Access Monitoring Interfaces](#access-monitoring-interfaces)
+- [Configure Dashboards](#configure-dashboards)
+- [Configure Alerting](#configure-alerting)
+- [Log Aggregation with Loki](#log-aggregation-with-loki)
+- [Monitoring Best Practices](#monitoring-best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Integration with External Systems](#integration-with-external-systems)
+- [Capacity Planning](#capacity-planning)
+- [Related Documentation](#related-documentation)
+- [Next Steps](#next-steps)
 **doc_type: how-to**
 
 Set up comprehensive monitoring and observability for openCenter-managed Kubernetes clusters using Prometheus, Grafana, Loki, and integrated alerting.

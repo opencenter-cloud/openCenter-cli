@@ -1,5 +1,16 @@
 # Deploy and Destroy Clusters
 
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Discovering OpenStack Resources](#discovering-openstack-resources)
+- [Deploying a Cluster](#deploying-a-cluster)
+- [Troubleshooting Deployment](#troubleshooting-deployment)
+- [Destroying a Cluster](#destroying-a-cluster)
+- [Region-Specific Examples](#region-specific-examples)
+- [Best Practices](#best-practices)
+- [Next Steps](#next-steps)
 This guide covers the complete workflow for deploying and destroying Kubernetes clusters using openCenter CLI on OpenStack.
 
 ## Prerequisites

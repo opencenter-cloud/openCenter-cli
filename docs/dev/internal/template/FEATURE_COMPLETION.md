@@ -1,5 +1,19 @@
 # Template Engine Feature Completion
 
+
+## Table of Contents
+
+- [Task: Go template engine supports all existing template features](#task-go-template-engine-supports-all-existing-template-features)
+- [Summary](#summary)
+- [Implemented Features](#implemented-features)
+- [Test Coverage](#test-coverage)
+- [Compatibility Verification](#compatibility-verification)
+- [Code Changes](#code-changes)
+- [Validation](#validation)
+- [Acceptance Criterion Status](#acceptance-criterion-status)
+- [Next Steps](#next-steps)
+- [Migration Path](#migration-path)
+- [Conclusion](#conclusion)
 ## Task: Go template engine supports all existing template features
 
 **Status**: ✅ COMPLETED

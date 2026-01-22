@@ -1,5 +1,18 @@
 # Backup and Recovery
 
+
+## Table of Contents
+
+- [Task Summary](#task-summary)
+- [Prerequisites](#prerequisites)
+- [Backup Procedures](#backup-procedures)
+- [Restore Procedures](#restore-procedures)
+- [Backup Strategies](#backup-strategies)
+- [Disaster Recovery Scenarios](#disaster-recovery-scenarios)
+- [Backup Management](#backup-management)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [Related Documentation](#related-documentation)
 **doc_type: how-to**
 
 Protect your cluster configurations and secrets with backups. Restore them when needed.

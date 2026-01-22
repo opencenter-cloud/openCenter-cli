@@ -1,5 +1,17 @@
 # Circular Dependency Detection Implementation
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Implementation](#implementation)
+- [Test Coverage](#test-coverage)
+- [Verification Results](#verification-results)
+- [Usage Examples](#usage-examples)
+- [Performance Characteristics](#performance-characteristics)
+- [Integration Points](#integration-points)
+- [Future Enhancements](#future-enhancements)
+- [Conclusion](#conclusion)
 ## Overview
 
 The Service Registry implements comprehensive circular dependency detection to prevent infinite loops during service dependency resolution. This document describes the implementation, testing, and verification of this critical feature.

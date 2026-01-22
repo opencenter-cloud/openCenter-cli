@@ -6,6 +6,18 @@ weight: 90
 
 # Developer Commands
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Overview](#overview)
+- [Available Hidden Commands](#available-hidden-commands)
+- [Why Commands are Hidden](#why-commands-are-hidden)
+- [Discovering Hidden Commands](#discovering-hidden-commands)
+- [Using Hidden Commands in Scripts](#using-hidden-commands-in-scripts)
+- [Migration Guide](#migration-guide)
+- [Related Documentation](#related-documentation)
+- [See Also](#see-also)
 openCenter includes several developer commands that are useful for development, debugging, and advanced workflows. These commands are intentionally hidden from the main help menu to keep it focused on primary user workflows, but they remain fully functional and documented here.
 
 ## Who this is for

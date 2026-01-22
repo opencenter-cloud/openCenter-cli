@@ -1,5 +1,17 @@
 # `openCenter cluster select` - Select the Active Cluster
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Options](#options)
+- [Examples](#examples)
+- [Output](#output)
+- [Environment Setup](#environment-setup)
+- [Notes](#notes)
+- [See Also](#see-also)
 ## Synopsis
 ```bash
 openCenter cluster select [name] [OPTIONS]

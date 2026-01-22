@@ -7,6 +7,16 @@ weight: 30
 
 # Cluster Commands Reference
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Command Index](#command-index)
+- [Common Patterns](#common-patterns)
+- [Global Flags](#global-flags)
+- [Environment Variables](#environment-variables)
+- [Exit Codes](#exit-codes)
+- [Related Documentation](#related-documentation)
 Complete reference for all `openCenter cluster` subcommands organized by lifecycle phase.
 
 ## Overview

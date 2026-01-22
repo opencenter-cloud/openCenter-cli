@@ -11,6 +11,17 @@ related:
 
 # Provider Comparison and Selection Guide
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Supported Providers](#supported-providers)
+- [Provider Comparison Matrix](#provider-comparison-matrix)
+- [Decision Framework](#decision-framework)
+- [Provider-Specific Considerations](#provider-specific-considerations)
+- [Migration Between Providers](#migration-between-providers)
+- [Conclusion](#conclusion)
+- [Related Documentation](#related-documentation)
 This document explains the different infrastructure providers supported by openCenter, their characteristics, trade-offs, and guidance for choosing the right provider for your use case.
 
 ## Overview

@@ -1,5 +1,20 @@
 # openCenter Documentation
 
+
+## Table of Contents
+
+- [What is openCenter?](#what-is-opencenter)
+- [Quick Navigation](#quick-navigation)
+- [Documentation Structure](#documentation-structure)
+- [By User Role](#by-user-role)
+- [By Task](#by-task)
+- [Provider-Specific Documentation](#provider-specific-documentation)
+- [Operations Documentation](#operations-documentation)
+- [Development Documentation](#development-documentation)
+- [Additional Resources](#additional-resources)
+- [Contributing to Documentation](#contributing-to-documentation)
+- [Version Information](#version-information)
+- [License](#license)
 **doc_type: reference**
 
 Welcome to openCenter documentation. This guide helps you find what you need quickly.

@@ -1,5 +1,18 @@
 # Template Engine Feature Flag
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Purpose](#purpose)
+- [Usage](#usage)
+- [Migration Strategy](#migration-strategy)
+- [Affected Functions](#affected-functions)
+- [Testing](#testing)
+- [Monitoring](#monitoring)
+- [Troubleshooting](#troubleshooting)
+- [Future Plans](#future-plans)
+- [References](#references)
 ## Overview
 
 The `OPENCENTER_USE_NEW_TEMPLATE_ENGINE` environment variable provides a feature flag for controlling which template engine implementation is used during the migration from the legacy text/template system to the new GoTemplateEngine.

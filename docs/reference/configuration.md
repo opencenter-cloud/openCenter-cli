@@ -1,5 +1,15 @@
 # Configuration Reference
 
+
+## Table of Contents
+
+- [Configuration File Structure](#configuration-file-structure)
+- [Configuration Sections](#configuration-sections)
+- [Configuration File Locations](#configuration-file-locations)
+- [Environment Variables](#environment-variables)
+- [Configuration Validation](#configuration-validation)
+- [Configuration Examples](#configuration-examples)
+- [See Also](#see-also)
 Complete reference for openCenter cluster configuration.
 
 ## Configuration File Structure

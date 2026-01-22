@@ -1,5 +1,19 @@
 # Shell Integration
 
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Prompt Integration](#prompt-integration)
+- [Environment Variables](#environment-variables)
+- [Helper Functions](#helper-functions)
+- [Troubleshooting](#troubleshooting)
+- [Cluster Selection Modes](#cluster-selection-modes)
+- [See Also](#see-also)
 openCenter provides shell integration for session-scoped cluster selection, allowing multiple terminal sessions to work with different clusters independently.
 
 ## Quick Start

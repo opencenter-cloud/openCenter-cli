@@ -1,5 +1,22 @@
 # Known Issues and Limitations
 
+
+## Table of Contents
+
+- [Validation System](#validation-system)
+- [Cloud Provider Support](#cloud-provider-support)
+- [GitOps and Deployment](#gitops-and-deployment)
+- [Configuration Management](#configuration-management)
+- [User Interface](#user-interface)
+- [Provider-Specific Limitations](#provider-specific-limitations)
+- [Performance](#performance)
+- [Security](#security)
+- [Documentation](#documentation)
+- [Workarounds Summary](#workarounds-summary)
+- [Reporting Issues](#reporting-issues)
+- [Future Improvements](#future-improvements)
+- [Related Documentation](#related-documentation)
+- [Conclusion](#conclusion)
 **doc_type**: explanation
 
 This document describes current limitations, known issues, and planned improvements in openCenter. It's organized by functional area to help you understand what works, what doesn't, and what workarounds exist.

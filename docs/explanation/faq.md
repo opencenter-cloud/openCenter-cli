@@ -1,5 +1,20 @@
 # Frequently Asked Questions
 
+
+## Table of Contents
+
+- [Installation and Setup](#installation-and-setup)
+- [Configuration](#configuration)
+- [Validation](#validation)
+- [GitOps and Deployment](#gitops-and-deployment)
+- [Secrets Management](#secrets-management)
+- [Providers](#providers)
+- [Troubleshooting](#troubleshooting)
+- [Performance and Scaling](#performance-and-scaling)
+- [Advanced Usage](#advanced-usage)
+- [Comparison with Other Tools](#comparison-with-other-tools)
+- [Getting Help](#getting-help)
+- [Related Documentation](#related-documentation)
 **doc_type**: explanation
 
 This document answers common questions about openCenter, organized by topic. If you don't find your answer here, check the [Troubleshooting Guide](../how-to/troubleshooting.md) or open an issue on GitHub.

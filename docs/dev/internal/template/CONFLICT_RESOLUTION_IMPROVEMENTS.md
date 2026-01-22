@@ -1,5 +1,15 @@
 # Conflict Resolution Error Message Improvements
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Changes Made](#changes-made)
+- [Error Message Structure](#error-message-structure)
+- [Benefits](#benefits)
+- [Testing](#testing)
+- [Related Requirements](#related-requirements)
+- [Future Enhancements](#future-enhancements)
 ## Overview
 
 This document describes the improvements made to conflict resolution error messages in the template composition system. The enhancements provide clear, actionable guidance to users when template conflicts are detected.

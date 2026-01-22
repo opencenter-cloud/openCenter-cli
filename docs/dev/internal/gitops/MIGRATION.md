@@ -1,5 +1,21 @@
 # GitOps Generation System Migration Guide
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Current Status](#current-status)
+- [Migration Timeline](#migration-timeline)
+- [Code Migration Examples](#code-migration-examples)
+- [Feature Flag Usage](#feature-flag-usage)
+- [API Reference](#api-reference)
+- [Benefits of the New System](#benefits-of-the-new-system)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [Related Documentation](#related-documentation)
+- [Questions?](#questions)
+- [Version History](#version-history)
 ## Overview
 
 The openCenter CLI is migrating from a legacy generation system to a new pipeline-based system that provides:

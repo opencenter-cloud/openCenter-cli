@@ -1,5 +1,20 @@
 # `openCenter cluster validate` - Validate Cluster Configuration
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Options](#options)
+- [Validation Checks](#validation-checks)
+- [Examples](#examples)
+- [Output](#output)
+- [Debug Configuration](#debug-configuration)
+- [Exit Codes](#exit-codes)
+- [Troubleshooting](#troubleshooting)
+- [Notes](#notes)
+- [See Also](#see-also)
 ## Synopsis
 ```bash
 openCenter cluster validate [name] [OPTIONS]

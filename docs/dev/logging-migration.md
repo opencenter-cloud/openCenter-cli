@@ -1,5 +1,18 @@
 # Logging Migration Guide
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Why Migrate?](#why-migrate)
+- [Migration Steps](#migration-steps)
+- [Migration Checklist](#migration-checklist)
+- [Common Patterns](#common-patterns)
+- [Testing](#testing)
+- [Backward Compatibility](#backward-compatibility)
+- [Performance Considerations](#performance-considerations)
+- [Troubleshooting](#troubleshooting)
+- [References](#references)
 ## Overview
 
 This guide explains how to migrate from logrus to the new structured logging system in `internal/observability`.

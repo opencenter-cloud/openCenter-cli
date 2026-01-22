@@ -1,5 +1,14 @@
 # Type-Safe Configuration Paths
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Usage](#usage)
+- [Benefits](#benefits)
+- [Available Paths](#available-paths)
+- [Migration Guide](#migration-guide)
+- [Implementation Details](#implementation-details)
 ## Overview
 
 The configuration builder now supports compile-time type-safe paths through the `TypedConfigPath` system. This prevents common errors like typos in path strings and type mismatches that would only be caught at runtime.

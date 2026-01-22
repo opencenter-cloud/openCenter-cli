@@ -1,5 +1,22 @@
 # cluster destroy
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Flags](#flags)
+- [Examples](#examples)
+- [Confirmation Prompt](#confirmation-prompt)
+- [Deletion Process](#deletion-process)
+- [Directory Structure Handling](#directory-structure-handling)
+- [Locking](#locking)
+- [Output](#output)
+- [Active Cluster Handling](#active-cluster-handling)
+- [Error Handling](#error-handling)
+- [Recovery](#recovery)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Destroy cluster infrastructure and clean up resources.

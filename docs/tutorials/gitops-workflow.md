@@ -1,5 +1,24 @@
 # GitOps Workflow with openCenter
 
+
+## Table of Contents
+
+- [What You'll Learn](#what-youll-learn)
+- [Prerequisites](#prerequisites)
+- [Step 1: Understand the GitOps Repository Structure](#step-1-understand-the-gitops-repository-structure)
+- [Step 2: Make Your First Configuration Change](#step-2-make-your-first-configuration-change)
+- [Step 3: Deploy an Application via GitOps](#step-3-deploy-an-application-via-gitops)
+- [Step 4: Manage Secrets with SOPS](#step-4-manage-secrets-with-sops)
+- [Step 5: Enable a Service Through Configuration](#step-5-enable-a-service-through-configuration)
+- [Step 6: Implement a Rollback](#step-6-implement-a-rollback)
+- [Step 7: Multi-Environment Workflow](#step-7-multi-environment-workflow)
+- [Step 8: Automate with FluxCD (Optional)](#step-8-automate-with-fluxcd-optional)
+- [What You Learned](#what-you-learned)
+- [Next Steps](#next-steps)
+- [Common Patterns](#common-patterns)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [Related Documentation](#related-documentation)
 **doc_type: tutorial**
 
 Learn GitOps principles by managing a Kubernetes cluster through Git. You'll make configuration changes, deploy applications, and understand how openCenter implements GitOps workflows in 45 minutes.

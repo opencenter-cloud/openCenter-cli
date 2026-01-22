@@ -1,5 +1,22 @@
 # Setting Up Monitoring
 
+
+## Table of Contents
+
+- [What you'll set up](#what-youll-set-up)
+- [Prerequisites](#prerequisites)
+- [Steps](#steps)
+- [Configuration options](#configuration-options)
+- [Accessing Prometheus](#accessing-prometheus)
+- [Accessing Alertmanager](#accessing-alertmanager)
+- [Pre-configured dashboards](#pre-configured-dashboards)
+- [Custom dashboards](#custom-dashboards)
+- [Alert configuration](#alert-configuration)
+- [Troubleshooting](#troubleshooting)
+- [Integration with other services](#integration-with-other-services)
+- [Best practices](#best-practices)
+- [Related documentation](#related-documentation)
+- [Next steps](#next-steps)
 **doc_type:** how-to
 
 This guide shows you how to configure the kube-prometheus-stack monitoring service in openCenter clusters.

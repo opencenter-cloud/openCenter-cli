@@ -1,5 +1,15 @@
 # Troubleshooting Guide
 
+
+## Table of Contents
+
+- [General Troubleshooting Steps](#general-troubleshooting-steps)
+- [Common Issues](#common-issues)
+- [Debugging Techniques](#debugging-techniques)
+- [Performance Issues](#performance-issues)
+- [Getting More Help](#getting-more-help)
+- [Additional Resources](#additional-resources)
+- [Common Error Messages](#common-error-messages)
 **doc_type: how-to**
 
 This guide helps you diagnose and resolve common issues with openCenter.

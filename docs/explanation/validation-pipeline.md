@@ -1,5 +1,21 @@
 # Validation Pipeline Architecture
 
+
+## Table of Contents
+
+- [What Validation Does](#what-validation-does)
+- [The Four Validation Stages](#the-four-validation-stages)
+- [Error Handling and Suggestions](#error-handling-and-suggestions)
+- [Why Staged Validation?](#why-staged-validation)
+- [Validation Result Structure](#validation-result-structure)
+- [Auto-Repair Mode](#auto-repair-mode)
+- [Validation Performance](#validation-performance)
+- [Integration with Other Systems](#integration-with-other-systems)
+- [Trade-offs and Limitations](#trade-offs-and-limitations)
+- [Common Validation Patterns](#common-validation-patterns)
+- [Future Directions](#future-directions)
+- [Related Documentation](#related-documentation)
+- [Conclusion](#conclusion)
 **doc_type**: explanation
 
 This document explains how openCenter validates cluster configurations before deployment. It covers the validation system's architecture, the stages configurations pass through, and why validation is structured this way.

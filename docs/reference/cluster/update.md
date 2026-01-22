@@ -1,5 +1,20 @@
 # `openCenter cluster update` - Update Cluster Configuration Fields
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Options](#options)
+- [Configuration Paths](#configuration-paths)
+- [Examples](#examples)
+- [Output](#output)
+- [Available IAC Keys](#available-iac-keys)
+- [Value Types](#value-types)
+- [Notes](#notes)
+- [Workflow](#workflow)
+- [See Also](#see-also)
 ## Synopsis
 ```bash
 openCenter cluster update [name] [OPTIONS]

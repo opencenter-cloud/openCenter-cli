@@ -1,5 +1,21 @@
 # Session-Scoped Cluster Selection
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Problem](#problem)
+- [Solution](#solution)
+- [Quick Start](#quick-start)
+- [Use Cases](#use-cases)
+- [How It Works](#how-it-works)
+- [Advanced Usage](#advanced-usage)
+- [Optional: Prompt Integration](#optional-prompt-integration)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Command Reference](#command-reference)
+- [Environment Variables](#environment-variables)
+- [See Also](#see-also)
 This guide shows you how to work with multiple clusters simultaneously using session-scoped cluster selection.
 
 ## Overview

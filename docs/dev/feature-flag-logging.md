@@ -1,5 +1,18 @@
 # Feature Flag Structured Logging
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Logging Framework](#logging-framework)
+- [Log Events](#log-events)
+- [Configuration](#configuration)
+- [Use Cases](#use-cases)
+- [Integration with Monitoring Systems](#integration-with-monitoring-systems)
+- [Testing](#testing)
+- [Example Code](#example-code)
+- [Related Documentation](#related-documentation)
+- [Requirements](#requirements)
 ## Overview
 
 The openCenter CLI uses structured logging to track feature flag evaluation and usage. This provides visibility into which systems are active during execution and helps with monitoring, debugging, and troubleshooting during the migration from legacy to new implementations.

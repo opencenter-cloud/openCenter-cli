@@ -1,5 +1,18 @@
 # Template Dependency Resolution Implementation
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Implementation Details](#implementation-details)
+- [Test Coverage](#test-coverage)
+- [Files Modified](#files-modified)
+- [Validation Results](#validation-results)
+- [Design Properties Validated](#design-properties-validated)
+- [Next Steps](#next-steps)
+- [Usage Example](#usage-example)
+- [Performance Characteristics](#performance-characteristics)
+- [Conclusion](#conclusion)
 ## Overview
 
 This document describes the implementation of template dependency resolution for Task 3.1 of the configuration system refactor. The implementation ensures that template dependencies are always resolved in the correct order (dependencies before dependents).

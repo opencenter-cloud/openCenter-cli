@@ -1,5 +1,23 @@
 # Service Plugin System Implementation Summary
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Implemented Components](#implemented-components)
+- [Manifest File Format](#manifest-file-format)
+- [Key Capabilities](#key-capabilities)
+- [Implementation Statistics](#implementation-statistics)
+- [Validation Features](#validation-features)
+- [Error Handling](#error-handling)
+- [Thread Safety](#thread-safety)
+- [Performance Characteristics](#performance-characteristics)
+- [Integration Points](#integration-points)
+- [Future Enhancements](#future-enhancements)
+- [Testing Strategy](#testing-strategy)
+- [Acceptance Criteria Status](#acceptance-criteria-status)
+- [Files Created](#files-created)
+- [Conclusion](#conclusion)
 ## Overview
 
 This document summarizes the implementation of the service plugin system for openCenter, which enables dynamic loading of service plugins from manifest files.

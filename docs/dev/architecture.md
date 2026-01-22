@@ -4,6 +4,26 @@ doc_type: explanation
 
 # Code Architecture
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Architectural Overview](#architectural-overview)
+- [Core Principles](#core-principles)
+- [Package Organization](#package-organization)
+- [Design Patterns](#design-patterns)
+- [Data Flow](#data-flow)
+- [Dependency Graph](#dependency-graph)
+- [Testing Strategy](#testing-strategy)
+- [Configuration Storage](#configuration-storage)
+- [Plugin System](#plugin-system)
+- [Performance Optimizations](#performance-optimizations)
+- [Security Architecture](#security-architecture)
+- [Extensibility Points](#extensibility-points)
+- [Trade-offs and Decisions](#trade-offs-and-decisions)
+- [Common Misconceptions](#common-misconceptions)
+- [Future Directions](#future-directions)
+- [See Also](#see-also)
 This document explains the openCenter codebase architecture, design patterns, and organizational principles.
 
 ## Who this is for

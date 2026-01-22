@@ -1,5 +1,21 @@
 # openCenter Documentation Taxonomy 1.0.0
 
+
+## Table of Contents
+
+- [Purpose](#purpose)
+- [Documentation Principles](#documentation-principles)
+- [Complete Documentation Structure](#complete-documentation-structure)
+- [Content Status Legend](#content-status-legend)
+- [Priority Levels](#priority-levels)
+- [Content Requirements by Type](#content-requirements-by-type)
+- [Documentation Maintenance](#documentation-maintenance)
+- [Migration Plan](#migration-plan)
+- [Success Metrics](#success-metrics)
+- [Tools and Automation](#tools-and-automation)
+- [Appendix: File Naming Conventions](#appendix-file-naming-conventions)
+- [Appendix: Cross-Referencing Guidelines](#appendix-cross-referencing-guidelines)
+- [Version History](#version-history)
 **doc_type: reference**
 
 This document defines the complete documentation structure for openCenter 1.0.0 release. It serves as the master plan for documentation organization, content requirements, and maintenance guidelines.

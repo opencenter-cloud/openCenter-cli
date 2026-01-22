@@ -1,5 +1,14 @@
 # Explanation Documentation
 
+
+## Table of Contents
+
+- [Purpose](#purpose)
+- [What You'll Find Here](#what-youll-find-here)
+- [How to Use This Section](#how-to-use-this-section)
+- [Related Documentation](#related-documentation)
+- [Contributing to Explanations](#contributing-to-explanations)
+- [Document Status](#document-status)
 **doc_type: explanation**
 
 This section helps you understand how openCenter works and why it's designed the way it is. These documents explain concepts, architecture, and design decisions rather than teaching specific tasks.

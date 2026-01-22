@@ -1,5 +1,22 @@
 # OpenStack Setup Guide
 
+
+## Table of Contents
+
+- [Task Summary](#task-summary)
+- [Prerequisites](#prerequisites)
+- [Step 1: Configure Authentication](#step-1-configure-authentication)
+- [Step 2: Plan Network Configuration](#step-2-plan-network-configuration)
+- [Step 3: Select Compute Resources](#step-3-select-compute-resources)
+- [Step 4: Configure Storage](#step-4-configure-storage)
+- [Step 5: Configure Load Balancing](#step-5-configure-load-balancing)
+- [Step 6: Set Up Security](#step-6-set-up-security)
+- [Step 7: Create Configuration File](#step-7-create-configuration-file)
+- [Step 8: Validate Configuration](#step-8-validate-configuration)
+- [Common Configurations](#common-configurations)
+- [Troubleshooting](#troubleshooting)
+- [Next Steps](#next-steps)
+- [Related Documentation](#related-documentation)
 **doc_type: how-to**
 
 Configure openCenter to deploy Kubernetes clusters on OpenStack infrastructure. This guide walks through authentication setup, network planning, compute resource selection, storage configuration, and load balancing options.

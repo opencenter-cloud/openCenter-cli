@@ -1,5 +1,19 @@
 # CLI Commands Migration to Unified GitOps Interface
 
+
+## Table of Contents
+
+- [Status: COMPLETE ✅](#status-complete-)
+- [Changes Made](#changes-made)
+- [Benefits](#benefits)
+- [Feature Flag Support](#feature-flag-support)
+- [Testing](#testing)
+- [Commands Updated](#commands-updated)
+- [Migration Path](#migration-path)
+- [Documentation](#documentation)
+- [Related Files](#related-files)
+- [Verification Checklist](#verification-checklist)
+- [Conclusion](#conclusion)
 ## Status: COMPLETE ✅
 
 This document tracks the completion of Task 4.4 sub-task: "CLI commands use new generation system transparently"

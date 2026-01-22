@@ -11,6 +11,22 @@ related:
 
 # Template Engine Design and Architecture
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Design Principles](#core-design-principles)
+- [Architecture Components](#architecture-components)
+- [Template Rendering Process](#template-rendering-process)
+- [Template Functions](#template-functions)
+- [Template Organization](#template-organization)
+- [Design Decisions and Rationale](#design-decisions-and-rationale)
+- [Template Best Practices](#template-best-practices)
+- [Testing Strategy](#testing-strategy)
+- [Performance Optimization](#performance-optimization)
+- [Future Enhancements](#future-enhancements)
+- [Conclusion](#conclusion)
+- [Related Documentation](#related-documentation)
 This document explains the design and architecture of openCenter's template engine, which transforms cluster configurations into GitOps repository manifests, Terraform files, and Ansible inventories.
 
 ## Overview

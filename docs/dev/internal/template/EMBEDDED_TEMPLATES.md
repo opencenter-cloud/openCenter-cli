@@ -1,5 +1,19 @@
 # Embedded Template Registry
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [Template Metadata](#template-metadata)
+- [Template Inference](#template-inference)
+- [Registering Custom Templates](#registering-custom-templates)
+- [Testing](#testing)
+- [Migration from Legacy System](#migration-from-legacy-system)
+- [Statistics](#statistics)
+- [Future Enhancements](#future-enhancements)
+- [See Also](#see-also)
 This document describes the embedded template registration system that automatically catalogs all templates embedded in the openCenter CLI binary.
 
 ## Overview

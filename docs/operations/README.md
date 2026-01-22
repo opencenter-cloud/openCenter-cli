@@ -1,5 +1,18 @@
 # Operations Documentation
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Operational Documentation](#operational-documentation)
+- [Runbooks](#runbooks)
+- [Operations by Phase](#operations-by-phase)
+- [Related Documentation](#related-documentation)
+- [Operational Best Practices](#operational-best-practices)
+- [Emergency Contacts](#emergency-contacts)
+- [Compliance and Audit](#compliance-and-audit)
+- [Contributing](#contributing)
+- [Version Compatibility](#version-compatibility)
 **doc_type: reference**
 
 Operational procedures, runbooks, and reference material for teams running openCenter-managed Kubernetes clusters in production.

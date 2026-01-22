@@ -1,5 +1,15 @@
 # cluster backup
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Subcommands](#subcommands)
+- [Backup Contents](#backup-contents)
+- [Backup Format](#backup-format)
+- [Storage Location](#storage-location)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Manage cluster configuration backups for disaster recovery.

@@ -1,5 +1,22 @@
 # `openCenter cluster migrate` - Migrate Cluster Configurations
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Options](#options)
+- [Migration Process](#migration-process)
+- [Examples](#examples)
+- [Output](#output)
+- [Directory Structure Changes](#directory-structure-changes)
+- [Backup and Rollback](#backup-and-rollback)
+- [Validation](#validation)
+- [Exit Codes](#exit-codes)
+- [Notes](#notes)
+- [Troubleshooting](#troubleshooting)
+- [See Also](#see-also)
 ## Synopsis
 ```bash
 openCenter cluster migrate [cluster-name] [OPTIONS]

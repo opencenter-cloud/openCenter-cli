@@ -11,6 +11,20 @@ related:
 
 # Configuration System Architecture
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Design Principles](#core-design-principles)
+- [Architecture Components](#architecture-components)
+- [Design Decisions and Rationale](#design-decisions-and-rationale)
+- [Configuration Lifecycle](#configuration-lifecycle)
+- [Advanced Features](#advanced-features)
+- [Performance Considerations](#performance-considerations)
+- [Testing Strategy](#testing-strategy)
+- [Future Enhancements](#future-enhancements)
+- [Conclusion](#conclusion)
+- [Related Documentation](#related-documentation)
 This document explains the design and architecture of openCenter's configuration system, including schema validation, the builder pattern, configuration migration, and the rationale behind key design decisions.
 
 ## Overview

@@ -1,5 +1,15 @@
 # Configuration Precedence
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Precedence Order](#precedence-order)
+- [Complete Resolution Flow](#complete-resolution-flow)
+- [Practical Examples](#practical-examples)
+- [Best Practices](#best-practices)
+- [Related Commands](#related-commands)
+- [See Also](#see-also)
 This document describes the order of precedence for configuration values when initializing or managing clusters with openCenter CLI.
 
 ## Overview

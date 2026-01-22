@@ -1,5 +1,19 @@
 # AWS Provider
 
+
+## Table of Contents
+
+- [Purpose](#purpose)
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Configuration Options](#configuration-options)
+- [Deployment Workflow](#deployment-workflow)
+- [Limitations and Known Issues](#limitations-and-known-issues)
+- [Development Status](#development-status)
+- [Related Documentation](#related-documentation)
+- [External Resources](#external-resources)
 **doc_type: reference**
 
 This document describes the AWS provider for openCenter. It covers architecture, features, requirements, configuration options, and deployment workflow for running Kubernetes clusters on Amazon Web Services.

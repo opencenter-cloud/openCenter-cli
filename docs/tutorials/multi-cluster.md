@@ -6,6 +6,29 @@ weight: 30
 
 # Managing Multiple Clusters
 
+
+## Table of Contents
+
+- [What You'll Learn](#what-youll-learn)
+- [Prerequisites](#prerequisites)
+- [Understanding Organization Structure](#understanding-organization-structure)
+- [Step 1: Create Your First Organization](#step-1-create-your-first-organization)
+- [Step 2: Add More Clusters to the Organization](#step-2-add-more-clusters-to-the-organization)
+- [Step 3: Create Staging Organization](#step-3-create-staging-organization)
+- [Step 4: Create Production Organization](#step-4-create-production-organization)
+- [Step 5: List All Clusters](#step-5-list-all-clusters)
+- [Step 6: Switch Between Clusters](#step-6-switch-between-clusters)
+- [Step 7: Activate Cluster Environment](#step-7-activate-cluster-environment)
+- [Step 8: View Current Cluster](#step-8-view-current-cluster)
+- [Step 9: Share Configuration Across Clusters](#step-9-share-configuration-across-clusters)
+- [Step 10: Manage Secrets Across Clusters](#step-10-manage-secrets-across-clusters)
+- [Working with Multiple Environments](#working-with-multiple-environments)
+- [Advanced Multi-Cluster Patterns](#advanced-multi-cluster-patterns)
+- [Shell Integration](#shell-integration)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [Next Steps](#next-steps)
+- [Additional Resources](#additional-resources)
 This tutorial teaches you how to manage multiple Kubernetes clusters with openCenter, including organizing clusters by environment, switching between clusters, and maintaining consistent configurations across your infrastructure.
 
 ## What You'll Learn

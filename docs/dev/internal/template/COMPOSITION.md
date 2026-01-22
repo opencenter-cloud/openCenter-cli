@@ -1,5 +1,15 @@
 # Template Composition System
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Implementation](#implementation)
+- [Usage Examples](#usage-examples)
+- [Testing](#testing)
+- [Properties Validated](#properties-validated)
+- [Files](#files)
+- [Future Enhancements](#future-enhancements)
 ## Overview
 
 The template composition system allows base templates to be extended with overlays and patches, enabling flexible and reusable template configurations.

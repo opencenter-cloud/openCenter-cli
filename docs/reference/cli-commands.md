@@ -1,5 +1,17 @@
 # CLI Command Reference
 
+
+## Table of Contents
+
+- [Global Flags](#global-flags)
+- [Cluster Commands](#cluster-commands)
+- [SOPS Commands](#sops-commands)
+- [Config Commands](#config-commands)
+- [Version Command](#version-command)
+- [Plugins Commands](#plugins-commands)
+- [Environment Variables](#environment-variables)
+- [Exit Codes](#exit-codes)
+- [See Also](#see-also)
 Complete reference for all openCenter CLI commands.
 
 ## Global Flags

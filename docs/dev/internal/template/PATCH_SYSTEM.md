@@ -1,5 +1,16 @@
 # Template Patch System
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Operations](#operations)
+- [Conditional Patches](#conditional-patches)
+- [Complete Example](#complete-example)
+- [Error Handling](#error-handling)
+- [Best Practices](#best-practices)
+- [Implementation Details](#implementation-details)
+- [Testing](#testing)
 ## Overview
 
 The template patch system provides flexible, targeted modifications to template content through three core operations: **add**, **remove**, and **replace**. Each operation supports multiple path strategies for precise content manipulation.

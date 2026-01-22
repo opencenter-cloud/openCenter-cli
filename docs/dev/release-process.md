@@ -4,6 +4,27 @@ doc_type: how-to
 
 # Release Process
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Versioning Strategy](#versioning-strategy)
+- [Release Types](#release-types)
+- [Release Checklist](#release-checklist)
+- [Building Releases](#building-releases)
+- [Changelog Management](#changelog-management)
+- [Testing Releases](#testing-releases)
+- [Distribution](#distribution)
+- [Hotfix Process](#hotfix-process)
+- [Version Support](#version-support)
+- [Release Schedule](#release-schedule)
+- [Rollback Procedure](#rollback-procedure)
+- [Security Releases](#security-releases)
+- [Documentation Updates](#documentation-updates)
+- [Metrics and Monitoring](#metrics-and-monitoring)
+- [Communication](#communication)
+- [Troubleshooting](#troubleshooting)
+- [See Also](#see-also)
 This document describes the release process for openCenter, including versioning, building, testing, and distribution.
 
 ## Who this is for

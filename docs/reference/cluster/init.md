@@ -1,5 +1,21 @@
 # cluster init
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Flags](#flags)
+- [Examples](#examples)
+- [Directory Structure](#directory-structure)
+- [Key Generation](#key-generation)
+- [Git Repository Initialization](#git-repository-initialization)
+- [Configuration Override](#configuration-override)
+- [Server Pool Configuration](#server-pool-configuration)
+- [Output](#output)
+- [Error Handling](#error-handling)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Initialize a new cluster configuration with default values.

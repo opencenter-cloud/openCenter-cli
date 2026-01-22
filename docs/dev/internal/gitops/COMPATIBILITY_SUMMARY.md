@@ -1,5 +1,21 @@
 # GitOps Generation Compatibility Layer - Implementation Summary
 
+
+## Table of Contents
+
+- [Task Completion](#task-completion)
+- [What Was Implemented](#what-was-implemented)
+- [API Overview](#api-overview)
+- [Key Features](#key-features)
+- [Files Created](#files-created)
+- [Test Results](#test-results)
+- [Verification](#verification)
+- [Migration Path](#migration-path)
+- [Benefits Delivered](#benefits-delivered)
+- [Next Steps](#next-steps)
+- [Acceptance Criteria Status](#acceptance-criteria-status)
+- [Conclusion](#conclusion)
+- [References](#references)
 ## Task Completion
 
 **Task:** 4.4.1 - Existing generation calls work without modification  

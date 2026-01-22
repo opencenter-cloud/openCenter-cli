@@ -1,5 +1,22 @@
 # Upgrading Kubernetes Clusters
 
+
+## Table of Contents
+
+- [Task Summary](#task-summary)
+- [Prerequisites](#prerequisites)
+- [Check Version Compatibility](#check-version-compatibility)
+- [Plan Rollback Procedure](#plan-rollback-procedure)
+- [Update Configuration](#update-configuration)
+- [Regenerate GitOps Repository](#regenerate-gitops-repository)
+- [Monitor FluxCD Reconciliation](#monitor-fluxcd-reconciliation)
+- [Verify Cluster Health](#verify-cluster-health)
+- [Component Upgrade Order](#component-upgrade-order)
+- [Rollback Procedure](#rollback-procedure)
+- [Post-Upgrade Verification](#post-upgrade-verification)
+- [Troubleshooting](#troubleshooting)
+- [Related Documentation](#related-documentation)
+- [See Also](#see-also)
 **doc_type: how-to**
 
 This guide walks you through upgrading a Kubernetes cluster's version without downtime. It covers planning, execution, verification, and rollback procedures.

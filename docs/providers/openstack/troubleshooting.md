@@ -8,6 +8,20 @@ last_updated: 2025-01-XX
 
 # OpenStack Troubleshooting Guide
 
+
+## Table of Contents
+
+- [Quick Diagnostics](#quick-diagnostics)
+- [Authentication Issues](#authentication-issues)
+- [Quota and Resource Issues](#quota-and-resource-issues)
+- [Network Connectivity Issues](#network-connectivity-issues)
+- [Image and Flavor Issues](#image-and-flavor-issues)
+- [Provisioning Failures](#provisioning-failures)
+- [Performance Issues](#performance-issues)
+- [Configuration Validation Errors](#configuration-validation-errors)
+- [Getting Help](#getting-help)
+- [Related Documentation](#related-documentation)
+- [Additional Resources](#additional-resources)
 This guide provides solutions to common OpenStack-specific issues encountered when deploying and managing Kubernetes clusters with openCenter.
 
 ## Quick Diagnostics

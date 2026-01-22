@@ -1,5 +1,16 @@
 # `openCenter cluster current` - Show the Current Active Cluster
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Options](#options)
+- [Examples](#examples)
+- [Output](#output)
+- [Exit Codes](#exit-codes)
+- [Notes](#notes)
+- [See Also](#see-also)
 ## Synopsis
 ```bash
 openCenter cluster current [OPTIONS]

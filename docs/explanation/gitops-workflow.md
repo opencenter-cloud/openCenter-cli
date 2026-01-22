@@ -1,5 +1,17 @@
 # GitOps Workflow in openCenter
 
+
+## Table of Contents
+
+- [What GitOps Means Here](#what-gitops-means-here)
+- [Why GitOps](#why-gitops)
+- [Repository Structure](#repository-structure)
+- [How openCenter Generates Repositories](#how-opencenter-generates-repositories)
+- [FluxCD Integration](#fluxcd-integration)
+- [ArgoCD Integration](#argocd-integration)
+- [Configuration Change Workflow](#configuration-change-workflow)
+- [Trade-offs](#trade-offs)
+- [Common Misconceptions](#common-misconceptions)
 **doc_type: explanation**
 
 This document explains what GitOps means in openCenter's context, why it's the default approach, and how configuration changes flow through Git to your cluster.

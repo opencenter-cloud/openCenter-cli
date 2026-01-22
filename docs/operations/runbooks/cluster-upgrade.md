@@ -1,5 +1,20 @@
 # Cluster Upgrade Runbook
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Prerequisites](#prerequisites)
+- [Upgrade Overview](#upgrade-overview)
+- [Pre-Upgrade Checklist](#pre-upgrade-checklist)
+- [Upgrade Procedure](#upgrade-procedure)
+- [Post-Upgrade Validation](#post-upgrade-validation)
+- [Rollback Procedure](#rollback-procedure)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [Related Documentation](#related-documentation)
+- [Upgrade Schedule](#upgrade-schedule)
+- [Post-Upgrade Tasks](#post-upgrade-tasks)
 **doc_type: how-to**
 
 Step-by-step procedures for upgrading Kubernetes clusters managed by openCenter, including pre-upgrade validation, upgrade execution, and rollback procedures.

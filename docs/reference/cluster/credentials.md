@@ -1,5 +1,17 @@
 # cluster credentials
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Supported Providers](#supported-providers)
+- [Configuration Sources](#configuration-sources)
+- [Subcommands](#subcommands)
+- [Common Workflow](#common-workflow)
+- [Security Considerations](#security-considerations)
+- [Migration to cluster select](#migration-to-cluster-select)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Manage cloud provider credentials from cluster configuration.

@@ -11,6 +11,21 @@ related:
 
 # Security Model
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Security Principles](#core-security-principles)
+- [SOPS Integration](#sops-integration)
+- [Credential Handling](#credential-handling)
+- [SSH Key Management](#ssh-key-management)
+- [Security Boundaries](#security-boundaries)
+- [Compliance Considerations](#compliance-considerations)
+- [Trade-offs](#trade-offs)
+- [Best Practices](#best-practices)
+- [Future Enhancements](#future-enhancements)
+- [Related Documentation](#related-documentation)
+- [Conclusion](#conclusion)
 ## Overview
 
 openCenter implements a defense-in-depth security model designed to protect sensitive data throughout the cluster lifecycle—from initial configuration through deployment and ongoing operations. The security architecture is built on the principle that **no plaintext secrets should ever be committed to version control**, while maintaining usability for DevOps workflows.

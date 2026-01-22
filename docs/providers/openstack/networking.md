@@ -8,6 +8,18 @@ last_updated: 2025-01-XX
 
 # OpenStack Networking Configuration
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Network Architecture Components](#network-architecture-components)
+- [Kubernetes Network Configuration](#kubernetes-network-configuration)
+- [Advanced Networking Patterns](#advanced-networking-patterns)
+- [Network Performance Tuning](#network-performance-tuning)
+- [Troubleshooting Network Issues](#troubleshooting-network-issues)
+- [Best Practices](#best-practices)
+- [Related Documentation](#related-documentation)
+- [Additional Resources](#additional-resources)
 This guide explains OpenStack networking concepts and configuration options in openCenter, helping you understand how to design and configure network topology for your Kubernetes clusters.
 
 ## Overview

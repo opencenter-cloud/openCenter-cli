@@ -1,5 +1,17 @@
 # Built-in Service Plugins
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Built-in Services](#built-in-services)
+- [Plugin Structure](#plugin-structure)
+- [Usage](#usage)
+- [Service Dependencies](#service-dependencies)
+- [Adding a New Service Plugin](#adding-a-new-service-plugin)
+- [Testing](#testing)
+- [Migration from Legacy System](#migration-from-legacy-system)
+- [Future Enhancements](#future-enhancements)
 This directory contains the plugin implementations for all built-in openCenter services. These plugins implement the `ServicePlugin` interface and provide validation, rendering, and status reporting capabilities for each service.
 
 ## Overview

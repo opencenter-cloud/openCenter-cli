@@ -1,5 +1,21 @@
 # Migrating Clusters and Configurations
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Understanding Migration Types](#understanding-migration-types)
+- [Task 1: Migrate to Organization Structure](#task-1-migrate-to-organization-structure)
+- [Task 2: Migrate Between Cloud Providers](#task-2-migrate-between-cloud-providers)
+- [Task 3: Upgrade Configuration Schema](#task-3-upgrade-configuration-schema)
+- [Task 4: Migrate Secrets and Keys](#task-4-migrate-secrets-and-keys)
+- [Task 5: Migrate GitOps Repository](#task-5-migrate-gitops-repository)
+- [Task 6: Rollback Migration](#task-6-rollback-migration)
+- [Task 7: Migrate Multiple Clusters](#task-7-migrate-multiple-clusters)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Next Steps](#next-steps)
 **doc_type**: how-to  
 **priority**: 3  
 **audience**: Platform engineers managing cluster migrations  

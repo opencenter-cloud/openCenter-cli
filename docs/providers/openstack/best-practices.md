@@ -1,5 +1,19 @@
 # OpenStack Best Practices
 
+
+## Table of Contents
+
+- [Purpose](#purpose)
+- [Prerequisites](#prerequisites)
+- [Production Configuration](#production-configuration)
+- [Operational Practices](#operational-practices)
+- [Configuration Patterns](#configuration-patterns)
+- [Troubleshooting Common Issues](#troubleshooting-common-issues)
+- [Performance Optimization](#performance-optimization)
+- [Security Considerations](#security-considerations)
+- [Cost Optimization](#cost-optimization)
+- [Related Documentation](#related-documentation)
+- [External Resources](#external-resources)
 **doc_type: how-to**
 
 This guide provides production recommendations for deploying and operating Kubernetes clusters on OpenStack using openCenter. It covers configuration choices, operational patterns, and lessons learned from production deployments.

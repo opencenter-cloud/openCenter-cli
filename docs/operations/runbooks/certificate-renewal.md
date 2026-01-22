@@ -1,5 +1,23 @@
 # Certificate Renewal Runbook
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Prerequisites](#prerequisites)
+- [Certificate Overview](#certificate-overview)
+- [Pre-Flight Checks](#pre-flight-checks)
+- [Application Certificate Renewal](#application-certificate-renewal)
+- [Kubernetes API Certificate Renewal](#kubernetes-api-certificate-renewal)
+- [etcd Certificate Renewal](#etcd-certificate-renewal)
+- [Kubelet Certificate Renewal](#kubelet-certificate-renewal)
+- [Certificate Monitoring](#certificate-monitoring)
+- [Troubleshooting](#troubleshooting)
+- [Post-Renewal Verification](#post-renewal-verification)
+- [Best Practices](#best-practices)
+- [Related Documentation](#related-documentation)
+- [Certificate Renewal Schedule](#certificate-renewal-schedule)
+- [Emergency Certificate Renewal](#emergency-certificate-renewal)
 **doc_type: how-to**
 
 Step-by-step procedures for renewing and rotating certificates in openCenter-managed Kubernetes clusters, including Kubernetes API certificates, etcd certificates, and application TLS certificates.

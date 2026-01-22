@@ -1,5 +1,17 @@
 # Template Engine Cache Performance
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Performance Metrics](#performance-metrics)
+- [Key Findings](#key-findings)
+- [Benchmark Results](#benchmark-results)
+- [Implementation Details](#implementation-details)
+- [Validation Tests](#validation-tests)
+- [Conclusion](#conclusion)
+- [Running the Benchmarks](#running-the-benchmarks)
+- [References](#references)
 ## Overview
 
 This document provides evidence that template caching in the `GoTemplateEngine` provides measurable performance improvements, satisfying the acceptance criteria for Task 1.2 of the configuration system refactor.

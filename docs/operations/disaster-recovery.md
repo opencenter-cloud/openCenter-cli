@@ -1,5 +1,19 @@
 # Disaster Recovery Guide
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Backup Components](#backup-components)
+- [Backup Procedures](#backup-procedures)
+- [Restoration Procedures](#restoration-procedures)
+- [Key Escrow Procedures](#key-escrow-procedures)
+- [Common Disaster Scenarios](#common-disaster-scenarios)
+- [Best Practices](#best-practices)
+- [Backup Automation](#backup-automation)
+- [Support and Troubleshooting](#support-and-troubleshooting)
+- [Appendix: Backup File Format](#appendix-backup-file-format)
+- [Revision History](#revision-history)
 **doc_type: how-to**
 
 This guide provides procedures for backing up and recovering openCenter cluster configurations in disaster scenarios.

@@ -1,5 +1,16 @@
 # Talos OpenStack Provider
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Package Structure](#package-structure)
+- [Core Interfaces](#core-interfaces)
+- [Error Handling](#error-handling)
+- [Configuration](#configuration)
+- [Logging](#logging)
+- [Testing](#testing)
+- [Next Steps](#next-steps)
 This package provides the Talos OpenStack provider implementation for the openCenter CLI.
 
 ## Overview

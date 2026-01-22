@@ -1,5 +1,20 @@
 # Node Replacement Runbook
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Prerequisites](#prerequisites)
+- [Node Replacement Overview](#node-replacement-overview)
+- [Pre-Flight Checks](#pre-flight-checks)
+- [Worker Node Replacement](#worker-node-replacement)
+- [Control Plane Node Replacement](#control-plane-node-replacement)
+- [Troubleshooting](#troubleshooting)
+- [Post-Replacement Verification](#post-replacement-verification)
+- [Best Practices](#best-practices)
+- [Related Documentation](#related-documentation)
+- [Emergency Node Replacement](#emergency-node-replacement)
+- [Node Replacement Checklist](#node-replacement-checklist)
 **doc_type: how-to**
 
 Step-by-step procedures for replacing failed or degraded nodes in openCenter-managed Kubernetes clusters, including both control plane and worker nodes.

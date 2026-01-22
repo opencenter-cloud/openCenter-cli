@@ -1,5 +1,19 @@
 # cluster preflight
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Examples](#examples)
+- [Checks Performed](#checks-performed)
+- [Status Updates](#status-updates)
+- [Output](#output)
+- [Exit Codes](#exit-codes)
+- [Common Issues](#common-issues)
+- [Use Cases](#use-cases)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Run preflight checks for required tools and provider requirements.

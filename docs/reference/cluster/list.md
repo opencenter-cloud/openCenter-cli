@@ -1,5 +1,20 @@
 # cluster list
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Aliases](#aliases)
+- [Description](#description)
+- [Flags](#flags)
+- [Examples](#examples)
+- [Output Format](#output-format)
+- [Directory Structure Support](#directory-structure-support)
+- [Active Cluster Indicator](#active-cluster-indicator)
+- [Sorting](#sorting)
+- [Use Cases](#use-cases)
+- [Error Handling](#error-handling)
+- [See Also](#see-also)
 **doc_type:** reference
 
 List all configured clusters across all organizations.

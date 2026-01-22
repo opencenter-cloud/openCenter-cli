@@ -1,5 +1,20 @@
 # Customizing GitOps Templates
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Understanding the Template System](#understanding-the-template-system)
+- [Task 1: Customize Existing Templates](#task-1-customize-existing-templates)
+- [Task 2: Create Custom Service Templates](#task-2-create-custom-service-templates)
+- [Task 3: Use Advanced Template Features](#task-3-use-advanced-template-features)
+- [Task 4: Override Infrastructure Templates](#task-4-override-infrastructure-templates)
+- [Task 5: Test Template Changes](#task-5-test-template-changes)
+- [Task 6: Version Control Template Changes](#task-6-version-control-template-changes)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [Next Steps](#next-steps)
 **doc_type**: how-to  
 **priority**: 3  
 **audience**: Platform engineers customizing cluster deployments  

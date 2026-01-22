@@ -1,5 +1,19 @@
 # Integrating openCenter with CI/CD Pipelines
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Understanding CI/CD Integration](#understanding-cicd-integration)
+- [Task 1: Set Up GitHub Actions Pipeline](#task-1-set-up-github-actions-pipeline)
+- [Task 2: Set Up GitLab CI Pipeline](#task-2-set-up-gitlab-ci-pipeline)
+- [Task 3: Set Up Jenkins Pipeline](#task-3-set-up-jenkins-pipeline)
+- [Task 4: Implement Automated Testing](#task-4-implement-automated-testing)
+- [Task 5: Set Up Monitoring and Alerting](#task-5-set-up-monitoring-and-alerting)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Next Steps](#next-steps)
 **doc_type**: how-to  
 **priority**: 3  
 **audience**: DevOps engineers automating cluster deployments  

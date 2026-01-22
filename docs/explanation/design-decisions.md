@@ -1,5 +1,21 @@
 # Design Decisions and Rationale
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Configuration as a single YAML file](#configuration-as-a-single-yaml-file)
+- [Embedded templates in the binary](#embedded-templates-in-the-binary)
+- [Organization-based directory structure](#organization-based-directory-structure)
+- [Staged validation pipeline](#staged-validation-pipeline)
+- [SOPS with Age encryption for secrets](#sops-with-age-encryption-for-secrets)
+- [Dependency injection container](#dependency-injection-container)
+- [Mise instead of Make](#mise-instead-of-make)
+- [Atomic file operations for GitOps generation](#atomic-file-operations-for-gitops-generation)
+- [Template sandboxing](#template-sandboxing)
+- [Why these decisions matter](#why-these-decisions-matter)
+- [Evolution and future decisions](#evolution-and-future-decisions)
+- [See also](#see-also)
 **doc_type**: explanation
 
 ## Who this is for

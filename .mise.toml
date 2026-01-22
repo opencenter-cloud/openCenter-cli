@@ -902,3 +902,22 @@ echo "  1. Review cleanup-report.md"
 echo "  2. Identify files to keep, move, or remove"
 echo "  3. Document decisions in report annotations"
 '''
+
+# Add or update Table of Contents in documentation files
+docs-toc = '''
+#!/usr/bin/env bash
+set -e
+
+echo "=== Documentation TOC Management ==="
+echo ""
+echo "Adding/updating TOCs in markdown files > 100 lines..."
+./hack/add-toc.sh
+
+echo ""
+echo "✅ TOC update complete!"
+echo ""
+echo "Files updated with TOCs follow the documentation standard:"
+echo "  - TOC placed after main title"
+echo "  - Includes all ## and ### headings"
+echo "  - Proper anchor link formatting"
+'''

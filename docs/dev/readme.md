@@ -4,6 +4,26 @@ doc_type: how-to
 
 # Developer Guide
 
+
+## Table of Contents
+
+- [Who this is for](#who-this-is-for)
+- [Prerequisites](#prerequisites)
+- [Initial Setup](#initial-setup)
+- [Development Workflow](#development-workflow)
+- [Project Structure](#project-structure)
+- [Common Tasks](#common-tasks)
+- [Architecture Overview](#architecture-overview)
+- [Testing Strategy](#testing-strategy)
+- [Configuration Management](#configuration-management)
+- [Error Handling](#error-handling)
+- [Logging](#logging)
+- [Performance Considerations](#performance-considerations)
+- [Security Considerations](#security-considerations)
+- [Debugging](#debugging)
+- [Contributing](#contributing)
+- [Release Process](#release-process)
+- [See Also](#see-also)
 This guide covers setting up your development environment, building openCenter, running tests, and common development workflows.
 
 ## Who this is for

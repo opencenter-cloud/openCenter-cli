@@ -1,5 +1,22 @@
 # IDE Integration
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [What You Get](#what-you-get)
+- [Quick Setup](#quick-setup)
+- [Visual Studio Code](#visual-studio-code)
+- [JetBrains IDEs](#jetbrains-ides)
+- [Vim/Neovim](#vimneovim)
+- [Emacs](#emacs)
+- [Schema Management](#schema-management)
+- [Using the openCenter Config IDE Command](#using-the-opencenter-config-ide-command)
+- [YAML Linting](#yaml-linting)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [Related Documentation](#related-documentation)
+- [External Resources](#external-resources)
 **doc_type: how-to**
 
 This guide shows you how to set up IDE integration for openCenter cluster configuration files with autocomplete, validation, and inline documentation.

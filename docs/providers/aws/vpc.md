@@ -1,5 +1,21 @@
 # AWS VPC Design
 
+
+## Table of Contents
+
+- [Purpose](#purpose)
+- [VPC Architecture Overview](#vpc-architecture-overview)
+- [CIDR Block Planning](#cidr-block-planning)
+- [Multi-AZ Deployment](#multi-az-deployment)
+- [Routing and Gateways](#routing-and-gateways)
+- [Security Groups](#security-groups)
+- [Network Performance](#network-performance)
+- [VPC Peering and Connectivity](#vpc-peering-and-connectivity)
+- [Cost Optimization](#cost-optimization)
+- [Troubleshooting Network Issues](#troubleshooting-network-issues)
+- [Best Practices Summary](#best-practices-summary)
+- [Related Documentation](#related-documentation)
+- [External Resources](#external-resources)
 **doc_type: explanation**
 
 This document explains VPC (Virtual Private Cloud) networking concepts for Kubernetes clusters on AWS. It covers network architecture, subnet design, routing, security groups, and best practices for production deployments.

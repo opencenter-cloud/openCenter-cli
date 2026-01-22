@@ -7,6 +7,20 @@ weight: 50
 
 # Environment Variables Reference
 
+
+## Table of Contents
+
+- [Core Configuration Variables](#core-configuration-variables)
+- [Debug and Development Variables](#debug-and-development-variables)
+- [Cluster Selection Variables](#cluster-selection-variables)
+- [Container Runtime Variables](#container-runtime-variables)
+- [Kubernetes Configuration Variables](#kubernetes-configuration-variables)
+- [Cloud Provider Variables](#cloud-provider-variables)
+- [Feature Flag Variables](#feature-flag-variables)
+- [Variable Precedence](#variable-precedence)
+- [Security Considerations](#security-considerations)
+- [Testing and CI/CD](#testing-and-cicd)
+- [Related Documentation](#related-documentation)
 Complete reference for all environment variables used by openCenter CLI.
 
 ## Core Configuration Variables

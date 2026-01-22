@@ -1,5 +1,18 @@
 # Performance Characteristics
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Executive Summary](#executive-summary)
+- [Baseline Metrics](#baseline-metrics)
+- [Performance Bottlenecks](#performance-bottlenecks)
+- [Optimization Opportunities](#optimization-opportunities)
+- [Performance Monitoring](#performance-monitoring)
+- [Performance Testing Strategy](#performance-testing-strategy)
+- [Comparison with Requirements](#comparison-with-requirements)
+- [Recommendations](#recommendations)
+- [Conclusion](#conclusion)
 ## Overview
 
 This document provides baseline performance metrics, identifies bottlenecks, and documents optimization opportunities for the openCenter configuration system refactor. All benchmarks were run on Apple M4 (ARM64) architecture.

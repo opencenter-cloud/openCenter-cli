@@ -1,5 +1,23 @@
 # Template Registry
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Types](#core-types)
+- [Usage Examples](#usage-examples)
+- [Template Types](#template-types)
+- [Condition Types](#condition-types)
+- [Filtering and Sorting](#filtering-and-sorting)
+- [Dependency Resolution](#dependency-resolution)
+- [Thread Safety](#thread-safety)
+- [Validation](#validation)
+- [Performance Characteristics](#performance-characteristics)
+- [Best Practices](#best-practices)
+- [Error Handling](#error-handling)
+- [Integration with Template Engine](#integration-with-template-engine)
+- [Testing](#testing)
+- [Future Enhancements](#future-enhancements)
 The Template Registry is a centralized system for managing template definitions with rich metadata, dependency resolution, and filtering capabilities.
 
 ## Overview

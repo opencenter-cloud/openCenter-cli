@@ -1,5 +1,19 @@
 # Reference Documentation
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Core Reference](#core-reference)
+- [Command Reference](#command-reference)
+- [API and Integration](#api-and-integration)
+- [Data Formats](#data-formats)
+- [Additional Reference](#additional-reference)
+- [Reference by Category](#reference-by-category)
+- [Using Reference Documentation](#using-reference-documentation)
+- [Related Documentation](#related-documentation)
+- [Contributing](#contributing)
+- [Version Compatibility](#version-compatibility)
 **doc_type: reference**
 
 Complete technical specifications for openCenter. Look up commands, configuration options, APIs, and error codes.

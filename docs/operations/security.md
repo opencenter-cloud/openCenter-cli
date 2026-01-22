@@ -1,5 +1,22 @@
 # Security Operations
 
+
+## Table of Contents
+
+- [Who This Is For](#who-this-is-for)
+- [Prerequisites](#prerequisites)
+- [Security Architecture Overview](#security-architecture-overview)
+- [Enable Security Features](#enable-security-features)
+- [Secrets Management](#secrets-management)
+- [Certificate Management](#certificate-management)
+- [Vulnerability Scanning](#vulnerability-scanning)
+- [Access Control and RBAC](#access-control-and-rbac)
+- [Compliance and Audit Logging](#compliance-and-audit-logging)
+- [Network Security](#network-security)
+- [Security Incident Response](#security-incident-response)
+- [Security Best Practices](#security-best-practices)
+- [Related Documentation](#related-documentation)
+- [Next Steps](#next-steps)
 **doc_type: how-to**
 
 Security operations procedures for openCenter-managed Kubernetes clusters, covering vulnerability management, certificate rotation, secrets management, compliance validation, and incident response.

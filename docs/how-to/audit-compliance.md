@@ -1,5 +1,21 @@
 # Implementing Audit and Compliance Workflows
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Understanding Audit Logging](#understanding-audit-logging)
+- [Task 1: Enable Audit Logging](#task-1-enable-audit-logging)
+- [Task 2: Query Audit Events](#task-2-query-audit-events)
+- [Task 3: Verify Audit Log Integrity](#task-3-verify-audit-log-integrity)
+- [Task 4: Implement Compliance Checks](#task-4-implement-compliance-checks)
+- [Task 5: Implement Secret Scanning](#task-5-implement-secret-scanning)
+- [Task 6: Export Audit Logs for Compliance](#task-6-export-audit-logs-for-compliance)
+- [Task 7: Implement Continuous Compliance Monitoring](#task-7-implement-continuous-compliance-monitoring)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Next Steps](#next-steps)
 **doc_type**: how-to  
 **priority**: 3  
 **audience**: Security engineers and compliance officers  

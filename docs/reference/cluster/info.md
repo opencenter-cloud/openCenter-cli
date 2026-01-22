@@ -1,5 +1,22 @@
 # cluster info
 
+
+## Table of Contents
+
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Arguments](#arguments)
+- [Flags](#flags)
+- [Examples](#examples)
+- [Output Format](#output-format)
+- [Information Displayed](#information-displayed)
+- [Active Cluster Indicator](#active-cluster-indicator)
+- [Validation Mode](#validation-mode)
+- [Export-Only Mode](#export-only-mode)
+- [Shell-Specific Export](#shell-specific-export)
+- [Lock Status](#lock-status)
+- [Use Cases](#use-cases)
+- [See Also](#see-also)
 **doc_type:** reference
 
 Display detailed information about a cluster.

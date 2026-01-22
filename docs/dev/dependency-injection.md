@@ -1,5 +1,22 @@
 # Dependency Injection Container
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Purpose](#purpose)
+- [Container Interface](#container-interface)
+- [Component Registration](#component-registration)
+- [Using the Container](#using-the-container)
+- [Adding New Components](#adding-new-components)
+- [Testing with the Container](#testing-with-the-container)
+- [Circular Dependency Detection](#circular-dependency-detection)
+- [Component Lifecycle](#component-lifecycle)
+- [Best Practices](#best-practices)
+- [Currently Registered Components](#currently-registered-components)
+- [Migration from Global State](#migration-from-global-state)
+- [Troubleshooting](#troubleshooting)
+- [References](#references)
 ## Overview
 
 The openCenter CLI uses a dependency injection (DI) container to manage component lifecycle and dependencies. This eliminates global state, improves testability, and makes the codebase more maintainable.

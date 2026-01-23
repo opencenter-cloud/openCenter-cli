@@ -34,13 +34,21 @@ import (
 // The structure matches the testdata/schema.yaml format with opencenter, opentofu, cloud, and secrets sections.
 type Config struct {
 	SchemaVersion string               `yaml:"schema_version,omitempty" json:"schema_version,omitempty"`
+	Metadata      ConfigMetadata       `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 	OpenCenter    SimplifiedOpenCenter `yaml:"opencenter" json:"opencenter"`
 	OpenTofu      SimplifiedOpenTofu   `yaml:"opentofu" json:"opentofu"`
 	Secrets       Secrets              `yaml:"secrets" json:"secrets"`
-	Networking    Networking           `yaml:"networking,omitempty" json:"networking,omitempty"`
 	Deployment    Deployment           `yaml:"deployment,omitempty" json:"deployment,omitempty"`
 	Overrides     map[string]any       `yaml:"overrides,omitempty" json:"overrides,omitempty"`
-	Metadata      ConfigMetadata       `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	
+	// Legacy fields for backward compatibility with v1.2.0 migrations
+	Networking    LegacyNetworking     `yaml:"networking,omitempty" json:"networking,omitempty"`
+}
+
+// LegacyNetworking holds old networking fields for backward compatibility during migrations
+type LegacyNetworking struct {
+	SubnetPods     string `yaml:"subnet_pods,omitempty" json:"subnet_pods,omitempty"`
+	SubnetServices string `yaml:"subnet_services,omitempty" json:"subnet_services,omitempty"`
 }
 
 // Cluster Stages

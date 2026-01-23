@@ -475,10 +475,10 @@ func (m *mockConfigurationManager) LoadConfig(ctx context.Context, cluster strin
 		OpenCenter: config.SimplifiedOpenCenter{
 			Cluster: config.ClusterConfig{
 				ClusterName: cluster,
+				Networking: config.ClusterNetworkingConfig{
+					SubnetNodes: "10.0.0.0/24",
+				},
 			},
-		},
-		Networking: config.Networking{
-			SubnetNodes: "10.0.0.0/24",
 		},
 	}, nil
 }

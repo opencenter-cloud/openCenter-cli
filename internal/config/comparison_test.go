@@ -144,7 +144,7 @@ func TestCompareConfigs_SliceChanges(t *testing.T) {
 	config2 := NewDefault("test-cluster")
 
 	// Modify slice length
-	config2.OpenCenter.Cluster.Networking.K8sAPIPortACL = append(config2.OpenCenter.Cluster.Networking.K8sAPIPortACL, "10.0.0.0/8")
+	config2.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.K8sAPIPortACL = append(config2.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.K8sAPIPortACL, "10.0.0.0/8")
 
 	diff := CompareConfigs(config1, config2)
 
@@ -156,10 +156,10 @@ func TestCompareConfigs_SliceChanges(t *testing.T) {
 	foundLengthChange := false
 	foundElementAdd := false
 	for _, change := range diff.Changes {
-		if change.Path == "OpenCenter.Cluster.Networking.K8sAPIPortACL.length" && change.Type == ChangeTypeModified {
+		if change.Path == "OpenCenter.Infrastructure.Cloud.OpenStack.Networking.K8sAPIPortACL.length" && change.Type == ChangeTypeModified {
 			foundLengthChange = true
 		}
-		if change.Path == "OpenCenter.Cluster.Networking.K8sAPIPortACL[1]" && change.Type == ChangeTypeAdded {
+		if change.Path == "OpenCenter.Infrastructure.Cloud.OpenStack.Networking.K8sAPIPortACL[1]" && change.Type == ChangeTypeAdded {
 			foundElementAdd = true
 		}
 	}
@@ -474,8 +474,8 @@ func TestCompareConfigs_EmptySliceVsNilSlice(t *testing.T) {
 	config2 := NewDefault("test-cluster")
 
 	// Set one to empty slice and one to nil
-	config1.OpenCenter.Cluster.Networking.K8sAPIPortACL = []string{}
-	config2.OpenCenter.Cluster.Networking.K8sAPIPortACL = nil
+	config1.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.K8sAPIPortACL = []string{}
+	config2.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.K8sAPIPortACL = nil
 
 	diff := CompareConfigs(config1, config2)
 

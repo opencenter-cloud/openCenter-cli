@@ -307,7 +307,7 @@ func TestSchemaManager_MigrateConfig_PreservesUserData(t *testing.T) {
 				Provider: "openstack",
 			},
 		},
-		Networking: Networking{
+		Networking: LegacyNetworking{
 			SubnetPods:     "10.100.0.0/16",
 			SubnetServices: "10.200.0.0/16",
 		},
@@ -453,7 +453,7 @@ func TestSchemaManager_MigrateConfigDryRun_PreservesOriginal(t *testing.T) {
 				Provider: "openstack",
 			},
 		},
-		Networking: Networking{
+		Networking: LegacyNetworking{
 			SubnetPods:     "10.100.0.0/16",
 			SubnetServices: "10.200.0.0/16",
 		},
@@ -1061,7 +1061,7 @@ func TestSchemaManager_MigrateAndRollback_RoundTrip(t *testing.T) {
 				Provider: "openstack",
 			},
 		},
-		Networking: Networking{
+		Networking: LegacyNetworking{
 			SubnetPods:     "10.100.0.0/16",
 			SubnetServices: "10.200.0.0/16",
 		},

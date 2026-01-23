@@ -261,7 +261,7 @@ func (d *driftDetector) detectNetworkDrift(ctx context.Context, cluster string, 
 	}
 
 	// Compare actual networks with expected configuration
-	expectedCIDR := cfg.Networking.SubnetNodes
+	expectedCIDR := cfg.OpenCenter.Cluster.Networking.SubnetNodes
 	for _, network := range networks {
 		if network.CIDR != expectedCIDR {
 			report.Drifts = append(report.Drifts, ResourceDrift{

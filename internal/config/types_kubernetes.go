@@ -22,6 +22,7 @@ type KubernetesConfig struct {
 	WorkerNodes              []NodeConfig             `yaml:"worker_nodes,omitempty" json:"worker_nodes,omitempty"`
 	WindowsNodes             []NodeConfig             `yaml:"windows_nodes,omitempty" json:"windows_nodes,omitempty"`
 	NetworkPlugin            NetworkPlugin            `yaml:"network_plugin" json:"network_plugin"`
+	StoragePlugin            StoragePlugin            `yaml:"storage_plugin" json:"storage_plugin"`
 	OIDC                     OIDCConfig               `yaml:"oidc" json:"oidc"`
 	WindowsWorkers           WindowsWorkers           `yaml:"windows_workers" json:"windows_workers"`
 	Security                 KubernetesSecurityConfig `yaml:"security" json:"security"`
@@ -38,6 +39,28 @@ type NodeConfig struct {
 	ID         string `yaml:"id" json:"id"`
 	Name       string `yaml:"name" json:"name"`
 	AccessIPv4 string `yaml:"access_ip_v4" json:"access_ip_v4"`
+}
+
+// NetworkPlugin represents the network plugin configuration
+type StoragePlugin struct {
+	vsphere  VsphereConfig  `yaml:"calico" json:"calico"`
+	cinder  CinderConfig   `yaml:"cilium" json:"cilium"`
+	longhorn LonghornConfig `yaml:"kube-ovn" json:"kube-ovn"`
+}
+
+//  
+type VsphereConfig struct {
+	Enabled              bool                `yaml:"enabled" json:"enabled"`
+}
+
+//  
+type CinderConfig struct {
+	Enabled              bool                `yaml:"enabled" json:"enabled"`
+}
+
+//  
+type LonghornConfig struct {
+	Enabled              bool                `yaml:"enabled" json:"enabled"`
 }
 
 // NetworkPlugin represents the network plugin configuration

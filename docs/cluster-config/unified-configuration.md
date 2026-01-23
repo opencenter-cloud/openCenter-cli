@@ -634,12 +634,55 @@ opencenter:
       enabled: true
     gateway-api:
       enabled: true
+    
+    # Storage CSI Drivers (provider-specific)
     external-snapshotter:
-      enabled: true
-    openstack-ccm:
       enabled: true
     openstack-csi:
       enabled: true
+      storage_classes:
+        - name: "csi-cinder-sc-delete"
+          provisioner: "cinder.csi.openstack.org"
+          reclaim_policy: "Delete"
+          volume_binding_mode: "WaitForFirstConsumer"
+          parameters:
+            type: "HA-Standard"
+        - name: "csi-cinder-sc-retain"
+          provisioner: "cinder.csi.openstack.org"
+          reclaim_policy: "Retain"
+          parameters:
+            type: "HA-Performance"
+    aws-ebs-csi:
+      enabled: false
+      storage_classes:
+        - name: "gp3"
+          provisioner: "ebs.csi.aws.com"
+          parameters:
+            type: "gp3"
+            encrypted: "true"
+    vsphere-csi:
+      enabled: false
+      storage_classes:
+        - name: "vsphere-standard"
+          provisioner: "csi.vsphere.vmware.com"
+          parameters:
+            storagepolicyname: "vSAN Default Storage Policy"
+    ceph-csi:
+      enabled: false
+      monitors: []
+      storage_classes:
+        - name: "ceph-rbd"
+          provisioner: "rbd.csi.ceph.com"
+          parameters:
+            pool: "kubernetes"
+    
+    # Cloud Controller Managers (provider-specific)
+    openstack-ccm:
+      enabled: true
+    aws-ccm:
+      enabled: false
+    vsphere-ccm:
+      enabled: false
   
   # Managed services (external/vendor-managed)
   managed_services:
@@ -658,15 +701,74 @@ opencenter:
 │  services (Self-Hosted)                                      │
 │  ├── Deployed in-cluster via GitOps                          │
 │  ├── Managed by OpenCenter lifecycle                         │
-│  ├── Uses cluster resources                                  │
+│  ├── Uses cluster compute/storage resources                  │
+│  ├── Runs as Kubernetes workloads (Pods/StatefulSets)        │
 │  └── Examples: loki, tempo, prometheus, keycloak             │
 ├─────────────────────────────────────────────────────────────┤
 │  managed_services (External)                                 │
-│  ├── Hosted outside cluster                                  │
-│  ├── Requires external credentials/tokens                    │
-│  ├── Different lifecycle (vendor-managed)                    │
+│  ├── Hosted outside cluster (SaaS/vendor-managed)            │
+│  ├── Does not consume cluster resources                      │
+│  ├── Different lifecycle (vendor-managed updates)            │
 │  └── Examples: alert-proxy, external monitoring              │
 └─────────────────────────────────────────────────────────────┘
+```
+
+**Storage Architecture**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Infrastructure Storage (infrastructure.storage)             │
+│  ├── Boot volumes for VMs/instances                          │
+│  ├── Additional block devices attached to nodes              │
+│  ├── Provider-specific volume types (HA-Standard, gp3)       │
+│  └── Configured during infrastructure provisioning           │
+├─────────────────────────────────────────────────────────────┤
+│  Kubernetes Storage (services.<csi-driver>)                  │
+│  ├── CSI drivers deployed as Kubernetes workloads            │
+│  ├── StorageClasses for dynamic provisioning                 │
+│  ├── Volume snapshots and cloning                            │
+│  └── Examples: openstack-csi, aws-ebs-csi, vsphere-csi       │
+├─────────────────────────────────────────────────────────────┤
+│  Application Storage (services.<app>.storage_class)          │
+│  ├── References StorageClass from CSI driver                 │
+│  ├── Used by applications for persistent data                │
+│  └── Examples: prometheus, loki, grafana volumes             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**CSI Driver Selection by Provider**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Provider    │  CSI Driver           │  StorageClass Prefix  │
+├──────────────┼───────────────────────┼──────────────────────┤
+│  OpenStack   │  openstack-csi        │  csi-cinder-*         │
+│  AWS         │  aws-ebs-csi          │  gp2, gp3, io1        │
+│  GCP         │  gcp-compute-csi      │  standard, ssd        │
+│  Azure       │  azure-disk-csi       │  managed-*            │
+│  VMware      │  vsphere-csi          │  vsphere-*            │
+│  Bare Metal  │  local-path, ceph-csi │  local-path, ceph-*   │
+└──────────────┴───────────────────────┴──────────────────────┘
+```
+
+**Storage Configuration Flow**:
+
+```
+1. Infrastructure Provisioning
+   └─► infrastructure.storage.worker_volume_type = "HA-Standard"
+       (Creates boot volumes for worker nodes)
+
+2. CSI Driver Deployment
+   └─► services.openstack-csi.enabled = true
+       (Deploys CSI driver pods in kube-system namespace)
+
+3. StorageClass Creation
+   └─► services.openstack-csi.storage_classes[0].name = "csi-cinder-sc-delete"
+       (Creates Kubernetes StorageClass resource)
+
+4. Application Volume Provisioning
+   └─► services.prometheus.storage_class = "csi-cinder-sc-delete"
+       (Application PVC uses StorageClass for dynamic provisioning)
 ```
 
 ---
@@ -1411,3 +1513,273 @@ talos:
 | `E011` | Cluster API provider mismatch |
 | `E012` | Autoscaling configuration invalid |
 | `E013` | Mixed OS worker pool requires Kamaji or CAPI |
+
+
+---
+
+## Error Code Taxonomy
+
+OpenCenter uses a structured error code system for automation and troubleshooting. Each code follows the format: `XYNN` where:
+
+- **X** (Severity): `E` (Error), `W` (Warning), `I` (Info)
+- **Y** (Domain): `0` (General), `1` (Infrastructure), `2` (Deployment), `3` (Services), `4` (Secrets), `5` (Networking)
+- **NN** (Sequence): Two-digit error number within domain
+
+### Error Code Structure
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Error Code Format: XYNN                                     │
+├─────────────────────────────────────────────────────────────┤
+│  X - Severity Level                                          │
+│    E = Error (blocks operation)                              │
+│    W = Warning (operation continues with risk)               │
+│    I = Info (informational message)                          │
+├─────────────────────────────────────────────────────────────┤
+│  Y - Domain                                                  │
+│    0 = General (schema, validation, references)              │
+│    1 = Infrastructure (provider, compute, storage)           │
+│    2 = Deployment (method, bootstrap, lifecycle)             │
+│    3 = Services (workloads, dependencies)                    │
+│    4 = Secrets (credentials, encryption)                     │
+│    5 = Networking (CIDR, DNS, load balancing)                │
+├─────────────────────────────────────────────────────────────┤
+│  NN - Sequence Number                                        │
+│    01-99 = Specific error within domain                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### General Errors (E0xx)
+
+| Code | Severity | Description | Resolution |
+|------|----------|-------------|------------|
+| `E001` | Error | Missing required field | Add required field to configuration |
+| `E002` | Error | Invalid field type | Correct field type (string, int, bool) |
+| `E003` | Error | Reference resolution failed | Check reference path syntax `${path.to.field}` |
+| `E004` | Error | Circular reference detected | Remove circular dependency in references |
+| `E005` | Error | Schema version mismatch | Update schema_version to current (2.0) |
+| `E006` | Error | Invalid enum value | Use valid value from allowed list |
+| `W001` | Warning | Deprecated field used | Migrate to new field name |
+| `W002` | Warning | Field will be ignored | Remove unused field or enable feature |
+| `I001` | Info | Using default value | Explicit value recommended for production |
+
+### Infrastructure Errors (E1xx)
+
+| Code | Severity | Description | Resolution |
+|------|----------|-------------|------------|
+| `E101` | Error | Provider not supported | Use: openstack, aws, gcp, azure, baremetal, vsphere |
+| `E102` | Error | Provider authentication failed | Verify credentials in secrets section |
+| `E103` | Error | Region not available | Check provider region list |
+| `E104` | Error | Flavor/instance type not found | Verify flavor exists in provider region |
+| `E105` | Error | Image ID not found | Verify image exists in provider region |
+| `E106` | Error | Insufficient quota | Request quota increase from provider |
+| `E107` | Error | Storage class not available | Verify storage class exists in cluster |
+| `E108` | Error | Volume type not supported | Use provider-supported volume type |
+| `E109` | Error | Compute configuration invalid | Check master_count, worker_count values |
+| `E110` | Error | Additional server pool invalid | Verify pool name, flavor, and counts |
+| `E111` | Error | Server group affinity invalid | Use: anti-affinity, affinity, soft-anti-affinity |
+| `W101` | Warning | Using default flavor | Explicit flavor recommended for production |
+| `W102` | Warning | Small volume size | Consider increasing for production workloads |
+| `W103` | Warning | No additional block devices | Data persistence may be limited |
+
+### Deployment Errors (E2xx)
+
+| Code | Severity | Description | Resolution |
+|------|----------|-------------|------------|
+| `E201` | Error | Deployment method not supported | Use: kubespray, talos, kamaji, eks, gke, aks |
+| `E202` | Error | Provider-deployment incompatibility | Check deployment method compatibility matrix |
+| `E203` | Error | Kamaji control plane config invalid | Verify replicas, datastore, service_type |
+| `E204` | Error | Kamaji worker pool config invalid | Check pool name, os, count, flavor |
+| `E205` | Error | Cluster API provider mismatch | Infrastructure provider must match CAPI provider |
+| `E206` | Error | Mixed OS requires Kamaji/CAPI | Use Kamaji or CAPI for mixed Ubuntu/Windows/Talos |
+| `E207` | Error | Talos version incompatible | Use supported Talos version (v1.8.0+) |
+| `E208` | Error | Kubespray version incompatible | Use supported Kubespray version (v2.29.0+) |
+| `E209` | Error | Bootstrap provider invalid | Use: kubeadm, talos |
+| `E210` | Error | Control plane datastore invalid | Use: etcd, postgresql, mysql |
+| `W201` | Warning | Using development deployment | Not recommended for production |
+| `W202` | Warning | Single control plane replica | Use 3+ replicas for HA |
+
+### Service Errors (E3xx)
+
+| Code | Severity | Description | Resolution |
+|------|----------|-------------|------------|
+| `E301` | Error | Service dependency not met | Enable required dependency service |
+| `E302` | Error | Service configuration invalid | Check service-specific configuration |
+| `E303` | Error | Incompatible service-provider combo | Service not supported on this provider |
+| `E304` | Error | Storage backend not configured | Configure swift, s3, or local storage |
+| `E305` | Error | DNS provider not configured | Configure route53, cloudflare, or designate |
+| `E306` | Error | OIDC configuration incomplete | Provide issuer_url, client_id, client_secret |
+| `E307` | Error | Service namespace conflict | Use unique namespace per service |
+| `E308` | Error | CNI plugin conflict | Only one CNI can be enabled |
+| `E309` | Error | Service version incompatible | Use compatible service version |
+| `E310` | Error | Monitoring stack incomplete | Enable prometheus with loki/tempo |
+| `W301` | Warning | Service disabled but configured | Remove config or enable service |
+| `W302` | Warning | Using default storage size | Consider increasing for production |
+| `W303` | Warning | No backup configured | Enable velero for disaster recovery |
+
+### Secrets Errors (E4xx)
+
+| Code | Severity | Description | Resolution |
+|------|----------|-------------|------------|
+| `E401` | Error | Secret not configured for service | Add required secret to secrets section |
+| `E402` | Error | SOPS key file not found | Generate Age key with `age-keygen` |
+| `E403` | Error | Secret decryption failed | Verify SOPS key and encrypted file |
+| `E404` | Error | SSH key not found | Generate SSH key or provide path |
+| `E405` | Error | Credential format invalid | Check credential format (base64, PEM) |
+| `E406` | Error | Secret scope mismatch | Use correct scope: global, service-specific |
+| `E407` | Error | Plaintext secret detected | Encrypt with SOPS before committing |
+| `E408` | Error | Age recipient not configured | Add age recipient to .sops.yaml |
+| `W401` | Warning | Using default SSH key | Generate cluster-specific key |
+| `W402` | Warning | Secret not encrypted | Encrypt with SOPS for security |
+| `W403` | Warning | Weak credential detected | Use strong passwords/keys |
+
+### Networking Errors (E5xx)
+
+| Code | Severity | Description | Resolution |
+|------|----------|-------------|------------|
+| `E501` | Error | Invalid CIDR notation | Use valid CIDR format: 10.0.0.0/24 |
+| `E502` | Error | CIDR overlap detected | Ensure non-overlapping subnets |
+| `E503` | Error | Subnet too small | Increase subnet size for node count |
+| `E504` | Error | DNS nameserver unreachable | Verify DNS server accessibility |
+| `E505` | Error | Load balancer config invalid | Check provider, type, and settings |
+| `E506` | Error | Floating IP pool not found | Verify pool exists in provider |
+| `E507` | Error | VLAN configuration invalid | Check VLAN ID, MTU, provider |
+| `E508` | Error | Network ID not found | Verify network exists in provider |
+| `E509` | Error | Router configuration invalid | Check external network ID |
+| `E510` | Error | Port range invalid | Use valid port range (1-65535) |
+| `E511` | Error | ACL configuration invalid | Check CIDR format in ACL rules |
+| `W501` | Warning | Using default DNS servers | Configure provider-specific DNS |
+| `W502` | Warning | Public IP exposure | Restrict ACLs for security |
+| `W503` | Warning | Large subnet allocated | Consider smaller subnet for efficiency |
+
+### Exit Codes
+
+OpenCenter CLI uses standard exit codes for automation:
+
+| Exit Code | Meaning | Description |
+|-----------|---------|-------------|
+| `0` | Success | Operation completed successfully |
+| `1` | General error | Unspecified error occurred |
+| `2` | Validation error | Configuration validation failed (E0xx-E5xx) |
+| `3` | Authentication error | Provider authentication failed (E102, E402, E403) |
+| `4` | Resource error | Required resource not found (E104, E105, E508) |
+| `5` | Quota error | Insufficient quota or capacity (E106) |
+| `10` | User interrupt | Operation cancelled by user (Ctrl+C) |
+
+### Error Code Examples
+
+```bash
+# Example: Missing required field
+$ opencenter cluster validate my-cluster
+ERROR [E001]: Missing required field 'opencenter.infrastructure.provider'
+  Location: opencenter.infrastructure.provider
+  Resolution: Add provider field with value: openstack, aws, gcp, azure, baremetal, or vsphere
+  Exit Code: 2
+
+# Example: CIDR overlap
+$ opencenter cluster validate my-cluster
+ERROR [E502]: CIDR overlap detected between subnet_nodes and subnet_pods
+  Location: opencenter.cluster.kubernetes.subnet_pods
+  Conflict: 10.0.0.0/16 overlaps with infrastructure.networking.subnet_nodes 10.0.0.0/22
+  Resolution: Use non-overlapping CIDR ranges
+  Exit Code: 2
+
+# Example: Service dependency
+$ opencenter cluster validate my-cluster
+ERROR [E301]: Service dependency not met for 'grafana'
+  Location: opencenter.services.grafana
+  Missing: kube-prometheus-stack must be enabled
+  Resolution: Set opencenter.services.kube-prometheus-stack.enabled = true
+  Exit Code: 2
+
+# Example: Warning (non-blocking)
+$ opencenter cluster validate my-cluster
+WARNING [W101]: Using default flavor for worker nodes
+  Location: opencenter.infrastructure.compute.flavor_worker
+  Current: gp.0.4.16 (default)
+  Recommendation: Specify explicit flavor for production deployments
+  Exit Code: 0 (warnings don't block)
+```
+
+### Automation Integration
+
+Error codes enable programmatic handling:
+
+```bash
+#!/bin/bash
+# Automated validation with error handling
+
+opencenter cluster validate my-cluster 2>&1 | tee validation.log
+
+EXIT_CODE=$?
+
+case $EXIT_CODE in
+  0)
+    echo "✓ Validation passed"
+    opencenter cluster setup my-cluster
+    ;;
+  2)
+    echo "✗ Validation failed"
+    # Parse error codes for specific handling
+    if grep -q "E102" validation.log; then
+      echo "Authentication error - check credentials"
+      exit 1
+    elif grep -q "E5" validation.log; then
+      echo "Networking error - check CIDR configuration"
+      exit 1
+    fi
+    ;;
+  3)
+    echo "✗ Authentication failed"
+    echo "Run: opencenter cluster credentials export"
+    exit 1
+    ;;
+  *)
+    echo "✗ Unexpected error"
+    exit 1
+    ;;
+esac
+```
+
+### Error Code JSON Output
+
+For machine-readable output, use `--output json`:
+
+```bash
+$ opencenter cluster validate my-cluster --output json
+{
+  "status": "failed",
+  "exit_code": 2,
+  "errors": [
+    {
+      "code": "E001",
+      "severity": "error",
+      "domain": "general",
+      "message": "Missing required field 'opencenter.infrastructure.provider'",
+      "location": "opencenter.infrastructure.provider",
+      "resolution": "Add provider field with value: openstack, aws, gcp, azure, baremetal, or vsphere"
+    },
+    {
+      "code": "E502",
+      "severity": "error",
+      "domain": "networking",
+      "message": "CIDR overlap detected between subnet_nodes and subnet_pods",
+      "location": "opencenter.cluster.kubernetes.subnet_pods",
+      "details": {
+        "conflict": "10.0.0.0/16 overlaps with infrastructure.networking.subnet_nodes 10.0.0.0/22"
+      },
+      "resolution": "Use non-overlapping CIDR ranges"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "W101",
+      "severity": "warning",
+      "domain": "infrastructure",
+      "message": "Using default flavor for worker nodes",
+      "location": "opencenter.infrastructure.compute.flavor_worker",
+      "recommendation": "Specify explicit flavor for production deployments"
+    }
+  ]
+}
+```

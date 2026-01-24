@@ -9,24 +9,24 @@ type OpenCenter struct {
 
 // ClusterMeta holds high-level metadata about the cluster.
 type ClusterMeta struct {
-	Name         string `yaml:"name" json:"name"`
-	Env          string `yaml:"env" json:"env"`
-	Region       string `yaml:"region" json:"region"`
+	Name         string `yaml:"name" json:"name" validate:"required,dns1123"`
+	Env          string `yaml:"env" json:"env" validate:"omitempty,oneof=dev staging production"`
+	Region       string `yaml:"region" json:"region" validate:"required"`
 	Status       string `yaml:"status" json:"status"`
 	Stage        string `yaml:"stage" json:"stage"`
-	Organization string `yaml:"organization" json:"organization"`
+	Organization string `yaml:"organization" json:"organization" validate:"required"`
 	Locked       bool   `yaml:"locked,omitempty" json:"locked,omitempty"`
 	LockReason   string `yaml:"lock_reason,omitempty" json:"lock_reason,omitempty"`
 }
 
 // SimplifiedOpenCenter represents the opencenter section of the new simplified schema
 type SimplifiedOpenCenter struct {
-	Meta           ClusterMeta       `yaml:"meta" json:"meta"`
+	Meta           ClusterMeta       `yaml:"meta" json:"meta" validate:"required"`
 	Secrets        OpenCenterSecrets `yaml:"secrets,omitempty" json:"secrets,omitempty"`
-	Infrastructure Infrastructure    `yaml:"infrastructure" json:"infrastructure"`
-	Cluster        ClusterConfig     `yaml:"cluster" json:"cluster"`
-	GitOps         GitOpsConfig      `yaml:"gitops" json:"gitops"`
-	Storage        StorageConfig     `yaml:"storage,omitempty" json:"storage,omitempty"`
+	Infrastructure Infrastructure    `yaml:"infrastructure" json:"infrastructure" validate:"required"`
+	Cluster        ClusterConfig     `yaml:"cluster" json:"cluster" validate:"required"`
+	GitOps         GitOpsConfig      `yaml:"gitops" json:"gitops" validate:"required"`
+	Storage        StorageConfig     `yaml:"storage,omitempty" json:"storage,omitempty" validate:"required"`
 	Talos          *TalosConfig      `yaml:"talos,omitempty" json:"talos,omitempty"`
 	ManagedService ServiceMap        `yaml:"managed-service" json:"managed-service"`
 	Services       ServiceMap        `yaml:"services" json:"services"`
@@ -35,13 +35,13 @@ type SimplifiedOpenCenter struct {
 // TalosConfig represents Talos-specific configuration
 type TalosConfig struct {
 	Enabled        bool                `yaml:"enabled" json:"enabled" jsonschema:"description=Enable Talos Linux provider"`
-	Version        string              `yaml:"version" json:"version" jsonschema:"description=Talos Linux version"`
-	ImageURL       string              `yaml:"image_url" json:"image_url" jsonschema:"description=URL to Talos Linux image"`
+	Version        string              `yaml:"version" json:"version" jsonschema:"description=Talos Linux version" validate:"required_if=Enabled true,omitempty,semver"`
+	ImageURL       string              `yaml:"image_url" json:"image_url" jsonschema:"description=URL to Talos Linux image" validate:"required_if=Enabled true,omitempty,url"`
 	ImageSignature string              `yaml:"image_signature" json:"image_signature" jsonschema:"description=Cryptographic signature of Talos image"`
 	MachineConfig  TalosMachineConfig  `yaml:"machine_config" json:"machine_config"`
-	NetworkConfig  TalosNetworkConfig  `yaml:"network_config" json:"network_config"`
+	NetworkConfig  TalosNetworkConfig  `yaml:"network_config" json:"network_config" validate:"required_if=Enabled true"`
 	SecurityConfig TalosSecurityConfig `yaml:"security_config" json:"security_config"`
-	PulumiConfig   TalosPulumiConfig   `yaml:"pulumi_config" json:"pulumi_config"`
+	PulumiConfig   TalosPulumiConfig   `yaml:"pulumi_config" json:"pulumi_config" validate:"required_if=Enabled true"`
 }
 
 // TalosMachineConfig holds Talos machine configuration settings
@@ -56,12 +56,12 @@ type TalosMachineConfig struct {
 
 // TalosNetworkConfig holds network topology settings
 type TalosNetworkConfig struct {
-	ManagementSubnet string   `yaml:"management_subnet" json:"management_subnet" jsonschema:"description=CIDR for management network,default=10.0.1.0/24"`
-	ControlSubnet    string   `yaml:"control_subnet" json:"control_subnet" jsonschema:"description=CIDR for control plane network,default=10.0.2.0/24"`
-	DataSubnet       string   `yaml:"data_subnet" json:"data_subnet" jsonschema:"description=CIDR for data plane network,default=10.0.3.0/24"`
-	WireGuardPort    int      `yaml:"wireguard_port" json:"wireguard_port" jsonschema:"description=UDP port for WireGuard VPN,default=51820"`
-	TalosAPIPort     int      `yaml:"talos_api_port" json:"talos_api_port" jsonschema:"description=TCP port for Talos API,default=50000"`
-	AllowedCIDRs     []string `yaml:"allowed_cidrs,omitempty" json:"allowed_cidrs,omitempty" jsonschema:"description=List of CIDRs allowed to access cluster"`
+	ManagementSubnet string   `yaml:"management_subnet" json:"management_subnet" jsonschema:"description=CIDR for management network,default=10.0.1.0/24" validate:"required,cidrv4"`
+	ControlSubnet    string   `yaml:"control_subnet" json:"control_subnet" jsonschema:"description=CIDR for control plane network,default=10.0.2.0/24" validate:"required,cidrv4"`
+	DataSubnet       string   `yaml:"data_subnet" json:"data_subnet" jsonschema:"description=CIDR for data plane network,default=10.0.3.0/24" validate:"required,cidrv4"`
+	WireGuardPort    int      `yaml:"wireguard_port" json:"wireguard_port" jsonschema:"description=UDP port for WireGuard VPN,default=51820" validate:"required,min=1,max=65535"`
+	TalosAPIPort     int      `yaml:"talos_api_port" json:"talos_api_port" jsonschema:"description=TCP port for Talos API,default=50000" validate:"required,min=1,max=65535"`
+	AllowedCIDRs     []string `yaml:"allowed_cidrs,omitempty" json:"allowed_cidrs,omitempty" jsonschema:"description=List of CIDRs allowed to access cluster" validate:"dive,cidrv4"`
 }
 
 // TalosSecurityConfig holds security-related settings
@@ -75,8 +75,8 @@ type TalosSecurityConfig struct {
 
 // TalosPulumiConfig holds Pulumi-specific settings
 type TalosPulumiConfig struct {
-	StackName         string `yaml:"stack_name" json:"stack_name" jsonschema:"description=Pulumi stack name"`
-	SwiftContainer    string `yaml:"swift_container" json:"swift_container" jsonschema:"description=Swift container for Pulumi state"`
+	StackName         string `yaml:"stack_name" json:"stack_name" jsonschema:"description=Pulumi stack name" validate:"required"`
+	SwiftContainer    string `yaml:"swift_container" json:"swift_container" jsonschema:"description=Swift container for Pulumi state" validate:"required"`
 	SwiftPrefix       string `yaml:"swift_prefix,omitempty" json:"swift_prefix,omitempty" jsonschema:"description=Swift prefix for state isolation"`
 	SecretsPassphrase string `yaml:"secrets_passphrase,omitempty" json:"secrets_passphrase,omitempty" jsonschema:"secret=true,description=Passphrase for Pulumi secrets provider"`
 }

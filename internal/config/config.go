@@ -33,11 +33,11 @@ import (
 // Config represents the simplified root configuration for a cluster based on the new schema.
 // The structure matches the testdata/schema.yaml format with opencenter, opentofu, cloud, and secrets sections.
 type Config struct {
-	SchemaVersion string               `yaml:"schema_version,omitempty" json:"schema_version,omitempty"`
+	SchemaVersion string               `yaml:"schema_version,omitempty" json:"schema_version,omitempty" validate:"omitempty,oneof=1.0 2.0"`
 	Metadata      ConfigMetadata       `yaml:"metadata,omitempty" json:"metadata,omitempty"`
-	OpenCenter    SimplifiedOpenCenter `yaml:"opencenter" json:"opencenter"`
-	OpenTofu      SimplifiedOpenTofu   `yaml:"opentofu" json:"opentofu"`
-	Secrets       Secrets              `yaml:"secrets" json:"secrets"`
+	OpenCenter    SimplifiedOpenCenter `yaml:"opencenter" json:"opencenter" validate:"required"`
+	OpenTofu      SimplifiedOpenTofu   `yaml:"opentofu" json:"opentofu" validate:"required"`
+	Secrets       Secrets              `yaml:"secrets" json:"secrets" validate:"required"`
 	Deployment    Deployment           `yaml:"deployment,omitempty" json:"deployment,omitempty"`
 	Overrides     map[string]any       `yaml:"overrides,omitempty" json:"overrides,omitempty"`
 	
@@ -47,8 +47,8 @@ type Config struct {
 
 // LegacyNetworking holds old networking fields for backward compatibility during migrations
 type LegacyNetworking struct {
-	SubnetPods     string `yaml:"subnet_pods,omitempty" json:"subnet_pods,omitempty"`
-	SubnetServices string `yaml:"subnet_services,omitempty" json:"subnet_services,omitempty"`
+	SubnetPods     string `yaml:"subnet_pods,omitempty" json:"subnet_pods,omitempty" validate:"omitempty,cidrv4"`
+	SubnetServices string `yaml:"subnet_services,omitempty" json:"subnet_services,omitempty" validate:"omitempty,cidrv4"`
 }
 
 // Cluster Stages

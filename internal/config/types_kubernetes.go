@@ -2,26 +2,26 @@ package config
 
 // KubernetesConfig represents the kubernetes configuration
 type KubernetesConfig struct {
-	Version                  string                   `yaml:"version" json:"version"`
-	KubesprayVersion         string                   `yaml:"kubespray_version" json:"kubespray_version"`
-	APIPort                  int                      `yaml:"api_port" json:"api_port"`
+	Version                  string                   `yaml:"version" json:"version" validate:"required,semver"`
+	KubesprayVersion         string                   `yaml:"kubespray_version" json:"kubespray_version" validate:"required,semver"`
+	APIPort                  int                      `yaml:"api_port" json:"api_port" validate:"required,min=1,max=65535"`
 	KubeVIPEnabled           bool                     `yaml:"kube_vip_enabled" json:"kube_vip_enabled"`
 	KubeletRotateServerCerts bool                     `yaml:"kubelet_rotate_server_certificates" json:"kubelet_rotate_server_certificates"`
-	FlavorBastion            string                   `yaml:"flavor_bastion" json:"flavor_bastion"`
+	FlavorBastion            string                   `yaml:"flavor_bastion" json:"flavor_bastion" validate:"required"`
 	FlavorMaster             string                   `yaml:"flavor_master" json:"flavor_master"`
 	FlavorWorker             string                   `yaml:"flavor_worker" json:"flavor_worker"`
 	FlavorWorkerWindows      string                   `yaml:"flavor_worker_windows" json:"flavor_worker_windows"`
-	SubnetPods               string                   `yaml:"subnet_pods" json:"subnet_pods"`
-	SubnetServices           string                   `yaml:"subnet_services" json:"subnet_services"`
-	LoadbalancerProvider     string                   `yaml:"loadbalancer_provider" json:"loadbalancer_provider"`
-	DNSZoneName              string                   `yaml:"dns_zone_name" json:"dns_zone_name"`
-	MasterCount              int                      `yaml:"master_count" json:"master_count"`
-	WorkerCount              int                      `yaml:"worker_count" json:"worker_count"`
-	WorkerCountWindows       int                      `yaml:"worker_count_windows" json:"worker_count_windows"`
-	MasterNodes              []NodeConfig             `yaml:"master_nodes,omitempty" json:"master_nodes,omitempty"`
-	WorkerNodes              []NodeConfig             `yaml:"worker_nodes,omitempty" json:"worker_nodes,omitempty"`
-	WindowsNodes             []NodeConfig             `yaml:"windows_nodes,omitempty" json:"windows_nodes,omitempty"`
-	NetworkPlugin            NetworkPlugin            `yaml:"network_plugin" json:"network_plugin"`
+	SubnetPods               string                   `yaml:"subnet_pods" json:"subnet_pods" validate:"required,cidrv4"`
+	SubnetServices           string                   `yaml:"subnet_services" json:"subnet_services" validate:"required,cidrv4"`
+	LoadbalancerProvider     string                   `yaml:"loadbalancer_provider" json:"loadbalancer_provider" validate:"required,oneof=ovn octavia metallb cloud-native"`
+	DNSZoneName              string                   `yaml:"dns_zone_name" json:"dns_zone_name" validate:"omitempty,fqdn"`
+	MasterCount              int                      `yaml:"master_count" json:"master_count" validate:"min=0,max=100"`
+	WorkerCount              int                      `yaml:"worker_count" json:"worker_count" validate:"min=0,max=1000"`
+	WorkerCountWindows       int                      `yaml:"worker_count_windows" json:"worker_count_windows" validate:"min=0,max=100"`
+	MasterNodes              []NodeConfig             `yaml:"master_nodes,omitempty" json:"master_nodes,omitempty" validate:"dive"`
+	WorkerNodes              []NodeConfig             `yaml:"worker_nodes,omitempty" json:"worker_nodes,omitempty" validate:"dive"`
+	WindowsNodes             []NodeConfig             `yaml:"windows_nodes,omitempty" json:"windows_nodes,omitempty" validate:"dive"`
+	NetworkPlugin            NetworkPlugin            `yaml:"network_plugin" json:"network_plugin" validate:"required"`
 	StoragePlugin            StoragePlugin            `yaml:"storage_plugin" json:"storage_plugin"`
 	OIDC                     OIDCConfig               `yaml:"oidc" json:"oidc"`
 	WindowsWorkers           WindowsWorkers           `yaml:"windows_workers" json:"windows_workers"`
@@ -29,16 +29,16 @@ type KubernetesConfig struct {
 	Networking               Networking               `yaml:"networking" json:"networking"`
 	Modules                  KubernetesModulesConfig  `yaml:"modules" json:"modules"`
 	// AdditionalServerPoolsWorker defines additional worker node pools with custom configurations
-	AdditionalServerPoolsWorker []AdditionalServerPool `yaml:"additional_server_pools_worker" json:"additional_server_pools_worker,omitempty"`
+	AdditionalServerPoolsWorker []AdditionalServerPool `yaml:"additional_server_pools_worker" json:"additional_server_pools_worker,omitempty" validate:"dive"`
 	// AdditionalServerPoolsWorkerWindows defines additional Windows worker node pools
-	AdditionalServerPoolsWorkerWindows []AdditionalServerPoolWindows `yaml:"additional_server_pools_worker_windows" json:"additional_server_pools_worker_windows,omitempty"`
+	AdditionalServerPoolsWorkerWindows []AdditionalServerPoolWindows `yaml:"additional_server_pools_worker_windows" json:"additional_server_pools_worker_windows,omitempty" validate:"dive"`
 }
 
 // NodeConfig represents a baremetal node configuration with id, name, and IP
 type NodeConfig struct {
-	ID         string `yaml:"id" json:"id"`
-	Name       string `yaml:"name" json:"name"`
-	AccessIPv4 string `yaml:"access_ip_v4" json:"access_ip_v4"`
+	ID         string `yaml:"id" json:"id" validate:"required"`
+	Name       string `yaml:"name" json:"name" validate:"required,dns1123"`
+	AccessIPv4 string `yaml:"access_ip_v4" json:"access_ip_v4" validate:"required,ipv4"`
 }
 
 // NetworkPlugin represents the network plugin configuration
@@ -99,8 +99,8 @@ type KubeOVNConfig struct {
 // OIDCConfig represents the OIDC configuration
 type OIDCConfig struct {
 	Enabled                bool   `yaml:"enabled" json:"enabled"`
-	KubeOIDCURL            string `yaml:"kube_oidc_url" json:"kube_oidc_url"`
-	KubeOIDCClientID       string `yaml:"kube_oidc_client_id" json:"kube_oidc_client_id"`
+	KubeOIDCURL            string `yaml:"kube_oidc_url" json:"kube_oidc_url" validate:"required_if=Enabled true,omitempty,url"`
+	KubeOIDCClientID       string `yaml:"kube_oidc_client_id" json:"kube_oidc_client_id" validate:"required_if=Enabled true"`
 	KubeOIDCCAFile         string `yaml:"kube_oidc_ca_file" json:"kube_oidc_ca_file"`
 	KubeOIDCUsernameClaim  string `yaml:"kube_oidc_username_claim" json:"kube_oidc_username_claim"`
 	KubeOIDCUsernamePrefix string `yaml:"kube_oidc_username_prefix" json:"kube_oidc_username_prefix"`

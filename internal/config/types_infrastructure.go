@@ -2,27 +2,27 @@ package config
 
 // Infrastructure represents the infrastructure configuration block.
 type Infrastructure struct {
-	Provider            string         `yaml:"provider" json:"provider"`
-	Cloud               CloudConfig    `yaml:"cloud" json:"cloud"`
-	SSHUser             string         `yaml:"ssh_user" json:"ssh_user"`
+	Provider            string         `yaml:"provider" json:"provider" validate:"required,oneof=openstack aws gcp azure baremetal vsphere"`
+	Cloud               CloudConfig    `yaml:"cloud" json:"cloud" validate:"required"`
+	SSHUser             string         `yaml:"ssh_user" json:"ssh_user" validate:"required"`
 	SSHKeyPath          string         `yaml:"ssh_key_path,omitempty" json:"ssh_key_path,omitempty" jsonschema:"description=Path to SSH private key for cluster access"`
-	OSVersion           string         `yaml:"os_version" json:"os_version"`
-	ServerGroupAffinity []string       `yaml:"server_group_affinity" json:"server_group_affinity"`
-	NodeNaming          NodeNaming     `yaml:"node_naming" json:"node_naming"`
-	Bastion             BastionConfig  `yaml:"bastion" json:"bastion"`
-	K8sAPIIP            string         `yaml:"k8s_api_ip" json:"k8s_api_ip"`
+	OSVersion           string         `yaml:"os_version" json:"os_version" validate:"required"`
+	ServerGroupAffinity []string       `yaml:"server_group_affinity" json:"server_group_affinity" validate:"dive,oneof=affinity anti-affinity soft-affinity soft-anti-affinity"`
+	NodeNaming          NodeNaming     `yaml:"node_naming" json:"node_naming" validate:"required"`
+	Bastion             BastionConfig  `yaml:"bastion" json:"bastion" validate:"required"`
+	K8sAPIIP            string         `yaml:"k8s_api_ip" json:"k8s_api_ip" validate:"omitempty,ipv4"`
 }
 
 // NodeNaming represents node naming conventions
 type NodeNaming struct {
-	Worker        string `yaml:"worker" json:"worker"`
-	Master        string `yaml:"master" json:"master"`
+	Worker        string `yaml:"worker" json:"worker" validate:"required"`
+	Master        string `yaml:"master" json:"master" validate:"required"`
 	WorkerWindows string `yaml:"worker_windows" json:"worker_windows"`
 }
 
 // BastionConfig represents bastion host configuration
 type BastionConfig struct {
-	Address string `yaml:"address" json:"address"`
+	Address string `yaml:"address" json:"address" validate:"required,hostname|ipv4"`
 }
 
 // CloudConfig represents the cloud configuration within opencenter

@@ -33,20 +33,20 @@ type TofuS3 struct {
 // SimplifiedOpenTofu represents the opentofu section
 type SimplifiedOpenTofu struct {
 	Enabled bool                  `yaml:"enabled" json:"enabled"`
-	Path    string                `yaml:"path" json:"path"`
-	Backend SimplifiedTofuBackend `yaml:"backend" json:"backend"`
+	Path    string                `yaml:"path" json:"path" validate:"required"`
+	Backend SimplifiedTofuBackend `yaml:"backend" json:"backend" validate:"required"`
 }
 
 // SimplifiedTofuBackend represents the backend configuration
 type SimplifiedTofuBackend struct {
-	Type  string              `yaml:"type" json:"type"`
+	Type  string              `yaml:"type" json:"type" validate:"required,oneof=local s3 aws"`
 	Local SimplifiedTofuLocal `yaml:"local,omitempty" json:"local,omitempty"`
 	S3    SimplifiedTofuS3    `yaml:"s3,omitempty" json:"s3,omitempty"`
 }
 
 // SimplifiedTofuLocal represents the local backend
 type SimplifiedTofuLocal struct {
-	Path string `yaml:"path" json:"path"`
+	Path string `yaml:"path" json:"path" validate:"required"`
 }
 
 // SimplifiedTofuS3 represents the S3 backend
@@ -54,7 +54,7 @@ type SimplifiedTofuS3 struct {
 	Bucket   string `yaml:"bucket" json:"bucket"`
 	Key      string `yaml:"key" json:"key"`
 	Region   string `yaml:"region" json:"region"`
-	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
+	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty" validate:"omitempty,url"`
 	Profile  string `yaml:"profile,omitempty" json:"profile,omitempty"`
 	Encrypt  bool   `yaml:"encrypt,omitempty" json:"encrypt,omitempty"`
 }

@@ -533,6 +533,15 @@ test-priority8 = "go test ./... -v args --godog.tags=@priority8 --godog.paths=te
 # Generate the cluster JSON schema into the schema directory
 schema = "./bin/opencenter cluster schema  --pretty --out schema/cluster.schema.json"
 
+# Generate JSON schema from Go struct definitions (v2 schema generator)
+schema-gen = '''
+#!/usr/bin/env bash
+set -e
+echo "Generating JSON schema from Go structs..."
+go run ./cmd/schema-gen/main.go --version 1.0 --output schema/cluster-v1.schema.json
+echo "Schema generated successfully at schema/cluster-v1.schema.json"
+'''
+
 # Convenience tasks for validation
 validate = "./bin/opencenter cluster validate"
 

@@ -19,6 +19,8 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	
+	"github.com/rackerlabs/opencenter-cli/internal/config/services"
 )
 
 // V2ValidationError represents a structured validation error with code, field path, and message
@@ -380,8 +382,28 @@ func (v *multiLayerValidator) ValidateDeployment(cfg *Config) []V2ValidationErro
 func (v *multiLayerValidator) ValidateServices(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
 	
-	// Service dependency validation would go here
-	// For now, just a placeholder
+	// Import the service dependency validator
+	depValidator := services.NewDependencyValidator()
+	
+	// Validate service dependencies
+	depErrors := depValidator.ValidateDependencies(cfg.OpenCenter.Services)
+	for _, errMsg := range depErrors {
+		errors = append(errors, V2ValidationError{
+			Code:    "E014",
+			Field:   "opencenter.services",
+			Message: errMsg,
+		})
+	}
+	
+	// Validate Headlamp OIDC configuration
+	oidcErrors := depValidator.ValidateHeadlampOIDC(cfg.OpenCenter.Services)
+	for _, errMsg := range oidcErrors {
+		errors = append(errors, V2ValidationError{
+			Code:    "E014",
+			Field:   "opencenter.services.headlamp",
+			Message: errMsg,
+		})
+	}
 	
 	return errors
 }

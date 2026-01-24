@@ -548,6 +548,38 @@ validate = "./bin/opencenter cluster validate"
 # Validate template schema references
 validate-templates = "./hack/validate-template-schema.sh"
 
+# Migrate v1 configuration to v2 format
+migrate-config = '''
+#!/usr/bin/env bash
+set -e
+
+if [ -z "$1" ]; then
+  echo "Usage: mise run migrate-config <input-config.yaml>"
+  echo "Example: mise run migrate-config testdata/cluster-config.yaml"
+  exit 1
+fi
+
+./bin/opencenter cluster migrate-config "$1" --report
+'''
+
+# Export effective configuration with applied defaults
+config-export-effective = '''
+#!/usr/bin/env bash
+set -e
+
+if [ -z "$1" ]; then
+  echo "Usage: mise run config-export-effective <cluster-name> [output-file]"
+  echo "Example: mise run config-export-effective my-cluster"
+  echo "Example: mise run config-export-effective my-cluster /tmp/effective-config.yaml"
+  exit 1
+fi
+
+CLUSTER_NAME="$1"
+OUTPUT_FILE="${2:-${CLUSTER_NAME}-effective.yaml}"
+
+./bin/opencenter cluster config export-effective "$CLUSTER_NAME" -o "$OUTPUT_FILE"
+'''
+
 # Preflight task for preflight
 preflight = "./bin/opencenter cluster preflight"
 

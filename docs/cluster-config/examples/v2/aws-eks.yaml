@@ -1,0 +1,266 @@
+# v2 Cluster Configuration Example: AWS + EKS
+#
+# This example demonstrates a managed Kubernetes cluster on AWS using EKS
+# (Elastic Kubernetes Service).
+#
+# Key Features:
+# - Managed control plane (AWS EKS)
+# - VPC CNI for pod networking
+# - EBS CSI for persistent storage
+# - Multi-AZ deployment for high availability
+# - IAM roles for service accounts (IRSA)
+
+schema_version: "2.0"
+
+opencenter:
+  # Meta Domain: Cluster identity and organizational context
+  meta:
+    name: prod-eks-cluster
+    organization: acme-corp
+    env: production
+    region: us-east-1
+    status: active
+
+  # Cluster Domain: Kubernetes-specific configuration
+  cluster:
+    cluster_name: prod-eks-cluster
+    base_domain: acme-corp.com
+    cluster_fqdn: prod-eks-cluster.acme-corp.com
+    admin_email: k8s-admin@acme-corp.com
+    
+    kubernetes:
+      version: "1.28"
+      api_port: 443
+      kube_vip_enabled: false  # Not needed with EKS
+      subnet_pods: "10.244.0.0/16"
+      subnet_services: "10.96.0.0/12"
+      
+      # CNI Plugin Selection (AWS VPC CNI)
+      network_plugin:
+        aws_vpc_cni:
+          enabled: true
+          version: "v1.15.0"
+          enable_prefix_delegation: true
+          enable_network_policy: true
+      
+      # CSI Plugin Selection (AWS EBS CSI)
+      storage_plugin:
+        aws_ebs_csi:
+          enabled: true
+          version: "v1.25.0"
+      
+      security:
+        pod_security_policy_enabled: false
+        audit_log_enabled: true
+        encryption_at_rest_enabled: true
+        secrets_encryption_kms_key: "${infrastructure.cloud.aws.kms_key_arn}"
+      
+      oidc:
+        enabled: true
+        issuer_url: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_XXXXXXXXX"
+        client_id: "kubernetes"
+        username_claim: "email"
+        groups_claim: "cognito:groups"
+
+  # Infrastructure Domain: AWS-specific configuration
+  infrastructure:
+    provider: aws
+    os_version: "amazon-linux-2"
+    
+    # SSH Configuration
+    ssh:
+      user: ec2-user
+      key_name: "prod-eks-cluster-key"
+      bastion_enabled: true
+    
+    # Networking Configuration
+    networking:
+      subnet_nodes: "10.0.0.0/16"
+      allocation_pool_start: "10.0.1.0"
+      allocation_pool_end: "10.0.255.254"
+      vrrp_enabled: false  # Not applicable for EKS
+      loadbalancer_provider: "cloud-native"  # AWS ALB/NLB
+      dns_nameservers:
+        - "10.0.0.2"  # AWS DNS
+      ntp_servers:
+        - "169.254.169.123"  # AWS NTP
+    
+    # Compute Configuration
+    compute:
+      flavor_bastion: "t3.small"
+      flavor_worker: "m5.xlarge"
+      master_count: 0  # Managed by EKS
+      worker_count: 5
+    
+    # Storage Configuration
+    storage:
+      default_storage_class: "gp3"
+      worker_volume_size: 100
+      worker_volume_destination_type: "volume"
+      worker_volume_source_type: "image"
+      worker_volume_type: "gp3"
+      worker_volume_delete_on_termination: true
+      
+      # Additional EBS volumes for worker nodes
+      additional_block_devices:
+        - device_name: "/dev/xvdb"
+          volume_size: 500
+          volume_type: "gp3"
+          iops: 3000
+          throughput: 125
+          delete_on_termination: true
+    
+    # Provider-Specific Configuration (AWS)
+    cloud:
+      aws:
+        region: "us-east-1"
+        availability_zones:
+          - "us-east-1a"
+          - "us-east-1b"
+          - "us-east-1c"
+        vpc_id: "vpc-0123456789abcdef0"
+        subnet_ids:
+          - "subnet-0123456789abcdef0"
+          - "subnet-0123456789abcdef1"
+          - "subnet-0123456789abcdef2"
+        ami_id: "${secrets.aws.amazon_linux_2_ami_id}"
+        instance_profile: "eks-node-instance-profile"
+        kms_key_arn: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+        enable_irsa: true  # IAM Roles for Service Accounts
+        tags:
+          Environment: "production"
+          ManagedBy: "opencenter"
+          CostCenter: "engineering"
+
+  # Services Domain: Platform workloads
+  services:
+    # FluxCD for GitOps
+    fluxcd:
+      enabled: true
+      version: "v2.2.0"
+      namespace: "flux-system"
+    
+    # Cert-Manager with Route53 DNS
+    cert-manager:
+      enabled: true
+      version: "v1.13.0"
+      namespace: "cert-manager"
+      dns_provider: "route53"
+      route53_config:
+        region: "${infrastructure.cloud.aws.region}"
+        hosted_zone_id: "${secrets.aws.route53_hosted_zone_id}"
+        iam_role_arn: "${secrets.aws.cert_manager_iam_role_arn}"
+    
+    # AWS EBS CSI Driver
+    aws-ebs-csi:
+      enabled: true
+      version: "v1.25.0"
+      namespace: "kube-system"
+      iam_role_arn: "${secrets.aws.ebs_csi_iam_role_arn}"
+      storage_classes:
+        - name: "gp3"
+          is_default: true
+          volume_type: "gp3"
+          iops: 3000
+          throughput: 125
+          reclaim_policy: "Delete"
+        - name: "io2"
+          is_default: false
+          volume_type: "io2"
+          iops: 10000
+          reclaim_policy: "Retain"
+    
+    # AWS Load Balancer Controller
+    aws-load-balancer-controller:
+      enabled: true
+      version: "v2.6.0"
+      namespace: "kube-system"
+      iam_role_arn: "${secrets.aws.alb_controller_iam_role_arn}"
+    
+    # Monitoring Stack
+    kube-prometheus-stack:
+      enabled: true
+      version: "v0.70.0"
+      namespace: "monitoring"
+      grafana_enabled: true
+      prometheus_retention: "30d"
+      prometheus_storage_class: "gp3"
+      prometheus_storage_size: "100Gi"
+    
+    # Logging Stack
+    loki:
+      enabled: true
+      version: "v2.9.0"
+      namespace: "logging"
+      storage_type: "s3"
+      s3_config:
+        bucket_name: "acme-corp-loki-chunks"
+        region: "${infrastructure.cloud.aws.region}"
+        iam_role_arn: "${secrets.aws.loki_iam_role_arn}"
+
+# Deployment Configuration: EKS managed service
+deployment:
+  auto_deploy: true
+  method: eks
+  
+  eks:
+    version: "1.28"
+    endpoint_private_access: true
+    endpoint_public_access: true
+    public_access_cidrs:
+      - "0.0.0.0/0"
+    cluster_logging:
+      - "api"
+      - "audit"
+      - "authenticator"
+      - "controllerManager"
+      - "scheduler"
+    addons:
+      - name: "vpc-cni"
+        version: "v1.15.0-eksbuild.1"
+      - name: "coredns"
+        version: "v1.10.1-eksbuild.2"
+      - name: "kube-proxy"
+        version: "v1.28.1-eksbuild.1"
+      - name: "aws-ebs-csi-driver"
+        version: "v1.25.0-eksbuild.1"
+
+# GitOps Configuration
+gitops:
+  enabled: true
+  git_url: "git@github.com:acme-corp/k8s-gitops.git"
+  git_branch: "main"
+  base_repo_url: "https://github.com/rackerlabs/openCenter-gitops-base.git"
+  base_repo_release: "v1.0.0"
+  flux_interval: "5m"
+  flux_prune: true
+
+# OpenTofu Backend Configuration
+opentofu:
+  enabled: true
+  backend_type: "s3"
+  s3_config:
+    bucket: "acme-corp-terraform-state"
+    key: "kubernetes/prod-eks-cluster/terraform.tfstate"
+    region: "us-east-1"
+    encrypt: true
+    dynamodb_table: "terraform-state-lock"
+
+# Secrets Configuration
+secrets:
+  sops:
+    enabled: true
+    age_key_file: "~/.config/opencenter/clusters/acme-corp/secrets/age/prod-eks-cluster-key.txt"
+  
+  # Global AWS secrets
+  aws:
+    access_key_id: "ENC[AES256_GCM,data:...]"
+    secret_access_key: "ENC[AES256_GCM,data:...]"
+    amazon_linux_2_ami_id: "ENC[AES256_GCM,data:...]"
+    route53_hosted_zone_id: "ENC[AES256_GCM,data:...]"
+    
+    # IAM Role ARNs for IRSA
+    cert_manager_iam_role_arn: "ENC[AES256_GCM,data:...]"
+    ebs_csi_iam_role_arn: "ENC[AES256_GCM,data:...]"
+    alb_controller_iam_role_arn: "ENC[AES256_GCM,data:...]"
+    loki_iam_role_arn: "ENC[AES256_GCM,data:...]"

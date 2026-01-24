@@ -98,12 +98,14 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterTemplateCmd())
 	cmd.AddCommand(newClusterDestroyCmd())
 	cmd.AddCommand(newClusterUpdateCmd())
+	cmd.AddCommand(newClusterMigrateConfigCmd())
 	cmd.AddCommand(newClusterServiceCmd())
 	cmd.AddCommand(newClusterCredentialsCmd())
 	cmd.AddCommand(newClusterDriftCmd())
 	cmd.AddCommand(newClusterBackupCmd())
 	cmd.AddCommand(newClusterLockCmd())
 	cmd.AddCommand(newClusterUnlockCmd())
+	cmd.AddCommand(newClusterConfigCmd())
 	return cmd
 }
 

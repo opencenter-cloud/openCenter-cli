@@ -96,8 +96,8 @@ type VLANConfig struct {
 type ComputeConfig struct {
 	// Instance flavors
 	FlavorBastion       string `yaml:"flavor_bastion,omitempty" json:"flavor_bastion,omitempty"`
-	FlavorMaster        string `yaml:"flavor_master" json:"flavor_master" validate:"required_if=MasterCount gt 0"`
-	FlavorWorker        string `yaml:"flavor_worker" json:"flavor_worker" validate:"required_if=WorkerCount gt 0"`
+	FlavorMaster        string `yaml:"flavor_master,omitempty" json:"flavor_master,omitempty"`
+	FlavorWorker        string `yaml:"flavor_worker,omitempty" json:"flavor_worker,omitempty"`
 	FlavorWorkerWindows string `yaml:"flavor_worker_windows,omitempty" json:"flavor_worker_windows,omitempty"`
 	
 	// Node counts

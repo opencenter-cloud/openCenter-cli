@@ -58,6 +58,8 @@ func (cl *ConfigLoader) LoadFromFile(ctx context.Context, filePath string) (*Con
 }
 
 // LoadFromBytes loads configuration from byte data.
+// It automatically detects the schema version and routes to the appropriate loader.
+// Requirements: 13.1, 13.2, 13.3
 func (cl *ConfigLoader) LoadFromBytes(ctx context.Context, data []byte, clusterName string) (*Config, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("configuration data cannot be empty")
@@ -67,12 +69,32 @@ func (cl *ConfigLoader) LoadFromBytes(ctx context.Context, data []byte, clusterN
 		return nil, fmt.Errorf("cluster name cannot be empty")
 	}
 
+	// Detect schema version
+	versionInfo, err := DetectSchemaVersionFromBytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to detect schema version: %w", err)
+	}
+
+	// Route to appropriate loader based on version
+	if versionInfo.IsV2 {
+		// v2 configurations are not yet fully supported in the v1 loader
+		// Return an error directing users to use the v2 loader
+		return nil, fmt.Errorf("v2 configuration detected: use v2.ConfigLoader for loading v2 configurations")
+	}
+
+	// v1 configuration loading (existing logic)
 	// Start with default configuration
 	config := defaultConfig(clusterName)
 
 	// Unmarshal YAML data onto the default configuration
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML configuration: %w", err)
+	}
+
+	// Resolve references after parsing
+	resolver := NewReferenceResolver()
+	if err := resolver.Resolve(&config); err != nil {
+		return nil, fmt.Errorf("failed to resolve configuration references: %w", err)
 	}
 
 	return &config, nil

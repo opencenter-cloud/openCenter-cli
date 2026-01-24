@@ -1,0 +1,228 @@
+// Copyright 2025 Victor Palma <victor.palma@rackspace.com>
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/config/defaults"
+	v2 "github.com/rackerlabs/opencenter-cli/internal/config/v2"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+)
+
+// newClusterConfigCmd creates the "cluster config" command for cluster configuration operations.
+// Requirements: 15.7, 15.8
+func newClusterConfigCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: "Manage cluster configuration",
+		Long: `Manage cluster configuration operations including export and inspection.
+
+The config subcommand provides utilities for working with cluster configurations,
+including exporting effective configurations with applied defaults.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+
+	// Add subcommands
+	cmd.AddCommand(newClusterConfigExportEffectiveCmd())
+
+	return cmd
+}
+
+// newClusterConfigExportEffectiveCmd creates the "cluster config export-effective" command.
+// This command exports the effective configuration (config + applied defaults) with comments
+// indicating the source of each default value.
+// Requirements: 15.7, 15.8
+func newClusterConfigExportEffectiveCmd() *cobra.Command {
+	var outputPath string
+
+	cmd := &cobra.Command{
+		Use:   "export-effective [name]",
+		Short: "Export effective configuration with applied defaults",
+		Long: `Export the effective configuration including all applied defaults.
+
+This command loads a cluster configuration, applies all defaults (provider-region,
+provider, and global defaults), and exports the complete configuration with comments
+indicating which values came from defaults vs explicit configuration.
+
+The effective configuration shows:
+  • All explicitly configured values
+  • All applied defaults with their source (provider-region, provider, global)
+  • Comments indicating default sources for transparency
+
+This is useful for:
+  • Understanding which defaults are being applied
+  • Debugging configuration issues
+  • Creating explicit configurations from defaults
+  • Documentation and auditing
+
+If no cluster name is provided, exports the currently active cluster.`,
+		Example: `  # Export effective config for active cluster
+  opencenter cluster config export-effective
+
+  # Export effective config for specific cluster
+  opencenter cluster config export-effective my-cluster
+
+  # Export to specific file
+  opencenter cluster config export-effective my-cluster -o /tmp/effective-config.yaml
+
+  # Export with organization prefix
+  opencenter cluster config export-effective myorg/my-cluster`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Resolve cluster name from args or active cluster
+			name, err := resolveClusterName(args, true)
+			if err != nil {
+				return err
+			}
+
+			// Get configuration file path
+			configPath, err := config.ConfigPath(name)
+			if err != nil {
+				return fmt.Errorf("failed to resolve configuration path: %w", err)
+			}
+
+			// Detect schema version
+			// Requirements: 13.2
+			versionInfo, err := config.DetectSchemaVersionFromFile(configPath)
+			if err != nil {
+				return fmt.Errorf("failed to detect schema version: %w", err)
+			}
+
+			// Determine output path
+			if outputPath == "" {
+				// Default to current directory with cluster name
+				outputPath = fmt.Sprintf("%s-effective.yaml", name)
+			}
+
+			// Route to appropriate exporter based on version
+			if versionInfo.IsV2 {
+				return exportV2EffectiveConfig(cmd, configPath, outputPath)
+			}
+
+			// Export v1 effective config
+			return exportV1EffectiveConfig(cmd, name, outputPath)
+		},
+	}
+
+	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "output file path (default: <cluster-name>-effective.yaml)")
+
+	return cmd
+}
+
+// exportV1EffectiveConfig exports effective configuration for v1 schema.
+// For v1, we load the config and save it with all defaults applied.
+// Requirements: 15.7, 15.8
+func exportV1EffectiveConfig(cmd *cobra.Command, name, outputPath string) error {
+	// Load configuration (this applies defaults during loading)
+	cfg, err := config.Load(name)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	// Create header with metadata
+	header := fmt.Sprintf(`# Effective Configuration for cluster: %s
+# Schema Version: %s
+# Generated by: opencenter cluster config export-effective
+#
+# This configuration includes all applied defaults.
+# Explicitly configured values are preserved as-is.
+# Default values are applied based on provider and region.
+#
+# Note: v1 schema does not track individual default sources.
+# Consider migrating to v2 schema for detailed default tracking.
+
+`, name, cfg.SchemaVersion)
+
+	// Marshal configuration to YAML
+	data, err := yaml.Marshal(&cfg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal configuration: %w", err)
+	}
+
+	// Combine header and data
+	output := append([]byte(header), data...)
+
+	// Write to file
+	if err := os.WriteFile(outputPath, output, 0600); err != nil {
+		return fmt.Errorf("failed to write effective configuration: %w", err)
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "✓ Effective configuration exported to: %s\n", outputPath)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Schema version: v1\n")
+	fmt.Fprintf(cmd.OutOrStdout(), "  Cluster: %s\n", name)
+
+	return nil
+}
+
+// exportV2EffectiveConfig exports effective configuration for v2 schema.
+// For v2, we use the loader's ExportEffectiveConfig method which includes
+// detailed comments about default sources.
+// Requirements: 15.7, 15.8
+func exportV2EffectiveConfig(cmd *cobra.Command, configPath, outputPath string) error {
+	// Create v2 loader with default registry
+	registry := defaults.NewRegistry()
+	loader := v2.NewConfigLoader(registry)
+
+	// Load configuration (this applies defaults during loading)
+	cfg, err := loader.LoadFromFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	// Export effective configuration with applied defaults
+	effectiveConfig, err := loader.ExportEffectiveConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to export effective configuration: %w", err)
+	}
+
+	// Write to file
+	if err := os.WriteFile(outputPath, effectiveConfig, 0600); err != nil {
+		return fmt.Errorf("failed to write effective configuration: %w", err)
+	}
+
+	// Get applied defaults for summary
+	appliedDefaults := loader.GetAppliedDefaults()
+
+	// Resolve absolute path for display
+	absPath, _ := filepath.Abs(outputPath)
+
+	fmt.Fprintf(cmd.OutOrStdout(), "✓ Effective configuration exported to: %s\n", absPath)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Schema version: v2\n")
+	fmt.Fprintf(cmd.OutOrStdout(), "  Cluster: %s\n", cfg.OpenCenter.Meta.Name)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Provider: %s\n", cfg.OpenCenter.Infrastructure.Provider)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Region: %s\n", cfg.OpenCenter.Meta.Region)
+	fmt.Fprintf(cmd.OutOrStdout(), "  Applied defaults: %d fields\n", len(appliedDefaults))
+
+	// Show summary of default sources
+	sourceCounts := make(map[defaults.DefaultSource]int)
+	for _, source := range appliedDefaults {
+		sourceCounts[source]++
+	}
+
+	if len(sourceCounts) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "\n  Default sources:\n")
+		for source, count := range sourceCounts {
+			fmt.Fprintf(cmd.OutOrStdout(), "    - %s: %d fields\n", source, count)
+		}
+	}
+
+	return nil
+}

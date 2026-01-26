@@ -96,7 +96,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 			}
 
 			// Load configuration
-			_, err := config.Load(clusterName)
+			_, err = config.Load(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
@@ -179,14 +179,8 @@ If no cluster name is provided, uses the currently active cluster.`,
 	cmd.Flags().Bool("confirm", false, "Prompt for confirmation before applying changes")
 
 	return cmd
-}	return cmd
 }
 
-// newClusterDriftScheduleCmd creates the drift schedule subcommand
-func newClusterDriftScheduleCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "schedule <cluster>",
-		Short: "Schedule periodic drift detection",
 // newClusterDriftScheduleCmd creates the drift schedule subcommand
 func newClusterDriftScheduleCmd() *cobra.Command {
 	cmd := &cobra.Command{

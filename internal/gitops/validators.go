@@ -453,7 +453,9 @@ func (v *ManifestValidator) hasProperdependsOnIndentation(content string) bool {
 	// dependsOn:
 	//   - name: something
 	//     namespace: something
-	pattern := regexp.MustCompile(`dependsOn:\s*\n\s*-\s+name:`)
+	// The list item must be indented with at least 2 spaces
+	// and properties under the list item must be indented further
+	pattern := regexp.MustCompile(`dependsOn:\s*\n {2,}-\s+name:[^\n]*\n {4,}namespace:`)
 	return pattern.MatchString(content)
 }
 
@@ -463,7 +465,8 @@ func (v *ManifestValidator) hasProperDecryptionIndentation(content string) bool 
 	//   provider: sops
 	//   secretRef:
 	//     name: sops-age
-	pattern := regexp.MustCompile(`decryption:\s*\n\s+provider:\s+sops\s*\n\s+secretRef:\s*\n\s+name:`)
+	// Each level must be properly indented (at least 2 spaces per level)
+	pattern := regexp.MustCompile(`decryption:\s*\n {2,}provider:\s+sops\s*\n {2,}secretRef:\s*\n {4,}name:`)
 	return pattern.MatchString(content)
 }
 

@@ -381,38 +381,34 @@ Troubleshooting:
 				}
 
 				if versionInfo.IsV2 {
-					// Use v2 loader for v2 configurations
-					return fmt.Errorf(`v2 configuration detected in '%s'
+					// For v2 configs, just parse the YAML directly without full v2 pipeline
+					// This allows using v2 configs as templates for cluster init
+					if err := yaml.Unmarshal(data, &cfg); err != nil {
+						return fmt.Errorf("failed to parse v2 configuration: %w", err)
+					}
 
-The 'cluster init' command is for creating NEW configurations only.
-To work with existing v2 configurations, use:
+					// Initialize configMap from the loaded configuration
+					configMap = make(map[string]any)
+					if err := yaml.Unmarshal(data, &configMap); err != nil {
+						return fmt.Errorf("failed to parse configuration file to map: %w", err)
+					}
 
-  • Validate:  opencenter cluster validate --config %s
-  • Update:    opencenter cluster update --config %s
-  • Render:    opencenter cluster render --config %s
-  • Setup:     opencenter cluster setup --config %s
+					fmt.Fprintf(cmd.OutOrStdout(), "Loaded v2 configuration from %s\n", configFile)
+				} else {
+					// Use v1 loader for v1 configurations
+					loader := config.NewConfigLoader(pathResolver)
+					loadedCfg, err := loader.LoadFromBytes(context.Background(), data, name)
+					if err != nil {
+						return fmt.Errorf("failed to load configuration from file '%s': %w", configFile, err)
+					}
+					cfg = *loadedCfg
 
-To create a NEW cluster based on this template:
-  1. Copy the file: cp %s my-new-cluster.yaml
-  2. Edit cluster name in the file (opencenter.meta.name)
-  3. Run: opencenter cluster init my-new-cluster --schema-version=2.0
-
-See: docs/how-to/working-with-v2-configs.md`, configFile, configFile, configFile, configFile, configFile, configFile)
-				}
-
-				// Use v1 loader for v1 configurations
-				loader := config.NewConfigLoader(pathResolver)
-				loadedCfg, err := loader.LoadFromBytes(context.Background(), data, name)
-				if err != nil {
-					return fmt.Errorf("failed to load configuration from file '%s': %w", configFile, err)
-				}
-				cfg = *loadedCfg
-
-				// Initialize configMap from the loaded configuration
-				// This is needed for flag processing and map-based updates later
-				configMap = make(map[string]any)
-				if err := yaml.Unmarshal(data, &configMap); err != nil {
-					return fmt.Errorf("failed to parse configuration file to map: %w", err)
+					// Initialize configMap from the loaded configuration
+					// This is needed for flag processing and map-based updates later
+					configMap = make(map[string]any)
+					if err := yaml.Unmarshal(data, &configMap); err != nil {
+						return fmt.Errorf("failed to parse configuration file to map: %w", err)
+					}
 				}
 			} else {
 				// Generate configuration using schema-based defaults to match testdata/schema.yaml structure

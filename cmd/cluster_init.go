@@ -374,6 +374,33 @@ Troubleshooting:
 					return fmt.Errorf("failed to read configuration file '%s': %w", configFile, err)
 				}
 
+				// Detect schema version to use appropriate loader
+				versionInfo, err := config.DetectSchemaVersionFromBytes(data)
+				if err != nil {
+					return fmt.Errorf("failed to detect schema version: %w", err)
+				}
+
+				if versionInfo.IsV2 {
+					// Use v2 loader for v2 configurations
+					return fmt.Errorf(`v2 configuration detected in '%s'
+
+The 'cluster init' command is for creating NEW configurations only.
+To work with existing v2 configurations, use:
+
+  • Validate:  opencenter cluster validate --config %s
+  • Update:    opencenter cluster update --config %s
+  • Render:    opencenter cluster render --config %s
+  • Setup:     opencenter cluster setup --config %s
+
+To create a NEW cluster based on this template:
+  1. Copy the file: cp %s my-new-cluster.yaml
+  2. Edit cluster name in the file (opencenter.meta.name)
+  3. Run: opencenter cluster init my-new-cluster --schema-version=2.0
+
+See: docs/how-to/working-with-v2-configs.md`, configFile, configFile, configFile, configFile, configFile, configFile)
+				}
+
+				// Use v1 loader for v1 configurations
 				loader := config.NewConfigLoader(pathResolver)
 				loadedCfg, err := loader.LoadFromBytes(context.Background(), data, name)
 				if err != nil {

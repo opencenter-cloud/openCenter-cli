@@ -154,6 +154,9 @@ func loadV1Config(path string) (*config.Config, error) {
 
 	// Verify it's a v1 config
 	if cfg.SchemaVersion != "" && cfg.SchemaVersion != "1.0" {
+		if cfg.SchemaVersion == "2.0" {
+			return nil, fmt.Errorf("configuration is already v2.0 - no migration needed\n\nTo validate your v2 configuration, use:\n  opencenter cluster validate %s", path)
+		}
 		return nil, fmt.Errorf("input configuration is not v1 (schema_version: %s)", cfg.SchemaVersion)
 	}
 

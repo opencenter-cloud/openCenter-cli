@@ -1485,6 +1485,11 @@ func DetectSchemaMigrationNeeded(config Config) (bool, string, error) {
 		return false, configVersion, nil
 	}
 
+	// v2.0 is a valid current version - no migration needed
+	if configVersion == "2.0" || configVersion == "v2.0.0" || configVersion == SchemaVersion2_0_0 {
+		return false, configVersion, nil
+	}
+
 	// Versions differ - migration may be needed
 	// In the future, this could use semantic versioning to determine
 	// if the difference requires migration or is backward compatible

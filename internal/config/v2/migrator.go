@@ -431,9 +431,10 @@ func (m *DefaultMigrator) migrateGitOps(v1 *config.Config) GitOpsConfig {
 }
 
 // migrateDeployment migrates deployment configuration.
-func (m *DefaultMigrator) migrateDeployment(v1 *config.Config) DeploymentSettings {
-	return DeploymentSettings{
+func (m *DefaultMigrator) migrateDeployment(v1 *config.Config) DeploymentConfig {
+	return DeploymentConfig{
 		AutoDeploy: v1.Deployment.AutoDeploy,
+		Method:     "kubespray", // Default method for v1 configs
 	}
 }
 

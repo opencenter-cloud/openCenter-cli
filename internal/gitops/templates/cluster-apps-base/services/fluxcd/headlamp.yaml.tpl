@@ -46,7 +46,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  path: ./applications/overlays/dev-cluster/services/headlamp
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/headlamp
   targetNamespace: headlamp
   prune: true
   commonMetadata:

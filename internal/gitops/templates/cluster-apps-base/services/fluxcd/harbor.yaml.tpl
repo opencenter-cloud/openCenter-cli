@@ -42,7 +42,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/dev-cluster/services/harbor
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/harbor
   targetNamespace: harbor
   prune: true
   healthChecks:

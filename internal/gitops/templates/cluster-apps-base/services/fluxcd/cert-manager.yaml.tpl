@@ -50,7 +50,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/stage-cluster/services/cert-manager
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/cert-manager
   targetNamespace: cert-manager
   prune: true
   wait: true

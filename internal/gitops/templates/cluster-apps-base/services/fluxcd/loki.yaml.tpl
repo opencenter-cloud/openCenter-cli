@@ -51,7 +51,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/stage-cluster/services/loki
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/loki
   targetNamespace: observability
   decryption:
     provider: sops

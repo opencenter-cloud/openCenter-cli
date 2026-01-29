@@ -46,7 +46,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  path: ./applications/overlays/stage-cluster/services/openstack-csi
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/openstack-csi
   targetNamespace: openstack-csi
   prune: true
   commonMetadata:

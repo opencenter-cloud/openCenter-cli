@@ -19,7 +19,7 @@ spec:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: applications/overlays/stage-cluster/services/keycloak/00-postgres
+  path: applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/keycloak/00-postgres
   targetNamespace: keycloak
   prune: true
   wait: true
@@ -51,7 +51,7 @@ spec:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: applications/overlays/stage-cluster/services/keycloak/10-operator
+  path: applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/keycloak/10-operator
   targetNamespace: keycloak
   prune: true
   healthChecks:
@@ -91,7 +91,7 @@ spec:
     kind: GitRepository
     name: opencenter-keycloak-config
     namespace: flux-system
-  path: applications/overlays/stage-cluster/services/keycloak/20-keycloak
+  path: applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/keycloak/20-keycloak
   targetNamespace: keycloak
   prune: true
   healthChecks:

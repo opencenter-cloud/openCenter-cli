@@ -51,7 +51,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/stage-cluster/services/opentelemetry-kube-stack
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/opentelemetry-kube-stack
   targetNamespace: observability
   decryption:
     provider: sops

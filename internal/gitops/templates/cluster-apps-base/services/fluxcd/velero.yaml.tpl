@@ -49,7 +49,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-age
-  path: ./applications/overlays/stage-cluster/services/velero
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/velero
   targetNamespace: velero
   prune: true
   commonMetadata:

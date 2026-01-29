@@ -46,7 +46,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/dev-cluster/services/sealed-secrets
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/sealed-secrets
   targetNamespace: sealed-secrets
   prune: true
   wait: true

@@ -15,4 +15,4 @@ spec:
   - repository:
     name: opencenter-olm
   fromPath: applications/base/services/olm
-  toPath: applications/overlays/stage-cluster/services/base/olm/
+  toPath: applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/base/olm/

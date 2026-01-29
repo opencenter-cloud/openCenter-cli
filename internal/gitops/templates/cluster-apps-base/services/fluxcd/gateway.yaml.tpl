@@ -13,7 +13,7 @@ spec:
   interval: 15m
   retryInterval: 1m
   timeout: 10m
-  path: ./applications/overlays/stage-cluster/services/gateway/
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/gateway/
   prune: true
   sourceRef:
     kind: GitRepository

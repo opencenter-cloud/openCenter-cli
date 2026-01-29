@@ -46,7 +46,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/stage-cluster/services/gateway-api
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/gateway-api
   targetNamespace: envoy-gateway-system
   prune: true
   wait: true

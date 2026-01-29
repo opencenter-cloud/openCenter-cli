@@ -51,7 +51,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/stage-cluster/services/tempo
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/tempo
   targetNamespace: observability
   decryption:
     provider: sops

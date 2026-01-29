@@ -43,7 +43,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/dev-cluster/services/longhorn
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/longhorn
   targetNamespace: longhorn-system
   prune: true
   wait: true

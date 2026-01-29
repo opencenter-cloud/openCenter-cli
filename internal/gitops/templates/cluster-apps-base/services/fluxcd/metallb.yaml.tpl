@@ -46,7 +46,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/dev-cluster/services/metallb
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/metallb
   targetNamespace: metallb-system
   prune: true
   wait: true

@@ -43,7 +43,7 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  path: ./applications/overlays/stage-cluster/services/postgres-operator
+  path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/postgres-operator
   targetNamespace: postgres-operator
   prune: true
   wait: true

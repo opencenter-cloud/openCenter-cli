@@ -699,7 +699,7 @@ Use --activate to automatically activate the cluster environment (sets environme
 
 				var activateOutput strings.Builder
 
-				// Export cloud provider credentials (always bash-style for now, credentials package needs update)
+				// Export cloud provider credentials with shell-specific syntax
 				awsCreds, awsErr := extractor.ExtractAWS()
 				osCreds, osErr := extractor.ExtractOpenStack()
 
@@ -707,13 +707,13 @@ Use --activate to automatically activate the cluster environment (sets environme
 				hasOS := osErr == nil && !osCreds.IsEmpty()
 
 				if hasAWS {
-					activateOutput.WriteString(awsCreds.ToEnvVars())
+					activateOutput.WriteString(awsCreds.ToEnvVarsForShell(shell))
 				}
 				if hasOS {
 					if hasAWS {
 						activateOutput.WriteString("\n")
 					}
-					activateOutput.WriteString(osCreds.ToEnvVars())
+					activateOutput.WriteString(osCreds.ToEnvVarsForShell(shell))
 				}
 
 				// Add cluster-specific environment variables with shell-aware syntax

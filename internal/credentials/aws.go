@@ -37,23 +37,67 @@ func (c *AWSCredentials) IsEmpty() bool {
 }
 
 // ToEnvVars converts AWS credentials to environment variable export statements
+// Deprecated: Use ToEnvVarsForShell instead
 func (c *AWSCredentials) ToEnvVars() string {
+	return c.ToEnvVarsForShell("bash")
+}
+
+// ToEnvVarsForShell converts AWS credentials to shell-specific environment variable export statements
+func (c *AWSCredentials) ToEnvVarsForShell(shell string) string {
 	var output strings.Builder
 
-	if c.AccessKeyID != "" {
-		output.WriteString(fmt.Sprintf("export AWS_ACCESS_KEY_ID=\"%s\"\n", c.AccessKeyID))
-	}
-	if c.SecretAccessKey != "" {
-		output.WriteString(fmt.Sprintf("export AWS_SECRET_ACCESS_KEY=\"%s\"\n", c.SecretAccessKey))
-	}
-	if c.Region != "" {
-		output.WriteString(fmt.Sprintf("export AWS_DEFAULT_REGION=\"%s\"\n", c.Region))
-	}
-	if c.Profile != "" {
-		output.WriteString(fmt.Sprintf("export AWS_PROFILE=\"%s\"\n", c.Profile))
-	}
-	if c.SessionToken != "" {
-		output.WriteString(fmt.Sprintf("export AWS_SESSION_TOKEN=\"%s\"\n", c.SessionToken))
+	switch shell {
+	case "fish":
+		if c.AccessKeyID != "" {
+			output.WriteString(fmt.Sprintf("set -gx AWS_ACCESS_KEY_ID \"%s\"\n", c.AccessKeyID))
+		}
+		if c.SecretAccessKey != "" {
+			output.WriteString(fmt.Sprintf("set -gx AWS_SECRET_ACCESS_KEY \"%s\"\n", c.SecretAccessKey))
+		}
+		if c.Region != "" {
+			output.WriteString(fmt.Sprintf("set -gx AWS_DEFAULT_REGION \"%s\"\n", c.Region))
+		}
+		if c.Profile != "" {
+			output.WriteString(fmt.Sprintf("set -gx AWS_PROFILE \"%s\"\n", c.Profile))
+		}
+		if c.SessionToken != "" {
+			output.WriteString(fmt.Sprintf("set -gx AWS_SESSION_TOKEN \"%s\"\n", c.SessionToken))
+		}
+
+	case "powershell":
+		if c.AccessKeyID != "" {
+			output.WriteString(fmt.Sprintf("$env:AWS_ACCESS_KEY_ID = \"%s\"\n", c.AccessKeyID))
+		}
+		if c.SecretAccessKey != "" {
+			output.WriteString(fmt.Sprintf("$env:AWS_SECRET_ACCESS_KEY = \"%s\"\n", c.SecretAccessKey))
+		}
+		if c.Region != "" {
+			output.WriteString(fmt.Sprintf("$env:AWS_DEFAULT_REGION = \"%s\"\n", c.Region))
+		}
+		if c.Profile != "" {
+			output.WriteString(fmt.Sprintf("$env:AWS_PROFILE = \"%s\"\n", c.Profile))
+		}
+		if c.SessionToken != "" {
+			output.WriteString(fmt.Sprintf("$env:AWS_SESSION_TOKEN = \"%s\"\n", c.SessionToken))
+		}
+
+	default:
+		// Bash/Zsh syntax
+		if c.AccessKeyID != "" {
+			output.WriteString(fmt.Sprintf("export AWS_ACCESS_KEY_ID=\"%s\"\n", c.AccessKeyID))
+		}
+		if c.SecretAccessKey != "" {
+			output.WriteString(fmt.Sprintf("export AWS_SECRET_ACCESS_KEY=\"%s\"\n", c.SecretAccessKey))
+		}
+		if c.Region != "" {
+			output.WriteString(fmt.Sprintf("export AWS_DEFAULT_REGION=\"%s\"\n", c.Region))
+		}
+		if c.Profile != "" {
+			output.WriteString(fmt.Sprintf("export AWS_PROFILE=\"%s\"\n", c.Profile))
+		}
+		if c.SessionToken != "" {
+			output.WriteString(fmt.Sprintf("export AWS_SESSION_TOKEN=\"%s\"\n", c.SessionToken))
+		}
 	}
 
 	return output.String()

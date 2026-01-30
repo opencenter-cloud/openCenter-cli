@@ -113,7 +113,7 @@ This is useful for:
 
 			var output strings.Builder
 
-			// Export cloud provider credentials
+			// Export cloud provider credentials with shell-specific syntax
 			awsCreds, awsErr := extractor.ExtractAWS()
 			osCreds, osErr := extractor.ExtractOpenStack()
 
@@ -121,13 +121,13 @@ This is useful for:
 			hasOS := osErr == nil && !osCreds.IsEmpty()
 
 			if hasAWS {
-				output.WriteString(awsCreds.ToEnvVars())
+				output.WriteString(awsCreds.ToEnvVarsForShell(shell))
 			}
 			if hasOS {
 				if hasAWS {
 					output.WriteString("\n")
 				}
-				output.WriteString(osCreds.ToEnvVars())
+				output.WriteString(osCreds.ToEnvVarsForShell(shell))
 			}
 
 			// Add cluster-specific environment variables with shell-aware syntax

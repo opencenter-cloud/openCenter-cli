@@ -55,53 +55,131 @@ func (c *OpenStackCredentials) IsEmpty() bool {
 }
 
 // ToEnvVars converts OpenStack credentials to environment variable export statements
+// Deprecated: Use ToEnvVarsForShell instead
 func (c *OpenStackCredentials) ToEnvVars() string {
+	return c.ToEnvVarsForShell("bash")
+}
+
+// ToEnvVarsForShell converts OpenStack credentials to shell-specific environment variable export statements
+func (c *OpenStackCredentials) ToEnvVarsForShell(shell string) string {
 	var output strings.Builder
 
-	if c.AuthURL != "" {
-		output.WriteString(fmt.Sprintf("export OS_AUTH_URL=\"%s\"\n", c.AuthURL))
-	}
-	if c.Region != "" {
-		output.WriteString(fmt.Sprintf("export OS_REGION_NAME=\"%s\"\n", c.Region))
-	}
+	switch shell {
+	case "fish":
+		if c.AuthURL != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_AUTH_URL \"%s\"\n", c.AuthURL))
+		}
+		if c.Region != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_REGION_NAME \"%s\"\n", c.Region))
+		}
+		if c.ApplicationCredentialID != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_APPLICATION_CREDENTIAL_ID \"%s\"\n", c.ApplicationCredentialID))
+		}
+		if c.ApplicationCredentialSecret != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_APPLICATION_CREDENTIAL_SECRET \"%s\"\n", c.ApplicationCredentialSecret))
+		}
+		if c.Username != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_USERNAME \"%s\"\n", c.Username))
+		}
+		if c.Password != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_PASSWORD \"%s\"\n", c.Password))
+		}
+		if c.ProjectName != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_PROJECT_NAME \"%s\"\n", c.ProjectName))
+		}
+		if c.TenantName != "" && c.ProjectName == "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_PROJECT_NAME \"%s\"\n", c.TenantName))
+		}
+		if c.UserDomainName != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_USER_DOMAIN_NAME \"%s\"\n", c.UserDomainName))
+		}
+		if c.ProjectDomainName != "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_PROJECT_DOMAIN_NAME \"%s\"\n", c.ProjectDomainName))
+		}
+		if c.Domain != "" && c.UserDomainName == "" && c.ProjectDomainName == "" {
+			output.WriteString(fmt.Sprintf("set -gx OS_USER_DOMAIN_NAME \"%s\"\n", c.Domain))
+			output.WriteString(fmt.Sprintf("set -gx OS_PROJECT_DOMAIN_NAME \"%s\"\n", c.Domain))
+		}
+		output.WriteString("set -gx OS_INTERFACE \"public\"\n")
+		output.WriteString("set -gx OS_IDENTITY_API_VERSION \"3\"\n")
 
-	// Application credentials (preferred)
-	if c.ApplicationCredentialID != "" {
-		output.WriteString(fmt.Sprintf("export OS_APPLICATION_CREDENTIAL_ID=\"%s\"\n", c.ApplicationCredentialID))
-	}
-	if c.ApplicationCredentialSecret != "" {
-		output.WriteString(fmt.Sprintf("export OS_APPLICATION_CREDENTIAL_SECRET=\"%s\"\n", c.ApplicationCredentialSecret))
-	}
+	case "powershell":
+		if c.AuthURL != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_AUTH_URL = \"%s\"\n", c.AuthURL))
+		}
+		if c.Region != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_REGION_NAME = \"%s\"\n", c.Region))
+		}
+		if c.ApplicationCredentialID != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_APPLICATION_CREDENTIAL_ID = \"%s\"\n", c.ApplicationCredentialID))
+		}
+		if c.ApplicationCredentialSecret != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_APPLICATION_CREDENTIAL_SECRET = \"%s\"\n", c.ApplicationCredentialSecret))
+		}
+		if c.Username != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_USERNAME = \"%s\"\n", c.Username))
+		}
+		if c.Password != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_PASSWORD = \"%s\"\n", c.Password))
+		}
+		if c.ProjectName != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_PROJECT_NAME = \"%s\"\n", c.ProjectName))
+		}
+		if c.TenantName != "" && c.ProjectName == "" {
+			output.WriteString(fmt.Sprintf("$env:OS_PROJECT_NAME = \"%s\"\n", c.TenantName))
+		}
+		if c.UserDomainName != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_USER_DOMAIN_NAME = \"%s\"\n", c.UserDomainName))
+		}
+		if c.ProjectDomainName != "" {
+			output.WriteString(fmt.Sprintf("$env:OS_PROJECT_DOMAIN_NAME = \"%s\"\n", c.ProjectDomainName))
+		}
+		if c.Domain != "" && c.UserDomainName == "" && c.ProjectDomainName == "" {
+			output.WriteString(fmt.Sprintf("$env:OS_USER_DOMAIN_NAME = \"%s\"\n", c.Domain))
+			output.WriteString(fmt.Sprintf("$env:OS_PROJECT_DOMAIN_NAME = \"%s\"\n", c.Domain))
+		}
+		output.WriteString("$env:OS_INTERFACE = \"public\"\n")
+		output.WriteString("$env:OS_IDENTITY_API_VERSION = \"3\"\n")
 
-	// Username/password authentication (fallback)
-	if c.Username != "" {
-		output.WriteString(fmt.Sprintf("export OS_USERNAME=\"%s\"\n", c.Username))
+	default:
+		// Bash/Zsh syntax
+		if c.AuthURL != "" {
+			output.WriteString(fmt.Sprintf("export OS_AUTH_URL=\"%s\"\n", c.AuthURL))
+		}
+		if c.Region != "" {
+			output.WriteString(fmt.Sprintf("export OS_REGION_NAME=\"%s\"\n", c.Region))
+		}
+		if c.ApplicationCredentialID != "" {
+			output.WriteString(fmt.Sprintf("export OS_APPLICATION_CREDENTIAL_ID=\"%s\"\n", c.ApplicationCredentialID))
+		}
+		if c.ApplicationCredentialSecret != "" {
+			output.WriteString(fmt.Sprintf("export OS_APPLICATION_CREDENTIAL_SECRET=\"%s\"\n", c.ApplicationCredentialSecret))
+		}
+		if c.Username != "" {
+			output.WriteString(fmt.Sprintf("export OS_USERNAME=\"%s\"\n", c.Username))
+		}
+		if c.Password != "" {
+			output.WriteString(fmt.Sprintf("export OS_PASSWORD=\"%s\"\n", c.Password))
+		}
+		if c.ProjectName != "" {
+			output.WriteString(fmt.Sprintf("export OS_PROJECT_NAME=\"%s\"\n", c.ProjectName))
+		}
+		if c.TenantName != "" && c.ProjectName == "" {
+			output.WriteString(fmt.Sprintf("export OS_PROJECT_NAME=\"%s\"\n", c.TenantName))
+		}
+		if c.UserDomainName != "" {
+			output.WriteString(fmt.Sprintf("export OS_USER_DOMAIN_NAME=\"%s\"\n", c.UserDomainName))
+		}
+		if c.ProjectDomainName != "" {
+			output.WriteString(fmt.Sprintf("export OS_PROJECT_DOMAIN_NAME=\"%s\"\n", c.ProjectDomainName))
+		}
+		if c.Domain != "" && c.UserDomainName == "" && c.ProjectDomainName == "" {
+			output.WriteString(fmt.Sprintf("export OS_USER_DOMAIN_NAME=\"%s\"\n", c.Domain))
+			output.WriteString(fmt.Sprintf("export OS_PROJECT_DOMAIN_NAME=\"%s\"\n", c.Domain))
+		}
+		output.WriteString("export OS_INTERFACE=\"public\"\n")
+		output.WriteString("export OS_IDENTITY_API_VERSION=\"3\"\n")
 	}
-	if c.Password != "" {
-		output.WriteString(fmt.Sprintf("export OS_PASSWORD=\"%s\"\n", c.Password))
-	}
-	if c.ProjectName != "" {
-		output.WriteString(fmt.Sprintf("export OS_PROJECT_NAME=\"%s\"\n", c.ProjectName))
-	}
-	if c.TenantName != "" && c.ProjectName == "" {
-		// Use tenant name as project name if project name is not set
-		output.WriteString(fmt.Sprintf("export OS_PROJECT_NAME=\"%s\"\n", c.TenantName))
-	}
-	if c.UserDomainName != "" {
-		output.WriteString(fmt.Sprintf("export OS_USER_DOMAIN_NAME=\"%s\"\n", c.UserDomainName))
-	}
-	if c.ProjectDomainName != "" {
-		output.WriteString(fmt.Sprintf("export OS_PROJECT_DOMAIN_NAME=\"%s\"\n", c.ProjectDomainName))
-	}
-	if c.Domain != "" && c.UserDomainName == "" && c.ProjectDomainName == "" {
-		// Use domain for both user and project domain if not explicitly set
-		output.WriteString(fmt.Sprintf("export OS_USER_DOMAIN_NAME=\"%s\"\n", c.Domain))
-		output.WriteString(fmt.Sprintf("export OS_PROJECT_DOMAIN_NAME=\"%s\"\n", c.Domain))
-	}
-
-	// Interface version
-	output.WriteString("export OS_INTERFACE=\"public\"\n")
-	output.WriteString("export OS_IDENTITY_API_VERSION=\"3\"\n")
 
 	return output.String()
 }

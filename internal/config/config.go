@@ -40,9 +40,9 @@ type Config struct {
 	Secrets       Secrets              `yaml:"secrets" json:"secrets" validate:"required"`
 	Deployment    Deployment           `yaml:"deployment,omitempty" json:"deployment,omitempty"`
 	Overrides     map[string]any       `yaml:"overrides,omitempty" json:"overrides,omitempty"`
-	
+
 	// Legacy fields for backward compatibility with v1.2.0 migrations
-	Networking    LegacyNetworking     `yaml:"networking,omitempty" json:"networking,omitempty"`
+	Networking LegacyNetworking `yaml:"networking,omitempty" json:"networking,omitempty"`
 }
 
 // LegacyNetworking holds old networking fields for backward compatibility during migrations

@@ -17,6 +17,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/rackerlabs/opencenter-cli/internal/config"
 )
 
 // TestClusterInfoAndSelectExportConsistency verifies that 'cluster info --export-only'
@@ -31,34 +33,34 @@ func TestClusterInfoAndSelectExportConsistency(t *testing.T) {
 	testCluster := availableClusters[0]
 
 	tests := []struct {
-		name         string
-		clusterName  string
+		name          string
+		clusterName   string
 		shellOverride string
-		description  string
+		description   string
 	}{
 		{
-			name:         "bash_shell",
-			clusterName:  testCluster,
+			name:          "bash_shell",
+			clusterName:   testCluster,
 			shellOverride: "bash",
-			description:  "Verify bash export commands are identical",
+			description:   "Verify bash export commands are identical",
 		},
 		{
-			name:         "zsh_shell",
-			clusterName:  testCluster,
+			name:          "zsh_shell",
+			clusterName:   testCluster,
 			shellOverride: "zsh",
-			description:  "Verify zsh export commands are identical",
+			description:   "Verify zsh export commands are identical",
 		},
 		{
-			name:         "fish_shell",
-			clusterName:  testCluster,
+			name:          "fish_shell",
+			clusterName:   testCluster,
 			shellOverride: "fish",
-			description:  "Verify fish export commands are identical",
+			description:   "Verify fish export commands are identical",
 		},
 		{
-			name:         "powershell",
-			clusterName:  testCluster,
+			name:          "powershell",
+			clusterName:   testCluster,
 			shellOverride: "powershell",
-			description:  "Verify powershell export commands are identical",
+			description:   "Verify powershell export commands are identical",
 		},
 	}
 

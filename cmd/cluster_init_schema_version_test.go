@@ -81,4 +81,3 @@ func TestClusterInitSchemaVersionValidation(t *testing.T) {
 		})
 	}
 }
-

@@ -269,9 +269,9 @@ func TestProperty_MigrationHydration(t *testing.T) {
 						ClusterFQDN: clusterName + ".sjc3.k8s.opencenter.cloud",
 						AdminEmail:  "admin@example.com",
 						Kubernetes: config.KubernetesConfig{
-							Version:    "1.33.5",
-							APIPort:    443,
-							SubnetPods: "10.42.0.0/16",
+							Version:        "1.33.5",
+							APIPort:        443,
+							SubnetPods:     "10.42.0.0/16",
 							SubnetServices: "10.43.0.0/16",
 						},
 					},

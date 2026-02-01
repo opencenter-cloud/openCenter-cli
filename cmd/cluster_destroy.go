@@ -48,7 +48,7 @@ If no cluster name is provided, the active cluster will be destroyed.`,
 
   # Destroy active cluster
   opencenter cluster destroy`,
-		Args:  cobra.MaximumNArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
 			name, err := resolveClusterName(args, true)

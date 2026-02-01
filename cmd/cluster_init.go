@@ -17,20 +17,196 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/rackerlabs/opencenter-cli/internal/cluster"
 	"github.com/rackerlabs/opencenter-cli/internal/config"
-	"github.com/rackerlabs/opencenter-cli/internal/config/flags"
-	"github.com/rackerlabs/opencenter-cli/internal/security"
-	"github.com/rackerlabs/opencenter-cli/internal/sops"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
+	"github.com/rackerlabs/opencenter-cli/internal/di"
 	"github.com/rackerlabs/opencenter-cli/internal/util"
-	"github.com/rackerlabs/opencenter-cli/internal/util/crypto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
+
+func newClusterInitCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "init [name]",
+		Short: "Initialize a new cluster configuration (non-interactive)",
+		Long: `Initialize a new cluster configuration with default values.
+
+This command creates a new cluster configuration file with sensible defaults
+based on the JSON schema. You can override any configuration value using
+command-line flags with dot notation.
+
+This command generates v2 configuration (schema_version: "2.0") only.
+For v1 configurations, use 'cluster migrate-config' to migrate existing v1 configs to v2.
+
+The configuration is created in an organization-based directory structure:
+  ~/.config/opencenter/clusters/<organization>/<cluster>/
+
+By default, the organization is set to "opencenter". Use --org to specify a different organization.
+
+SOPS Age encryption keys and SSH key pairs are automatically generated if they
+don't already exist, unless --no-keygen is specified.`,
+		Example: `  # Initialize with defaults
+  opencenter cluster init my-cluster
+
+  # Initialize from existing config file
+  opencenter cluster init --config my-cluster-config.yaml
+
+  # Initialize with organization
+  opencenter cluster init my-cluster --org myorg
+
+  # Initialize with custom values
+  opencenter cluster init my-cluster --org production --type aws
+
+  # Initialize without key generation
+  opencenter cluster init my-cluster --no-keygen
+
+  # Overwrite existing config
+  opencenter cluster init my-cluster --force`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: runClusterInit,
+	}
+
+	cmd.Flags().String("org", "", "organization name (defaults to 'opencenter')")
+	cmd.Flags().String("type", "openstack", "cluster type: openstack, baremetal, kind, vmware")
+	cmd.Flags().String("schema-version", "2.0", "configuration schema version (v2 only)")
+	cmd.Flags().String("config", "", "load configuration from file")
+	cmd.Flags().Bool("strict", false, "fail if required values are missing")
+	cmd.Flags().Bool("force", false, "overwrite existing config file")
+	cmd.Flags().Bool("no-keygen", false, "do not auto-generate keys")
+	cmd.Flags().Bool("no-sops-keygen", false, "do not auto-generate SOPS keys")
+	cmd.Flags().Bool("regenerate-keys", false, "regenerate keys even if they exist")
+	cmd.Flags().Bool("full-schema", false, "generate configuration with all available fields")
+	cmd.Flags().StringArray("server-pool", []string{}, "additional server pool configuration")
+
+	return cmd
+}
+
+func runClusterInit(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	// Initialize DI container
+	container := di.NewContainer()
+	if err := setupContainer(container); err != nil {
+		return fmt.Errorf("setting up DI container: %w", err)
+	}
+
+	// Resolve InitService from container
+	var initService *cluster.InitService
+	if err := container.ResolveAs("init-service", &initService); err != nil {
+		return fmt.Errorf("resolving init service: %w", err)
+	}
+
+	// Parse command-line options
+	opts, err := parseInitOptions(cmd, args)
+	if err != nil {
+		return err
+	}
+
+	// Execute initialization
+	result, err := initService.Initialize(ctx, opts)
+	if err != nil {
+		return err
+	}
+
+	// Display results
+	fmt.Fprint(cmd.OutOrStdout(), result.Message)
+	return nil
+}
+
+// setupContainer initializes the DI container with all required services
+func setupContainer(container di.Container) error {
+	pathResolver, err := di.ProvidePathResolver("")
+	if err != nil {
+		return err
+	}
+	if err := container.Singleton("path-resolver", func() (*paths.PathResolver, error) {
+		return pathResolver, nil
+	}); err != nil {
+		return err
+	}
+	if err := container.Singleton("config-manager", di.ProvideConfigManager); err != nil {
+		return err
+	}
+	if err := container.Singleton("validation-engine", di.ProvideValidationEngine); err != nil {
+		return err
+	}
+	if err := container.Singleton("init-service", di.ProvideInitService); err != nil {
+		return err
+	}
+	return container.Initialize()
+}
+
+// parseInitOptions parses command-line flags into InitOptions
+func parseInitOptions(cmd *cobra.Command, args []string) (cluster.InitOptions, error) {
+	opts := cluster.InitOptions{}
+
+	// Get cluster name from args, config file, or active cluster
+	if len(args) > 0 {
+		opts.ClusterName = args[0]
+	} else if configFile, _ := cmd.Flags().GetString("config"); configFile != "" {
+		name, err := extractClusterNameFromConfig(configFile)
+		if err != nil {
+			return opts, err
+		}
+		opts.ClusterName = name
+		opts.ConfigFile = configFile
+	} else {
+		activeName, err := config.GetActive()
+		if err != nil || activeName == "" {
+			return opts, fmt.Errorf("no cluster name provided and no active cluster set")
+		}
+		opts.ClusterName = activeName
+	}
+
+	// Parse flags
+	opts.Organization, _ = cmd.Flags().GetString("org")
+	opts.Provider, _ = cmd.Flags().GetString("type")
+	opts.Force, _ = cmd.Flags().GetBool("force")
+	opts.Strict, _ = cmd.Flags().GetBool("strict")
+	opts.NoKeyGen, _ = cmd.Flags().GetBool("no-keygen")
+	opts.NoSOPSKeyGen, _ = cmd.Flags().GetBool("no-sops-keygen")
+	opts.RegenerateKeys, _ = cmd.Flags().GetBool("regenerate-keys")
+	opts.FullSchema, _ = cmd.Flags().GetBool("full-schema")
+	opts.SchemaVersion, _ = cmd.Flags().GetString("schema-version")
+	opts.ServerPools, _ = cmd.Flags().GetStringArray("server-pool")
+
+	if opts.SchemaVersion != "2.0" {
+		return opts, fmt.Errorf("invalid schema version '%s': only v2.0 is supported", opts.SchemaVersion)
+	}
+
+	return opts, nil
+}
+
+// extractClusterNameFromConfig extracts the cluster name from a config file
+func extractClusterNameFromConfig(configFile string) (string, error) {
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return "", fmt.Errorf("reading config file: %w", err)
+	}
+
+	var tempCfg struct {
+		OpenCenter struct {
+			Cluster struct {
+				ClusterName string `yaml:"cluster_name"`
+			} `yaml:"cluster"`
+		} `yaml:"opencenter"`
+	}
+
+	if err := yaml.Unmarshal(data, &tempCfg); err != nil {
+		return "", fmt.Errorf("parsing config file: %w", err)
+	}
+
+	if tempCfg.OpenCenter.Cluster.ClusterName == "" {
+		return "", fmt.Errorf("cluster name not found in config file")
+	}
+
+	return tempCfg.OpenCenter.Cluster.ClusterName, nil
+}
 
 // setField sets a field in a struct using a dot-notation path.
 // It uses reflection to traverse the struct and set the value.
@@ -133,1539 +309,5 @@ func setReflectValue(field reflect.Value, value string) error {
 	default:
 		return fmt.Errorf("unsupported field type: %s", field.Type())
 	}
-	return nil
-}
-
-// setMapField sets a field in a map using dot-notation path, similar to setField but for maps
-func setMapField(obj map[string]any, path string, value string) error {
-	parts := strings.Split(path, ".")
-	current := obj
-
-	for i, part := range parts {
-		if i == len(parts)-1 {
-			// Last part, set the value
-			current[part] = convertStringValue(value)
-			return nil
-		}
-
-		// Navigate deeper
-		if next, exists := current[part]; exists {
-			if nextMap, ok := next.(map[string]any); ok {
-				current = nextMap
-			} else {
-				return fmt.Errorf("field '%s' is not a map, cannot traverse further", part)
-			}
-		} else {
-			// Create new map
-			newMap := make(map[string]any)
-			current[part] = newMap
-			current = newMap
-		}
-	}
-	return nil
-}
-
-// convertStringValue converts a string to the appropriate type (string, int, bool)
-func convertStringValue(value string) any {
-	// Try to parse as bool
-	if b, err := strconv.ParseBool(value); err == nil {
-		return b
-	}
-	// Try to parse as int
-	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
-		return i
-	}
-	// Default to string
-	return value
-}
-
-func newClusterInitCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "init [name]",
-		Short: "Initialize a new cluster configuration (non-interactive)",
-		Long: `Initialize a new cluster configuration with default values.
-
-This command creates a new cluster configuration file with sensible defaults
-based on the JSON schema. You can override any configuration value using
-command-line flags with dot notation.
-
-This command generates v2 configuration (schema_version: "2.0") only.
-For v1 configurations, use 'cluster migrate-config' to migrate existing v1 configs to v2.
-
-When using --config flag, the cluster name is automatically extracted from the
-configuration file (opencenter.cluster.cluster_name), so you don't need to
-specify it as an argument. You can still provide a name argument to override
-the name in the config file.
-
-The configuration is created in an organization-based directory structure:
-  ~/.config/opencenter/clusters/<organization>/<cluster>/
-
-	By default, the organization is set to "opencenter". Use --org to
-	specify a different organization.
-
-SOPS Age encryption keys and SSH key pairs are automatically generated if they
-don't already exist, unless --no-keygen is specified. Use --regenerate-keys to
-force regeneration of existing keys. Keys are stored in the cluster's secrets
-directory.
-
-Configuration Override:
-  Use --org flag or dot notation to set organization:
-    --org myorg
-    --opencenter.meta.organization=myorg
-  
-  Use --type flag to specify cluster type:
-    --type baremetal
-    --type openstack (default)
-  
-  Schema version is always v2.0 for new clusters.
-  Use 'cluster migrate-config' to migrate v1 configs to v2.
-  
-  Use dot notation to override any configuration value:
-    --opencenter.meta.env=prod
-    --opencenter.cluster.kubernetes.version=1.31.4
-    --opencenter.infrastructure.provider=aws
-
-Troubleshooting:
-  • If cluster already exists, use --force to overwrite config file (preserves keys)
-  • Use --strict to enable validation during initialization
-  • Check ~/.config/opencenter/clusters/ for created files`,
-		Example: `  # Initialize with defaults (uses "opencenter" as organization, v2 schema)
-	  opencenter cluster init my-cluster
-
-  # Initialize from existing config file (cluster name extracted from config)
-  opencenter cluster init --config my-cluster-config.yaml
-
-  # Initialize from config file with explicit name (overrides config file name)
-  opencenter cluster init my-cluster --config template-config.yaml
-
-  # Initialize bare metal cluster with v2 schema
-  opencenter cluster init my-cluster --org myorg --type baremetal
-
-  # Initialize with organization using --org flag
-  opencenter cluster init my-cluster --org myorg
-
-  # Initialize with organization using dot notation
-  opencenter cluster init my-cluster --opencenter.meta.organization=myorg
-
-  # Initialize with custom values
-  opencenter cluster init my-cluster \
-    --org production \
-    --opencenter.meta.env=prod \
-    --opencenter.cluster.kubernetes.version=1.31.4 \
-    --opencenter.infrastructure.provider=aws
-
-  # Initialize without key generation (SOPS and SSH)
-  opencenter cluster init my-cluster --no-keygen
-
-  # Regenerate keys even if they already exist
-  opencenter cluster init my-cluster --regenerate-keys
-
-  # Overwrite existing config file (preserves existing keys)
-  opencenter cluster init my-cluster --force
-
-  # Overwrite active cluster config file (preserves existing keys)
-  opencenter cluster init --force
-
-  # Initialize with strict validation
-  opencenter cluster init my-cluster --strict`,
-		Args: cobra.MaximumNArgs(1),
-		FParseErrWhitelist: cobra.FParseErrWhitelist{
-			UnknownFlags: true,
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// Initialize security components (Requirements: 1.1, 1.2, 1.5, 1.6, 1.8)
-			validator := security.NewDefaultInputValidator()
-
-			// Check if a configuration file was provided via --config flag
-			configFile, _ := cmd.Flags().GetString("config")
-
-			// Validate config file path if provided (Requirements: 1.8)
-			if configFile != "" {
-				if err := validator.ValidatePath(configFile); err != nil {
-					return fmt.Errorf("invalid config file path: %w", err)
-				}
-			}
-
-			// Check if --config-dir was explicitly provided
-			configDirFlag, _ := cmd.Flags().GetString("config-dir")
-
-			// Check if organization was explicitly specified via --org flag or dot notation
-			orgFlagValue, _ := cmd.Flags().GetString("org")
-
-			// Check if organization was specified via dot notation by looking at the args
-			hasOrgInDotNotation := false
-			for _, arg := range os.Args {
-				if strings.Contains(arg, "--opencenter.meta.organization=") || strings.Contains(arg, "--set") && strings.Contains(arg, "opencenter.meta.organization") {
-					hasOrgInDotNotation = true
-					break
-				}
-			}
-
-			// Use legacy flat structure only if --config-dir is specified AND no organization is explicitly set
-			// This maintains backward compatibility while allowing organization-based structure when needed
-			useLegacyFlatStructure := configDirFlag != "" && orgFlagValue == "" && !hasOrgInDotNotation
-
-			// Resolve cluster name from args, config file, or active cluster
-			var name string
-			if len(args) > 0 {
-				name = args[0]
-			} else if configFile != "" {
-				// When using --config, extract cluster name from the config file
-				data, err := os.ReadFile(configFile)
-				if err != nil {
-					return fmt.Errorf("failed to read configuration file '%s': %w", configFile, err)
-				}
-
-				// Parse just enough to get the cluster name
-				var tempCfg struct {
-					OpenCenter struct {
-						Cluster struct {
-							ClusterName string `yaml:"cluster_name"`
-						} `yaml:"cluster"`
-					} `yaml:"opencenter"`
-				}
-				if err := yaml.Unmarshal(data, &tempCfg); err != nil {
-					return fmt.Errorf("failed to parse configuration file '%s': %w", configFile, err)
-				}
-
-				name = tempCfg.OpenCenter.Cluster.ClusterName
-				if name == "" {
-					return fmt.Errorf("cluster name not found in configuration file '%s' (opencenter.cluster.cluster_name)", configFile)
-				}
-			} else {
-				// No name provided and no config file, try to use active cluster
-				activeName, err := config.GetActive()
-				if err != nil {
-					return fmt.Errorf("failed to get active cluster: %w", err)
-				}
-				if activeName == "" {
-					return fmt.Errorf("no cluster name provided and no active cluster set; specify a cluster name, use --config with a config file, or use 'opencenter cluster select <name>' to set an active cluster")
-				}
-				name = activeName
-			}
-
-			// Validate cluster name (Requirements: 1.1, 1.5, 1.6)
-			if err := validator.ValidateClusterName(name); err != nil {
-				return fmt.Errorf("invalid cluster name '%s': %w", name, err)
-			}
-
-			// Initialize CLI configuration manager
-			configManager, err := config.NewConfigManager("")
-			if err != nil {
-				return fmt.Errorf("failed to initialize configuration manager: %w", err)
-			}
-
-			// Initialize path resolver
-			pathResolver := config.NewPathResolverImpl(configManager)
-
-			// Load configuration from file or generate defaults
-			var cfg config.Config
-			var configMap map[string]any
-
-			if configFile != "" {
-				// Load configuration from the specified file
-				data, err := os.ReadFile(configFile)
-				if err != nil {
-					return fmt.Errorf("failed to read configuration file '%s': %w", configFile, err)
-				}
-
-				// Detect schema version to use appropriate loader
-				versionInfo, err := config.DetectSchemaVersionFromBytes(data)
-				if err != nil {
-					return fmt.Errorf("failed to detect schema version: %w", err)
-				}
-
-				if versionInfo.IsV2 {
-					// For v2 configs, just parse the YAML directly without full v2 pipeline
-					// This allows using v2 configs as templates for cluster init
-					if err := yaml.Unmarshal(data, &cfg); err != nil {
-						return fmt.Errorf("failed to parse v2 configuration: %w", err)
-					}
-
-					// Initialize configMap from the loaded configuration
-					configMap = make(map[string]any)
-					if err := yaml.Unmarshal(data, &configMap); err != nil {
-						return fmt.Errorf("failed to parse configuration file to map: %w", err)
-					}
-
-					fmt.Fprintf(cmd.OutOrStdout(), "Loaded v2 configuration from %s\n", configFile)
-				} else {
-					// Use v1 loader for v1 configurations
-					loader := config.NewConfigLoader(pathResolver)
-					loadedCfg, err := loader.LoadFromBytes(context.Background(), data, name)
-					if err != nil {
-						return fmt.Errorf("failed to load configuration from file '%s': %w", configFile, err)
-					}
-					cfg = *loadedCfg
-
-					// Initialize configMap from the loaded configuration
-					// This is needed for flag processing and map-based updates later
-					configMap = make(map[string]any)
-					if err := yaml.Unmarshal(data, &configMap); err != nil {
-						return fmt.Errorf("failed to parse configuration file to map: %w", err)
-					}
-				}
-			} else {
-				// Generate configuration using schema-based defaults to match testdata/schema.yaml structure
-				fullSchema, _ := cmd.Flags().GetBool("full-schema")
-				schemaVersion, _ := cmd.Flags().GetString("schema-version")
-
-				// Only v2 schema is supported for new clusters
-				// v1 is deprecated and only supported for migration via cluster migrate-config
-				if schemaVersion != "2.0" {
-					return fmt.Errorf("invalid schema version '%s': only v2.0 is supported for new clusters (use 'cluster migrate-config' to migrate v1 configs)", schemaVersion)
-				}
-
-				var schemaDefaultYAML []byte
-				var err error
-
-				if fullSchema {
-					// Generate full schema with local value examples
-					schemaDefaultYAML, err = config.GenerateFullSchemaDefaults(name)
-				} else {
-					// Generate standard defaults
-					schemaDefaultYAML, err = config.GenerateDefaultFromSchema(name)
-				}
-
-				if err != nil {
-					return fmt.Errorf("failed to generate schema-based defaults: %w", err)
-				}
-
-				if err := yaml.Unmarshal(schemaDefaultYAML, &configMap); err != nil {
-					return fmt.Errorf("failed to parse schema defaults to map: %w", err)
-				}
-
-				// Also create a struct version for validation (unmarshal the schema defaults into a Config struct)
-				if err := yaml.Unmarshal(schemaDefaultYAML, &cfg); err != nil {
-					return fmt.Errorf("failed to parse schema defaults to struct: %w", err)
-				}
-
-				// Set the schema version to v2.0
-				cfg.SchemaVersion = "2.0"
-				// For v2, set schema_version at root level
-				configMap["schema_version"] = "2.0"
-			}
-
-			// Apply overrides from flags to the config struct (for validation) and map (for output)
-			// Use enhanced flag parser for better flag handling while maintaining backward compatibility
-			flagIntegration, err := flags.NewCLIIntegration()
-			if err != nil {
-				return fmt.Errorf("failed to initialize flag integration: %w", err)
-			}
-
-			// Filter out cobra-handled flags from os.Args
-			var filteredArgs []string
-			for _, arg := range os.Args {
-				if strings.HasPrefix(arg, "--") {
-					parts := strings.SplitN(strings.TrimPrefix(arg, "--"), "=", 2)
-					if len(parts) == 2 {
-						key := parts[0]
-						// Skip flags that are handled by cobra
-						if cmd.Flags().Lookup(key) != nil {
-							continue
-						}
-						filteredArgs = append(filteredArgs, arg)
-					}
-				}
-			}
-
-			// Process flags using enhanced parser
-			if err := flagIntegration.ProcessFlags(filteredArgs, &cfg, configMap); err != nil {
-				return fmt.Errorf("error processing flags: %w", err)
-			}
-
-			// Determine organization from --org flag, configuration, or use cluster name as default
-			orgFlag, _ := cmd.Flags().GetString("org")
-			organization := orgFlag
-			if organization == "" {
-				organization = cfg.OpenCenter.Meta.Organization
-			}
-			if organization == "" {
-				organization = "opencenter"
-			}
-
-			// Validate organization name (Requirements: 1.1, 1.5, 6.2)
-			if err := validator.ValidateOrganizationName(organization); err != nil {
-				return fmt.Errorf("invalid organization name '%s': %w", organization, err)
-			}
-
-			// Always update configuration with the determined organization
-			cfg.OpenCenter.Meta.Organization = organization
-
-			// Apply CLI config defaults for region and environment if not already set
-			cliConfig := configManager.GetConfig()
-
-			// Apply region default if not set or if it's the schema default
-			// Schema default is "sjc3", so we override it with CLI config default if available
-			if (cfg.OpenCenter.Meta.Region == "" || cfg.OpenCenter.Meta.Region == "sjc3") && cliConfig.Defaults.Region != "" {
-				cfg.OpenCenter.Meta.Region = cliConfig.Defaults.Region
-				// Also update the map
-				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
-					if meta, ok := opencenter["meta"].(map[string]any); ok {
-						meta["region"] = cliConfig.Defaults.Region
-					}
-				}
-			}
-
-			// Apply environment default if not set or if it's the schema default
-			// Schema default is "dev", so we override it with CLI config default if available
-			if (cfg.OpenCenter.Meta.Env == "" || cfg.OpenCenter.Meta.Env == "dev") && cliConfig.Defaults.Environment != "" {
-				cfg.OpenCenter.Meta.Env = cliConfig.Defaults.Environment
-				// Also update the map
-				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
-					if meta, ok := opencenter["meta"].(map[string]any); ok {
-						meta["env"] = cliConfig.Defaults.Environment
-					}
-				}
-			}
-
-			// Apply provider-region defaults using the hydrator (Requirement: 13.4)
-			// This applies intelligent defaults based on the provider and region
-			schemaVersion, _ := cmd.Flags().GetString("schema-version")
-			if schemaVersion == "2.0" {
-				// Import the defaults package
-				// Note: This is a placeholder - actual import will be added at the top of the file
-				// For now, we'll skip hydration and add it in a follow-up if needed
-				// The hydrator requires the defaults package to be imported
-				fmt.Fprintf(cmd.OutOrStdout(), "Note: Provider-region defaults will be applied for v2 configurations\n")
-			}
-
-			// Set initial stage and status
-			cfg.OpenCenter.Meta.Stage = config.StageInit
-			cfg.OpenCenter.Meta.Status = config.StatusSuccess
-
-			// Handle --type flag to set infrastructure provider
-			// Use CLI config defaults if flag is not explicitly set
-			typeFlag, _ := cmd.Flags().GetString("type")
-
-			// Check if the flag was explicitly set by the user
-			typeFlagChanged := cmd.Flags().Changed("type")
-
-			// If flag wasn't explicitly set, try to use CLI config default
-			if !typeFlagChanged {
-				cliConfig := configManager.GetConfig()
-				if cliConfig.Defaults.Provider != "" {
-					typeFlag = cliConfig.Defaults.Provider
-				}
-			}
-
-			if typeFlag != "" {
-				cfg.OpenCenter.Infrastructure.Provider = typeFlag
-				// Also update the map
-				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
-					if infrastructure, ok := opencenter["infrastructure"].(map[string]any); ok {
-						infrastructure["provider"] = typeFlag
-					} else {
-						opencenter["infrastructure"] = map[string]any{
-							"provider": typeFlag,
-						}
-					}
-				}
-			}
-
-			// Handle --server-pool flags to set additional server pools
-			serverPools, _ := cmd.Flags().GetStringArray("server-pool")
-			if len(serverPools) > 0 {
-				var additionalServerPools []config.AdditionalServerPool
-				for _, poolStr := range serverPools {
-					pool, err := parseServerPoolString(poolStr)
-					if err != nil {
-						return fmt.Errorf("failed to parse server pool '%s': %w", poolStr, err)
-					}
-					additionalServerPools = append(additionalServerPools, pool)
-				}
-
-				// Update the configuration struct
-				cfg.OpenCenter.Cluster.Kubernetes.AdditionalServerPoolsWorker = additionalServerPools
-
-				// Also update the map for consistency
-				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
-					if cluster, ok := opencenter["cluster"].(map[string]any); ok {
-						if kubernetes, ok := cluster["kubernetes"].(map[string]any); ok {
-							kubernetes["additional_server_pools_worker"] = convertServerPoolsToMap(additionalServerPools)
-						} else {
-							cluster["kubernetes"] = map[string]any{
-								"additional_server_pools_worker": convertServerPoolsToMap(additionalServerPools),
-							}
-						}
-					} else {
-						opencenter["cluster"] = map[string]any{
-							"kubernetes": map[string]any{
-								"additional_server_pools_worker": convertServerPoolsToMap(additionalServerPools),
-							},
-						}
-					}
-				}
-			}
-			// Also update the map
-			if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
-				if meta, ok := opencenter["meta"].(map[string]any); ok {
-					meta["organization"] = organization
-					meta["stage"] = config.StageInit
-					meta["status"] = config.StatusSuccess
-				} else {
-					opencenter["meta"] = map[string]any{
-						"organization": organization,
-						"stage":        config.StageInit,
-						"status":       config.StatusSuccess,
-					}
-				}
-			} else {
-				configMap["opencenter"] = map[string]any{
-					"meta": map[string]any{
-						"organization": organization,
-						"stage":        config.StageInit,
-						"status":       config.StatusSuccess,
-					},
-				}
-			}
-
-			// Handle legacy flat file structure for backward compatibility
-			// This must be done BEFORE resolving cluster paths to avoid creating org structure
-			if useLegacyFlatStructure {
-				return handleLegacyFlatInit(cmd, name, configMap, configDirFlag)
-			}
-
-			// Resolve cluster paths using organization structure
-			clusterPaths, err := pathResolver.ResolveClusterPaths(context.Background(), name, organization)
-			if err != nil {
-				return fmt.Errorf("failed to resolve cluster paths: %w", err)
-			}
-
-			// Update GitOps directory to point to organization root
-			// Check if user explicitly set a custom git_dir via command line flags
-			userSetCustomGitDir := false
-			for _, arg := range os.Args {
-				if strings.HasPrefix(arg, "--opencenter.gitops.git_dir=") || strings.HasPrefix(arg, "--gitops.git_dir=") {
-					userSetCustomGitDir = true
-					break
-				}
-			}
-
-			// If user didn't explicitly set a custom git_dir, use organization-based path
-			if !userSetCustomGitDir {
-				cfg.OpenCenter.GitOps.GitDir = clusterPaths.GitOpsDir
-				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
-					if gitops, ok := opencenter["gitops"].(map[string]any); ok {
-						gitops["git_dir"] = clusterPaths.GitOpsDir
-					} else {
-						opencenter["gitops"] = map[string]any{
-							"git_dir": clusterPaths.GitOpsDir,
-						}
-					}
-				}
-			}
-
-			// Handle --force
-			force, _ := cmd.Flags().GetBool("force")
-
-			// Check if cluster directory exists in organization structure
-			if _, err := os.Stat(clusterPaths.ClusterDir); err == nil {
-				// Check if the cluster is marked as destroyed
-				isDestroyed := false
-				if existingCfg, err := config.Load(name); err == nil {
-					if existingCfg.OpenCenter.Meta.Stage == config.StageDestroy {
-						isDestroyed = true
-					}
-				}
-
-				if !force && !isDestroyed {
-					return fmt.Errorf("cluster configuration directory '%s' already exists in organization '%s', use --force to overwrite", name, organization)
-				}
-
-				// If cluster is destroyed, perform full cleanup and overwrite
-				if isDestroyed {
-					if err := cleanupClusterDirectory(clusterPaths.ClusterDir); err != nil {
-						return fmt.Errorf("failed to cleanup existing cluster directory '%s': %w", clusterPaths.ClusterDir, err)
-					}
-				}
-				// If --force is set (but cluster is not destroyed), only overwrite the config file
-				// Keys and other files will be preserved or created only if they don't exist
-				// This allows updating configuration without destroying existing keys
-			}
-
-			// Validate organization name for directory creation
-			if err := validateOrganizationName(organization); err != nil {
-				return fmt.Errorf("invalid organization name '%s': %w", organization, err)
-			}
-
-			// Handle --strict
-			strict, _ := cmd.Flags().GetBool("strict")
-			if strict {
-				// In strict mode, clear default values for required fields if user didn't explicitly set them
-				// This ensures validation fails if required fields are missing
-				// In strict mode, validation ensures required fields are present
-				// We no longer clear default values as they are now correctly resolved before validation
-
-				if errs := config.Validate(cfg); len(errs) > 0 {
-					for _, e := range errs {
-						fmt.Fprintln(cmd.ErrOrStderr(), e)
-					}
-					return fmt.Errorf("validation failed")
-				}
-			}
-
-			// Create organization structure
-			if err := pathResolver.CreateOrganizationStructure(context.Background(), organization); err != nil {
-				return fmt.Errorf("failed to create organization structure: %w", err)
-			}
-
-			// Create .gitignore at organization level
-			if err := createOrganizationGitignore(clusterPaths.OrganizationDir); err != nil {
-				return fmt.Errorf("failed to create organization .gitignore: %w", err)
-			}
-
-			// Create cluster directories
-			if err := pathResolver.CreateClusterDirectories(context.Background(), name, organization); err != nil {
-				return fmt.Errorf("failed to create cluster directories: %w", err)
-			}
-
-			// Persist config
-			// Generate SOPS key only if regenerate-keys flag is set or if key doesn't exist
-			regenerateKeys, _ := cmd.Flags().GetBool("regenerate-keys")
-
-			// Check if SOPS key already exists
-			sopsKeyExists := false
-			if clusterPaths.SOPSKeyPath != "" {
-				if _, err := os.Stat(clusterPaths.SOPSKeyPath); err == nil {
-					sopsKeyExists = true
-				}
-			}
-
-			// Generate SOPS key if:
-			// 1. regenerate-keys flag is set, OR
-			// 2. key doesn't exist and no-keygen is not set
-			disableKeygen, _ := cmd.Flags().GetBool("no-keygen")
-			disableSopsKeygen, _ := cmd.Flags().GetBool("no-sops-keygen")
-			shouldGenerateSOPS := (regenerateKeys || !sopsKeyExists) && !disableKeygen && !disableSopsKeygen
-
-			if shouldGenerateSOPS && cfg.Secrets.SopsAgeKeyFile == "" && name != "" {
-				if err := generateOrganizationSOPSKey(name, organization, &cfg, pathResolver); err != nil {
-					return fmt.Errorf("failed to generate organization SOPS key: %w", err)
-				}
-			} else if sopsKeyExists && !regenerateKeys {
-				// Use existing SOPS key
-				cfg.Secrets.SopsAgeKeyFile = clusterPaths.SOPSKeyPath
-				fmt.Fprintf(cmd.OutOrStdout(), "Using existing SOPS key at %s\n", clusterPaths.SOPSKeyPath)
-			}
-
-			// GitOps directory is already updated to point to organization root
-			// If user specified a custom git_dir, keep it as-is
-
-			// Update SSH key paths to point to organization secrets directory
-			// Format: <clustersDir>/<organization>/secrets/ssh/<cluster>-<env>-<region>
-			env := cfg.OpenCenter.Meta.Env
-			region := cfg.OpenCenter.Meta.Region
-			if env == "" {
-				env = "dev"
-			}
-			if region == "" {
-				region = "local"
-			}
-
-			// Use the already-resolved secrets directory from clusterPaths
-			// This respects any custom clustersDir configuration
-			sshKeyBaseName := fmt.Sprintf("%s-%s-%s", name, env, region)
-			sshKeyPath := filepath.Join(clusterPaths.SecretsDir, "ssh", sshKeyBaseName)
-			sshPubKeyPath := sshKeyPath + ".pub"
-
-			// Check if user explicitly set SSH keys via command line flags
-			userSetSSHKeys := false
-			for _, arg := range os.Args {
-				if strings.HasPrefix(arg, "--opencenter.gitops.git_ssh_key=") ||
-					strings.HasPrefix(arg, "--gitops.git_ssh_key=") ||
-					strings.HasPrefix(arg, "--opencenter.gitops.git_ssh_pub=") ||
-					strings.HasPrefix(arg, "--gitops.git_ssh_pub=") {
-					userSetSSHKeys = true
-					break
-				}
-			}
-
-			// Only set SSH key paths if user didn't explicitly provide them
-			if !userSetSSHKeys {
-				cfg.OpenCenter.GitOps.GitSSHKey = sshKeyPath
-				cfg.OpenCenter.GitOps.GitSSHPub = sshPubKeyPath
-				if opencenter, ok := configMap["opencenter"].(map[string]any); ok {
-					if gitops, ok := opencenter["gitops"].(map[string]any); ok {
-						gitops["git_ssh_key"] = sshKeyPath
-						gitops["git_ssh_pub"] = sshPubKeyPath
-					} else {
-						opencenter["gitops"] = map[string]any{
-							"git_ssh_key": sshKeyPath,
-							"git_ssh_pub": sshPubKeyPath,
-						}
-					}
-				}
-			}
-
-			// Set secrets.ssh_key paths using the same pattern as GitOps SSH keys
-			// Reuse sshKeyBaseName from above
-			secretsSSHKeyPath := filepath.Join(clusterPaths.SecretsDir, "ssh", sshKeyBaseName)
-			secretsSSHPubKeyPath := secretsSSHKeyPath + ".pub"
-
-			// Check if user provided a cypher type, otherwise default to ed25519
-			sshKeyCypher := "ed25519"
-			if secretsMap, ok := configMap["secrets"].(map[string]any); ok {
-				if sshKeyMap, ok := secretsMap["ssh_key"].(map[string]any); ok {
-					if cypher, ok := sshKeyMap["cypher"].(string); ok && cypher != "" {
-						sshKeyCypher = cypher
-					}
-				}
-			}
-
-			cfg.Secrets.SSHKey.Private = secretsSSHKeyPath
-			cfg.Secrets.SSHKey.Public = secretsSSHPubKeyPath
-			cfg.Secrets.SSHKey.Cypher = sshKeyCypher
-
-			// Check if SSH key already exists
-			sshKeyExists := false
-			if _, err := os.Stat(secretsSSHKeyPath); err == nil {
-				sshKeyExists = true
-			}
-
-			// Generate SSH key pair if:
-			// 1. regenerate-keys flag is set, OR
-			// 2. key doesn't exist and no-keygen is not set
-			shouldGenerateSSH := (regenerateKeys || !sshKeyExists) && !disableKeygen
-
-			if shouldGenerateSSH {
-				// Create SSH directory if it doesn't exist
-				sshDir := filepath.Dir(secretsSSHKeyPath)
-				if err := os.MkdirAll(sshDir, 0o700); err != nil {
-					return fmt.Errorf("failed to create SSH directory: %w", err)
-				}
-
-				// Create SSH key comment in format: <organization>-<cluster>-<region>
-				sshKeyComment := fmt.Sprintf("%s-%s-%s", organization, name, region)
-
-				// Generate SSH key pair using the specified cipher with comment
-				keyPair, err := crypto.GenerateSSHKeyWithComment(cfg.Secrets.SSHKey.Cypher, sshKeyComment)
-				if err != nil {
-					return fmt.Errorf("failed to generate SSH key pair: %w", err)
-				}
-
-				// Write private key with restrictive permissions
-				if err := os.WriteFile(secretsSSHKeyPath, keyPair.PrivateKey, 0o600); err != nil {
-					return fmt.Errorf("failed to write SSH private key: %w", err)
-				}
-
-				// Write public key
-				if err := os.WriteFile(secretsSSHPubKeyPath, keyPair.PublicKey, 0o644); err != nil {
-					return fmt.Errorf("failed to write SSH public key: %w", err)
-				}
-
-				if regenerateKeys && sshKeyExists {
-					fmt.Fprintf(cmd.OutOrStdout(), "Regenerated %s SSH key pair at %s\n", cfg.Secrets.SSHKey.Cypher, secretsSSHKeyPath)
-				} else {
-					fmt.Fprintf(cmd.OutOrStdout(), "Generated %s SSH key pair at %s\n", cfg.Secrets.SSHKey.Cypher, secretsSSHKeyPath)
-				}
-			} else if sshKeyExists && !regenerateKeys {
-				fmt.Fprintf(cmd.OutOrStdout(), "Using existing SSH key pair at %s\n", secretsSSHKeyPath)
-			}
-
-			// Update the map with any SOPS key changes from the struct
-			if secretsMap, ok := configMap["secrets"].(map[string]any); ok {
-				if cfg.Secrets.SopsAgeKeyFile != "" {
-					secretsMap["sops_age_key_file"] = cfg.Secrets.SopsAgeKeyFile
-				}
-				// Add SSH key configuration
-				secretsMap["ssh_key"] = map[string]any{
-					"private": secretsSSHKeyPath,
-					"public":  secretsSSHPubKeyPath,
-					"cypher":  sshKeyCypher,
-				}
-			} else {
-				// Create secrets map if it doesn't exist
-				secretsConfig := map[string]any{
-					"ssh_key": map[string]any{
-						"private": secretsSSHKeyPath,
-						"public":  secretsSSHPubKeyPath,
-						"cypher":  sshKeyCypher,
-					},
-				}
-				if cfg.Secrets.SopsAgeKeyFile != "" {
-					secretsConfig["sops_age_key_file"] = cfg.Secrets.SopsAgeKeyFile
-				}
-				configMap["secrets"] = secretsConfig
-			}
-
-			// Marshal the struct directly to ensure all fields (including empty secrets) are rendered
-			// This is important so users can see and modify all available service configurations
-			finalYAML, err := yaml.Marshal(cfg)
-			if err != nil {
-				return fmt.Errorf("failed to marshal final config: %w", err)
-			}
-
-			// Get the config path at organization level (per structure document)
-			configPath := filepath.Join(clusterPaths.OrganizationDir, "."+name+"-config.yaml")
-
-			// Write the config file with proper permissions (0600 for files)
-			if err := os.WriteFile(configPath, finalYAML, 0o600); err != nil {
-				return fmt.Errorf("failed to write cluster configuration file to '%s': %w", configPath, err)
-			}
-
-			// Initialize git repository in the GitOps directory
-			if err := initializeGitRepository(clusterPaths.GitOpsDir, cmd); err != nil {
-				return fmt.Errorf("failed to initialize git repository: %w", err)
-			}
-
-			fmt.Fprintf(cmd.OutOrStdout(), "Created cluster configuration in organization '%s' at '%s'\n", organization, clusterPaths.ClusterDir)
-			fmt.Fprintf(cmd.OutOrStdout(), "GitOps repository root: %s\n", clusterPaths.GitOpsDir)
-			fmt.Fprintf(cmd.OutOrStdout(), "SOPS key location: %s\n", clusterPaths.SOPSKeyPath)
-			return nil
-		},
-	}
-	cmd.Flags().String("org", "", "organization name (defaults to cluster name if not specified)")
-	cmd.Flags().String("type", "openstack", "cluster type: openstack, baremetal, kind, vmware (defaults to openstack)")
-	cmd.Flags().String("schema-version", "2.0", "configuration schema version (v2 only, v1 deprecated)")
-	cmd.Flags().Bool("strict", false, "fail if required values are missing")
-	cmd.Flags().Bool("force", false, "overwrite existing config file (preserves keys and other files)")
-	cmd.Flags().Bool("no-keygen", false, "do not auto-generate SOPS age keys and SSH key pairs")
-	cmd.Flags().Bool("no-sops-keygen", false, "do not auto-generate SOPS age keys (alias for no-keygen)")
-	cmd.Flags().Bool("regenerate-keys", false, "regenerate SOPS age keys and SSH key pairs even if they already exist")
-	cmd.Flags().StringArray("server-pool", []string{}, "additional server pool configuration (format: name=value,key=value,...)")
-	cmd.Flags().Bool("full-schema", false, "generate configuration with all available fields including Terraform local value examples")
-	return cmd
-}
-
-// initializeGitRepository initializes a git repository in the specified directory
-// and makes an initial commit with the configuration files.
-func initializeGitRepository(gitDir string, cmd *cobra.Command) error {
-	// Check if git repository already exists
-	if _, err := os.Stat(filepath.Join(gitDir, ".git")); err != nil {
-		// Git repository doesn't exist, initialize it
-
-		// Create the directory if it doesn't exist
-		if err := os.MkdirAll(gitDir, 0o755); err != nil {
-			return fmt.Errorf("failed to create git directory: %w", err)
-		}
-
-		// Initialize git repository
-		if err := runGitCommand(gitDir, []string{"init", "-b", "main"}, cmd); err != nil {
-			return fmt.Errorf("failed to initialize git repository: %w", err)
-		}
-
-		fmt.Fprintf(cmd.OutOrStdout(), "Initialized git repository at %s\n", gitDir)
-	}
-
-	// Install pre-commit hook for SOPS encryption validation
-	if err := installSOPSPreCommitHook(gitDir, cmd); err != nil {
-		return fmt.Errorf("failed to install SOPS pre-commit hook: %w", err)
-	}
-
-	// Create a basic .gitignore file if it doesn't exist
-	gitignorePath := filepath.Join(gitDir, ".gitignore")
-	if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
-		gitignoreContent := `# SOPS-related files
-.sops.yaml.bak
-*.dec
-*.dec.*
-*.tmp
-
-# Terraform/OpenTofu files
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Local development files
-.env
-.env.local
-`
-
-		if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0o644); err != nil {
-			return fmt.Errorf("failed to create .gitignore: %w", err)
-		}
-	}
-
-	// Add all files to git
-	if err := runGitCommand(gitDir, []string{"add", "."}, cmd); err != nil {
-		return fmt.Errorf("failed to add files to git: %w", err)
-	}
-
-	return nil
-}
-
-// runGitCommand executes a git command in the specified directory
-// Uses CommandSanitizer to prevent command injection (Requirements: 1.3, 1.4)
-func runGitCommand(dir string, args []string, cmd *cobra.Command) error {
-	sanitizer := security.NewDefaultCommandSanitizer()
-
-	// Sanitize git arguments (Requirements: 1.3, 1.4)
-	sanitizedArgs, err := sanitizer.SanitizeGitArgs(args)
-	if err != nil {
-		return fmt.Errorf("failed to sanitize git arguments: %w", err)
-	}
-
-	// Create sanitized command (Requirements: 1.3, 1.4)
-	gitCmd, err := sanitizer.SanitizeCommand("git", sanitizedArgs)
-	if err != nil {
-		return fmt.Errorf("failed to sanitize git command: %w", err)
-	}
-
-	gitCmd.Dir = dir
-	gitCmd.Stdout = cmd.OutOrStdout()
-	gitCmd.Stderr = cmd.ErrOrStderr()
-	return gitCmd.Run()
-}
-
-// installSOPSPreCommitHook installs a pre-commit hook that validates SOPS encryption
-// of cluster configuration files containing sensitive data
-func installSOPSPreCommitHook(gitDir string, cmd *cobra.Command) error {
-	hooksDir := filepath.Join(gitDir, ".git", "hooks")
-	preCommitPath := filepath.Join(hooksDir, "pre-commit")
-
-	// Create hooks directory if it doesn't exist
-	if err := os.MkdirAll(hooksDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create git hooks directory: %w", err)
-	}
-
-	// Check if pre-commit hook already exists
-	if _, err := os.Stat(preCommitPath); err == nil {
-		// Hook already exists, don't overwrite it
-		fmt.Fprintf(cmd.OutOrStdout(), "Pre-commit hook already exists at %s\n", preCommitPath)
-		return nil
-	}
-
-	// Pre-commit hook content
-	hookContent := `#!/usr/bin/env bash
-#
-# Pre-commit hook to ensure cluster config secret sections are encrypted via SOPS
-#
-# This hook checks that any cluster configuration files containing sensitive data
-# are properly encrypted with SOPS before being committed to the repository.
-#
-
-set -e
-
-# Colors for output
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_error() {
-    echo -e "${RED}ERROR: $1${NC}" >&2
-}
-
-print_warning() {
-    echo -e "${YELLOW}WARNING: $1${NC}" >&2
-}
-
-print_success() {
-    echo -e "${GREEN}SUCCESS: $1${NC}"
-}
-
-# Function to check if a file is SOPS encrypted
-is_sops_encrypted() {
-    local file="$1"
-    
-    # Check if file contains SOPS metadata
-    if grep -q "sops:" "$file" 2>/dev/null; then
-        # Check for encrypted data patterns
-        if grep -q "ENC\[AES256_GCM\|age:" "$file" 2>/dev/null; then
-            return 0  # File is encrypted
-        fi
-    fi
-    return 1  # File is not encrypted
-}
-
-# Function to check if file contains sensitive data that should be encrypted
-contains_sensitive_data() {
-    local file="$1"
-    
-    # List of sensitive field patterns that should be encrypted
-    local sensitive_patterns=(
-        "application_credential_secret:"
-        "application_credential_id:"
-        "aws_access_key:"
-        "aws_secret_access_key:"
-        "password:"
-        "secret:"
-        "token:"
-        "key:"
-        "credential:"
-    )
-    
-    # Check if file contains any sensitive patterns with actual values
-    for pattern in "${sensitive_patterns[@]}"; do
-        # Look for the pattern and extract the value
-        local matches=$(grep -E "${pattern}" "$file" 2>/dev/null || true)
-        if [[ -n "$matches" ]]; then
-            # Check each match to see if it has a real value
-            while IFS= read -r line; do
-                # Extract the value part after the colon
-                local value=$(echo "$line" | sed -E "s/.*${pattern}[[:space:]]*//" | sed -E 's/^["\'"'"']?([^"'"'"']*)["\'"'"']?[[:space:]]*$/\1/')
-                
-                # Skip empty values, quotes only, or common placeholders
-                if [[ -n "$value" && "$value" != '""' && "$value" != "''" && "$value" != "<placeholder>" && "$value" != "PLACEHOLDER" && "$value" != "TODO" && "$value" != "CHANGEME" ]]; then
-                    return 0  # Contains sensitive data
-                fi
-            done <<< "$matches"
-        fi
-    done
-    
-    return 1  # No sensitive data found
-}
-
-# Function to check if file is a cluster config
-is_cluster_config() {
-    local file="$1"
-    
-    # Skip test files and fixtures
-    if [[ "$file" =~ ^tests/ ]] || [[ "$file" =~ ^testdata/ ]] || [[ "$file" =~ \.feature$ ]]; then
-        return 1
-    fi
-    
-    # Check if it's a cluster config file by pattern
-    if [[ "$file" =~ \..*-config\.yaml$ ]] || [[ "$file" =~ cluster.*\.yaml$ ]]; then
-        return 0
-    fi
-    
-    # Check if file contains opencenter configuration structure
-    if grep -q "opencenter:" "$file" 2>/dev/null; then
-        return 0
-    fi
-    
-    return 1
-}
-
-# Main validation function
-validate_file() {
-    local file="$1"
-    local errors=0
-    
-    # Skip if file doesn't exist (deleted files)
-    if [[ ! -f "$file" ]]; then
-        return 0
-    fi
-    
-    # Check if this is a cluster config file
-    if ! is_cluster_config "$file"; then
-        return 0
-    fi
-    
-    print_warning "Checking cluster config: $file"
-    
-    # Check if file contains sensitive data
-    if contains_sensitive_data "$file"; then
-        # File contains sensitive data, check if it's encrypted
-        if ! is_sops_encrypted "$file"; then
-            print_error "File '$file' contains sensitive data but is not SOPS encrypted!"
-            print_error "Please encrypt the file using: sops -e -i '$file'"
-            print_error "Or use: opencenter sops secrets-encrypt '$file'"
-            errors=1
-        else
-            print_success "File '$file' is properly SOPS encrypted"
-        fi
-    else
-        print_success "File '$file' contains no sensitive data"
-    fi
-    
-    return $errors
-}
-
-# Main execution
-main() {
-    local exit_code=0
-    local files_checked=0
-    
-    echo "🔒 Checking for unencrypted secrets in cluster configurations..."
-    
-    # Get list of staged files
-    while IFS= read -r -d '' file; do
-        if validate_file "$file"; then
-            ((files_checked++))
-        else
-            exit_code=1
-        fi
-    done < <(git diff --cached --name-only -z)
-    
-    if [[ $files_checked -eq 0 ]]; then
-        echo "ℹ️  No cluster configuration files found in staged changes"
-        return 0
-    fi
-    
-    if [[ $exit_code -eq 0 ]]; then
-        print_success "All cluster configurations are properly secured! ✅"
-    else
-        echo ""
-        print_error "❌ Commit blocked: Unencrypted secrets detected!"
-        echo ""
-        echo "To fix this issue:"
-        echo "1. Encrypt sensitive files with SOPS:"
-        echo "   sops -e -i <file>"
-        echo "2. Or use the opencenter CLI:"
-        echo "   opencenter sops secrets-encrypt <file>"
-        echo "3. Stage the encrypted files:"
-        echo "   git add <file>"
-        echo "4. Commit again"
-        echo ""
-        echo "For more information, see: docs/reference/sops.md"
-    fi
-    
-    return $exit_code
-}
-
-# Run the main function
-main "$@"
-`
-
-	// Write the hook file with executable permissions
-	if err := os.WriteFile(preCommitPath, []byte(hookContent), 0o755); err != nil {
-		return fmt.Errorf("failed to write pre-commit hook: %w", err)
-	}
-
-	fmt.Fprintf(cmd.OutOrStdout(), "Installed SOPS pre-commit hook at %s\n", preCommitPath)
-	return nil
-}
-
-// cleanupClusterDirectory removes the existing cluster directory and all its contents
-// to prepare for overwriting with new configuration when --force flag is used.
-func cleanupClusterDirectory(clusterDir string) error {
-	// Remove the entire cluster directory and all its contents
-	if err := os.RemoveAll(clusterDir); err != nil {
-		return fmt.Errorf("failed to remove existing cluster directory and contents: %w", err)
-	}
-	return nil
-}
-
-// generateDefaultSOPSKey creates an age key file under the cluster-specific secrets directory
-// at <cluster-dir>/secrets/age/keys/<cluster>-key.txt and updates cfg.Secrets.SopsAgeKeyFile
-// to point to the generated file using the new SOPS key manager.
-func generateDefaultSOPSKey(cluster string, cfg *config.Config) error {
-	// Get the cluster-specific secrets directory path
-	secretsDir, err := config.ClusterSecretsPath(cluster)
-	if err != nil {
-		return fmt.Errorf("failed to get cluster secrets directory path: %w", err)
-	}
-
-	// Create the secrets directory with proper permissions (0755 for directories)
-	if err := os.MkdirAll(secretsDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create cluster secrets directory '%s': %w", secretsDir, err)
-	}
-
-	// Generate the key file path
-	keyFile := filepath.Join(secretsDir, fmt.Sprintf("%s-key.txt", cluster))
-
-	// Use the new SOPS key manager to generate a proper Age key
-	km := sops.NewKeyManager(secretsDir)
-	keyPair, err := km.GenerateAgeKey()
-	if err != nil {
-		return fmt.Errorf("failed to generate Age key pair: %w", err)
-	}
-
-	// Write the private key file with proper permissions (0600 for files)
-	keyContent := keyPair.PrivateKey
-	if !strings.HasSuffix(keyContent, "\n") {
-		keyContent += "\n"
-	}
-	if err := os.WriteFile(keyFile, []byte(keyContent), 0o600); err != nil {
-		return fmt.Errorf("failed to write SOPS key file to cluster directory '%s': %w", keyFile, err)
-	}
-
-	cfg.Secrets.SopsAgeKeyFile = keyFile
-	return nil
-}
-
-// generateOrganizationSOPSKey creates an age key file using the organization-based directory structure
-// and updates cfg.Secrets.SopsAgeKeyFile to point to the generated file.
-func generateOrganizationSOPSKey(cluster, organization string, cfg *config.Config, pathResolver config.PathResolverInterface) error {
-	// Resolve cluster paths for the organization
-	clusterPaths, err := pathResolver.ResolveClusterPaths(context.Background(), cluster, organization)
-	if err != nil {
-		return fmt.Errorf("failed to resolve cluster paths: %w", err)
-	}
-
-	// Create the secrets directory with proper permissions (0755 for directories)
-	secretsKeyDir := filepath.Dir(clusterPaths.SOPSKeyPath)
-	if err := os.MkdirAll(secretsKeyDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create organization secrets directory '%s': %w", secretsKeyDir, err)
-	}
-
-	// Use the new SOPS key manager to generate and save a proper Age key
-	km := sops.NewKeyManager(secretsKeyDir)
-	keyPair, err := km.GenerateAgeKey()
-	if err != nil {
-		return fmt.Errorf("failed to generate Age key pair: %w", err)
-	}
-
-	// Save the key using the key manager (creates <cluster>-key.txt and <cluster>-key.pub)
-	keyName := cluster + "-key"
-	if err := km.SaveAgeKey(keyPair, keyName); err != nil {
-		return fmt.Errorf("failed to save Age key pair: %w", err)
-	}
-
-	// Create or update the SOPS configuration file for the organization
-	if err := createOrganizationSOPSConfig(clusterPaths.SOPSConfigPath, keyPair.PublicKey, cluster); err != nil {
-		return fmt.Errorf("failed to create organization SOPS config: %w", err)
-	}
-
-	cfg.Secrets.SopsAgeKeyFile = clusterPaths.SOPSKeyPath
-	return nil
-}
-
-// createOrganizationSOPSConfig creates or updates the .sops.yaml configuration file at the organization root.
-// Each cluster's key only encrypts files in its specific directories:
-// - /applications/overlays/<cluster>/
-// - /infrastructure/clusters/<cluster>/
-func createOrganizationSOPSConfig(sopsConfigPath, publicKey string, clusterName string) error {
-	// sopsConfigPath is already the full path to .sops.yaml at organization root
-	rootSOPSConfigPath := sopsConfigPath
-
-	// Define the path patterns for this cluster
-	clusterRule := fmt.Sprintf(`  - path_regex: >-
-      (applications/overlays/%s/.*|infrastructure/clusters/%s/.*|\.%s-config)\.ya?ml$
-    age: >-
-      %s`, clusterName, clusterName, clusterName, publicKey)
-
-	// Check if .sops.yaml already exists at organization root
-	var existingContent string
-	if data, err := os.ReadFile(rootSOPSConfigPath); err == nil {
-		existingContent = string(data)
-	}
-
-	var sopsConfig string
-	if existingContent == "" {
-		// Create new .sops.yaml with header and first cluster rule
-		sopsConfig = fmt.Sprintf(`# SOPS configuration for organization
-# Each cluster's key encrypts only its specific directories
-creation_rules:
-%s
-`, clusterRule)
-	} else {
-		// Check if this cluster already has a rule
-		clusterRulePattern := fmt.Sprintf(`path_regex: \(applications/overlays/%s/`, clusterName)
-		if strings.Contains(existingContent, clusterRulePattern) {
-			// Cluster rule already exists, update it
-			// Find and replace the existing rule for this cluster
-			lines := strings.Split(existingContent, "\n")
-			var newLines []string
-			skipNext := false
-			inClusterRule := false
-
-			for i, line := range lines {
-				if skipNext {
-					skipNext = false
-					continue
-				}
-
-				// Check if this is the start of our cluster's rule
-				if strings.Contains(line, clusterRulePattern) {
-					inClusterRule = true
-					// Add the new rule
-					newLines = append(newLines, clusterRule)
-					// Skip the next line (age key line)
-					if i+1 < len(lines) && strings.Contains(lines[i+1], "age:") {
-						skipNext = true
-					}
-					continue
-				}
-
-				if inClusterRule && strings.TrimSpace(line) != "" && !strings.HasPrefix(strings.TrimSpace(line), "age:") {
-					inClusterRule = false
-				}
-
-				if !inClusterRule {
-					newLines = append(newLines, line)
-				}
-			}
-			sopsConfig = strings.Join(newLines, "\n")
-		} else {
-			// Append new cluster rule to existing config
-			// Insert before the last newline if it exists
-			existingContent = strings.TrimRight(existingContent, "\n")
-			sopsConfig = fmt.Sprintf("%s\n%s\n", existingContent, clusterRule)
-		}
-	}
-
-	// Write the SOPS configuration file at organization root
-	if err := os.WriteFile(rootSOPSConfigPath, []byte(sopsConfig), 0o600); err != nil {
-		return fmt.Errorf("failed to write SOPS config file: %w", err)
-	}
-
-	return nil
-}
-
-// createOrganizationGitignore creates a .gitignore file at the organization level.
-// This file is copied from the embedded gitops-base-dir/.gitignore template.
-func createOrganizationGitignore(organizationDir string) error {
-	gitignorePath := filepath.Join(organizationDir, ".gitignore")
-
-	// Check if .gitignore already exists
-	if _, err := os.Stat(gitignorePath); err == nil {
-		// .gitignore already exists, don't overwrite it
-		return nil
-	}
-
-	// Read the embedded .gitignore template from gitops-base-dir
-	gitignoreContent := `# Python
-__pycache__/
-*.pyc
-*.pyd
-*.pyo
-*.egg-info/
-.Python
-build/
-dist/
-venv/
-.env
-.pytest_cache/
-htmlcov/
-.tox/
-.mypy_cache/
-.ipynb_checkpoints/
-
-# Terraform
-.terraform/
-*.tfstate
-*.tfstate.*
-.terraform.lock.hcl
-crash.log
-override.tf
-override_*.tf
-*.tfvars
-*.tfvars.json
-.terraformrc
-terraform.rc
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-# Thumbnails
-._*
-# Spotlight files
-.Spotlight-V100
-# Temporary files
-.Trashes
-Icon?
-# Xcode
-build/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.xcscmblueprint
-.xcscmblueprint
-*.xccheckout
-# Finder
-.localized
-
-# Linux
-# Temporary files
-*~
-.#*
-*.swp
-*.bak
-*.tmp
-
-#RMPK specific
-.bin/
-id_rsa
-id_rsa.pub
-kubeconfig.yaml
-ca.crt
-ca.key
-kubespray/
-ansible-hardening/
-.python-version
-credentials/
-.mygitignore
-`
-
-	// Write the .gitignore file with proper permissions (0644 for files)
-	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0o644); err != nil {
-		return fmt.Errorf("failed to write .gitignore file to organization directory '%s': %w", gitignorePath, err)
-	}
-
-	return nil
-}
-
-// validateOrganizationName validates that an organization name is safe for use as a directory name.
-// Uses InputValidator for consistent validation (Requirements: 1.1, 1.5, 6.2)
-func validateOrganizationName(organization string) error {
-	validator := security.NewDefaultInputValidator()
-	return validator.ValidateOrganizationName(organization)
-}
-
-// parseServerPoolString parses a server pool configuration string in the format:
-// "name=value,key=value,..." and returns an AdditionalServerPool struct
-func parseServerPoolString(poolStr string) (config.AdditionalServerPool, error) {
-	pool := config.AdditionalServerPool{}
-
-	// Split by comma to get key=value pairs
-	pairs := strings.Split(poolStr, ",")
-	for _, pair := range pairs {
-		// Split by = to get key and value
-		kv := strings.SplitN(pair, "=", 2)
-		if len(kv) != 2 {
-			return pool, fmt.Errorf("invalid key=value pair: %s", pair)
-		}
-
-		key := strings.TrimSpace(kv[0])
-		value := strings.TrimSpace(kv[1])
-
-		// Map the key to the appropriate field
-		switch key {
-		case "name":
-			pool.Name = value
-		case "worker_count":
-			count, err := strconv.Atoi(value)
-			if err != nil {
-				return pool, fmt.Errorf("invalid worker_count '%s': %w", value, err)
-			}
-			pool.WorkerCount = count
-		case "flavor_worker":
-			pool.FlavorWorker = value
-		case "node_worker":
-			pool.NodeWorker = value
-		case "server_group_affinity":
-			pool.ServerGroupAffinity = value
-		case "image_id":
-			pool.ImageID = value
-		case "image_name":
-			pool.ImageName = value
-		case "worker_node_bfv_volume_size":
-			size, err := strconv.Atoi(value)
-			if err != nil {
-				return pool, fmt.Errorf("invalid worker_node_bfv_volume_size '%s': %w", value, err)
-			}
-			pool.WorkerNodeBFVVolumeSize = size
-		case "worker_node_bfv_destination_type":
-			pool.WorkerNodeBFVDestinationType = value
-		case "worker_node_bfv_source_type":
-			pool.WorkerNodeBFVSourceType = value
-		case "worker_node_bfv_volume_type":
-			pool.WorkerNodeBFVVolumeType = value
-		case "worker_node_bfv_delete_on_termination":
-			delete, err := strconv.ParseBool(value)
-			if err != nil {
-				return pool, fmt.Errorf("invalid worker_node_bfv_delete_on_termination '%s': %w", value, err)
-			}
-			pool.WorkerNodeBFVDeleteOnTermination = delete
-		case "pf9_onboard":
-			onboard, err := strconv.ParseBool(value)
-			if err != nil {
-				return pool, fmt.Errorf("invalid pf9_onboard '%s': %w", value, err)
-			}
-			pool.PF9Onboard = onboard
-		case "subnet_id":
-			pool.SubnetID = value
-		default:
-			return pool, fmt.Errorf("unknown server pool field: %s", key)
-		}
-	}
-
-	// Validate required fields
-	if pool.Name == "" {
-		return pool, fmt.Errorf("server pool name is required")
-	}
-	if pool.WorkerCount == 0 {
-		return pool, fmt.Errorf("server pool worker_count is required and must be > 0")
-	}
-	if pool.FlavorWorker == "" {
-		return pool, fmt.Errorf("server pool flavor_worker is required")
-	}
-	if pool.NodeWorker == "" {
-		return pool, fmt.Errorf("server pool node_worker is required")
-	}
-
-	return pool, nil
-}
-
-// convertServerPoolsToMap converts a slice of AdditionalServerPool structs to a slice of maps
-// for use in the configuration map structure
-func convertServerPoolsToMap(pools []config.AdditionalServerPool) []map[string]any {
-	var result []map[string]any
-	for _, pool := range pools {
-		poolMap := map[string]any{
-			"name":          pool.Name,
-			"worker_count":  pool.WorkerCount,
-			"flavor_worker": pool.FlavorWorker,
-			"node_worker":   pool.NodeWorker,
-		}
-
-		// Add optional fields if they're set
-		if pool.ServerGroupAffinity != "" {
-			poolMap["server_group_affinity"] = pool.ServerGroupAffinity
-		}
-		if pool.ImageID != "" {
-			poolMap["image_id"] = pool.ImageID
-		}
-		if pool.ImageName != "" {
-			poolMap["image_name"] = pool.ImageName
-		}
-		if pool.WorkerNodeBFVVolumeSize > 0 {
-			poolMap["worker_node_bfv_volume_size"] = pool.WorkerNodeBFVVolumeSize
-		}
-		if pool.WorkerNodeBFVDestinationType != "" {
-			poolMap["worker_node_bfv_destination_type"] = pool.WorkerNodeBFVDestinationType
-		}
-		if pool.WorkerNodeBFVSourceType != "" {
-			poolMap["worker_node_bfv_source_type"] = pool.WorkerNodeBFVSourceType
-		}
-		if pool.WorkerNodeBFVVolumeType != "" {
-			poolMap["worker_node_bfv_volume_type"] = pool.WorkerNodeBFVVolumeType
-		}
-		if pool.WorkerNodeBFVDeleteOnTermination {
-			poolMap["worker_node_bfv_delete_on_termination"] = pool.WorkerNodeBFVDeleteOnTermination
-		}
-		if pool.PF9Onboard {
-			poolMap["pf9_onboard"] = pool.PF9Onboard
-		}
-		if pool.SubnetID != "" {
-			poolMap["subnet_id"] = pool.SubnetID
-		}
-
-		result = append(result, poolMap)
-	}
-	return result
-}
-
-// handleLegacyFlatInit handles the legacy flat file structure for backward compatibility
-// when --config-dir is specified. This creates config files directly in the specified
-// directory as <cluster-name>.yaml instead of using the organization-based structure.
-func handleLegacyFlatInit(cmd *cobra.Command, name string, configMap map[string]any, configDir string) error {
-	// Ensure the config directory exists
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create config directory '%s': %w", configDir, err)
-	}
-
-	// Create config file path in flat structure
-	configPath := filepath.Join(configDir, name+".yaml")
-
-	// Check if file exists and handle --force flag
-	force, _ := cmd.Flags().GetBool("force")
-	if _, err := os.Stat(configPath); err == nil && !force {
-		return fmt.Errorf("configuration file '%s' already exists, use --force to overwrite", configPath)
-	}
-
-	// Convert the map to YAML
-	finalYAML, err := yaml.Marshal(configMap)
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	// Write the config file
-	if err := os.WriteFile(configPath, finalYAML, 0o600); err != nil {
-		return fmt.Errorf("failed to write config file to '%s': %w", configPath, err)
-	}
-
-	fmt.Fprintf(cmd.OutOrStdout(), "Created cluster configuration at '%s'\n", configPath)
 	return nil
 }

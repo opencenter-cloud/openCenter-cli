@@ -16,18 +16,18 @@ package v2
 // DeploymentConfig represents deployment method configuration.
 // Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
 type DeploymentConfig struct {
-	AutoDeploy bool             `yaml:"auto_deploy" json:"auto_deploy"`
-	Method     string           `yaml:"method" json:"method" validate:"required,oneof=kubespray talos kamaji eks gke aks cluster-api"`
-	Kubespray  *KubesprayConfig `yaml:"kubespray,omitempty" json:"kubespray,omitempty"`
-	Talos      *TalosConfig     `yaml:"talos,omitempty" json:"talos,omitempty"`
-	Kamaji     *KamajiConfig    `yaml:"kamaji,omitempty" json:"kamaji,omitempty"`
+	AutoDeploy bool              `yaml:"auto_deploy" json:"auto_deploy"`
+	Method     string            `yaml:"method" json:"method" validate:"required,oneof=kubespray talos kamaji eks gke aks cluster-api"`
+	Kubespray  *KubesprayConfig  `yaml:"kubespray,omitempty" json:"kubespray,omitempty"`
+	Talos      *TalosConfig      `yaml:"talos,omitempty" json:"talos,omitempty"`
+	Kamaji     *KamajiConfig     `yaml:"kamaji,omitempty" json:"kamaji,omitempty"`
 	ClusterAPI *ClusterAPIConfig `yaml:"cluster_api,omitempty" json:"cluster_api,omitempty"`
 }
 
 // KubesprayConfig represents Kubespray deployment configuration.
 // Requirements: 5.2
 type KubesprayConfig struct {
-	Version string                 `yaml:"version" json:"version" validate:"required,semver"`
+	Version string                  `yaml:"version" json:"version" validate:"required,semver"`
 	Modules map[string]ModuleConfig `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
 
@@ -42,18 +42,18 @@ type ModuleConfig struct {
 // TalosConfig represents Talos Linux deployment configuration.
 // Requirements: 5.3
 type TalosConfig struct {
-	Version string                 `yaml:"version" json:"version" validate:"required,semver"`
+	Version string                  `yaml:"version" json:"version" validate:"required,semver"`
 	Modules map[string]ModuleConfig `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
 
 // KamajiConfig represents Kamaji hosted control plane configuration.
 // Requirements: 5.4, 5.5, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8
 type KamajiConfig struct {
-	Enabled      bool                   `yaml:"enabled" json:"enabled"`
-	Version      string                 `yaml:"version" json:"version" validate:"required_if=Enabled true,omitempty,semver"`
-	ControlPlane KamajiControlPlane     `yaml:"control_plane" json:"control_plane" validate:"required_if=Enabled true"`
-	ClusterAPI   ClusterAPIConfig       `yaml:"cluster_api" json:"cluster_api" validate:"required_if=Enabled true"`
-	WorkerPools  []KamajiWorkerPool     `yaml:"worker_pools" json:"worker_pools" validate:"required_if=Enabled true,min=1,dive"`
+	Enabled      bool                    `yaml:"enabled" json:"enabled"`
+	Version      string                  `yaml:"version" json:"version" validate:"required_if=Enabled true,omitempty,semver"`
+	ControlPlane KamajiControlPlane      `yaml:"control_plane" json:"control_plane" validate:"required_if=Enabled true"`
+	ClusterAPI   ClusterAPIConfig        `yaml:"cluster_api" json:"cluster_api" validate:"required_if=Enabled true"`
+	WorkerPools  []KamajiWorkerPool      `yaml:"worker_pools" json:"worker_pools" validate:"required_if=Enabled true,min=1,dive"`
 	Modules      map[string]ModuleConfig `yaml:"modules,omitempty" json:"modules,omitempty"`
 }
 
@@ -107,12 +107,12 @@ type KamajiResourcesConfig struct {
 // ClusterAPIConfig represents Cluster API configuration.
 // Requirements: 10.6
 type ClusterAPIConfig struct {
-	Version   string                  `yaml:"version" json:"version" validate:"required,semver"`
-	Providers ClusterAPIProviders     `yaml:"providers" json:"providers" validate:"required"`
-	OpenStack *CAPIOpenStackConfig    `yaml:"openstack,omitempty" json:"openstack,omitempty"`
-	AWS       *CAPIAWSConfig          `yaml:"aws,omitempty" json:"aws,omitempty"`
-	Azure     *CAPIAzureConfig        `yaml:"azure,omitempty" json:"azure,omitempty"`
-	VMware    *CAPIVMwareConfig       `yaml:"vmware,omitempty" json:"vmware,omitempty"`
+	Version   string               `yaml:"version" json:"version" validate:"required,semver"`
+	Providers ClusterAPIProviders  `yaml:"providers" json:"providers" validate:"required"`
+	OpenStack *CAPIOpenStackConfig `yaml:"openstack,omitempty" json:"openstack,omitempty"`
+	AWS       *CAPIAWSConfig       `yaml:"aws,omitempty" json:"aws,omitempty"`
+	Azure     *CAPIAzureConfig     `yaml:"azure,omitempty" json:"azure,omitempty"`
+	VMware    *CAPIVMwareConfig    `yaml:"vmware,omitempty" json:"vmware,omitempty"`
 }
 
 // ClusterAPIProviders represents Cluster API provider configuration.
@@ -147,18 +147,18 @@ type CAPIVMwareConfig struct {
 // KamajiWorkerPool represents a Kamaji worker pool configuration.
 // Requirements: 10.7, 10.8
 type KamajiWorkerPool struct {
-	Name              string            `yaml:"name" json:"name" validate:"required,dns1123"`
-	OS                string            `yaml:"os" json:"os" validate:"required,oneof=ubuntu windows talos"`
-	Count             int               `yaml:"count" json:"count" validate:"required,min=1"`
-	Flavor            string            `yaml:"flavor" json:"flavor" validate:"required"`
-	Image             string            `yaml:"image" json:"image" validate:"required"`
-	BootstrapProvider string            `yaml:"bootstrap_provider" json:"bootstrap_provider" validate:"required,oneof=kubeadm talos"`
-	TalosVersion      string            `yaml:"talos_version,omitempty" json:"talos_version,omitempty" validate:"required_if=OS talos,omitempty,semver"`
-	BootVolume        VolumeConfig      `yaml:"boot_volume" json:"boot_volume" validate:"required"`
-	AdditionalVolumes []VolumeConfig    `yaml:"additional_volumes,omitempty" json:"additional_volumes,omitempty"`
-	Labels            map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Taints            []TaintConfig     `yaml:"taints,omitempty" json:"taints,omitempty"`
-	Autoscaling       AutoscalingConfig `yaml:"autoscaling,omitempty" json:"autoscaling,omitempty"`
+	Name              string             `yaml:"name" json:"name" validate:"required,dns1123"`
+	OS                string             `yaml:"os" json:"os" validate:"required,oneof=ubuntu windows talos"`
+	Count             int                `yaml:"count" json:"count" validate:"required,min=1"`
+	Flavor            string             `yaml:"flavor" json:"flavor" validate:"required"`
+	Image             string             `yaml:"image" json:"image" validate:"required"`
+	BootstrapProvider string             `yaml:"bootstrap_provider" json:"bootstrap_provider" validate:"required,oneof=kubeadm talos"`
+	TalosVersion      string             `yaml:"talos_version,omitempty" json:"talos_version,omitempty" validate:"required_if=OS talos,omitempty,semver"`
+	BootVolume        VolumeConfig       `yaml:"boot_volume" json:"boot_volume" validate:"required"`
+	AdditionalVolumes []VolumeConfig     `yaml:"additional_volumes,omitempty" json:"additional_volumes,omitempty"`
+	Labels            map[string]string  `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Taints            []TaintConfig      `yaml:"taints,omitempty" json:"taints,omitempty"`
+	Autoscaling       AutoscalingConfig  `yaml:"autoscaling,omitempty" json:"autoscaling,omitempty"`
 	TalosConfig       *TalosWorkerConfig `yaml:"talos_config,omitempty" json:"talos_config,omitempty"`
 }
 

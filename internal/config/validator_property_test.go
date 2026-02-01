@@ -90,7 +90,7 @@ func TestProperty_ValidationCompleteness(t *testing.T) {
 			if invalidCIDR == "" {
 				return true
 			}
-			
+
 			cfg := ClusterNetworkingConfig{
 				SubnetNodes:          invalidCIDR,
 				NTPServers:           []string{"time.example.com"},
@@ -127,12 +127,12 @@ func TestProperty_ValidationCompleteness(t *testing.T) {
 	properties.Property("validator enforces enum constraints", prop.ForAll(
 		func(provider string) bool {
 			cfg := Infrastructure{
-				Provider:    provider,
-				SSHUser:     "ubuntu",
-				OSVersion:   "24",
-				NodeNaming:  NodeNaming{Worker: "wn", Master: "cp"},
-				Bastion:     BastionConfig{Address: "localhost"},
-				Cloud:       CloudConfig{},
+				Provider:   provider,
+				SSHUser:    "ubuntu",
+				OSVersion:  "24",
+				NodeNaming: NodeNaming{Worker: "wn", Master: "cp"},
+				Bastion:    BastionConfig{Address: "localhost"},
+				Cloud:      CloudConfig{},
 			}
 
 			err := validate.Struct(cfg)

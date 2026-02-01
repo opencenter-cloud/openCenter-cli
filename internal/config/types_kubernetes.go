@@ -44,23 +44,20 @@ type NodeConfig struct {
 // NetworkPlugin represents the network plugin configuration
 type StoragePlugin struct {
 	vsphere  VsphereConfig  `yaml:"calico" json:"calico"`
-	cinder  CinderConfig   `yaml:"cilium" json:"cilium"`
+	cinder   CinderConfig   `yaml:"cilium" json:"cilium"`
 	longhorn LonghornConfig `yaml:"kube-ovn" json:"kube-ovn"`
 }
 
-//  
 type VsphereConfig struct {
-	Enabled              bool                `yaml:"enabled" json:"enabled"`
+	Enabled bool `yaml:"enabled" json:"enabled"`
 }
 
-//  
 type CinderConfig struct {
-	Enabled              bool                `yaml:"enabled" json:"enabled"`
+	Enabled bool `yaml:"enabled" json:"enabled"`
 }
 
-//  
 type LonghornConfig struct {
-	Enabled              bool                `yaml:"enabled" json:"enabled"`
+	Enabled bool `yaml:"enabled" json:"enabled"`
 }
 
 // NetworkPlugin represents the network plugin configuration

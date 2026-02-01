@@ -32,6 +32,24 @@ type Service struct {
 	Logger *Logger
 }
 
+// ShutdownableComponent for testing Shutdown functionality
+type ShutdownableComponent struct {
+	Name           string
+	ShutdownCalled bool
+}
+
+func (s *ShutdownableComponent) Shutdown() error {
+	s.ShutdownCalled = true
+	return nil
+}
+
+// FailingShutdownComponent for testing Shutdown errors
+type FailingShutdownComponent struct{}
+
+func (f *FailingShutdownComponent) Shutdown() error {
+	return errors.New("shutdown failed")
+}
+
 func TestNewContainer(t *testing.T) {
 	container := NewContainer()
 	if container == nil {
@@ -349,5 +367,221 @@ func TestMultipleDependencies(t *testing.T) {
 	}
 	if service.DB.Logger == nil {
 		t.Error("Service.DB.Logger is nil")
+	}
+}
+
+func TestUnresolvableDependency(t *testing.T) {
+	container := NewContainer()
+
+	// Register component with unresolvable dependency
+	err := container.Register("service", func(missing *Logger) (*Service, error) {
+		return &Service{Logger: missing}, nil
+	})
+	if err != nil {
+		t.Fatalf("Register() failed: %v", err)
+	}
+
+	// Resolve should fail due to missing dependency
+	_, err = container.Resolve("service")
+	if err == nil {
+		t.Error("Resolve() should fail for unresolvable dependency")
+	}
+}
+
+func TestConstructorWithNoReturnValue(t *testing.T) {
+	container := NewContainer()
+
+	// Register constructor with no return value
+	err := container.Register("invalid", func() {
+		// No return value
+	})
+	if err != nil {
+		t.Fatalf("Register() failed: %v", err)
+	}
+
+	// Resolve should fail
+	_, err = container.Resolve("invalid")
+	if err == nil {
+		t.Error("Resolve() should fail for constructor with no return value")
+	}
+}
+
+func TestSingletonWithDependencies(t *testing.T) {
+	container := NewContainer()
+
+	loggerCallCount := 0
+	dbCallCount := 0
+
+	// Register logger as singleton
+	err := container.Singleton("logger", func() (*Logger, error) {
+		loggerCallCount++
+		return &Logger{Name: "singleton"}, nil
+	})
+	if err != nil {
+		t.Fatalf("Singleton() failed: %v", err)
+	}
+
+	// Register database as singleton with logger dependency
+	err = container.Singleton("database", func(logger *Logger) (*Database, error) {
+		dbCallCount++
+		return &Database{Logger: logger}, nil
+	})
+	if err != nil {
+		t.Fatalf("Singleton() failed: %v", err)
+	}
+
+	// Initialize singletons
+	err = container.Initialize()
+	if err != nil {
+		t.Fatalf("Initialize() failed: %v", err)
+	}
+
+	// Resolve multiple times
+	db1, err := container.Resolve("database")
+	if err != nil {
+		t.Errorf("Resolve() failed: %v", err)
+	}
+
+	db2, err := container.Resolve("database")
+	if err != nil {
+		t.Errorf("Resolve() failed: %v", err)
+	}
+
+	// Should be the same instance
+	if db1 != db2 {
+		t.Error("Singleton should return the same instance")
+	}
+
+	// Constructors should be called only once each
+	if loggerCallCount != 1 {
+		t.Errorf("Logger constructor called %d times, want 1", loggerCallCount)
+	}
+	if dbCallCount != 1 {
+		t.Errorf("Database constructor called %d times, want 1", dbCallCount)
+	}
+}
+
+func TestResolveAsWithWrongType(t *testing.T) {
+	container := NewContainer()
+
+	// Register a logger
+	err := container.Register("logger", func() (*Logger, error) {
+		return &Logger{Name: "test"}, nil
+	})
+	if err != nil {
+		t.Fatalf("Register() failed: %v", err)
+	}
+
+	// Try to resolve as wrong type
+	var db *Database
+	err = container.ResolveAs("logger", &db)
+	if err == nil {
+		t.Error("ResolveAs() should fail when types don't match")
+	}
+}
+
+func TestShutdownWithShutdownableComponent(t *testing.T) {
+	container := NewContainer()
+
+	shutdownable := &ShutdownableComponent{Name: "test"}
+
+	err := container.Singleton("shutdownable", func() (*ShutdownableComponent, error) {
+		return shutdownable, nil
+	})
+	if err != nil {
+		t.Fatalf("Singleton() failed: %v", err)
+	}
+
+	// Initialize
+	err = container.Initialize()
+	if err != nil {
+		t.Fatalf("Initialize() failed: %v", err)
+	}
+
+	// Shutdown should call the Shutdown method
+	err = container.Shutdown()
+	if err != nil {
+		t.Errorf("Shutdown() failed: %v", err)
+	}
+
+	if !shutdownable.ShutdownCalled {
+		t.Error("Shutdown() did not call component's Shutdown method")
+	}
+}
+
+func TestShutdownError(t *testing.T) {
+	container := NewContainer()
+
+	err := container.Singleton("failing", func() (*FailingShutdownComponent, error) {
+		return &FailingShutdownComponent{}, nil
+	})
+	if err != nil {
+		t.Fatalf("Singleton() failed: %v", err)
+	}
+
+	// Initialize
+	err = container.Initialize()
+	if err != nil {
+		t.Fatalf("Initialize() failed: %v", err)
+	}
+
+	// Shutdown should return the error
+	err = container.Shutdown()
+	if err == nil {
+		t.Error("Shutdown() should return error from component")
+	}
+}
+
+func TestInitializeAlreadyInitialized(t *testing.T) {
+	container := NewContainer()
+
+	callCount := 0
+	err := container.Singleton("logger", func() (*Logger, error) {
+		callCount++
+		return &Logger{Name: "test"}, nil
+	})
+	if err != nil {
+		t.Fatalf("Singleton() failed: %v", err)
+	}
+
+	// Initialize once
+	err = container.Initialize()
+	if err != nil {
+		t.Fatalf("Initialize() failed: %v", err)
+	}
+
+	// Initialize again - should not call constructor again
+	err = container.Initialize()
+	if err != nil {
+		t.Fatalf("Initialize() failed on second call: %v", err)
+	}
+
+	if callCount != 1 {
+		t.Errorf("Constructor called %d times, want 1", callCount)
+	}
+}
+
+func TestRegisterAfterResolve(t *testing.T) {
+	container := NewContainer()
+
+	// Register and resolve a component
+	err := container.Register("logger", func() (*Logger, error) {
+		return &Logger{Name: "test"}, nil
+	})
+	if err != nil {
+		t.Fatalf("Register() failed: %v", err)
+	}
+
+	_, err = container.Resolve("logger")
+	if err != nil {
+		t.Fatalf("Resolve() failed: %v", err)
+	}
+
+	// Register another component - should work
+	err = container.Register("database", func() (*Database, error) {
+		return &Database{}, nil
+	})
+	if err != nil {
+		t.Errorf("Register() should work after Resolve(): %v", err)
 	}
 }

@@ -117,7 +117,7 @@ func (d *KamajiDeployment) ValidateConfig(cfg *Config) error {
 
 	// Validate Kamaji-specific configuration
 	// Note: In v2, Kamaji config would be in deployment.kamaji, but for now we validate the constraints
-	
+
 	return nil
 }
 

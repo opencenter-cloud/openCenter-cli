@@ -18,11 +18,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation"
 	"github.com/rackerlabs/opencenter-cli/internal/di"
 	"github.com/rackerlabs/opencenter-cli/internal/plugins"
 )
@@ -31,6 +34,51 @@ import (
 type contextKey string
 
 const ContainerKey contextKey = "container"
+
+var (
+	globalContainer di.Container
+	containerOnce   sync.Once
+)
+
+// getContainer returns the global DI container, initializing it if necessary
+func getContainer() di.Container {
+	containerOnce.Do(func() {
+		globalContainer = initializeContainer()
+	})
+	return globalContainer
+}
+
+// initializeContainer creates and initializes the DI container with all services
+func initializeContainer() di.Container {
+	container := di.NewContainer()
+
+	// Get base directory for path resolver
+	baseDir, _ := config.ResolveConfigDir()
+
+	// Register core services as singletons
+	_ = container.Singleton("PathResolver", func() (*paths.PathResolver, error) {
+		return di.ProvidePathResolver(baseDir)
+	})
+
+	_ = container.Singleton("ConfigManager", func() (*config.ConfigManager, error) {
+		return di.ProvideConfigManager()
+	})
+
+	_ = container.Singleton("ValidationEngine", func() (*validation.ValidationEngine, error) {
+		return di.ProvideValidationEngine()
+	})
+
+	// Register domain services
+	_ = container.Singleton("InitService", di.ProvideInitService)
+	_ = container.Singleton("ValidateService", di.ProvideValidateService)
+	_ = container.Singleton("SetupService", di.ProvideSetupService)
+	_ = container.Singleton("BootstrapService", di.ProvideBootstrapService)
+
+	// Initialize all singletons
+	_ = container.Initialize()
+
+	return container
+}
 
 // GetContainer retrieves the DI container from the context
 func GetContainer(ctx context.Context) (di.Container, error) {

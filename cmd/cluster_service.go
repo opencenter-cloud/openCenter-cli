@@ -77,7 +77,7 @@ Examples:
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			serviceName := args[0]
-			
+
 			// Resolve cluster name from flag or active cluster
 			clusterName, err := resolveClusterNameFromFlag(cluster, true)
 			if err != nil {
@@ -198,7 +198,7 @@ Examples:
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			serviceName := args[0]
-			
+
 			// Resolve cluster name from flag or active cluster
 			clusterName, err := resolveClusterNameFromFlag(cluster, true)
 			if err != nil {

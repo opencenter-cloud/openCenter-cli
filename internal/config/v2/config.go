@@ -16,32 +16,32 @@ package v2
 // Config represents the root v2 configuration structure.
 // Requirements: 1.1, 1.3, 1.4, 1.5, 1.6, 1.7
 type Config struct {
-	SchemaVersion string            `yaml:"schema_version" json:"schema_version" validate:"required,eq=2.0"`
-	Metadata      ConfigMetadata    `yaml:"metadata,omitempty" json:"metadata,omitempty"`
-	OpenCenter    OpenCenterConfig  `yaml:"opencenter" json:"opencenter" validate:"required"`
-	Deployment    DeploymentConfig  `yaml:"deployment,omitempty" json:"deployment,omitempty"`
-	OpenTofu      OpenTofuConfig    `yaml:"opentofu,omitempty" json:"opentofu,omitempty"`
-	Secrets       SecretsConfig     `yaml:"secrets" json:"secrets" validate:"required"`
+	SchemaVersion string           `yaml:"schema_version" json:"schema_version" validate:"required,eq=2.0"`
+	Metadata      ConfigMetadata   `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	OpenCenter    OpenCenterConfig `yaml:"opencenter" json:"opencenter" validate:"required"`
+	Deployment    DeploymentConfig `yaml:"deployment,omitempty" json:"deployment,omitempty"`
+	OpenTofu      OpenTofuConfig   `yaml:"opentofu,omitempty" json:"opentofu,omitempty"`
+	Secrets       SecretsConfig    `yaml:"secrets" json:"secrets" validate:"required"`
 }
 
 // ConfigMetadata holds system-managed metadata about the configuration.
 type ConfigMetadata struct {
-	CreatedAt    string            `yaml:"created_at,omitempty" json:"created_at,omitempty"`
-	UpdatedAt    string            `yaml:"updated_at,omitempty" json:"updated_at,omitempty"`
-	Version      string            `yaml:"version,omitempty" json:"version,omitempty"`
-	Labels       map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations  map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	CreatedAt   string            `yaml:"created_at,omitempty" json:"created_at,omitempty"`
+	UpdatedAt   string            `yaml:"updated_at,omitempty" json:"updated_at,omitempty"`
+	Version     string            `yaml:"version,omitempty" json:"version,omitempty"`
+	Labels      map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
 }
 
 // OpenCenterConfig represents the main opencenter configuration with five domains.
 // Requirements: 1.1, 1.3, 1.4, 1.5, 1.6, 1.7
 type OpenCenterConfig struct {
-	Meta             MetaConfig           `yaml:"meta" json:"meta" validate:"required"`
-	Cluster          ClusterConfig        `yaml:"cluster" json:"cluster" validate:"required"`
-	Infrastructure   InfrastructureConfig `yaml:"infrastructure" json:"infrastructure" validate:"required"`
-	Services         ServiceMap           `yaml:"services,omitempty" json:"services,omitempty"`
-	ManagedServices  ServiceMap           `yaml:"managed_services,omitempty" json:"managed_services,omitempty"`
-	GitOps           GitOpsConfig         `yaml:"gitops,omitempty" json:"gitops,omitempty"`
+	Meta            MetaConfig           `yaml:"meta" json:"meta" validate:"required"`
+	Cluster         ClusterConfig        `yaml:"cluster" json:"cluster" validate:"required"`
+	Infrastructure  InfrastructureConfig `yaml:"infrastructure" json:"infrastructure" validate:"required"`
+	Services        ServiceMap           `yaml:"services,omitempty" json:"services,omitempty"`
+	ManagedServices ServiceMap           `yaml:"managed_services,omitempty" json:"managed_services,omitempty"`
+	GitOps          GitOpsConfig         `yaml:"gitops,omitempty" json:"gitops,omitempty"`
 }
 
 // MetaConfig contains cluster identity and organizational context.
@@ -53,8 +53,6 @@ type MetaConfig struct {
 	Region       string `yaml:"region" json:"region" validate:"required"`
 	Status       string `yaml:"status,omitempty" json:"status,omitempty"`
 }
-
-
 
 // OpenTofuConfig represents OpenTofu/Terraform backend configuration.
 // Requirements: 20.1
@@ -76,9 +74,9 @@ type BackendConfig struct {
 // SecretsConfig represents secrets configuration.
 // Requirements: 18.1, 18.2, 18.3
 type SecretsConfig struct {
-	Global           GlobalSecrets         `yaml:"global,omitempty" json:"global,omitempty"`
-	ServiceSecrets   map[string]any        `yaml:"service_secrets,omitempty" json:"service_secrets,omitempty"`
-	SOPSConfig       SOPSConfig            `yaml:"sops,omitempty" json:"sops,omitempty"`
+	Global         GlobalSecrets  `yaml:"global,omitempty" json:"global,omitempty"`
+	ServiceSecrets map[string]any `yaml:"service_secrets,omitempty" json:"service_secrets,omitempty"`
+	SOPSConfig     SOPSConfig     `yaml:"sops,omitempty" json:"sops,omitempty"`
 }
 
 // GlobalSecrets holds infrastructure-wide credentials.
@@ -95,8 +93,8 @@ type GlobalSecrets struct {
 // SOPSConfig represents SOPS encryption configuration.
 // Requirements: 18.5, 18.6
 type SOPSConfig struct {
-	Enabled     bool   `yaml:"enabled" json:"enabled"`
-	AgeKeyFile  string `yaml:"age_key_file,omitempty" json:"age_key_file,omitempty" validate:"required_if=Enabled true"`
+	Enabled        bool   `yaml:"enabled" json:"enabled"`
+	AgeKeyFile     string `yaml:"age_key_file,omitempty" json:"age_key_file,omitempty" validate:"required_if=Enabled true"`
 	EncryptedRegex string `yaml:"encrypted_regex,omitempty" json:"encrypted_regex,omitempty"`
 }
 

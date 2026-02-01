@@ -72,12 +72,12 @@ func TestProperty_KamajiDeploymentConstraints(t *testing.T) {
 			if kamaji == nil {
 				return true
 			}
-			
+
 			// Get Kamaji config from deployment
 			if len(cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker) == 0 {
 				return false
 			}
-			
+
 			// Check that replicas is odd (1, 3, 5, 7)
 			// This is validated through the generator
 			return true
@@ -131,7 +131,7 @@ func TestProperty_KamajiDeploymentConstraints(t *testing.T) {
 			if !pool.Autoscaling.Enabled {
 				return true
 			}
-			
+
 			// When autoscaling is enabled:
 			// - min_replicas must be >= 1
 			// - max_replicas must be >= min_replicas
@@ -145,7 +145,7 @@ func TestProperty_KamajiDeploymentConstraints(t *testing.T) {
 			if pool.Count < pool.Autoscaling.MinReplicas || pool.Count > pool.Autoscaling.MaxReplicas {
 				return false
 			}
-			
+
 			return true
 		},
 		genKamajiWorkerPool(),
@@ -188,11 +188,11 @@ func genClusterConfigForKamaji() gopter.Gen {
 		clusterName := parts[0].(string)
 		baseDomain := parts[1].(string)
 		return ClusterConfig{
-			ClusterName:  clusterName,
-			BaseDomain:   baseDomain,
-			ClusterFQDN:  clusterName + "." + baseDomain,
-			AdminEmail:   parts[2].(string),
-			Kubernetes:   parts[3].(KubernetesConfig),
+			ClusterName: clusterName,
+			BaseDomain:  baseDomain,
+			ClusterFQDN: clusterName + "." + baseDomain,
+			AdminEmail:  parts[2].(string),
+			Kubernetes:  parts[3].(KubernetesConfig),
 		}
 	})
 }
@@ -225,7 +225,7 @@ func genInfrastructureConfigForKamaji() gopter.Gen {
 	).FlatMap(func(parts interface{}) gopter.Gen {
 		partsSlice := parts.([]interface{})
 		provider := partsSlice[0].(string)
-		
+
 		return genCloudConfig(provider).Map(func(cloud CloudConfig) InfrastructureConfig {
 			return InfrastructureConfig{
 				Provider: provider,
@@ -282,7 +282,7 @@ func genComputeConfigForKamaji() gopter.Gen {
 				},
 			}
 		}
-		
+
 		return ComputeConfig{
 			FlavorMaster:                "m1.medium",
 			FlavorWorker:                "m1.large",
@@ -305,7 +305,7 @@ func genKamajiWorkerPool() gopter.Gen {
 		os := parts[1].(string)
 		count := parts[2].(int)
 		autoscalingEnabled := parts[3].(bool)
-		
+
 		// Determine bootstrap provider based on OS
 		bootstrapProvider := "kubeadm"
 		talosVersion := ""
@@ -313,7 +313,7 @@ func genKamajiWorkerPool() gopter.Gen {
 			bootstrapProvider = "talos"
 			talosVersion = "1.6.0"
 		}
-		
+
 		// Generate autoscaling config
 		autoscaling := AutoscalingConfig{
 			Enabled: autoscalingEnabled,
@@ -322,7 +322,7 @@ func genKamajiWorkerPool() gopter.Gen {
 			autoscaling.MinReplicas = count
 			autoscaling.MaxReplicas = count + 5
 		}
-		
+
 		return KamajiWorkerPool{
 			Name:              name,
 			OS:                os,
@@ -339,7 +339,6 @@ func genKamajiWorkerPool() gopter.Gen {
 		}
 	})
 }
-
 
 // Property 12: Provider-Deployment Compatibility
 // For any provider-deployment combination, the validator must correctly accept valid
@@ -361,10 +360,10 @@ func TestProperty_ProviderDeploymentCompatibility(t *testing.T) {
 
 			// Validate compatibility
 			err = deploymentValidator.ValidateCompatibility(provider)
-			
+
 			// Check if this is a valid combination
 			isValid := isValidProviderDeploymentCombination(provider, method)
-			
+
 			// Should return nil error for valid combinations
 			if isValid {
 				return err == nil
@@ -471,7 +470,7 @@ func TestProperty_ProviderDeploymentCompatibility(t *testing.T) {
 			}
 
 			err = deploymentValidator.ValidateConfig(cfg)
-			
+
 			// Methods requiring masters should reject master_count=0
 			if deploymentValidator.RequiresMasterNodes() {
 				return err != nil

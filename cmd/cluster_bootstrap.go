@@ -73,7 +73,7 @@ func newClusterBootstrapCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bootstrap [name]",
 		Short: "Run provider-specific bootstrap actions for a cluster",
-		Args: cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
 			name, err := resolveClusterName(args, true)

@@ -141,7 +141,7 @@ func renderAllServices(cfg config.Config, force bool, cmd *cobra.Command) error 
 		if err := backupApplicationsDirectory(cfg, cmd); err != nil {
 			return fmt.Errorf("failed to create backups: %w", err)
 		}
-		
+
 		// Also backup infrastructure if it exists
 		infraPath := filepath.Join(gitOpsDir, "infrastructure", "clusters", clusterName)
 		if _, err := os.Stat(infraPath); err == nil {
@@ -195,7 +195,7 @@ func renderSingleService(cfg config.Config, serviceName string, force bool, cmd 
 	// Check if service files already exist
 	gitOpsDir := cfg.GitOps().GitDir
 	serviceDir := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "services", serviceName)
-	
+
 	if _, err := os.Stat(serviceDir); err == nil && !force {
 		return fmt.Errorf("service '%s' is enabled but files already exist, use --force to overwrite (creates backup)", serviceName)
 	}

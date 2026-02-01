@@ -366,7 +366,7 @@ func getBaseConfig(service any) *services.BaseConfig {
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
-	
+
 	// Look for BaseConfig field
 	if val.Kind() == reflect.Struct {
 		baseField := val.FieldByName("BaseConfig")
@@ -376,7 +376,7 @@ func getBaseConfig(service any) *services.BaseConfig {
 			}
 		}
 	}
-	
+
 	return nil
 }
 

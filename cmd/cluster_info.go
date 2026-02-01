@@ -31,7 +31,7 @@ func newClusterInfoCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "info [name]",
 		Short: "Show configuration for a cluster",
-		Args: cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
 			name, err := resolveClusterName(args, false)

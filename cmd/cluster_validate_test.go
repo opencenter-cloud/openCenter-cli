@@ -28,11 +28,11 @@ import (
 // Requirements: 13.2
 func TestSchemaVersionDetection(t *testing.T) {
 	tests := []struct {
-		name           string
-		configContent  string
-		expectedV1     bool
-		expectedV2     bool
-		expectError    bool
+		name          string
+		configContent string
+		expectedV1    bool
+		expectedV2    bool
+		expectError   bool
 	}{
 		{
 			name: "v1 config with explicit version",
@@ -73,14 +73,14 @@ opencenter:
 			// Create temporary config file
 			tmpDir := t.TempDir()
 			configPath := filepath.Join(tmpDir, "test-config.yaml")
-			
+
 			if err := os.WriteFile(configPath, []byte(tt.configContent), 0600); err != nil {
 				t.Fatalf("failed to write test config: %v", err)
 			}
 
 			// Detect schema version
 			versionInfo, err := config.DetectSchemaVersionFromFile(configPath)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("expected error but got none")
@@ -109,7 +109,7 @@ func TestValidateCommandV2Support(t *testing.T) {
 	// This is an integration test that would require a full v2 config
 	// For now, we just verify the command structure is correct
 	cmd := newClusterValidateCmd()
-	
+
 	if cmd == nil {
 		t.Fatal("validate command should not be nil")
 	}
@@ -130,13 +130,12 @@ func TestValidateCommandV2Support(t *testing.T) {
 	}
 }
 
-
 // TestValidateV2ConfigIntegration tests end-to-end v2 configuration validation.
 // Requirements: 13.2, 11.7
 func TestValidateV2ConfigIntegration(t *testing.T) {
 	// Load the test v2 config
 	configPath := filepath.Join("..", "testdata", "v2-minimal-config.yaml")
-	
+
 	// Check if file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Skipf("test config not found: %s", configPath)
@@ -180,7 +179,7 @@ func TestValidateV1ConfigBackwardCompatibility(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "v1-config.yaml")
-	
+
 	if err := os.WriteFile(configPath, []byte(v1Config), 0600); err != nil {
 		t.Fatalf("failed to write test config: %v", err)
 	}
@@ -199,7 +198,6 @@ func TestValidateV1ConfigBackwardCompatibility(t *testing.T) {
 		t.Errorf("expected version '1.0' (default), got '%s'", versionInfo.Version)
 	}
 }
-
 
 // TestValidationErrorFormatting tests that validation errors are displayed with field paths.
 // Requirements: 11.7
@@ -278,7 +276,7 @@ secrets:
 
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "invalid-v2-config.yaml")
-	
+
 	if err := os.WriteFile(configPath, []byte(invalidV2Config), 0600); err != nil {
 		t.Fatalf("failed to write test config: %v", err)
 	}
@@ -296,7 +294,7 @@ secrets:
 	// Try to load and validate - should fail with field path errors
 	registry := defaults.NewRegistry()
 	loader := v2.NewConfigLoader(registry)
-	
+
 	_, err = loader.LoadFromFile(configPath)
 	if err == nil {
 		t.Error("expected validation error but got none")

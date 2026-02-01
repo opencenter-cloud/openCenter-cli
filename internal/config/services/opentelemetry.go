@@ -9,10 +9,10 @@ type OpenTelemetryConfig struct {
 	BaseConfig `yaml:",inline"`
 
 	// Collector configuration
-	CollectorMode     string          `yaml:"collector_mode" json:"collector_mode,omitempty" jsonschema:"description=Collector deployment mode,enum=deployment,enum=daemonset,enum=statefulset,default=deployment"`
-	CollectorReplicas int             `yaml:"collector_replicas" json:"collector_replicas,omitempty" jsonschema:"description=Number of collector replicas,default=1"`
-	Exporters         []OTelExporter  `yaml:"exporters" json:"exporters,omitempty" jsonschema:"description=List of exporters"`
-	Processors        []string        `yaml:"processors" json:"processors,omitempty" jsonschema:"description=List of processor names"`
+	CollectorMode     string         `yaml:"collector_mode" json:"collector_mode,omitempty" jsonschema:"description=Collector deployment mode,enum=deployment,enum=daemonset,enum=statefulset,default=deployment"`
+	CollectorReplicas int            `yaml:"collector_replicas" json:"collector_replicas,omitempty" jsonschema:"description=Number of collector replicas,default=1"`
+	Exporters         []OTelExporter `yaml:"exporters" json:"exporters,omitempty" jsonschema:"description=List of exporters"`
+	Processors        []string       `yaml:"processors" json:"processors,omitempty" jsonschema:"description=List of processor names"`
 }
 
 // OTelExporter represents an OpenTelemetry exporter configuration

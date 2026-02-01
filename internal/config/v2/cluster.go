@@ -135,10 +135,10 @@ type KubernetesSecurityConfig struct {
 
 // OIDCConfig represents OIDC authentication configuration.
 type OIDCConfig struct {
-	Enabled      bool   `yaml:"enabled" json:"enabled"`
-	IssuerURL    string `yaml:"issuer_url,omitempty" json:"issuer_url,omitempty" validate:"required_if=Enabled true,omitempty,url"`
-	ClientID     string `yaml:"client_id,omitempty" json:"client_id,omitempty" validate:"required_if=Enabled true"`
-	ClientSecret string `yaml:"client_secret,omitempty" json:"client_secret,omitempty" validate:"required_if=Enabled true"`
+	Enabled       bool   `yaml:"enabled" json:"enabled"`
+	IssuerURL     string `yaml:"issuer_url,omitempty" json:"issuer_url,omitempty" validate:"required_if=Enabled true,omitempty,url"`
+	ClientID      string `yaml:"client_id,omitempty" json:"client_id,omitempty" validate:"required_if=Enabled true"`
+	ClientSecret  string `yaml:"client_secret,omitempty" json:"client_secret,omitempty" validate:"required_if=Enabled true"`
 	UsernameClaim string `yaml:"username_claim,omitempty" json:"username_claim,omitempty"`
 	GroupsClaim   string `yaml:"groups_claim,omitempty" json:"groups_claim,omitempty"`
 }

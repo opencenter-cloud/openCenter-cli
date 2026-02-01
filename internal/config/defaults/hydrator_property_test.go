@@ -23,15 +23,15 @@ import (
 
 // TestConfig is a simple test configuration struct for hydration testing.
 type TestConfig struct {
-	ImageID              string
-	DefaultStorageClass  string
-	FlavorBastion        string
-	FlavorMaster         string
-	FlavorWorker         string
-	FlavorWorkerWindows  string
-	AvailabilityZones    []string
-	NTPServers           []string
-	DNSNameservers       []string
+	ImageID             string
+	DefaultStorageClass string
+	FlavorBastion       string
+	FlavorMaster        string
+	FlavorWorker        string
+	FlavorWorkerWindows string
+	AvailabilityZones   []string
+	NTPServers          []string
+	DNSNameservers      []string
 }
 
 // Property 4: Default Precedence Order

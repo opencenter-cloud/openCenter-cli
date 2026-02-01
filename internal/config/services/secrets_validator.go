@@ -20,9 +20,9 @@ import (
 
 // SecretRequirement represents a required secret for a service
 type SecretRequirement struct {
-	SecretPath  string   // Path to the secret in the secrets configuration
-	Condition   string   // Condition when this secret is required (e.g., "dns_provider=route53")
-	Description string   // Human-readable description of what the secret is for
+	SecretPath  string // Path to the secret in the secrets configuration
+	Condition   string // Condition when this secret is required (e.g., "dns_provider=route53")
+	Description string // Human-readable description of what the secret is for
 }
 
 // ServiceSecretMapping defines required secrets for each service
@@ -255,7 +255,7 @@ func (v *SecretsValidator) isConditionMet(condition string, serviceConfig any) b
 func (v *SecretsValidator) isSecretConfigured(secretPath string, secrets map[string]any) bool {
 	// Parse the secret path (e.g., "service_secrets.cert_manager.aws_access_key")
 	// For simplicity, we'll check if the path exists and has a non-empty value
-	
+
 	// Split path into parts
 	var parts []string
 	currentPart := ""

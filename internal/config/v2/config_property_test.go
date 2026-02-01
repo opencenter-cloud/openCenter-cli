@@ -41,25 +41,25 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 		func(cfg *Config) bool {
 			// Verify VRRP IP is in infrastructure.networking.vrrp_ip
 			vrrpIP := cfg.OpenCenter.Infrastructure.Networking.VRRPIP
-			
+
 			// Verify it doesn't appear in deprecated locations by checking struct fields
 			// We use reflection to ensure no other field contains the VRRP IP value
 			if vrrpIP == "" {
 				return true // Empty VRRP IP is valid
 			}
-			
+
 			// Check that VRRP IP doesn't appear in cluster domain
 			clusterVal := reflect.ValueOf(cfg.OpenCenter.Cluster)
 			if containsVRRPIPInStruct(clusterVal, vrrpIP, "infrastructure.networking.vrrp_ip") {
 				return false
 			}
-			
+
 			// Check that VRRP IP doesn't appear in cloud provider configs (except as reference)
 			cloudVal := reflect.ValueOf(cfg.OpenCenter.Infrastructure.Cloud)
 			if containsVRRPIPInStruct(cloudVal, vrrpIP, "infrastructure.networking.vrrp_ip") {
 				return false
 			}
-			
+
 			return true
 		},
 		genValidV2Config(),
@@ -69,7 +69,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 		func(cfg *Config) bool {
 			provider := cfg.OpenCenter.Infrastructure.Provider
 			cloud := cfg.OpenCenter.Infrastructure.Cloud
-			
+
 			// Count how many provider sections are populated
 			populatedSections := 0
 			if cloud.OpenStack != nil && !isEmptyStruct(cloud.OpenStack) {
@@ -102,7 +102,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 					return false
 				}
 			}
-			
+
 			// Only one provider section should be populated
 			return populatedSections <= 1
 		},
@@ -113,7 +113,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 		func(cfg *Config) bool {
 			// Verify infrastructure networking fields are in infrastructure.networking
 			networking := cfg.OpenCenter.Infrastructure.Networking
-			
+
 			// These fields should only exist in infrastructure.networking
 			if networking.SubnetNodes == "" {
 				return false // Required field
@@ -124,7 +124,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 			if len(networking.NTPServers) == 0 {
 				return false // Required field
 			}
-			
+
 			// Verify these fields don't appear in cluster domain
 			// (This is enforced by struct design, but we verify the invariant)
 			return true
@@ -135,7 +135,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 	properties.Property("compute configuration only in infrastructure.compute", prop.ForAll(
 		func(cfg *Config) bool {
 			compute := cfg.OpenCenter.Infrastructure.Compute
-			
+
 			// Verify compute fields are populated
 			if compute.MasterCount > 0 && compute.FlavorMaster == "" {
 				return false
@@ -143,7 +143,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 			if compute.WorkerCount > 0 && compute.FlavorWorker == "" {
 				return false
 			}
-			
+
 			// Verify compute configuration doesn't leak into cluster domain
 			// (This is enforced by struct design)
 			return true
@@ -154,7 +154,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 	properties.Property("storage configuration only in infrastructure.storage", prop.ForAll(
 		func(cfg *Config) bool {
 			storage := cfg.OpenCenter.Infrastructure.Storage
-			
+
 			// Verify storage fields are populated
 			if storage.DefaultStorageClass == "" {
 				return false
@@ -162,7 +162,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 			if storage.WorkerVolumeSize <= 0 {
 				return false
 			}
-			
+
 			// Verify storage configuration doesn't leak into other domains
 			// (This is enforced by struct design)
 			return true
@@ -181,7 +181,7 @@ func containsVRRPIPInStruct(v reflect.Value, vrrpIP, allowedPath string) bool {
 	if !v.IsValid() {
 		return false
 	}
-	
+
 	switch v.Kind() {
 	case reflect.String:
 		// Check if this string field contains the VRRP IP
@@ -213,7 +213,7 @@ func containsVRRPIPInStruct(v reflect.Value, vrrpIP, allowedPath string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -222,7 +222,7 @@ func isEmptyStruct(v interface{}) bool {
 	if v == nil {
 		return true
 	}
-	
+
 	val := reflect.ValueOf(v)
 	if val.Kind() == reflect.Ptr {
 		if val.IsNil() {
@@ -230,18 +230,18 @@ func isEmptyStruct(v interface{}) bool {
 		}
 		val = val.Elem()
 	}
-	
+
 	if val.Kind() != reflect.Struct {
 		return false
 	}
-	
+
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Field(i)
 		if !field.IsZero() {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -296,11 +296,11 @@ func genClusterConfig() gopter.Gen {
 		clusterName := strings.ToLower(parts[0].(string))
 		baseDomain := parts[1].(string)
 		return ClusterConfig{
-			ClusterName:  clusterName,
-			BaseDomain:   baseDomain,
-			ClusterFQDN:  clusterName + "." + baseDomain,
-			AdminEmail:   parts[2].(string),
-			Kubernetes:   parts[3].(KubernetesConfig),
+			ClusterName: clusterName,
+			BaseDomain:  baseDomain,
+			ClusterFQDN: clusterName + "." + baseDomain,
+			AdminEmail:  parts[2].(string),
+			Kubernetes:  parts[3].(KubernetesConfig),
 		}
 	})
 }
@@ -332,7 +332,7 @@ func genInfrastructureConfig() gopter.Gen {
 	).FlatMap(func(parts interface{}) gopter.Gen {
 		partsSlice := parts.([]interface{})
 		provider := partsSlice[0].(string)
-		
+
 		return genCloudConfig(provider).Map(func(cloud CloudConfig) InfrastructureConfig {
 			return InfrastructureConfig{
 				Provider: provider,
@@ -364,7 +364,7 @@ func genNetworkingConfig() gopter.Gen {
 		if vrrpEnabled {
 			vrrpIP = "10.2.128.5"
 		}
-		
+
 		return NetworkingConfig{
 			SubnetNodes:          parts[0].(string),
 			AllocationPoolStart:  parts[1].(string),
@@ -387,7 +387,7 @@ func genComputeConfig() gopter.Gen {
 	).Map(func(parts []interface{}) ComputeConfig {
 		masterCount := parts[0].(int)
 		workerCount := parts[1].(int)
-		
+
 		return ComputeConfig{
 			FlavorMaster: "m1.medium",
 			FlavorWorker: "m1.large",

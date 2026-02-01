@@ -336,7 +336,6 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 	properties.TestingRun(t, gopter.ConsoleReporter(false))
 }
 
-
 // Helper function to check if a string contains a substring
 func containsSubstring(s, substr string) bool {
 	if len(substr) > len(s) {

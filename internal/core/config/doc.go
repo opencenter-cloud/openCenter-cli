@@ -1,0 +1,139 @@
+// Copyright 2025 Victor Palma <victor.palma@rackspace.com>
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package config provides unified configuration management for opencenter-cli.
+//
+// This package is part of the architectural refactoring effort to consolidate
+// configuration loading, version handling, and migration into a single,
+// well-structured system.
+//
+// # Architecture
+//
+// The package is organized into focused modules:
+//
+//   - manager.go: ConfigManager with strategy pattern for version handling
+//   - types.go: Core configuration types (Config, Metadata, etc.)
+//   - defaults.go: Default value generation and application
+//   - persistence.go: File I/O operations (Load, Save, path resolution)
+//   - strategies/: Version-specific loading strategies (v1, v2, legacy)
+//   - migration/: Version migration logic
+//
+// # Key Features
+//
+//   - Auto-detection of configuration version from YAML
+//   - Strategy-based loading for version-specific logic
+//   - Integrated migration pipeline for version upgrades
+//   - Thread-safe caching with invalidation
+//   - Single Load() method handles all versions
+//   - Organization-aware path resolution
+//
+// # Usage
+//
+// Basic configuration loading:
+//
+//	manager := config.NewConfigManager()
+//	cfg, err := manager.Load("/path/to/config.yaml", config.LoadOptions{
+//	    AutoMigrate: true,
+//	    Validate: true,
+//	})
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+// Creating a new configuration with defaults:
+//
+//	cfg := config.NewDefault("my-cluster")
+//	err := manager.Save("/path/to/config.yaml", cfg)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+// Loading with cache bypass:
+//
+//	cfg, err := manager.Load(path, config.LoadOptions{
+//	    SkipCache: true,
+//	})
+//
+// Invalidating cache after external changes:
+//
+//	manager.InvalidateCache(path)
+//
+// Registering custom strategies:
+//
+//	manager.RegisterStrategy(myCustomStrategy)
+//
+// # Version Detection and Migration
+//
+// The ConfigManager automatically detects the configuration version by examining
+// the YAML structure. It tries each registered strategy in order until one
+// reports it can load the configuration.
+//
+// When AutoMigrate is enabled, older configurations are automatically upgraded:
+//
+//	// Load a v1 config and auto-migrate to v2
+//	cfg, err := manager.Load("old-config.yaml", config.LoadOptions{
+//	    AutoMigrate: true,
+//	})
+//	// cfg is now in v2 format
+//
+// Migration preserves all data and adds new required fields with sensible defaults.
+// The original file is backed up before migration.
+//
+// # Implementation Status
+//
+// This package has completed Phase 1 (Foundation) of the architectural refactoring:
+//
+//   - ✅ Phase 1: Package structure, ConfigManager, strategies, and migration
+//   - 🔄 Phase 2: Integration with command layer (in progress)
+//   - ⏳ Phase 3: Deprecation of legacy config package
+//   - ⏳ Phase 4: Performance optimization and final cleanup
+//
+// The ConfigManager is fully functional and ready for use. It supports:
+//   - V2 configuration format (current)
+//   - V1 configuration format (with auto-migration)
+//   - Legacy flat-file format (with auto-migration)
+//   - Thread-safe caching
+//   - Validation integration
+//
+// # Design Principles
+//
+//   - Single Responsibility: Each file has one clear purpose
+//   - Strategy Pattern: Version-specific logic is isolated
+//   - Dependency Inversion: High-level code depends on abstractions
+//   - Open/Closed: Open for extension (new versions), closed for modification
+//
+// # Thread Safety
+//
+// ConfigManager is thread-safe. Multiple goroutines can safely call Load()
+// and Save() concurrently. The internal cache is protected by a RWMutex.
+//
+// # Performance
+//
+// Target performance characteristics:
+//
+//   - Config loading: <100ms (50% improvement over current)
+//   - Cache hit: <1ms
+//   - Memory usage: <100MB peak (33% reduction)
+//
+// # Related Packages
+//
+//   - internal/core/paths: Path resolution and organization structure
+//   - internal/core/validation: Configuration validation
+//   - internal/config: Legacy configuration package (to be deprecated)
+//
+// # References
+//
+//   - Design Document: .kiro/specs/architectural-refactoring/design.md
+//   - Requirements: .kiro/specs/architectural-refactoring/requirements.md
+//   - Tasks: .kiro/specs/architectural-refactoring/tasks.md
+package config

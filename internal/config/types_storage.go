@@ -9,8 +9,8 @@ type Storage struct {
 
 // BFV describes the block volume size and type.
 type BFV struct {
-	Size int    `yaml:"size" json:"size"`
-	Type string `yaml:"type" json:"type"`
+	Size                        int              `yaml:"size" json:"size"`
+	Type                        string           `yaml:"type" json:"type"`
 	WorkerVolumeSize            int              `yaml:"worker_volume_size,omitempty" json:"worker_volume_size,omitempty" jsonschema:"description=Worker node boot volume size in GB,default=100"`
 	WorkerVolumeDestinationType string           `yaml:"worker_volume_destination_type,omitempty" json:"worker_volume_destination_type,omitempty" jsonschema:"description=Worker node boot volume destination type,default=volume"`
 	WorkerVolumeSourceType      string           `yaml:"worker_volume_source_type,omitempty" json:"worker_volume_source_type,omitempty" jsonschema:"description=Worker node boot volume source type,default=image"`

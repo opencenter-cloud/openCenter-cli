@@ -24,10 +24,10 @@ import (
 type ReferenceResolver interface {
 	// Resolve resolves all references in the configuration
 	Resolve(cfg *Config) error
-	
+
 	// BuildDependencyGraph builds a dependency graph from the configuration
 	BuildDependencyGraph(cfg *Config) (*DependencyGraph, error)
-	
+
 	// DetectCycles detects circular dependencies in the graph
 	DetectCycles(graph *DependencyGraph) error
 }
@@ -323,7 +323,7 @@ func (r *referenceResolver) resolveString(cfg *Config, str string) (string, erro
 
 			// Convert value to string
 			refStr := fmt.Sprintf("%v", refValue)
-			
+
 			// If the referenced value still contains references, resolve them recursively
 			if r.referencePattern.MatchString(refStr) {
 				refStr, err = r.resolveString(cfg, refStr)
@@ -363,7 +363,7 @@ func (r *referenceResolver) getValueAtPath(cfg *Config, path string) (interface{
 			// Parse array access like "field[0]"
 			fieldName := part[:strings.Index(part, "[")]
 			indexStr := part[strings.Index(part, "[")+1 : strings.Index(part, "]")]
-			
+
 			// Get the field
 			v = r.getFieldByName(v, fieldName)
 			if !v.IsValid() {
@@ -425,7 +425,7 @@ func (r *referenceResolver) setValueAtPath(cfg *Config, path string, value inter
 		if strings.Contains(part, "[") && strings.Contains(part, "]") {
 			fieldName := part[:strings.Index(part, "[")]
 			indexStr := part[strings.Index(part, "[")+1 : strings.Index(part, "]")]
-			
+
 			v = r.getFieldByName(v, fieldName)
 			if !v.IsValid() {
 				return fmt.Errorf("field '%s' not found at path '%s'", fieldName, strings.Join(parts[:i+1], "."))
@@ -473,7 +473,7 @@ func (r *referenceResolver) setValueAtPath(cfg *Config, path string, value inter
 	// Set the value
 	newValue := reflect.ValueOf(value)
 	if !newValue.Type().AssignableTo(field.Type()) {
-		return fmt.Errorf("cannot assign value of type %s to field of type %s at path '%s'", 
+		return fmt.Errorf("cannot assign value of type %s to field of type %s at path '%s'",
 			newValue.Type(), field.Type(), path)
 	}
 

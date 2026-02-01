@@ -37,7 +37,7 @@ func TestProperty_RequiredSecretsValidation(t *testing.T) {
 		func(serviceType string, providerType string, hasSecrets bool) bool {
 			// Create service configuration based on type and provider
 			services := createServiceWithProvider(serviceType, providerType)
-			
+
 			// Create secrets configuration
 			var secrets map[string]any
 			if hasSecrets {
@@ -75,7 +75,7 @@ func TestProperty_RequiredSecretsValidation(t *testing.T) {
 		func(serviceType string, providerType string) bool {
 			// Create disabled service
 			services := createDisabledService(serviceType, providerType)
-			
+
 			// No secrets configured
 			secrets := map[string]any{
 				"service_secrets": map[string]any{},
@@ -424,7 +424,6 @@ func TestProperty_RequiredSecretsValidation_EdgeCases(t *testing.T) {
 
 	properties.TestingRun(t)
 }
-
 
 // doesServiceProviderRequireSecrets checks if a service/provider combination requires secrets
 func doesServiceProviderRequireSecrets(serviceType string, providerType string) bool {

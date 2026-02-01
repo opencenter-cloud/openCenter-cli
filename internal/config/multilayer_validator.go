@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	
+
 	"github.com/rackerlabs/opencenter-cli/internal/config/services"
 )
 
@@ -39,19 +39,19 @@ func (e V2ValidationError) Error() string {
 type V2Validator interface {
 	// Validate performs all validation layers
 	Validate(cfg *Config) []V2ValidationError
-	
+
 	// ValidateSchema performs schema validation (required fields, data types, enum values)
 	ValidateSchema(cfg *Config) []V2ValidationError
-	
+
 	// ValidateBusinessRules performs business rule validation (cross-field dependencies, value ranges)
 	ValidateBusinessRules(cfg *Config) []V2ValidationError
-	
+
 	// ValidateProvider performs provider-specific validation
 	ValidateProvider(cfg *Config) []V2ValidationError
-	
+
 	// ValidateDeployment performs deployment-method validation
 	ValidateDeployment(cfg *Config) []V2ValidationError
-	
+
 	// ValidateServices performs service dependency validation
 	ValidateServices(cfg *Config) []V2ValidationError
 }
@@ -64,10 +64,10 @@ type multiLayerValidator struct {
 // NewMultiLayerValidator creates a new multi-layered validator
 func NewMultiLayerValidator() V2Validator {
 	v := validator.New()
-	
+
 	// Register custom validation functions
 	registerCustomValidations(v)
-	
+
 	return &multiLayerValidator{
 		validate: v,
 	}
@@ -77,16 +77,16 @@ func NewMultiLayerValidator() V2Validator {
 func registerCustomValidations(v *validator.Validate) {
 	// Register dns1123 validation
 	v.RegisterValidation("dns1123", validateDNS1123)
-	
+
 	// Register cidrv4 validation
 	v.RegisterValidation("cidrv4", validateCIDRv4)
-	
+
 	// Register semver validation
 	v.RegisterValidation("semver", validateSemVer)
-	
+
 	// Override built-in email validation with stricter version
 	v.RegisterValidation("email", validateEmail)
-	
+
 	// Override built-in fqdn validation with stricter version
 	v.RegisterValidation("fqdn", validateFQDN)
 }
@@ -97,13 +97,13 @@ func validateDNS1123(fl validator.FieldLevel) bool {
 	if value == "" {
 		return true // Empty is valid for optional fields
 	}
-	
+
 	// DNS-1123 label: lowercase alphanumeric, hyphens, max 63 chars
 	// Must start and end with alphanumeric
 	if len(value) > 63 {
 		return false
 	}
-	
+
 	for i, c := range value {
 		if i == 0 || i == len(value)-1 {
 			// First and last must be alphanumeric
@@ -117,7 +117,7 @@ func validateDNS1123(fl validator.FieldLevel) bool {
 			}
 		}
 	}
-	
+
 	return true
 }
 
@@ -127,7 +127,7 @@ func validateCIDRv4(fl validator.FieldLevel) bool {
 	if value == "" {
 		return true // Empty is valid for optional fields
 	}
-	
+
 	_, _, err := net.ParseCIDR(value)
 	return err == nil
 }
@@ -138,17 +138,17 @@ func validateSemVer(fl validator.FieldLevel) bool {
 	if value == "" {
 		return true // Empty is valid for optional fields
 	}
-	
+
 	// Basic semver pattern: v?X.Y.Z or v?X.Y.Z-suffix
 	// Remove leading 'v' if present
 	value = strings.TrimPrefix(value, "v")
-	
+
 	// Split by '.' and '-'
 	parts := strings.Split(value, ".")
 	if len(parts) < 2 {
 		return false
 	}
-	
+
 	// Check that first parts are numeric
 	for i := 0; i < 2 && i < len(parts); i++ {
 		part := parts[i]
@@ -165,7 +165,7 @@ func validateSemVer(fl validator.FieldLevel) bool {
 			}
 		}
 	}
-	
+
 	return true
 }
 
@@ -175,64 +175,64 @@ func validateEmail(fl validator.FieldLevel) bool {
 	if value == "" {
 		return true // Empty is valid for optional fields
 	}
-	
+
 	// Email must contain exactly one @
 	atIndex := strings.Index(value, "@")
 	if atIndex == -1 {
 		return false // No @ sign
 	}
-	
+
 	// Check for multiple @ signs
 	if strings.Count(value, "@") > 1 {
 		return false
 	}
-	
+
 	// Split into local and domain parts
 	localPart := value[:atIndex]
 	domainPart := value[atIndex+1:]
-	
+
 	// Local part must not be empty
 	if localPart == "" {
 		return false
 	}
-	
+
 	// Domain part must not be empty
 	if domainPart == "" {
 		return false
 	}
-	
+
 	// Domain must contain at least one dot
 	if !strings.Contains(domainPart, ".") {
 		return false
 	}
-	
+
 	// Domain must not start or end with dot
 	if strings.HasPrefix(domainPart, ".") || strings.HasSuffix(domainPart, ".") {
 		return false
 	}
-	
+
 	// Domain must have a TLD (at least one character after the last dot)
 	lastDotIndex := strings.LastIndex(domainPart, ".")
 	if lastDotIndex == len(domainPart)-1 {
 		return false
 	}
-	
+
 	// Basic character validation for local part
 	for _, c := range localPart {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || 
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
 			(c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-' || c == '+') {
 			return false
 		}
 	}
-	
+
 	// Basic character validation for domain part
 	for _, c := range domainPart {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || 
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
 			(c >= '0' && c <= '9') || c == '.' || c == '-') {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -242,39 +242,39 @@ func validateFQDN(fl validator.FieldLevel) bool {
 	if value == "" {
 		return true // Empty is valid for optional fields
 	}
-	
+
 	// FQDN must contain at least one dot
 	if !strings.Contains(value, ".") {
 		return false
 	}
-	
+
 	// FQDN must not start or end with dot
 	if strings.HasPrefix(value, ".") || strings.HasSuffix(value, ".") {
 		return false
 	}
-	
+
 	// Split into labels
 	labels := strings.Split(value, ".")
 	if len(labels) < 2 {
 		return false
 	}
-	
+
 	// Each label must be valid
 	for _, label := range labels {
 		if label == "" {
 			return false
 		}
-		
+
 		// Label must not exceed 63 characters
 		if len(label) > 63 {
 			return false
 		}
-		
+
 		// Label must start and end with alphanumeric
 		if len(label) > 0 {
 			first := label[0]
 			last := label[len(label)-1]
-			
+
 			if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || (first >= '0' && first <= '9')) {
 				return false
 			}
@@ -282,50 +282,50 @@ func validateFQDN(fl validator.FieldLevel) bool {
 				return false
 			}
 		}
-		
+
 		// Label can contain alphanumeric and hyphens
 		for _, c := range label {
-			if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || 
+			if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
 				(c >= '0' && c <= '9') || c == '-') {
 				return false
 			}
 		}
 	}
-	
+
 	return true
 }
 
 // Validate performs all validation layers
 func (v *multiLayerValidator) Validate(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	// Layer 1: Schema validation
 	errors = append(errors, v.ValidateSchema(cfg)...)
-	
+
 	// Layer 2: Business rules validation
 	errors = append(errors, v.ValidateBusinessRules(cfg)...)
-	
+
 	// Layer 3: Provider-specific validation
 	errors = append(errors, v.ValidateProvider(cfg)...)
-	
+
 	// Layer 4: Deployment-method validation
 	errors = append(errors, v.ValidateDeployment(cfg)...)
-	
+
 	// Layer 5: Service dependency validation
 	errors = append(errors, v.ValidateServices(cfg)...)
-	
+
 	return errors
 }
 
 // ValidateSchema performs schema validation using go-playground/validator
 func (v *multiLayerValidator) ValidateSchema(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	err := v.validate.Struct(cfg)
 	if err == nil {
 		return errors
 	}
-	
+
 	// Convert validator errors to V2ValidationError
 	validationErrors, ok := err.(validator.ValidationErrors)
 	if !ok {
@@ -336,7 +336,7 @@ func (v *multiLayerValidator) ValidateSchema(cfg *Config) []V2ValidationError {
 		})
 		return errors
 	}
-	
+
 	for _, fieldErr := range validationErrors {
 		errors = append(errors, V2ValidationError{
 			Code:    getErrorCode(fieldErr.Tag()),
@@ -344,7 +344,7 @@ func (v *multiLayerValidator) ValidateSchema(cfg *Config) []V2ValidationError {
 			Message: getErrorMessage(fieldErr),
 		})
 	}
-	
+
 	return errors
 }
 
@@ -353,11 +353,11 @@ func (v *multiLayerValidator) ValidateSchema(cfg *Config) []V2ValidationError {
 func normalizeFieldPath(namespace string) string {
 	// Remove "Config." prefix if present
 	path := strings.TrimPrefix(namespace, "Config.")
-	
+
 	// Split by dots to process each segment
 	segments := strings.Split(path, ".")
 	var result []string
-	
+
 	for _, segment := range segments {
 		// Special case for known compound words
 		lowerSegment := strings.ToLower(segment)
@@ -365,10 +365,10 @@ func normalizeFieldPath(namespace string) string {
 			result = append(result, lowerSegment)
 			continue
 		}
-		
+
 		// Convert PascalCase to snake_case
 		var segmentResult strings.Builder
-		
+
 		for i, r := range segment {
 			if r >= 'A' && r <= 'Z' {
 				// Add underscore before uppercase if not at start and previous was lowercase
@@ -385,14 +385,14 @@ func normalizeFieldPath(namespace string) string {
 		}
 		result = append(result, segmentResult.String())
 	}
-	
+
 	return strings.Join(result, ".")
 }
 
 // ValidateBusinessRules performs business rule validation
 func (v *multiLayerValidator) ValidateBusinessRules(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	// Validate CIDR containment (allocation pool within subnet)
 	if cfg.OpenCenter.Cluster.Networking.SubnetNodes != "" {
 		_, subnet, err := net.ParseCIDR(cfg.OpenCenter.Cluster.Networking.SubnetNodes)
@@ -408,7 +408,7 @@ func (v *multiLayerValidator) ValidateBusinessRules(cfg *Config) []V2ValidationE
 					})
 				}
 			}
-			
+
 			// Check allocation pool end
 			if cfg.OpenCenter.Cluster.Networking.AllocationPoolEnd != "" {
 				endIP := net.ParseIP(cfg.OpenCenter.Cluster.Networking.AllocationPoolEnd)
@@ -422,7 +422,7 @@ func (v *multiLayerValidator) ValidateBusinessRules(cfg *Config) []V2ValidationE
 			}
 		}
 	}
-	
+
 	// Validate VRRP IP is required when VRRP is enabled
 	if cfg.OpenCenter.Cluster.Networking.VRRPEnabled && cfg.OpenCenter.Cluster.Networking.VRRPIP == "" {
 		errors = append(errors, V2ValidationError{
@@ -431,7 +431,7 @@ func (v *multiLayerValidator) ValidateBusinessRules(cfg *Config) []V2ValidationE
 			Message: "VRRP IP is required when VRRP is enabled",
 		})
 	}
-	
+
 	// Validate node counts
 	if cfg.OpenCenter.Cluster.Kubernetes.MasterCount < 0 {
 		errors = append(errors, V2ValidationError{
@@ -440,7 +440,7 @@ func (v *multiLayerValidator) ValidateBusinessRules(cfg *Config) []V2ValidationE
 			Message: "master count cannot be negative",
 		})
 	}
-	
+
 	if cfg.OpenCenter.Cluster.Kubernetes.WorkerCount < 0 {
 		errors = append(errors, V2ValidationError{
 			Code:    "E007",
@@ -448,16 +448,16 @@ func (v *multiLayerValidator) ValidateBusinessRules(cfg *Config) []V2ValidationE
 			Message: "worker count cannot be negative",
 		})
 	}
-	
+
 	return errors
 }
 
 // ValidateProvider performs provider-specific validation
 func (v *multiLayerValidator) ValidateProvider(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	provider := cfg.OpenCenter.Infrastructure.Provider
-	
+
 	switch provider {
 	case "openstack":
 		errors = append(errors, v.validateOpenStackProvider(cfg)...)
@@ -474,14 +474,14 @@ func (v *multiLayerValidator) ValidateProvider(cfg *Config) []V2ValidationError 
 			Message: fmt.Sprintf("unsupported provider: %s", provider),
 		})
 	}
-	
+
 	return errors
 }
 
 // validateOpenStackProvider validates OpenStack-specific configuration
 func (v *multiLayerValidator) validateOpenStackProvider(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	// Check that OpenStack configuration is provided
 	if cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL == "" {
 		errors = append(errors, V2ValidationError{
@@ -490,7 +490,7 @@ func (v *multiLayerValidator) validateOpenStackProvider(cfg *Config) []V2Validat
 			Message: "OpenStack auth_url is required when provider is openstack",
 		})
 	}
-	
+
 	if cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Region == "" {
 		errors = append(errors, V2ValidationError{
 			Code:    "E009",
@@ -498,14 +498,14 @@ func (v *multiLayerValidator) validateOpenStackProvider(cfg *Config) []V2Validat
 			Message: "OpenStack region is required when provider is openstack",
 		})
 	}
-	
+
 	return errors
 }
 
 // validateAWSProvider validates AWS-specific configuration
 func (v *multiLayerValidator) validateAWSProvider(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	// Check that AWS configuration is provided
 	if cfg.OpenCenter.Infrastructure.Cloud.AWS.Region == "" {
 		errors = append(errors, V2ValidationError{
@@ -514,47 +514,47 @@ func (v *multiLayerValidator) validateAWSProvider(cfg *Config) []V2ValidationErr
 			Message: "AWS region is required when provider is aws",
 		})
 	}
-	
+
 	return errors
 }
 
 // validateGCPProvider validates GCP-specific configuration
 func (v *multiLayerValidator) validateGCPProvider(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	// GCP validation would go here
 	// For now, just a placeholder
-	
+
 	return errors
 }
 
 // validateAzureProvider validates Azure-specific configuration
 func (v *multiLayerValidator) validateAzureProvider(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	// Azure validation would go here
 	// For now, just a placeholder
-	
+
 	return errors
 }
 
 // ValidateDeployment performs deployment-method validation
 func (v *multiLayerValidator) ValidateDeployment(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	// Deployment validation would go here
 	// For now, just a placeholder
-	
+
 	return errors
 }
 
 // ValidateServices performs service dependency validation
 func (v *multiLayerValidator) ValidateServices(cfg *Config) []V2ValidationError {
 	var errors []V2ValidationError
-	
+
 	// Import the service dependency validator
 	depValidator := services.NewDependencyValidator()
-	
+
 	// Validate service dependencies
 	depErrors := depValidator.ValidateDependencies(cfg.OpenCenter.Services)
 	for _, errMsg := range depErrors {
@@ -564,7 +564,7 @@ func (v *multiLayerValidator) ValidateServices(cfg *Config) []V2ValidationError 
 			Message: errMsg,
 		})
 	}
-	
+
 	// Validate Headlamp OIDC configuration
 	oidcErrors := depValidator.ValidateHeadlampOIDC(cfg.OpenCenter.Services)
 	for _, errMsg := range oidcErrors {
@@ -574,7 +574,7 @@ func (v *multiLayerValidator) ValidateServices(cfg *Config) []V2ValidationError 
 			Message: errMsg,
 		})
 	}
-	
+
 	return errors
 }
 
@@ -609,7 +609,7 @@ func getErrorMessage(fieldErr validator.FieldError) string {
 	field := fieldErr.Field()
 	tag := fieldErr.Tag()
 	param := fieldErr.Param()
-	
+
 	switch tag {
 	case "required":
 		return fmt.Sprintf("%s is required", field)

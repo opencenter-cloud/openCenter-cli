@@ -59,23 +59,23 @@ func (m *DefaultMigrator) Migrate(v1Config *config.Config) (*Config, error) {
 	v2Config := &Config{
 		SchemaVersion: "2.0",
 		Metadata: ConfigMetadata{
-			CreatedAt: time.Now().Format(time.RFC3339),
-			UpdatedAt: time.Now().Format(time.RFC3339),
-			Version:   "2.0",
-			Labels:    make(map[string]string),
+			CreatedAt:   time.Now().Format(time.RFC3339),
+			UpdatedAt:   time.Now().Format(time.RFC3339),
+			Version:     "2.0",
+			Labels:      make(map[string]string),
 			Annotations: make(map[string]string),
 		},
 		OpenCenter: OpenCenterConfig{
-			Meta: m.migrateMeta(v1Config),
-			Cluster: m.migrateCluster(v1Config),
-			Infrastructure: m.migrateInfrastructure(v1Config),
-			Services: make(ServiceMap),
+			Meta:            m.migrateMeta(v1Config),
+			Cluster:         m.migrateCluster(v1Config),
+			Infrastructure:  m.migrateInfrastructure(v1Config),
+			Services:        make(ServiceMap),
 			ManagedServices: make(ServiceMap),
-			GitOps: m.migrateGitOps(v1Config),
+			GitOps:          m.migrateGitOps(v1Config),
 		},
 		Deployment: m.migrateDeployment(v1Config),
-		OpenTofu: m.migrateOpenTofu(v1Config),
-		Secrets: m.migrateSecrets(v1Config),
+		OpenTofu:   m.migrateOpenTofu(v1Config),
+		Secrets:    m.migrateSecrets(v1Config),
 	}
 
 	// Apply hydration to make implicit v1 defaults explicit in v2
@@ -296,13 +296,13 @@ func (m *DefaultMigrator) migrateVLAN(v1 *config.Config) VLANConfig {
 // Requirements: 12.4
 func (m *DefaultMigrator) migrateCompute(v1 *config.Config) ComputeConfig {
 	return ComputeConfig{
-		FlavorBastion:              v1.OpenCenter.Cluster.Kubernetes.FlavorBastion,
-		FlavorMaster:               v1.OpenCenter.Cluster.Kubernetes.FlavorMaster,
-		FlavorWorker:               v1.OpenCenter.Cluster.Kubernetes.FlavorWorker,
-		FlavorWorkerWindows:        v1.OpenCenter.Cluster.Kubernetes.FlavorWorkerWindows,
-		MasterCount:                v1.OpenCenter.Cluster.Kubernetes.MasterCount,
-		WorkerCount:                v1.OpenCenter.Cluster.Kubernetes.WorkerCount,
-		WorkerCountWindows:         v1.OpenCenter.Cluster.Kubernetes.WorkerCountWindows,
+		FlavorBastion:               v1.OpenCenter.Cluster.Kubernetes.FlavorBastion,
+		FlavorMaster:                v1.OpenCenter.Cluster.Kubernetes.FlavorMaster,
+		FlavorWorker:                v1.OpenCenter.Cluster.Kubernetes.FlavorWorker,
+		FlavorWorkerWindows:         v1.OpenCenter.Cluster.Kubernetes.FlavorWorkerWindows,
+		MasterCount:                 v1.OpenCenter.Cluster.Kubernetes.MasterCount,
+		WorkerCount:                 v1.OpenCenter.Cluster.Kubernetes.WorkerCount,
+		WorkerCountWindows:          v1.OpenCenter.Cluster.Kubernetes.WorkerCountWindows,
 		AdditionalServerPoolsWorker: []WorkerPoolConfig{}, // Migrate if present
 	}
 }

@@ -26,7 +26,7 @@ import (
 type SchemaGenerator interface {
 	// Generate creates a JSON schema for the specified version
 	Generate(version string) (*jsonschema.Schema, error)
-	
+
 	// WriteToFile writes the generated schema to a file
 	WriteToFile(schema *jsonschema.Schema, path string) error
 }
@@ -43,7 +43,7 @@ func NewSchemaGenerator() SchemaGenerator {
 		DoNotReference:            false,
 		ExpandedStruct:            true,
 	}
-	
+
 	return &schemaGenerator{
 		reflector: reflector,
 	}
@@ -52,7 +52,7 @@ func NewSchemaGenerator() SchemaGenerator {
 // Generate creates a JSON schema for the specified version
 func (g *schemaGenerator) Generate(version string) (*jsonschema.Schema, error) {
 	var schema *jsonschema.Schema
-	
+
 	switch version {
 	case "1.0", "v1", "v1.0":
 		// Generate schema for v1 Config struct
@@ -64,19 +64,19 @@ func (g *schemaGenerator) Generate(version string) (*jsonschema.Schema, error) {
 	default:
 		return nil, fmt.Errorf("unsupported schema version: %s", version)
 	}
-	
+
 	// Add schema metadata
 	schema.Version = "https://json-schema.org/draft/2020-12/schema"
 	schema.Title = fmt.Sprintf("OpenCenter Cluster Configuration Schema v%s", version)
 	schema.Description = "JSON schema for OpenCenter cluster configuration files"
-	
+
 	// Add custom properties
 	if schema.Extras == nil {
 		schema.Extras = make(map[string]any)
 	}
 	schema.Extras["$id"] = fmt.Sprintf("https://opencenter.io/schemas/cluster-config-v%s.json", version)
 	schema.Extras["schemaVersion"] = version
-	
+
 	return schema, nil
 }
 
@@ -87,12 +87,12 @@ func (g *schemaGenerator) WriteToFile(schema *jsonschema.Schema, path string) er
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	
+
 	// Write to file
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("failed to write schema file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -103,20 +103,20 @@ func GenerateSchemaFromStruct(v interface{}) (*jsonschema.Schema, error) {
 		DoNotReference:            false,
 		ExpandedStruct:            true,
 	}
-	
+
 	// Use reflection to get the type
 	t := reflect.TypeOf(v)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
-	
+
 	schema := reflector.Reflect(v)
-	
+
 	// Add schema metadata
 	schema.Version = "https://json-schema.org/draft/2020-12/schema"
 	schema.Title = fmt.Sprintf("%s Schema", t.Name())
 	schema.Description = fmt.Sprintf("JSON schema for %s", t.Name())
-	
+
 	return schema, nil
 }
 
@@ -127,17 +127,17 @@ func ValidateSchemaOutput(schema *jsonschema.Schema) error {
 	if err != nil {
 		return fmt.Errorf("schema is not valid JSON: %w", err)
 	}
-	
+
 	// Unmarshal back to verify structure
 	var test map[string]interface{}
 	if err := json.Unmarshal(data, &test); err != nil {
 		return fmt.Errorf("schema structure is invalid: %w", err)
 	}
-	
+
 	// Check for required fields
 	if schema.Version == "" {
 		return fmt.Errorf("schema missing version field")
 	}
-	
+
 	return nil
 }

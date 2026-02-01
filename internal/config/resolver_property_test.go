@@ -161,7 +161,7 @@ func intToString(n int) string {
 	if n == 0 {
 		return "0"
 	}
-	
+
 	digits := []byte{}
 	for n > 0 {
 		digits = append([]byte{byte('0' + n%10)}, digits...)

@@ -15,197 +15,79 @@ package validation
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
+
+// mockValidator is a mock validator for testing
+type mockValidator struct {
+	name   string
+	result *ValidationResult
+	err    error
+}
+
+func (m *mockValidator) Name() string {
+	return m.name
+}
+
+func (m *mockValidator) Validate(ctx context.Context, value interface{}) (*ValidationResult, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.result, nil
+}
 
 func TestNewValidationEngine(t *testing.T) {
 	engine := NewValidationEngine()
 	if engine == nil {
 		t.Fatal("NewValidationEngine returned nil")
 	}
-
 	if engine.registry == nil {
-		t.Error("engine.registry is nil")
+		t.Error("registry is nil")
 	}
-
 	if engine.suggestionEngine == nil {
-		t.Error("engine.suggestionEngine is nil")
+		t.Error("suggestionEngine is nil")
 	}
 }
 
 func TestValidationEngine_Register(t *testing.T) {
 	engine := NewValidationEngine()
 
-	validator := NewValidatorFunc("test", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		result := &ValidationResult{Valid: true}
-		return result, nil
-	})
-
+	validator := &mockValidator{name: "test"}
 	err := engine.Register(validator)
 	if err != nil {
 		t.Fatalf("Register failed: %v", err)
 	}
 
 	if !engine.Has("test") {
-		t.Error("validator not found after registration")
+		t.Error("validator not registered")
 	}
 }
 
-func TestValidationEngine_RegisterDuplicate(t *testing.T) {
+func TestValidationEngine_MustRegister(t *testing.T) {
 	engine := NewValidationEngine()
 
-	validator := NewValidatorFunc("test", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		result := &ValidationResult{Valid: true}
-		return result, nil
-	})
-
-	err := engine.Register(validator)
-	if err != nil {
-		t.Fatalf("First Register failed: %v", err)
-	}
-
-	err = engine.Register(validator)
-	if err == nil {
-		t.Error("Expected error when registering duplicate validator")
-	}
-}
-
-func TestValidationEngine_Validate(t *testing.T) {
-	engine := NewValidationEngine()
-
-	validator := NewValidatorFunc("test", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		result := &ValidationResult{Valid: true}
-		if value == nil {
-			result.AddError("value", "value cannot be nil")
-		}
-		return result, nil
-	})
-
+	validator := &mockValidator{name: "test"}
 	engine.MustRegister(validator)
 
-	// Test valid value
-	result, err := engine.Validate(context.Background(), "test", "valid")
-	if err != nil {
-		t.Fatalf("Validate failed: %v", err)
+	if !engine.Has("test") {
+		t.Error("validator not registered")
 	}
 
-	if !result.Valid {
-		t.Error("Expected valid result")
-	}
-
-	// Test invalid value
-	result, err = engine.Validate(context.Background(), "test", nil)
-	if err != nil {
-		t.Fatalf("Validate failed: %v", err)
-	}
-
-	if result.Valid {
-		t.Error("Expected invalid result")
-	}
-
-	if len(result.Errors) != 1 {
-		t.Errorf("Expected 1 error, got %d", len(result.Errors))
-	}
-}
-
-func TestValidationEngine_ValidateNotFound(t *testing.T) {
-	engine := NewValidationEngine()
-
-	_, err := engine.Validate(context.Background(), "nonexistent", "value")
-	if err == nil {
-		t.Error("Expected error for nonexistent validator")
-	}
-}
-
-func TestValidationEngine_ValidateAll(t *testing.T) {
-	engine := NewValidationEngine()
-
-	validator1 := NewValidatorFunc("test1", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		result := &ValidationResult{Valid: true}
-		return result, nil
-	})
-
-	validator2 := NewValidatorFunc("test2", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		result := &ValidationResult{Valid: true}
-		result.AddWarning("field", "this is a warning")
-		return result, nil
-	})
-
-	engine.MustRegister(validator1)
-	engine.MustRegister(validator2)
-
-	result, err := engine.ValidateAll(context.Background(), []string{"test1", "test2"}, "value")
-	if err != nil {
-		t.Fatalf("ValidateAll failed: %v", err)
-	}
-
-	if !result.Valid {
-		t.Error("Expected valid result")
-	}
-
-	if len(result.Warnings) != 1 {
-		t.Errorf("Expected 1 warning, got %d", len(result.Warnings))
-	}
-}
-
-func TestValidationEngine_ValidateParallel(t *testing.T) {
-	engine := NewValidationEngine()
-
-	validator1 := NewValidatorFunc("test1", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		result := &ValidationResult{Valid: true}
-		return result, nil
-	})
-
-	validator2 := NewValidatorFunc("test2", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		result := &ValidationResult{Valid: true}
-		return result, nil
-	})
-
-	engine.MustRegister(validator1)
-	engine.MustRegister(validator2)
-
-	result, err := engine.ValidateParallel(context.Background(), []string{"test1", "test2"}, "value")
-	if err != nil {
-		t.Fatalf("ValidateParallel failed: %v", err)
-	}
-
-	if !result.Valid {
-		t.Error("Expected valid result")
-	}
-}
-
-func TestValidationEngine_List(t *testing.T) {
-	engine := NewValidationEngine()
-
-	validator1 := NewValidatorFunc("test1", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		return &ValidationResult{Valid: true}, nil
-	})
-
-	validator2 := NewValidatorFunc("test2", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		return &ValidationResult{Valid: true}, nil
-	})
-
-	engine.MustRegister(validator1)
-	engine.MustRegister(validator2)
-
-	names := engine.List()
-	if len(names) != 2 {
-		t.Errorf("Expected 2 validators, got %d", len(names))
-	}
+	// Test panic on duplicate
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("MustRegister should panic on duplicate")
+		}
+	}()
+	engine.MustRegister(validator)
 }
 
 func TestValidationEngine_Unregister(t *testing.T) {
 	engine := NewValidationEngine()
 
-	validator := NewValidatorFunc("test", func(ctx context.Context, value interface{}) (*ValidationResult, error) {
-		return &ValidationResult{Valid: true}, nil
-	})
-
-	engine.MustRegister(validator)
-
-	if !engine.Has("test") {
-		t.Error("validator not found after registration")
-	}
+	validator := &mockValidator{name: "test"}
+	engine.Register(validator)
 
 	err := engine.Unregister("test")
 	if err != nil {
@@ -213,6 +95,311 @@ func TestValidationEngine_Unregister(t *testing.T) {
 	}
 
 	if engine.Has("test") {
-		t.Error("validator still found after unregistration")
+		t.Error("validator still registered")
 	}
+}
+
+func TestValidationEngine_List(t *testing.T) {
+	engine := NewValidationEngine()
+
+	engine.Register(&mockValidator{name: "test1"})
+	engine.Register(&mockValidator{name: "test2"})
+
+	list := engine.List()
+	if len(list) != 2 {
+		t.Errorf("expected 2 validators, got %d", len(list))
+	}
+}
+
+func TestValidationEngine_Validate(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	result := &ValidationResult{Valid: true}
+	validator := &mockValidator{name: "test", result: result}
+	engine.Register(validator)
+
+	got, err := engine.Validate(ctx, "test", "value")
+	if err != nil {
+		t.Fatalf("Validate failed: %v", err)
+	}
+	if !got.Valid {
+		t.Error("expected valid result")
+	}
+}
+
+func TestValidationEngine_ValidateNotFound(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	_, err := engine.Validate(ctx, "nonexistent", "value")
+	if err == nil {
+		t.Error("expected error for nonexistent validator")
+	}
+}
+
+func TestValidationEngine_ValidateError(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	validator := &mockValidator{
+		name: "test",
+		err:  errors.New("validation error"),
+	}
+	engine.Register(validator)
+
+	_, err := engine.Validate(ctx, "test", "value")
+	if err == nil {
+		t.Error("expected error from validator")
+	}
+}
+
+func TestValidationEngine_ValidateAll(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	// Register validators
+	result1 := &ValidationResult{Valid: true}
+	result2 := &ValidationResult{Valid: true}
+	engine.Register(&mockValidator{name: "test1", result: result1})
+	engine.Register(&mockValidator{name: "test2", result: result2})
+
+	got, err := engine.ValidateAll(ctx, []string{"test1", "test2"}, "value")
+	if err != nil {
+		t.Fatalf("ValidateAll failed: %v", err)
+	}
+	if !got.Valid {
+		t.Error("expected valid result")
+	}
+}
+
+func TestValidationEngine_ValidateAllWithError(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	// Register validators with one error
+	result1 := &ValidationResult{
+		Valid:  false,
+		Errors: []*ValidationIssue{{Field: "test", Message: "error"}},
+	}
+	result2 := &ValidationResult{Valid: true}
+	engine.Register(&mockValidator{name: "test1", result: result1})
+	engine.Register(&mockValidator{name: "test2", result: result2})
+
+	got, err := engine.ValidateAll(ctx, []string{"test1", "test2"}, "value")
+	if err != nil {
+		t.Fatalf("ValidateAll failed: %v", err)
+	}
+	if got.Valid {
+		t.Error("expected invalid result")
+	}
+	if len(got.Errors) != 1 {
+		t.Errorf("expected 1 error, got %d", len(got.Errors))
+	}
+}
+
+func TestValidationEngine_ValidateAllStopOnFirstError(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	// Register validators with one error
+	result1 := &ValidationResult{
+		Valid:  false,
+		Errors: []*ValidationIssue{{Field: "test", Message: "error"}},
+	}
+	result2 := &ValidationResult{Valid: true}
+	engine.Register(&mockValidator{name: "test1", result: result1})
+	engine.Register(&mockValidator{name: "test2", result: result2})
+
+	opts := &ValidationOptions{StopOnFirstError: true}
+	got, err := engine.ValidateAllWithOptions(ctx, []string{"test1", "test2"}, "value", opts)
+	if err != nil {
+		t.Fatalf("ValidateAll failed: %v", err)
+	}
+	if got.Valid {
+		t.Error("expected invalid result")
+	}
+	// Should only have errors from test1
+	if len(got.Errors) != 1 {
+		t.Errorf("expected 1 error, got %d", len(got.Errors))
+	}
+}
+
+func TestValidationEngine_ValidateParallel(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	// Register validators
+	result1 := &ValidationResult{Valid: true}
+	result2 := &ValidationResult{Valid: true}
+	engine.Register(&mockValidator{name: "test1", result: result1})
+	engine.Register(&mockValidator{name: "test2", result: result2})
+
+	got, err := engine.ValidateParallel(ctx, []string{"test1", "test2"}, "value")
+	if err != nil {
+		t.Fatalf("ValidateParallel failed: %v", err)
+	}
+	if !got.Valid {
+		t.Error("expected valid result")
+	}
+}
+
+func TestValidationEngine_ValidateParallelWithError(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	// Register validators with one error
+	result1 := &ValidationResult{
+		Valid:  false,
+		Errors: []*ValidationIssue{{Field: "test", Message: "error"}},
+	}
+	result2 := &ValidationResult{Valid: true}
+	engine.Register(&mockValidator{name: "test1", result: result1})
+	engine.Register(&mockValidator{name: "test2", result: result2})
+
+	got, err := engine.ValidateParallel(ctx, []string{"test1", "test2"}, "value")
+	if err != nil {
+		t.Fatalf("ValidateParallel failed: %v", err)
+	}
+	if got.Valid {
+		t.Error("expected invalid result")
+	}
+	if len(got.Errors) != 1 {
+		t.Errorf("expected 1 error, got %d", len(got.Errors))
+	}
+}
+
+func TestValidationEngine_ValidateWithOptions(t *testing.T) {
+	engine := NewValidationEngine()
+	ctx := context.Background()
+
+	result := &ValidationResult{
+		Valid:    true,
+		Warnings: []*ValidationIssue{{Field: "test", Message: "warning"}},
+	}
+	validator := &mockValidator{name: "test", result: result}
+	engine.Register(validator)
+
+	// Test with warnings included
+	opts := &ValidationOptions{IncludeWarnings: true}
+	got, err := engine.ValidateWithOptions(ctx, "test", "value", opts)
+	if err != nil {
+		t.Fatalf("Validate failed: %v", err)
+	}
+	if len(got.Warnings) != 1 {
+		t.Errorf("expected 1 warning, got %d", len(got.Warnings))
+	}
+
+	// Test with warnings excluded
+	opts = &ValidationOptions{IncludeWarnings: false}
+	got, err = engine.ValidateWithOptions(ctx, "test", "value", opts)
+	if err != nil {
+		t.Fatalf("Validate failed: %v", err)
+	}
+	if len(got.Warnings) != 0 {
+		t.Errorf("expected 0 warnings, got %d", len(got.Warnings))
+	}
+}
+
+func TestValidationEngine_AddSuggestionRule(t *testing.T) {
+	engine := NewValidationEngine()
+
+	// Create a custom suggestion rule
+	rule := &mockSuggestionRule{name: "test"}
+	engine.AddSuggestionRule(rule)
+
+	// Verify rule was added (indirectly through suggestion engine)
+	if engine.suggestionEngine == nil {
+		t.Error("suggestion engine is nil")
+	}
+}
+
+func TestValidationEngine_GetRegistry(t *testing.T) {
+	engine := NewValidationEngine()
+	registry := engine.GetRegistry()
+	if registry == nil {
+		t.Error("GetRegistry returned nil")
+	}
+}
+
+func TestValidationEngine_GetSuggestionEngine(t *testing.T) {
+	engine := NewValidationEngine()
+	suggestionEngine := engine.GetSuggestionEngine()
+	if suggestionEngine == nil {
+		t.Error("GetSuggestionEngine returned nil")
+	}
+}
+
+func TestDefaultEngine(t *testing.T) {
+	engine := DefaultEngine()
+	if engine == nil {
+		t.Error("DefaultEngine returned nil")
+	}
+}
+
+func TestValidate(t *testing.T) {
+	// Use default engine
+	ctx := context.Background()
+
+	// Register a validator in the default engine
+	result := &ValidationResult{Valid: true}
+	validator := &mockValidator{name: "test-default", result: result}
+	DefaultEngine().Register(validator)
+
+	got, err := Validate(ctx, "test-default", "value")
+	if err != nil {
+		t.Fatalf("Validate failed: %v", err)
+	}
+	if !got.Valid {
+		t.Error("expected valid result")
+	}
+}
+
+func TestValidateAll_DefaultEngine(t *testing.T) {
+	ctx := context.Background()
+
+	// Register validators in the default engine
+	result1 := &ValidationResult{Valid: true}
+	result2 := &ValidationResult{Valid: true}
+	DefaultEngine().Register(&mockValidator{name: "test-all-1", result: result1})
+	DefaultEngine().Register(&mockValidator{name: "test-all-2", result: result2})
+
+	got, err := ValidateAll(ctx, []string{"test-all-1", "test-all-2"}, "value")
+	if err != nil {
+		t.Fatalf("ValidateAll failed: %v", err)
+	}
+	if !got.Valid {
+		t.Error("expected valid result")
+	}
+}
+
+func TestValidateParallel_DefaultEngine(t *testing.T) {
+	ctx := context.Background()
+
+	// Register validators in the default engine
+	result1 := &ValidationResult{Valid: true}
+	result2 := &ValidationResult{Valid: true}
+	DefaultEngine().Register(&mockValidator{name: "test-parallel-1", result: result1})
+	DefaultEngine().Register(&mockValidator{name: "test-parallel-2", result: result2})
+
+	got, err := ValidateParallel(ctx, []string{"test-parallel-1", "test-parallel-2"}, "value")
+	if err != nil {
+		t.Fatalf("ValidateParallel failed: %v", err)
+	}
+	if !got.Valid {
+		t.Error("expected valid result")
+	}
+}
+
+// mockSuggestionRule is a mock suggestion rule for testing
+type mockSuggestionRule struct {
+	name string
+}
+
+func (m *mockSuggestionRule) Name() string {
+	return m.name
+}
+
+func (m *mockSuggestionRule) Generate(issue *ValidationIssue, context map[string]interface{}) []string {
+	return []string{"test suggestion"}
 }

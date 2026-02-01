@@ -38,7 +38,7 @@ type defaultValidator struct {
 // NewValidator creates a new v2 configuration validator.
 func NewValidator() Validator {
 	v := validator.New()
-	
+
 	// Register custom validation tags
 	// dns1123: validates DNS-1123 subdomain names (lowercase alphanumeric, hyphens, dots)
 	v.RegisterValidation("dns1123", func(fl validator.FieldLevel) bool {
@@ -61,7 +61,7 @@ func NewValidator() Validator {
 		}
 		return true
 	})
-	
+
 	return &defaultValidator{
 		schemaValidator: v,
 	}

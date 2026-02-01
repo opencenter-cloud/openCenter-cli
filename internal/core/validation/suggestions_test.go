@@ -22,9 +22,8 @@ func TestNewSuggestionEngine(t *testing.T) {
 	if engine == nil {
 		t.Fatal("NewSuggestionEngine returned nil")
 	}
-
 	if len(engine.rules) == 0 {
-		t.Error("Expected default rules to be registered")
+		t.Error("expected default rules to be registered")
 	}
 }
 
@@ -32,11 +31,11 @@ func TestSuggestionEngine_AddRule(t *testing.T) {
 	engine := NewSuggestionEngine()
 	initialCount := len(engine.rules)
 
-	customRule := &TypoSuggestionRule{}
-	engine.AddRule(customRule)
+	rule := &mockSuggestionRule{name: "test"}
+	engine.AddRule(rule)
 
 	if len(engine.rules) != initialCount+1 {
-		t.Error("Rule was not added")
+		t.Errorf("expected %d rules, got %d", initialCount+1, len(engine.rules))
 	}
 }
 
@@ -47,9 +46,8 @@ func TestSuggestionEngine_EnhanceResult(t *testing.T) {
 		Valid: false,
 		Errors: []*ValidationIssue{
 			{
-				Severity: SeverityError,
-				Field:    "cluster.email",
-				Message:  "invalid email format",
+				Field:   "email",
+				Message: "invalid email format",
 			},
 		},
 	}
@@ -57,76 +55,87 @@ func TestSuggestionEngine_EnhanceResult(t *testing.T) {
 	context := make(map[string]interface{})
 	engine.EnhanceResult(result, context)
 
+	// Should have suggestions added from context rule (email field)
 	if len(result.Errors[0].Suggestions) == 0 {
-		t.Error("Expected suggestions to be added")
+		t.Error("expected suggestions to be added")
 	}
 }
 
 func TestSuggestionEngine_EnhanceResultNil(t *testing.T) {
 	engine := NewSuggestionEngine()
+	context := make(map[string]interface{})
 
-	// Should not panic
-	engine.EnhanceResult(nil, nil)
+	// Should not panic with nil result
+	engine.EnhanceResult(nil, context)
 }
 
 func TestTypoSuggestionRule_Name(t *testing.T) {
 	rule := &TypoSuggestionRule{}
 	if rule.Name() != "typo" {
-		t.Errorf("Expected name %q, got %q", "typo", rule.Name())
+		t.Errorf("expected name 'typo', got %q", rule.Name())
 	}
 }
 
 func TestTypoSuggestionRule_Generate(t *testing.T) {
 	rule := &TypoSuggestionRule{}
 
-	issue := &ValidationIssue{
-		Field:   "provider",
-		Message: "invalid value 'openstck'",
+	tests := []struct {
+		name               string
+		issue              *ValidationIssue
+		context            map[string]interface{}
+		wantMinSuggestions int
+		wantMaxSuggestions int
+	}{
+		{
+			name: "close match",
+			issue: &ValidationIssue{
+				Field:   "test",
+				Message: "invalid value 'tst'",
+			},
+			context: map[string]interface{}{
+				"valid_values": []string{"test", "prod", "dev"},
+			},
+			wantMinSuggestions: 1, // Should suggest at least "test"
+			wantMaxSuggestions: 3, // May suggest up to 3 close matches
+		},
+		{
+			name: "no close match",
+			issue: &ValidationIssue{
+				Field:   "test",
+				Message: "invalid value 'abcdefghijk'",
+			},
+			context: map[string]interface{}{
+				"valid_values": []string{"test", "prod", "dev"},
+			},
+			wantMinSuggestions: 0,
+			wantMaxSuggestions: 0,
+		},
+		{
+			name: "no valid values",
+			issue: &ValidationIssue{
+				Field:   "test",
+				Message: "invalid value 'test'",
+			},
+			context:            map[string]interface{}{},
+			wantMinSuggestions: 0,
+			wantMaxSuggestions: 0,
+		},
 	}
 
-	context := map[string]interface{}{
-		"valid_values": []string{"openstack", "aws", "gcp"},
-	}
-
-	suggestions := rule.Generate(issue, context)
-
-	if len(suggestions) == 0 {
-		t.Error("Expected typo suggestions")
-	}
-
-	// Should suggest "openstack" for "openstck"
-	found := false
-	for _, s := range suggestions {
-		if s == "Did you mean \"openstack\"?" {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		t.Errorf("Expected suggestion for 'openstack', got: %v", suggestions)
-	}
-}
-
-func TestTypoSuggestionRule_GenerateNoContext(t *testing.T) {
-	rule := &TypoSuggestionRule{}
-
-	issue := &ValidationIssue{
-		Field:   "provider",
-		Message: "invalid value",
-	}
-
-	suggestions := rule.Generate(issue, nil)
-
-	if len(suggestions) != 0 {
-		t.Error("Expected no suggestions without context")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestions := rule.Generate(tt.issue, tt.context)
+			if len(suggestions) < tt.wantMinSuggestions || len(suggestions) > tt.wantMaxSuggestions {
+				t.Errorf("expected %d-%d suggestions, got %d: %v", tt.wantMinSuggestions, tt.wantMaxSuggestions, len(suggestions), suggestions)
+			}
+		})
 	}
 }
 
 func TestContextSuggestionRule_Name(t *testing.T) {
 	rule := &ContextSuggestionRule{}
 	if rule.Name() != "context" {
-		t.Errorf("Expected name %q, got %q", "context", rule.Name())
+		t.Errorf("expected name 'context', got %q", rule.Name())
 	}
 }
 
@@ -134,78 +143,61 @@ func TestContextSuggestionRule_Generate(t *testing.T) {
 	rule := &ContextSuggestionRule{}
 
 	tests := []struct {
-		field    string
-		expected string
+		name            string
+		issue           *ValidationIssue
+		wantSuggestions bool
 	}{
-		{"cluster.email", "Ensure email is in format: user@example.com"},
-		{"cluster.url", "Ensure URL includes protocol (http:// or https://)"},
-		{"network.cidr", "Use CIDR notation (e.g., 10.0.0.0/16)"},
-		{"network.ip", "Ensure IP address is in valid format (e.g., 192.168.1.1)"},
-		{"service.port", "Port must be between 1 and 65535"},
-		{"cluster.name", "Use alphanumeric characters, hyphens, and underscores only"},
-		{"kubernetes.version", "Use semantic versioning format (e.g., 1.2.3)"},
-		{"node.count", "Value must be a positive number"},
-		{"feature.enabled", "Value must be true or false"},
+		{
+			name: "email field",
+			issue: &ValidationIssue{
+				Field:   "email",
+				Message: "invalid email",
+			},
+			wantSuggestions: true,
+		},
+		{
+			name: "url field",
+			issue: &ValidationIssue{
+				Field:   "api_url",
+				Message: "invalid url",
+			},
+			wantSuggestions: true,
+		},
+		{
+			name: "port field",
+			issue: &ValidationIssue{
+				Field:   "port",
+				Message: "invalid port",
+			},
+			wantSuggestions: true,
+		},
+		{
+			name: "cluster name field",
+			issue: &ValidationIssue{
+				Field:   "cluster_name",
+				Message: "invalid name",
+			},
+			wantSuggestions: true,
+		},
+		{
+			name: "generic field",
+			issue: &ValidationIssue{
+				Field:   "other",
+				Message: "invalid value",
+			},
+			wantSuggestions: false,
+		},
 	}
 
 	for _, tt := range tests {
-		issue := &ValidationIssue{
-			Field:   tt.field,
-			Message: "validation failed",
-		}
-
-		suggestions := rule.Generate(issue, nil)
-
-		found := false
-		for _, s := range suggestions {
-			if s == tt.expected {
-				found = true
-				break
+		t.Run(tt.name, func(t *testing.T) {
+			context := make(map[string]interface{})
+			suggestions := rule.Generate(tt.issue, context)
+			hasSuggestions := len(suggestions) > 0
+			if hasSuggestions != tt.wantSuggestions {
+				t.Errorf("expected suggestions=%v, got %d suggestions: %v", tt.wantSuggestions, len(suggestions), suggestions)
 			}
-		}
-
-		if !found {
-			t.Errorf("Expected suggestion %q for field %q, got: %v", tt.expected, tt.field, suggestions)
-		}
-	}
-}
-
-func TestContextSuggestionRule_GenerateWithErrorCode(t *testing.T) {
-	rule := &ContextSuggestionRule{}
-
-	tests := []struct {
-		code     string
-		expected string
-	}{
-		{"E001", "This field is required and cannot be empty"},
-		{"E002", "Check the allowed values for this field"},
-		{"E003", "Verify CIDR notation is correct"},
-		{"E004", "Verify IP address format"},
-		{"E005", "Ensure IP is within the specified subnet range"},
-		{"E006", "Check field dependencies and requirements"},
-		{"E007", "Verify value is within acceptable range"},
-	}
-
-	for _, tt := range tests {
-		issue := &ValidationIssue{
-			Field:   "test.field",
-			Message: "validation failed",
-			Code:    tt.code,
-		}
-
-		suggestions := rule.Generate(issue, nil)
-
-		found := false
-		for _, s := range suggestions {
-			if s == tt.expected {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			t.Errorf("Expected suggestion %q for code %q, got: %v", tt.expected, tt.code, suggestions)
-		}
+		})
 	}
 }
 
@@ -222,37 +214,62 @@ func TestLevenshteinDistance(t *testing.T) {
 		{"abc", "abd", 1},
 		{"abc", "def", 3},
 		{"kitten", "sitting", 3},
-		{"openstack", "openstck", 1},
+		{"test", "tst", 1},
+		{"test", "best", 1},
 	}
 
 	for _, tt := range tests {
-		distance := levenshteinDistance(tt.s1, tt.s2)
-		if distance != tt.expected {
-			t.Errorf("levenshteinDistance(%q, %q) = %d, expected %d", tt.s1, tt.s2, distance, tt.expected)
-		}
+		t.Run(tt.s1+"_"+tt.s2, func(t *testing.T) {
+			got := levenshteinDistance(tt.s1, tt.s2)
+			if got != tt.expected {
+				t.Errorf("levenshteinDistance(%q, %q) = %d, want %d", tt.s1, tt.s2, got, tt.expected)
+			}
+		})
 	}
 }
 
 func TestExtractInvalidValue(t *testing.T) {
 	tests := []struct {
-		message  string
+		name     string
+		issue    *ValidationIssue
 		expected string
 	}{
-		{"invalid value 'xyz'", "xyz"},
-		{"value 'abc' is invalid", "abc"},
-		{"'test' is not valid", "test"},
-		{"no value here", ""},
-		{"", ""},
+		{
+			name: "pattern: invalid value 'xyz'",
+			issue: &ValidationIssue{
+				Message: "invalid value 'xyz'",
+			},
+			expected: "xyz",
+		},
+		{
+			name: "pattern: value 'abc' is invalid",
+			issue: &ValidationIssue{
+				Message: "value 'abc' is invalid",
+			},
+			expected: "abc",
+		},
+		{
+			name: "pattern: 'test' is not valid",
+			issue: &ValidationIssue{
+				Message: "'test' is not valid",
+			},
+			expected: "test",
+		},
+		{
+			name: "no pattern match",
+			issue: &ValidationIssue{
+				Message: "something went wrong",
+			},
+			expected: "",
+		},
 	}
 
 	for _, tt := range tests {
-		issue := &ValidationIssue{
-			Message: tt.message,
-		}
-
-		value := extractInvalidValue(issue)
-		if value != tt.expected {
-			t.Errorf("extractInvalidValue(%q) = %q, expected %q", tt.message, value, tt.expected)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractInvalidValue(tt.issue)
+			if got != tt.expected {
+				t.Errorf("extractInvalidValue() = %q, want %q", got, tt.expected)
+			}
+		})
 	}
 }

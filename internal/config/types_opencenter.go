@@ -21,25 +21,25 @@ type ClusterMeta struct {
 
 // SimplifiedOpenCenter represents the opencenter section of the new simplified schema
 type SimplifiedOpenCenter struct {
-	Meta           ClusterMeta       `yaml:"meta" json:"meta" validate:"required"`
-	Secrets        OpenCenterSecrets `yaml:"secrets,omitempty" json:"secrets,omitempty"`
-	Infrastructure Infrastructure    `yaml:"infrastructure" json:"infrastructure" validate:"required"`
-	Cluster        ClusterConfig     `yaml:"cluster" json:"cluster" validate:"required"`
-	GitOps         GitOpsConfig      `yaml:"gitops" json:"gitops" validate:"required"`
+	Meta           ClusterMeta         `yaml:"meta" json:"meta" validate:"required"`
+	Secrets        OpenCenterSecrets   `yaml:"secrets,omitempty" json:"secrets,omitempty"`
+	Infrastructure Infrastructure      `yaml:"infrastructure" json:"infrastructure" validate:"required"`
+	Cluster        ClusterConfig       `yaml:"cluster" json:"cluster" validate:"required"`
+	GitOps         GitOpsConfig        `yaml:"gitops" json:"gitops" validate:"required"`
 	Gateway        GatewayGlobalConfig `yaml:"gateway,omitempty" json:"gateway,omitempty"`
-	OIDC           GlobalOIDCConfig  `yaml:"oidc,omitempty" json:"oidc,omitempty"`
-	Storage        StorageConfig     `yaml:"storage,omitempty" json:"storage,omitempty" validate:"required"`
-	Talos          *TalosConfig      `yaml:"talos,omitempty" json:"talos,omitempty"`
-	ManagedService ServiceMap        `yaml:"managed-service" json:"managed-service"`
-	Services       ServiceMap        `yaml:"services" json:"services"`
+	OIDC           GlobalOIDCConfig    `yaml:"oidc,omitempty" json:"oidc,omitempty"`
+	Storage        StorageConfig       `yaml:"storage,omitempty" json:"storage,omitempty" validate:"required"`
+	Talos          *TalosConfig        `yaml:"talos,omitempty" json:"talos,omitempty"`
+	ManagedService ServiceMap          `yaml:"managed-service" json:"managed-service"`
+	Services       ServiceMap          `yaml:"services" json:"services"`
 }
 
 // GatewayGlobalConfig holds global gateway configuration
 type GatewayGlobalConfig struct {
-	Name           string `yaml:"name" json:"name,omitempty" jsonschema:"description=Default gateway name,default=rmpk-gateway"`
-	Namespace      string `yaml:"namespace" json:"namespace,omitempty" jsonschema:"description=Default gateway namespace,default=rackspace-system"`
-	ClassName      string `yaml:"class_name" json:"class_name,omitempty" jsonschema:"description=Gateway class name,default=eg"`
-	DefaultIssuer  string `yaml:"default_issuer" json:"default_issuer,omitempty" jsonschema:"description=Default certificate issuer"`
+	Name          string `yaml:"name" json:"name,omitempty" jsonschema:"description=Default gateway name,default=rmpk-gateway"`
+	Namespace     string `yaml:"namespace" json:"namespace,omitempty" jsonschema:"description=Default gateway namespace,default=rackspace-system"`
+	ClassName     string `yaml:"class_name" json:"class_name,omitempty" jsonschema:"description=Gateway class name,default=eg"`
+	DefaultIssuer string `yaml:"default_issuer" json:"default_issuer,omitempty" jsonschema:"description=Default certificate issuer"`
 }
 
 // GlobalOIDCConfig holds global OIDC configuration for services

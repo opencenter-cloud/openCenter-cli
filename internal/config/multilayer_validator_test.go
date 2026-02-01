@@ -136,15 +136,15 @@ func TestMultiLayerValidator_ValidateSchema(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			errors := validator.ValidateSchema(tt.cfg)
-			
+
 			if tt.wantError && len(errors) == 0 {
 				t.Error("ValidateSchema() expected errors but got none")
 			}
-			
+
 			if !tt.wantError && len(errors) > 0 {
 				t.Errorf("ValidateSchema() unexpected errors: %v", errors)
 			}
-			
+
 			if tt.wantError && tt.errorCode != "" {
 				found := false
 				for _, err := range errors {
@@ -222,15 +222,15 @@ func TestMultiLayerValidator_ValidateBusinessRules(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			errors := validator.ValidateBusinessRules(tt.cfg)
-			
+
 			if tt.wantError && len(errors) == 0 {
 				t.Error("ValidateBusinessRules() expected errors but got none")
 			}
-			
+
 			if !tt.wantError && len(errors) > 0 {
 				t.Errorf("ValidateBusinessRules() unexpected errors: %v", errors)
 			}
-			
+
 			if tt.wantError && tt.errorCode != "" {
 				found := false
 				for _, err := range errors {
@@ -308,15 +308,15 @@ func TestMultiLayerValidator_ValidateProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			errors := validator.ValidateProvider(tt.cfg)
-			
+
 			if tt.wantError && len(errors) == 0 {
 				t.Error("ValidateProvider() expected errors but got none")
 			}
-			
+
 			if !tt.wantError && len(errors) > 0 {
 				t.Errorf("ValidateProvider() unexpected errors: %v", errors)
 			}
-			
+
 			if tt.wantError && tt.errorCode != "" {
 				found := false
 				for _, err := range errors {

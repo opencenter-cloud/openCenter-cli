@@ -30,7 +30,7 @@ import (
 // Requirements: 15.7, 15.8
 func TestClusterConfigCommand(t *testing.T) {
 	cmd := newClusterConfigCmd()
-	
+
 	if cmd == nil {
 		t.Fatal("config command should not be nil")
 	}
@@ -50,7 +50,7 @@ func TestClusterConfigCommand(t *testing.T) {
 // Requirements: 15.7, 15.8
 func TestExportEffectiveCommand(t *testing.T) {
 	cmd := newClusterConfigExportEffectiveCmd()
-	
+
 	if cmd == nil {
 		t.Fatal("export-effective command should not be nil")
 	}
@@ -177,7 +177,7 @@ secrets:
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "test-config.yaml")
 	outputPath := filepath.Join(tmpDir, "effective-config.yaml")
-	
+
 	if err := os.WriteFile(configPath, []byte(v2Config), 0600); err != nil {
 		t.Fatalf("failed to write test config: %v", err)
 	}
@@ -185,7 +185,7 @@ secrets:
 	// Create loader and load config
 	registry := defaults.NewRegistry()
 	loader := v2.NewConfigLoader(registry)
-	
+
 	cfg, err := loader.LoadFromFile(configPath)
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
@@ -412,7 +412,7 @@ secrets:
 
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "test-config.yaml")
-	
+
 	if err := os.WriteFile(configPath, []byte(v2Config), 0600); err != nil {
 		t.Fatalf("failed to write test config: %v", err)
 	}
@@ -420,7 +420,7 @@ secrets:
 	// Create loader and load config
 	registry := defaults.NewRegistry()
 	loader := v2.NewConfigLoader(registry)
-	
+
 	cfg, err := loader.LoadFromFile(configPath)
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
@@ -455,4 +455,3 @@ func findSubcommand(parent *cobra.Command, name string) *cobra.Command {
 	}
 	return nil
 }
-

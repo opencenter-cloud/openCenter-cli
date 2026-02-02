@@ -157,14 +157,21 @@ func (s *SOPSIntegration) CreateSOPSConfig(configPath, ageKeyPath string) error 
 
 	// Create SOPS configuration content
 	sopsConfig := fmt.Sprintf(`creation_rules:
-  - path_regex: .*\.(yaml|yml)$
-    age: %s
-    encrypted_regex: '^(data|stringData|password|token|key|secret|credentials|auth)'
-  - path_regex: secrets/.*\.yaml$
-    age: %s
-  - path_regex: .*-credentials\.yaml$
-    age: %s
-`, ageKey, ageKey, ageKey)
+  - path_regex: 'secrets/age/keys/.*-key\.txt$'
+    age: >-
+      %s
+  - path_regex: 'secrets/ssh/(?!.*\.pub$).*'
+    age: >-
+      %s
+  - path_regex: 'applications/overlays/[^/]+/(managed-services|services)/.*/.*\.ya?ml$'
+    encrypted_regex: "^(secret)$"
+    age: >-
+      %s
+  - path_regex: '^infrastructure\/clusters\/[^/]+\/(?!(?:venv|kubespray|\.terraform|\.bin)\/)(.*)'
+    encrypted_regex: "^(secret)$"
+    age: >-
+      %s
+`, ageKey, ageKey, ageKey, ageKey)
 
 	// Write SOPS configuration file
 	err = os.WriteFile(configPath, []byte(sopsConfig), 0600)

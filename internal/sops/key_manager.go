@@ -626,15 +626,15 @@ func (m *EnhancedKeyManager) GenerateSOPSConfig(cluster string) (string, error) 
 		ageKeys = append(ageKeys, key.PublicKey)
 	}
 
-	// Generate SOPS config
+	// Generate SOPS config with multiple rules
 	config := fmt.Sprintf(`# SOPS configuration for cluster: %s
 # Multi-key encryption with %d keys
 creation_rules:
-  - path_regex: .*\.(yaml|yml)$
+  - path_regex: 'secrets/age/keys/.*-key\.txt$'
     age: >-
 `, cluster, len(ageKeys))
 
-	// Add each key on a new line with proper indentation
+	// Add each key for the first rule
 	for i, key := range ageKeys {
 		if i == len(ageKeys)-1 {
 			config += fmt.Sprintf("      %s\n", key)
@@ -643,8 +643,44 @@ creation_rules:
 		}
 	}
 
-	config += `    encrypted_regex: '^(data|stringData|password|token|key|secret|credentials)'
+	// Add second rule for SSH keys
+	config += `  - path_regex: 'secrets/ssh/(?!.*\.pub$).*'
+    age: >-
 `
+	for i, key := range ageKeys {
+		if i == len(ageKeys)-1 {
+			config += fmt.Sprintf("      %s\n", key)
+		} else {
+			config += fmt.Sprintf("      %s,\n", key)
+		}
+	}
+
+	// Add third rule for application overlays
+	config += `  - path_regex: 'applications/overlays/[^/]+/(managed-services|services)/.*/.*\.ya?ml$'
+    encrypted_regex: "^(secret)$"
+    age: >-
+`
+	for i, key := range ageKeys {
+		if i == len(ageKeys)-1 {
+			config += fmt.Sprintf("      %s\n", key)
+		} else {
+			config += fmt.Sprintf("      %s,\n", key)
+		}
+	}
+
+	// Add fourth rule for infrastructure clusters
+	config += fmt.Sprintf(`  - path_regex: '^infrastructure\/clusters\/%s\/(?!(?:venv|kubespray|\.terraform|\.bin)\/)(.*)'
+    encrypted_regex: "^(secret)$"
+    age: >-
+`, cluster)
+	for i, key := range ageKeys {
+		if i == len(ageKeys)-1 {
+			config += fmt.Sprintf("      %s\n", key)
+		} else {
+			config += fmt.Sprintf("      %s,\n", key)
+		}
+	}
+
 
 	m.logger.Info("Successfully generated SOPS configuration", "cluster", cluster, "key_count", len(ageKeys))
 	return config, nil

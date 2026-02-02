@@ -17,6 +17,8 @@ limitations under the License.
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -35,6 +37,11 @@ func TestShouldSkipDirectory(t *testing.T) {
 		{
 			name:     ".venv directory",
 			dirPath:  "/path/to/project/.venv",
+			expected: true,
+		},
+		{
+			name:     "kubespray directory",
+			dirPath:  "/infrastructure/clusters/test-cluster/kubespray",
 			expected: true,
 		},
 		{
@@ -229,5 +236,207 @@ func TestShouldFileBeEncrypted(t *testing.T) {
 				t.Errorf("shouldFileBeEncrypted(%q) = %v, expected %v", tc.filePath, result, tc.expected)
 			}
 		})
+	}
+}
+
+func TestSOPSPathMatcher(t *testing.T) {
+	// Create a temporary SOPS config for testing
+	tmpDir := t.TempDir()
+	sopsConfigPath := filepath.Join(tmpDir, ".sops.yaml")
+
+	sopsConfig := `creation_rules:
+  - path_regex: '^infrastructure\/clusters\/test-cluster\/(?!(?:venv|kubespray|\.terraform|\.bin)\/)(.*)'
+    encrypted_regex: "^(secret)$"
+    age: age1test123
+  - path_regex: 'secrets/ssh/(?!.*\.pub$).*'
+    age: age1test123
+  - path_regex: 'secrets/age/keys/.*-key\.txt$'
+    age: age1test123
+  - path_regex: 'applications/overlays/[^/]+/(managed-services|services)/.*/.*\.ya?ml$'
+    encrypted_regex: "^(secret)$"
+    age: age1test123
+`
+
+	if err := os.WriteFile(sopsConfigPath, []byte(sopsConfig), 0644); err != nil {
+		t.Fatalf("Failed to create test SOPS config: %v", err)
+	}
+
+	// Change to temp directory for testing
+	oldWd, _ := os.Getwd()
+	defer os.Chdir(oldWd)
+	os.Chdir(tmpDir)
+
+	matcher, err := NewSOPSPathMatcher(".sops.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create SOPS path matcher: %v", err)
+	}
+
+	if len(matcher.rules) != 4 {
+		t.Errorf("Expected 4 rules, got %d", len(matcher.rules))
+	}
+
+	testCases := []struct {
+		name           string
+		path           string
+		shouldEncrypt  bool
+		shouldSkip     bool
+		description    string
+	}{
+		// Infrastructure paths that SHOULD be encrypted
+		{
+			name:          "infrastructure main.tf",
+			path:          "infrastructure/clusters/test-cluster/main.tf",
+			shouldEncrypt: true,
+			shouldSkip:    false,
+			description:   "Main terraform file should be encrypted",
+		},
+		{
+			name:          "infrastructure secrets",
+			path:          "infrastructure/clusters/test-cluster/secrets/credentials.yaml",
+			shouldEncrypt: true,
+			shouldSkip:    false,
+			description:   "Secrets in infrastructure should be encrypted",
+		},
+
+		// Infrastructure paths that SHOULD be skipped (excluded directories)
+		{
+			name:          "venv file",
+			path:          "infrastructure/clusters/test-cluster/venv/lib/python3.9/site.py",
+			shouldEncrypt: false,
+			shouldSkip:    true,
+			description:   "Files in venv should be skipped",
+		},
+		{
+			name:          "kubespray file",
+			path:          "infrastructure/clusters/test-cluster/kubespray/inventory/hosts.yaml",
+			shouldEncrypt: false,
+			shouldSkip:    true,
+			description:   "Files in kubespray should be skipped",
+		},
+		{
+			name:          ".terraform file",
+			path:          "infrastructure/clusters/test-cluster/.terraform/providers/aws.json",
+			shouldEncrypt: false,
+			shouldSkip:    true,
+			description:   "Files in .terraform should be skipped",
+		},
+		{
+			name:          ".bin file",
+			path:          "infrastructure/clusters/test-cluster/.bin/terraform",
+			shouldEncrypt: false,
+			shouldSkip:    true,
+			description:   "Files in .bin should be skipped",
+		},
+
+		// SSH keys
+		{
+			name:          "SSH private key",
+			path:          "secrets/ssh/id_rsa",
+			shouldEncrypt: true,
+			shouldSkip:    false,
+			description:   "SSH private keys should be encrypted",
+		},
+		{
+			name:          "SSH public key",
+			path:          "secrets/ssh/id_rsa.pub",
+			shouldEncrypt: false,
+			shouldSkip:    true, // Public keys are excluded by negative lookahead
+			description:   "SSH public keys should not be encrypted and should be skipped",
+		},
+
+		// Age keys
+		{
+			name:          "Age key file",
+			path:          "secrets/age/keys/cluster-key.txt",
+			shouldEncrypt: true,
+			shouldSkip:    false,
+			description:   "Age key files should be encrypted",
+		},
+
+		// Application overlays
+		{
+			name:          "Service secret",
+			path:          "applications/overlays/prod-cluster/services/harbor/secret.yaml",
+			shouldEncrypt: true,
+			shouldSkip:    false,
+			description:   "Service secrets should be encrypted",
+		},
+		{
+			name:          "Managed service config",
+			path:          "applications/overlays/dev-cluster/managed-services/loki/config.yml",
+			shouldEncrypt: true,
+			shouldSkip:    false,
+			description:   "Managed service configs should be encrypted",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			shouldEncrypt := matcher.ShouldEncryptPath(tc.path)
+			if shouldEncrypt != tc.shouldEncrypt {
+				t.Errorf("%s: ShouldEncryptPath(%q) = %v, expected %v",
+					tc.description, tc.path, shouldEncrypt, tc.shouldEncrypt)
+			}
+
+			shouldSkip := matcher.ShouldSkipPath(tc.path)
+			if shouldSkip != tc.shouldSkip {
+				t.Errorf("%s: ShouldSkipPath(%q) = %v, expected %v",
+					tc.description, tc.path, shouldSkip, tc.shouldSkip)
+			}
+		})
+	}
+}
+
+func TestExtractBasePattern(t *testing.T) {
+	testCases := []struct {
+		name     string
+		pattern  string
+		expected string
+	}{
+		{
+			name:     "infrastructure pattern with exclusions",
+			pattern:  `^infrastructure\/clusters\/test-cluster\/(?!(?:venv|kubespray|\.terraform|\.bin)\/)(.*)`,
+			expected: "infrastructure/clusters/test-cluster/",
+		},
+		{
+			name:     "SSH pattern with exclusions",
+			pattern:  `secrets/ssh/(?!.*\.pub$).*`,
+			expected: "secrets/ssh/",
+		},
+		{
+			name:     "pattern without exclusions",
+			pattern:  `secrets/age/keys/.*-key\.txt$`,
+			expected: "",
+		},
+		{
+			name:     "empty pattern",
+			pattern:  "",
+			expected: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := extractBasePattern(tc.pattern)
+			if result != tc.expected {
+				t.Errorf("extractBasePattern(%q) = %q, expected %q", tc.pattern, result, tc.expected)
+			}
+		})
+	}
+}
+
+func TestNewSOPSPathMatcherNoConfig(t *testing.T) {
+	// Test with non-existent config file
+	matcher, err := NewSOPSPathMatcher("/nonexistent/.sops.yaml")
+	if err != nil {
+		t.Errorf("Expected no error for non-existent config, got: %v", err)
+	}
+
+	if matcher == nil {
+		t.Error("Expected non-nil matcher")
+	}
+
+	if len(matcher.rules) != 0 {
+		t.Errorf("Expected 0 rules for non-existent config, got %d", len(matcher.rules))
 	}
 }

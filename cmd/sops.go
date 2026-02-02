@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dlclark/regexp2"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -1039,6 +1040,17 @@ func executeSOPSSecretsList(ctx context.Context, keyFile, searchPath string, dry
 
 	fmt.Printf("🔍 Searching for SOPS files in: %s\n", searchPath)
 
+	// Load SOPS configuration and create path matcher
+	sopsConfigPath := ".sops.yaml"
+	pathMatcher, err := NewSOPSPathMatcher(sopsConfigPath)
+	if err != nil {
+		fmt.Printf("⚠️  Failed to load SOPS configuration: %v\n", err)
+		fmt.Println("ℹ️  Falling back to basic pattern matching")
+		pathMatcher = &SOPSPathMatcher{rules: []*SOPSPathRule{}}
+	} else if len(pathMatcher.rules) > 0 {
+		fmt.Printf("✅ Loaded SOPS configuration with %d rules\n", len(pathMatcher.rules))
+	}
+
 	// Setup key environment if keyFile is specified
 	if keyFile != "" {
 		if err := setupSOPSKeyEnvironment(keyFile); err != nil {
@@ -1050,15 +1062,22 @@ func executeSOPSSecretsList(ctx context.Context, keyFile, searchPath string, dry
 	encryptor := sops.NewDefaultEncryptor(nil, nil)
 	var encryptedFiles []string
 	var unencryptedFiles []string
+	var skippedDirs []string
 
-	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip excluded directories
 		if info.IsDir() && shouldSkipDirectory(path) {
+			skippedDirs = append(skippedDirs, path)
 			return filepath.SkipDir
+		}
+
+		// Check if path should be skipped based on SOPS rules
+		if pathMatcher.ShouldSkipPath(path) {
+			return nil
 		}
 
 		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
@@ -1066,8 +1085,13 @@ func executeSOPSSecretsList(ctx context.Context, keyFile, searchPath string, dry
 				if isEncrypted {
 					encryptedFiles = append(encryptedFiles, path)
 				} else {
-					// For unencrypted files, check if they contain sensitive data patterns
-					if shouldEncrypt := shouldFileBeEncrypted(path); shouldEncrypt {
+					// Use SOPS path matcher if available, otherwise fall back to basic matching
+					shouldEncrypt := pathMatcher.ShouldEncryptPath(path)
+					if !shouldEncrypt {
+						shouldEncrypt = shouldFileBeEncrypted(path)
+					}
+					
+					if shouldEncrypt {
 						unencryptedFiles = append(unencryptedFiles, path)
 					}
 				}
@@ -1081,6 +1105,13 @@ func executeSOPSSecretsList(ctx context.Context, keyFile, searchPath string, dry
 	}
 
 	// Display results
+	if len(skippedDirs) > 0 && dryRun {
+		fmt.Printf("\n⏭️  Skipped directories: %d\n", len(skippedDirs))
+		for _, dir := range skippedDirs {
+			fmt.Printf("  • %s\n", dir)
+		}
+	}
+
 	fmt.Printf("\n📊 SOPS Files Status:\n")
 	fmt.Printf("🔒 Encrypted files: %d\n", len(encryptedFiles))
 	for _, file := range encryptedFiles {
@@ -1110,9 +1141,19 @@ func executeSOPSSecretsEncrypt(ctx context.Context, keyFile, searchPath string, 
 	fmt.Printf("📁 Search path: %s\n", searchPath)
 	fmt.Printf("💾 Create backups: %t\n", createBackups)
 
+	// Load SOPS configuration and create path matcher
+	sopsConfigPath := ".sops.yaml"
+	pathMatcher, err := NewSOPSPathMatcher(sopsConfigPath)
+	if err != nil {
+		fmt.Printf("⚠️  Failed to load SOPS configuration: %v\n", err)
+		fmt.Println("ℹ️  Falling back to basic pattern matching")
+		pathMatcher = &SOPSPathMatcher{rules: []*SOPSPathRule{}}
+	} else if len(pathMatcher.rules) > 0 {
+		fmt.Printf("✅ Loaded SOPS configuration with %d rules\n", len(pathMatcher.rules))
+	}
+
 	// Setup key environment and load age keys
 	var ageKeys []string
-	var err error
 
 	if keyFile != "" {
 		// Use the specified key file
@@ -1143,14 +1184,31 @@ func executeSOPSSecretsEncrypt(ctx context.Context, keyFile, searchPath string, 
 			return err
 		}
 
-		// Skip excluded directories
+		// Skip excluded directories (basic exclusion)
 		if info.IsDir() && shouldSkipDirectory(path) {
+			if dryRun {
+				fmt.Printf("⏭️  Skipping directory: %s\n", path)
+			}
 			return filepath.SkipDir
+		}
+
+		// Check if path should be skipped based on SOPS rules
+		if pathMatcher.ShouldSkipPath(path) {
+			if dryRun && !info.IsDir() {
+				fmt.Printf("⏭️  Skipping (SOPS rule): %s\n", path)
+			}
+			return nil
 		}
 
 		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
 			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && !isEncrypted {
-				if shouldEncrypt := shouldFileBeEncrypted(path); shouldEncrypt {
+				// Use SOPS path matcher if available, otherwise fall back to basic matching
+				shouldEncrypt := pathMatcher.ShouldEncryptPath(path)
+				if !shouldEncrypt {
+					shouldEncrypt = shouldFileBeEncrypted(path)
+				}
+				
+				if shouldEncrypt {
 					filesToEncrypt = append(filesToEncrypt, path)
 				}
 			}
@@ -1221,6 +1279,16 @@ func executeSOPSSecretsDecrypt(ctx context.Context, keyFile, searchPath string, 
 	fmt.Printf("📁 Search path: %s\n", searchPath)
 	fmt.Printf("💾 Create backups: %t\n", createBackups)
 
+	// Load SOPS configuration and create path matcher
+	sopsConfigPath := ".sops.yaml"
+	pathMatcher, err := NewSOPSPathMatcher(sopsConfigPath)
+	if err != nil {
+		fmt.Printf("⚠️  Failed to load SOPS configuration: %v\n", err)
+		pathMatcher = &SOPSPathMatcher{rules: []*SOPSPathRule{}}
+	} else if len(pathMatcher.rules) > 0 {
+		fmt.Printf("✅ Loaded SOPS configuration with %d rules\n", len(pathMatcher.rules))
+	}
+
 	// Setup key environment if keyFile is specified
 	if keyFile != "" {
 		if err := setupSOPSKeyEnvironment(keyFile); err != nil {
@@ -1233,14 +1301,25 @@ func executeSOPSSecretsDecrypt(ctx context.Context, keyFile, searchPath string, 
 	var filesToDecrypt []string
 
 	// Find encrypted files
-	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip excluded directories
 		if info.IsDir() && shouldSkipDirectory(path) {
+			if dryRun {
+				fmt.Printf("⏭️  Skipping directory: %s\n", path)
+			}
 			return filepath.SkipDir
+		}
+
+		// Check if path should be skipped based on SOPS rules
+		if pathMatcher.ShouldSkipPath(path) {
+			if dryRun && !info.IsDir() {
+				fmt.Printf("⏭️  Skipping (SOPS rule): %s\n", path)
+			}
+			return nil
 		}
 
 		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
@@ -1307,12 +1386,159 @@ func executeSOPSSecretsDecrypt(ctx context.Context, keyFile, searchPath string, 
 	return nil
 }
 
+// SOPSPathMatcher handles path matching based on SOPS configuration
+type SOPSPathMatcher struct {
+	rules []*SOPSPathRule
+}
+
+// SOPSPathRule represents a compiled SOPS creation rule
+type SOPSPathRule struct {
+	pathRegex      *regexp2.Regexp
+	encryptedRegex *regexp2.Regexp
+	original       CreationRule
+}
+
+// NewSOPSPathMatcher creates a new path matcher from SOPS configuration
+func NewSOPSPathMatcher(configPath string) (*SOPSPathMatcher, error) {
+	// Check if config file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// Return empty matcher if no config exists
+		return &SOPSPathMatcher{rules: []*SOPSPathRule{}}, nil
+	}
+
+	// Load SOPS configuration
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read SOPS config: %w", err)
+	}
+
+	var config SOPSConfig
+	if err := yaml.Unmarshal(content, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse SOPS config: %w", err)
+	}
+
+	// Compile regex patterns
+	matcher := &SOPSPathMatcher{
+		rules: make([]*SOPSPathRule, 0, len(config.CreationRules)),
+	}
+
+	for _, rule := range config.CreationRules {
+		pathRule := &SOPSPathRule{
+			original: rule,
+		}
+
+		// Compile path regex if present
+		if rule.PathRegex != "" {
+			pathRegex, err := regexp2.Compile(rule.PathRegex, regexp2.None)
+			if err != nil {
+				return nil, fmt.Errorf("failed to compile path_regex '%s': %w", rule.PathRegex, err)
+			}
+			pathRule.pathRegex = pathRegex
+		}
+
+		// Compile encrypted_regex if present
+		if rule.EncryptedRegex != "" {
+			encryptedRegex, err := regexp2.Compile(rule.EncryptedRegex, regexp2.None)
+			if err != nil {
+				return nil, fmt.Errorf("failed to compile encrypted_regex '%s': %w", rule.EncryptedRegex, err)
+			}
+			pathRule.encryptedRegex = encryptedRegex
+		}
+
+		matcher.rules = append(matcher.rules, pathRule)
+	}
+
+	return matcher, nil
+}
+
+// ShouldEncryptPath checks if a path should be encrypted based on SOPS rules
+func (m *SOPSPathMatcher) ShouldEncryptPath(path string) bool {
+	// If no rules, fall back to basic pattern matching
+	if len(m.rules) == 0 {
+		return shouldFileBeEncrypted(path)
+	}
+
+	// Normalize path to use forward slashes
+	normalizedPath := filepath.ToSlash(path)
+
+	// Check each rule
+	for _, rule := range m.rules {
+		if rule.pathRegex != nil {
+			match, err := rule.pathRegex.MatchString(normalizedPath)
+			if err != nil {
+				// If regex fails, skip this rule
+				continue
+			}
+			if match {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// ShouldSkipPath checks if a path should be skipped (excluded from encryption)
+func (m *SOPSPathMatcher) ShouldSkipPath(path string) bool {
+	// If no rules, fall back to directory-based exclusion
+	if len(m.rules) == 0 {
+		return false
+	}
+
+	// Normalize path to use forward slashes
+	normalizedPath := filepath.ToSlash(path)
+
+	// Check each rule - if path matches a rule with negative lookahead,
+	// it means the path is explicitly excluded
+	for _, rule := range m.rules {
+		if rule.pathRegex != nil {
+			match, err := rule.pathRegex.MatchString(normalizedPath)
+			if err != nil {
+				continue
+			}
+			
+			// If the pattern contains negative lookahead
+			if strings.Contains(rule.original.PathRegex, "(?!") {
+				// Extract the base pattern before the negative lookahead
+				basePattern := extractBasePattern(rule.original.PathRegex)
+				if basePattern != "" && strings.HasPrefix(normalizedPath, basePattern) {
+					// If the path starts with the base pattern but doesn't match the full regex,
+					// it means it's in an excluded directory
+					if !match {
+						return true
+					}
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// extractBasePattern extracts the base path pattern before negative lookahead
+func extractBasePattern(pattern string) string {
+	// Extract pattern like "infrastructure/clusters/test-cluster/" from
+	// "^infrastructure\/clusters\/test-cluster\/(?!(?:venv|kubespray|\.terraform|\.bin)\/)(.*)"
+	
+	// Remove anchors and escape sequences
+	pattern = strings.TrimPrefix(pattern, "^")
+	pattern = strings.ReplaceAll(pattern, "\\/", "/")
+	
+	// Find the negative lookahead position
+	if idx := strings.Index(pattern, "(?!"); idx > 0 {
+		return pattern[:idx]
+	}
+	
+	return ""
+}
+
 // shouldSkipDirectory determines if a directory should be skipped during file walking
 func shouldSkipDirectory(dirPath string) bool {
 	// List of directory patterns to exclude from encryption
 	excludedDirs := []string{
 		"venv",
 		".venv",
+		"kubespray",
 		".terraform",
 		".bin",
 		"node_modules",

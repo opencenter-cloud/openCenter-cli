@@ -402,24 +402,21 @@ func (m *DefaultSOPSManager) generateSOPSConfig(cfg *config.Config) (string, err
 
 	config := fmt.Sprintf(`# SOPS configuration for cluster: %s
 creation_rules:
-  - path_regex: .*\.(yaml|yml)$
-    age: %s
-    encrypted_regex: '^(data|stringData|password|token|key|secret|credentials)'
-`, cfg.OpenCenter.Cluster.ClusterName, ageKey)
-
-	// Add provider-specific rules
-	switch cfg.OpenCenter.Infrastructure.Provider {
-	case "openstack":
-		config += `  - path_regex: secrets/openstack-credentials\.yaml$
-    age: ` + ageKey + `
-`
-	case "vsphere":
-		config += `  - path_regex: secrets/vsphere-credentials\.yaml$
-    age: ` + ageKey + `
-  - path_regex: customer-managed/services/.*/secret\.yaml$
-    age: ` + ageKey + `
-`
-	}
+  - path_regex: 'secrets/age/keys/.*-key\.txt$'
+    age: >-
+      %s
+  - path_regex: 'secrets/ssh/(?!.*\.pub$).*'
+    age: >-
+      %s
+  - path_regex: 'applications/overlays/[^/]+/(managed-services|services)/.*/.*\.ya?ml$'
+    encrypted_regex: "^(secret)$"
+    age: >-
+      %s
+  - path_regex: '^infrastructure\/clusters\/%s\/(?!(?:venv|kubespray|\.terraform|\.bin)\/)(.*)'
+    encrypted_regex: "^(secret)$"
+    age: >-
+      %s
+`, cfg.OpenCenter.Cluster.ClusterName, ageKey, ageKey, ageKey, cfg.OpenCenter.Cluster.ClusterName, ageKey)
 
 	return config, nil
 }

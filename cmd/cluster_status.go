@@ -14,13 +14,16 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 )
 
 // newClusterStatusCmd creates the "cluster status" command.
@@ -108,41 +111,55 @@ using 'opencenter cluster select' to set one.`,
 				// Get configuration manager and path resolver
 				configManager, err := config.NewConfigManager("")
 				if err == nil {
-					pathResolver := config.NewPathResolver(configManager)
-
-					// Parse cluster identifier to get organization
-					organization, clusterName, parseErr := config.ParseClusterIdentifier(activeCluster)
-					if parseErr == nil {
-						// Use organization from config if available, otherwise use parsed
-						if cfg.OpenCenter.Meta.Organization != "" {
-							organization = cfg.OpenCenter.Meta.Organization
+					// Get base directory for clusters
+					baseDir := configManager.GetConfig().Paths.ClustersDir
+					if baseDir == "" {
+						homeDir, err := os.UserHomeDir()
+						if err == nil {
+							baseDir = filepath.Join(homeDir, ".config", "opencenter", "clusters")
 						}
+					}
 
-						paths := pathResolver.ResolveClusterPaths(clusterName, organization)
+					if baseDir != "" {
+						pathResolver := paths.NewPathResolver(baseDir)
 
-						fmt.Fprintf(cmd.OutOrStdout(), "  Config Directory:  %s\n", paths.ClusterDir)
-						fmt.Fprintf(cmd.OutOrStdout(), "  SOPS Key:          %s\n", paths.SOPSKeyPath)
-						fmt.Fprintf(cmd.OutOrStdout(), "  GitOps Directory:  %s\n", paths.GitOpsDir)
+						// Parse cluster identifier to get organization
+						organization, clusterName, parseErr := config.ParseClusterIdentifier(activeCluster)
+						if parseErr == nil {
+							// Use organization from config if available, otherwise use parsed
+							if cfg.OpenCenter.Meta.Organization != "" {
+								organization = cfg.OpenCenter.Meta.Organization
+							}
 
-						// Check if key files exist
-						if _, err := os.Stat(paths.SOPSKeyPath); err == nil {
-							fmt.Fprintf(cmd.OutOrStdout(), "  SOPS Key Status:   ✓ Present\n")
-						} else {
-							fmt.Fprintf(cmd.OutOrStdout(), "  SOPS Key Status:   ✗ Missing\n")
-						}
+							// Resolve cluster paths
+							ctx := context.Background()
+							clusterPaths, err := pathResolver.Resolve(ctx, clusterName, organization)
+							if err == nil {
+								fmt.Fprintf(cmd.OutOrStdout(), "  Config Directory:  %s\n", clusterPaths.ClusterDir)
+								fmt.Fprintf(cmd.OutOrStdout(), "  SOPS Key:          %s\n", clusterPaths.SOPSKeyPath)
+								fmt.Fprintf(cmd.OutOrStdout(), "  GitOps Directory:  %s\n", clusterPaths.GitOpsDir)
 
-						// Check if GitOps directory exists
-						if _, err := os.Stat(paths.GitOpsDir); err == nil {
-							fmt.Fprintf(cmd.OutOrStdout(), "  GitOps Status:     ✓ Initialized\n")
-						} else {
-							fmt.Fprintf(cmd.OutOrStdout(), "  GitOps Status:     ✗ Not initialized\n")
-						}
+								// Check if key files exist
+								if _, err := os.Stat(clusterPaths.SOPSKeyPath); err == nil {
+									fmt.Fprintf(cmd.OutOrStdout(), "  SOPS Key Status:   ✓ Present\n")
+								} else {
+									fmt.Fprintf(cmd.OutOrStdout(), "  SOPS Key Status:   ✗ Missing\n")
+								}
 
-						// Check for kubeconfig
-						if _, err := os.Stat(paths.KubeconfigPath); err == nil {
-							fmt.Fprintf(cmd.OutOrStdout(), "  Kubeconfig:        ✓ Present\n")
-						} else {
-							fmt.Fprintf(cmd.OutOrStdout(), "  Kubeconfig:        ✗ Missing\n")
+								// Check if GitOps directory exists
+								if _, err := os.Stat(clusterPaths.GitOpsDir); err == nil {
+									fmt.Fprintf(cmd.OutOrStdout(), "  GitOps Status:     ✓ Initialized\n")
+								} else {
+									fmt.Fprintf(cmd.OutOrStdout(), "  GitOps Status:     ✗ Not initialized\n")
+								}
+
+								// Check for kubeconfig
+								if _, err := os.Stat(clusterPaths.KubeconfigPath); err == nil {
+									fmt.Fprintf(cmd.OutOrStdout(), "  Kubeconfig:        ✓ Present\n")
+								} else {
+									fmt.Fprintf(cmd.OutOrStdout(), "  Kubeconfig:        ✗ Missing\n")
+								}
+							}
 						}
 					}
 				}

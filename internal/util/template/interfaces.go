@@ -30,19 +30,34 @@ type TemplateRenderer interface {
 	AddFunctions(funcMap template.FuncMap) error
 }
 
-// TemplateValidator interface for validating templates and data
-type TemplateValidator interface {
+// BasicTemplateValidator interface for basic template validation
+type BasicTemplateValidator interface {
 	ValidateTemplate(templateName string) error
-	ValidateTemplateData(templateName string, data interface{}) error
 	ValidateTemplateExists(templateName string) error
-	ValidateRequiredFields(data interface{}, requiredFields []string) error
-
-	// Enhanced validation methods for comprehensive template validation framework
-	ValidateTemplateWithData(templateName string, data interface{}) *TemplateValidationResult
 	ValidateTemplateSyntax(templateName string) error
+}
+
+// TemplateDataValidator interface for validating template data
+type TemplateDataValidator interface {
+	ValidateTemplateData(templateName string, data interface{}) error
+	ValidateRequiredFields(data interface{}, requiredFields []string) error
 	ValidateVariableSubstitution(templateName string, data interface{}) error
+}
+
+// AdvancedTemplateValidator interface for advanced template analysis
+type AdvancedTemplateValidator interface {
+	ValidateTemplateWithData(templateName string, data interface{}) *TemplateValidationResult
 	ExtractTemplateVariables(templateName string) ([]VariableInfo, error)
 	ValidateNetworkPluginConfig(pluginType string, config map[string]interface{}) error
+}
+
+// TemplateValidator interface combining all validation capabilities
+// Deprecated: Use specific validator interfaces (BasicTemplateValidator, TemplateDataValidator, AdvancedTemplateValidator)
+// This interface is maintained for backward compatibility and will be removed in v2.0.0
+type TemplateValidator interface {
+	BasicTemplateValidator
+	TemplateDataValidator
+	AdvancedTemplateValidator
 }
 
 // TemplateEngine interface combining rendering and validation with dependency injection

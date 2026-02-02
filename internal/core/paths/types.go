@@ -16,6 +16,31 @@ package paths
 // ClusterPaths contains all organization-aware paths for a cluster.
 // This structure supports the organization-based directory layout and provides
 // a single source of truth for all cluster-related paths.
+//
+// Directory Structure:
+//
+//	~/.config/opencenter/clusters/
+//	└── <organization>/
+//	    ├── infrastructure/
+//	    │   └── clusters/
+//	    │       └── <cluster>/
+//	    │           ├── .<cluster>-config.yaml  (ConfigPath)
+//	    │           ├── kubeconfig.yaml         (KubeconfigPath)
+//	    │           ├── inventory/              (InventoryPath)
+//	    │           ├── venv/                   (VenvPath)
+//	    │           └── .bin/                   (BinPath)
+//	    ├── applications/
+//	    │   └── overlays/
+//	    │       └── <cluster>/                  (ApplicationsDir)
+//	    ├── secrets/
+//	    │   ├── age/
+//	    │   │   └── keys/
+//	    │   │       └── <cluster>-key.txt       (SOPSKeyPath)
+//	    │   └── ssh/
+//	    │       └── <cluster>                   (SSHKeyPath)
+//	    └── .sops.yaml                          (SOPSConfigPath)
+//
+// All paths are absolute and fully resolved (no ~ or environment variables).
 type ClusterPaths struct {
 	// OrganizationDir is the root directory for the organization
 	// Example: ~/.config/opencenter/clusters/<organization>
@@ -71,6 +96,19 @@ type ClusterPaths struct {
 }
 
 // ResolutionOptions contains options for path resolution.
+//
+// These options control the behavior of PathResolver:
+//   - Organization: Default organization when not specified in Resolve()
+//   - CacheResults: Enable caching for performance (recommended: true)
+//   - ValidatePaths: Validate write permissions (expensive, use in tests)
+//
+// Example:
+//
+//	opts := paths.ResolutionOptions{
+//	    Organization: "my-company",
+//	    CacheResults: true,
+//	    ValidatePaths: false, // Skip expensive validation
+//	}
 type ResolutionOptions struct {
 	// Organization is the organization name for the cluster
 	// If empty, defaults to "opencenter"
@@ -86,6 +124,16 @@ type ResolutionOptions struct {
 }
 
 // DefaultResolutionOptions returns the default resolution options.
+//
+// Defaults:
+//   - Organization: "opencenter"
+//   - CacheResults: true (caching enabled for performance)
+//   - ValidatePaths: false (validation disabled for performance)
+//
+// Example:
+//
+//	opts := paths.DefaultResolutionOptions()
+//	opts.Organization = "my-company" // Override default
 func DefaultResolutionOptions() ResolutionOptions {
 	return ResolutionOptions{
 		Organization:  "opencenter",

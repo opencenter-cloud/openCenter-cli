@@ -18,24 +18,33 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"gopkg.in/yaml.v3"
 )
 
-// ConfigLoader implements the ConfigLoaderInterface for loading configurations from various sources.
-type ConfigLoader struct {
+// LegacyConfigLoader implements the ConfigLoaderInterface for loading configurations from various sources.
+//
+// Deprecated: Use internal/core/config.ConfigManager instead. This implementation will be removed in v2.0.0.
+// Migration: Replace LegacyConfigLoader with ConfigManager from internal/core/config package.
+type LegacyConfigLoader struct {
 	pathResolver PathResolverInterface
 }
 
 // NewConfigLoader creates a new configuration loader.
-func NewConfigLoader(pathResolver PathResolverInterface) *ConfigLoader {
-	return &ConfigLoader{
+//
+// Deprecated: Use internal/core/config.NewConfigManager() instead. This will be removed in v2.0.0.
+// Migration: Replace NewConfigLoader(pathResolver) with config.NewConfigManager()
+func NewConfigLoader(pathResolver PathResolverInterface) *LegacyConfigLoader {
+	logDeprecationWarning(
+		"config.NewConfigLoader()",
+		"internal/core/config.NewConfigManager()",
+		"v2.0.0",
+	)
+	return &LegacyConfigLoader{
 		pathResolver: pathResolver,
 	}
 }
 
 // LoadFromFile loads configuration from a file path.
-func (cl *ConfigLoader) LoadFromFile(ctx context.Context, filePath string) (*Config, error) {
+func (cl *LegacyConfigLoader) LoadFromFile(ctx context.Context, filePath string) (*Config, error) {
 	if filePath == "" {
 		return nil, fmt.Errorf("file path cannot be empty")
 	}
@@ -58,9 +67,9 @@ func (cl *ConfigLoader) LoadFromFile(ctx context.Context, filePath string) (*Con
 }
 
 // LoadFromBytes loads configuration from byte data.
-// It automatically detects the schema version and routes to the appropriate loader.
+// In v2.0.0, only v2 configurations are supported. V1 configurations are rejected.
 // Requirements: 13.1, 13.2, 13.3
-func (cl *ConfigLoader) LoadFromBytes(ctx context.Context, data []byte, clusterName string) (*Config, error) {
+func (cl *LegacyConfigLoader) LoadFromBytes(ctx context.Context, data []byte, clusterName string) (*Config, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("configuration data cannot be empty")
 	}
@@ -75,43 +84,29 @@ func (cl *ConfigLoader) LoadFromBytes(ctx context.Context, data []byte, clusterN
 		return nil, fmt.Errorf("failed to detect schema version: %w", err)
 	}
 
-	// Route to appropriate loader based on version
-	if versionInfo.IsV2 {
-		// v2 configurations are not yet fully supported in the v1 loader
-		// Return an error directing users to use the v2 loader
-		return nil, fmt.Errorf("v2 configuration detected: use v2.ConfigLoader for loading v2 configurations")
+	// Only v2 configurations are supported in v2.0.0
+	if !versionInfo.IsV2 {
+		return nil, fmt.Errorf("v1 configurations are not supported in v2.0.0. Please upgrade to v1.x and run migration before using v2.0.0")
 	}
 
-	// v1 configuration loading (existing logic)
-	// Start with default configuration
-	config := defaultConfig(clusterName)
-
-	// Unmarshal YAML data onto the default configuration
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML configuration: %w", err)
-	}
-
-	// Resolve references after parsing
-	resolver := NewReferenceResolver()
-	if err := resolver.Resolve(&config); err != nil {
-		return nil, fmt.Errorf("failed to resolve configuration references: %w", err)
-	}
-
-	return &config, nil
+	// v2 configuration loading
+	// Use the new ConfigManager for v2 loading
+	return nil, fmt.Errorf("use internal/core/config.ConfigManager for loading v2 configurations")
 }
 
 // LoadDefault creates a default configuration for a cluster.
-func (cl *ConfigLoader) LoadDefault(ctx context.Context, clusterName string) (*Config, error) {
+func (cl *LegacyConfigLoader) LoadDefault(ctx context.Context, clusterName string) (*Config, error) {
 	if err := ValidateClusterName(clusterName); err != nil {
 		return nil, fmt.Errorf("invalid cluster name: %w", err)
 	}
 
-	config := defaultConfig(clusterName)
+	// Use cached default config for better performance
+	config := GetCachedDefaultConfig(clusterName)
 	return &config, nil
 }
 
 // GenerateCompleteConfig generates a complete configuration with defaults merged.
-func (cl *ConfigLoader) GenerateCompleteConfig(ctx context.Context, clusterName string) (*Config, error) {
+func (cl *LegacyConfigLoader) GenerateCompleteConfig(ctx context.Context, clusterName string) (*Config, error) {
 	if err := ValidateClusterName(clusterName); err != nil {
 		return nil, fmt.Errorf("invalid cluster name: %w", err)
 	}
@@ -126,7 +121,7 @@ func (cl *ConfigLoader) GenerateCompleteConfig(ctx context.Context, clusterName 
 }
 
 // LoadFromPath loads configuration using organization-aware path resolution.
-func (cl *ConfigLoader) LoadFromPath(ctx context.Context, clusterName string) (*Config, error) {
+func (cl *LegacyConfigLoader) LoadFromPath(ctx context.Context, clusterName string) (*Config, error) {
 	if err := ValidateClusterName(clusterName); err != nil {
 		return nil, fmt.Errorf("invalid cluster name: %w", err)
 	}
@@ -151,7 +146,7 @@ func (cl *ConfigLoader) LoadFromPath(ctx context.Context, clusterName string) (*
 }
 
 // LoadWithDefaults loads configuration and merges with schema defaults.
-func (cl *ConfigLoader) LoadWithDefaults(ctx context.Context, clusterName string) (*Config, error) {
+func (cl *LegacyConfigLoader) LoadWithDefaults(ctx context.Context, clusterName string) (*Config, error) {
 	if err := ValidateClusterName(clusterName); err != nil {
 		return nil, fmt.Errorf("invalid cluster name: %w", err)
 	}
@@ -161,7 +156,7 @@ func (cl *ConfigLoader) LoadWithDefaults(ctx context.Context, clusterName string
 }
 
 // SaveToFile saves configuration to a file path.
-func (cl *ConfigLoader) SaveToFile(ctx context.Context, config *Config, filePath string) error {
+func (cl *LegacyConfigLoader) SaveToFile(ctx context.Context, config *Config, filePath string) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
@@ -177,7 +172,8 @@ func (cl *ConfigLoader) SaveToFile(ctx context.Context, config *Config, filePath
 	}
 
 	// Marshal configuration to YAML
-	data, err := yaml.Marshal(config)
+	// Use optimized marshaling for better performance
+	data, err := MarshalConfigOptimized(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration to YAML: %w", err)
 	}
@@ -191,7 +187,7 @@ func (cl *ConfigLoader) SaveToFile(ctx context.Context, config *Config, filePath
 }
 
 // SaveToPath saves configuration using organization-aware path resolution.
-func (cl *ConfigLoader) SaveToPath(ctx context.Context, config *Config) error {
+func (cl *LegacyConfigLoader) SaveToPath(ctx context.Context, config *Config) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
@@ -219,7 +215,7 @@ func (cl *ConfigLoader) SaveToPath(ctx context.Context, config *Config) error {
 }
 
 // ValidateFile validates that a configuration file exists and is readable.
-func (cl *ConfigLoader) ValidateFile(ctx context.Context, filePath string) error {
+func (cl *LegacyConfigLoader) ValidateFile(ctx context.Context, filePath string) error {
 	if filePath == "" {
 		return fmt.Errorf("file path cannot be empty")
 	}
@@ -249,7 +245,7 @@ func (cl *ConfigLoader) ValidateFile(ctx context.Context, filePath string) error
 }
 
 // extractClusterNameFromPath extracts the cluster name from a configuration file path.
-func (cl *ConfigLoader) extractClusterNameFromPath(filePath string) string {
+func (cl *LegacyConfigLoader) extractClusterNameFromPath(filePath string) string {
 	// Extract filename without extension
 	filename := filepath.Base(filePath)
 
@@ -271,12 +267,12 @@ func (cl *ConfigLoader) extractClusterNameFromPath(filePath string) string {
 }
 
 // GetSupportedFormats returns the list of supported configuration file formats.
-func (cl *ConfigLoader) GetSupportedFormats() []string {
+func (cl *LegacyConfigLoader) GetSupportedFormats() []string {
 	return []string{"yaml", "yml"}
 }
 
 // IsValidFormat checks if a file format is supported.
-func (cl *ConfigLoader) IsValidFormat(filePath string) bool {
+func (cl *LegacyConfigLoader) IsValidFormat(filePath string) bool {
 	ext := filepath.Ext(filePath)
 	if len(ext) > 0 {
 		ext = ext[1:] // Remove the dot
@@ -293,7 +289,7 @@ func (cl *ConfigLoader) IsValidFormat(filePath string) bool {
 }
 
 // LoadMultiple loads multiple configurations by cluster names.
-func (cl *ConfigLoader) LoadMultiple(ctx context.Context, clusterNames []string) (map[string]*Config, error) {
+func (cl *LegacyConfigLoader) LoadMultiple(ctx context.Context, clusterNames []string) (map[string]*Config, error) {
 	if len(clusterNames) == 0 {
 		return make(map[string]*Config), nil
 	}
@@ -318,7 +314,7 @@ func (cl *ConfigLoader) LoadMultiple(ctx context.Context, clusterNames []string)
 }
 
 // CreateFromTemplate creates a new configuration from a template.
-func (cl *ConfigLoader) CreateFromTemplate(ctx context.Context, clusterName, templateName string) (*Config, error) {
+func (cl *LegacyConfigLoader) CreateFromTemplate(ctx context.Context, clusterName, templateName string) (*Config, error) {
 	if err := ValidateClusterName(clusterName); err != nil {
 		return nil, fmt.Errorf("invalid cluster name: %w", err)
 	}

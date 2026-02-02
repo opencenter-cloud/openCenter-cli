@@ -14,11 +14,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/credentials"
 	"github.com/spf13/cobra"
 )
@@ -78,7 +81,18 @@ This is useful for:
 			if err != nil {
 				return fmt.Errorf("failed to create config manager: %w", err)
 			}
-			pathResolver := config.NewPathResolver(configManager)
+
+			// Get base directory for clusters
+			baseDir := configManager.GetConfig().Paths.ClustersDir
+			if baseDir == "" {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return fmt.Errorf("failed to get home directory: %w", err)
+				}
+				baseDir = filepath.Join(homeDir, ".config", "opencenter", "clusters")
+			}
+
+			pathResolver := paths.NewPathResolver(baseDir)
 
 			// Parse cluster identifier to get organization and cluster name
 			organization, actualClusterName, err := config.ParseClusterIdentifier(clusterName)
@@ -92,7 +106,11 @@ This is useful for:
 			}
 
 			// Resolve cluster paths
-			paths := pathResolver.ResolveClusterPaths(actualClusterName, organization)
+			ctx := context.Background()
+			clusterPaths, err := pathResolver.Resolve(ctx, actualClusterName, organization)
+			if err != nil {
+				return fmt.Errorf("failed to resolve cluster paths: %w", err)
+			}
 
 			// Detect shell (or use override)
 			shell := shellOverride
@@ -139,17 +157,17 @@ This is useful for:
 			switch shell {
 			case "fish":
 				output.WriteString(fmt.Sprintf("set -gx OPENCENTER_CLUSTER %s\n", clusterName))
-				if _, err := os.Stat(paths.KubeconfigPath); err == nil {
-					output.WriteString(fmt.Sprintf("set -gx KUBECONFIG %s\n", paths.KubeconfigPath))
+				if _, err := os.Stat(clusterPaths.KubeconfigPath); err == nil {
+					output.WriteString(fmt.Sprintf("set -gx KUBECONFIG %s\n", clusterPaths.KubeconfigPath))
 				}
-				if _, err := os.Stat(paths.InventoryPath); err == nil {
-					output.WriteString(fmt.Sprintf("set -gx ANSIBLE_INVENTORY %s\n", paths.InventoryPath))
+				if _, err := os.Stat(clusterPaths.InventoryPath); err == nil {
+					output.WriteString(fmt.Sprintf("set -gx ANSIBLE_INVENTORY %s\n", clusterPaths.InventoryPath))
 				}
-				if _, err := os.Stat(paths.BinPath); err == nil {
-					output.WriteString(fmt.Sprintf("set -gx PATH %s $PATH\n", paths.BinPath))
+				if _, err := os.Stat(clusterPaths.BinPath); err == nil {
+					output.WriteString(fmt.Sprintf("set -gx PATH %s $PATH\n", clusterPaths.BinPath))
 				}
-				if _, err := os.Stat(paths.VenvPath); err == nil {
-					activateScript := fmt.Sprintf("%s/bin/activate.fish", paths.VenvPath)
+				if _, err := os.Stat(clusterPaths.VenvPath); err == nil {
+					activateScript := fmt.Sprintf("%s/bin/activate.fish", clusterPaths.VenvPath)
 					if _, err := os.Stat(activateScript); err == nil {
 						output.WriteString(fmt.Sprintf("source %s\n", activateScript))
 					}
@@ -157,17 +175,17 @@ This is useful for:
 
 			case "powershell":
 				output.WriteString(fmt.Sprintf("$env:OPENCENTER_CLUSTER = '%s'\n", clusterName))
-				if _, err := os.Stat(paths.KubeconfigPath); err == nil {
-					output.WriteString(fmt.Sprintf("$env:KUBECONFIG = '%s'\n", paths.KubeconfigPath))
+				if _, err := os.Stat(clusterPaths.KubeconfigPath); err == nil {
+					output.WriteString(fmt.Sprintf("$env:KUBECONFIG = '%s'\n", clusterPaths.KubeconfigPath))
 				}
-				if _, err := os.Stat(paths.InventoryPath); err == nil {
-					output.WriteString(fmt.Sprintf("$env:ANSIBLE_INVENTORY = '%s'\n", paths.InventoryPath))
+				if _, err := os.Stat(clusterPaths.InventoryPath); err == nil {
+					output.WriteString(fmt.Sprintf("$env:ANSIBLE_INVENTORY = '%s'\n", clusterPaths.InventoryPath))
 				}
-				if _, err := os.Stat(paths.BinPath); err == nil {
-					output.WriteString(fmt.Sprintf("$env:PATH = '%s;' + $env:PATH\n", paths.BinPath))
+				if _, err := os.Stat(clusterPaths.BinPath); err == nil {
+					output.WriteString(fmt.Sprintf("$env:PATH = '%s;' + $env:PATH\n", clusterPaths.BinPath))
 				}
-				if _, err := os.Stat(paths.VenvPath); err == nil {
-					activateScript := fmt.Sprintf("%s\\Scripts\\Activate.ps1", paths.VenvPath)
+				if _, err := os.Stat(clusterPaths.VenvPath); err == nil {
+					activateScript := fmt.Sprintf("%s\\Scripts\\Activate.ps1", clusterPaths.VenvPath)
 					if _, err := os.Stat(activateScript); err == nil {
 						output.WriteString(fmt.Sprintf(". %s\n", activateScript))
 					}
@@ -176,17 +194,17 @@ This is useful for:
 			default:
 				// Bash/Zsh syntax
 				output.WriteString(fmt.Sprintf("export OPENCENTER_CLUSTER=%s\n", clusterName))
-				if _, err := os.Stat(paths.KubeconfigPath); err == nil {
-					output.WriteString(fmt.Sprintf("export KUBECONFIG=%s\n", paths.KubeconfigPath))
+				if _, err := os.Stat(clusterPaths.KubeconfigPath); err == nil {
+					output.WriteString(fmt.Sprintf("export KUBECONFIG=%s\n", clusterPaths.KubeconfigPath))
 				}
-				if _, err := os.Stat(paths.InventoryPath); err == nil {
-					output.WriteString(fmt.Sprintf("export ANSIBLE_INVENTORY=%s\n", paths.InventoryPath))
+				if _, err := os.Stat(clusterPaths.InventoryPath); err == nil {
+					output.WriteString(fmt.Sprintf("export ANSIBLE_INVENTORY=%s\n", clusterPaths.InventoryPath))
 				}
-				if _, err := os.Stat(paths.BinPath); err == nil {
-					output.WriteString(fmt.Sprintf("export PATH=%s:$PATH\n", paths.BinPath))
+				if _, err := os.Stat(clusterPaths.BinPath); err == nil {
+					output.WriteString(fmt.Sprintf("export PATH=%s:$PATH\n", clusterPaths.BinPath))
 				}
-				if _, err := os.Stat(paths.VenvPath); err == nil {
-					activateScript := fmt.Sprintf("%s/bin/activate", paths.VenvPath)
+				if _, err := os.Stat(clusterPaths.VenvPath); err == nil {
+					activateScript := fmt.Sprintf("%s/bin/activate", clusterPaths.VenvPath)
 					if _, err := os.Stat(activateScript); err == nil {
 						output.WriteString(fmt.Sprintf("source %s\n", activateScript))
 					}

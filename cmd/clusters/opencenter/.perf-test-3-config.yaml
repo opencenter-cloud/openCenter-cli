@@ -1,0 +1,634 @@
+schema_version: "2.0"
+metadata:
+    created_at: 2026-02-01T22:09:55.329901-06:00
+    updated_at: 2026-02-01T22:09:55.329901-06:00
+    created_by: victor.palma
+opencenter:
+    meta:
+        name: perf-test-3
+        env: dev
+        region: '{{ .OpenCenter.Cluster.ClusterRegion }}'
+        status: success
+        stage: init
+        organization: opencenter
+    secrets:
+        backend: barbican
+    infrastructure:
+        provider: openstack
+        cloud:
+            aws:
+                profile: ""
+                region: ""
+                vpc_id: ""
+                private_subnets: []
+                public_subnets: []
+            openstack:
+                auth_url: ""
+                insecure: false
+                region: sjc3
+                application_credential_id: ""
+                application_credential_secret: ""
+                domain: ""
+                tenant_name: ""
+                availability_zone: az1
+                project_domain_name: rackspace_cloud_domain
+                user_domain_name: rackspace_cloud_domain
+                ca: ""
+                image_id: 799dcf97-3656-4361-8187-13ab1b295e33
+                image_id_windows: a2083759-f341-445b-b717-dafb5e31fa6b
+                networking:
+                    floating_ip_pool: PUBLICNET
+                    floating_network_id: ""
+                    network_id: ""
+                    router_external_network_id: 723f8fa2-dbf7-4cec-8d5f-017e62c12f79
+                    subnet_id: ""
+                    designate:
+                        dns_zone_name: ""
+                    vlan:
+                        provider: physnet1
+                    k8s_api_port_acl:
+                        - 0.0.0.0/0
+                modules:
+                    openstack_nova:
+                        source: github.com/rackerlabs/opencenter-gitops-base.git//iac/cloud/openstack/openstack-nova?ref=main
+        ssh_user: ubuntu
+        os_version: "24"
+        server_group_affinity:
+            - anti-affinity
+        node_naming:
+            worker: wn
+            master: cp
+            worker_windows: win
+        bastion:
+            address: localhost
+        k8s_api_ip: ""
+    cluster:
+        cluster_name: perf-test-3
+        aws_access_key: ""
+        aws_secret_access_key: ""
+        ssh_authorized_keys:
+            - ""
+        kubernetes:
+            version: 1.33.5
+            kubespray_version: v2.29.1
+            api_port: 443
+            kube_vip_enabled: true
+            kubelet_rotate_server_certificates: false
+            flavor_bastion: gp.0.2.2
+            flavor_master: gp.0.4.8
+            flavor_worker: gp.0.4.16
+            flavor_worker_windows: gp.5.4.16
+            subnet_pods: 10.42.0.0/16
+            subnet_services: 10.43.0.0/16
+            loadbalancer_provider: ovn
+            dns_zone_name: ""
+            master_count: 3
+            worker_count: 2
+            worker_count_windows: 0
+            network_plugin:
+                calico:
+                    enabled: true
+                    cni_iface: enp3s0
+                    calico_interface_autodetect: interface
+                    autodetect_cidr: ""
+                    encapsulation_type: VXLAN
+                    nat_outgoing: true
+                    modules:
+                        calico:
+                            source: github.com/rackerlabs/opencenter-gitops-base.git//iac/cni/calico?ref=main
+                cilium:
+                    enabled: false
+                    operator_enabled: true
+                    kubeProxyReplacement: true
+                    modules:
+                        cilium:
+                            source: github.com/rackerlabs/opencenter-gitops-base.git//iac/cni/cilium?ref=main
+                kube-ovn:
+                    enabled: false
+                    cilium_integration: true
+                    modules:
+                        kube_ovn:
+                            source: github.com/rackerlabs/opencenter-gitops-base.git//iac/cni/kube-ovn?ref=main
+            storage_plugin:
+                vsphere:
+                    enabled: false
+                cinder:
+                    enabled: false
+                longhorn:
+                    enabled: false
+            oidc:
+                enabled: false
+                kube_oidc_url: ""
+                kube_oidc_client_id: kubernetes
+                kube_oidc_ca_file: ""
+                kube_oidc_username_claim: sub
+                kube_oidc_username_prefix: 'oidc:'
+                kube_oidc_groups_claim: groups
+                kube_oidc_groups_prefix: 'oidc:'
+            windows_workers:
+                enabled: false
+                windows_user: Administrator
+                windows_admin_password: ""
+                worker_node_bfv_size_windows: 0
+                worker_node_bfv_type_windows: ""
+            security:
+                k8s_hardening: true
+                pod_security_exemptions:
+                    - trivy-temp
+                    - tigera-operator
+                    - kube-system
+            networking:
+                subnet_nodes: ""
+                allocation_pool_start: ""
+                allocation_pool_end: ""
+                vrrp_enabled: false
+                vrrp_ip: ""
+                subnet_services: ""
+                subnet_pods: ""
+                use_octavia: false
+                loadbalancer_provider: ""
+                use_designate: false
+                dns_zone_name: ""
+                dns_nameservers: []
+                ntp_servers: []
+                vlan: {}
+            modules:
+                kubespray_cluster:
+                    source: github.com/rackerlabs/opencenter-gitops-base.git//iac/provider/kubespray?ref=main
+            additional_server_pools_worker: []
+            additional_server_pools_worker_windows: []
+        networking:
+            ntp_servers:
+                - time.sjc3.rackspace.com
+                - time2.sjc3.rackspace.com
+            dns_nameservers:
+                - 8.8.8.8
+                - 8.8.4.4
+            security:
+                ca_certificates: ""
+                os_hardening: true
+            subnet_nodes: 10.2.128.0/22
+            vrrp_enabled: true
+            use_octavia: false
+            loadbalancer_provider: ovn
+            use_designate: false
+            vlan:
+                provider: physnet1
+        base_domain: k8s.opencenter.cloud
+        cluster_fqdn: perf-test-3.sjc3.k8s.opencenter.cloud
+    gitops:
+        git_dir: clusters/opencenter
+        git_url: ""
+        git_ssh_key: clusters/opencenter/secrets/ssh/perf-test-3-dev-{{ .OpenCenter.Cluster.ClusterRegion }}
+        git_ssh_pub: clusters/opencenter/secrets/ssh/perf-test-3-dev-{{ .OpenCenter.Cluster.ClusterRegion }}.pub
+        git_branch: main
+        flux:
+            interval: 15m
+            prune: true
+        gitops_base_repo: ssh://git@github.com/rackerlabs/opencenter-gitops-base.git
+        gitops_base_release: v0.1.0
+        gitops_branch: main
+    storage:
+        default_storage_class: csi-cinder-sc-delete
+        worker_volume_size: 40
+        worker_volume_destination_type: volume
+        worker_volume_source_type: image
+        worker_volume_type: HA-Standard
+    managed-service:
+        alert-proxy:
+            enabled: false
+            namespace: ""
+            hostname: ""
+            image_repository: ghcr.io/rackerlabs/alert-proxy
+            image_tag: latest
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ssh://git@github.com/rackerlabs/opencenter-gitops-base.git
+            gitops_source_release: v0.1.0
+            gitops_source_branch: main
+            alert_manager_base_url: ""
+            http_route_fqdn: https://alerts.perf-test-3.sjc3.k8s.opencenter.cloud
+    services:
+        calico:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            calico_kube_api_server: https://api.perf-test-3.sjc3.k8s.opencenter.cloud:6443
+        cert-manager:
+            enabled: false
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            letsencrypt_server: https://acme-v02.api.letsencrypt.org/directory
+            email: mpk-support@rackspace.com
+            region: us-east-1
+            dns_zones: []
+            create_cluster_issuer: false
+            issuers: []
+            dns_provider: ""
+        etcd-backup:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            s3_host: https://swift.api.dfw3.rackspacecloud.com
+            s3_region: DFW3
+        external-snapshotter:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        fluxcd:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        gateway:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            gateway_name: ""
+            gateway_namespace: ""
+            gateway_class: ""
+            default_issuer: ""
+            listeners: []
+        gateway-api:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        headlamp:
+            enabled: false
+            namespace: ""
+            hostname: dashboard.perf-test-3.sjc3.k8s.opencenter.cloud
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            headlamp_oidc_issuer_url: https://auth.perf-test-3.sjc3.k8s.opencenter.cloud/realms/opencenter
+            headlamp_oidc_client_id: kubernetes
+        keycloak:
+            enabled: false
+            namespace: ""
+            hostname: auth.perf-test-3.sjc3.k8s.opencenter.cloud
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            keycloak_realm: opencenter
+            keycloak_frontend_url: https://auth.perf-test-3.sjc3.k8s.opencenter.cloud
+            keycloak_client_id: kubernetes
+            start_optimized: false
+            cache_enabled: false
+            cache_stack: ""
+            resource_requests_cpu: ""
+            resource_requests_memory: ""
+            resource_limits_cpu: ""
+            resource_limits_memory: ""
+            instances: 0
+            min_replicas: 0
+            max_replicas: 0
+            database_host: ""
+            database_port: 0
+            database_name: ""
+            database_user: ""
+            db_pool_min_size: 0
+            db_pool_initial_size: 0
+            db_pool_max_size: 0
+            metrics_enabled: false
+            event_metrics_enabled: false
+            health_enabled: false
+            log_level: ""
+            log_format: ""
+            tls_secret_name: ""
+            tls_enabled: false
+            realm_import_enabled: false
+            realm_groups: []
+            realm_admin_email: ""
+            backup_enabled: false
+            backup_schedule: ""
+            smtp_host: ""
+            smtp_port: 0
+            smtp_from: ""
+            smtp_starttls: false
+        kube-prometheus-stack:
+            enabled: false
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            grafana_volume_size: 10
+            grafana_storage_class: csi-cinder-sc-delete
+            prometheus_volume_size: 50
+            prometheus_storage_class: csi-cinder-sc-delete
+            alertmanager_volume_size: 10
+            alertmanager_storage_class: csi-cinder-sc-delete
+            webhook_url: ""
+        kyverno:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        loki:
+            enabled: false
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            loki_storage_type: ""
+            loki_bucket_name: perf-test-3-loki
+            loki_volume_size: 20
+            loki_storage_class: csi-cinder-sc-delete
+            swift_auth_url: https://keystone.api.sjc3.rackspacecloud.com/v3/
+            swift_region: SJC3
+            swift_auth_version: 0
+            swift_application_credential_id: ""
+            swift_container_name: ""
+            swift_user_domain_name: ""
+            swift_domain_name: Default
+            swift_username: ""
+            swift_project_name: ""
+            loki_s3_endpoint: ""
+            loki_s3_region: ""
+            loki_s3_force_path_style: false
+            loki_s3_insecure: false
+        olm:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        openstack-ccm:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        openstack-csi:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        postgres-operator:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        rbac-manager:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        sources:
+            enabled: true
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+        tempo:
+            enabled: false
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            storage_type: s3
+            bucket_name: perf-test-3-tempo
+            volume_size: 10
+            storage_class: csi-cinder-sc-delete
+            s3_endpoint: https://swift.api.sjc3.rackspacecloud.com
+            s3_region: SJC3
+            s3_force_path_style: false
+            s3_insecure: false
+            swift_auth_url: ""
+            swift_region: ""
+            swift_auth_version: 0
+            swift_application_credential_id: ""
+            swift_container_name: ""
+            swift_user_domain_name: ""
+            swift_domain_name: ""
+        velero:
+            enabled: false
+            namespace: ""
+            hostname: ""
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            velero_backup_bucket: perf-test-3-backups
+            velero_region: us-east-1
+            storage_type: ""
+        vsphere-csi:
+            enabled: false
+            namespace: ""
+            hostname: ""
+            image_repository: registry.k8s.io/csi-vsphere
+            image_tag: v3.3.0
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+            datastore_name: ""
+            datastoreurl: ""
+            delete_datastore_uuid: ""
+            retain_datastore_name: ""
+            retain_datastore_uuid: ""
+            storage_classes: []
+        weave-gitops:
+            enabled: false
+            namespace: ""
+            hostname: gitops.perf-test-3.sjc3.k8s.opencenter.cloud
+            image_repository: ""
+            image_tag: ""
+            release: ""
+            branch: ""
+            uri: ""
+            gitops_source_repo: ""
+            gitops_source_release: ""
+            gitops_source_branch: ""
+opentofu:
+    enabled: true
+    path: opentofu
+    backend:
+        type: local
+        local:
+            path: .opentofu-local-perf-test-3/terraform.tfstate
+secrets:
+    sops_age_key_file: clusters/opencenter/secrets/age/keys/perf-test-3-key.txt
+    ssh_key:
+        private: clusters/opencenter/secrets/ssh/perf-test-3-dev-{{ .OpenCenter.Cluster.ClusterRegion }}
+        public: clusters/opencenter/secrets/ssh/perf-test-3-dev-{{ .OpenCenter.Cluster.ClusterRegion }}.pub
+        cypher: ed25519
+    global:
+        aws:
+            infrastructure:
+                access_key: ""
+                secret_access_key: ""
+                region: us-east-1
+            application:
+                access_key: ""
+                secret_access_key: ""
+    cert_manager:
+        aws_access_key: ""
+        aws_secret_access_key: ""
+    loki:
+        swift_password: ""
+        swift_application_credential_secret: ""
+        s3_access_key_id: ""
+        s3_secret_access_key: ""
+    keycloak:
+        client_secret: ""
+        admin_password: ""
+    headlamp:
+        oidc_client_secret: ""
+    weave_gitops:
+        password: ""
+        password_hash: ""
+    grafana:
+        admin_password: ""
+    tempo:
+        access_key: ""
+        secret_key: ""
+    alert_proxy:
+        core_device_id: ""
+        account_service_token: ""
+        core_account_number: ""
+    vsphere_csi:
+        vcenter_host: ""
+        username: ""
+        password: ""
+        datacenters: ""
+        insecure_flag: "false"
+        port: "443"
+        datastoreurl: ""
+deployment:
+    auto_deploy: true

@@ -1573,7 +1573,17 @@ func (cv *ConfigValidator) checkDiskSpace(path string) error {
 }
 
 // ExpandPath expands environment variables and tilde in a path.
+//
+// Deprecated: Use internal/core/paths.PathResolver.ExpandPath() instead.
+// This function will be removed in v2.0.0.
+// Migration: Replace ExpandPath(path) with pathResolver.ExpandPath(path)
 func ExpandPath(path string) string {
+	logDeprecationWarning(
+		"config.ExpandPath()",
+		"internal/core/paths.PathResolver.ExpandPath()",
+		"v2.0.0",
+	)
+
 	// Expand environment variables
 	path = os.ExpandEnv(path)
 

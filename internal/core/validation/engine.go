@@ -20,6 +20,38 @@ import (
 )
 
 // ValidationEngine provides a unified validation system with pluggable validators.
+//
+// The engine manages a registry of validators and provides methods to execute
+// them individually, sequentially, or in parallel. It also integrates a
+// suggestion engine that enhances validation results with helpful suggestions.
+//
+// Thread Safety:
+//
+// ValidationEngine is thread-safe and can be used concurrently from multiple
+// goroutines. All public methods use appropriate locking.
+//
+// Example usage:
+//
+//	engine := validation.NewValidationEngine()
+//	engine.Register(validators.NewClusterNameValidator())
+//
+//	result, err := engine.Validate(ctx, "cluster-name", "my-cluster")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	if !result.Valid {
+//	    for _, err := range result.Errors {
+//	        fmt.Printf("Error: %s\n", err.Message)
+//	    }
+//	}
+//
+// For multiple validators:
+//
+//	result, err := engine.ValidateAll(ctx, []string{"cluster-name", "config"}, value)
+//
+// For parallel execution:
+//
+//	result, err := engine.ValidateParallel(ctx, []string{"validator1", "validator2"}, value)
 type ValidationEngine struct {
 	registry         *Registry
 	suggestionEngine *SuggestionEngine
@@ -27,6 +59,15 @@ type ValidationEngine struct {
 }
 
 // NewValidationEngine creates a new validation engine.
+//
+// The engine is created with an empty registry and a default suggestion engine.
+// Validators must be registered before use.
+//
+// Example:
+//
+//	engine := validation.NewValidationEngine()
+//	engine.Register(validators.NewClusterNameValidator())
+//	engine.Register(validators.NewConfigValidator())
 func NewValidationEngine() *ValidationEngine {
 	return &ValidationEngine{
 		registry:         NewRegistry(),
@@ -35,6 +76,22 @@ func NewValidationEngine() *ValidationEngine {
 }
 
 // Register registers a validator with the engine.
+//
+// The validator's Name() must be unique. Attempting to register a validator
+// with a duplicate name returns an error.
+//
+// Parameters:
+//   - validator: The validator to register
+//
+// Returns:
+//   - error: Registration failure (duplicate name)
+//
+// Example:
+//
+//	err := engine.Register(validators.NewClusterNameValidator())
+//	if err != nil {
+//	    return fmt.Errorf("failed to register validator: %w", err)
+//	}
 func (e *ValidationEngine) Register(validator Validator) error {
 	return e.registry.Register(validator)
 }
@@ -60,6 +117,34 @@ func (e *ValidationEngine) List() []string {
 }
 
 // Validate validates a value using a specific validator.
+//
+// This method:
+//  1. Looks up the validator by name
+//  2. Executes the validator
+//  3. Enhances the result with suggestions
+//  4. Returns the validation result
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeouts
+//   - validatorName: Name of the registered validator
+//   - value: Value to validate (type depends on validator)
+//
+// Returns:
+//   - *ValidationResult: Validation result with errors, warnings, and suggestions
+//   - error: Validator not found or validation execution error
+//
+// Example:
+//
+//	result, err := engine.Validate(ctx, "cluster-name", "my-cluster")
+//	if err != nil {
+//	    return fmt.Errorf("validation failed: %w", err)
+//	}
+//	if !result.Valid {
+//	    fmt.Println("Validation errors:")
+//	    for _, err := range result.Errors {
+//	        fmt.Printf("  - %s: %s\n", err.Field, err.Message)
+//	    }
+//	}
 func (e *ValidationEngine) Validate(ctx context.Context, validatorName string, value interface{}) (*ValidationResult, error) {
 	return e.ValidateWithOptions(ctx, validatorName, value, DefaultValidationOptions())
 }
@@ -92,18 +177,33 @@ func (e *ValidationEngine) ValidateWithOptions(ctx context.Context, validatorNam
 
 // ValidateAll validates a value using multiple validators.
 // Validation stops at the first error if StopOnFirstError is true in options.
+//
+// This method executes validators sequentially in the order provided.
+// Use ValidateParallel for concurrent execution of independent validators.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeouts
+//   - validatorNames: Names of validators to execute
+//   - value: Value to validate
+//
+// Returns:
+//   - *ValidationResult: Merged validation results from all validators
+//   - error: Validator not found or execution error
+//
+// Example:
+//
+//	validators := []string{"cluster-name", "config", "security"}
+//	result, err := engine.ValidateAll(ctx, validators, config)
+//	if err != nil {
+//	    return fmt.Errorf("validation failed: %w", err)
+//	}
 func (e *ValidationEngine) ValidateAll(ctx context.Context, validatorNames []string, value interface{}) (*ValidationResult, error) {
 	return e.ValidateAllWithOptions(ctx, validatorNames, value, DefaultValidationOptions())
 }
 
 // ValidateAllWithOptions validates a value using multiple validators with options.
 func (e *ValidationEngine) ValidateAllWithOptions(ctx context.Context, validatorNames []string, value interface{}, opts *ValidationOptions) (*ValidationResult, error) {
-	result := &ValidationResult{
-		Valid:    true,
-		Errors:   []*ValidationIssue{},
-		Warnings: []*ValidationIssue{},
-		Info:     []*ValidationIssue{},
-	}
+	result := NewValidationResult()
 
 	for _, name := range validatorNames {
 		// Check context cancellation
@@ -156,18 +256,35 @@ func (e *ValidationEngine) ValidateAllWithOptions(ctx context.Context, validator
 
 // ValidateParallel validates a value using multiple validators in parallel.
 // This is useful for independent validators that can run concurrently.
+//
+// All validators execute concurrently using goroutines. Results are collected
+// and merged into a single ValidationResult. This method is faster than
+// ValidateAll for independent validators but uses more resources.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeouts
+//   - validatorNames: Names of validators to execute concurrently
+//   - value: Value to validate
+//
+// Returns:
+//   - *ValidationResult: Merged validation results from all validators
+//   - error: Validator not found or execution error
+//
+// Example:
+//
+//	// These validators are independent and can run in parallel
+//	validators := []string{"syntax", "schema", "security"}
+//	result, err := engine.ValidateParallel(ctx, validators, config)
+//	if err != nil {
+//	    return fmt.Errorf("validation failed: %w", err)
+//	}
 func (e *ValidationEngine) ValidateParallel(ctx context.Context, validatorNames []string, value interface{}) (*ValidationResult, error) {
 	return e.ValidateParallelWithOptions(ctx, validatorNames, value, DefaultValidationOptions())
 }
 
 // ValidateParallelWithOptions validates a value using multiple validators in parallel with options.
 func (e *ValidationEngine) ValidateParallelWithOptions(ctx context.Context, validatorNames []string, value interface{}, opts *ValidationOptions) (*ValidationResult, error) {
-	result := &ValidationResult{
-		Valid:    true,
-		Errors:   []*ValidationIssue{},
-		Warnings: []*ValidationIssue{},
-		Info:     []*ValidationIssue{},
-	}
+	result := NewValidationResult()
 
 	// Create channels for results
 	type validationJob struct {

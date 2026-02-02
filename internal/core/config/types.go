@@ -13,73 +13,67 @@
 
 package config
 
-// Config represents the root configuration for a cluster.
-// This is a placeholder that will be moved from internal/config/config.go
-// during Phase 2 of the architectural refactoring.
-//
-// The Config struct contains:
-//   - SchemaVersion: Version of the configuration schema (1.0, 2.0)
-//   - Metadata: Configuration metadata (created_at, updated_at, tags, annotations)
-//   - OpenCenter: Core cluster configuration (infrastructure, services, gitops)
-//   - OpenTofu: Infrastructure as code configuration
-//   - Secrets: Sensitive data (keys, passwords, credentials)
-//   - Deployment: Deployment settings
-//   - Overrides: Custom overrides for advanced use cases
-//
-// Note: This type definition will be populated with the actual Config struct
-// from internal/config/config.go in Epic 2.4.1 (Phase 2: Migration).
-// For now, it serves as a placeholder to establish the package structure.
-//
-// TODO: Move Config struct from internal/config/config.go in Phase 2, Epic 2.4.1
-type Config struct {
-	// Placeholder fields - will be replaced with actual Config struct
-	// from internal/config/config.go during migration
-}
+import (
+	internalconfig "github.com/rackerlabs/opencenter-cli/internal/config"
+)
 
-// ConfigMetadata holds metadata about the configuration file.
-// This will be moved from internal/config/metadata.go during Phase 2.
-//
-// TODO: Move ConfigMetadata from internal/config/metadata.go in Phase 2, Epic 2.4.1
-type ConfigMetadata struct {
-	// Placeholder - will be populated during migration
-}
+// Re-export types from internal/config for use in internal/core/config.
+// This allows internal/core/config to work with the same types without circular dependencies.
+// The actual type definitions remain in internal/config to maintain compatibility
+// with existing code while the architectural refactoring is completed.
 
-// SimplifiedOpenCenter represents the opencenter section of the configuration.
-// This will be moved from internal/config/types_opencenter.go during Phase 2.
-//
-// TODO: Move from internal/config/types_opencenter.go in Phase 2, Epic 2.4.1
-type SimplifiedOpenCenter struct {
-	// Placeholder - will be populated during migration
-}
+type (
+	// Config represents the simplified root configuration for a cluster.
+	Config = internalconfig.Config
 
-// SimplifiedOpenTofu represents the opentofu section of the configuration.
-// This will be moved from internal/config/types_opentofu.go during Phase 2.
-//
-// TODO: Move from internal/config/types_opentofu.go in Phase 2, Epic 2.4.1
-type SimplifiedOpenTofu struct {
-	// Placeholder - will be populated during migration
-}
+	// ConfigMetadata contains metadata about the configuration file.
+	ConfigMetadata = internalconfig.ConfigMetadata
 
-// Secrets holds all sensitive configuration data.
-// This will be moved from internal/config/types_secrets.go during Phase 2.
-//
-// TODO: Move from internal/config/types_secrets.go in Phase 2, Epic 2.4.1
-type Secrets struct {
-	// Placeholder - will be populated during migration
-}
+	// SimplifiedOpenCenter represents the opencenter section of the configuration.
+	SimplifiedOpenCenter = internalconfig.SimplifiedOpenCenter
 
-// Deployment holds deployment-related configuration.
-// This will be moved from internal/config/types_deployment.go during Phase 2.
-//
-// TODO: Move from internal/config/types_deployment.go in Phase 2, Epic 2.4.1
-type Deployment struct {
-	// Placeholder - will be populated during migration
-}
+	// SimplifiedOpenTofu represents the opentofu section of the configuration.
+	SimplifiedOpenTofu = internalconfig.SimplifiedOpenTofu
 
-// LegacyNetworking holds old networking fields for backward compatibility.
-// This will be moved from internal/config/config.go during Phase 2.
-//
-// TODO: Move from internal/config/config.go in Phase 2, Epic 2.4.1
-type LegacyNetworking struct {
-	// Placeholder - will be populated during migration
-}
+	// Secrets holds all sensitive configuration data.
+	Secrets = internalconfig.Secrets
+
+	// Deployment holds deployment-related configuration.
+	Deployment = internalconfig.Deployment
+
+	// Infrastructure represents the infrastructure configuration block.
+	Infrastructure = internalconfig.Infrastructure
+
+	// ClusterConfig represents the cluster configuration section.
+	ClusterConfig = internalconfig.ClusterConfig
+
+	// GitOpsConfig holds configuration related to GitOps scaffolding.
+	GitOpsConfig = internalconfig.GitOpsConfig
+
+	// StorageConfig represents the storage configuration for the cluster.
+	StorageConfig = internalconfig.StorageConfig
+
+	// ServiceMap handles polymorphic unmarshalling of service configurations.
+	ServiceMap = internalconfig.ServiceMap
+)
+
+// Re-export constants
+const (
+	StageInit      = internalconfig.StageInit
+	StagePreflight = internalconfig.StagePreflight
+	StageSetup     = internalconfig.StageSetup
+	StageBootstrap = internalconfig.StageBootstrap
+	StageValidate  = internalconfig.StageValidate
+	StageDestroy   = internalconfig.StageDestroy
+	StageRender    = internalconfig.StageRender
+	StagePlan      = internalconfig.StagePlan
+	StageApply     = internalconfig.StageApply
+
+	StatusPending = internalconfig.StatusPending
+	StatusRunning = internalconfig.StatusRunning
+	StatusSuccess = internalconfig.StatusSuccess
+	StatusFailed  = internalconfig.StatusFailed
+)
+
+// Re-export helper functions
+var NewConfigMetadata = internalconfig.NewConfigMetadata

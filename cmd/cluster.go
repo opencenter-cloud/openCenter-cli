@@ -14,11 +14,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
-	"github.com/rackerlabs/opencenter-cli/internal/security"
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation/validators"
 	"github.com/spf13/cobra"
 )
 
@@ -98,7 +99,6 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterTemplateCmd())
 	cmd.AddCommand(newClusterDestroyCmd())
 	cmd.AddCommand(newClusterUpdateCmd())
-	cmd.AddCommand(newClusterMigrateConfigCmd())
 	cmd.AddCommand(newClusterServiceCmd())
 	cmd.AddCommand(newClusterCredentialsCmd())
 	cmd.AddCommand(newClusterDriftCmd())
@@ -121,7 +121,8 @@ Configuration files are stored in organization-based directories:
 //   - clusterName: The resolved cluster name (may include organization prefix)
 //   - error: An error if resolution fails
 func resolveClusterName(args []string, requireActive bool) (string, error) {
-	validator := security.NewDefaultInputValidator()
+	ctx := context.Background()
+	validator := validators.NewClusterNameValidator()
 
 	// If cluster name provided as argument
 	if len(args) > 0 {
@@ -138,8 +139,12 @@ func resolveClusterName(args []string, requireActive bool) (string, error) {
 
 		// Validate each part
 		for _, part := range parts {
-			if err := validator.ValidateClusterName(part); err != nil {
-				return "", fmt.Errorf("invalid cluster identifier: %w", err)
+			result, err := validator.Validate(ctx, part)
+			if err != nil {
+				return "", fmt.Errorf("validation error: %w", err)
+			}
+			if !result.Valid {
+				return "", fmt.Errorf("invalid cluster identifier: %s", result.Errors[0].Message)
 			}
 		}
 
@@ -173,7 +178,8 @@ func resolveClusterName(args []string, requireActive bool) (string, error) {
 //   - clusterName: The resolved cluster name (may include organization prefix)
 //   - error: An error if resolution fails
 func resolveClusterNameFromFlag(flagValue string, requireActive bool) (string, error) {
-	validator := security.NewDefaultInputValidator()
+	ctx := context.Background()
+	validator := validators.NewClusterNameValidator()
 
 	// If cluster flag provided
 	if flagValue != "" {
@@ -190,8 +196,12 @@ func resolveClusterNameFromFlag(flagValue string, requireActive bool) (string, e
 
 		// Validate each part
 		for _, part := range parts {
-			if err := validator.ValidateClusterName(part); err != nil {
-				return "", fmt.Errorf("invalid cluster identifier: %w", err)
+			result, err := validator.Validate(ctx, part)
+			if err != nil {
+				return "", fmt.Errorf("validation error: %w", err)
+			}
+			if !result.Valid {
+				return "", fmt.Errorf("invalid cluster identifier: %s", result.Errors[0].Message)
 			}
 		}
 

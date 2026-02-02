@@ -81,51 +81,16 @@ func (v *DefaultValidator) ValidateOctaviaImpl(ctx context.Context) error {
 
 // checkOctaviaAvailability verifies that Octavia service is reachable.
 func (v *DefaultValidator) checkOctaviaAvailability(ctx context.Context) (bool, error) {
-	// TODO: Implement actual Octavia API call
-	// For now, this is a placeholder that simulates the check
-	// In a real implementation, this would:
-	// 1. Create an Octavia client using OpenStack credentials
-	// 2. Make a simple API call (e.g., GET /v2/lbaas/loadbalancers)
-	// 3. Return true if successful, false otherwise
-
 	v.logger.Debug("Checking Octavia service availability")
-
-	// Placeholder: In real implementation, we would use gophercloud octavia client
-	// Example:
-	// client, err := octaviaclient.NewClient(...)
-	// if err != nil {
-	//     return false, err
-	// }
-	// _, err = client.ListLoadBalancers(ctx, octavia.ListOpts{Limit: 1})
-	// return err == nil, err
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would use gophercloud octavia client to verify service availability
 	return true, nil
 }
 
 // checkLoadBalancerQuota verifies sufficient load balancer quota is available.
 func (v *DefaultValidator) checkLoadBalancerQuota(ctx context.Context) (bool, error) {
-	// TODO: Implement actual quota check
-	// For now, this is a placeholder that simulates the check
-	// In a real implementation, this would:
-	// 1. Query Octavia quota for the current project
-	// 2. Check current usage vs. quota limits
-	// 3. Verify at least 1 load balancer can be created
-	// 4. Return true if quota is sufficient, false otherwise
-
 	v.logger.Debug("Checking load balancer quota")
-
-	// Placeholder: In real implementation, we would check quotas
-	// Example:
-	// quota, err := client.GetQuota(ctx, projectID)
-	// if err != nil {
-	//     return false, err
-	// }
-	// usage, err := client.GetQuotaUsage(ctx, projectID)
-	// if err != nil {
-	//     return false, err
-	// }
-	// available := quota.LoadBalancer - usage.LoadBalancer
-	// return available >= 1, nil
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would query Octavia quota and verify availability
 	return true, nil
 }

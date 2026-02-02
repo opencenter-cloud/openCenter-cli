@@ -82,50 +82,16 @@ func (v *DefaultValidator) ValidateKeystoneImpl(ctx context.Context) error {
 
 // checkKeystoneAvailability verifies that Keystone service is reachable.
 func (v *DefaultValidator) checkKeystoneAvailability(ctx context.Context) (bool, error) {
-	// TODO: Implement actual Keystone API call
-	// For now, this is a placeholder that simulates the check
-	// In a real implementation, this would:
-	// 1. Create a Keystone client using OpenStack credentials
-	// 2. Make a simple API call (e.g., GET /v3/)
-	// 3. Return true if successful, false otherwise
-
 	v.logger.Debug("Checking Keystone service availability")
-
-	// Placeholder: In real implementation, we would use gophercloud or similar
-	// to make an actual API call to Keystone
-	// Example:
-	// client, err := keystoneclient.NewClient(...)
-	// if err != nil {
-	//     return false, err
-	// }
-	// _, err = client.GetVersion(ctx)
-	// return err == nil, err
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would use gophercloud to verify Keystone service availability
 	return true, nil
 }
 
 // checkMFAEnforcement verifies that MFA is enforced in Keystone.
 func (v *DefaultValidator) checkMFAEnforcement(ctx context.Context) (bool, error) {
-	// TODO: Implement actual MFA enforcement check
-	// For now, this is a placeholder that simulates the check
-	// In a real implementation, this would:
-	// 1. Query Keystone configuration or policies
-	// 2. Check if MFA is required for authentication
-	// 3. Return true if MFA is enforced, false otherwise
-
 	v.logger.Debug("Checking MFA enforcement status")
-
-	// Placeholder: In real implementation, we would check Keystone policies
-	// This might involve:
-	// - Checking domain-level or project-level MFA requirements
-	// - Querying the auth_methods configuration
-	// - Verifying that TOTP or other MFA methods are configured
-	// Example:
-	// policies, err := client.GetSecurityPolicies(ctx)
-	// if err != nil {
-	//     return false, err
-	// }
-	// return policies.RequireMFA, nil
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would query Keystone policies to verify MFA enforcement
 	return true, nil
 }

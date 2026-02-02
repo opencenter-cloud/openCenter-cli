@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation/validators"
 )
 
 // InputValidator validates and sanitizes user-controlled input to prevent injection attacks
@@ -39,8 +40,6 @@ type InputValidator interface {
 
 // DefaultInputValidator implements InputValidator interface
 type DefaultInputValidator struct {
-	// clusterNamePattern validates cluster and organization names
-	clusterNamePattern *regexp.Regexp
 	// safeEditors is a whitelist of allowed editors
 	safeEditors map[string]bool
 	// shellMetachars are characters that need to be escaped or rejected
@@ -54,8 +53,6 @@ type DefaultInputValidator struct {
 // NewDefaultInputValidator creates a new input validator with default settings
 func NewDefaultInputValidator() *DefaultInputValidator {
 	return &DefaultInputValidator{
-		// Pattern: must start with alphanumeric, then alphanumeric/hyphen/underscore/dot, max 63 chars
-		clusterNamePattern: regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,62}$`),
 		safeEditors: map[string]bool{
 			"vim":   true,
 			"vi":    true,
@@ -93,42 +90,43 @@ func (v *DefaultInputValidator) logRejectedInput(inputType, reason string) {
 
 // ValidateClusterName validates a cluster name against security requirements
 // Requirements: 1.5, 1.6, 6.1
+//
+// Deprecated: Use internal/core/validation.ValidationEngine with "cluster-name" validator instead.
+// This method will be removed in v2.0.0.
+// Migration: Replace validator.ValidateClusterName(name) with validationEngine.Validate(ctx, "cluster-name", name)
 func (v *DefaultInputValidator) ValidateClusterName(name string) error {
-	if name == "" {
-		v.logRejectedInput("cluster_name", "empty cluster name")
+	// Delegate to the centralized ValidationEngine for consistency
+	ctx := context.Background()
+	validator := validators.NewClusterNameValidator()
+
+	result, err := validator.Validate(ctx, name)
+	if err != nil {
+		v.logRejectedInput("cluster_name", fmt.Sprintf("validation error: %v", err))
 		return &ValidationError{
 			Field:   "cluster_name",
 			Value:   name,
-			Message: "cluster name cannot be empty",
+			Message: fmt.Sprintf("validation error: %v", err),
 		}
 	}
 
-	// Check for path traversal sequences
-	if strings.Contains(name, "..") {
-		v.logRejectedInput("cluster_name", "path traversal detected")
-		return &ValidationError{
-			Field:   "cluster_name",
-			Value:   name,
-			Message: "cluster name cannot contain path traversal sequences (..)",
+	if !result.Valid {
+		// Log rejection
+		if len(result.Errors) > 0 {
+			v.logRejectedInput("cluster_name", result.Errors[0].Message)
 		}
-	}
 
-	if strings.Contains(name, "/") || strings.Contains(name, "\\") {
-		v.logRejectedInput("cluster_name", "path separator detected")
-		return &ValidationError{
-			Field:   "cluster_name",
-			Value:   name,
-			Message: "cluster name cannot contain path separators (/ or \\)",
+		// Return the first error as ValidationError
+		if len(result.Errors) > 0 {
+			return &ValidationError{
+				Field:   "cluster_name",
+				Value:   name,
+				Message: result.Errors[0].Message,
+			}
 		}
-	}
-
-	// Validate against pattern
-	if !v.clusterNamePattern.MatchString(name) {
-		v.logRejectedInput("cluster_name", "invalid format")
 		return &ValidationError{
 			Field:   "cluster_name",
 			Value:   name,
-			Message: "cluster name must start with alphanumeric character and contain only alphanumeric, hyphen, underscore, or dot (max 63 characters)",
+			Message: "cluster name validation failed",
 		}
 	}
 
@@ -137,38 +135,37 @@ func (v *DefaultInputValidator) ValidateClusterName(name string) error {
 
 // ValidateOrganizationName validates an organization name against security requirements
 // Requirements: 6.2
+//
+// Deprecated: Use internal/core/validation.ValidationEngine with "organization-name" validator instead.
+// This method will be removed in v2.0.0.
+// Migration: Replace validator.ValidateOrganizationName(org) with validationEngine.Validate(ctx, "organization-name", org)
 func (v *DefaultInputValidator) ValidateOrganizationName(org string) error {
-	if org == "" {
+	// Delegate to the centralized ValidationEngine for consistency
+	ctx := context.Background()
+	validator := validators.NewOrganizationNameValidator()
+
+	result, err := validator.Validate(ctx, org)
+	if err != nil {
 		return &ValidationError{
 			Field:   "organization_name",
 			Value:   org,
-			Message: "organization name cannot be empty",
+			Message: fmt.Sprintf("validation error: %v", err),
 		}
 	}
 
-	// Check for path traversal sequences
-	if strings.Contains(org, "..") {
-		return &ValidationError{
-			Field:   "organization_name",
-			Value:   org,
-			Message: "organization name cannot contain path traversal sequences (..)",
+	if !result.Valid {
+		// Return the first error as ValidationError
+		if len(result.Errors) > 0 {
+			return &ValidationError{
+				Field:   "organization_name",
+				Value:   org,
+				Message: result.Errors[0].Message,
+			}
 		}
-	}
-
-	if strings.Contains(org, "/") || strings.Contains(org, "\\") {
 		return &ValidationError{
 			Field:   "organization_name",
 			Value:   org,
-			Message: "organization name cannot contain path separators (/ or \\)",
-		}
-	}
-
-	// Validate against same pattern as cluster name
-	if !v.clusterNamePattern.MatchString(org) {
-		return &ValidationError{
-			Field:   "organization_name",
-			Value:   org,
-			Message: "organization name must start with alphanumeric character and contain only alphanumeric, hyphen, underscore, or dot (max 63 characters)",
+			Message: "organization name validation failed",
 		}
 	}
 

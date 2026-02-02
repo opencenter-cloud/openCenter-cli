@@ -89,31 +89,31 @@ func TestValidateClusterName(t *testing.T) {
 			name:      "starts with hyphen",
 			input:     "-cluster",
 			wantError: true,
-			errorMsg:  "must start with alphanumeric",
+			errorMsg:  "format is invalid",
 		},
 		{
 			name:      "starts with underscore",
 			input:     "_cluster",
 			wantError: true,
-			errorMsg:  "must start with alphanumeric",
+			errorMsg:  "format is invalid",
 		},
 		{
 			name:      "too long",
 			input:     strings.Repeat("a", 64),
 			wantError: true,
-			errorMsg:  "max 63 characters",
+			errorMsg:  "too long",
 		},
 		{
 			name:      "contains special characters",
 			input:     "my-cluster!",
 			wantError: true,
-			errorMsg:  "must start with alphanumeric",
+			errorMsg:  "format is invalid",
 		},
 		{
 			name:      "contains spaces",
 			input:     "my cluster",
 			wantError: true,
-			errorMsg:  "must start with alphanumeric",
+			errorMsg:  "format is invalid",
 		},
 	}
 

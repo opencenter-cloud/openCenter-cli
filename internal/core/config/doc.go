@@ -13,9 +13,9 @@
 
 // Package config provides unified configuration management for opencenter-cli.
 //
-// This package is part of the architectural refactoring effort to consolidate
-// configuration loading, version handling, and migration into a single,
-// well-structured system.
+// This package consolidates configuration loading, version handling, and migration
+// into a single, well-structured system that supports v2.0.0 and provides clear
+// error messages for v1 configurations.
 //
 // # Architecture
 //
@@ -25,8 +25,9 @@
 //   - types.go: Core configuration types (Config, Metadata, etc.)
 //   - defaults.go: Default value generation and application
 //   - persistence.go: File I/O operations (Load, Save, path resolution)
-//   - strategies/: Version-specific loading strategies (v1, v2, legacy)
+//   - strategies/: Version-specific loading strategies (v2, legacy)
 //   - migration/: Version migration logic
+//   - errors.go: Custom error types for configuration issues
 //
 // # Key Features
 //
@@ -36,6 +37,7 @@
 //   - Thread-safe caching with invalidation
 //   - Single Load() method handles all versions
 //   - Organization-aware path resolution
+//   - V2-only enforcement with clear upgrade guidance
 //
 // # Usage
 //
@@ -78,32 +80,28 @@
 // the YAML structure. It tries each registered strategy in order until one
 // reports it can load the configuration.
 //
-// When AutoMigrate is enabled, older configurations are automatically upgraded:
+// In v2.0.0, v1 configurations are rejected with a clear error message:
 //
-//	// Load a v1 config and auto-migrate to v2
-//	cfg, err := manager.Load("old-config.yaml", config.LoadOptions{
-//	    AutoMigrate: true,
-//	})
-//	// cfg is now in v2 format
+//	cfg, err := manager.Load("old-v1-config.yaml", config.LoadOptions{})
+//	// Returns V1ConfigError with upgrade instructions
 //
-// Migration preserves all data and adds new required fields with sensible defaults.
-// The original file is backed up before migration.
+// Users must upgrade to v1.x and run migration before using v2.0.0:
+//
+//	# Using v1.x
+//	opencenter cluster migrate-config my-cluster
+//	# Then upgrade to v2.0.0
 //
 // # Implementation Status
 //
-// This package has completed Phase 1 (Foundation) of the architectural refactoring:
-//
-//   - ✅ Phase 1: Package structure, ConfigManager, strategies, and migration
-//   - 🔄 Phase 2: Integration with command layer (in progress)
-//   - ⏳ Phase 3: Deprecation of legacy config package
-//   - ⏳ Phase 4: Performance optimization and final cleanup
-//
-// The ConfigManager is fully functional and ready for use. It supports:
+// This package provides a unified configuration management system with:
 //   - V2 configuration format (current)
 //   - V1 configuration format (with auto-migration)
 //   - Legacy flat-file format (with auto-migration)
 //   - Thread-safe caching
 //   - Validation integration
+//
+// The ConfigManager is fully functional and production-ready, supporting
+// all configuration operations including loading, saving, migration, and validation.
 //
 // # Design Principles
 //
@@ -111,6 +109,7 @@
 //   - Strategy Pattern: Version-specific logic is isolated
 //   - Dependency Inversion: High-level code depends on abstractions
 //   - Open/Closed: Open for extension (new versions), closed for modification
+//   - Fail Fast: Reject unsupported versions immediately with clear guidance
 //
 // # Thread Safety
 //
@@ -121,7 +120,7 @@
 //
 // Target performance characteristics:
 //
-//   - Config loading: <100ms (50% improvement over current)
+//   - Config loading: <100ms (50% improvement over legacy)
 //   - Cache hit: <1ms
 //   - Memory usage: <100MB peak (33% reduction)
 //
@@ -129,11 +128,11 @@
 //
 //   - internal/core/paths: Path resolution and organization structure
 //   - internal/core/validation: Configuration validation
-//   - internal/config: Legacy configuration package (to be deprecated)
+//   - internal/config: Legacy configuration package (being phased out)
 //
 // # References
 //
-//   - Design Document: .kiro/specs/architectural-refactoring/design.md
-//   - Requirements: .kiro/specs/architectural-refactoring/requirements.md
-//   - Tasks: .kiro/specs/architectural-refactoring/tasks.md
+//   - Design Document: .kiro/specs/v2-breaking-changes/design.md
+//   - Requirements: .kiro/specs/v2-breaking-changes/requirements.md
+//   - Tasks: .kiro/specs/v2-breaking-changes/tasks.md
 package config

@@ -45,17 +45,17 @@ nodes:
 
 // BootstrapOptions contains options for cluster bootstrap
 type BootstrapOptions struct {
-	ClusterName       string
-	Organization      string
-	SkipValidation    bool
-	Timeout           time.Duration
-	DryRun            bool
-	ContainerRuntime  string
-	Restart           bool
-	OnlyStep          string
-	FromStep          string
-	KubeconfigPath    string
-	LogPath           string
+	ClusterName      string
+	Organization     string
+	SkipValidation   bool
+	Timeout          time.Duration
+	DryRun           bool
+	ContainerRuntime string
+	Restart          bool
+	OnlyStep         string
+	FromStep         string
+	KubeconfigPath   string
+	LogPath          string
 }
 
 // BootstrapResult contains the result of cluster bootstrap
@@ -120,6 +120,18 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 	cfg, err := config.Load(opts.ClusterName)
 	if err != nil {
 		return nil, fmt.Errorf("loading configuration: %w", err)
+	}
+
+	// Check schema version - only v2 is supported
+	if cfg.SchemaVersion != "2.0" {
+		return nil, fmt.Errorf(`v1 configurations are not supported in v2.0.0
+
+To upgrade to v2.0.0:
+1. Install opencenter v1.x
+2. Run: opencenter cluster migrate-config %s
+3. Upgrade to opencenter v2.0.0
+
+See: https://docs.opencenter.io/migration/v1-to-v2`, opts.ClusterName)
 	}
 
 	result := &BootstrapResult{

@@ -84,15 +84,27 @@ func TestHydrator_AppliedDefaultsTracking(t *testing.T) {
 	}
 }
 
-// TestHydrator_InvalidProviderRegion verifies error handling for invalid provider-region combinations.
+// TestHydrator_InvalidProviderRegion verifies graceful handling for invalid provider-region combinations.
 func TestHydrator_InvalidProviderRegion(t *testing.T) {
 	registry := GetGlobalRegistry()
 	hydrator := NewHydrator(registry)
 
 	cfg := &TestConfig{}
 
+	// Invalid provider-region combinations should not error, but should not apply defaults
 	err := hydrator.Hydrate(cfg, "invalid-provider", "invalid-region")
-	if err == nil {
-		t.Error("Expected error for invalid provider-region combination")
+	if err != nil {
+		t.Errorf("Unexpected error for invalid provider-region combination: %v", err)
+	}
+
+	// Verify no defaults were applied
+	appliedDefaults := hydrator.GetAppliedDefaults()
+	if len(appliedDefaults) != 0 {
+		t.Errorf("Expected no defaults to be applied for invalid provider-region, got %d", len(appliedDefaults))
+	}
+
+	// Verify config fields remain empty
+	if cfg.ImageID != "" || cfg.DefaultStorageClass != "" || len(cfg.AvailabilityZones) > 0 {
+		t.Error("Expected config fields to remain empty for invalid provider-region")
 	}
 }

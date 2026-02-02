@@ -68,7 +68,7 @@ func TestValidateService_Validate(t *testing.T) {
 			pathResolver := paths.NewPathResolver(configDir)
 			validationEngine := validation.NewValidationEngine()
 			configManager, _ := config.NewConfigManager("")
-			
+
 			service := NewValidateService(pathResolver, validationEngine, configManager)
 
 			// Update opts with cluster name
@@ -76,14 +76,14 @@ func TestValidateService_Validate(t *testing.T) {
 
 			// Execute validation
 			result, err := service.Validate(context.Background(), tt.opts)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Validate() expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Fatalf("Validate() unexpected error = %v", err)
 			}
@@ -295,7 +295,7 @@ func TestValidateService_validateConnectivity(t *testing.T) {
 
 	cfg := config.Config{}
 	cfg.OpenCenter.Infrastructure.Provider = "kind"
-	
+
 	result := &ValidationResult{
 		Valid:             true,
 		ConfigValid:       true,

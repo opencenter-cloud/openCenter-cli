@@ -9,6 +9,8 @@ import (
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
+
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 )
 
 // Feature: security-and-operational-remediation, Property 14: Backup Completeness
@@ -24,48 +26,43 @@ func TestProperty_BackupCompleteness(t *testing.T) {
 			}
 
 			// Create temporary directories
-			configDir := t.TempDir()
+			baseDir := t.TempDir()
 			backupDir := t.TempDir()
 
-			// Setup test cluster files
-			clusterDir := filepath.Join(configDir, "clusters", clusterName)
-			if err := os.MkdirAll(clusterDir, 0700); err != nil {
+			// Create PathResolver
+			pathResolver := paths.NewPathResolver(baseDir)
+
+			// Create cluster directories
+			if err := pathResolver.CreateClusterDirectories(context.Background(), clusterName, "opencenter"); err != nil {
 				return false
 			}
 
-			secretsDir := filepath.Join(configDir, "secrets")
-			ageDir := filepath.Join(secretsDir, "age")
-			sshDir := filepath.Join(secretsDir, "ssh")
-			if err := os.MkdirAll(ageDir, 0700); err != nil {
-				return false
-			}
-			if err := os.MkdirAll(sshDir, 0700); err != nil {
+			// Resolve cluster paths
+			clusterPaths, err := pathResolver.Resolve(context.Background(), clusterName, "opencenter")
+			if err != nil {
 				return false
 			}
 
 			// Create test files
-			configFile := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
-			if err := os.WriteFile(configFile, []byte("test: config"), 0600); err != nil {
+			if err := os.WriteFile(clusterPaths.ConfigPath, []byte("test: config"), 0600); err != nil {
 				return false
 			}
 
-			ageKeyFile := filepath.Join(ageDir, clusterName+"-key.txt")
-			if err := os.WriteFile(ageKeyFile, []byte("AGE-SECRET-KEY-TEST"), 0600); err != nil {
+			if err := os.WriteFile(clusterPaths.SOPSKeyPath, []byte("AGE-SECRET-KEY-TEST"), 0600); err != nil {
 				return false
 			}
 
-			sshKeyFile := filepath.Join(sshDir, clusterName+"-key")
-			if err := os.WriteFile(sshKeyFile, []byte("ssh-rsa TEST"), 0600); err != nil {
+			if err := os.WriteFile(clusterPaths.SSHKeyPath, []byte("ssh-rsa TEST"), 0600); err != nil {
 				return false
 			}
 
-			tfStateFile := filepath.Join(clusterDir, "terraform.tfstate")
+			tfStateFile := filepath.Join(clusterPaths.ClusterDir, "terraform.tfstate")
 			if err := os.WriteFile(tfStateFile, []byte(`{"version": 4}`), 0600); err != nil {
 				return false
 			}
 
 			// Create backup manager
-			bm, err := NewBackupManager(configDir, backupDir)
+			bm, err := NewBackupManager(pathResolver, backupDir)
 			if err != nil {
 				return false
 			}
@@ -148,45 +145,40 @@ func TestProperty_BackupRestorationRoundTrip(t *testing.T) {
 			}
 
 			// Create temporary directories
-			configDir := t.TempDir()
+			baseDir := t.TempDir()
 			backupDir := t.TempDir()
 
-			// Setup test cluster files
-			clusterDir := filepath.Join(configDir, "clusters", clusterName)
-			if err := os.MkdirAll(clusterDir, 0700); err != nil {
+			// Create PathResolver
+			pathResolver := paths.NewPathResolver(baseDir)
+
+			// Create cluster directories
+			if err := pathResolver.CreateClusterDirectories(context.Background(), clusterName, "opencenter"); err != nil {
 				return false
 			}
 
-			secretsDir := filepath.Join(configDir, "secrets")
-			ageDir := filepath.Join(secretsDir, "age")
-			sshDir := filepath.Join(secretsDir, "ssh")
-			if err := os.MkdirAll(ageDir, 0700); err != nil {
-				return false
-			}
-			if err := os.MkdirAll(sshDir, 0700); err != nil {
+			// Resolve cluster paths
+			clusterPaths, err := pathResolver.Resolve(context.Background(), clusterName, "opencenter")
+			if err != nil {
 				return false
 			}
 
 			// Create test files with specific content
-			configFile := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
-			if err := os.WriteFile(configFile, []byte(configContent), 0600); err != nil {
+			if err := os.WriteFile(clusterPaths.ConfigPath, []byte(configContent), 0600); err != nil {
 				return false
 			}
 
 			ageKeyContent := "AGE-SECRET-KEY-1234567890ABCDEF"
-			ageKeyFile := filepath.Join(ageDir, clusterName+"-key.txt")
-			if err := os.WriteFile(ageKeyFile, []byte(ageKeyContent), 0600); err != nil {
+			if err := os.WriteFile(clusterPaths.SOPSKeyPath, []byte(ageKeyContent), 0600); err != nil {
 				return false
 			}
 
 			sshKeyContent := "ssh-rsa AAAAB3NzaC1yc2ETEST"
-			sshKeyFile := filepath.Join(sshDir, clusterName+"-key")
-			if err := os.WriteFile(sshKeyFile, []byte(sshKeyContent), 0600); err != nil {
+			if err := os.WriteFile(clusterPaths.SSHKeyPath, []byte(sshKeyContent), 0600); err != nil {
 				return false
 			}
 
 			// Create backup manager
-			bm, err := NewBackupManager(configDir, backupDir)
+			bm, err := NewBackupManager(pathResolver, backupDir)
 			if err != nil {
 				return false
 			}
@@ -203,33 +195,36 @@ func TestProperty_BackupRestorationRoundTrip(t *testing.T) {
 			}
 
 			// Delete original files
-			os.Remove(configFile)
-			os.Remove(ageKeyFile)
-			os.Remove(sshKeyFile)
+			os.Remove(clusterPaths.ConfigPath)
+			os.Remove(clusterPaths.SOPSKeyPath)
+			os.Remove(clusterPaths.SSHKeyPath)
 
 			// Restore backup
 			if err := bm.RestoreBackup(context.Background(), backup.ID, passphrase); err != nil {
 				return false
 			}
 
+			// Resolve paths for restored cluster
+			restoredPaths, err := pathResolver.Resolve(context.Background(), "restored", "opencenter")
+			if err != nil {
+				return false
+			}
+
 			// Verify restored files exist
-			restoredConfigFile := filepath.Join(configDir, "clusters", "restored", ".restored-config.yaml")
-			if _, err := os.Stat(restoredConfigFile); os.IsNotExist(err) {
+			if _, err := os.Stat(restoredPaths.ConfigPath); os.IsNotExist(err) {
 				return false
 			}
 
-			restoredAgeKeyFile := filepath.Join(ageDir, "restored-key.txt")
-			if _, err := os.Stat(restoredAgeKeyFile); os.IsNotExist(err) {
+			if _, err := os.Stat(restoredPaths.SOPSKeyPath); os.IsNotExist(err) {
 				return false
 			}
 
-			restoredSSHKeyFile := filepath.Join(sshDir, "restored-keys")
-			if _, err := os.Stat(restoredSSHKeyFile); os.IsNotExist(err) {
+			if _, err := os.Stat(restoredPaths.SSHKeyPath); os.IsNotExist(err) {
 				return false
 			}
 
 			// Verify restored content matches original
-			restoredConfig, err := os.ReadFile(restoredConfigFile)
+			restoredConfig, err := os.ReadFile(restoredPaths.ConfigPath)
 			if err != nil {
 				return false
 			}
@@ -237,7 +232,7 @@ func TestProperty_BackupRestorationRoundTrip(t *testing.T) {
 				return false
 			}
 
-			restoredAgeKey, err := os.ReadFile(restoredAgeKeyFile)
+			restoredAgeKey, err := os.ReadFile(restoredPaths.SOPSKeyPath)
 			if err != nil {
 				return false
 			}
@@ -245,7 +240,7 @@ func TestProperty_BackupRestorationRoundTrip(t *testing.T) {
 				return false
 			}
 
-			restoredSSHKey, err := os.ReadFile(restoredSSHKeyFile)
+			restoredSSHKey, err := os.ReadFile(restoredPaths.SSHKeyPath)
 			if err != nil {
 				return false
 			}
@@ -278,22 +273,30 @@ func TestProperty_BackupEncryption(t *testing.T) {
 			}
 
 			// Create temporary directories
-			configDir := t.TempDir()
+			baseDir := t.TempDir()
 			backupDir := t.TempDir()
 
-			// Setup minimal test cluster
-			clusterDir := filepath.Join(configDir, "clusters", clusterName)
-			if err := os.MkdirAll(clusterDir, 0700); err != nil {
+			// Create PathResolver
+			pathResolver := paths.NewPathResolver(baseDir)
+
+			// Create cluster directories
+			if err := pathResolver.CreateClusterDirectories(context.Background(), clusterName, "opencenter"); err != nil {
 				return false
 			}
 
-			configFile := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
-			if err := os.WriteFile(configFile, []byte("sensitive: data"), 0600); err != nil {
+			// Resolve cluster paths
+			clusterPaths, err := pathResolver.Resolve(context.Background(), clusterName, "opencenter")
+			if err != nil {
+				return false
+			}
+
+			// Create test file
+			if err := os.WriteFile(clusterPaths.ConfigPath, []byte("sensitive: data"), 0600); err != nil {
 				return false
 			}
 
 			// Create backup manager
-			bm, err := NewBackupManager(configDir, backupDir)
+			bm, err := NewBackupManager(pathResolver, backupDir)
 			if err != nil {
 				return false
 			}
@@ -351,22 +354,30 @@ func TestProperty_BackupIntegrity(t *testing.T) {
 			}
 
 			// Create temporary directories
-			configDir := t.TempDir()
+			baseDir := t.TempDir()
 			backupDir := t.TempDir()
 
-			// Setup minimal test cluster
-			clusterDir := filepath.Join(configDir, "clusters", clusterName)
-			if err := os.MkdirAll(clusterDir, 0700); err != nil {
+			// Create PathResolver
+			pathResolver := paths.NewPathResolver(baseDir)
+
+			// Create cluster directories
+			if err := pathResolver.CreateClusterDirectories(context.Background(), clusterName, "opencenter"); err != nil {
 				return false
 			}
 
-			configFile := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
-			if err := os.WriteFile(configFile, []byte("test: config"), 0600); err != nil {
+			// Resolve cluster paths
+			clusterPaths, err := pathResolver.Resolve(context.Background(), clusterName, "opencenter")
+			if err != nil {
+				return false
+			}
+
+			// Create test file
+			if err := os.WriteFile(clusterPaths.ConfigPath, []byte("test: config"), 0600); err != nil {
 				return false
 			}
 
 			// Create backup manager
-			bm, err := NewBackupManager(configDir, backupDir)
+			bm, err := NewBackupManager(pathResolver, backupDir)
 			if err != nil {
 				return false
 			}

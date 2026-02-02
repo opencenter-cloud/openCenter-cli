@@ -41,11 +41,11 @@ type NodeConfig struct {
 	AccessIPv4 string `yaml:"access_ip_v4" json:"access_ip_v4" validate:"required,ipv4"`
 }
 
-// NetworkPlugin represents the network plugin configuration
+// StoragePlugin represents the storage plugin configuration
 type StoragePlugin struct {
-	vsphere  VsphereConfig  `yaml:"calico" json:"calico"`
-	cinder   CinderConfig   `yaml:"cilium" json:"cilium"`
-	longhorn LonghornConfig `yaml:"kube-ovn" json:"kube-ovn"`
+	Vsphere  VsphereConfig  `yaml:"vsphere" json:"vsphere"`
+	Cinder   CinderConfig   `yaml:"cinder" json:"cinder"`
+	Longhorn LonghornConfig `yaml:"longhorn" json:"longhorn"`
 }
 
 type VsphereConfig struct {

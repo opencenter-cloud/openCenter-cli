@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -81,7 +82,15 @@ func newClusterInfoCmd() *cobra.Command {
 			if cfg.OpenCenter.GitOps.GitDir != "" {
 				cwd, err := os.Getwd()
 				if err == nil {
-					gitDir := config.ExpandPath(cfg.OpenCenter.GitOps.GitDir)
+					gitDir := cfg.OpenCenter.GitOps.GitDir
+					// Expand tilde and environment variables
+					if strings.HasPrefix(gitDir, "~/") {
+						if home, err := os.UserHomeDir(); err == nil {
+							gitDir = filepath.Join(home, gitDir[2:])
+						}
+					}
+					gitDir = os.ExpandEnv(gitDir)
+
 					if absGitDir, err := filepath.Abs(gitDir); err == nil {
 						if absCwd, err := filepath.Abs(cwd); err == nil {
 							isInGitDir = (absCwd == absGitDir)

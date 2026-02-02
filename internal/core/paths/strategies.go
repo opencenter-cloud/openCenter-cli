@@ -22,14 +22,75 @@ import (
 
 // ResolutionStrategy defines the interface for path resolution strategies.
 // Currently only supports organization-based structure.
+//
+// Implementations must:
+//   - Provide a unique strategy name
+//   - Detect if they can resolve paths for a cluster
+//   - Resolve all paths for a cluster
+//
+// Thread Safety:
+//
+// Implementations must be thread-safe and support concurrent calls to all methods.
+//
+// Example implementation:
+//
+//	type MyStrategy struct {
+//	    baseDir string
+//	}
+//
+//	func (s *MyStrategy) Name() string {
+//	    return "my-strategy"
+//	}
+//
+//	func (s *MyStrategy) CanResolve(ctx context.Context, clusterName, organization string) (bool, error) {
+//	    // Check if cluster exists in this strategy's structure
+//	    clusterDir := filepath.Join(s.baseDir, organization, clusterName)
+//	    _, err := os.Stat(clusterDir)
+//	    return err == nil, nil
+//	}
+//
+//	func (s *MyStrategy) Resolve(ctx context.Context, clusterName, organization string) (*ClusterPaths, error) {
+//	    // Resolve all paths for the cluster
+//	    return &ClusterPaths{
+//	        ClusterDir: filepath.Join(s.baseDir, organization, clusterName),
+//	        // ... other paths
+//	    }, nil
+//	}
 type ResolutionStrategy interface {
 	// Name returns the name of the strategy
+	//
+	// The name should be unique and descriptive (e.g., "org-based", "legacy").
+	// It's used for logging, debugging, and cache keys.
 	Name() string
 
 	// CanResolve checks if this strategy can resolve paths for the given cluster
+	//
+	// This method should be fast and only check for existence, not perform
+	// full path resolution. It's called during strategy selection.
+	//
+	// Parameters:
+	//   - ctx: Context for cancellation
+	//   - clusterName: Name of the cluster
+	//   - organization: Organization name (may be empty)
+	//
+	// Returns:
+	//   - bool: true if this strategy can resolve the cluster
+	//   - error: Check failure (not found is not an error)
 	CanResolve(ctx context.Context, clusterName, organization string) (bool, error)
 
 	// Resolve resolves all paths for the given cluster
+	//
+	// This method performs the actual path resolution and returns a complete
+	// ClusterPaths structure with all paths populated.
+	//
+	// Parameters:
+	//   - ctx: Context for cancellation
+	//   - clusterName: Name of the cluster
+	//   - organization: Organization name (may be empty)
+	//
+	// Returns:
+	//   - *ClusterPaths: Resolved paths for the cluster
+	//   - error: Resolution failure
 	Resolve(ctx context.Context, clusterName, organization string) (*ClusterPaths, error)
 }
 

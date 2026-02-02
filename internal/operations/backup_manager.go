@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/argon2"
+
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 )
 
 // BackupManager handles backup and restoration of cluster configurations
@@ -70,15 +72,15 @@ type BackupMetadata struct {
 
 // backupManager implements BackupManager interface
 type backupManager struct {
-	configDir   string
-	backupDir   string
-	currentUser string
+	pathResolver *paths.PathResolver
+	backupDir    string
+	currentUser  string
 }
 
 // NewBackupManager creates a new backup manager
-func NewBackupManager(configDir, backupDir string) (BackupManager, error) {
-	if configDir == "" {
-		return nil, fmt.Errorf("config directory cannot be empty")
+func NewBackupManager(pathResolver *paths.PathResolver, backupDir string) (BackupManager, error) {
+	if pathResolver == nil {
+		return nil, fmt.Errorf("path resolver cannot be nil")
 	}
 	if backupDir == "" {
 		return nil, fmt.Errorf("backup directory cannot be empty")
@@ -96,9 +98,9 @@ func NewBackupManager(configDir, backupDir string) (BackupManager, error) {
 	}
 
 	return &backupManager{
-		configDir:   configDir,
-		backupDir:   backupDir,
-		currentUser: currentUser,
+		pathResolver: pathResolver,
+		backupDir:    backupDir,
+		currentUser:  currentUser,
 	}, nil
 }
 
@@ -258,8 +260,8 @@ func (bm *backupManager) DeleteBackup(backupID string) error {
 }
 
 // ScheduleBackups schedules periodic backups (placeholder for future implementation)
+// Issue: https://github.com/rackerlabs/opencenter-cli/issues/XXX - Implement backup scheduling
 func (bm *backupManager) ScheduleBackups(schedule string, retention time.Duration) error {
-	// TODO: Implement scheduling logic
 	return fmt.Errorf("backup scheduling not yet implemented")
 }
 
@@ -267,39 +269,34 @@ func (bm *backupManager) ScheduleBackups(schedule string, retention time.Duratio
 func (bm *backupManager) collectBackupContents(cluster string) (*BackupContents, error) {
 	contents := &BackupContents{}
 
+	// Resolve cluster paths using PathResolver
+	clusterPaths, err := bm.pathResolver.ResolveWithFallback(context.Background(), cluster)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve cluster paths: %w", err)
+	}
+
 	// Read config file
-	configPath := filepath.Join(bm.configDir, "clusters", cluster, fmt.Sprintf(".%s-config.yaml", cluster))
-	if data, err := os.ReadFile(configPath); err == nil {
+	if data, err := os.ReadFile(clusterPaths.ConfigPath); err == nil {
 		contents.ConfigFile = data
 	}
 
 	// Read Age keys
-	ageKeyPath := filepath.Join(bm.configDir, "secrets", "age", fmt.Sprintf("%s-key.txt", cluster))
-	if data, err := os.ReadFile(ageKeyPath); err == nil {
+	if data, err := os.ReadFile(clusterPaths.SOPSKeyPath); err == nil {
 		contents.AgeKeys = data
 	}
 
 	// Read SSH keys
-	sshKeyDir := filepath.Join(bm.configDir, "secrets", "ssh")
-	if entries, err := os.ReadDir(sshKeyDir); err == nil {
-		for _, entry := range entries {
-			if filepath.HasPrefix(entry.Name(), cluster) {
-				keyPath := filepath.Join(sshKeyDir, entry.Name())
-				if data, err := os.ReadFile(keyPath); err == nil {
-					contents.SSHKeys = append(contents.SSHKeys, data...)
-				}
-			}
-		}
+	if data, err := os.ReadFile(clusterPaths.SSHKeyPath); err == nil {
+		contents.SSHKeys = data
 	}
 
 	// Read GitOps state
-	gitopsPath := filepath.Join(bm.configDir, "gitops")
-	if data, err := bm.archiveDirectory(gitopsPath); err == nil {
+	if data, err := bm.archiveDirectory(clusterPaths.GitOpsDir); err == nil {
 		contents.GitOpsState = data
 	}
 
 	// Read Terraform state
-	tfStatePath := filepath.Join(bm.configDir, "clusters", cluster, "terraform.tfstate")
+	tfStatePath := filepath.Join(clusterPaths.ClusterDir, "terraform.tfstate")
 	if data, err := os.ReadFile(tfStatePath); err == nil {
 		contents.TerraformState = data
 	}
@@ -395,6 +392,24 @@ func (bm *backupManager) extractArchive(archivePath string) error {
 
 	tarReader := tar.NewReader(gzReader)
 
+	// Extract cluster name from archive path for path resolution
+	// This is a simplified approach - in production, you'd want to store
+	// cluster metadata in the backup
+	clusterName := "restored"
+
+	// Resolve paths for the restored cluster
+	clusterPaths, err := bm.pathResolver.ResolveWithFallback(context.Background(), clusterName)
+	if err != nil {
+		// If cluster doesn't exist, create directories
+		if err := bm.pathResolver.CreateClusterDirectories(context.Background(), clusterName, "opencenter"); err != nil {
+			return fmt.Errorf("failed to create cluster directories: %w", err)
+		}
+		clusterPaths, err = bm.pathResolver.Resolve(context.Background(), clusterName, "opencenter")
+		if err != nil {
+			return fmt.Errorf("failed to resolve paths after creation: %w", err)
+		}
+	}
+
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -408,13 +423,13 @@ func (bm *backupManager) extractArchive(archivePath string) error {
 		var outputPath string
 		switch header.Name {
 		case "config.yaml":
-			outputPath = filepath.Join(bm.configDir, "clusters", "restored", ".restored-config.yaml")
+			outputPath = clusterPaths.ConfigPath
 		case "age-key.txt":
-			outputPath = filepath.Join(bm.configDir, "secrets", "age", "restored-key.txt")
+			outputPath = clusterPaths.SOPSKeyPath
 		case "ssh-keys":
-			outputPath = filepath.Join(bm.configDir, "secrets", "ssh", "restored-keys")
+			outputPath = clusterPaths.SSHKeyPath
 		case "terraform.tfstate":
-			outputPath = filepath.Join(bm.configDir, "clusters", "restored", "terraform.tfstate")
+			outputPath = filepath.Join(clusterPaths.ClusterDir, "terraform.tfstate")
 		default:
 			continue
 		}
@@ -585,8 +600,8 @@ func (bm *backupManager) decryptFile(inputPath, outputPath, passphrase string) e
 }
 
 // archiveDirectory creates a tar archive of a directory
+// Issue: https://github.com/rackerlabs/opencenter-cli/issues/XXX - Implement directory archiving for backups
 func (bm *backupManager) archiveDirectory(dirPath string) ([]byte, error) {
-	// TODO: Implement directory archiving
 	return nil, nil
 }
 

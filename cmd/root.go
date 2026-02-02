@@ -17,6 +17,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -53,7 +55,25 @@ func initializeContainer() di.Container {
 	container := di.NewContainer()
 
 	// Get base directory for path resolver
-	baseDir, _ := config.ResolveConfigDir()
+	// Use default config directory: ~/.config/opencenter on Linux/macOS
+	baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
+	if baseDir == "" {
+		if runtime.GOOS == "windows" {
+			base := os.Getenv("APPDATA")
+			if base == "" {
+				base = os.Getenv("LOCALAPPDATA")
+			}
+			if base == "" {
+				base = os.Getenv("USERPROFILE")
+			}
+			baseDir = filepath.Join(base, "opencenter", "clusters")
+		} else {
+			home, _ := os.UserHomeDir()
+			baseDir = filepath.Join(home, ".config", "opencenter", "clusters")
+		}
+	} else {
+		baseDir = filepath.Join(baseDir, "clusters")
+	}
 
 	// Register core services as singletons
 	_ = container.Singleton("PathResolver", func() (*paths.PathResolver, error) {
@@ -157,6 +177,10 @@ func Execute(version string) error {
 //   - error: An error if one occurred during execution.
 func ExecuteWithContext(ctx context.Context, version string) error {
 	rootCmd.Version = version
+
+	// Initialize DI container and add to context
+	container := getContainer()
+	ctx = context.WithValue(ctx, ContainerKey, container)
 
 	// Add global persistent flags
 	addGlobalFlags(rootCmd)
@@ -399,98 +423,4 @@ func GetRootCmd() *cobra.Command {
 // code. Use fmt.Errorf to wrap underlying errors.
 func failf(format string, a ...interface{}) error {
 	return fmt.Errorf(format, a...)
-}
-
-// GetConfigManager is a temporary stub that returns nil.
-// This will be replaced with DI container access in subtask 17.4.
-// Deprecated: Use DI container instead.
-func GetConfigManager() *config.ConfigManager {
-	return nil
-}
-
-// formatError formats an error (temporary stub).
-// This will be replaced with DI container access.
-// Deprecated: Use DI container instead.
-func formatError(err error) error {
-	return err
-}
-
-// formatErrorWithCode formats an error with an error code (temporary stub).
-// This will be replaced with DI container access.
-// Deprecated: Use DI container instead.
-func formatErrorWithCode(err error, code string) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("[%s] %w", code, err)
-}
-
-// formatErrorWithFix formats an error with a fix suggestion (temporary stub).
-// This will be replaced with DI container access.
-// Deprecated: Use DI container instead.
-func formatErrorWithFix(err error, fix string) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("%w\nFix: %s", err, fix)
-}
-
-// formatMultipleErrors formats multiple errors (temporary stub).
-// This will be replaced with DI container access.
-// Deprecated: Use DI container instead.
-func formatMultipleErrors(errs []error, verbose bool) error {
-	if len(errs) == 0 {
-		return nil
-	}
-
-	maxErrors := 5
-	if verbose {
-		maxErrors = len(errs)
-	}
-
-	var msg strings.Builder
-	for i, err := range errs {
-		if i >= maxErrors {
-			msg.WriteString(fmt.Sprintf("\n... and %d more errors", len(errs)-maxErrors))
-			break
-		}
-		if i > 0 {
-			msg.WriteString("\n")
-		}
-		msg.WriteString(fmt.Sprintf("%d. %v", i+1, err))
-	}
-
-	return fmt.Errorf("%s", msg.String())
-}
-
-// formatErrorWithInfo formats an error with complete error information.
-// This is a temporary stub that provides basic formatting.
-// This will be replaced with DI container access.
-// Deprecated: Use DI container instead.
-// Requirements: 15.1, 15.2, 15.3, 15.4, 15.8
-func formatErrorWithInfo(err error, code string) error {
-	if err == nil {
-		return nil
-	}
-
-	// Provide basic error info for known codes
-	switch code {
-	case "E1001":
-		return fmt.Errorf(`Error: OpenStack region not configured (%s)
-
-The OpenStack provider requires a region to be specified.
-
-Fix: Add region to your configuration:
-  opencenter cluster update my-cluster \
-    --opencenter.infrastructure.cloud.openstack.region=RegionOne
-
-Hint: List available regions:
-  openstack region list
-
-Learn more: https://docs.opencenter.cloud/errors/E1001
-
-Original error: %w`, code, err)
-	default:
-		return formatErrorWithCode(err, code)
-	}
 }

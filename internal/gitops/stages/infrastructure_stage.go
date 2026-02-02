@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/gitops"
 	"github.com/rackerlabs/opencenter-cli/internal/template"
 )
@@ -237,9 +238,22 @@ func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, c
 	// If template has a custom output path in metadata tags, use the first tag
 	if len(tmpl.Metadata.Tags) > 0 && tmpl.Metadata.Tags[0] != "" {
 		outputPath := tmpl.Metadata.Tags[0]
-		// Replace placeholders in the path
-		outputPath = filepath.Join("infrastructure", "clusters", clusterName, outputPath)
-		return outputPath
+
+		// Use PathResolver to get the cluster directory
+		resolver := paths.NewPathResolver(cfg.GitOps().GitDir)
+		clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
+		if err != nil {
+			// Fallback to old path construction if resolver fails
+			return filepath.Join("infrastructure", "clusters", clusterName, outputPath)
+		}
+
+		// Get relative path from git dir
+		relPath, err := filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ClusterDir, outputPath))
+		if err != nil {
+			// Fallback to old path construction if relative path fails
+			return filepath.Join("infrastructure", "clusters", clusterName, outputPath)
+		}
+		return relPath
 	}
 
 	// Default: use template name as filename
@@ -248,7 +262,22 @@ func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, c
 		filename += ".yaml"
 	}
 
-	return filepath.Join("infrastructure", "clusters", clusterName, filename)
+	// Use PathResolver to get the cluster directory
+	resolver := paths.NewPathResolver(cfg.GitOps().GitDir)
+	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
+	if err != nil {
+		// Fallback to old path construction if resolver fails
+		return filepath.Join("infrastructure", "clusters", clusterName, filename)
+	}
+
+	// Get relative path from git dir
+	relPath, err := filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ClusterDir, filename))
+	if err != nil {
+		// Fallback to old path construction if relative path fails
+		return filepath.Join("infrastructure", "clusters", clusterName, filename)
+	}
+
+	return relPath
 }
 
 // evaluateConditions checks if all conditions for a template are met.

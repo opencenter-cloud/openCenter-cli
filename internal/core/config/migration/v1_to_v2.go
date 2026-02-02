@@ -56,11 +56,6 @@ func migrateV1ToV2(cfg *config.Config) (*config.Config, error) {
 		return nil, fmt.Errorf("failed to migrate infrastructure: %w", err)
 	}
 
-	// Migrate networking configuration
-	if err := migrateNetworking(&migrated); err != nil {
-		return nil, fmt.Errorf("failed to migrate networking: %w", err)
-	}
-
 	// Migrate services configuration
 	if err := migrateServices(&migrated); err != nil {
 		return nil, fmt.Errorf("failed to migrate services: %w", err)
@@ -70,9 +65,6 @@ func migrateV1ToV2(cfg *config.Config) (*config.Config, error) {
 	if err := migrateSecrets(&migrated); err != nil {
 		return nil, fmt.Errorf("failed to migrate secrets: %w", err)
 	}
-
-	// Clear legacy fields
-	migrated.Networking = config.LegacyNetworking{}
 
 	return &migrated, nil
 }
@@ -117,21 +109,6 @@ func migrateInfrastructure(cfg *config.Config) error {
 		if err := validateVSphereConfig(cfg); err != nil {
 			return fmt.Errorf("invalid vSphere configuration: %w", err)
 		}
-	}
-
-	return nil
-}
-
-// migrateNetworking migrates networking configuration from v1.0 to v2.0.
-// v2.0 moves networking configuration into the infrastructure section.
-func migrateNetworking(cfg *config.Config) error {
-	// If legacy networking fields are present, migrate them
-	if cfg.Networking.SubnetPods != "" {
-		cfg.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = cfg.Networking.SubnetPods
-	}
-
-	if cfg.Networking.SubnetServices != "" {
-		cfg.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = cfg.Networking.SubnetServices
 	}
 
 	return nil

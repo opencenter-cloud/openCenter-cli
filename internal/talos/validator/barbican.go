@@ -108,74 +108,24 @@ func (v *DefaultValidator) ValidateBarbicanImpl(ctx context.Context) error {
 
 // checkBarbicanAvailability verifies that Barbican service is reachable.
 func (v *DefaultValidator) checkBarbicanAvailability(ctx context.Context) (bool, error) {
-	// TODO: Implement actual Barbican API call
-	// For now, this is a placeholder that simulates the check
-	// In a real implementation, this would:
-	// 1. Create a Barbican client using OpenStack credentials
-	// 2. Make a simple API call (e.g., GET /v1/)
-	// 3. Return true if successful, false otherwise
-
 	v.logger.Debug("Checking Barbican service availability")
-
-	// Placeholder: In real implementation, we would use gophercloud or barbican client
-	// Example:
-	// client, err := barbicanclient.NewClient(...)
-	// if err != nil {
-	//     return false, err
-	// }
-	// _, err = client.GetVersion(ctx)
-	// return err == nil, err
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would use gophercloud or barbican client to verify service availability
 	return true, nil
 }
 
 // testSecretCreation tests the ability to create secrets in Barbican.
 func (v *DefaultValidator) testSecretCreation(ctx context.Context) (bool, error) {
-	// TODO: Implement actual secret creation test
-	// For now, this is a placeholder that simulates the test
-	// In a real implementation, this would:
-	// 1. Create a test secret with a random name
-	// 2. Store a simple test payload
-	// 3. Return true if successful, false otherwise
-	// 4. Clean up the test secret
-
 	v.logger.Debug("Testing secret creation capability")
-
-	// Placeholder: In real implementation, we would create a test secret
-	// Example:
-	// testSecret := &barbican.Secret{
-	//     Name:    fmt.Sprintf("talos-validation-test-%d", time.Now().Unix()),
-	//     Payload: "test-payload",
-	// }
-	// secretRef, err := client.CreateSecret(ctx, testSecret)
-	// if err != nil {
-	//     return false, err
-	// }
-	// defer client.DeleteSecret(ctx, secretRef)
-	// return true, nil
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would create a test secret and clean it up
 	return true, nil
 }
 
 // testSecretRetrieval tests the ability to retrieve secrets from Barbican.
 func (v *DefaultValidator) testSecretRetrieval(ctx context.Context) (bool, error) {
-	// TODO: Implement actual secret retrieval test
-	// For now, this is a placeholder that simulates the test
-	// In a real implementation, this would:
-	// 1. Use the secret created in testSecretCreation
-	// 2. Retrieve the secret payload
-	// 3. Verify the payload matches what was stored
-	// 4. Return true if successful, false otherwise
-
 	v.logger.Debug("Testing secret retrieval capability")
-
-	// Placeholder: In real implementation, we would retrieve the test secret
-	// Example:
-	// payload, err := client.GetSecretPayload(ctx, secretRef)
-	// if err != nil {
-	//     return false, err
-	// }
-	// return payload == "test-payload", nil
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would retrieve and verify a test secret
 	return true, nil
 }

@@ -19,7 +19,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/config/defaults"
 	v2 "github.com/rackerlabs/opencenter-cli/internal/config/v2"
 	"github.com/spf13/cobra"
@@ -238,13 +237,9 @@ secrets:
 // TestExportV1EffectiveConfig tests exporting v1 effective configuration.
 // Requirements: 15.7, 15.8
 func TestExportV1EffectiveConfig(t *testing.T) {
-	// Set test mode to avoid requiring real credentials
-	os.Setenv("OPENCENTER_TEST_MODE", "true")
-	defer os.Unsetenv("OPENCENTER_TEST_MODE")
-
-	// Create a minimal v1 config
+	// Create a minimal v1 config using test fixture
 	clusterName := "test-v1-export"
-	cfg := config.NewDefault(clusterName)
+	cfg := minimalTestConfig(clusterName)
 	cfg.SchemaVersion = "1.0"
 
 	tmpDir := t.TempDir()

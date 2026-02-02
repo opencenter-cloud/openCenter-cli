@@ -20,6 +20,8 @@ func writeTestConfig(t *testing.T, dir, name, provider, gitDir string) {
 		}
 	}
 	content := fmt.Sprintf(`opencenter:
+  meta:
+    organization: opencenter
   infrastructure:
     provider: %s
   cluster:
@@ -27,13 +29,13 @@ func writeTestConfig(t *testing.T, dir, name, provider, gitDir string) {
   gitops:
     git_dir: %q
 `, provider, name, gitDir)
-	// Create cluster directory structure
-	clusterDir := filepath.Join(dir, "clusters", name)
-	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
-		t.Fatalf("create cluster directory: %v", err)
+	// Create cluster directory structure with organization
+	orgDir := filepath.Join(dir, "clusters", "opencenter")
+	if err := os.MkdirAll(orgDir, 0o755); err != nil {
+		t.Fatalf("create organization directory: %v", err)
 	}
 
-	path := filepath.Join(clusterDir, "."+name+"-config.yaml")
+	path := filepath.Join(orgDir, "."+name+"-config.yaml")
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}

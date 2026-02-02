@@ -76,31 +76,6 @@ func TestMigrateV1ToV2(t *testing.T) {
 			cfg:     nil,
 			wantErr: true,
 		},
-		{
-			name: "config with legacy networking",
-			cfg: &config.Config{
-				SchemaVersion: "1.0",
-				OpenCenter: config.SimplifiedOpenCenter{
-					Meta: config.ClusterMeta{
-						Name: "test-cluster",
-					},
-					Infrastructure: config.Infrastructure{
-						Provider: "openstack",
-						Cloud: config.CloudConfig{
-							OpenStack: config.SimplifiedOpenStackCloud{
-								AuthURL:    "https://identity.example.com/v3",
-								TenantName: "test-project",
-							},
-						},
-					},
-				},
-				Networking: config.LegacyNetworking{
-					SubnetPods:     "10.244.0.0/16",
-					SubnetServices: "10.96.0.0/12",
-				},
-			},
-			wantErr: false,
-		},
 	}
 
 	for _, tt := range tests {
@@ -122,18 +97,6 @@ func TestMigrateV1ToV2(t *testing.T) {
 			// Verify schema version was updated
 			if result.SchemaVersion != "2.0" {
 				t.Errorf("SchemaVersion = %s, want 2.0", result.SchemaVersion)
-			}
-
-			// Verify legacy networking was cleared
-			if result.Networking.SubnetPods != "" || result.Networking.SubnetServices != "" {
-				t.Error("legacy networking fields should be cleared")
-			}
-
-			// If source had legacy networking, verify it was migrated
-			if tt.cfg != nil && tt.cfg.Networking.SubnetPods != "" {
-				if result.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods != tt.cfg.Networking.SubnetPods {
-					t.Error("legacy subnet_pods not migrated correctly")
-				}
 			}
 		})
 	}

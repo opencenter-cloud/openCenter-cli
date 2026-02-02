@@ -25,8 +25,14 @@ func TestInitService_Initialize(t *testing.T) {
 		t.Fatalf("Failed to register cluster validator: %v", err)
 	}
 
+	// Create config manager
+	configManager, err := config.NewConfigManager("")
+	if err != nil {
+		t.Fatalf("Failed to create config manager: %v", err)
+	}
+
 	// Create init service
-	initService := NewInitService(pathResolver, validationEngine)
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	tests := []struct {
 		name    string
@@ -82,7 +88,7 @@ func TestInitService_Initialize(t *testing.T) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-			
+
 			ctx := context.Background()
 			result, err := initService.Initialize(ctx, tt.opts)
 
@@ -127,8 +133,14 @@ func TestInitService_validateClusterName(t *testing.T) {
 		t.Fatalf("Failed to register cluster validator: %v", err)
 	}
 
+	// Create config manager
+	configManager, err := config.NewConfigManager("")
+	if err != nil {
+		t.Fatalf("Failed to create config manager: %v", err)
+	}
+
 	// Create init service
-	initService := NewInitService(pathResolver, validationEngine)
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	tests := []struct {
 		name        string
@@ -195,7 +207,8 @@ func TestInitService_createDefaultConfig(t *testing.T) {
 	validationEngine := validation.NewValidationEngine()
 
 	// Create init service
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	tests := []struct {
 		name    string
@@ -224,7 +237,7 @@ func TestInitService_createDefaultConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := initService.createDefaultConfig(tt.opts)
+			cfg, _, err := initService.createDefaultConfig(tt.opts)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createDefaultConfig() error = %v, wantErr %v", err, tt.wantErr)
@@ -232,8 +245,8 @@ func TestInitService_createDefaultConfig(t *testing.T) {
 			}
 
 			if !tt.wantErr {
-				if cfg == nil {
-					t.Error("createDefaultConfig() returned nil config")
+				if cfg.SchemaVersion == "" {
+					t.Error("createDefaultConfig() returned empty config")
 					return
 				}
 
@@ -276,26 +289,41 @@ func TestInitService_generateKeys(t *testing.T) {
 	validationEngine := validation.NewValidationEngine()
 
 	// Create init service
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	// Create cluster paths
 	ctx := context.Background()
-	
+
 	// Create cluster directories first
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
 		t.Fatalf("Failed to create cluster directories: %v", err)
 	}
-	
+
 	clusterPaths, err := pathResolver.Resolve(ctx, "test-cluster", "test-org")
 	if err != nil {
 		t.Fatalf("Failed to resolve cluster paths: %v", err)
 	}
 
 	// Test key generation
-	err = initService.generateKeys(clusterPaths)
+	cfg := &config.Config{
+		OpenCenter: config.Config{}.OpenCenter,
+		Secrets:    config.Config{}.Secrets,
+	}
+	cfg.OpenCenter.Meta.Region = "test-region"
+	cfg.Secrets.SSHKey.Cypher = "ed25519"
+
+	opts := InitOptions{
+		ClusterName:  "test-cluster",
+		Organization: "test-org",
+	}
+	keysGenerated, err := initService.generateKeys(clusterPaths, cfg, opts)
 	if err != nil {
 		t.Errorf("generateKeys() error = %v", err)
 		return
+	}
+	if !keysGenerated {
+		t.Error("generateKeys() returned false, expected true")
 	}
 
 	// Verify SOPS key was created
@@ -337,16 +365,17 @@ func TestInitService_initGitRepo(t *testing.T) {
 	validationEngine := validation.NewValidationEngine()
 
 	// Create init service
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	// Create cluster paths
 	ctx := context.Background()
-	
+
 	// Create cluster directories first
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
 		t.Fatalf("Failed to create cluster directories: %v", err)
 	}
-	
+
 	clusterPaths, err := pathResolver.Resolve(ctx, "test-cluster", "test-org")
 	if err != nil {
 		t.Fatalf("Failed to resolve cluster paths: %v", err)
@@ -363,7 +392,7 @@ func TestInitService_initGitRepo(t *testing.T) {
 	if _, err := os.Stat(clusterPaths.GitOpsDir); os.IsNotExist(err) {
 		t.Errorf("GitOps directory was not created at %s", clusterPaths.GitOpsDir)
 	}
-	
+
 	// Note: The actual .git directory creation is handled by the command layer
 	// which has access to the cobra command for output. The service just ensures
 	// the GitOps directory exists.
@@ -378,7 +407,8 @@ func TestInitService_Initialize_WithKeyGeneration(t *testing.T) {
 		t.Fatalf("Failed to register cluster validator: %v", err)
 	}
 
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
@@ -420,7 +450,8 @@ func TestInitService_Initialize_WithGitInit(t *testing.T) {
 		t.Fatalf("Failed to register cluster validator: %v", err)
 	}
 
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
@@ -459,7 +490,8 @@ func TestInitService_Initialize_DifferentProviders(t *testing.T) {
 		t.Fatalf("Failed to register cluster validator: %v", err)
 	}
 
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	providers := []string{"openstack", "aws", "kind", "vsphere"}
 
@@ -495,7 +527,8 @@ func TestInitService_generateSOPSKey(t *testing.T) {
 	tmpDir := t.TempDir()
 	pathResolver := paths.NewPathResolver(tmpDir)
 	validationEngine := validation.NewValidationEngine()
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
@@ -531,7 +564,8 @@ func TestInitService_generateSSHKey(t *testing.T) {
 	tmpDir := t.TempDir()
 	pathResolver := paths.NewPathResolver(tmpDir)
 	validationEngine := validation.NewValidationEngine()
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
@@ -543,7 +577,14 @@ func TestInitService_generateSSHKey(t *testing.T) {
 		t.Fatalf("Failed to resolve cluster paths: %v", err)
 	}
 
-	err = initService.generateSSHKey(clusterPaths)
+	cfg := &config.Config{
+		OpenCenter: config.Config{}.OpenCenter,
+		Secrets:    config.Config{}.Secrets,
+	}
+	cfg.OpenCenter.Meta.Region = "test-region"
+	cfg.Secrets.SSHKey.Cypher = "ed25519"
+
+	err = initService.generateSSHKey(clusterPaths, cfg)
 	if err != nil {
 		t.Fatalf("generateSSHKey() error = %v", err)
 	}
@@ -582,7 +623,8 @@ func TestInitService_createDefaultConfig_EmptyOrganization(t *testing.T) {
 	tmpDir := t.TempDir()
 	pathResolver := paths.NewPathResolver(tmpDir)
 	validationEngine := validation.NewValidationEngine()
-	initService := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	opts := InitOptions{
 		ClusterName:  "test-cluster",
@@ -590,7 +632,7 @@ func TestInitService_createDefaultConfig_EmptyOrganization(t *testing.T) {
 		Provider:     "openstack",
 	}
 
-	cfg, err := initService.createDefaultConfig(opts)
+	cfg, _, err := initService.createDefaultConfig(opts)
 	if err != nil {
 		t.Fatalf("createDefaultConfig() error = %v", err)
 	}
@@ -606,7 +648,8 @@ func TestInitService_NewInitService(t *testing.T) {
 	pathResolver := paths.NewPathResolver(tmpDir)
 	validationEngine := validation.NewValidationEngine()
 
-	service := NewInitService(pathResolver, validationEngine)
+	configManager, _ := config.NewConfigManager("")
+	service := NewInitService(pathResolver, validationEngine, configManager)
 
 	if service == nil {
 		t.Fatal("NewInitService returned nil")

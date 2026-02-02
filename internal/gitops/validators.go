@@ -14,6 +14,7 @@
 package gitops
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,19 +22,30 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation"
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation/validators"
 )
 
 // ManifestValidator validates generated GitOps manifests for common issues
 type ManifestValidator struct {
-	gitDir string
-	errors []string
+	gitDir           string
+	errors           []string
+	validationEngine *validation.ValidationEngine
+	fileValidator    *validators.FileValidator
 }
 
 // NewManifestValidator creates a new manifest validator
 func NewManifestValidator(gitDir string) *ManifestValidator {
+	engine := validation.NewValidationEngine()
+	fileValidator := validators.NewFileValidator()
+	engine.MustRegister(fileValidator)
+
 	return &ManifestValidator{
-		gitDir: gitDir,
-		errors: []string{},
+		gitDir:           gitDir,
+		errors:           []string{},
+		validationEngine: engine,
+		fileValidator:    fileValidator,
 	}
 }
 
@@ -58,6 +70,25 @@ func (v *ManifestValidator) Validate() error {
 	return nil
 }
 
+// validateFile validates a file using the ValidationEngine
+func (v *ManifestValidator) validateFile(file string, operation string) {
+	ctx := context.Background()
+	result, err := v.validationEngine.Validate(ctx, "file", map[string]interface{}{
+		"path":      file,
+		"operation": operation,
+	})
+
+	if err != nil {
+		v.errors = append(v.errors, fmt.Sprintf("%s: validation error: %v", file, err))
+		return
+	}
+
+	// Add errors from validation result
+	for _, issue := range result.Errors {
+		v.errors = append(v.errors, fmt.Sprintf("%s: %s", file, issue.Message))
+	}
+}
+
 // validateFluxCDManifests validates FluxCD Kustomization manifests
 func (v *ManifestValidator) validateFluxCDManifests() {
 	pattern := filepath.Join(v.gitDir, "applications/overlays/*/services/fluxcd/*.yaml")
@@ -74,6 +105,9 @@ func (v *ManifestValidator) validateFluxCDManifests() {
 
 // validateFluxCDKustomization validates a single FluxCD Kustomization manifest
 func (v *ManifestValidator) validateFluxCDKustomization(file string) {
+	// Use ValidationEngine for basic file validation
+	v.validateFile(file, "read")
+
 	data, err := os.ReadFile(file)
 	if err != nil {
 		v.errors = append(v.errors, fmt.Sprintf("%s: failed to read: %v", file, err))
@@ -137,6 +171,9 @@ func (v *ManifestValidator) validateGitRepositories() {
 
 // validateGitRepository validates a single GitRepository manifest
 func (v *ManifestValidator) validateGitRepository(file string) {
+	// Use ValidationEngine for basic file validation
+	v.validateFile(file, "read")
+
 	data, err := os.ReadFile(file)
 	if err != nil {
 		v.errors = append(v.errors, fmt.Sprintf("%s: failed to read: %v", file, err))
@@ -188,6 +225,9 @@ func (v *ManifestValidator) validateCertManager() {
 	}
 
 	for _, file := range files {
+		// Use ValidationEngine for basic file validation
+		v.validateFile(file, "read")
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
@@ -218,6 +258,9 @@ func (v *ManifestValidator) validateCertManager() {
 	}
 
 	for _, file := range files {
+		// Use ValidationEngine for basic file validation
+		v.validateFile(file, "read")
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
@@ -238,6 +281,9 @@ func (v *ManifestValidator) validateCertManager() {
 	}
 
 	for _, file := range files {
+		// Use ValidationEngine for basic file validation
+		v.validateFile(file, "read")
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
@@ -261,6 +307,9 @@ func (v *ManifestValidator) validateGateway() {
 	}
 
 	for _, file := range files {
+		// Use ValidationEngine for basic file validation
+		v.validateFile(file, "read")
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
@@ -291,6 +340,9 @@ func (v *ManifestValidator) validateGateway() {
 	}
 
 	for _, file := range files {
+		// Use ValidationEngine for basic file validation
+		v.validateFile(file, "read")
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
@@ -316,6 +368,9 @@ func (v *ManifestValidator) validateVSphereCSI() {
 	}
 
 	for _, file := range files {
+		// Use ValidationEngine for basic file validation
+		v.validateFile(file, "read")
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
@@ -366,6 +421,9 @@ func (v *ManifestValidator) validateMetalLB() {
 	}
 
 	for _, file := range files {
+		// Use ValidationEngine for basic file validation
+		v.validateFile(file, "read")
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
@@ -403,6 +461,9 @@ func (v *ManifestValidator) validateHeadlamp() {
 	}
 
 	for _, file := range files {
+		// Use ValidationEngine for basic file validation
+		v.validateFile(file, "read")
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue

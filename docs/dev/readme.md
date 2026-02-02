@@ -1,371 +1,763 @@
----
-doc_type: how-to
----
-
 # Developer Guide
 
+**doc_type: explanation**
+
+This guide covers the technical implementation details of opencenter-cli for developers contributing to the project. It explains the architecture, coding standards, and development workflows.
 
 ## Table of Contents
 
-- [Who this is for](#who-this-is-for)
-- [Prerequisites](#prerequisites)
-- [Initial Setup](#initial-setup)
-- [Development Workflow](#development-workflow)
-- [Project Structure](#project-structure)
-- [Common Tasks](#common-tasks)
+- [Getting Started](#getting-started)
 - [Architecture Overview](#architecture-overview)
-- [Testing Strategy](#testing-strategy)
-- [Configuration Management](#configuration-management)
-- [Error Handling](#error-handling)
-- [Logging](#logging)
-- [Performance Considerations](#performance-considerations)
-- [Security Considerations](#security-considerations)
-- [Debugging](#debugging)
+- [Core Abstractions](#core-abstractions)
+- [Development Workflow](#development-workflow)
+- [Coding Standards](#coding-standards)
+- [Testing Guidelines](#testing-guidelines)
+- [Common Development Tasks](#common-development-tasks)
+- [Debugging and Troubleshooting](#debugging-and-troubleshooting)
+- [Performance Optimization](#performance-optimization)
 - [Contributing](#contributing)
-- [Release Process](#release-process)
-- [See Also](#see-also)
-This guide covers setting up your development environment, building opencenter, running tests, and common development workflows.
 
-## Who this is for
+## Getting Started
 
-Developers contributing to opencenter or extending it with custom providers and plugins.
+### Prerequisites
 
-## Prerequisites
+- Go 1.25.2 or later
+- Mise for tool version management
+- Git for version control
+- Basic understanding of Kubernetes and GitOps
 
-- **Mise**: Tool version manager ([installation guide](https://mise.jdx.dev/getting-started.html))
-- **Git**: Version control
-- **Go**: Managed automatically by Mise
+### Initial Setup
 
-## Initial Setup
+```bash
+# Clone repository
+git clone https://github.com/rackerlabs/opencenter-cli.git
+cd opencenter-cli
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/rackerlabs/opencenter-cli.git
-   cd opencenter-cli
-   ```
+# Install tools via mise
+mise install
 
-2. **Install development tools**:
-   ```bash
-   mise install
-   ```
-   
-   This installs Go, kubectl, kind, helm, and other tools defined in `.mise.toml`.
+# Build binary
+mise run build
 
-3. **Build the CLI**:
-   ```bash
-   mise run build
-   ```
-   
-   The binary is created at `bin/opencenter` with version metadata from git.
+# Run tests
+mise run test
 
-4. **Verify the build**:
-   ```bash
-   ./bin/opencenter version
-   ```
+# Run BDD tests
+mise run godog
+```
+
+### Project Structure
+
+```
+opencenter-cli/
+├── cmd/                    # CLI commands (Cobra)
+├── internal/               # Internal packages
+│   ├── core/              # Core abstractions
+│   │   ├── paths/         # Path resolution
+│   │   ├── config/        # Configuration management
+│   │   └── validation/    # Validation engine
+│   ├── cluster/           # Domain services
+│   ├── di/                # Dependency injection
+│   ├── gitops/            # GitOps generation
+│   ├── sops/              # Secrets management
+│   └── cloud/             # Provider logic
+├── docs/                   # Documentation
+├── tests/                  # BDD test scenarios
+└── .mise.toml             # Build tasks
+```
+
+## Architecture Overview
+
+opencenter-cli follows clean architecture principles with clear separation of concerns:
+
+### Layer Architecture
+
+```
+CLI Layer (cmd/)
+    ↓
+Domain Services (internal/cluster/)
+    ↓
+Core Infrastructure (internal/core/)
+    ↓
+Supporting Services (internal/*)
+```
+
+**Key Principles**:
+1. **Single Responsibility**: Each module has one clear purpose
+2. **Dependency Inversion**: High-level modules depend on abstractions
+3. **DRY**: Eliminate duplication through centralization
+4. **Interface Segregation**: Small, focused interfaces
+5. **Open/Closed**: Open for extension, closed for modification
+
+For detailed architecture documentation, see [Architecture](architecture.md).
+
+## Core Abstractions
+
+### PathResolver (internal/core/paths/)
+
+Centralized path resolution with organization support.
+
+**Usage**:
+```go
+import "github.com/rackerlabs/opencenter-cli/internal/core/paths"
+
+resolver := paths.NewPathResolver(baseDir)
+clusterPaths, err := resolver.Resolve("my-cluster", "my-org")
+if err != nil {
+    return err
+}
+
+// Access paths
+configFile := clusterPaths.ConfigFile
+secretsDir := clusterPaths.SecretsDir
+gitopsDir := clusterPaths.GitOpsDir
+```
+
+**Features**:
+- Organization-aware path resolution
+- Caching (<100μs cached, <1ms uncached)
+- Thread-safe operations
+- Fallback strategies for backward compatibility
+
+### ValidationEngine (internal/core/validation/)
+
+Unified validation system with pluggable validators.
+
+**Usage**:
+```go
+import "github.com/rackerlabs/opencenter-cli/internal/core/validation"
+
+engine := validation.NewEngine()
+
+// Register validators
+engine.Register("cluster-name", &validators.ClusterNameValidator{})
+
+// Validate
+result, err := engine.Validate(ctx, "cluster-name", "my-cluster")
+if !result.Valid {
+    for _, err := range result.Errors {
+        fmt.Println(err.Message)
+        for _, suggestion := range err.Suggestions {
+            fmt.Printf("  Suggestion: %s\n", suggestion)
+        }
+    }
+}
+```
+
+**Features**:
+- Pluggable validator architecture
+- Suggestion engine for common mistakes
+- Context-aware validation
+- <100μs per validation
+
+### ConfigManager (internal/core/config/)
+
+Unified configuration loading with version handling.
+
+**Usage**:
+```go
+import "github.com/rackerlabs/opencenter-cli/internal/core/config"
+
+manager := config.NewManager()
+
+// Load config (auto-detects version)
+cfg, err := manager.Load(configPath, config.LoadOptions{
+    Validate:    true,
+    AutoMigrate: true,
+})
+if err != nil {
+    return err
+}
+
+// Save config
+err = manager.Save(configPath, cfg)
+```
+
+**Features**:
+- Strategy pattern for v1, v2, legacy loaders
+- Auto-detection of version
+- Integrated migration pipeline
+- Caching with invalidation
+
+### Domain Services (internal/cluster/)
+
+Business logic separated from CLI.
+
+**Usage**:
+```go
+import "github.com/rackerlabs/opencenter-cli/internal/cluster"
+
+// Get service from DI container
+initService := container.Get(cluster.InitService)
+
+// Invoke service
+result, err := initService.Initialize(ctx, cluster.InitOptions{
+    ClusterName:  "my-cluster",
+    Organization: "my-org",
+    Provider:     "openstack",
+})
+```
+
+**Services**:
+- **InitService**: Cluster initialization
+- **ValidateService**: Configuration validation
+- **SetupService**: GitOps repository setup
+- **BootstrapService**: Infrastructure provisioning
 
 ## Development Workflow
 
 ### Building
 
-Build the binary with version information:
 ```bash
+# Build for current platform
 mise run build
-```
 
-Build for specific platforms:
-```bash
-mise run build-linux        # Linux AMD64
-mise run build-all          # All platforms
-```
+# Build for Linux
+mise run build-linux
 
-The build injects version metadata via ldflags:
-- `version`: Git tag or "0.0.1"
-- `gitCommit`: Current commit hash
-- `gitBranch`: Current branch name
-- `buildDate`: ISO 8601 timestamp
+# Build for all platforms
+mise run build-all
+
+# Clean build artifacts
+mise run clean
+```
 
 ### Testing
 
-Run unit tests:
 ```bash
+# Run unit tests
 mise run test
-```
 
-Run BDD tests:
-```bash
-mise run godog              # All non-@wip scenarios
-mise run godog-wip          # Only @wip scenarios
-```
+# Run unit tests with coverage
+go test -cover ./internal/...
 
-Run specific test suites:
-```bash
-mise run test-security      # Security component tests
-mise run test-integration   # Operational readiness tests
-```
+# Run BDD tests
+mise run godog
 
-Run tests for specific priorities:
-```bash
-mise run test-priority1     # Config loader tests
-mise run test-priority2     # GitOps idempotency tests
+# Run WIP scenarios only
+mise run godog-wip
+
+# Run specific test
+go test -run TestPathResolver ./internal/core/paths/
+
+# Run benchmarks
+go test -bench=. ./internal/core/paths/
 ```
 
 ### Code Quality
 
-Format code:
 ```bash
+# Format code
 mise run fmt
-```
 
-Run linter:
-```bash
-mise run lint
-```
-
-Tidy dependencies:
-```bash
+# Tidy dependencies
 mise run tidy
+
+# Run linters
+golangci-lint run
+
+# Run static analysis
+go vet ./...
+staticcheck ./...
 ```
 
-### Schema Changes
+### Schema Management
 
-When modifying configuration schema:
 ```bash
+# Generate JSON schema
+mise run schema
+
+# Verify schema
 mise run schema-verify
+
+# Validate configuration
+mise run validate
 ```
 
-This comprehensive task:
-1. Builds the project
-2. Generates JSON schema
-3. Tests cluster init with new schema
-4. Runs validation
-5. Executes unit and BDD tests
-6. Compares with reference schema
+## Coding Standards
 
-### Local Testing Environment
+### Go Conventions
 
-Start local Gitea for testing:
-```bash
-mise run gitea-up           # Setup and configure
-mise run gitea-cleanup      # Cleanup
-```
+- **Formatting**: Use `gofmt` (run `mise run fmt`)
+- **Naming**: `CamelCase` for exported, `mixedCase` for locals
+- **Imports**: Standard library, external deps, internal packages
+- **Error Handling**: Always check errors, wrap with context
 
-Create Kind cluster for testing:
-```bash
-mise run kind-cluster-no-cni
-```
-
-### Credentials Management
-
-Export credentials for active cluster:
-```bash
-mise run export-aws-creds       # AWS credentials
-mise run export-os-creds        # OpenStack credentials
-mise run export-all-creds       # All credentials
-```
-
-Setup development environment:
-```bash
-mise run dev-env-setup          # Export all credentials
-mise run dev-env-clean          # Clear credentials
-```
-
-## Project Structure
-
-See [architecture.md](./architecture.md) for detailed codebase organization.
-
-Quick overview:
-- `cmd/`: CLI commands (Cobra)
-- `internal/`: Core implementation
-- `tests/`: BDD test scenarios
-- `testdata/`: Test fixtures
-- `schema/`: Generated JSON schemas
-- `docs/`: Documentation
-
-## Common Tasks
-
-### Adding a New Command
-
-1. Create `cmd/<command>_<subcommand>.go`
-2. Implement `new<Command><Subcommand>Cmd()` returning `*cobra.Command`
-3. Register in parent command's `AddCommand()`
-4. Add tests in `tests/features/`
-5. Update documentation
-
-### Adding a New Provider
-
-1. Create `internal/cloud/<provider>/`
-2. Implement `preflight.go` with provider checks
-3. Add provider configuration in `internal/config/types_infrastructure.go`
-4. Update schema in `internal/config/schema.go`
-5. Add validation in `internal/config/<provider>_validator.go`
-6. Add tests
-
-### Adding a New Mise Task
-
-When adding functionality that requires commands:
-
-1. **Always create a mise task** in `.mise.toml`
-2. Use descriptive kebab-case names
-3. Document the task purpose with a comment
-4. Chain related tasks using dependencies
-
-Example:
-```toml
-[tasks]
-# Run integration tests with local cluster
-test-integration = [
-  "mise run kind-cluster-no-cni",
-  "go test ./tests/integration/... -v"
-]
-```
-
-Never suggest raw commands - always wrap in mise tasks for consistency.
-
-## Architecture Overview
-
-opencenter follows a layered architecture:
-
-**Command Layer** (`cmd/`): Cobra commands, flag parsing, user interaction
-
-**Business Logic** (`internal/`):
-- `config/`: Configuration management and validation
-- `gitops/`: GitOps repository scaffolding
-- `sops/`: Secrets encryption with SOPS/Age
-- `cloud/`: Provider-specific integrations
-- `provision/`: Infrastructure provisioning (Terraform/Ansible/Pulumi)
-- `template/`: Template engine with sandboxing
-- `security/`: Input validation, credential masking, audit logging
-- `resilience/`: Retry logic, circuit breakers, locking
-- `operations/`: Drift detection, backup management
-
-**Testing** (`internal/testing/`): Test framework, generators, mocks
-
-For detailed architecture, see [architecture.md](./architecture.md).
-
-## Testing Strategy
-
-opencenter uses multiple testing approaches:
-
-**Unit Tests**: Standard Go tests in `internal/` packages
-- Test individual functions and components
-- Run with `mise run test`
-- Files: `*_test.go`
-
-**Property-Based Tests**: Generative testing with gopter
-- Test properties that should hold for all inputs
-- Files: `*_property_test.go`
-- Example: `internal/config/migration_property_test.go`
-
-**BDD Tests**: Behavior-driven tests with Godog
-- Gherkin scenarios in `tests/features/`
-- Run with `mise run godog`
-- Use `@wip` tag during development
-
-**Integration Tests**: Full workflow validation
-- Files: `*_integration_test.go`
-- Test complete command flows
-
-See [testing/README.md](./testing/README.md) for detailed testing guide.
-
-## Configuration Management
-
-Configuration files use organization-based structure:
-
-```
-~/.config/opencenter/clusters/
-└── <organization>/
-    ├── .<cluster>-config.yaml
-    ├── infrastructure/
-    │   └── clusters/<cluster>/
-    ├── applications/
-    │   └── overlays/<cluster>/
-    └── secrets/
-        ├── age/keys/
-        └── ssh/
-```
-
-The `ConfigManager` handles:
-- Loading from YAML
-- Schema validation
-- Environment variable expansion
-- Runtime overrides via `--set` flag
-- Migration between schema versions
-
-## Error Handling
-
-Use error wrapping for context:
+**Example**:
 ```go
-if err != nil {
-    return fmt.Errorf("failed to load cluster: %w", err)
+import (
+    "context"
+    "fmt"
+    
+    "github.com/spf13/cobra"
+    
+    "github.com/rackerlabs/opencenter-cli/internal/config"
+)
+
+func processCluster(ctx context.Context, name string) error {
+    cfg, err := loadConfig(name)
+    if err != nil {
+        return fmt.Errorf("loading config: %w", err)
+    }
+    
+    // Process config
+    return nil
 }
 ```
 
-Exit codes:
-- `0`: Success
-- `1`: Error occurred
+### File Organization
 
-## Logging
+- **Test files**: `*_test.go` (unit), `*_property_test.go` (property-based)
+- **Test functions**: `TestXxx` naming convention
+- **Benchmarks**: `BenchmarkXxx` naming convention
+- **Examples**: `ExampleXxx` naming convention
 
-Log levels: `debug`, `info`, `warn` (default), `error`
+### Documentation
 
-Set via:
-- `--log-level` flag
-- `--verbose` flag (sets debug)
-- `OPENCENTER_DEBUG=1` environment variable
+- **Package docs**: `doc.go` in each package
+- **Function docs**: Godoc comments for exported functions
+- **Examples**: Runnable examples in `example_test.go`
 
-Log formats: `text` (default), `json`, `yaml`
-
-## Performance Considerations
-
-- Configuration loaded once at startup
-- Plugin discovery cached
-- Template rendering cached when enabled
-- Lazy loading where possible
-- File operations minimized
-
-## Security Considerations
-
-- Configuration files: 0600 permissions
-- Secrets never logged (credential masking)
-- SOPS integration for encryption
-- Input validation on all user input
-- Path traversal prevention
-- Template sandboxing prevents code execution
-
-## Debugging
-
-Enable debug mode:
-```bash
-export OPENCENTER_DEBUG=1
-./bin/opencenter cluster validate my-cluster
+**Example**:
+```go
+// Package paths provides centralized path resolution for cluster resources.
+//
+// The PathResolver handles all path construction with support for
+// organization-based directory structures and intelligent caching.
+//
+// Example usage:
+//
+//	resolver := paths.NewPathResolver("/base")
+//	paths, err := resolver.Resolve("my-cluster", "my-org")
+//	if err != nil {
+//	    return err
+//	}
+//	fmt.Println(paths.ConfigFile)
+package paths
 ```
 
-Debug artifacts created in debug mode:
-- Detailed logs
-- Intermediate files
-- Validation reports
+### Error Handling
+
+- **Always check errors**: Never ignore error returns
+- **Wrap errors**: Add context with `fmt.Errorf("context: %w", err)`
+- **Sentinel errors**: Use `errors.Is()` for comparison
+- **Error types**: Define custom error types for specific cases
+
+**Example**:
+```go
+var ErrClusterNotFound = errors.New("cluster not found")
+
+func loadCluster(name string) (*Cluster, error) {
+    path, err := resolvePath(name)
+    if err != nil {
+        return nil, fmt.Errorf("resolving path for %s: %w", name, err)
+    }
+    
+    if !fileExists(path) {
+        return nil, ErrClusterNotFound
+    }
+    
+    // Load cluster
+    return cluster, nil
+}
+
+// Usage
+cluster, err := loadCluster("my-cluster")
+if errors.Is(err, ErrClusterNotFound) {
+    // Handle not found
+}
+```
+
+## Testing Guidelines
+
+### Unit Tests
+
+**Focus**: Test individual functions and methods in isolation.
+
+**Structure**:
+```go
+func TestPathResolver_Resolve(t *testing.T) {
+    // Setup
+    resolver := paths.NewPathResolver("/base")
+    
+    // Execute
+    paths, err := resolver.Resolve("test-cluster", "test-org")
+    
+    // Verify
+    require.NoError(t, err)
+    assert.Equal(t, "/base/test-org/test-cluster", paths.ClusterDir)
+}
+```
+
+**Best Practices**:
+- Use table-driven tests for multiple cases
+- Use `testify/require` for fatal assertions
+- Use `testify/assert` for non-fatal assertions
+- Test error cases explicitly
+
+### Integration Tests
+
+**Focus**: Test complete workflows end-to-end.
+
+**Structure**:
+```go
+func TestClusterInit_Integration(t *testing.T) {
+    // Setup
+    tmpDir := t.TempDir()
+    container := setupTestContainer(tmpDir)
+    
+    // Execute
+    svc := container.Get(InitService)
+    result, err := svc.Initialize(context.Background(), InitOptions{
+        ClusterName:  "test-cluster",
+        Organization: "test-org",
+    })
+    
+    // Verify
+    require.NoError(t, err)
+    assert.FileExists(t, result.ConfigPath)
+    
+    // Verify config content
+    cfg, err := loadConfig(result.ConfigPath)
+    require.NoError(t, err)
+    assert.Equal(t, "test-cluster", cfg.Cluster.Name)
+}
+```
+
+### Benchmark Tests
+
+**Focus**: Measure performance of critical operations.
+
+**Structure**:
+```go
+func BenchmarkPathResolver_Resolve(b *testing.B) {
+    resolver := paths.NewPathResolver("/base")
+    
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        resolver.Resolve("test-cluster", "test-org")
+    }
+}
+```
+
+**Run benchmarks**:
+```bash
+go test -bench=. -benchmem ./internal/core/paths/
+```
+
+### Property-Based Tests
+
+**Focus**: Test invariants across many generated inputs.
+
+**Structure**:
+```go
+func TestPathResolver_Properties(t *testing.T) {
+    properties := gopter.NewProperties(nil)
+    
+    properties.Property("Resolve is deterministic", prop.ForAll(
+        func(name, org string) bool {
+            resolver := paths.NewPathResolver("/base")
+            paths1, _ := resolver.Resolve(name, org)
+            paths2, _ := resolver.Resolve(name, org)
+            return reflect.DeepEqual(paths1, paths2)
+        },
+        gen.Identifier(),
+        gen.Identifier(),
+    ))
+    
+    properties.TestingRun(t)
+}
+```
+
+### BDD Tests
+
+**Focus**: Test user-facing behavior with Gherkin scenarios.
+
+**Location**: `tests/features/*.feature`
+
+**Example**:
+```gherkin
+Feature: Cluster Initialization
+  
+  Scenario: Initialize new cluster
+    Given I have opencenter installed
+    When I run "opencenter cluster init test-cluster"
+    Then the command should succeed
+    And a config file should exist at "~/.config/opencenter/clusters/opencenter/.test-cluster-config.yaml"
+```
+
+## Common Development Tasks
+
+### Adding a New Command
+
+1. Create command file in `cmd/`:
+```go
+// cmd/cluster_mycommand.go
+func newClusterMyCommandCmd(container *di.Container) *cobra.Command {
+    cmd := &cobra.Command{
+        Use:   "mycommand <cluster-name>",
+        Short: "Description of my command",
+        RunE: func(cmd *cobra.Command, args []string) error {
+            // Parse flags
+            opts := parseMyCommandFlags(cmd, args)
+            
+            // Get service
+            svc := container.Get(MyCommandService)
+            
+            // Invoke service
+            result, err := svc.Execute(cmd.Context(), opts)
+            
+            // Display result
+            return displayMyCommandResult(result, err)
+        },
+    }
+    return cmd
+}
+```
+
+2. Create service in `internal/cluster/`:
+```go
+// internal/cluster/mycommand_service.go
+type MyCommandService struct {
+    pathResolver  paths.PathResolver
+    configManager config.ConfigManager
+}
+
+func (s *MyCommandService) Execute(ctx context.Context, opts MyCommandOptions) (*MyCommandResult, error) {
+    // Business logic here
+    return &MyCommandResult{}, nil
+}
+```
+
+3. Register service in DI container:
+```go
+// internal/di/providers.go
+func ProvideMyCommandService(
+    pathResolver paths.PathResolver,
+    configManager config.ConfigManager,
+) *cluster.MyCommandService {
+    return &cluster.MyCommandService{
+        pathResolver:  pathResolver,
+        configManager: configManager,
+    }
+}
+```
+
+4. Add tests:
+```go
+// internal/cluster/mycommand_service_test.go
+func TestMyCommandService_Execute(t *testing.T) {
+    // Test implementation
+}
+```
+
+### Adding a New Validator
+
+1. Create validator in `internal/core/validation/validators/`:
+```go
+// internal/core/validation/validators/myvalidator.go
+type MyValidator struct{}
+
+func (v *MyValidator) Validate(ctx context.Context, value interface{}) validation.ValidationResult {
+    result := validation.ValidationResult{Valid: true}
+    
+    // Validation logic
+    if !isValid(value) {
+        result.Valid = false
+        result.Errors = append(result.Errors, validation.ValidationError{
+            Field:   "field-name",
+            Message: "validation failed",
+            Suggestions: []string{"try this instead"},
+        })
+    }
+    
+    return result
+}
+```
+
+2. Register validator:
+```go
+// In init() or setup code
+engine.Register("my-validator", &validators.MyValidator{})
+```
+
+3. Add tests:
+```go
+// internal/core/validation/validators/myvalidator_test.go
+func TestMyValidator_Validate(t *testing.T) {
+    validator := &MyValidator{}
+    
+    result := validator.Validate(context.Background(), "test-value")
+    
+    assert.True(t, result.Valid)
+}
+```
+
+### Adding a New Config Version
+
+1. Create strategy in `internal/core/config/strategies/`:
+```go
+// internal/core/config/strategies/v3.go
+type V3Strategy struct{}
+
+func (s *V3Strategy) CanLoad(data []byte) bool {
+    return bytes.Contains(data, []byte("schema_version: v3"))
+}
+
+func (s *V3Strategy) Load(data []byte) (*config.Config, error) {
+    var cfg config.Config
+    if err := yaml.Unmarshal(data, &cfg); err != nil {
+        return nil, err
+    }
+    return &cfg, nil
+}
+```
+
+2. Create migration in `internal/core/config/migration/`:
+```go
+// internal/core/config/migration/v2_to_v3.go
+func MigrateV2ToV3(v2Config *config.Config) (*config.Config, error) {
+    v3Config := *v2Config
+    // Migration logic
+    return &v3Config, nil
+}
+```
+
+3. Register strategy in ConfigManager:
+```go
+// internal/core/config/manager.go
+func NewManager() *Manager {
+    return &Manager{
+        strategies: []LoadStrategy{
+            &strategies.V3Strategy{},
+            &strategies.V2Strategy{},
+            &strategies.V1Strategy{},
+            &strategies.LegacyStrategy{},
+        },
+    }
+}
+```
+
+## Debugging and Troubleshooting
+
+### Debugging Tips
+
+**Enable verbose logging**:
+```bash
+export OPENCENTER_LOG_LEVEL=debug
+./bin/opencenter cluster init test-cluster
+```
+
+**Use delve debugger**:
+```bash
+dlv debug ./cmd/opencenter -- cluster init test-cluster
+```
+
+**Print debug info**:
+```go
+import "github.com/davecgh/go-spew/spew"
+
+spew.Dump(config)
+```
+
+### Common Issues
+
+**Issue**: Path resolution fails
+```bash
+# Check base directory
+echo $OPENCENTER_CONFIG_DIR
+
+# Verify organization structure
+ls -la ~/.config/opencenter/clusters/
+```
+
+**Issue**: Config loading fails
+```bash
+# Validate YAML syntax
+yamllint ~/.config/opencenter/clusters/opencenter/.test-cluster-config.yaml
+
+# Check schema version
+grep schema_version ~/.config/opencenter/clusters/opencenter/.test-cluster-config.yaml
+```
+
+**Issue**: Tests fail
+```bash
+# Run specific test with verbose output
+go test -v -run TestPathResolver ./internal/core/paths/
+
+# Check test fixtures
+ls -la internal/core/paths/testdata/
+```
+
+## Performance Optimization
+
+### Profiling
+
+**CPU profiling**:
+```bash
+go test -cpuprofile=cpu.prof -bench=. ./internal/core/paths/
+go tool pprof cpu.prof
+```
+
+**Memory profiling**:
+```bash
+go test -memprofile=mem.prof -bench=. ./internal/core/paths/
+go tool pprof mem.prof
+```
+
+**Trace analysis**:
+```bash
+go test -trace=trace.out ./internal/core/paths/
+go tool trace trace.out
+```
+
+### Performance Targets
+
+- **Path Resolution**: <1ms uncached, <100μs cached
+- **Config Loading**: <100ms
+- **Validation**: <100μs per validator
+- **Memory Usage**: <100MB peak
+
+### Optimization Techniques
+
+1. **Caching**: Cache expensive operations (path resolution, config loading)
+2. **Pooling**: Reuse buffers for YAML parsing
+3. **Lazy Loading**: Load config only when needed
+4. **Parallel Validation**: Run independent validators concurrently
 
 ## Contributing
 
-See [contributing.md](./contributing.md) for:
-- Code style guidelines
-- Commit message conventions
-- Pull request process
-- Review checklist
+### Contribution Workflow
 
-## Release Process
+1. **Fork repository**: Create personal fork on GitHub
+2. **Create branch**: `git checkout -b feature/my-feature`
+3. **Make changes**: Follow coding standards
+4. **Add tests**: Ensure >90% coverage
+5. **Run checks**: `mise run fmt && mise run test && mise run godog`
+6. **Commit**: Use conventional commits (`feat:`, `fix:`, `docs:`)
+7. **Push**: `git push origin feature/my-feature`
+8. **Create PR**: Submit pull request with description
 
-See [release-process.md](./release-process.md) for:
-- Versioning strategy
-- Release checklist
-- Build and distribution
-- Changelog generation
+### PR Requirements
 
-## See Also
+- [ ] All tests pass
+- [ ] Code formatted with `gofmt`
+- [ ] New code has >90% test coverage
+- [ ] Documentation updated
+- [ ] Conventional commit messages
+- [ ] No breaking changes (or documented)
 
-- [Architecture Documentation](./architecture.md) - Detailed codebase architecture
-- [Testing Guide](./testing/README.md) - Comprehensive testing documentation
-- [Contributing Guidelines](./contributing.md) - How to contribute
-- [Release Process](./release-process.md) - Release procedures
-- [Configuration Reference](../reference/configuration.md) - Configuration schema
-- [Plugin Development](../how-to/plugin-development.md) - Creating plugins
+### Code Review Process
+
+1. **Automated checks**: CI runs tests, linters, benchmarks
+2. **Peer review**: At least one approval required
+3. **Maintainer review**: Final approval from maintainer
+4. **Merge**: Squash and merge to main
+
+## References
+
+- [Architecture Documentation](architecture.md)
+- [Path Resolution Deprecation](path-resolution-deprecation.md)
+- [Deprecation Timeline](deprecation-timeline.md)
+- [Contributing Guide](../contributing.md)
+- [Architectural Refactoring Spec](../../.kiro/specs/architectural-refactoring/README.md)

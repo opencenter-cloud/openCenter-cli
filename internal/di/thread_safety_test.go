@@ -28,7 +28,7 @@ func TestConcurrentRegister(t *testing.T) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			name := string(rune('a' + (id % 26))) + string(rune('0' + (id / 26)))
+			name := string(rune('a'+(id%26))) + string(rune('0'+(id/26)))
 			err := container.Register(name, func() (*Logger, error) {
 				return &Logger{Name: name}, nil
 			})
@@ -157,7 +157,7 @@ func TestConcurrentRegisterAndResolve(t *testing.T) {
 		// Register
 		go func(id int) {
 			defer wg.Done()
-			name := string(rune('a' + (id % 26))) + string(rune('0' + (id / 26)))
+			name := string(rune('a'+(id%26))) + string(rune('0'+(id/26)))
 			err := container.Register(name, func() (*Logger, error) {
 				return &Logger{Name: name}, nil
 			})
@@ -170,7 +170,7 @@ func TestConcurrentRegisterAndResolve(t *testing.T) {
 		// Resolve
 		go func(id int) {
 			defer wg.Done()
-			name := string(rune('a' + (id % 26))) + string(rune('0' + (id / 26)))
+			name := string(rune('a'+(id%26))) + string(rune('0'+(id/26)))
 			_, err := container.Resolve(name)
 			if err != nil {
 				// Component might not be registered yet, which is fine

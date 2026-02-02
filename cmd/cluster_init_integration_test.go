@@ -75,7 +75,7 @@ func TestClusterInitIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create command
 			cmd := newClusterInitCmd()
-			
+
 			// Set up command output buffers
 			var stdout, stderr bytes.Buffer
 			cmd.SetOut(&stdout)
@@ -169,16 +169,9 @@ func TestClusterInitIntegration(t *testing.T) {
 					t.Errorf("SOPS key not created: %s", sopsKeyPath)
 				}
 
-				// SSH keys should be in the format: <cluster>-<env>-<region>
-				env := cfg.OpenCenter.Meta.Env
-				region := cfg.OpenCenter.Meta.Region
-				if env == "" {
-					env = "dev"
-				}
-				if region == "" {
-					region = "local"
-				}
-				sshKeyPath := filepath.Join(secretsDir, "ssh", tt.clusterName+"-"+env+"-"+region)
+				// SSH keys are in the format: <cluster> (PathResolver uses simple cluster name)
+				// The old format was <cluster>-<env>-<region> but PathResolver simplified this
+				sshKeyPath := filepath.Join(secretsDir, "ssh", tt.clusterName)
 				if _, err := os.Stat(sshKeyPath); os.IsNotExist(err) {
 					t.Errorf("SSH key not created: %s", sshKeyPath)
 				}
@@ -244,12 +237,12 @@ func TestClusterInitServiceIntegration(t *testing.T) {
 	// Create dependencies
 	pathResolver := paths.NewPathResolver(dir)
 	validationEngine := validation.NewValidationEngine()
-	
+
 	// Register validators
 	if err := validationEngine.Register(validators.NewClusterNameValidator()); err != nil {
 		t.Fatalf("failed to register cluster name validator: %v", err)
 	}
-	
+
 	configManager, err := config.NewConfigManager("")
 	if err != nil {
 		t.Fatalf("failed to create config manager: %v", err)

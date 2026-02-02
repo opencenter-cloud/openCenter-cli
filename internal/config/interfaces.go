@@ -18,32 +18,51 @@ import (
 	"fmt"
 )
 
-// ConfigManagerInterface defines the interface for configuration management operations.
-// This interface provides abstraction for loading, validating, and managing cluster configurations.
-type ConfigManagerInterface interface {
+// ConfigLoader defines the interface for loading cluster configurations.
+type ConfigLoader interface {
 	// LoadConfig loads a cluster configuration by name
 	LoadConfig(ctx context.Context, clusterName string) (*Config, error)
 
+	// GetConfigPath returns the path to a cluster's configuration file
+	GetConfigPath(ctx context.Context, clusterName string) (string, error)
+}
+
+// ConfigPersister defines the interface for saving and deleting configurations.
+type ConfigPersister interface {
 	// SaveConfig saves a cluster configuration
 	SaveConfig(ctx context.Context, config *Config) error
 
-	// ValidateConfig validates a cluster configuration
-	ValidateConfig(ctx context.Context, config *Config) *ConfigValidationResult
-
-	// ListConfigs returns a list of available cluster configurations
-	ListConfigs(ctx context.Context) ([]string, error)
-
 	// DeleteConfig removes a cluster configuration
 	DeleteConfig(ctx context.Context, clusterName string) error
+}
 
-	// GetConfigPath returns the path to a cluster's configuration file
-	GetConfigPath(ctx context.Context, clusterName string) (string, error)
+// ConfigLister defines the interface for listing available configurations.
+type ConfigLister interface {
+	// ListConfigs returns a list of available cluster configurations
+	ListConfigs(ctx context.Context) ([]string, error)
+}
 
+// ActiveConfigManager defines the interface for managing the active cluster configuration.
+type ActiveConfigManager interface {
 	// SetActiveConfig sets the active cluster configuration
 	SetActiveConfig(ctx context.Context, clusterName string) error
 
 	// GetActiveConfig returns the name of the active cluster configuration
 	GetActiveConfig(ctx context.Context) (string, error)
+}
+
+// ConfigManagerInterface defines the interface for configuration management operations.
+// This interface provides abstraction for loading, validating, and managing cluster configurations.
+// Deprecated: Use specific interfaces (ConfigLoader, ConfigPersister, ConfigLister, ActiveConfigManager)
+// This interface is maintained for backward compatibility and will be removed in v2.0.0
+type ConfigManagerInterface interface {
+	ConfigLoader
+	ConfigPersister
+	ConfigLister
+	ActiveConfigManager
+
+	// ValidateConfig validates a cluster configuration
+	ValidateConfig(ctx context.Context, config *Config) *ConfigValidationResult
 }
 
 // ConfigLoaderInterface defines the interface for loading configurations from various sources.
@@ -82,24 +101,6 @@ type ConfigValidatorInterface interface {
 	ValidateCloudProvider(ctx context.Context, config *Config) *ConfigValidationResult
 }
 
-// ConfigMigratorInterface defines the interface for configuration migration operations.
-type ConfigMigratorInterface interface {
-	// MigrateToOrganization migrates a cluster from flat to organization structure
-	MigrateToOrganization(ctx context.Context, clusterName, organization string) error
-
-	// DetectLegacyStructure detects clusters using legacy flat structure
-	DetectLegacyStructure(ctx context.Context) ([]string, error)
-
-	// ValidatePostMigration validates that migration was successful
-	ValidatePostMigration(ctx context.Context, clusterName, organization string) error
-
-	// BackupCluster creates a backup before migration
-	BackupCluster(ctx context.Context, clusterName string) (string, error)
-
-	// RestoreCluster restores a cluster from backup
-	RestoreCluster(ctx context.Context, clusterName, backupPath string) error
-}
-
 // PathResolverInterface defines the interface for path resolution operations.
 type PathResolverInterface interface {
 	// ResolveClusterPaths resolves all paths for a cluster
@@ -122,6 +123,7 @@ type PathResolverInterface interface {
 }
 
 // ConfigCacheInterface defines the interface for configuration caching.
+// This is an internal interface used by ConfigurationManager.
 type ConfigCacheInterface interface {
 	// Get retrieves a cached configuration
 	Get(ctx context.Context, key string) (*Config, bool)

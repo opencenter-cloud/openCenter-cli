@@ -25,6 +25,27 @@ import (
 // PathResolver manages dynamic path resolution with organization support.
 // It provides a single source of truth for all cluster path resolution,
 // with caching and fallback strategies for backward compatibility.
+//
+// PathResolver is thread-safe and can be used concurrently from multiple goroutines.
+// It uses a read-write mutex to protect internal state and a thread-safe cache
+// for resolved paths.
+//
+// Example usage:
+//
+//	resolver := paths.NewPathResolver("~/.config/opencenter/clusters")
+//	paths, err := resolver.Resolve(ctx, "my-cluster", "my-org")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println("Config path:", paths.ConfigPath)
+//
+// For clusters without a known organization, use ResolveWithFallback:
+//
+//	paths, err := resolver.ResolveWithFallback(ctx, "my-cluster")
+//
+// The resolver automatically caches results for performance. To invalidate:
+//
+//	resolver.InvalidateCache("my-cluster")
 type PathResolver struct {
 	// baseDir is the base directory for all clusters
 	baseDir string
@@ -43,11 +64,39 @@ type PathResolver struct {
 }
 
 // NewPathResolver creates a new path resolver with the given base directory.
+//
+// The base directory is the root directory containing organization subdirectories.
+// Typically this is "~/.config/opencenter/clusters".
+//
+// The resolver is created with default options:
+//   - Organization: "opencenter"
+//   - CacheResults: true
+//   - ValidatePaths: false
+//
+// Example:
+//
+//	resolver := paths.NewPathResolver("~/.config/opencenter/clusters")
+//
+// For custom options, use NewPathResolverWithOptions.
 func NewPathResolver(baseDir string) *PathResolver {
 	return NewPathResolverWithOptions(baseDir, DefaultResolutionOptions())
 }
 
 // NewPathResolverWithOptions creates a new path resolver with custom options.
+//
+// This constructor allows fine-grained control over resolver behavior:
+//   - Organization: Default organization name when not specified
+//   - CacheResults: Enable/disable result caching
+//   - ValidatePaths: Enable/disable path validation (expensive)
+//
+// Example:
+//
+//	opts := paths.ResolutionOptions{
+//	    Organization: "my-company",
+//	    CacheResults: true,
+//	    ValidatePaths: true,
+//	}
+//	resolver := paths.NewPathResolverWithOptions("~/.config/opencenter/clusters", opts)
 func NewPathResolverWithOptions(baseDir string, options ResolutionOptions) *PathResolver {
 	baseDir = expandPath(baseDir)
 
@@ -70,12 +119,35 @@ func NewPathResolverWithOptions(baseDir string, options ResolutionOptions) *Path
 
 // Resolve resolves all paths for the given cluster and organization.
 // This is the primary method for path resolution.
+//
+// The method performs the following steps:
+//  1. Validates cluster name and organization name
+//  2. Checks cache for existing resolution (if caching enabled)
+//  3. Uses organization-based strategy to resolve paths
+//  4. Caches the result for future calls
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeouts
+//   - clusterName: Name of the cluster (must be valid DNS label)
+//   - organization: Organization name (uses default if empty)
+//
+// Returns:
+//   - *ClusterPaths: Resolved paths for the cluster
+//   - error: Validation error or resolution failure
+//
+// Example:
+//
+//	paths, err := resolver.Resolve(ctx, "prod-cluster", "acme-corp")
+//	if err != nil {
+//	    return fmt.Errorf("failed to resolve paths: %w", err)
+//	}
+//	// Use paths.ConfigPath, paths.SecretsDir, etc.
 func (r *PathResolver) Resolve(ctx context.Context, clusterName, organization string) (*ClusterPaths, error) {
 	if clusterName == "" {
 		return nil, fmt.Errorf("cluster name cannot be empty")
 	}
 
-	// Validate cluster name
+	// Validate cluster name (fast path - no allocations for valid names)
 	if err := r.validateClusterName(clusterName); err != nil {
 		return nil, fmt.Errorf("invalid cluster name: %w", err)
 	}
@@ -90,14 +162,14 @@ func (r *PathResolver) Resolve(ctx context.Context, clusterName, organization st
 		return nil, fmt.Errorf("invalid organization name: %w", err)
 	}
 
-	// Check cache first
+	// Check cache first (fast path)
 	if r.cache != nil {
 		if paths := r.cache.Get(clusterName, organization); paths != nil {
 			return paths, nil
 		}
 	}
 
-	// Use organization-based strategy
+	// Use organization-based strategy (slow path)
 	strategy := r.strategies[0]
 	canResolve, err := strategy.CanResolve(ctx, clusterName, organization)
 	if err != nil {
@@ -121,8 +193,35 @@ func (r *PathResolver) Resolve(ctx context.Context, clusterName, organization st
 	return paths, nil
 }
 
-// ResolveWithFallback resolves paths for a cluster.
-// If organization is not specified, searches across all organizations.
+// ResolveWithFallback resolves paths for a cluster without knowing its organization.
+// It searches across all organization directories to find the cluster.
+//
+// This method is useful when:
+//   - The organization is unknown
+//   - Migrating from legacy structure
+//   - Supporting backward compatibility
+//
+// The search process:
+//  1. Checks cache first
+//  2. Scans all organization directories in baseDir
+//  3. Returns paths for the first matching cluster found
+//  4. Caches the result with empty organization key
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeouts
+//   - clusterName: Name of the cluster to find
+//
+// Returns:
+//   - *ClusterPaths: Resolved paths for the cluster
+//   - error: Cluster not found or validation error
+//
+// Example:
+//
+//	// When you don't know the organization
+//	paths, err := resolver.ResolveWithFallback(ctx, "my-cluster")
+//	if err != nil {
+//	    return fmt.Errorf("cluster not found: %w", err)
+//	}
 func (r *PathResolver) ResolveWithFallback(ctx context.Context, clusterName string) (*ClusterPaths, error) {
 	if clusterName == "" {
 		return nil, fmt.Errorf("cluster name cannot be empty")
@@ -173,6 +272,16 @@ func (r *PathResolver) ResolveWithFallback(ctx context.Context, clusterName stri
 }
 
 // InvalidateCache invalidates the cache for a specific cluster.
+//
+// Call this method after:
+//   - Creating new cluster directories
+//   - Moving a cluster to a different organization
+//   - Modifying cluster structure
+//
+// Example:
+//
+//	resolver.CreateClusterDirectories(ctx, "new-cluster", "my-org")
+//	resolver.InvalidateCache("new-cluster") // Force fresh resolution
 func (r *PathResolver) InvalidateCache(clusterName string) {
 	if r.cache != nil {
 		r.cache.InvalidateCluster(clusterName)
@@ -180,13 +289,30 @@ func (r *PathResolver) InvalidateCache(clusterName string) {
 }
 
 // ClearCache clears all cached path resolutions.
+//
+// Use this to force fresh resolution for all clusters, typically:
+//   - After bulk operations
+//   - During testing
+//   - When directory structure changes
+//
+// Example:
+//
+//	resolver.ClearCache() // Clear all cached paths
 func (r *PathResolver) ClearCache() {
 	if r.cache != nil {
 		r.cache.Clear()
 	}
 }
 
-// GetCacheStats returns cache statistics.
+// GetCacheStats returns cache statistics for monitoring and debugging.
+//
+// Returns:
+//   - CacheStats: Hit rate, miss rate, and entry count
+//
+// Example:
+//
+//	stats := resolver.GetCacheStats()
+//	fmt.Printf("Cache hit rate: %.2f%%\n", stats.HitRate()*100)
 func (r *PathResolver) GetCacheStats() CacheStats {
 	if r.cache != nil {
 		return r.cache.Stats()
@@ -246,6 +372,31 @@ func (r *PathResolver) GetOrganization(ctx context.Context, clusterName string) 
 }
 
 // CreateClusterDirectories creates all necessary directories for a cluster.
+//
+// This method creates the complete directory structure required for a cluster:
+//   - Organization directory
+//   - Infrastructure/clusters/<cluster>
+//   - Applications/overlays/<cluster>
+//   - Secrets directories (age, ssh)
+//   - Inventory, venv, and bin directories
+//
+// All directories are created with 0755 permissions. If ValidatePaths option
+// is enabled, write permissions are verified for each directory.
+//
+// Parameters:
+//   - ctx: Context for cancellation
+//   - clusterName: Name of the cluster
+//   - organization: Organization name (uses default if empty)
+//
+// Returns:
+//   - error: Directory creation or validation failure
+//
+// Example:
+//
+//	err := resolver.CreateClusterDirectories(ctx, "new-cluster", "my-org")
+//	if err != nil {
+//	    return fmt.Errorf("failed to create directories: %w", err)
+//	}
 func (r *PathResolver) CreateClusterDirectories(ctx context.Context, clusterName, organization string) error {
 	if err := r.validateClusterName(clusterName); err != nil {
 		return fmt.Errorf("invalid cluster name: %w", err)
@@ -310,6 +461,23 @@ func (r *PathResolver) CreateClusterDirectories(ctx context.Context, clusterName
 }
 
 // ValidatePath validates that a path is safe and accessible.
+//
+// Validation checks:
+//   - Path is not empty
+//   - No directory traversal attempts (..)
+//   - Path is absolute after expansion
+//
+// Parameters:
+//   - path: Path to validate (can contain ~ and environment variables)
+//
+// Returns:
+//   - error: Validation failure with specific reason
+//
+// Example:
+//
+//	if err := resolver.ValidatePath("~/.config/opencenter"); err != nil {
+//	    return fmt.Errorf("invalid path: %w", err)
+//	}
 func (r *PathResolver) ValidatePath(path string) error {
 	if path == "" {
 		return fmt.Errorf("path cannot be empty")

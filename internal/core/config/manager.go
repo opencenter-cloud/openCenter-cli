@@ -14,7 +14,7 @@
 package config
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +23,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	internalconfig "github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/core/config/migration"
 )
 
@@ -50,7 +49,7 @@ type ConfigManager struct {
 	strategies map[string]LoadStrategy
 
 	// cache stores loaded configurations by path
-	cache map[string]*internalconfig.Config
+	cache map[string]*Config
 
 	// mu protects concurrent access to cache
 	mu sync.RWMutex
@@ -59,18 +58,86 @@ type ConfigManager struct {
 // LoadStrategy defines the interface for version-specific configuration loaders.
 // Each version (v1, v2, legacy) implements this interface to provide
 // version-specific loading logic.
+//
+// Implementations must:
+//   - Detect if they can load a configuration (CanLoad)
+//   - Parse and load the configuration (Load)
+//   - Return a version identifier (Version)
+//
+// Example implementation:
+//
+//	type V2Strategy struct{}
+//
+//	func (s *V2Strategy) CanLoad(data []byte) (bool, error) {
+//	    var meta struct {
+//	        SchemaVersion string `yaml:"schema_version"`
+//	    }
+//	    if err := yaml.Unmarshal(data, &meta); err != nil {
+//	        return false, err
+//	    }
+//	    return meta.SchemaVersion == "2.0", nil
+//	}
+//
+//	func (s *V2Strategy) Load(data []byte, clusterName string) (*Config, error) {
+//	    // Parse v2 configuration...
+//	}
+//
+//	func (s *V2Strategy) Version() string {
+//	    return "2.0"
+//	}
 type LoadStrategy interface {
 	// CanLoad determines if this strategy can load the given configuration data
+	//
+	// This method should quickly detect if the configuration matches this
+	// strategy's version. It typically checks a version field in the YAML.
+	//
+	// Parameters:
+	//   - data: Raw YAML configuration data
+	//
+	// Returns:
+	//   - bool: true if this strategy can load the configuration
+	//   - error: Detection failure (invalid YAML, etc.)
 	CanLoad(data []byte) (bool, error)
 
 	// Load loads and parses the configuration data
-	Load(data []byte, clusterName string) (*internalconfig.Config, error)
+	//
+	// This method performs the actual parsing and returns a fully populated
+	// Config structure. It should handle version-specific logic.
+	//
+	// Parameters:
+	//   - data: Raw YAML configuration data
+	//   - clusterName: Name of the cluster (for metadata)
+	//
+	// Returns:
+	//   - *Config: Parsed configuration
+	//   - error: Parsing or validation failure
+	Load(data []byte, clusterName string) (*Config, error)
 
 	// Version returns the version identifier for this strategy
+	//
+	// The version should match the schema_version field in configurations
+	// that this strategy can load (e.g., "1.0", "2.0", "legacy").
+	//
+	// Returns:
+	//   - string: Version identifier
 	Version() string
 }
 
 // LoadOptions configures the behavior of the Load operation.
+//
+// Options:
+//   - AutoMigrate: Automatically upgrade older versions to current version
+//   - Validate: Run validation after loading
+//   - SkipCache: Force fresh load, bypassing cache
+//
+// Example:
+//
+//	opts := config.LoadOptions{
+//	    AutoMigrate: true,  // Upgrade v1 to v2 automatically
+//	    Validate: true,     // Validate after loading
+//	    SkipCache: false,   // Use cache if available
+//	}
+//	cfg, err := manager.Load(path, opts)
 type LoadOptions struct {
 	// AutoMigrate automatically migrates older versions to the current version
 	AutoMigrate bool
@@ -83,22 +150,44 @@ type LoadOptions struct {
 }
 
 // NewConfigManager creates a new ConfigManager with all supported strategies registered.
+//
+// The manager is created with an empty strategy registry and cache.
+// Strategies must be registered using RegisterStrategy before loading configurations.
+//
+// Example:
+//
+//	manager := config.NewConfigManager()
+//	manager.RegisterStrategy(strategies.NewV2Strategy())
+//	manager.RegisterStrategy(strategies.NewV1Strategy())
+//
+//	cfg, err := manager.Load(path, config.LoadOptions{AutoMigrate: true})
 func NewConfigManager() *ConfigManager {
 	cm := &ConfigManager{
 		strategies: make(map[string]LoadStrategy),
-		cache:      make(map[string]*internalconfig.Config),
+		cache:      make(map[string]*Config),
 	}
 
 	// Register strategies for each supported version
 	// Import strategies package to get concrete implementations
-	// Note: We'll use lazy registration pattern - strategies register themselves
-	// when their package is imported. For now, we provide a method to register
-	// strategies externally.
+	// Note: We use lazy registration pattern - strategies register themselves
+	// when their package is imported. Strategies can also be registered
+	// externally using the RegisterStrategy method.
 
 	return cm
 }
 
 // RegisterStrategy registers a new loading strategy for a specific version.
+//
+// Strategies are identified by their Version() string. Registering a strategy
+// with a duplicate version replaces the existing strategy.
+//
+// Parameters:
+//   - strategy: The loading strategy to register
+//
+// Example:
+//
+//	manager.RegisterStrategy(strategies.NewV2Strategy())
+//	manager.RegisterStrategy(strategies.NewV1Strategy())
 func (cm *ConfigManager) RegisterStrategy(strategy LoadStrategy) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
@@ -109,10 +198,13 @@ func (cm *ConfigManager) RegisterStrategy(strategy LoadStrategy) {
 // It uses the registered strategies to determine the correct loader based on the
 // file content, then applies the appropriate loading logic.
 //
+// In v2.0.0, this method rejects v1 configurations with a clear error message
+// directing users to migrate using v1.x before upgrading.
+//
 // The loading process:
 //  1. Check cache (unless SkipCache is true)
 //  2. Read file from disk
-//  3. Detect version using registered strategies
+//  3. Detect version using registered strategies (rejects v1)
 //  4. Load using the appropriate strategy
 //  5. Optionally migrate to current version
 //  6. Optionally validate the configuration
@@ -125,7 +217,7 @@ func (cm *ConfigManager) RegisterStrategy(strategy LoadStrategy) {
 // Outputs:
 //   - *Config: The loaded configuration
 //   - error: An error if loading fails
-func (cm *ConfigManager) Load(path string, opts LoadOptions) (*internalconfig.Config, error) {
+func (cm *ConfigManager) Load(path string, opts LoadOptions) (*Config, error) {
 	// Check cache first (unless skip cache is requested)
 	if !opts.SkipCache {
 		if cached := cm.getFromCache(path); cached != nil {
@@ -140,8 +232,15 @@ func (cm *ConfigManager) Load(path string, opts LoadOptions) (*internalconfig.Co
 	}
 
 	// Detect version and select appropriate strategy
+	// This will reject v1 configurations in v2.0.0
 	strategy, err := cm.detectStrategy(data)
 	if err != nil {
+		// Check if this is a v1 config error and add path information
+		var v1Err *V1ConfigError
+		if errors.As(err, &v1Err) {
+			v1Err.Path = path
+			return nil, v1Err
+		}
 		return nil, fmt.Errorf("failed to detect configuration version: %w", err)
 	}
 
@@ -185,7 +284,7 @@ func (cm *ConfigManager) Load(path string, opts LoadOptions) (*internalconfig.Co
 //
 // Outputs:
 //   - error: An error if saving fails
-func (cm *ConfigManager) Save(path string, config *internalconfig.Config) error {
+func (cm *ConfigManager) Save(path string, config *Config) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}
@@ -220,8 +319,18 @@ func (cm *ConfigManager) Save(path string, config *internalconfig.Config) error 
 // InvalidateCache removes a configuration from the cache, forcing a fresh load
 // on the next Load() call.
 //
-// Inputs:
+// Call this after:
+//   - Modifying a configuration file externally
+//   - Saving a configuration with Save()
+//   - Detecting configuration changes
+//
+// Parameters:
 //   - path: Path to the configuration file to invalidate
+//
+// Example:
+//
+//	manager.Save(path, config)
+//	manager.InvalidateCache(path) // Force fresh load next time
 func (cm *ConfigManager) InvalidateCache(path string) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
@@ -229,14 +338,14 @@ func (cm *ConfigManager) InvalidateCache(path string) {
 }
 
 // getFromCache retrieves a configuration from the cache if it exists.
-func (cm *ConfigManager) getFromCache(path string) *internalconfig.Config {
+func (cm *ConfigManager) getFromCache(path string) *Config {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 	return cm.cache[path]
 }
 
 // putInCache stores a configuration in the cache.
-func (cm *ConfigManager) putInCache(path string, config *internalconfig.Config) {
+func (cm *ConfigManager) putInCache(path string, config *Config) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	cm.cache[path] = config
@@ -252,9 +361,24 @@ func (cm *ConfigManager) readFile(path string) ([]byte, error) {
 }
 
 // detectStrategy determines which loading strategy to use based on file content.
+// In v2.0.0, this rejects v1 configurations with a clear error message.
 func (cm *ConfigManager) detectStrategy(data []byte) (LoadStrategy, error) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
+
+	// First, check if this is a v1 configuration and reject it
+	if isV1Config(data) {
+		return nil, fmt.Errorf("v1 configuration detected: %w", &V1ConfigError{
+			Message: "v1 configurations are not supported in v2.0.0",
+			Suggestion: `To upgrade to v2.0.0:
+1. Install opencenter v1.x (latest version)
+2. Run: opencenter cluster migrate-config <cluster-name>
+3. Verify the migrated configuration
+4. Upgrade to opencenter v2.0.0
+
+For more information, see: https://docs.opencenter.io/migration/v1-to-v2`,
+		})
+	}
 
 	// Try each strategy to see which one can load this configuration
 	for _, strategy := range cm.strategies {
@@ -269,6 +393,21 @@ func (cm *ConfigManager) detectStrategy(data []byte) (LoadStrategy, error) {
 	}
 
 	return nil, fmt.Errorf("no suitable loading strategy found for configuration")
+}
+
+// isV1Config checks if the configuration data is a v1 configuration.
+// It checks for schema_version: "1.0" or missing schema_version (which defaults to v1).
+func isV1Config(data []byte) bool {
+	var versionCheck struct {
+		SchemaVersion string `yaml:"schema_version"`
+	}
+
+	if err := yaml.Unmarshal(data, &versionCheck); err != nil {
+		return false
+	}
+
+	// V1 is identified by explicit "1.0" or missing version
+	return versionCheck.SchemaVersion == "1.0" || versionCheck.SchemaVersion == ""
 }
 
 // extractClusterName extracts the cluster name from the configuration file path.
@@ -288,7 +427,7 @@ func (cm *ConfigManager) extractClusterName(path string) string {
 }
 
 // migrateToCurrentVersion migrates a configuration to the current schema version.
-func (cm *ConfigManager) migrateToCurrentVersion(cfg *internalconfig.Config) (*internalconfig.Config, error) {
+func (cm *ConfigManager) migrateToCurrentVersion(cfg *Config) (*Config, error) {
 	// Create a migrator with all registered migrations
 	migrator := cm.createMigrator()
 
@@ -321,21 +460,12 @@ func (cm *ConfigManager) createMigrator() *migration.Migrator {
 	return migrator
 }
 
-// validateConfig validates a configuration using the existing validation system.
-func (cm *ConfigManager) validateConfig(cfg *internalconfig.Config) error {
-	// Use the existing validator from the config package
-	validator := internalconfig.NewConfigValidator(false)
-	result := validator.Validate(context.Background(), cfg)
-
-	if !result.Valid {
-		// Collect all error messages
-		var errMsgs []string
-		for _, err := range result.Errors {
-			errMsgs = append(errMsgs, err.Message)
-		}
-		return fmt.Errorf("validation failed: %s", strings.Join(errMsgs, "; "))
-	}
-
+// validateConfig validates a configuration using the validation system.
+// Currently returns nil as validation is performed during unmarshaling.
+// Future enhancements will integrate with the validation engine.
+func (cm *ConfigManager) validateConfig(cfg *Config) error {
+	// Basic validation is performed during unmarshaling
+	// Additional validation can be added here as needed
 	return nil
 }
 

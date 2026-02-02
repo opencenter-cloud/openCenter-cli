@@ -21,6 +21,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/operations"
 	"github.com/spf13/cobra"
 )
@@ -118,8 +119,11 @@ If no cluster name is provided, uses the currently active cluster.`,
 			configDir := filepath.Join(homeDir, ".config", "opencenter")
 			backupDir := filepath.Join(configDir, "backups")
 
+			// Create path resolver
+			pathResolver := paths.NewPathResolver(configDir)
+
 			// Create backup manager
-			bm, err := operations.NewBackupManager(configDir, backupDir)
+			bm, err := operations.NewBackupManager(pathResolver, backupDir)
 			if err != nil {
 				return fmt.Errorf("failed to create backup manager: %w", err)
 			}
@@ -200,8 +204,11 @@ configurations. You can then manually move them to the appropriate locations.`,
 			configDir := filepath.Join(homeDir, ".config", "opencenter")
 			backupDir := filepath.Join(configDir, "backups")
 
+			// Create path resolver
+			pathResolver := paths.NewPathResolver(configDir)
+
 			// Create backup manager
-			bm, err := operations.NewBackupManager(configDir, backupDir)
+			bm, err := operations.NewBackupManager(pathResolver, backupDir)
 			if err != nil {
 				return fmt.Errorf("failed to create backup manager: %w", err)
 			}
@@ -263,8 +270,11 @@ Displays backup ID, creation time, size, and storage location.`,
 			configDir := filepath.Join(homeDir, ".config", "opencenter")
 			backupDir := filepath.Join(configDir, "backups")
 
+			// Create path resolver
+			pathResolver := paths.NewPathResolver(configDir)
+
 			// Create backup manager
-			bm, err := operations.NewBackupManager(configDir, backupDir)
+			bm, err := operations.NewBackupManager(pathResolver, backupDir)
 			if err != nil {
 				return fmt.Errorf("failed to create backup manager: %w", err)
 			}
@@ -347,8 +357,11 @@ This operation is irreversible. Use with caution.`,
 			configDir := filepath.Join(homeDir, ".config", "opencenter")
 			backupDir := filepath.Join(configDir, "backups")
 
+			// Create path resolver
+			pathResolver := paths.NewPathResolver(configDir)
+
 			// Create backup manager
-			bm, err := operations.NewBackupManager(configDir, backupDir)
+			bm, err := operations.NewBackupManager(pathResolver, backupDir)
 			if err != nil {
 				return fmt.Errorf("failed to create backup manager: %w", err)
 			}

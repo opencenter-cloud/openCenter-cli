@@ -35,6 +35,9 @@ This command performs comprehensive validation including:
   • Network configuration validation
   • SOPS key validation
 
+Only v2 configurations (schema_version: "2.0") are supported.
+v1 configurations will be rejected with migration instructions.
+
 If no cluster name is provided, validates the currently active cluster.`,
 		Example: `  # Validate active cluster
   opencenter cluster validate

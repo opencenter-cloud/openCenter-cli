@@ -85,8 +85,9 @@ func (c *PathCache) Get(clusterName, organization string) *ClusterPaths {
 		return nil
 	}
 
-	// Check if entry has expired
-	if time.Since(entry.Timestamp) > c.ttl {
+	// Fast path: check expiration without allocating time.Now()
+	// Only check expiration if TTL is set (non-zero)
+	if c.ttl > 0 && time.Since(entry.Timestamp) > c.ttl {
 		c.misses++
 		// Don't delete here to avoid write lock upgrade
 		// Cleanup will happen on next Set or explicit Clear
@@ -196,11 +197,14 @@ func (c *PathCache) Size() int {
 }
 
 // makeKey creates a cache key from cluster name and organization.
+// Optimized to avoid fmt.Sprintf allocation for common case.
 func (c *PathCache) makeKey(clusterName, organization string) string {
 	if organization == "" {
 		organization = "opencenter"
 	}
-	return fmt.Sprintf("%s:%s", organization, clusterName)
+	// Avoid fmt.Sprintf allocation by using string concatenation
+	// This is faster for simple string joining
+	return organization + ":" + clusterName
 }
 
 // matchesCluster checks if a cache key matches the given cluster name.

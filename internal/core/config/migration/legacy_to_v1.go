@@ -136,15 +136,6 @@ func migrateLegacyKubernetes(src, dst *config.Config) error {
 	// Copy Kubernetes configuration
 	dst.OpenCenter.Cluster.Kubernetes = src.OpenCenter.Cluster.Kubernetes
 
-	// Migrate legacy networking fields if present
-	if src.Networking.SubnetPods != "" {
-		dst.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods = src.Networking.SubnetPods
-	}
-
-	if src.Networking.SubnetServices != "" {
-		dst.OpenCenter.Cluster.Kubernetes.Networking.SubnetServices = src.Networking.SubnetServices
-	}
-
 	return nil
 }
 

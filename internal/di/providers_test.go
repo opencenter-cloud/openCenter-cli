@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/core/validation"
 )
@@ -99,8 +100,13 @@ func TestProvideInitService(t *testing.T) {
 		t.Fatalf("ProvideValidationEngine() failed: %v", err)
 	}
 
+	configManager, err := ProvideConfigManager()
+	if err != nil {
+		t.Fatalf("ProvideConfigManager() failed: %v", err)
+	}
+
 	// Create service
-	service, err := ProvideInitService(pathResolver, validator)
+	service, err := ProvideInitService(pathResolver, validator, configManager)
 	if err != nil {
 		t.Fatalf("ProvideInitService() failed: %v", err)
 	}
@@ -221,7 +227,7 @@ func TestProviderIntegration(t *testing.T) {
 	}
 
 	// Create all services
-	initService, err := ProvideInitService(pathResolver, validator)
+	initService, err := ProvideInitService(pathResolver, validator, configMgr)
 	if err != nil {
 		t.Fatalf("ProvideInitService() failed: %v", err)
 	}
@@ -303,8 +309,9 @@ func TestProviderWithContainer(t *testing.T) {
 	if err := container.Register("initService", func(
 		pr *paths.PathResolver,
 		ve *validation.ValidationEngine,
+		cm *config.ConfigManager,
 	) (*interface{}, error) {
-		svc, err := ProvideInitService(pr, ve)
+		svc, err := ProvideInitService(pr, ve, cm)
 		var result interface{} = svc
 		return &result, err
 	}); err != nil {

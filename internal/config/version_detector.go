@@ -39,6 +39,7 @@ func DetectSchemaVersionFromFile(filePath string) (*SchemaVersionInfo, error) {
 }
 
 // DetectSchemaVersionFromBytes detects the schema version from configuration data.
+// In v2.0.0, only v2 configurations are supported. V1 configurations are rejected.
 // Requirements: 13.1, 13.2, 13.3
 func DetectSchemaVersionFromBytes(data []byte) (*SchemaVersionInfo, error) {
 	// Parse just the schema_version field
@@ -54,34 +55,35 @@ func DetectSchemaVersionFromBytes(data []byte) (*SchemaVersionInfo, error) {
 		Version: versionCheck.SchemaVersion,
 	}
 
-	// Default to v1 when schema_version is missing (backward compatibility)
-	// Requirement: 13.3
-	if info.Version == "" {
-		info.Version = "1.0"
-		info.IsV1 = true
-		info.IsV2 = false
+	// Reject v1 configurations (including missing schema_version which defaults to v1)
+	if info.Version == "" || info.Version == "1.0" {
+		return nil, fmt.Errorf("v1 configurations are not supported in v2.0.0. Please upgrade to v1.x and run migration before using v2.0.0")
+	}
+
+	// Only support v2
+	if info.Version == "2.0" {
+		info.IsV1 = false
+		info.IsV2 = true
 		return info, nil
 	}
 
-	// Determine version type
-	switch info.Version {
-	case "1.0":
-		info.IsV1 = true
-		info.IsV2 = false
-	case "2.0":
-		info.IsV1 = false
-		info.IsV2 = true
-	default:
-		return nil, fmt.Errorf("unsupported schema version: %s (supported: 1.0, 2.0)", info.Version)
-	}
-
-	return info, nil
+	// Unsupported version
+	return nil, fmt.Errorf("unsupported schema version: %s (only 2.0 is supported)", info.Version)
 }
 
 // LoadConfigWithVersionDetection loads a configuration file with automatic version detection.
 // It routes to the appropriate parser based on the detected schema version.
 // Requirements: 13.1, 13.2, 13.3
+//
+// Deprecated: Use internal/core/config.ConfigManager.Load() which handles version detection automatically.
+// This function will be removed in v2.0.0.
+// Migration: Replace LoadConfigWithVersionDetection(filePath) with configManager.Load(filePath, LoadOptions{})
 func LoadConfigWithVersionDetection(filePath string) (interface{}, *SchemaVersionInfo, error) {
+	logDeprecationWarning(
+		"config.LoadConfigWithVersionDetection()",
+		"internal/core/config.ConfigManager.Load()",
+		"v2.0.0",
+	)
 	// Detect schema version
 	versionInfo, err := DetectSchemaVersionFromFile(filePath)
 	if err != nil {

@@ -45,6 +45,10 @@ func TestFullDependencyChain(t *testing.T) {
 		t.Fatalf("Failed to register validationEngine: %v", err)
 	}
 
+	if err := container.Register("configManager", ProvideConfigManager); err != nil {
+		t.Fatalf("Failed to register configManager: %v", err)
+	}
+
 	if err := container.Register("initService", ProvideInitService); err != nil {
 		t.Fatalf("Failed to register initService: %v", err)
 	}
@@ -201,12 +205,20 @@ func TestDependencyResolutionWithRealComponents(t *testing.T) {
 		t.Fatalf("Failed to register validationEngine: %v", err)
 	}
 
+	// Register ConfigManager
+	if err := container.Register("configManager", func() (*config.ConfigManager, error) {
+		return config.NewConfigManager("")
+	}); err != nil {
+		t.Fatalf("Failed to register configManager: %v", err)
+	}
+
 	// Register InitService with dependencies
 	if err := container.Register("initService", func(
 		pr *paths.PathResolver,
 		ve *validation.ValidationEngine,
+		cm *config.ConfigManager,
 	) (*cluster.InitService, error) {
-		return cluster.NewInitService(pr, ve), nil
+		return cluster.NewInitService(pr, ve, cm), nil
 	}); err != nil {
 		t.Fatalf("Failed to register initService: %v", err)
 	}
@@ -260,7 +272,7 @@ func TestComplexDependencyGraph(t *testing.T) {
 	// Register services
 	services := map[string]func(*paths.PathResolver, *validation.ValidationEngine, *config.ConfigManager) (interface{}, error){
 		"initService": func(pr *paths.PathResolver, ve *validation.ValidationEngine, cm *config.ConfigManager) (interface{}, error) {
-			return ProvideInitService(pr, ve)
+			return ProvideInitService(pr, ve, cm)
 		},
 		"validateService": func(pr *paths.PathResolver, ve *validation.ValidationEngine, cm *config.ConfigManager) (interface{}, error) {
 			return ProvideValidateService(pr, ve, cm)
@@ -305,6 +317,10 @@ func TestServiceLifecycle(t *testing.T) {
 
 	if err := container.Singleton("validationEngine", ProvideValidationEngine); err != nil {
 		t.Fatalf("Failed to register validationEngine: %v", err)
+	}
+
+	if err := container.Singleton("configManager", ProvideConfigManager); err != nil {
+		t.Fatalf("Failed to register configManager: %v", err)
 	}
 
 	// Initialize
@@ -458,6 +474,11 @@ func TestResolveWithMixedSingletonsAndTransients(t *testing.T) {
 	// Register ValidationEngine as transient
 	if err := container.Register("validationEngine", ProvideValidationEngine); err != nil {
 		t.Fatalf("Failed to register validationEngine: %v", err)
+	}
+
+	// Register ConfigManager as singleton
+	if err := container.Singleton("configManager", ProvideConfigManager); err != nil {
+		t.Fatalf("Failed to register configManager: %v", err)
 	}
 
 	// Initialize singletons

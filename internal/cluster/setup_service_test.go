@@ -43,13 +43,13 @@ func TestSetupService_generateGitOpsManifests_DryRun(t *testing.T) {
 	cfg.OpenCenter.Infrastructure.Provider = "openstack"
 
 	pathResolver := paths.NewPathResolver(tmpDir)
-	
+
 	// Create cluster directories
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
 		t.Fatalf("failed to create cluster directories: %v", err)
 	}
-	
+
 	clusterPaths, err := pathResolver.Resolve(ctx, "test-cluster", "test-org")
 	if err != nil {
 		t.Fatalf("failed to resolve paths: %v", err)
@@ -79,13 +79,13 @@ func TestSetupService_validateManifests(t *testing.T) {
 	}
 
 	pathResolver := paths.NewPathResolver(tmpDir)
-	
+
 	// Create cluster directories
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
 		t.Fatalf("failed to create cluster directories: %v", err)
 	}
-	
+
 	clusterPaths, err := pathResolver.Resolve(ctx, "test-cluster", "test-org")
 	if err != nil {
 		t.Fatalf("failed to resolve paths: %v", err)
@@ -120,13 +120,13 @@ func TestSetupService_commitChanges(t *testing.T) {
 	}
 
 	pathResolver := paths.NewPathResolver(tmpDir)
-	
+
 	// Create cluster directories
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
 		t.Fatalf("failed to create cluster directories: %v", err)
 	}
-	
+
 	clusterPaths, err := pathResolver.Resolve(ctx, "test-cluster", "test-org")
 	if err != nil {
 		t.Fatalf("failed to resolve paths: %v", err)
@@ -246,7 +246,7 @@ func TestSetupService_Setup(t *testing.T) {
 	gitDir := filepath.Join(tmpDir, "gitops")
 
 	pathResolver := paths.NewPathResolver(tmpDir)
-	
+
 	// Create cluster directories first
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "opencenter"); err != nil {
@@ -299,7 +299,7 @@ func TestSetupService_Setup_MissingGitDir(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	pathResolver := paths.NewPathResolver(tmpDir)
-	
+
 	// Create cluster directories first
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "opencenter"); err != nil {
@@ -340,7 +340,7 @@ func TestSetupService_Setup_ValidationFailure(t *testing.T) {
 	gitDir := filepath.Join(tmpDir, "gitops")
 
 	pathResolver := paths.NewPathResolver(tmpDir)
-	
+
 	// Create cluster directories first
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "opencenter"); err != nil {
@@ -388,7 +388,7 @@ func TestSetupService_Setup_WithForce(t *testing.T) {
 	}
 
 	pathResolver := paths.NewPathResolver(tmpDir)
-	
+
 	// Create cluster directories first
 	ctx := context.Background()
 	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "opencenter"); err != nil {

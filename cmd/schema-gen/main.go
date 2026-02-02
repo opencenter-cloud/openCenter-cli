@@ -22,9 +22,15 @@ import (
 )
 
 func main() {
-	version := flag.String("version", "1.0", "Schema version to generate (1.0 or 2.0)")
+	version := flag.String("version", "2.0", "Schema version to generate (only 2.0 is supported)")
 	output := flag.String("output", "schema/cluster.schema.json", "Output file path")
 	flag.Parse()
+
+	// Validate version
+	if *version != "2.0" && *version != "v2" && *version != "v2.0" {
+		fmt.Fprintf(os.Stderr, "Error: Only v2.0 schema generation is supported in v2.0.0\n")
+		os.Exit(1)
+	}
 
 	// Create schema generator
 	generator := config.NewSchemaGenerator()
@@ -48,5 +54,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Successfully generated schema v%s at %s\n", *version, *output)
+	fmt.Printf("Successfully generated schema v2.0 at %s\n", *output)
 }

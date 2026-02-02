@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-// TestSchemaGenerator_Generate tests schema generation for v1 structs
+// TestSchemaGenerator_Generate tests schema generation for v2 structs
 func TestSchemaGenerator_Generate(t *testing.T) {
 	generator := NewSchemaGenerator()
 
@@ -30,19 +30,29 @@ func TestSchemaGenerator_Generate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "generate v1.0 schema",
-			version: "1.0",
-			wantErr: false,
-		},
-		{
-			name:    "generate v1 schema",
-			version: "v1",
-			wantErr: false,
-		},
-		{
 			name:    "generate v2.0 schema",
 			version: "2.0",
 			wantErr: false,
+		},
+		{
+			name:    "generate v2 schema",
+			version: "v2",
+			wantErr: false,
+		},
+		{
+			name:    "generate v2.0 schema (alternate)",
+			version: "v2.0",
+			wantErr: false,
+		},
+		{
+			name:    "reject v1.0 schema",
+			version: "1.0",
+			wantErr: true,
+		},
+		{
+			name:    "reject v1 schema",
+			version: "v1",
+			wantErr: true,
 		},
 		{
 			name:    "unsupported version",
@@ -68,7 +78,7 @@ func TestSchemaGenerator_Generate(t *testing.T) {
 // TestSchemaGenerator_SchemaIncludesRequiredFields tests that generated schema includes required fields
 func TestSchemaGenerator_SchemaIncludesRequiredFields(t *testing.T) {
 	generator := NewSchemaGenerator()
-	schema, err := generator.Generate("1.0")
+	schema, err := generator.Generate("2.0")
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -106,7 +116,7 @@ func TestSchemaGenerator_SchemaIncludesRequiredFields(t *testing.T) {
 // TestSchemaGenerator_SchemaIncludesEnums tests that schema includes enum validation
 func TestSchemaGenerator_SchemaIncludesEnums(t *testing.T) {
 	generator := NewSchemaGenerator()
-	schema, err := generator.Generate("1.0")
+	schema, err := generator.Generate("2.0")
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -138,7 +148,7 @@ func TestSchemaGenerator_SchemaIncludesEnums(t *testing.T) {
 // TestSchemaGenerator_SchemaIncludesPatterns tests that schema includes pattern validation
 func TestSchemaGenerator_SchemaIncludesPatterns(t *testing.T) {
 	generator := NewSchemaGenerator()
-	schema, err := generator.Generate("1.0")
+	schema, err := generator.Generate("2.0")
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -159,7 +169,7 @@ func TestSchemaGenerator_SchemaIncludesPatterns(t *testing.T) {
 // TestSchemaGenerator_SchemaOutputIsValidJSON tests that schema output is valid JSON schema
 func TestSchemaGenerator_SchemaOutputIsValidJSON(t *testing.T) {
 	generator := NewSchemaGenerator()
-	schema, err := generator.Generate("1.0")
+	schema, err := generator.Generate("2.0")
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -173,7 +183,7 @@ func TestSchemaGenerator_SchemaOutputIsValidJSON(t *testing.T) {
 // TestSchemaGenerator_WriteToFile tests writing schema to file
 func TestSchemaGenerator_WriteToFile(t *testing.T) {
 	generator := NewSchemaGenerator()
-	schema, err := generator.Generate("1.0")
+	schema, err := generator.Generate("2.0")
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -229,7 +239,7 @@ func TestGenerateSchemaFromStruct(t *testing.T) {
 // TestValidateSchemaOutput tests schema validation
 func TestValidateSchemaOutput(t *testing.T) {
 	generator := NewSchemaGenerator()
-	schema, err := generator.Generate("1.0")
+	schema, err := generator.Generate("2.0")
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}

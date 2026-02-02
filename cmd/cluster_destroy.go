@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/resilience"
 	"github.com/spf13/cobra"
 )
@@ -73,7 +75,7 @@ If no cluster name is provided, the active cluster will be destroyed.`,
 			defer lockMgr.Release(lock)
 
 			// Load cluster configuration
-			cfg, err := config.Load(name)
+			cfg, err := loadConfigV2Only(name)
 			if err != nil {
 				return err
 			}
@@ -97,8 +99,26 @@ If no cluster name is provided, the active cluster will be destroyed.`,
 			}
 
 			// Update cluster status to "destroyed" before removal (skip for flat configs)
-			configDir, err := config.ResolveConfigDir()
-			if err == nil {
+			// Get default config directory
+			configDir := os.Getenv("OPENCENTER_CONFIG_DIR")
+			if configDir == "" {
+				if runtime.GOOS == "windows" {
+					base := os.Getenv("APPDATA")
+					if base == "" {
+						base = os.Getenv("LOCALAPPDATA")
+					}
+					if base == "" {
+						base = os.Getenv("USERPROFILE")
+					}
+					configDir = filepath.Join(base, "opencenter")
+				} else {
+					if home, err := os.UserHomeDir(); err == nil {
+						configDir = filepath.Join(home, ".config", "opencenter")
+					}
+				}
+			}
+
+			if configDir != "" {
 				configPath, pathErr := config.ConfigPath(name)
 				if pathErr == nil && filepath.Dir(configPath) != configDir {
 					// Not a flat config, safe to update status
@@ -126,29 +146,54 @@ If no cluster name is provided, the active cluster will be destroyed.`,
 			}
 
 			// Determine the structure type based on config path
-			resolvedConfigDir, err := config.ResolveConfigDir()
-			if err != nil {
-				return fmt.Errorf("failed to resolve config directory: %w", err)
+			// Get default config directory
+			resolvedConfigDir := os.Getenv("OPENCENTER_CONFIG_DIR")
+			if resolvedConfigDir == "" {
+				if runtime.GOOS == "windows" {
+					base := os.Getenv("APPDATA")
+					if base == "" {
+						base = os.Getenv("LOCALAPPDATA")
+					}
+					if base == "" {
+						base = os.Getenv("USERPROFILE")
+					}
+					resolvedConfigDir = filepath.Join(base, "opencenter")
+				} else {
+					home, err := os.UserHomeDir()
+					if err != nil {
+						return fmt.Errorf("failed to get home directory: %w", err)
+					}
+					resolvedConfigDir = filepath.Join(home, ".config", "opencenter")
+				}
 			}
 
 			// Check if this is a flat config file (not in clusters directory)
 			isFlatConfig := filepath.Dir(configPath) == resolvedConfigDir
 
 			if !isFlatConfig {
-				// Determine if this is an organization-based or legacy structure
+				// Determine if this is an organization-based structure
 				configMgr, err := config.NewConfigManager("")
 				if err != nil {
 					return fmt.Errorf("failed to create config manager: %w", err)
 				}
-				pathResolver := config.NewPathResolver(configMgr)
 
-				// Check if this is a legacy cluster
-				isLegacy, _ := pathResolver.IsLegacyCluster(clusterName)
+				// Get base directory for clusters
+				baseDir := configMgr.GetConfig().Paths.ClustersDir
+				if baseDir == "" {
+					homeDir, err := os.UserHomeDir()
+					if err != nil {
+						return fmt.Errorf("failed to get home directory: %w", err)
+					}
+					baseDir = filepath.Join(homeDir, ".config", "opencenter", "clusters")
+				}
 
-				if !isLegacy && organization != "" {
-					// Organization-based structure
-					clusterPaths := pathResolver.ResolveClusterPaths(clusterName, organization)
+				pathResolver := paths.NewPathResolver(baseDir)
 
+				// Try to resolve cluster paths
+				ctx := context.Background()
+				clusterPaths, err := pathResolver.Resolve(ctx, clusterName, organization)
+				if err == nil {
+					// Organization-based structure found
 					// Remove cluster directory: clusters/<org>/infrastructure/clusters/<cluster>/
 					if err := os.RemoveAll(clusterPaths.ClusterDir); err != nil && !os.IsNotExist(err) {
 						return fmt.Errorf("failed to remove cluster directory: %w", err)
@@ -163,17 +208,6 @@ If no cluster name is provided, the active cluster will be destroyed.`,
 					}
 					if _, statErr := os.Stat(clusterPaths.ApplicationsDir); os.IsNotExist(statErr) {
 						fmt.Fprintf(cmd.OutOrStdout(), "Removed applications directory: %s\n", clusterPaths.ApplicationsDir)
-					}
-				} else {
-					// Legacy structure - remove the cluster directory if it exists
-					legacyPath, err := pathResolver.GetLegacyClusterPath(clusterName)
-					if err == nil {
-						if err := os.RemoveAll(legacyPath); err != nil && !os.IsNotExist(err) {
-							return fmt.Errorf("failed to remove legacy cluster directory: %w", err)
-						}
-						if _, statErr := os.Stat(legacyPath); os.IsNotExist(statErr) {
-							fmt.Fprintf(cmd.OutOrStdout(), "Removed cluster directory: %s\n", legacyPath)
-						}
 					}
 				}
 			}

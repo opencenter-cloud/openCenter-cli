@@ -99,82 +99,25 @@ func (v *DefaultValidator) ValidateGlanceImpl(ctx context.Context) error {
 
 // checkGlanceAvailability verifies that Glance service is reachable.
 func (v *DefaultValidator) checkGlanceAvailability(ctx context.Context) (bool, error) {
-	// TODO: Implement actual Glance API call
-	// For now, this is a placeholder that simulates the check
-	// In a real implementation, this would:
-	// 1. Create a Glance client using OpenStack credentials
-	// 2. Make a simple API call (e.g., GET /v2/images with limit=1)
-	// 3. Return true if successful, false otherwise
-
 	v.logger.Debug("Checking Glance service availability")
-
-	// Placeholder: In real implementation, we would use gophercloud glance client
-	// Example:
-	// client, err := glanceclient.NewClient(...)
-	// if err != nil {
-	//     return false, err
-	// }
-	// _, err = client.ListImages(ctx, glance.ListOpts{Limit: 1})
-	// return err == nil, err
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would use gophercloud glance client to verify service availability
 	return true, nil
 }
 
 // checkImageSignatureVerification verifies that image signature verification is enabled.
 func (v *DefaultValidator) checkImageSignatureVerification(ctx context.Context) (bool, error) {
-	// TODO: Implement actual signature verification check
-	// For now, this is a placeholder that simulates the check
-	// In a real implementation, this would:
-	// 1. Query Glance configuration or capabilities
-	// 2. Check if signature verification is enabled
-	// 3. Verify that Nova is configured to enforce signature verification
-	// 4. Return true if enabled, false otherwise
-
 	v.logger.Debug("Checking image signature verification status")
-
-	// Placeholder: In real implementation, we would check Glance configuration
-	// This might involve:
-	// - Checking Glance API capabilities
-	// - Querying configuration settings
-	// - Verifying Nova compute configuration
-	// Example:
-	// config, err := client.GetConfiguration(ctx)
-	// if err != nil {
-	//     return false, err
-	// }
-	// return config.EnableImageSignatureVerification && config.VerifyGlanceSignatures, nil
-
+	// Placeholder implementation - returns true for now
+	// Real implementation would query Glance configuration to verify signature verification is enabled
 	return true, nil
 }
 
 // checkForSignedTalosImages checks if signed Talos images exist in Glance.
 func (v *DefaultValidator) checkForSignedTalosImages(ctx context.Context) (bool, error) {
-	// TODO: Implement actual Talos image check
-	// For now, this is a placeholder that simulates the check
-	// In a real implementation, this would:
-	// 1. Query Glance for images with "talos" in the name
-	// 2. Check if any images have signature metadata
-	// 3. Validate signature metadata format
-	// 4. Return true if signed Talos images exist, false otherwise
-
 	v.logger.Debug("Checking for signed Talos images")
-
-	// Placeholder: In real implementation, we would search for Talos images
-	// Example:
-	// images, err := client.ListImages(ctx, glance.ListOpts{
-	//     Name: "talos",
-	// })
-	// if err != nil {
-	//     return false, err
-	// }
-	// for _, image := range images {
-	//     if hasValidSignature(image) {
-	//         return true, nil
-	//     }
-	// }
-	// return false, nil
-
-	// For validation purposes, not having images yet is acceptable
+	// Placeholder implementation - returns false for now (acceptable for new deployments)
+	// Real implementation would search Glance for Talos images with valid signatures
 	return false, nil
 }
 

@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -41,7 +42,8 @@ based on the JSON schema. You can override any configuration value using
 command-line flags with dot notation.
 
 This command generates v2 configuration (schema_version: "2.0") only.
-For v1 configurations, use 'cluster migrate-config' to migrate existing v1 configs to v2.
+v1 configurations are not supported in v2.0.0. Users must upgrade to v1.x first
+and migrate their configurations before upgrading to v2.0.0.
 
 The configuration is created in an organization-based directory structure:
   ~/.config/opencenter/clusters/<organization>/<cluster>/
@@ -120,7 +122,18 @@ func runClusterInit(cmd *cobra.Command, args []string) error {
 
 // setupContainer initializes the DI container with all required services
 func setupContainer(container di.Container) error {
-	pathResolver, err := di.ProvidePathResolver("")
+	// Get base directory from environment or use default
+	baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
+	if baseDir == "" {
+		// Use default config directory
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("getting home directory: %w", err)
+		}
+		baseDir = filepath.Join(home, ".config", "opencenter")
+	}
+	
+	pathResolver, err := di.ProvidePathResolver(baseDir)
 	if err != nil {
 		return err
 	}

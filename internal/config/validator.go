@@ -15,14 +15,17 @@ package config
 
 import (
 	"context"
+
+	corevalidation "github.com/rackerlabs/opencenter-cli/internal/core/validation"
 )
 
 // ClusterConfigValidator implements the ConfigValidatorInterface for comprehensive configuration validation.
-// It now uses the ValidationPipeline architecture for better separation of concerns.
+// It now uses the ValidationEngine from internal/core/validation for unified validation.
 type ClusterConfigValidator struct {
 	autoRepair       bool
 	pipelineAdapter  *PipelineAdapter
 	suggestionEngine *SuggestionEngine
+	validationEngine *corevalidation.ValidationEngine
 }
 
 // NewConfigValidator creates a new configuration validator.
@@ -31,6 +34,7 @@ func NewConfigValidator(autoRepair bool) *ClusterConfigValidator {
 		autoRepair:       autoRepair,
 		pipelineAdapter:  NewPipelineAdapter(),
 		suggestionEngine: NewSuggestionEngine(),
+		validationEngine: corevalidation.NewValidationEngine(),
 	}
 }
 
@@ -72,6 +76,11 @@ func (cv *ClusterConfigValidator) IsAutoRepairEnabled() bool {
 // GetSuggestionEngine returns the suggestion engine for generating helpful suggestions.
 func (cv *ClusterConfigValidator) GetSuggestionEngine() *SuggestionEngine {
 	return cv.suggestionEngine
+}
+
+// GetValidationEngine returns the core validation engine.
+func (cv *ClusterConfigValidator) GetValidationEngine() *corevalidation.ValidationEngine {
+	return cv.validationEngine
 }
 
 // enhanceSuggestions enhances existing suggestions with context-aware recommendations.

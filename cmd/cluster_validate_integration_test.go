@@ -29,11 +29,11 @@ func TestClusterValidateIntegration(t *testing.T) {
 	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
 
 	tests := []struct {
-		name           string
-		clusterName    string
-		setupConfig    bool
-		expectError    bool
-		errorContains  string
+		name          string
+		clusterName   string
+		setupConfig   bool
+		expectError   bool
+		errorContains string
 	}{
 		{
 			name:          "validate non-existent cluster",
@@ -84,7 +84,7 @@ func TestClusterValidateIntegration(t *testing.T) {
 func TestClusterValidateWithFlags(t *testing.T) {
 	// This test verifies that flags are properly parsed and passed to the service
 	// We don't need actual cluster configs for this test
-	
+
 	t.Run("validate help flag", func(t *testing.T) {
 		// Create command
 		cmd := newClusterValidateCmd()

@@ -76,43 +76,7 @@ func TestRegisterRealGitOpsTemplates(t *testing.T) {
 
 // TestRegisterRealProvisionTemplates tests registration of actual embedded provision templates
 func TestRegisterRealProvisionTemplates(t *testing.T) {
-	registry := NewInMemoryTemplateRegistry()
-
-	// Note: provision package uses templatesFS which is not exported
-	// We'll test with a mock filesystem that matches the structure
 	t.Skip("Skipping: provision.templatesFS is not exported, tested via mock in other tests")
-
-	// Register templates from the actual provision embedded filesystem
-	// err := RegisterProvisionTemplates(registry, provision.templatesFS)
-	// require.NoError(t, err)
-
-	// Verify templates were registered
-	templates := registry.ListTemplates()
-	assert.Greater(t, len(templates), 0, "should have registered templates from provision.Templates")
-
-	// Log registered templates for debugging
-	t.Logf("Registered %d templates from provision.Templates", len(templates))
-	for _, tmpl := range templates {
-		t.Logf("  - %s (type: %s, provider: %s)", tmpl.Name, tmpl.Type, tmpl.Provider)
-	}
-
-	// Verify all are infrastructure type
-	for _, tmpl := range templates {
-		assert.Equal(t, TemplateTypeInfrastructure, tmpl.Type,
-			"provision templates should be infrastructure type")
-	}
-
-	// Verify specific expected templates exist
-	expectedTemplates := []string{
-		"main.tf",
-		"variables.tf",
-		"inventory",
-	}
-
-	for _, expectedName := range expectedTemplates {
-		_, err := registry.GetTemplate(expectedName)
-		assert.NoError(t, err, "expected template %s should be registered", expectedName)
-	}
 }
 
 // TestGlobalTemplateRegistry tests the global registry initialization

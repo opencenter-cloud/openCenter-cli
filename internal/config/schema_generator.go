@@ -50,32 +50,27 @@ func NewSchemaGenerator() SchemaGenerator {
 }
 
 // Generate creates a JSON schema for the specified version
+// In v2.0.0, only v2 schema generation is supported
 func (g *schemaGenerator) Generate(version string) (*jsonschema.Schema, error) {
-	var schema *jsonschema.Schema
-
-	switch version {
-	case "1.0", "v1", "v1.0":
-		// Generate schema for v1 Config struct
-		schema = g.reflector.Reflect(&Config{})
-	case "2.0", "v2", "v2.0":
-		// For v2, we'll use the same Config struct for now
-		// In the future, this will use a separate v2 Config struct
-		schema = g.reflector.Reflect(&Config{})
-	default:
-		return nil, fmt.Errorf("unsupported schema version: %s", version)
+	// Only support v2 schema generation
+	if version != "2.0" && version != "v2" && version != "v2.0" {
+		return nil, fmt.Errorf("unsupported schema version: %s (only v2.0 is supported in v2.0.0)", version)
 	}
+
+	// Generate schema for v2 Config struct
+	schema := g.reflector.Reflect(&Config{})
 
 	// Add schema metadata
 	schema.Version = "https://json-schema.org/draft/2020-12/schema"
-	schema.Title = fmt.Sprintf("OpenCenter Cluster Configuration Schema v%s", version)
-	schema.Description = "JSON schema for OpenCenter cluster configuration files"
+	schema.Title = "OpenCenter Cluster Configuration Schema v2.0"
+	schema.Description = "JSON schema for OpenCenter cluster configuration files (v2.0)"
 
 	// Add custom properties
 	if schema.Extras == nil {
 		schema.Extras = make(map[string]any)
 	}
-	schema.Extras["$id"] = fmt.Sprintf("https://opencenter.io/schemas/cluster-config-v%s.json", version)
-	schema.Extras["schemaVersion"] = version
+	schema.Extras["$id"] = "https://opencenter.io/schemas/cluster-config-v2.json"
+	schema.Extras["schemaVersion"] = "2.0"
 
 	return schema, nil
 }

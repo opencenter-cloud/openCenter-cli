@@ -14,11 +14,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation/validators"
 	"github.com/rackerlabs/opencenter-cli/internal/security"
 	"github.com/spf13/cobra"
 )
@@ -55,8 +57,11 @@ Examples:
   opencenter cluster edit myorg/my-cluster`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := context.Background()
+
 			// Initialize security components
-			validator := security.NewDefaultInputValidator()
+			clusterValidator := validators.NewClusterNameValidator()
+			pathValidator := security.NewDefaultInputValidator()
 			sanitizer := security.NewDefaultCommandSanitizer()
 
 			var clusterName string
@@ -72,8 +77,12 @@ Examples:
 					return fmt.Errorf("invalid cluster identifier format: use 'cluster' or 'organization/cluster'")
 				}
 				for _, part := range parts {
-					if err := validator.ValidateClusterName(part); err != nil {
-						return fmt.Errorf("invalid cluster name: %w", err)
+					result, err := clusterValidator.Validate(ctx, part)
+					if err != nil {
+						return fmt.Errorf("validation error: %w", err)
+					}
+					if !result.Valid {
+						return fmt.Errorf("invalid cluster name: %s", result.Errors[0].Message)
 					}
 				}
 			} else {
@@ -97,7 +106,7 @@ Examples:
 			}
 
 			// Validate the config path (Requirements: 1.8)
-			if err := validator.ValidatePath(configPath); err != nil {
+			if err := pathValidator.ValidatePath(configPath); err != nil {
 				return fmt.Errorf("invalid config path: %w", err)
 			}
 

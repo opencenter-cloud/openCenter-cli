@@ -69,21 +69,6 @@ func TestMigrateLegacyToV1(t *testing.T) {
 			cfg:     nil,
 			wantErr: true,
 		},
-		{
-			name: "legacy with networking",
-			cfg: &config.Config{
-				OpenCenter: config.SimplifiedOpenCenter{
-					Meta: config.ClusterMeta{
-						Name: "test-cluster",
-					},
-				},
-				Networking: config.LegacyNetworking{
-					SubnetPods:     "10.244.0.0/16",
-					SubnetServices: "10.96.0.0/12",
-				},
-			},
-			wantErr: false,
-		},
 	}
 
 	for _, tt := range tests {
@@ -121,13 +106,6 @@ func TestMigrateLegacyToV1(t *testing.T) {
 				if result.OpenCenter.Meta.Name != tt.cfg.OpenCenter.Meta.Name {
 					t.Errorf("cluster name = %s, want %s",
 						result.OpenCenter.Meta.Name, tt.cfg.OpenCenter.Meta.Name)
-				}
-			}
-
-			// If source had legacy networking, verify it was migrated
-			if tt.cfg != nil && tt.cfg.Networking.SubnetPods != "" {
-				if result.OpenCenter.Cluster.Kubernetes.Networking.SubnetPods != tt.cfg.Networking.SubnetPods {
-					t.Error("legacy subnet_pods not migrated correctly")
 				}
 			}
 		})

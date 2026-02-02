@@ -74,7 +74,7 @@ Unlike 'cluster setup', this command:
 			}
 
 			// Load configuration
-			cfg, err := config.Load(name)
+			cfg, err := loadConfigV2Only(name)
 			if err != nil {
 				return err
 			}

@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -24,6 +25,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/credentials"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +49,7 @@ type ClusterMetadata struct {
 // ClusterSelectOutput represents the complete output for cluster select command.
 type ClusterSelectOutput struct {
 	Metadata       ClusterMetadata
-	Paths          config.ClusterPaths
+	Paths          *paths.ClusterPaths
 	ExportCommands []string
 	GitOpsInfo     GitOpsInfo
 	Shell          string
@@ -182,12 +184,24 @@ func generateClusterSelectOutput(clusterName string, shellOverride string) (Clus
 		return ClusterSelectOutput{}, fmt.Errorf("failed to create config manager: %w", err)
 	}
 
+	// Get base directory for clusters
+	baseDir := configManager.GetConfig().Paths.ClustersDir
+	if baseDir == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return ClusterSelectOutput{}, fmt.Errorf("failed to get home directory: %w", err)
+		}
+		baseDir = filepath.Join(homeDir, ".config", "opencenter", "clusters")
+	}
+
 	// Create path resolver
-	pathResolver := config.NewPathResolver(configManager)
+	pathResolver := paths.NewPathResolver(baseDir)
 
 	// Validate that cluster exists first
-	if err := validateClusterExists(clusterName, pathResolver); err != nil {
-		return ClusterSelectOutput{}, err
+	ctx := context.Background()
+	clusterPaths, err := pathResolver.ResolveWithFallback(ctx, actualClusterName)
+	if err != nil {
+		return ClusterSelectOutput{}, fmt.Errorf("cluster not found: %w", err)
 	}
 
 	// Load cluster metadata
@@ -201,15 +215,12 @@ func generateClusterSelectOutput(clusterName string, shellOverride string) (Clus
 		metadata.Organization = organization
 	}
 
-	// Resolve cluster paths using organization from metadata
-	paths := pathResolver.ResolveClusterPaths(actualClusterName, metadata.Organization)
-
 	// Create GitOps info
 	gitOpsInfo := GitOpsInfo{
-		GitDir:            paths.GitOpsDir,
-		ApplicationsDir:   filepath.Join(paths.GitOpsDir, "applications", "overlays", actualClusterName),
-		InfrastructureDir: filepath.Join(paths.GitOpsDir, "infrastructure", "clusters", actualClusterName),
-		SecretsDir:        paths.SecretsDir,
+		GitDir:            clusterPaths.GitOpsDir,
+		ApplicationsDir:   clusterPaths.ApplicationsDir,
+		InfrastructureDir: clusterPaths.ClusterDir,
+		SecretsDir:        clusterPaths.SecretsDir,
 	}
 
 	// Detect shell (or use override)
@@ -230,12 +241,12 @@ func generateClusterSelectOutput(clusterName string, shellOverride string) (Clus
 	var exportCommands []string
 	status := strings.ToLower(metadata.Status)
 	if status == "deployed" || status == "success" {
-		exportCommands = generateExportCommands(paths, shell)
+		exportCommands = generateExportCommands(clusterPaths, shell)
 	}
 
 	return ClusterSelectOutput{
 		Metadata:       metadata,
-		Paths:          paths,
+		Paths:          clusterPaths,
 		ExportCommands: exportCommands,
 		GitOpsInfo:     gitOpsInfo,
 		Shell:          shell,
@@ -268,62 +279,62 @@ func detectShell() string {
 }
 
 // generateExportCommands generates shell-specific export commands for cluster environment setup.
-func generateExportCommands(paths config.ClusterPaths, shell string) []string {
+func generateExportCommands(clusterPaths *paths.ClusterPaths, shell string) []string {
 	var commands []string
 
 	switch shell {
 	case "fish":
 		// Fish shell syntax
-		if _, err := os.Stat(paths.KubeconfigPath); err == nil {
-			commands = append(commands, fmt.Sprintf("set -gx KUBECONFIG %s", paths.KubeconfigPath))
+		if _, err := os.Stat(clusterPaths.KubeconfigPath); err == nil {
+			commands = append(commands, fmt.Sprintf("set -gx KUBECONFIG %s", clusterPaths.KubeconfigPath))
 		}
-		if _, err := os.Stat(paths.InventoryPath); err == nil {
-			commands = append(commands, fmt.Sprintf("set -gx ANSIBLE_INVENTORY %s", paths.InventoryPath))
+		if _, err := os.Stat(clusterPaths.InventoryPath); err == nil {
+			commands = append(commands, fmt.Sprintf("set -gx ANSIBLE_INVENTORY %s", clusterPaths.InventoryPath))
 		}
-		if _, err := os.Stat(paths.VenvPath); err == nil {
-			activateScript := filepath.Join(paths.VenvPath, "bin", "activate.fish")
+		if _, err := os.Stat(clusterPaths.VenvPath); err == nil {
+			activateScript := filepath.Join(clusterPaths.VenvPath, "bin", "activate.fish")
 			if _, err := os.Stat(activateScript); err == nil {
 				commands = append(commands, fmt.Sprintf("source %s", activateScript))
 			}
 		}
-		if _, err := os.Stat(paths.BinPath); err == nil {
-			commands = append(commands, fmt.Sprintf("set -gx PATH %s $PATH", paths.BinPath))
+		if _, err := os.Stat(clusterPaths.BinPath); err == nil {
+			commands = append(commands, fmt.Sprintf("set -gx PATH %s $PATH", clusterPaths.BinPath))
 		}
 
 	case "powershell":
 		// PowerShell syntax
-		if _, err := os.Stat(paths.KubeconfigPath); err == nil {
-			commands = append(commands, fmt.Sprintf("$env:KUBECONFIG = '%s'", paths.KubeconfigPath))
+		if _, err := os.Stat(clusterPaths.KubeconfigPath); err == nil {
+			commands = append(commands, fmt.Sprintf("$env:KUBECONFIG = '%s'", clusterPaths.KubeconfigPath))
 		}
-		if _, err := os.Stat(paths.InventoryPath); err == nil {
-			commands = append(commands, fmt.Sprintf("$env:ANSIBLE_INVENTORY = '%s'", paths.InventoryPath))
+		if _, err := os.Stat(clusterPaths.InventoryPath); err == nil {
+			commands = append(commands, fmt.Sprintf("$env:ANSIBLE_INVENTORY = '%s'", clusterPaths.InventoryPath))
 		}
-		if _, err := os.Stat(paths.VenvPath); err == nil {
-			activateScript := filepath.Join(paths.VenvPath, "Scripts", "Activate.ps1")
+		if _, err := os.Stat(clusterPaths.VenvPath); err == nil {
+			activateScript := filepath.Join(clusterPaths.VenvPath, "Scripts", "Activate.ps1")
 			if _, err := os.Stat(activateScript); err == nil {
 				commands = append(commands, fmt.Sprintf(". %s", activateScript))
 			}
 		}
-		if _, err := os.Stat(paths.BinPath); err == nil {
-			commands = append(commands, fmt.Sprintf("$env:PATH = '%s;' + $env:PATH", paths.BinPath))
+		if _, err := os.Stat(clusterPaths.BinPath); err == nil {
+			commands = append(commands, fmt.Sprintf("$env:PATH = '%s;' + $env:PATH", clusterPaths.BinPath))
 		}
 
 	default:
 		// Bash/Zsh syntax (POSIX-compatible)
-		if _, err := os.Stat(paths.KubeconfigPath); err == nil {
-			commands = append(commands, fmt.Sprintf("export KUBECONFIG=%s", paths.KubeconfigPath))
+		if _, err := os.Stat(clusterPaths.KubeconfigPath); err == nil {
+			commands = append(commands, fmt.Sprintf("export KUBECONFIG=%s", clusterPaths.KubeconfigPath))
 		}
-		if _, err := os.Stat(paths.InventoryPath); err == nil {
-			commands = append(commands, fmt.Sprintf("export ANSIBLE_INVENTORY=%s", paths.InventoryPath))
+		if _, err := os.Stat(clusterPaths.InventoryPath); err == nil {
+			commands = append(commands, fmt.Sprintf("export ANSIBLE_INVENTORY=%s", clusterPaths.InventoryPath))
 		}
-		if _, err := os.Stat(paths.VenvPath); err == nil {
-			activateScript := filepath.Join(paths.VenvPath, "bin", "activate")
+		if _, err := os.Stat(clusterPaths.VenvPath); err == nil {
+			activateScript := filepath.Join(clusterPaths.VenvPath, "bin", "activate")
 			if _, err := os.Stat(activateScript); err == nil {
 				commands = append(commands, fmt.Sprintf("source %s", activateScript))
 			}
 		}
-		if _, err := os.Stat(paths.BinPath); err == nil {
-			commands = append(commands, fmt.Sprintf("export PATH=%s:$PATH", paths.BinPath))
+		if _, err := os.Stat(clusterPaths.BinPath); err == nil {
+			commands = append(commands, fmt.Sprintf("export PATH=%s:$PATH", clusterPaths.BinPath))
 		}
 	}
 
@@ -332,7 +343,7 @@ func generateExportCommands(paths config.ClusterPaths, shell string) []string {
 
 // validateClusterExists validates that the specified cluster exists in the organization structure.
 // The clusterName parameter can be in "cluster" or "organization/cluster" format.
-func validateClusterExists(clusterName string, pathResolver *config.PathResolver) error {
+func validateClusterExists(clusterName string) error {
 	// Check if cluster configuration exists
 	// ConfigPath now handles organization/cluster format
 	path, err := config.ConfigPath(clusterName)

@@ -14,15 +14,19 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/gophercloud/gophercloud"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	"github.com/rackerlabs/opencenter-cli/internal/cloud"
+	"github.com/rackerlabs/opencenter-cli/internal/cloud/aws"
+	"github.com/rackerlabs/opencenter-cli/internal/cloud/openstack"
 	"github.com/rackerlabs/opencenter-cli/internal/config"
-	"github.com/rackerlabs/opencenter-cli/internal/operations"
 )
 
 // newClusterDriftCmd creates the parent drift command
@@ -96,20 +100,50 @@ If no cluster name is provided, uses the currently active cluster.`,
 			}
 
 			// Load configuration
-			_, err = config.Load(clusterName)
+			cfg, err := loadConfigV2Only(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
 
-			// Drift detection requires cloud provider implementation
-			return fmt.Errorf("drift detection requires cloud provider implementation (not yet available)")
+			// Create cloud provider factory
+			factory := createCloudProviderFactory()
 
-			// TODO: Implement cloud provider factory and drift detection
-			// Once cloud provider is implemented:
-			// 1. Create configuration manager
-			// 2. Create cloud provider based on config
-			// 3. Create drift detector
-			// 4. Detect drift and output report
+			// Get provider for this cluster
+			provider, err := factory.GetProvider(cfg.OpenCenter.Infrastructure.Provider)
+			if err != nil {
+				return fmt.Errorf("failed to get cloud provider: %w", err)
+			}
+
+			// Get current state from provider
+			currentState, err := provider.GetCurrentState(cmd.Context(), cfg)
+			if err != nil {
+				return fmt.Errorf("failed to get current infrastructure state: %w", err)
+			}
+
+			// Build desired state from configuration
+			desiredState := buildDesiredState(cfg)
+
+			// Detect drift
+			report, err := provider.DetectDrift(cmd.Context(), desiredState, currentState)
+			if err != nil {
+				return fmt.Errorf("failed to detect drift: %w", err)
+			}
+
+			// Set cluster name and timestamp
+			report.ClusterName = clusterName
+			report.DetectedAt = time.Now().Format(time.RFC3339)
+
+			// Get output format
+			outputFormat, _ := cmd.Flags().GetString("output")
+			severityFilter, _ := cmd.Flags().GetString("severity")
+
+			// Filter by severity if specified
+			if severityFilter != "" {
+				report = filterBySeverity(report, severityFilter)
+			}
+
+			// Output report
+			return outputDriftReport(cmd, report, outputFormat)
 		},
 	}
 
@@ -154,24 +188,77 @@ If no cluster name is provided, uses the currently active cluster.`,
 			}
 
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			confirm, _ := cmd.Flags().GetBool("confirm")
 
 			// Load configuration
-			_, err = config.Load(clusterName)
+			cfg, err := loadConfigV2Only(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
 
-			_ = dryRun // Use dryRun to avoid unused variable error
+			// Create cloud provider factory
+			factory := createCloudProviderFactory()
 
-			// Drift reconciliation requires cloud provider implementation
-			return fmt.Errorf("drift reconciliation requires cloud provider implementation (not yet available)")
+			// Get provider for this cluster
+			provider, err := factory.GetProvider(cfg.OpenCenter.Infrastructure.Provider)
+			if err != nil {
+				return fmt.Errorf("failed to get cloud provider: %w", err)
+			}
 
-			// TODO: Implement cloud provider factory and drift reconciliation
-			// Once cloud provider is implemented:
-			// 1. Create configuration manager
-			// 2. Create cloud provider based on config
-			// 3. Create drift detector
-			// 4. Reconcile drift with dry-run support
+			// Get current state from provider
+			currentState, err := provider.GetCurrentState(cmd.Context(), cfg)
+			if err != nil {
+				return fmt.Errorf("failed to get current infrastructure state: %w", err)
+			}
+
+			// Build desired state from configuration
+			desiredState := buildDesiredState(cfg)
+
+			// Detect drift
+			report, err := provider.DetectDrift(cmd.Context(), desiredState, currentState)
+			if err != nil {
+				return fmt.Errorf("failed to detect drift: %w", err)
+			}
+
+			// Set cluster name and timestamp
+			report.ClusterName = clusterName
+			report.DetectedAt = time.Now().Format(time.RFC3339)
+
+			if len(report.Drifts) == 0 {
+				fmt.Fprintln(cmd.OutOrStdout(), "No drift detected")
+				return nil
+			}
+
+			// Show what would be reconciled
+			if dryRun {
+				fmt.Fprintf(cmd.OutOrStdout(), "Drift reconciliation plan for cluster %s:\n\n", clusterName)
+				for _, drift := range report.Drifts {
+					if drift.Reconcilable {
+						fmt.Fprintf(cmd.OutOrStdout(), "  - %s %s.%s: %v -> %v\n",
+							drift.ResourceType, drift.ResourceName, drift.Field,
+							drift.Actual, drift.Expected)
+					}
+				}
+				return nil
+			}
+
+			// Confirm before applying
+			if confirm {
+				fmt.Fprintf(cmd.OutOrStdout(), "About to reconcile %d drift items. Continue? [y/N]: ", len(report.Drifts))
+				var response string
+				fmt.Scanln(&response)
+				if response != "y" && response != "Y" {
+					return fmt.Errorf("reconciliation cancelled")
+				}
+			}
+
+			// Apply reconciliation
+			if err := provider.ReconcileDrift(cmd.Context(), report); err != nil {
+				return fmt.Errorf("failed to reconcile drift: %w", err)
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Successfully reconciled %d drift items\n", report.Summary.ReconcilableCount)
+			return nil
 		},
 	}
 
@@ -209,6 +296,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 			}
 
 			intervalStr, _ := cmd.Flags().GetString("interval")
+			callbackURL, _ := cmd.Flags().GetString("callback")
 
 			// Parse interval
 			interval, err := time.ParseDuration(intervalStr)
@@ -217,22 +305,67 @@ If no cluster name is provided, uses the currently active cluster.`,
 			}
 
 			// Load configuration
-			_, err = config.Load(clusterName)
+			cfg, err := loadConfigV2Only(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
 
-			_ = interval // Use interval to avoid unused variable error
+			// Create cloud provider factory
+			factory := createCloudProviderFactory()
 
-			// Drift scheduling requires cloud provider implementation
-			return fmt.Errorf("drift scheduling requires cloud provider implementation (not yet available)")
+			// Get provider for this cluster
+			provider, err := factory.GetProvider(cfg.OpenCenter.Infrastructure.Provider)
+			if err != nil {
+				return fmt.Errorf("failed to get cloud provider: %w", err)
+			}
 
-			// TODO: Implement cloud provider factory and scheduling
-			// Once cloud provider is implemented:
-			// 1. Create configuration manager
-			// 2. Create cloud provider based on config
-			// 3. Create drift detector
-			// 4. Schedule periodic drift checks with callback
+			// Schedule periodic drift detection
+			fmt.Fprintf(cmd.OutOrStdout(), "Scheduling drift detection for cluster %s every %s\n", clusterName, interval)
+			if callbackURL != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "Drift reports will be sent to: %s\n", callbackURL)
+			}
+
+			// Start periodic check in background
+			go func() {
+				ticker := time.NewTicker(interval)
+				defer ticker.Stop()
+
+				for range ticker.C {
+					// Get current state
+					currentState, err := provider.GetCurrentState(context.Background(), cfg)
+					if err != nil {
+						fmt.Fprintf(cmd.ErrOrStderr(), "Error getting current state: %v\n", err)
+						continue
+					}
+
+					// Build desired state
+					desiredState := buildDesiredState(cfg)
+
+					// Detect drift
+					report, err := provider.DetectDrift(context.Background(), desiredState, currentState)
+					if err != nil {
+						fmt.Fprintf(cmd.ErrOrStderr(), "Error detecting drift: %v\n", err)
+						continue
+					}
+
+					// Set cluster name and timestamp
+					report.ClusterName = clusterName
+					report.DetectedAt = time.Now().Format(time.RFC3339)
+
+					// Send to callback if configured
+					if callbackURL != "" {
+						// TODO: Implement HTTP POST to callback URL
+						fmt.Fprintf(cmd.OutOrStdout(), "Drift detected: %d items (would send to %s)\n", len(report.Drifts), callbackURL)
+					} else {
+						fmt.Fprintf(cmd.OutOrStdout(), "Drift detected: %d items\n", len(report.Drifts))
+					}
+				}
+			}()
+
+			fmt.Fprintln(cmd.OutOrStdout(), "Drift detection scheduled. Press Ctrl+C to stop.")
+			
+			// Block until interrupted
+			select {}
 		},
 	}
 
@@ -244,8 +377,80 @@ If no cluster name is provided, uses the currently active cluster.`,
 
 // Helper functions
 
+// createCloudProviderFactory creates and configures a cloud provider factory with all available providers.
+func createCloudProviderFactory() *cloud.CloudProviderFactory {
+	factory := cloud.NewCloudProviderFactory()
+
+	// Register OpenStack provider
+	// Note: Authentication options would need to be configured from environment or config
+	openstackProvider := openstack.NewProvider(gophercloud.AuthOptions{})
+	factory.RegisterProvider("openstack", openstackProvider)
+
+	// Register AWS provider
+	awsProvider := aws.NewProvider("us-east-1") // Default region, should come from config
+	factory.RegisterProvider("aws", awsProvider)
+
+	return factory
+}
+
+// buildDesiredState constructs the desired infrastructure state from configuration.
+func buildDesiredState(cfg config.Config) *cloud.InfrastructureState {
+	state := &cloud.InfrastructureState{
+		Servers:        []cloud.Server{},
+		Networks:       []cloud.Network{},
+		SecurityGroups: []cloud.SecurityGroup{},
+		LoadBalancers:  []cloud.LoadBalancer{},
+		Volumes:        []cloud.Volume{},
+		FloatingIPs:    []cloud.FloatingIP{},
+	}
+
+	// Build desired servers from configuration
+	// This is simplified - in reality, you'd need to interpret the configuration
+	// to determine expected servers based on node pools, control plane config, etc.
+	clusterName := cfg.OpenCenter.Cluster.ClusterName
+
+	// Example: Add control plane nodes
+	for i := 0; i < 3; i++ {
+		state.Servers = append(state.Servers, cloud.Server{
+			Name:   fmt.Sprintf("%s-control-%d", clusterName, i),
+			Flavor: cfg.OpenCenter.Cluster.Kubernetes.FlavorMaster,
+			Status: "ACTIVE",
+			Tags: map[string]string{
+				"cluster": clusterName,
+				"role":    "control-plane",
+			},
+		})
+	}
+
+	// Example: Add worker nodes
+	for i := 0; i < 3; i++ {
+		state.Servers = append(state.Servers, cloud.Server{
+			Name:   fmt.Sprintf("%s-worker-%d", clusterName, i),
+			Flavor: cfg.OpenCenter.Cluster.Kubernetes.FlavorWorker,
+			Status: "ACTIVE",
+			Tags: map[string]string{
+				"cluster": clusterName,
+				"role":    "worker",
+			},
+		})
+	}
+
+	// Build desired networks
+	state.Networks = append(state.Networks, cloud.Network{
+		Name: fmt.Sprintf("%s-network", clusterName),
+		Subnets: []cloud.Subnet{
+			{
+				Name: fmt.Sprintf("%s-subnet-nodes", clusterName),
+				CIDR: cfg.OpenCenter.Cluster.Networking.SubnetNodes,
+			},
+		},
+	})
+
+	return state
+}
+
 // outputDriftReport outputs a drift report in the specified format
-func outputDriftReport(cmd *cobra.Command, report *operations.DriftReport, format string) error {
+func outputDriftReport(cmd *cobra.Command, report *cloud.DriftReport, format string) error {
 	switch format {
 	case "json":
 		data, err := json.MarshalIndent(report, "", "  ")
@@ -265,9 +470,9 @@ func outputDriftReport(cmd *cobra.Command, report *operations.DriftReport, forma
 		fallthrough
 	default:
 		// Human-readable text format
-		fmt.Fprintf(cmd.OutOrStdout(), "Drift Report for Cluster: %s\n", report.Cluster)
-		fmt.Fprintf(cmd.OutOrStdout(), "Detected At: %s\n", report.DetectedAt.Format(time.RFC3339))
-		fmt.Fprintf(cmd.OutOrStdout(), "Overall Severity: %s\n", report.Severity)
+		fmt.Fprintf(cmd.OutOrStdout(), "Drift Report for Cluster: %s\n", report.ClusterName)
+		fmt.Fprintf(cmd.OutOrStdout(), "Detected At: %s\n", report.DetectedAt)
+		fmt.Fprintf(cmd.OutOrStdout(), "Overall Severity: %s\n", report.OverallSeverity)
 		fmt.Fprintf(cmd.OutOrStdout(), "Reconcilable: %v\n\n", report.Reconcilable)
 
 		fmt.Fprintf(cmd.OutOrStdout(), "Summary:\n")
@@ -286,7 +491,11 @@ func outputDriftReport(cmd *cobra.Command, report *operations.DriftReport, forma
 				fmt.Fprintf(cmd.OutOrStdout(), "     Expected: %v\n", drift.Expected)
 				fmt.Fprintf(cmd.OutOrStdout(), "     Actual: %v\n", drift.Actual)
 				fmt.Fprintf(cmd.OutOrStdout(), "     Severity: %s\n", drift.Severity)
-				fmt.Fprintf(cmd.OutOrStdout(), "     Reconcilable: %v\n\n", drift.Reconcilable)
+				fmt.Fprintf(cmd.OutOrStdout(), "     Reconcilable: %v\n", drift.Reconcilable)
+				if drift.Message != "" {
+					fmt.Fprintf(cmd.OutOrStdout(), "     Message: %s\n", drift.Message)
+				}
+				fmt.Fprintln(cmd.OutOrStdout())
 			}
 		}
 	}
@@ -295,24 +504,23 @@ func outputDriftReport(cmd *cobra.Command, report *operations.DriftReport, forma
 }
 
 // filterBySeverity filters a drift report by severity level
-func filterBySeverity(report *operations.DriftReport, severityStr string) *operations.DriftReport {
-	var targetSeverity operations.Severity
+func filterBySeverity(report *cloud.DriftReport, severityStr string) *cloud.DriftReport {
+	var targetSeverity cloud.Severity
 	switch severityStr {
 	case "critical":
-		targetSeverity = operations.SeverityCritical
+		targetSeverity = cloud.SeverityCritical
 	case "warning":
-		targetSeverity = operations.SeverityWarning
+		targetSeverity = cloud.SeverityWarning
 	case "info":
-		targetSeverity = operations.SeverityInfo
+		targetSeverity = cloud.SeverityInfo
 	default:
 		return report // Invalid severity, return unfiltered
 	}
 
-	filtered := &operations.DriftReport{
-		ID:         report.ID,
-		Cluster:    report.Cluster,
-		DetectedAt: report.DetectedAt,
-		Drifts:     []operations.ResourceDrift{},
+	filtered := &cloud.DriftReport{
+		ClusterName: report.ClusterName,
+		DetectedAt:  report.DetectedAt,
+		Drifts:      []cloud.DriftItem{},
 	}
 
 	for _, drift := range report.Drifts {
@@ -324,19 +532,19 @@ func filterBySeverity(report *operations.DriftReport, severityStr string) *opera
 	// Recalculate summary manually
 	filtered.Summary.TotalDrifts = len(filtered.Drifts)
 	filtered.Reconcilable = true
-	filtered.Severity = operations.SeverityInfo
+	filtered.OverallSeverity = cloud.SeverityInfo
 
 	for _, drift := range filtered.Drifts {
 		switch drift.Severity {
-		case operations.SeverityCritical:
+		case cloud.SeverityCritical:
 			filtered.Summary.CriticalCount++
-			filtered.Severity = operations.SeverityCritical
-		case operations.SeverityWarning:
+			filtered.OverallSeverity = cloud.SeverityCritical
+		case cloud.SeverityWarning:
 			filtered.Summary.WarningCount++
-			if filtered.Severity < operations.SeverityWarning {
-				filtered.Severity = operations.SeverityWarning
+			if filtered.OverallSeverity < cloud.SeverityWarning {
+				filtered.OverallSeverity = cloud.SeverityWarning
 			}
-		case operations.SeverityInfo:
+		case cloud.SeverityInfo:
 			filtered.Summary.InfoCount++
 		}
 

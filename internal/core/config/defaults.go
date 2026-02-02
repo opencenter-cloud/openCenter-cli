@@ -13,56 +13,38 @@
 
 package config
 
-// This file contains default configuration generation logic.
-// It will be populated with functions moved from internal/config/config.go
-// during Phase 2 of the architectural refactoring.
-//
-// Functions to be moved:
-//   - defaultConfig(name string) Config
-//   - NewDefault(name string) Config
-//   - DefaultTalosConfig(clusterName string) *TalosConfig
-//   - getDefaultSSHKeys(cliDefaults *DefaultsConfig) []string
-//   - getDefaultProvider(cliDefaults *DefaultsConfig) string
-//   - getDefaultEnvironment(cliDefaults *DefaultsConfig) string
-//   - applyOrganizationDefaults(cfg *Config)
-//   - applyCLIDefaults(cfg *Config)
-//
-// These functions handle:
-//   - Generation of default configuration values
-//   - Application of CLI defaults
-//   - Organization-based defaults
-//   - Test mode configuration
-//   - Provider-specific defaults
-//
-// TODO: Move default generation functions from internal/config/config.go
-// in Phase 2, Epic 2.4.1
+import (
+	internalconfig "github.com/rackerlabs/opencenter-cli/internal/config"
+)
 
-// NewDefault returns a Config initialized with default values for the given cluster name.
-// This is a placeholder that will be implemented during Phase 2.
+// NewDefault returns a Config initialized with the default values for the given cluster name.
 //
 // Inputs:
-//   - name: The name of the cluster
+//   - name: The name of the cluster.
 //
 // Outputs:
-//   - *Config: A new Config object with default values
-//
-// TODO: Implement in Phase 2, Epic 2.4.1
-func NewDefault(name string) *Config {
-	// Placeholder - will be implemented during migration
-	return &Config{}
+//   - Config: A new Config object with default values.
+func NewDefault(name string) Config {
+	return internalconfig.NewDefault(name)
 }
 
 // ApplyDefaults applies default values to a configuration.
 // This includes CLI defaults, organization defaults, and provider defaults.
-// This is a placeholder that will be implemented during Phase 2.
 //
 // Inputs:
 //   - cfg: The configuration to apply defaults to
-//
-// TODO: Implement in Phase 2, Epic 2.4.1
 func ApplyDefaults(cfg *Config) {
-	// Placeholder - will be implemented during migration
-	// Will call:
-	// - applyOrganizationDefaults(cfg)
-	// - applyCLIDefaults(cfg)
+	internalconfig.ApplyDefaults(cfg)
+}
+
+// DefaultTalosConfig returns a TalosConfig initialized with secure default values.
+// This function should be called when enabling Talos for a cluster.
+//
+// Inputs:
+//   - clusterName: The name of the cluster.
+//
+// Outputs:
+//   - *TalosConfig: A new TalosConfig object with default values.
+func DefaultTalosConfig(clusterName string) *internalconfig.TalosConfig {
+	return internalconfig.DefaultTalosConfig(clusterName)
 }

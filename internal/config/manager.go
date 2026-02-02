@@ -28,7 +28,6 @@ type ConfigurationManager struct {
 	validator    ConfigValidatorInterface
 	pathResolver PathResolverInterface
 	cache        ConfigCacheInterface
-	migrator     ConfigMigratorInterface
 
 	// Configuration options
 	enableCache  bool
@@ -44,14 +43,12 @@ func NewConfigurationManager(
 	validator ConfigValidatorInterface,
 	pathResolver PathResolverInterface,
 	cache ConfigCacheInterface,
-	migrator ConfigMigratorInterface,
 ) *ConfigurationManager {
 	return &ConfigurationManager{
 		loader:       loader,
 		validator:    validator,
 		pathResolver: pathResolver,
 		cache:        cache,
-		migrator:     migrator,
 		enableCache:  true,
 		cacheTimeout: 5 * time.Minute,
 	}
@@ -62,7 +59,6 @@ func NewEnhancedConfigurationManager(
 	loader ConfigLoaderInterface,
 	pathResolver PathResolverInterface,
 	cache ConfigCacheInterface,
-	migrator ConfigMigratorInterface,
 	autoRepair bool,
 ) *ConfigurationManager {
 	enhancedValidator := NewEnhancedConfigValidator(autoRepair)
@@ -72,7 +68,6 @@ func NewEnhancedConfigurationManager(
 		validator:    enhancedValidator,
 		pathResolver: pathResolver,
 		cache:        cache,
-		migrator:     migrator,
 		enableCache:  true,
 		cacheTimeout: 5 * time.Minute,
 	}
@@ -376,66 +371,6 @@ func (cm *ConfigurationManager) formatValidationSummary(result *ConfigValidation
 	}
 
 	return summary
-}
-
-// MigrateClusterToOrganization migrates a cluster from flat to organization structure.
-func (cm *ConfigurationManager) MigrateClusterToOrganization(ctx context.Context, clusterName, organization string) error {
-	if cm.migrator == nil {
-		return fmt.Errorf("migration manager not available")
-	}
-
-	// Invalidate cache before migration
-	if cm.enableCache {
-		if err := cm.cache.InvalidateCluster(ctx, clusterName); err != nil {
-			fmt.Printf("Warning: Failed to invalidate cache before migration: %v\n", err)
-		}
-	}
-
-	// Perform the migration
-	if err := cm.migrator.MigrateToOrganization(ctx, clusterName, organization); err != nil {
-		return fmt.Errorf("migration failed: %w", err)
-	}
-
-	// Validate post-migration
-	if err := cm.migrator.ValidatePostMigration(ctx, clusterName, organization); err != nil {
-		return fmt.Errorf("post-migration validation failed: %w", err)
-	}
-
-	return nil
-}
-
-// DetectLegacyClusters detects clusters using legacy flat structure.
-func (cm *ConfigurationManager) DetectLegacyClusters(ctx context.Context) ([]string, error) {
-	if cm.migrator == nil {
-		return nil, fmt.Errorf("migration manager not available")
-	}
-
-	return cm.migrator.DetectLegacyStructure(ctx)
-}
-
-// BackupCluster creates a backup of a cluster before migration.
-func (cm *ConfigurationManager) BackupCluster(ctx context.Context, clusterName string) (string, error) {
-	if cm.migrator == nil {
-		return "", fmt.Errorf("migration manager not available")
-	}
-
-	return cm.migrator.BackupCluster(ctx, clusterName)
-}
-
-// RestoreCluster restores a cluster from backup.
-func (cm *ConfigurationManager) RestoreCluster(ctx context.Context, clusterName, backupPath string) error {
-	if cm.migrator == nil {
-		return fmt.Errorf("migration manager not available")
-	}
-
-	// Invalidate cache before restoration
-	if cm.enableCache {
-		if err := cm.cache.InvalidateCluster(ctx, clusterName); err != nil {
-			fmt.Printf("Warning: Failed to invalidate cache before restoration: %v\n", err)
-		}
-	}
-
-	return cm.migrator.RestoreCluster(ctx, clusterName, backupPath)
 }
 
 // GetClusterPaths returns all paths for a cluster.

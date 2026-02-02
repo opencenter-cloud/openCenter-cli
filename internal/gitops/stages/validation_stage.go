@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/gitops"
 )
 
@@ -131,12 +132,26 @@ func (vs *ValidationStage) validateKustomizationFiles(workspace *gitops.GitOpsWo
 		return fmt.Errorf("cluster name is empty")
 	}
 
+	// Try to use PathResolver to get cluster paths
+	var clusterInfraPath, clusterAppsPath string
+	resolver := paths.NewPathResolver(workspace.RootDir)
+	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
+	if err == nil {
+		// Successfully resolved paths - get relative paths from workspace root
+		clusterInfraPath, _ = filepath.Rel(workspace.RootDir, filepath.Join(clusterPaths.ClusterDir, "kustomization.yaml"))
+		clusterAppsPath, _ = filepath.Rel(workspace.RootDir, filepath.Join(clusterPaths.ApplicationsDir, "kustomization.yaml"))
+	} else {
+		// Fallback to standard paths for test environments
+		clusterInfraPath = filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml")
+		clusterAppsPath = filepath.Join("applications", "overlays", clusterName, "kustomization.yaml")
+	}
+
 	// Required kustomization files
 	requiredKustomizations := []string{
 		"infrastructure/kustomization.yaml",
-		filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml"),
 		"applications/kustomization.yaml",
-		filepath.Join("applications", "overlays", clusterName, "kustomization.yaml"),
+		clusterInfraPath,
+		clusterAppsPath,
 	}
 
 	var missing []string
@@ -173,11 +188,22 @@ func (vs *ValidationStage) validateClusterStructure(workspace *gitops.GitOpsWork
 		return fmt.Errorf("cluster name is empty")
 	}
 
-	// Check cluster-specific directories
-	clusterDirs := []string{
-		filepath.Join("applications/overlays", clusterName),
-		filepath.Join("infrastructure/clusters", clusterName),
+	// Try to use PathResolver to get cluster paths
+	var appsDir, clusterDir string
+	resolver := paths.NewPathResolver(workspace.RootDir)
+	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
+	if err == nil {
+		// Successfully resolved paths - get relative paths from workspace root
+		appsDir, _ = filepath.Rel(workspace.RootDir, clusterPaths.ApplicationsDir)
+		clusterDir, _ = filepath.Rel(workspace.RootDir, clusterPaths.ClusterDir)
+	} else {
+		// Fallback to standard paths for test environments
+		appsDir = filepath.Join("applications/overlays", clusterName)
+		clusterDir = filepath.Join("infrastructure/clusters", clusterName)
 	}
+
+	// Check cluster-specific directories
+	clusterDirs := []string{appsDir, clusterDir}
 
 	var missing []string
 	for _, dir := range clusterDirs {

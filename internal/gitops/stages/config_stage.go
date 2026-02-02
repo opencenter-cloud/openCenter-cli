@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/gitops"
 	"github.com/rackerlabs/opencenter-cli/internal/template"
 )
@@ -111,6 +112,20 @@ func (cs *ConfigStage) createDefaultConfigs(ctx context.Context, workspace *gito
 	writer := gitops.NewAtomicWriter(workspace)
 	writer.SetStage(cs.Name())
 
+	// Try to use PathResolver to get cluster paths
+	var clusterInfraPath, clusterAppsPath string
+	resolver := paths.NewPathResolver(workspace.RootDir)
+	clusterPaths, err := resolver.ResolveWithFallback(ctx, clusterName)
+	if err == nil {
+		// Successfully resolved paths - get relative paths from workspace root
+		clusterInfraPath, _ = filepath.Rel(workspace.RootDir, filepath.Join(clusterPaths.ClusterDir, "kustomization.yaml"))
+		clusterAppsPath, _ = filepath.Rel(workspace.RootDir, filepath.Join(clusterPaths.ApplicationsDir, "kustomization.yaml"))
+	} else {
+		// Fallback to standard paths for test environments
+		clusterInfraPath = filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml")
+		clusterAppsPath = filepath.Join("applications", "overlays", clusterName, "kustomization.yaml")
+	}
+
 	// Create infrastructure kustomization.yaml
 	infraKustomization := fmt.Sprintf(`apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -130,7 +145,6 @@ metadata:
   namespace: flux-system
 `, clusterName)
 
-	clusterInfraPath := filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml")
 	if err := writer.WriteFileString(clusterInfraPath, clusterInfraKustomization, 0o644); err != nil {
 		return fmt.Errorf("failed to write cluster infrastructure kustomization: %w", err)
 	}
@@ -157,7 +171,6 @@ resources:
   - ../../base
 `, clusterName)
 
-	clusterAppsPath := filepath.Join("applications", "overlays", clusterName, "kustomization.yaml")
 	if err := writer.WriteFileString(clusterAppsPath, clusterAppsKustomization, 0o644); err != nil {
 		return fmt.Errorf("failed to write cluster applications kustomization: %w", err)
 	}
@@ -187,6 +200,14 @@ func (cs *ConfigStage) Rollback(ctx context.Context, workspace *gitops.GitOpsWor
 		return nil // Nothing to rollback
 	}
 
+	// Use PathResolver to get cluster paths
+	resolver := paths.NewPathResolver(workspace.RootDir)
+	clusterPaths, err := resolver.ResolveWithFallback(ctx, clusterName)
+	if err != nil {
+		// If we can't resolve paths, just continue with default paths
+		clusterPaths = nil
+	}
+
 	// Get configuration templates
 	templates := cs.templateRegistry.GetTemplatesForType(template.TemplateTypeConfig)
 
@@ -203,10 +224,15 @@ func (cs *ConfigStage) Rollback(ctx context.Context, workspace *gitops.GitOpsWor
 	// Remove default config files
 	defaultFiles := []string{
 		"infrastructure/kustomization.yaml",
-		filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml"),
 		"applications/kustomization.yaml",
-		filepath.Join("applications", "overlays", clusterName, "kustomization.yaml"),
 		".flux-system/kustomization.yaml",
+	}
+
+	// Add cluster-specific paths if we have them
+	if clusterPaths != nil {
+		clusterInfraPath, _ := filepath.Rel(workspace.RootDir, filepath.Join(clusterPaths.ClusterDir, "kustomization.yaml"))
+		clusterAppsPath, _ := filepath.Rel(workspace.RootDir, filepath.Join(clusterPaths.ApplicationsDir, "kustomization.yaml"))
+		defaultFiles = append(defaultFiles, clusterInfraPath, clusterAppsPath)
 	}
 
 	for _, file := range defaultFiles {
@@ -226,12 +252,26 @@ func (cs *ConfigStage) Validate(ctx context.Context, workspace *gitops.GitOpsWor
 		return fmt.Errorf("cluster name not specified in configuration")
 	}
 
+	// Try to use PathResolver to get cluster paths
+	var clusterInfraPath, clusterAppsPath string
+	resolver := paths.NewPathResolver(workspace.RootDir)
+	clusterPaths, err := resolver.ResolveWithFallback(ctx, clusterName)
+	if err == nil {
+		// Successfully resolved paths - get relative paths from workspace root
+		clusterInfraPath, _ = filepath.Rel(workspace.RootDir, filepath.Join(clusterPaths.ClusterDir, "kustomization.yaml"))
+		clusterAppsPath, _ = filepath.Rel(workspace.RootDir, filepath.Join(clusterPaths.ApplicationsDir, "kustomization.yaml"))
+	} else {
+		// Fallback to standard paths for test environments
+		clusterInfraPath = filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml")
+		clusterAppsPath = filepath.Join("applications", "overlays", clusterName, "kustomization.yaml")
+	}
+
 	// Check for required configuration files
 	requiredFiles := []string{
 		"infrastructure/kustomization.yaml",
-		filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml"),
 		"applications/kustomization.yaml",
-		filepath.Join("applications", "overlays", clusterName, "kustomization.yaml"),
+		clusterInfraPath,
+		clusterAppsPath,
 	}
 
 	for _, file := range requiredFiles {
@@ -251,6 +291,20 @@ func (cs *ConfigStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.S
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
 		return nil, fmt.Errorf("cluster name not specified in configuration")
+	}
+
+	// Try to use PathResolver to get cluster paths
+	var clusterInfraPath, clusterAppsPath string
+	resolver := paths.NewPathResolver(cfg.GitOps().GitDir)
+	clusterPaths, err := resolver.ResolveWithFallback(ctx, clusterName)
+	if err == nil {
+		// Successfully resolved paths - get relative paths from git dir
+		clusterInfraPath, _ = filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ClusterDir, "kustomization.yaml"))
+		clusterAppsPath, _ = filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ApplicationsDir, "kustomization.yaml"))
+	} else {
+		// Fallback to standard paths for test environments
+		clusterInfraPath = filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml")
+		clusterAppsPath = filepath.Join("applications", "overlays", clusterName, "kustomization.yaml")
 	}
 
 	// Get configuration templates
@@ -281,10 +335,10 @@ func (cs *ConfigStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.S
 	// Add default configuration files
 	defaultFiles := []string{
 		"infrastructure/kustomization.yaml",
-		filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml"),
 		"applications/kustomization.yaml",
-		filepath.Join("applications", "overlays", clusterName, "kustomization.yaml"),
 		".flux-system/kustomization.yaml",
+		clusterInfraPath,
+		clusterAppsPath,
 	}
 
 	for _, file := range defaultFiles {
@@ -331,7 +385,22 @@ func (cs *ConfigStage) getOutputPath(tmpl template.TemplateDefinition, cfg confi
 		filename += ".yaml"
 	}
 
-	return filepath.Join("infrastructure", "clusters", clusterName, filename)
+	// Use PathResolver to get the cluster directory
+	resolver := paths.NewPathResolver(cfg.GitOps().GitDir)
+	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
+	if err != nil {
+		// Fallback to old path construction if resolver fails
+		return filepath.Join("infrastructure", "clusters", clusterName, filename)
+	}
+
+	// Get relative path from git dir
+	relPath, err := filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ClusterDir, filename))
+	if err != nil {
+		// Fallback to old path construction if relative path fails
+		return filepath.Join("infrastructure", "clusters", clusterName, filename)
+	}
+
+	return relPath
 }
 
 // evaluateConditions checks if all conditions for a template are met.

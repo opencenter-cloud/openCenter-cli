@@ -125,8 +125,6 @@ func (w *world) runOpenCenter(args []string) error {
 	env := os.Environ()
 	// propagate config dir
 	env = append(env, fmt.Sprintf("OPENCENTER_CONFIG_DIR=%s", w.configDir))
-	// Enable test mode to populate required fields during init
-	env = append(env, "OPENCENTER_TEST_MODE=true")
 	if w.tmpDir != "" {
 		env = append(env, fmt.Sprintf("OPENCENTER_TEST_TMP=%s", w.tmpDir))
 	}

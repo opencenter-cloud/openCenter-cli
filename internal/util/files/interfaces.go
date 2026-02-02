@@ -57,45 +57,6 @@ type AtomicFileWriter interface {
 type FileBackupManager interface {
 	CreateBackup(filename string) (string, error)
 	RestoreBackup(backupPath, originalPath string) error
-	CleanupBackups(pattern string, maxAge int64) error
-	ListBackups(pattern string) ([]string, error)
-}
-
-// FileLockManager interface for file locking operations
-type FileLockManager interface {
-	LockFile(filename string) (FileLock, error)
-	TryLockFile(filename string) (FileLock, bool, error)
-	IsFileLocked(filename string) bool
-}
-
-// FileLock interface for file lock operations
-type FileLock interface {
-	Unlock() error
-	IsLocked() bool
-	GetPath() string
-}
-
-// FileWatcher interface for monitoring file changes
-type FileWatcher interface {
-	WatchFile(filename string, callback func(string)) error
-	WatchDirectory(dirname string, callback func(string)) error
-	StopWatching(path string) error
-	StopAll() error
-}
-
-// FileCompressor interface for file compression operations
-type FileCompressor interface {
-	CompressFile(src, dst string) error
-	DecompressFile(src, dst string) error
-	CompressDirectory(srcDir, dstFile string) error
-	DecompressDirectory(srcFile, dstDir string) error
-}
-
-// FileHasher interface for file hashing operations
-type FileHasher interface {
-	HashFile(filename string, algorithm string) (string, error)
-	VerifyFileHash(filename string, expectedHash string, algorithm string) error
-	HashDirectory(dirname string, algorithm string) (string, error)
 }
 
 // FileMetadata represents file metadata
@@ -119,13 +80,4 @@ type FileOperation struct {
 	Data        []byte                 `json:"data,omitempty"`
 	Permissions os.FileMode            `json:"permissions,omitempty"`
 	Options     map[string]interface{} `json:"options,omitempty"`
-}
-
-// BatchFileProcessor interface for processing multiple file operations
-type BatchFileProcessor interface {
-	AddOperation(op FileOperation) error
-	ExecuteOperations() error
-	RollbackOperations() error
-	GetOperationCount() int
-	ClearOperations()
 }

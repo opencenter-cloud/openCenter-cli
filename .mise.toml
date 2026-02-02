@@ -509,32 +509,37 @@ test-integration = '''
 #!/usr/bin/env bash
 set -e
 
-echo "=== Running Operational Readiness Tests ==="
+echo "=== Running Integration Tests ==="
 echo ""
 
-echo "1. Testing Retry Handler (unit + property tests)..."
+echo "1. Testing Cluster Setup Integration..."
+go test -v ./cmd -run "TestClusterSetup"
+
+echo ""
+echo "2. Testing Retry Handler (unit + property tests)..."
 go test -v ./internal/resilience -run "TestRetry|TestProperty.*Retry"
 
 echo ""
-echo "2. Testing Circuit Breaker (unit + property tests)..."
+echo "3. Testing Circuit Breaker (unit + property tests)..."
 go test -v ./internal/resilience -run "TestCircuitBreaker|TestProperty.*CircuitBreaker"
 
 echo ""
-echo "3. Testing Lock Manager (unit + property tests)..."
+echo "4. Testing Lock Manager (unit + property tests)..."
 go test -v ./internal/resilience -run "TestLockManager|TestProperty.*Lock"
 
 echo ""
-echo "4. Testing Drift Detector (unit + property tests)..."
+echo "5. Testing Drift Detector (unit + property tests)..."
 go test -v ./internal/operations -run "TestDriftDetector|TestProperty.*Drift"
 
 echo ""
-echo "5. Testing Backup Manager (unit + property tests)..."
+echo "6. Testing Backup Manager (unit + property tests)..."
 go test -v ./internal/operations -run "TestBackupManager|TestProperty.*Backup"
 
 echo ""
-echo "=== Operational Readiness Tests Complete ==="
+echo "=== Integration Tests Complete ==="
 echo ""
 echo "Summary:"
+echo "  ✓ Cluster setup workflow"
 echo "  ✓ Retry logic with exponential backoff"
 echo "  ✓ Circuit breaker pattern"
 echo "  ✓ Distributed locking"

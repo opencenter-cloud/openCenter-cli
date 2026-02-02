@@ -49,18 +49,18 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 			setup: func(t *testing.T) string {
 				clusterName := "test-cluster"
 				ctx := context.Background()
-				
+
 				// Create cluster directories
 				if err := pathResolver.CreateClusterDirectories(ctx, clusterName, "test-org"); err != nil {
 					t.Fatalf("Failed to create cluster directories: %v", err)
 				}
-				
+
 				// Create a minimal config file
 				_, err := pathResolver.Resolve(ctx, clusterName, "test-org")
 				if err != nil {
 					t.Fatalf("Failed to resolve cluster paths: %v", err)
 				}
-				
+
 				// Create minimal config
 				cfg := config.Config{
 					SchemaVersion: "2.0",
@@ -69,12 +69,12 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 				cfg.OpenCenter.Infrastructure.Provider = "kind"
 				cfg.OpenCenter.Cluster.ClusterName = clusterName
 				cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "gitops")
-				
+
 				// Save config
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("Failed to save config: %v", err)
 				}
-				
+
 				return clusterName
 			},
 		},
@@ -91,18 +91,18 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 			setup: func(t *testing.T) string {
 				clusterName := "test-cluster-2"
 				ctx := context.Background()
-				
+
 				// Create cluster directories
 				if err := pathResolver.CreateClusterDirectories(ctx, clusterName, "test-org"); err != nil {
 					t.Fatalf("Failed to create cluster directories: %v", err)
 				}
-				
+
 				// Create a minimal config file
 				_, err := pathResolver.Resolve(ctx, clusterName, "test-org")
 				if err != nil {
 					t.Fatalf("Failed to resolve cluster paths: %v", err)
 				}
-				
+
 				// Create minimal config
 				cfg := config.Config{
 					SchemaVersion: "2.0",
@@ -111,12 +111,12 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 				cfg.OpenCenter.Infrastructure.Provider = "kind"
 				cfg.OpenCenter.Cluster.ClusterName = clusterName
 				cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "gitops")
-				
+
 				// Save config
 				if err := config.Save(cfg); err != nil {
 					t.Fatalf("Failed to save config: %v", err)
 				}
-				
+
 				return clusterName
 			},
 		},

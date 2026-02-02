@@ -19,10 +19,11 @@ import (
 	"net"
 	"net/url"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 
+	corevalidation "github.com/rackerlabs/opencenter-cli/internal/core/validation"
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation/validators"
 	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
 )
 
@@ -34,6 +35,7 @@ type EnhancedConfigValidator struct {
 	cloudValidators       map[string]CloudProviderValidator
 	connectivityValidator *ConnectivityValidator
 	multiLayerValidator   V2Validator
+	validationEngine      *corevalidation.ValidationEngine
 }
 
 // CloudProviderValidator defines the interface for cloud provider-specific validation.
@@ -53,12 +55,19 @@ func NewEnhancedConfigValidator(autoRepair bool) *EnhancedConfigValidator {
 		cloudValidators:       make(map[string]CloudProviderValidator),
 		connectivityValidator: NewConnectivityValidator(10 * time.Second),
 		multiLayerValidator:   NewMultiLayerValidator(),
+		validationEngine:      corevalidation.NewValidationEngine(),
 	}
 
 	// Register cloud provider validators
 	validator.cloudValidators["openstack"] = NewOpenStackValidator()
 	validator.cloudValidators["aws"] = NewAWSValidator()
 	validator.cloudValidators["vsphere"] = NewVSphereValidator()
+
+	// Register core validators with the validation engine
+	validator.validationEngine.MustRegister(validators.NewClusterNameValidator())
+	validator.validationEngine.MustRegister(validators.NewConfigValidator())
+	validator.validationEngine.MustRegister(validators.NewFileValidator())
+	validator.validationEngine.MustRegister(validators.NewSecurityValidator())
 
 	return validator
 }
@@ -205,21 +214,30 @@ func (v *EnhancedConfigValidator) validateBasicStructure(ctx context.Context, co
 		))
 	}
 
-	// Validate cluster name
-	if config.ClusterName() == "" {
+	// Use ValidationEngine for cluster name validation
+	if config.ClusterName() != "" {
+		result, err := v.validationEngine.Validate(ctx, "cluster-name", config.ClusterName())
+		if err != nil {
+			aggregator.AddError(errors.CreateValidationError(
+				"opencenter.cluster.cluster_name",
+				fmt.Sprintf("cluster name validation failed: %v", err),
+				"Ensure cluster name is valid",
+			))
+		} else if result != nil && !result.Valid {
+			for _, issue := range result.Errors {
+				aggregator.AddError(errors.CreateValidationError(
+					"opencenter.cluster.cluster_name",
+					issue.Message,
+					issue.Suggestions...,
+				))
+			}
+		}
+	} else {
 		aggregator.AddError(errors.CreateValidationError(
 			"opencenter.cluster.cluster_name",
 			"cluster name is required",
 			"Set opencenter.cluster.cluster_name to a valid cluster name",
 			"Use alphanumeric characters, hyphens, and underscores only",
-		))
-	} else if err := v.validateClusterNameFormat(config.ClusterName()); err != nil {
-		aggregator.AddError(errors.CreateValidationError(
-			"opencenter.cluster.cluster_name",
-			fmt.Sprintf("invalid cluster name format: %v", err),
-			"Use alphanumeric characters, hyphens, and underscores only",
-			"Start with an alphanumeric character",
-			"Keep length under 255 characters",
 		))
 	}
 
@@ -253,6 +271,52 @@ func (v *EnhancedConfigValidator) validateBasicStructure(ctx context.Context, co
 func (v *EnhancedConfigValidator) validateCrossFieldDependencies(ctx context.Context, config *Config, aggregator *errors.ValidationAggregator) {
 	if config == nil {
 		return
+	}
+
+	// Validate admin email using ValidationEngine
+	if config.OpenCenter.Cluster.AdminEmail != "" {
+		result, err := v.validationEngine.Validate(ctx, "config", map[string]interface{}{
+			"type":  "email",
+			"value": config.OpenCenter.Cluster.AdminEmail,
+		})
+		if err != nil {
+			aggregator.AddError(errors.CreateValidationError(
+				"opencenter.cluster.admin_email",
+				fmt.Sprintf("email validation failed: %v", err),
+				"Ensure email is in valid format",
+			))
+		} else if result != nil && !result.Valid {
+			for _, issue := range result.Errors {
+				aggregator.AddError(errors.CreateValidationError(
+					"opencenter.cluster.admin_email",
+					issue.Message,
+					issue.Suggestions...,
+				))
+			}
+		}
+	}
+
+	// Validate cluster FQDN using ValidationEngine
+	if config.OpenCenter.Cluster.ClusterFQDN != "" {
+		result, err := v.validationEngine.Validate(ctx, "config", map[string]interface{}{
+			"type":  "fqdn",
+			"value": config.OpenCenter.Cluster.ClusterFQDN,
+		})
+		if err != nil {
+			aggregator.AddError(errors.CreateValidationError(
+				"opencenter.cluster.cluster_fqdn",
+				fmt.Sprintf("FQDN validation failed: %v", err),
+				"Ensure FQDN is in valid format",
+			))
+		} else if result != nil && !result.Valid {
+			for _, issue := range result.Errors {
+				aggregator.AddError(errors.CreateValidationError(
+					"opencenter.cluster.cluster_fqdn",
+					issue.Message,
+					issue.Suggestions...,
+				))
+			}
+		}
 	}
 
 	// Validate Windows workers configuration
@@ -410,23 +474,6 @@ func (v *EnhancedConfigValidator) validateSecurityConfiguration(ctx context.Cont
 }
 
 // Helper validation methods
-
-func (v *EnhancedConfigValidator) validateClusterNameFormat(name string) error {
-	if len(name) == 0 {
-		return fmt.Errorf("cluster name cannot be empty")
-	}
-	if len(name) > 255 {
-		return fmt.Errorf("cluster name too long (max 255 characters)")
-	}
-
-	// Check for valid characters (alphanumeric, hyphens, underscores, dots)
-	validName := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
-	if !validName.MatchString(name) {
-		return fmt.Errorf("cluster name must start with alphanumeric character and contain only alphanumeric, hyphens, underscores, and dots")
-	}
-
-	return nil
-}
 
 func (v *EnhancedConfigValidator) isValidKubernetesVersion(version string) bool {
 	// Basic semantic version check (major.minor.patch)
@@ -755,6 +802,11 @@ func (v *EnhancedConfigValidator) validatePreFlightRequirements(ctx context.Cont
 			"Download from https://opentofu.org/",
 		))
 	}
+}
+
+// GetValidationEngine returns the core validation engine for external use.
+func (v *EnhancedConfigValidator) GetValidationEngine() *corevalidation.ValidationEngine {
+	return v.validationEngine
 }
 
 // validateServiceSecrets validates that required secrets are configured for enabled services

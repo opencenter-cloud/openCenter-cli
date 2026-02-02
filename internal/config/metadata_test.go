@@ -24,18 +24,14 @@ import (
 
 // TestMetadataPreservation tests that metadata is preserved during various operations
 func TestMetadataPreservation(t *testing.T) {
-	// Set test mode
-	os.Setenv("OPENCENTER_TEST_MODE", "true")
-	defer os.Unsetenv("OPENCENTER_TEST_MODE")
-
 	t.Run("SavePreservesMetadata", func(t *testing.T) {
 		// Create a temporary directory for testing
 		tmpDir := t.TempDir()
 		os.Setenv("OPENCENTER_CONFIG_DIR", tmpDir)
 		defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
 
-		// Create a config with specific metadata
-		cfg := NewDefault("test-cluster")
+		// Create a config with specific metadata using test fixture
+		cfg := testModeConfig("test-cluster")
 		originalCreatedAt := time.Now().Add(-24 * time.Hour) // 1 day ago
 		originalUpdatedAt := time.Now().Add(-1 * time.Hour)  // 1 hour ago
 		cfg.Metadata.CreatedAt = originalCreatedAt

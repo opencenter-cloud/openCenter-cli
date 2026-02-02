@@ -170,17 +170,10 @@ an error will be returned.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
 
-			// Use global config manager if available, otherwise create a new one
-			var cm *config.ConfigManager
-			var err error
-
-			if globalCM := GetConfigManager(); globalCM != nil {
-				cm = globalCM
-			} else {
-				cm, err = config.NewConfigManager("")
-				if err != nil {
-					return fmt.Errorf("failed to load configuration: %w", err)
-				}
+			// Create a new config manager
+			cm, err := config.NewConfigManager("")
+			if err != nil {
+				return fmt.Errorf("failed to load configuration: %w", err)
 			}
 
 			// Get the value

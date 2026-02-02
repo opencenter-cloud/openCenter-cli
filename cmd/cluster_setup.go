@@ -16,19 +16,21 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strings"
+	"os"
+	"path/filepath"
 	"time"
 
-	"github.com/rackerlabs/opencenter-cli/internal/config"
-	"github.com/rackerlabs/opencenter-cli/internal/gitops"
+	"github.com/rackerlabs/opencenter-cli/internal/cluster"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
+	"github.com/rackerlabs/opencenter-cli/internal/di"
 	"github.com/rackerlabs/opencenter-cli/internal/resilience"
-	"github.com/rackerlabs/opencenter-cli/internal/tofu"
 	"github.com/spf13/cobra"
 )
 
 // newClusterSetupCmd creates the command for setting up the GitOps repository.
 //
 // This command initializes the GitOps repository structure for a cluster by:
+// - Validating the cluster configuration
 // - Checking if the repository is already initialized (unless --force is used)
 // - Rendering templates into the GitOps directory
 // - Provisioning OpenTofu configuration files
@@ -36,8 +38,6 @@ import (
 // Returns:
 //   - *cobra.Command: A pointer to the configured `setup` command.
 func newClusterSetupCmd() *cobra.Command {
-	var force bool
-
 	cmd := &cobra.Command{
 		Use:   "setup [name]",
 		Short: "Set up GitOps repository for a cluster",
@@ -46,6 +46,9 @@ func newClusterSetupCmd() *cobra.Command {
 This command initializes the GitOps repository by rendering templates and
 creating the necessary directory structure. It is idempotent by default,
 meaning it will skip setup if the repository is already initialized.
+
+Only v2 configurations (schema_version: "2.0") are supported.
+v1 configurations will be rejected with migration instructions.
 
 Use --force to overwrite an existing repository.
 
@@ -66,92 +69,121 @@ Configuration must have opencenter.gitops.git_dir set.`,
   # Force overwrite existing repository
   opencenter cluster setup my-cluster --force`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// Resolve cluster name from args or active cluster
-			name, err := resolveClusterName(args, true)
-			if err != nil {
-				return err
-			}
-
-			// Acquire lock for setup operation
-			lockMgr, err := resilience.NewLockManager(resilience.DefaultLockConfig)
-			if err != nil {
-				return fmt.Errorf("failed to create lock manager: %w", err)
-			}
-
-			ctx := context.Background()
-			lock, err := lockMgr.AcquireWithMetadata(ctx, name, 1*time.Hour, map[string]string{
-				"operation": "setup",
-				"command":   "cluster setup",
-			})
-			if err != nil {
-				return formatErrorWithInfo(err, "E6003")
-			}
-			defer lockMgr.Release(lock)
-
-			// Load configuration
-			cfg, err := config.Load(name)
-			if err != nil {
-				return err
-			}
-
-			// Validate that git_dir is set
-			gitDir := cfg.GitOps().GitDir
-			// Treat test default paths as unset for validation purposes
-			if gitDir == "" || strings.HasPrefix(gitDir, "./testdata/test-git-repo-") {
-				return fmt.Errorf("opencenter.gitops.git_dir must be set in the configuration")
-			}
-
-			// Check if already initialized (unless --force is used)
-			if !force {
-				initialized, err := gitops.IsGitOpsInitialized(gitDir)
-				if err != nil {
-					return fmt.Errorf("failed to check if GitOps repository is initialized: %w", err)
-				}
-
-				if initialized {
-					fmt.Fprintf(cmd.OutOrStdout(), "GitOps repository already initialized at: %s\n", gitDir)
-					fmt.Fprintln(cmd.OutOrStdout(), "Use --force to overwrite existing files")
-					return nil
-				}
-			}
-
-			// Perform setup
-			if err := setupGitOpsRepository(cfg, cmd); err != nil {
-				return fmt.Errorf("failed to set up GitOps repository: %w", err)
-			}
-
-			fmt.Fprintf(cmd.OutOrStdout(), "Created GitOps repo at: %s\n", gitDir)
-			return nil
-		},
+		RunE: runClusterSetup,
 	}
 
-	cmd.Flags().BoolVar(&force, "force", false, "Force overwrite existing GitOps repository")
+	cmd.Flags().Bool("force", false, "Force overwrite existing GitOps repository")
+	cmd.Flags().Bool("skip-validation", false, "Skip configuration validation")
+	cmd.Flags().Bool("dry-run", false, "Show what would be done without making changes")
+	cmd.Flags().String("org", "", "organization name (defaults to 'opencenter')")
 
 	return cmd
 }
 
-// setupGitOpsRepository performs the actual GitOps repository setup.
-func setupGitOpsRepository(cfg config.Config, cmd *cobra.Command) error {
-	// Copy base GitOps structure (always render for generation)
-	if err := gitops.CopyBase(cfg, true); err != nil {
-		return fmt.Errorf("failed to copy base GitOps structure: %w", err)
+// runClusterSetup executes the cluster setup command
+func runClusterSetup(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	// Initialize DI container
+	container := di.NewContainer()
+	if err := setupSetupContainer(container); err != nil {
+		return fmt.Errorf("setting up DI container: %w", err)
 	}
 
-	// Render cluster-specific applications
-	if err := gitops.RenderClusterApps(cfg); err != nil {
-		return fmt.Errorf("failed to render cluster apps: %w", err)
+	// Resolve SetupService from container
+	var setupService *cluster.SetupService
+	if err := container.ResolveAs("setup-service", &setupService); err != nil {
+		return fmt.Errorf("resolving setup service: %w", err)
 	}
 
-	// Render infrastructure templates
-	if err := gitops.RenderInfrastructureCluster(cfg); err != nil {
-		return fmt.Errorf("failed to render infrastructure cluster: %w", err)
+	// Parse command-line options
+	opts, err := parseSetupOptions(cmd, args)
+	if err != nil {
+		return err
 	}
 
-	// Provision OpenTofu (renders main.tf and provider.tf)
-	if err := tofu.Provision(cfg); err != nil {
-		return fmt.Errorf("failed to provision opentofu: %w", err)
+	// Acquire lock for setup operation
+	lockMgr, err := resilience.NewLockManager(resilience.DefaultLockConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create lock manager: %w", err)
+	}
+
+	lock, err := lockMgr.AcquireWithMetadata(ctx, opts.ClusterName, 1*time.Hour, map[string]string{
+		"operation": "setup",
+		"command":   "cluster setup",
+	})
+	if err != nil {
+		return fmt.Errorf("[E6003] failed to acquire lock: %w", err)
+	}
+	defer lockMgr.Release(lock)
+
+	// Execute setup
+	result, err := setupService.Setup(ctx, opts)
+	if err != nil {
+		return err
+	}
+
+	// Display results
+	if opts.DryRun {
+		fmt.Fprintf(cmd.OutOrStdout(), "Dry run: would create %d manifests at: %s\n", result.ManifestsCreated, result.GitOpsPath)
+	} else {
+		fmt.Fprintf(cmd.OutOrStdout(), "Created GitOps repo at: %s\n", result.GitOpsPath)
+		fmt.Fprintf(cmd.OutOrStdout(), "Generated %d manifests\n", result.ManifestsCreated)
+		if result.CommitHash != "" {
+			fmt.Fprintf(cmd.OutOrStdout(), "Committed changes: %s\n", result.CommitHash)
+		}
 	}
 
 	return nil
+}
+
+// setupSetupContainer initializes the DI container with required services
+func setupSetupContainer(container di.Container) error {
+	// Get base directory from environment or use default
+	baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
+	if baseDir == "" {
+		// Use default config directory
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("getting home directory: %w", err)
+		}
+		baseDir = filepath.Join(home, ".config", "opencenter")
+	}
+	
+	pathResolver, err := di.ProvidePathResolver(baseDir)
+	if err != nil {
+		return err
+	}
+	if err := container.Singleton("path-resolver", func() (*paths.PathResolver, error) {
+		return pathResolver, nil
+	}); err != nil {
+		return err
+	}
+	if err := container.Singleton("validation-engine", di.ProvideValidationEngine); err != nil {
+		return err
+	}
+	if err := container.Singleton("setup-service", di.ProvideSetupService); err != nil {
+		return err
+	}
+	return container.Initialize()
+}
+
+// parseSetupOptions parses command-line flags into SetupOptions
+func parseSetupOptions(cmd *cobra.Command, args []string) (cluster.SetupOptions, error) {
+	opts := cluster.SetupOptions{}
+
+	// Resolve cluster name from args or active cluster
+	name, err := resolveClusterName(args, true)
+	if err != nil {
+		return opts, err
+	}
+	opts.ClusterName = name
+
+	// Parse flags
+	opts.Organization, _ = cmd.Flags().GetString("org")
+	opts.Force, _ = cmd.Flags().GetBool("force")
+	opts.SkipValidation, _ = cmd.Flags().GetBool("skip-validation")
+	opts.DryRun, _ = cmd.Flags().GetBool("dry-run")
+
+	return opts, nil
 }

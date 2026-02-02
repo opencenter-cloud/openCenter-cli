@@ -23,18 +23,14 @@ import (
 
 // TestSchemaVersionInSavedConfig tests that saved configs include schema version.
 func TestSchemaVersionInSavedConfig(t *testing.T) {
-	// Set test mode
-	os.Setenv("OPENCENTER_TEST_MODE", "true")
-	defer os.Unsetenv("OPENCENTER_TEST_MODE")
-
 	// Create a temporary directory for the test
 	tmpDir := t.TempDir()
 	os.Setenv("OPENCENTER_CONFIG_DIR", tmpDir)
 	defer os.Unsetenv("OPENCENTER_CONFIG_DIR")
 
-	// Create a test config
+	// Create a test config using test fixture
 	clusterName := "test-schema-version"
-	config := NewDefault(clusterName)
+	config := testModeConfig(clusterName)
 
 	// Verify schema version is set
 	if config.SchemaVersion != SchemaVersion {
@@ -74,10 +70,6 @@ func TestSchemaVersionInSavedConfig(t *testing.T) {
 
 // TestLoadConfigWithoutSchemaVersion tests loading a config without schema version.
 func TestLoadConfigWithoutSchemaVersion(t *testing.T) {
-	// Set test mode
-	os.Setenv("OPENCENTER_TEST_MODE", "true")
-	defer os.Unsetenv("OPENCENTER_TEST_MODE")
-
 	// Create a temporary directory for the test
 	tmpDir := t.TempDir()
 	os.Setenv("OPENCENTER_CONFIG_DIR", tmpDir)
@@ -129,10 +121,6 @@ secrets:
 
 // TestLoadConfigWithOldSchemaVersion tests loading a config with old schema version.
 func TestLoadConfigWithOldSchemaVersion(t *testing.T) {
-	// Set test mode
-	os.Setenv("OPENCENTER_TEST_MODE", "true")
-	defer os.Unsetenv("OPENCENTER_TEST_MODE")
-
 	// Create a temporary directory for the test
 	tmpDir := t.TempDir()
 	os.Setenv("OPENCENTER_CONFIG_DIR", tmpDir)

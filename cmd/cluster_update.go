@@ -161,7 +161,7 @@ func newClusterUpdateCmd() *cobra.Command {
 				return err
 			}
 
-			cfg, err := config.Load(name)
+			cfg, err := loadConfigV2Only(name)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster %s: %w", name, err)
 			}

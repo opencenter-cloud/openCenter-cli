@@ -63,6 +63,18 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 		return nil, fmt.Errorf("loading configuration: %w", err)
 	}
 
+	// Check schema version - only v2 is supported
+	if cfg.SchemaVersion != "2.0" {
+		return nil, fmt.Errorf(`v1 configurations are not supported in v2.0.0
+
+To upgrade to v2.0.0:
+1. Install opencenter v1.x
+2. Run: opencenter cluster migrate-config %s
+3. Upgrade to opencenter v2.0.0
+
+See: https://docs.opencenter.io/migration/v1-to-v2`, opts.ClusterName)
+	}
+
 	// Validate that git_dir is set
 	gitDir := cfg.GitOps().GitDir
 	if gitDir == "" || strings.HasPrefix(gitDir, "./testdata/test-git-repo-") {

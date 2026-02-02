@@ -17,21 +17,21 @@ import (
 
 // InitOptions contains options for cluster initialization
 type InitOptions struct {
-	ClusterName      string
-	Organization     string
-	Provider         string
-	ConfigFile       string
-	ConfigMap        map[string]any
-	Force            bool
-	Strict           bool
-	NoKeyGen         bool
-	NoSOPSKeyGen     bool
-	RegenerateKeys   bool
-	NoGitInit        bool
-	FullSchema       bool
-	SchemaVersion    string
-	ServerPools      []string
-	FlagOverrides    []string
+	ClusterName    string
+	Organization   string
+	Provider       string
+	ConfigFile     string
+	ConfigMap      map[string]any
+	Force          bool
+	Strict         bool
+	NoKeyGen       bool
+	NoSOPSKeyGen   bool
+	RegenerateKeys bool
+	NoGitInit      bool
+	FullSchema     bool
+	SchemaVersion  string
+	ServerPools    []string
+	FlagOverrides  []string
 }
 
 // InitResult contains the result of cluster initialization
@@ -80,12 +80,12 @@ func (s *InitService) Initialize(ctx context.Context, opts InitOptions) (*InitRe
 		return nil, fmt.Errorf("invalid organization: %w", err)
 	}
 
-	// Try to resolve paths (will fail if cluster doesn't exist, which is expected for init)
-	clusterPaths, err := s.pathResolver.Resolve(ctx, opts.ClusterName, opts.Organization)
+	// Use PathResolver to resolve paths for the cluster
+	// For new clusters, this will use the organization-based strategy
+	strategy := s.pathResolver.GetStrategies()[0]
+	clusterPaths, err := strategy.Resolve(ctx, opts.ClusterName, opts.Organization)
 	if err != nil {
-		// If cluster doesn't exist, that's expected for init - we'll create it
-		// Build the paths manually based on the organization structure
-		clusterPaths = s.buildClusterPaths(opts.ClusterName, opts.Organization)
+		return nil, fmt.Errorf("resolving cluster paths: %w", err)
 	}
 
 	// Check if cluster exists and handle force flag
@@ -153,29 +153,6 @@ func (s *InitService) Initialize(ctx context.Context, opts InitOptions) (*InitRe
 	result.Message = s.buildResultMessage(clusterPaths, opts.Organization, result.KeysGenerated)
 
 	return result, nil
-}
-
-// buildClusterPaths builds cluster paths for a new cluster that doesn't exist yet
-func (s *InitService) buildClusterPaths(clusterName, organization string) *paths.ClusterPaths {
-	baseDir := s.pathResolver.GetBaseDir()
-	orgDir := filepath.Join(baseDir, "clusters", organization)
-	clusterDir := filepath.Join(orgDir, clusterName)
-	
-	return &paths.ClusterPaths{
-		OrganizationDir:  orgDir,
-		ClusterDir:       clusterDir,
-		ConfigPath:       filepath.Join(orgDir, "."+clusterName+"-config.yaml"),
-		ApplicationsDir:  filepath.Join(clusterDir, "applications"),
-		InventoryPath:    filepath.Join(clusterDir, "inventory"),
-		VenvPath:         filepath.Join(clusterDir, "venv"),
-		BinPath:          filepath.Join(clusterDir, "bin"),
-		GitOpsDir:        orgDir,
-		SecretsDir:       filepath.Join(orgDir, "secrets"),
-		SOPSKeyPath:      filepath.Join(orgDir, "secrets", "age", "keys", clusterName+"-key.txt"),
-		SOPSConfigPath:   filepath.Join(orgDir, ".sops.yaml"),
-		SSHKeyPath:       filepath.Join(orgDir, "secrets", "ssh", clusterName),
-		KubeconfigPath:   filepath.Join(clusterDir, "kubeconfig.yaml"),
-	}
 }
 
 // validateClusterName validates the cluster name using the validation engine
@@ -391,26 +368,14 @@ func (s *InitService) validateConfig(cfg *config.Config) error {
 	return nil
 }
 
-// createDirectories creates the necessary directory structure
+// createDirectories creates the necessary directory structure using PathResolver
 func (s *InitService) createDirectories(ctx context.Context, clusterPaths *paths.ClusterPaths, organization string) error {
-	// Create organization structure
-	if err := os.MkdirAll(clusterPaths.OrganizationDir, 0o755); err != nil {
-		return fmt.Errorf("creating organization directory: %w", err)
-	}
-
-	// Create cluster directories
-	if err := os.MkdirAll(clusterPaths.ClusterDir, 0o755); err != nil {
-		return fmt.Errorf("creating cluster directory: %w", err)
-	}
-
-	// Create secrets directory
-	if err := os.MkdirAll(clusterPaths.SecretsDir, 0o755); err != nil {
-		return fmt.Errorf("creating secrets directory: %w", err)
-	}
-
-	// Create GitOps directory
-	if err := os.MkdirAll(clusterPaths.GitOpsDir, 0o755); err != nil {
-		return fmt.Errorf("creating GitOps directory: %w", err)
+	// Extract cluster name from the cluster directory path
+	clusterName := filepath.Base(clusterPaths.ClusterDir)
+	
+	// Use PathResolver to create all necessary directories
+	if err := s.pathResolver.CreateClusterDirectories(ctx, clusterName, organization); err != nil {
+		return fmt.Errorf("creating cluster directories: %w", err)
 	}
 
 	return nil
@@ -517,7 +482,7 @@ func (s *InitService) generateSSHKey(clusterPaths *paths.ClusterPaths, cfg *conf
 	keyFileName := filepath.Base(clusterPaths.SSHKeyPath)
 	parts := strings.Split(keyFileName, "-")
 	clusterName := parts[0]
-	
+
 	// Get organization from the path
 	pathParts := strings.Split(clusterPaths.SSHKeyPath, string(filepath.Separator))
 	var organization string

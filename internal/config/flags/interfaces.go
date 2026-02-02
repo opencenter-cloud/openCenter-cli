@@ -53,31 +53,18 @@ type FlagHandler interface {
 	GetFlagType() FlagType
 }
 
-// ParsedFlag represents a parsed flag that can be merged into configuration
-type ParsedFlag interface {
-	// GetPath returns the configuration path this flag affects
-	GetPath() string
-}
-
-// ConfigurationMergeable represents flags that can merge into configuration
-type ConfigurationMergeable interface {
-	ParsedFlag
-	// MergeIntoConfiguration applies this flag to the configuration
-	MergeIntoConfiguration(flag ParsedFlag, config map[string]interface{}) error
-}
-
-// ArrayFlagHandler processes array-specific flags (for dedicated handlers like server-pool)
+// ArrayFlagHandler is a specialized handler for array-type flags
 type ArrayFlagHandler interface {
 	FlagHandler
 
 	// ParseArrayFlag converts string to array configuration
 	ParseArrayFlag(flagName, value string) (*ArrayConfig, error)
+}
 
-	// SupportedTypes returns array types this handler supports
-	SupportedTypes() []string
-
-	// ValidateArrayConfig ensures array configuration is valid
-	ValidateArrayConfig(config *ArrayConfig) error
+// ParsedFlag represents a parsed flag that can be merged into configuration
+type ParsedFlag interface {
+	// GetPath returns the configuration path this flag affects
+	GetPath() string
 }
 
 // ParsedFlags contains all parsed flag information

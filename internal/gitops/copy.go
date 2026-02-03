@@ -107,7 +107,7 @@ func copyWorkspaceToTarget(workspaceDir, targetDir string) error {
 			return err
 		}
 		
-		// Write to destination
+		// Write to destination (overwrites existing files)
 		return os.WriteFile(dstPath, data, info.Mode())
 	})
 }

@@ -267,7 +267,7 @@ func defaultConfig(name string) Config {
 				GitSSHPub:         "",
 				GitBranch:         "main",
 				GitOpsBaseRepo:    "ssh://git@github.com/rackerlabs/opencenter-gitops-base.git",
-				GitOpsBaseRelease: "v0.1.0",
+				GitOpsBaseRelease: "",
 				GitOpsBranch:      "main",
 				Flux: GitOpsFlux{
 					Interval: "15m",

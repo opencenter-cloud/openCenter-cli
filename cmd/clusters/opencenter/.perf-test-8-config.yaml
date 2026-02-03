@@ -425,8 +425,6 @@ opencenter:
             swift_container_name: ""
             swift_user_domain_name: ""
             swift_domain_name: Default
-            swift_username: ""
-            swift_project_name: ""
             loki_s3_endpoint: ""
             loki_s3_region: ""
             loki_s3_force_path_style: false
@@ -557,11 +555,6 @@ opencenter:
             gitops_source_repo: ""
             gitops_source_release: ""
             gitops_source_branch: ""
-            datastore_name: ""
-            datastoreurl: ""
-            delete_datastore_uuid: ""
-            retain_datastore_name: ""
-            retain_datastore_uuid: ""
             storage_classes: []
         weave-gitops:
             enabled: false
@@ -601,7 +594,6 @@ secrets:
         aws_access_key: ""
         aws_secret_access_key: ""
     loki:
-        swift_password: ""
         swift_application_credential_secret: ""
         s3_access_key_id: ""
         s3_secret_access_key: ""
@@ -629,6 +621,5 @@ secrets:
         datacenters: ""
         insecure_flag: "false"
         port: "443"
-        datastoreurl: ""
 deployment:
     auto_deploy: true

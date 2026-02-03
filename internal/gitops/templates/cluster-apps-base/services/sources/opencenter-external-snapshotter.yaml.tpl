@@ -6,12 +6,15 @@ metadata:
   namespace: flux-system
 spec:
   interval: 15m
-  url: {{ .OpenCenter.GitOps.GitOpsBaseRepo }}
+  {{- $service := index .OpenCenter.Services "external-snapshotter" }}
+  url: {{ $service.Uri | default .OpenCenter.GitOps.GitOpsBaseRepo }}
   ref:
-  {{- if .OpenCenter.GitOps.GitOpsBaseRelease }}
+  {{- if $service.Release }}
+  tag: {{ $service.Release }}
+  {{- else if .OpenCenter.GitOps.GitOpsBaseRelease }}
   tag: {{ .OpenCenter.GitOps.GitOpsBaseRelease }}
   {{- else }}
-  branch: {{ .OpenCenter.GitOps.GitOpsBranch | default "main" }}
+  branch: {{ $service.Branch | default .OpenCenter.GitOps.GitOpsBranch | default "main" }}
   {{- end }}
   secretRef:
   name: opencenter-base

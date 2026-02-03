@@ -140,18 +140,6 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 				"type":        "string",
 				"description": "Swift user domain name",
 			},
-			"swift_domain_name": map[string]any{
-				"type":        "string",
-				"description": "Swift domain name",
-			},
-			"swift_username": map[string]any{
-				"type":        "string",
-				"description": "Swift username (deprecated: use application credentials)",
-			},
-			"swift_project_name": map[string]any{
-				"type":        "string",
-				"description": "Swift project name (deprecated: use application credentials)",
-			},
 			"loki_s3_endpoint": map[string]any{
 				"type":        "string",
 				"description": "S3 endpoint URL for Loki storage",

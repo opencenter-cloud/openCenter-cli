@@ -137,46 +137,7 @@ func ParseClusterIdentifier(identifier string) (organization string, clusterName
 	return "opencenter", identifier, nil
 }
 
-// ValidateClusterName validates and sanitizes a cluster name to ensure it's safe for use as a directory name.
-// It checks for valid characters and prevents directory traversal attacks.
-// Note: This validates individual cluster or organization names, not the full "org/cluster" format.
-// Use ParseClusterIdentifier for validating the full identifier format.
-//
-// Deprecated: Use internal/core/validation.ValidationEngine with "cluster-name" validator instead.
-// This function will be removed in v2.0.0.
-// Migration: Replace ValidateClusterName(name) with validationEngine.Validate(ctx, "cluster-name", name)
-//
-// Inputs:
-//   - name: The cluster name to validate.
-//
-// Outputs:
-//   - error: An error if the name is invalid.
-func ValidateClusterName(name string) error {
-	logDeprecationWarning(
-		"config.ValidateClusterName()",
-		"internal/core/validation.ValidationEngine with \"cluster-name\" validator",
-		"v2.0.0",
-	)
 
-	// Use the centralized ValidationEngine for consistency
-	ctx := context.Background()
-	validator := validators.NewClusterNameValidator()
-
-	result, err := validator.Validate(ctx, name)
-	if err != nil {
-		return fmt.Errorf("validation error: %w", err)
-	}
-
-	if !result.Valid {
-		// Return the first error message
-		if len(result.Errors) > 0 {
-			return errors.New(result.Errors[0].Message)
-		}
-		return errors.New("cluster name validation failed")
-	}
-
-	return nil
-}
 
 // ConfigPath returns the absolute path to a cluster's configuration file.
 // It implements a fallback strategy to support both organization-based and legacy structures.

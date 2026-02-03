@@ -1,2116 +1,2382 @@
 {
+  "$id": "https://opencenter.cloud/schemas/cluster-config.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/rackerlabs/opencenter-cli/internal/config/config",
-  "$defs": {
-    "AWSGlobalSecrets": {
+  "description": "Complete schema for opencenter cluster configuration with validation rules and constraints",
+  "properties": {
+    "metadata": {
+      "description": "Configuration metadata for tracking lifecycle and provenance",
       "properties": {
-        "infrastructure": {
-          "$ref": "#/$defs/AWSSecrets"
-        },
-        "application": {
-          "$ref": "#/$defs/AWSSecrets"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "infrastructure",
-        "application"
-      ]
-    },
-    "AWSSecrets": {
-      "properties": {
-        "access_key": {
-          "type": "string",
-          "description": "AWS access key"
-        },
-        "secret_access_key": {
-          "type": "string",
-          "description": "AWS secret access key"
-        },
-        "region": {
-          "type": "string",
-          "description": "AWS region"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "access_key",
-        "secret_access_key"
-      ]
-    },
-    "AdditionalServerPool": {
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
-          "description": "Unique name for this worker pool"
-        },
-        "worker_count": {
-          "type": "integer",
-          "maximum": 100,
-          "minimum": 0,
-          "description": "Number of worker nodes in this pool"
-        },
-        "flavor_worker": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Instance flavor/size for this worker pool"
-        },
-        "node_worker": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Node suffix identifier for this worker pool"
-        },
-        "server_group_affinity": {
-          "type": "string",
-          "enum": [
-            "affinity;anti-affinity;soft-affinity;soft-anti-affinity"
-          ],
-          "description": "Server group affinity policy for this worker pool"
-        },
-        "image_id": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
-          "description": "OpenStack image ID for this worker pool"
-        },
-        "image_name": {
-          "type": "string",
-          "description": "OpenStack image name (alternative to image_id)"
-        },
-        "worker_node_bfv_volume_size": {
-          "type": "integer",
-          "maximum": 1000,
-          "minimum": 10,
-          "description": "Boot volume size in GB",
-          "default": 40
-        },
-        "worker_node_bfv_destination_type": {
-          "type": "string",
-          "enum": [
-            "volume;local"
-          ],
-          "description": "Boot volume destination type",
-          "default": "volume"
-        },
-        "worker_node_bfv_source_type": {
-          "type": "string",
-          "enum": [
-            "image;volume;snapshot"
-          ],
-          "description": "Boot volume source type",
-          "default": "image"
-        },
-        "worker_node_bfv_volume_type": {
-          "type": "string",
-          "description": "Boot volume type (e.g. HA-Standard HA-Performance)"
-        },
-        "worker_node_bfv_delete_on_termination": {
-          "type": "boolean",
-          "description": "Delete boot volume when instance is terminated",
-          "default": true
-        },
-        "additional_block_devices_worker": {
-          "items": {
-            "type": "object"
-          },
-          "type": "array",
-          "description": "Additional block devices for this worker pool"
-        },
-        "pf9_onboard": {
-          "type": "boolean",
-          "description": "Enable Platform9 onboarding for this pool",
-          "default": false
-        },
-        "subnet_id": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
-          "description": "Specific subnet ID for this worker pool (optional)"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "name",
-        "worker_count",
-        "flavor_worker",
-        "node_worker",
-        "server_group_affinity",
-        "image_id",
-        "image_name",
-        "worker_node_bfv_volume_size",
-        "worker_node_bfv_destination_type",
-        "worker_node_bfv_source_type",
-        "worker_node_bfv_volume_type",
-        "worker_node_bfv_delete_on_termination",
-        "additional_block_devices_worker",
-        "pf9_onboard",
-        "subnet_id"
-      ]
-    },
-    "AdditionalServerPoolWindows": {
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
-          "description": "Unique name for this Windows worker pool"
-        },
-        "worker_count": {
-          "type": "integer",
-          "maximum": 50,
-          "minimum": 0,
-          "description": "Number of Windows worker nodes in this pool"
-        },
-        "flavor_worker": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Instance flavor/size for this Windows worker pool"
-        },
-        "node_worker": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Node suffix identifier for this Windows worker pool"
-        },
-        "server_group_affinity": {
-          "type": "string",
-          "enum": [
-            "affinity;anti-affinity;soft-affinity;soft-anti-affinity"
-          ],
-          "description": "Server group affinity policy for this Windows worker pool"
-        },
-        "image_id": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
-          "description": "OpenStack Windows image ID for this worker pool"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "name",
-        "worker_count",
-        "flavor_worker",
-        "node_worker"
-      ]
-    },
-    "AlertProxySecrets": {
-      "properties": {
-        "core_device_id": {
-          "type": "string",
-          "description": "Alert proxy core device ID"
-        },
-        "account_service_token": {
-          "type": "string",
-          "description": "Alert proxy account service token"
-        },
-        "core_account_number": {
-          "type": "string",
-          "description": "Alert proxy core account number"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "core_device_id",
-        "account_service_token",
-        "core_account_number"
-      ]
-    },
-    "BarbicanConfig": {
-      "properties": {
-        "auth_url": {
-          "type": "string"
-        },
-        "project_id": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        },
-        "user_domain_name": {
-          "type": "string"
-        },
-        "project_domain_name": {
-          "type": "string"
-        },
-        "ca_cert": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "BastionConfig": {
-      "properties": {
-        "address": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "address"
-      ]
-    },
-    "CalicoConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "cni_iface": {
-          "type": "string"
-        },
-        "calico_interface_autodetect": {
-          "type": "string"
-        },
-        "autodetect_cidr": {
-          "type": "string"
-        },
-        "encapsulation_type": {
-          "type": "string"
-        },
-        "nat_outgoing": {
-          "type": "boolean"
-        },
-        "modules": {
-          "$ref": "#/$defs/CalicoModulesConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled",
-        "cni_iface",
-        "calico_interface_autodetect",
-        "autodetect_cidr",
-        "encapsulation_type",
-        "nat_outgoing",
-        "modules"
-      ]
-    },
-    "CalicoModuleConfig": {
-      "properties": {
-        "source": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "source"
-      ]
-    },
-    "CalicoModulesConfig": {
-      "properties": {
-        "calico": {
-          "$ref": "#/$defs/CalicoModuleConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "calico"
-      ]
-    },
-    "CertManagerSecrets": {
-      "properties": {
-        "aws_access_key": {
-          "type": "string",
-          "description": "AWS access key for Route53 DNS validation"
-        },
-        "aws_secret_access_key": {
-          "type": "string",
-          "description": "AWS secret access key for Route53 DNS validation"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "aws_access_key",
-        "aws_secret_access_key"
-      ]
-    },
-    "CiliumConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "operator_enabled": {
-          "type": "boolean"
-        },
-        "kubeProxyReplacement": {
-          "type": "boolean"
-        },
-        "modules": {
-          "$ref": "#/$defs/CiliumModulesConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled",
-        "operator_enabled",
-        "kubeProxyReplacement",
-        "modules"
-      ]
-    },
-    "CiliumModuleConfig": {
-      "properties": {
-        "source": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "source"
-      ]
-    },
-    "CiliumModulesConfig": {
-      "properties": {
-        "cilium": {
-          "$ref": "#/$defs/CiliumModuleConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "cilium"
-      ]
-    },
-    "CinderConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled"
-      ]
-    },
-    "CloudConfig": {
-      "properties": {
-        "aws": {
-          "$ref": "#/$defs/SimplifiedAWSCloud"
-        },
-        "openstack": {
-          "$ref": "#/$defs/SimplifiedOpenStackCloud"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "aws",
-        "openstack"
-      ]
-    },
-    "ClusterConfig": {
-      "properties": {
-        "cluster_name": {
-          "type": "string",
-          "description": "Name of the cluster"
-        },
-        "aws_access_key": {
-          "type": "string"
-        },
-        "aws_secret_access_key": {
-          "type": "string"
-        },
-        "ssh_authorized_keys": {
-          "items": {
+        "annotations": {
+          "additionalProperties": {
             "type": "string"
           },
-          "type": "array"
+          "description": "Custom annotations for additional metadata",
+          "type": "object"
         },
-        "kubernetes": {
-          "$ref": "#/$defs/KubernetesConfig"
-        },
-        "networking": {
-          "$ref": "#/$defs/ClusterNetworkingConfig"
-        },
-        "base_domain": {
-          "type": "string",
-          "description": "Base domain for the cluster (e.g. k8s.opencenter.cloud)"
-        },
-        "cluster_fqdn": {
-          "type": "string",
-          "description": "Fully qualified domain name for the cluster"
-        },
-        "admin_email": {
-          "type": "string",
-          "description": "Administrator email address for certificates and notifications"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "cluster_name",
-        "aws_access_key",
-        "aws_secret_access_key",
-        "ssh_authorized_keys",
-        "kubernetes",
-        "networking"
-      ]
-    },
-    "ClusterMeta": {
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "env": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "stage": {
-          "type": "string"
-        },
-        "organization": {
-          "type": "string"
-        },
-        "locked": {
-          "type": "boolean"
-        },
-        "lock_reason": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "name",
-        "env",
-        "region",
-        "status",
-        "stage",
-        "organization"
-      ]
-    },
-    "ClusterNetworkingConfig": {
-      "properties": {
-        "ntp_servers": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "dns_nameservers": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "security": {
-          "$ref": "#/$defs/ClusterSecurityConfig"
-        },
-        "subnet_nodes": {
-          "type": "string",
-          "description": "CIDR block for Kubernetes node network"
-        },
-        "allocation_pool_start": {
-          "type": "string",
-          "description": "Start IP for DHCP allocation pool"
-        },
-        "allocation_pool_end": {
-          "type": "string",
-          "description": "End IP for DHCP allocation pool"
-        },
-        "vrrp_ip": {
-          "type": "string",
-          "description": "Virtual IP for VRRP (Kubernetes API VIP)"
-        },
-        "vrrp_enabled": {
-          "type": "boolean",
-          "description": "Enable VRRP for HA",
-          "default": true
-        },
-        "use_octavia": {
-          "type": "boolean",
-          "description": "Use Octavia load balancer instead of floating IP",
-          "default": false
-        },
-        "loadbalancer_provider": {
-          "type": "string",
-          "description": "Load balancer provider (ovn/octavia/metallb)",
-          "default": "ovn"
-        },
-        "use_designate": {
-          "type": "boolean",
-          "description": "Use OpenStack Designate for DNS",
-          "default": false
-        },
-        "dns_zone_name": {
-          "type": "string",
-          "description": "DNS zone name for Designate"
-        },
-        "vlan": {
-          "$ref": "#/$defs/VLAN"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "ntp_servers",
-        "dns_nameservers",
-        "security",
-        "vrrp_enabled",
-        "use_octavia",
-        "use_designate"
-      ]
-    },
-    "ClusterSecurityConfig": {
-      "properties": {
-        "ca_certificates": {
-          "type": "string"
-        },
-        "os_hardening": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "ca_certificates",
-        "os_hardening"
-      ]
-    },
-    "ConfigMetadata": {
-      "properties": {
         "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
+          "description": "Timestamp when the configuration was created",
+          "format": "date-time",
+          "type": "string"
         },
         "created_by": {
+          "description": "User or system that created the configuration",
+          "minLength": 1,
           "type": "string"
         },
         "tags": {
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Custom tags for categorization and filtering",
           "type": "object"
         },
-        "annotations": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "created_at",
-        "updated_at",
-        "created_by"
-      ]
-    },
-    "Deployment": {
-      "properties": {
-        "auto_deploy": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "auto_deploy"
-      ]
-    },
-    "DesignateConfig": {
-      "properties": {
-        "dns_zone_name": {
+        "updated_at": {
+          "description": "Timestamp when the configuration was last updated",
+          "format": "date-time",
           "type": "string"
         }
       },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "dns_zone_name"
-      ]
-    },
-    "GatewayGlobalConfig": {
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Default gateway name",
-          "default": "rmpk-gateway"
-        },
-        "namespace": {
-          "type": "string",
-          "description": "Default gateway namespace",
-          "default": "rackspace-system"
-        },
-        "class_name": {
-          "type": "string",
-          "description": "Gateway class name",
-          "default": "eg"
-        },
-        "default_issuer": {
-          "type": "string",
-          "description": "Default certificate issuer"
-        }
-      },
-      "additionalProperties": false,
       "type": "object"
     },
-    "GitOpsConfig": {
+    "opencenter": {
+      "description": "Main opencenter configuration section",
       "properties": {
-        "git_dir": {
-          "type": "string"
-        },
-        "git_url": {
-          "type": "string"
-        },
-        "git_ssh_key": {
-          "type": "string"
-        },
-        "git_ssh_pub": {
-          "type": "string"
-        },
-        "git_branch": {
-          "type": "string"
-        },
-        "release": {
-          "type": "string"
-        },
-        "branch": {
-          "type": "string"
-        },
-        "uri": {
-          "type": "string"
-        },
-        "flux": {
-          "$ref": "#/$defs/GitOpsFlux"
-        },
-        "gitops_base_repo": {
-          "type": "string",
-          "description": "URL of the GitOps base repository"
-        },
-        "gitops_base_release": {
-          "type": "string",
-          "description": "Release tag of the GitOps base repository"
-        },
-        "gitops_branch": {
-          "type": "string",
-          "description": "Branch of the GitOps base repository",
-          "default": "main"
-        },
-        "secret_name": {
-          "type": "string",
-          "description": "Name of the GitOps secret for repository access",
-          "default": "opencenter-base"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "git_dir",
-        "git_url"
-      ]
-    },
-    "GitOpsFlux": {
-      "properties": {
-        "interval": {
-          "type": "string"
-        },
-        "prune": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "interval",
-        "prune"
-      ]
-    },
-    "GlobalOIDCConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Enable OIDC authentication",
-          "default": true
-        },
-        "client_id": {
-          "type": "string",
-          "description": "OIDC client ID",
-          "default": "opencenter"
-        },
-        "secret_name": {
-          "type": "string",
-          "description": "OIDC secret name",
-          "default": "gateway-oidc-secret"
-        },
-        "scopes": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "OIDC scopes"
-        },
-        "logout_path": {
-          "type": "string",
-          "description": "OIDC logout path",
-          "default": "/logout"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "GlobalSecrets": {
-      "properties": {
-        "aws": {
-          "$ref": "#/$defs/AWSGlobalSecrets"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "aws"
-      ]
-    },
-    "GrafanaSecrets": {
-      "properties": {
-        "admin_password": {
-          "type": "string",
-          "description": "Grafana admin password"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "admin_password"
-      ]
-    },
-    "HeadlampSecrets": {
-      "properties": {
-        "oidc_client_secret": {
-          "type": "string",
-          "description": "Headlamp OIDC client secret"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "oidc_client_secret"
-      ]
-    },
-    "Infrastructure": {
-      "properties": {
-        "provider": {
-          "type": "string"
-        },
-        "cloud": {
-          "$ref": "#/$defs/CloudConfig"
-        },
-        "ssh_user": {
-          "type": "string"
-        },
-        "ssh_key_path": {
-          "type": "string",
-          "description": "Path to SSH private key for cluster access"
-        },
-        "os_version": {
-          "type": "string"
-        },
-        "server_group_affinity": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "node_naming": {
-          "$ref": "#/$defs/NodeNaming"
-        },
-        "bastion": {
-          "$ref": "#/$defs/BastionConfig"
-        },
-        "k8s_api_ip": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "provider",
-        "cloud",
-        "ssh_user",
-        "os_version",
-        "server_group_affinity",
-        "node_naming",
-        "bastion",
-        "k8s_api_ip"
-      ]
-    },
-    "KeycloakSecrets": {
-      "properties": {
-        "client_secret": {
-          "type": "string",
-          "description": "Keycloak OIDC client secret"
-        },
-        "admin_password": {
-          "type": "string",
-          "description": "Keycloak admin user password"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "client_secret",
-        "admin_password"
-      ]
-    },
-    "KubeOVNConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "cilium_integration": {
-          "type": "boolean"
-        },
-        "modules": {
-          "$ref": "#/$defs/KubeOVNModulesConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled",
-        "cilium_integration",
-        "modules"
-      ]
-    },
-    "KubeOVNModuleConfig": {
-      "properties": {
-        "source": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "source"
-      ]
-    },
-    "KubeOVNModulesConfig": {
-      "properties": {
-        "kube_ovn": {
-          "$ref": "#/$defs/KubeOVNModuleConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "kube_ovn"
-      ]
-    },
-    "KubernetesConfig": {
-      "properties": {
-        "version": {
-          "type": "string"
-        },
-        "kubespray_version": {
-          "type": "string"
-        },
-        "api_port": {
-          "type": "integer"
-        },
-        "kube_vip_enabled": {
-          "type": "boolean"
-        },
-        "kubelet_rotate_server_certificates": {
-          "type": "boolean"
-        },
-        "flavor_bastion": {
-          "type": "string"
-        },
-        "flavor_master": {
-          "type": "string"
-        },
-        "flavor_worker": {
-          "type": "string"
-        },
-        "flavor_worker_windows": {
-          "type": "string"
-        },
-        "subnet_pods": {
-          "type": "string"
-        },
-        "subnet_services": {
-          "type": "string"
-        },
-        "loadbalancer_provider": {
-          "type": "string"
-        },
-        "dns_zone_name": {
-          "type": "string"
-        },
-        "master_count": {
-          "type": "integer"
-        },
-        "worker_count": {
-          "type": "integer"
-        },
-        "worker_count_windows": {
-          "type": "integer"
-        },
-        "master_nodes": {
-          "items": {
-            "$ref": "#/$defs/NodeConfig"
-          },
-          "type": "array"
-        },
-        "worker_nodes": {
-          "items": {
-            "$ref": "#/$defs/NodeConfig"
-          },
-          "type": "array"
-        },
-        "windows_nodes": {
-          "items": {
-            "$ref": "#/$defs/NodeConfig"
-          },
-          "type": "array"
-        },
-        "network_plugin": {
-          "$ref": "#/$defs/NetworkPlugin"
-        },
-        "storage_plugin": {
-          "$ref": "#/$defs/StoragePlugin"
-        },
-        "oidc": {
-          "$ref": "#/$defs/OIDCConfig"
-        },
-        "windows_workers": {
-          "$ref": "#/$defs/WindowsWorkers"
-        },
-        "security": {
-          "$ref": "#/$defs/KubernetesSecurityConfig"
-        },
-        "networking": {
-          "$ref": "#/$defs/Networking"
-        },
-        "modules": {
-          "$ref": "#/$defs/KubernetesModulesConfig"
-        },
-        "additional_server_pools_worker": {
-          "items": {
-            "$ref": "#/$defs/AdditionalServerPool"
-          },
-          "type": "array"
-        },
-        "additional_server_pools_worker_windows": {
-          "items": {
-            "$ref": "#/$defs/AdditionalServerPoolWindows"
-          },
-          "type": "array"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "version",
-        "kubespray_version",
-        "api_port",
-        "kube_vip_enabled",
-        "kubelet_rotate_server_certificates",
-        "flavor_bastion",
-        "flavor_master",
-        "flavor_worker",
-        "flavor_worker_windows",
-        "subnet_pods",
-        "subnet_services",
-        "loadbalancer_provider",
-        "dns_zone_name",
-        "master_count",
-        "worker_count",
-        "worker_count_windows",
-        "network_plugin",
-        "storage_plugin",
-        "oidc",
-        "windows_workers",
-        "security",
-        "networking",
-        "modules"
-      ]
-    },
-    "KubernetesModulesConfig": {
-      "properties": {
-        "kubespray_cluster": {
-          "$ref": "#/$defs/KubesprayClusterModuleConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "kubespray_cluster"
-      ]
-    },
-    "KubernetesSecurityConfig": {
-      "properties": {
-        "k8s_hardening": {
-          "type": "boolean"
-        },
-        "pod_security_exemptions": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "k8s_hardening",
-        "pod_security_exemptions"
-      ]
-    },
-    "KubesprayClusterModuleConfig": {
-      "properties": {
-        "source": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "source"
-      ]
-    },
-    "LokiSecrets": {
-      "properties": {
-        "swift_password": {
-          "type": "string",
-          "description": "Swift storage password (deprecated: use application credentials)"
-        },
-        "swift_application_credential_secret": {
-          "type": "string",
-          "description": "Swift application credential secret"
-        },
-        "s3_access_key_id": {
-          "type": "string",
-          "description": "S3 access key ID"
-        },
-        "s3_secret_access_key": {
-          "type": "string",
-          "description": "S3 secret access key"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "swift_password",
-        "swift_application_credential_secret",
-        "s3_access_key_id",
-        "s3_secret_access_key"
-      ]
-    },
-    "LonghornConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled"
-      ]
-    },
-    "NetworkPlugin": {
-      "properties": {
-        "calico": {
-          "$ref": "#/$defs/CalicoConfig"
-        },
-        "cilium": {
-          "$ref": "#/$defs/CiliumConfig"
-        },
-        "kube-ovn": {
-          "$ref": "#/$defs/KubeOVNConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "calico",
-        "cilium",
-        "kube-ovn"
-      ]
-    },
-    "Networking": {
-      "properties": {
-        "subnet_nodes": {
-          "type": "string"
-        },
-        "allocation_pool_start": {
-          "type": "string"
-        },
-        "allocation_pool_end": {
-          "type": "string"
-        },
-        "vrrp_enabled": {
-          "type": "boolean"
-        },
-        "vrrp_ip": {
-          "type": "string"
-        },
-        "subnet_services": {
-          "type": "string"
-        },
-        "subnet_pods": {
-          "type": "string"
-        },
-        "use_octavia": {
-          "type": "boolean"
-        },
-        "loadbalancer_provider": {
-          "type": "string"
-        },
-        "use_designate": {
-          "type": "boolean"
-        },
-        "dns_zone_name": {
-          "type": "string"
-        },
-        "dns_nameservers": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "ntp_servers": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "vlan": {
-          "$ref": "#/$defs/VLAN"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "subnet_nodes",
-        "allocation_pool_start",
-        "allocation_pool_end",
-        "vrrp_enabled",
-        "vrrp_ip",
-        "subnet_services",
-        "subnet_pods",
-        "use_octavia",
-        "loadbalancer_provider",
-        "use_designate",
-        "dns_zone_name",
-        "dns_nameservers",
-        "ntp_servers",
-        "vlan"
-      ]
-    },
-    "NodeConfig": {
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "access_ip_v4": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "id",
-        "name",
-        "access_ip_v4"
-      ]
-    },
-    "NodeNaming": {
-      "properties": {
-        "worker": {
-          "type": "string"
-        },
-        "master": {
-          "type": "string"
-        },
-        "worker_windows": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "worker",
-        "master",
-        "worker_windows"
-      ]
-    },
-    "OIDCConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "kube_oidc_url": {
-          "type": "string"
-        },
-        "kube_oidc_client_id": {
-          "type": "string"
-        },
-        "kube_oidc_ca_file": {
-          "type": "string"
-        },
-        "kube_oidc_username_claim": {
-          "type": "string"
-        },
-        "kube_oidc_username_prefix": {
-          "type": "string"
-        },
-        "kube_oidc_groups_claim": {
-          "type": "string"
-        },
-        "kube_oidc_groups_prefix": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled",
-        "kube_oidc_url",
-        "kube_oidc_client_id",
-        "kube_oidc_ca_file",
-        "kube_oidc_username_claim",
-        "kube_oidc_username_prefix",
-        "kube_oidc_groups_claim",
-        "kube_oidc_groups_prefix"
-      ]
-    },
-    "OpenCenterSecrets": {
-      "properties": {
-        "backend": {
-          "type": "string"
-        },
-        "barbican": {
-          "$ref": "#/$defs/BarbicanConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "OpenStackModulesConfig": {
-      "properties": {
-        "openstack_nova": {
-          "$ref": "#/$defs/OpenstackNovaModuleConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "openstack_nova"
-      ]
-    },
-    "OpenStackNetworkingConfig": {
-      "properties": {
-        "floating_ip_pool": {
-          "type": "string"
-        },
-        "floating_network_id": {
-          "type": "string"
-        },
-        "network_id": {
-          "type": "string"
-        },
-        "router_external_network_id": {
-          "type": "string"
-        },
-        "subnet_id": {
-          "type": "string"
-        },
-        "designate": {
-          "$ref": "#/$defs/DesignateConfig"
-        },
-        "vlan": {
-          "$ref": "#/$defs/VLAN"
-        },
-        "k8s_api_port_acl": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "CIDR blocks allowed to access Kubernetes API server"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "floating_ip_pool",
-        "floating_network_id",
-        "network_id",
-        "router_external_network_id",
-        "subnet_id",
-        "designate",
-        "vlan",
-        "k8s_api_port_acl"
-      ]
-    },
-    "OpenstackNovaModuleConfig": {
-      "properties": {
-        "source": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "source"
-      ]
-    },
-    "SSHKey": {
-      "properties": {
-        "private": {
-          "type": "string"
-        },
-        "public": {
-          "type": "string"
-        },
-        "cypher": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "private",
-        "public",
-        "cypher"
-      ]
-    },
-    "Secrets": {
-      "properties": {
-        "sops_age_key_file": {
-          "type": "string"
-        },
-        "ssh_key": {
-          "$ref": "#/$defs/SSHKey"
-        },
-        "global": {
-          "$ref": "#/$defs/GlobalSecrets"
-        },
-        "cert_manager": {
-          "$ref": "#/$defs/CertManagerSecrets"
-        },
-        "loki": {
-          "$ref": "#/$defs/LokiSecrets"
-        },
-        "keycloak": {
-          "$ref": "#/$defs/KeycloakSecrets"
-        },
-        "headlamp": {
-          "$ref": "#/$defs/HeadlampSecrets"
-        },
-        "weave_gitops": {
-          "$ref": "#/$defs/WeaveGitOpsSecrets"
-        },
-        "grafana": {
-          "$ref": "#/$defs/GrafanaSecrets"
-        },
-        "tempo": {
-          "$ref": "#/$defs/TempoSecrets"
-        },
-        "alert_proxy": {
-          "$ref": "#/$defs/AlertProxySecrets"
-        },
-        "vsphere_csi": {
-          "$ref": "#/$defs/VSphereCsiSecrets"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "sops_age_key_file",
-        "ssh_key",
-        "global",
-        "cert_manager",
-        "loki",
-        "keycloak",
-        "headlamp",
-        "weave_gitops",
-        "grafana",
-        "tempo",
-        "alert_proxy",
-        "vsphere_csi"
-      ]
-    },
-    "ServiceMap": {
-      "type": "object"
-    },
-    "SimplifiedAWSCloud": {
-      "properties": {
-        "profile": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        },
-        "vpc_id": {
-          "type": "string"
-        },
-        "private_subnets": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "public_subnets": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "profile",
-        "region",
-        "vpc_id",
-        "private_subnets",
-        "public_subnets"
-      ]
-    },
-    "SimplifiedOpenCenter": {
-      "properties": {
-        "meta": {
-          "$ref": "#/$defs/ClusterMeta"
-        },
-        "secrets": {
-          "$ref": "#/$defs/OpenCenterSecrets"
-        },
-        "infrastructure": {
-          "$ref": "#/$defs/Infrastructure"
-        },
         "cluster": {
-          "$ref": "#/$defs/ClusterConfig"
+          "description": "Kubernetes cluster configuration",
+          "properties": {
+            "admin_email": {
+              "default": "admin@example.com",
+              "description": "Administrator email address for certificates and notifications",
+              "format": "email",
+              "type": "string"
+            },
+            "aws_access_key": {
+              "description": "AWS access key for cluster resources",
+              "minLength": 16,
+              "type": "string"
+            },
+            "aws_secret_access_key": {
+              "description": "AWS secret access key for cluster resources",
+              "minLength": 32,
+              "type": "string"
+            },
+            "base_domain": {
+              "default": "k8s.opencenter.cloud",
+              "description": "Base domain for the cluster (e.g. k8s.opencenter.cloud)",
+              "format": "hostname",
+              "type": "string"
+            },
+            "cluster_fqdn": {
+              "description": "Fully qualified domain name for the cluster",
+              "format": "hostname",
+              "type": "string"
+            },
+            "cluster_name": {
+              "description": "Unique cluster name (used for resource naming)",
+              "maxLength": 63,
+              "minLength": 3,
+              "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+              "type": "string"
+            },
+            "k8s_api_port_acl": {
+              "default": [
+                "0.0.0.0/0"
+              ],
+              "description": "CIDR blocks allowed to access Kubernetes API server",
+              "items": {
+                "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "kubernetes": {
+              "description": "Kubernetes cluster settings",
+              "properties": {
+                "additional_server_pools_worker": {
+                  "description": "Additional worker node pools with custom configurations",
+                  "items": {
+                    "additionalProperties": false,
+                    "description": "Configuration for an additional worker node pool",
+                    "properties": {
+                      "additional_block_devices_worker": {
+                        "description": "Additional block devices for this worker pool",
+                        "items": {
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "flavor_worker": {
+                        "description": "Instance flavor/size for this worker pool",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "image_id": {
+                        "description": "OpenStack image ID for this worker pool",
+                        "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                        "type": "string"
+                      },
+                      "image_name": {
+                        "description": "OpenStack image name (alternative to image_id)",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Unique name for this worker pool",
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+                        "type": "string"
+                      },
+                      "node_worker": {
+                        "description": "Node suffix identifier for this worker pool",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "pf9_onboard": {
+                        "default": false,
+                        "description": "Enable Platform9 onboarding for this pool",
+                        "type": "boolean"
+                      },
+                      "server_group_affinity": {
+                        "description": "Server group affinity policy for this worker pool",
+                        "enum": [
+                          "affinity",
+                          "anti-affinity",
+                          "soft-affinity",
+                          "soft-anti-affinity"
+                        ],
+                        "type": "string"
+                      },
+                      "subnet_id": {
+                        "description": "Specific subnet ID for this worker pool (optional)",
+                        "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                        "type": "string"
+                      },
+                      "worker_count": {
+                        "description": "Number of worker nodes in this pool",
+                        "maximum": 100,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "worker_node_bfv_delete_on_termination": {
+                        "default": true,
+                        "description": "Delete boot volume when instance is terminated",
+                        "type": "boolean"
+                      },
+                      "worker_node_bfv_destination_type": {
+                        "default": "volume",
+                        "description": "Boot volume destination type",
+                        "enum": [
+                          "volume",
+                          "local"
+                        ],
+                        "type": "string"
+                      },
+                      "worker_node_bfv_source_type": {
+                        "default": "image",
+                        "description": "Boot volume source type",
+                        "enum": [
+                          "image",
+                          "volume",
+                          "snapshot"
+                        ],
+                        "type": "string"
+                      },
+                      "worker_node_bfv_volume_size": {
+                        "default": 40,
+                        "description": "Boot volume size in GB",
+                        "maximum": 1000,
+                        "minimum": 10,
+                        "type": "integer"
+                      },
+                      "worker_node_bfv_volume_type": {
+                        "description": "Boot volume type (e.g., HA-Standard, HA-Performance)",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "worker_count",
+                      "flavor_worker",
+                      "node_worker"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "additional_server_pools_worker_windows": {
+                  "description": "Additional Windows worker node pools with custom configurations",
+                  "items": {
+                    "additionalProperties": false,
+                    "description": "Configuration for an additional Windows worker node pool",
+                    "properties": {
+                      "flavor_worker": {
+                        "description": "Instance flavor/size for this Windows worker pool",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "image_id": {
+                        "description": "OpenStack Windows image ID for this worker pool",
+                        "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Unique name for this Windows worker pool",
+                        "minLength": 1,
+                        "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+                        "type": "string"
+                      },
+                      "node_worker": {
+                        "description": "Node suffix identifier for this Windows worker pool",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "server_group_affinity": {
+                        "description": "Server group affinity policy for this Windows worker pool",
+                        "enum": [
+                          "affinity",
+                          "anti-affinity",
+                          "soft-affinity",
+                          "soft-anti-affinity"
+                        ],
+                        "type": "string"
+                      },
+                      "worker_count": {
+                        "description": "Number of Windows worker nodes in this pool",
+                        "maximum": 50,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "worker_count",
+                      "flavor_worker",
+                      "node_worker"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "dns_zone_name": {
+                  "description": "DNS zone name for cluster services",
+                  "format": "hostname",
+                  "type": "string"
+                },
+                "flavor_bastion": {
+                  "description": "Instance flavor/size for bastion host",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "flavor_master": {
+                  "description": "Instance flavor/size for control plane nodes",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "flavor_worker": {
+                  "description": "Instance flavor/size for worker nodes",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "loadbalancer_provider": {
+                  "default": "ovn",
+                  "description": "Load balancer provider",
+                  "enum": [
+                    "ovn",
+                    "octavia",
+                    "metallb",
+                    "none"
+                  ],
+                  "type": "string"
+                },
+                "master_count": {
+                  "default": 3,
+                  "description": "Number of control plane nodes",
+                  "maximum": 9,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "master_nodes": {
+                  "description": "Pre-configured master/control plane nodes for baremetal deployments",
+                  "items": {
+                    "description": "Baremetal node configuration",
+                    "properties": {
+                      "access_ip_v4": {
+                        "description": "IPv4 address for accessing the node",
+                        "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "Unique identifier for the node",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Hostname or name of the node",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "access_ip_v4"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "network_plugin": {
+                  "description": "Kubernetes network plugin (CNI) configuration. Only one plugin should be enabled at a time.",
+                  "oneOf": [
+                    {
+                      "properties": {
+                        "calico": {
+                          "properties": {
+                            "enabled": {
+                              "const": true
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "cilium": {
+                          "properties": {
+                            "enabled": {
+                              "const": true
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "kube-ovn": {
+                          "properties": {
+                            "enabled": {
+                              "const": true
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "calico": {
+                          "properties": {
+                            "enabled": {
+                              "const": false
+                            }
+                          }
+                        },
+                        "cilium": {
+                          "properties": {
+                            "enabled": {
+                              "const": false
+                            }
+                          }
+                        },
+                        "kube-ovn": {
+                          "properties": {
+                            "enabled": {
+                              "const": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "properties": {
+                    "calico": {
+                      "description": "Calico CNI configuration",
+                      "properties": {
+                        "calico_interface_autodetect": {
+                          "default": "interface",
+                          "description": "Interface autodetection method",
+                          "enum": [
+                            "interface",
+                            "can-reach",
+                            "skip-interface",
+                            "cidr"
+                          ],
+                          "type": "string"
+                        },
+                        "cni_iface": {
+                          "description": "Network interface name for Calico CNI",
+                          "examples": [
+                            "enp3s0",
+                            "eth0",
+                            "ens3"
+                          ],
+                          "pattern": "^[a-zA-Z0-9]+$",
+                          "type": "string"
+                        },
+                        "enabled": {
+                          "default": false,
+                          "description": "Enable Calico as the CNI plugin",
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "cilium": {
+                      "description": "Cilium CNI configuration",
+                      "properties": {
+                        "enabled": {
+                          "default": false,
+                          "description": "Enable Cilium as the CNI plugin",
+                          "type": "boolean"
+                        },
+                        "kubeProxyReplacement": {
+                          "default": true,
+                          "description": "Replace kube-proxy with Cilium's eBPF implementation",
+                          "type": "boolean"
+                        },
+                        "operator_enabled": {
+                          "default": true,
+                          "description": "Enable Cilium operator for advanced features",
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "kube-ovn": {
+                      "description": "Kube-OVN CNI configuration",
+                      "properties": {
+                        "cilium_integration": {
+                          "default": true,
+                          "description": "Enable Cilium integration for advanced networking features",
+                          "type": "boolean"
+                        },
+                        "enabled": {
+                          "default": false,
+                          "description": "Enable Kube-OVN as the CNI plugin",
+                          "type": "boolean"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                },
+                "oidc": {
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "kube_oidc_ca_file": {
+                      "type": "string"
+                    },
+                    "kube_oidc_client_id": {
+                      "type": "string"
+                    },
+                    "kube_oidc_groups_claim": {
+                      "type": "string"
+                    },
+                    "kube_oidc_groups_prefix": {
+                      "type": "string"
+                    },
+                    "kube_oidc_url": {
+                      "type": "string"
+                    },
+                    "kube_oidc_username_claim": {
+                      "type": "string"
+                    },
+                    "kube_oidc_username_prefix": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "subnet_pods": {
+                  "default": "10.42.0.0/16",
+                  "description": "CIDR block for pod network",
+                  "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+                  "type": "string"
+                },
+                "subnet_services": {
+                  "default": "10.43.0.0/16",
+                  "description": "CIDR block for service network",
+                  "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+                  "type": "string"
+                },
+                "version": {
+                  "description": "Kubernetes version",
+                  "examples": [
+                    "1.31.4",
+                    "1.30.0",
+                    "1.29.2"
+                  ],
+                  "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+                  "type": "string"
+                },
+                "windows_workers": {
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "windows_admin_password": {
+                      "type": "string"
+                    },
+                    "windows_user": {
+                      "type": "string"
+                    },
+                    "worker_node_bfv_size_windows": {
+                      "type": "integer"
+                    },
+                    "worker_node_bfv_type_windows": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "worker_count": {
+                  "default": 2,
+                  "description": "Number of worker nodes",
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "worker_count_windows": {
+                  "default": 0,
+                  "description": "Number of Windows worker nodes",
+                  "maximum": 50,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "worker_nodes": {
+                  "description": "Pre-configured worker nodes for baremetal deployments",
+                  "items": {
+                    "description": "Baremetal node configuration",
+                    "properties": {
+                      "access_ip_v4": {
+                        "description": "IPv4 address for accessing the node",
+                        "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "Unique identifier for the node",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Hostname or name of the node",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "access_ip_v4"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "version",
+                "master_count",
+                "worker_count"
+              ],
+              "type": "object"
+            },
+            "ssh_authorized_keys": {
+              "description": "SSH public keys for node access",
+              "items": {
+                "minLength": 100,
+                "pattern": "^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521) ",
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          "required": [
+            "cluster_name",
+            "kubernetes"
+          ],
+          "type": "object"
         },
         "gitops": {
-          "$ref": "#/$defs/GitOpsConfig"
+          "description": "GitOps repository configuration for cluster manifests",
+          "properties": {
+            "branch": {
+              "description": "Git branch for GitOps base (mutually exclusive with release)",
+              "pattern": "^[a-zA-Z0-9/_-]+$",
+              "type": "string"
+            },
+            "flux": {
+              "description": "FluxCD reconciliation settings",
+              "properties": {
+                "interval": {
+                  "default": "15m",
+                  "description": "Reconciliation interval (e.g., 15m, 1h)",
+                  "pattern": "^[0-9]+(s|m|h)$",
+                  "type": "string"
+                },
+                "prune": {
+                  "default": true,
+                  "description": "Enable pruning of resources not in Git",
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "git_branch": {
+              "default": "main",
+              "description": "Git branch for GitOps repository",
+              "pattern": "^[a-zA-Z0-9/_-]+$",
+              "type": "string"
+            },
+            "git_dir": {
+              "description": "Local directory path for GitOps repository",
+              "minLength": 1,
+              "type": "string"
+            },
+            "git_ssh_key": {
+              "description": "Path to SSH private key for Git authentication",
+              "pattern": "^[~./].*",
+              "type": "string"
+            },
+            "git_ssh_pub": {
+              "description": "Path to SSH public key for Git authentication",
+              "pattern": "^[~./].*",
+              "type": "string"
+            },
+            "git_url": {
+              "description": "Git repository URL (SSH or HTTPS)",
+              "pattern": "^(https?://|git@|ssh://)",
+              "type": "string"
+            },
+            "gitops_base_release": {
+              "default": "v0.1.0",
+              "description": "Release tag of the GitOps base repository",
+              "pattern": "^[a-zA-Z0-9._-]+$",
+              "type": "string"
+            },
+            "gitops_base_repo": {
+              "default": "ssh://git@github.com/rackerlabs/opencenter-gitops-base.git",
+              "description": "URL of the GitOps base repository",
+              "pattern": "^(https?://|git@|ssh://)",
+              "type": "string"
+            },
+            "gitops_branch": {
+              "default": "main",
+              "description": "Branch of the GitOps base repository",
+              "pattern": "^[a-zA-Z0-9/_-]+$",
+              "type": "string"
+            },
+            "release": {
+              "description": "GitOps base release version (mutually exclusive with branch)",
+              "pattern": "^[a-zA-Z0-9._-]+$",
+              "type": "string"
+            },
+            "uri": {
+              "description": "Git repository URI for GitOps base",
+              "pattern": "^(https?://|git@|ssh://)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "git_dir"
+          ],
+          "type": "object"
         },
-        "gateway": {
-          "$ref": "#/$defs/GatewayGlobalConfig"
-        },
-        "oidc": {
-          "$ref": "#/$defs/GlobalOIDCConfig"
-        },
-        "storage": {
-          "$ref": "#/$defs/StorageConfig"
-        },
-        "talos": {
-          "$ref": "#/$defs/TalosConfig"
+        "infrastructure": {
+          "description": "Infrastructure provider configuration",
+          "properties": {
+            "bastion": {
+              "description": "Bastion host configuration for baremetal deployments",
+              "properties": {
+                "address": {
+                  "default": "localhost",
+                  "description": "Bastion host address (defaults to localhost for baremetal)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "cloud": {
+              "description": "Cloud provider specific configuration",
+              "properties": {
+                "aws": {
+                  "description": "AWS cloud provider configuration",
+                  "properties": {
+                    "private_subnets": {
+                      "description": "List of private subnet IDs",
+                      "items": {
+                        "pattern": "^subnet-[a-f0-9]{8,17}$",
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "profile": {
+                      "description": "AWS CLI profile name",
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "public_subnets": {
+                      "description": "List of public subnet IDs",
+                      "items": {
+                        "pattern": "^subnet-[a-f0-9]{8,17}$",
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "region": {
+                      "description": "AWS region",
+                      "examples": [
+                        "us-east-1",
+                        "us-west-2",
+                        "eu-west-1"
+                      ],
+                      "pattern": "^[a-z]{2}-[a-z]+-[0-9]{1}$",
+                      "type": "string"
+                    },
+                    "vpc_id": {
+                      "description": "VPC ID for cluster deployment",
+                      "pattern": "^vpc-[a-f0-9]{8,17}$",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "openstack": {
+                  "description": "OpenStack cloud provider configuration",
+                  "properties": {
+                    "application_credential_id": {
+                      "description": "OpenStack application credential ID",
+                      "minLength": 32,
+                      "type": "string"
+                    },
+                    "application_credential_secret": {
+                      "description": "OpenStack application credential secret",
+                      "minLength": 32,
+                      "type": "string"
+                    },
+                    "auth_url": {
+                      "description": "OpenStack Keystone authentication URL",
+                      "format": "uri",
+                      "pattern": "^https?://",
+                      "type": "string"
+                    },
+                    "domain": {
+                      "default": "Default",
+                      "description": "OpenStack domain name",
+                      "type": "string"
+                    },
+                    "floating_network_id": {
+                      "description": "External network ID for floating IPs",
+                      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                      "type": "string"
+                    },
+                    "insecure": {
+                      "default": false,
+                      "description": "Skip TLS certificate verification (not recommended for production)",
+                      "type": "boolean"
+                    },
+                    "region": {
+                      "description": "OpenStack region name",
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "subnet_id": {
+                      "description": "Subnet ID for cluster network",
+                      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                      "type": "string"
+                    },
+                    "tenant_name": {
+                      "description": "OpenStack project/tenant name or ID",
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "k8s_api_ip": {
+              "description": "Kubernetes API server IP address",
+              "format": "ipv4",
+              "type": "string"
+            },
+            "provider": {
+              "default": "openstack",
+              "description": "Cloud provider type",
+              "enum": [
+                "openstack",
+                "aws",
+                "vmware",
+                "kind",
+                "baremetal"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider"
+          ],
+          "type": "object"
         },
         "managed-service": {
-          "$ref": "#/$defs/ServiceMap"
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "branch": {
+                "description": "Git branch for this service (mutually exclusive with release)",
+                "pattern": "^[a-zA-Z0-9/_-]+$",
+                "type": "string"
+              },
+              "enabled": {
+                "default": false,
+                "description": "Enable or disable this service",
+                "type": "boolean"
+              },
+              "release": {
+                "description": "Release version or tag for this service (mutually exclusive with branch)",
+                "pattern": "^[a-zA-Z0-9._-]+$",
+                "type": "string"
+              },
+              "status": {
+                "description": "Service deployment status",
+                "enum": [
+                  "pending",
+                  "running",
+                  "success",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              "uri": {
+                "description": "Git repository URI for this service",
+                "pattern": "^(https?://|git@|ssh://)",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "properties": {
+            "alert-proxy": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "meta": {
+          "description": "Cluster metadata and organizational information",
+          "properties": {
+            "env": {
+              "description": "Environment designation",
+              "enum": [
+                "dev",
+                "stage",
+                "prod",
+                "test",
+                ""
+              ],
+              "type": "string"
+            },
+            "name": {
+              "description": "Cluster name (must match cluster_name in cluster section)",
+              "maxLength": 63,
+              "minLength": 3,
+              "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+              "type": "string"
+            },
+            "organization": {
+              "default": "opencenter",
+              "description": "Organization name for multi-tenant deployments",
+              "maxLength": 63,
+              "minLength": 1,
+              "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+              "type": "string"
+            },
+            "region": {
+              "description": "Deployment region",
+              "minLength": 1,
+              "type": "string"
+            },
+            "status": {
+              "description": "Cluster status",
+              "enum": [
+                "active",
+                "inactive",
+                "maintenance",
+                ""
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
         },
         "services": {
-          "$ref": "#/$defs/ServiceMap"
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "branch": {
+                "description": "Git branch for this service (mutually exclusive with release)",
+                "pattern": "^[a-zA-Z0-9/_-]+$",
+                "type": "string"
+              },
+              "enabled": {
+                "default": false,
+                "description": "Enable or disable this service",
+                "type": "boolean"
+              },
+              "release": {
+                "description": "Release version or tag for this service (mutually exclusive with branch)",
+                "pattern": "^[a-zA-Z0-9._-]+$",
+                "type": "string"
+              },
+              "status": {
+                "description": "Service deployment status",
+                "enum": [
+                  "pending",
+                  "running",
+                  "success",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              "uri": {
+                "description": "Git repository URI for this service",
+                "pattern": "^(https?://|git@|ssh://)",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "properties": {
+            "calico": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for Calico (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable Calico CNI service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Calico release version (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for Calico",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "cert-manager": {
+              "additionalProperties": false,
+              "properties": {
+                "aws_access_key": {
+                  "description": "AWS access key for cert-manager DNS validation",
+                  "minLength": 16,
+                  "type": "string"
+                },
+                "aws_secret_access_key": {
+                  "description": "AWS secret access key for cert-manager DNS validation",
+                  "minLength": 32,
+                  "type": "string"
+                },
+                "branch": {
+                  "description": "Git branch for cert-manager (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "email": {
+                  "description": "Email address for Let's Encrypt certificate notifications",
+                  "format": "email",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable cert-manager for automatic TLS certificate management",
+                  "type": "boolean"
+                },
+                "region": {
+                  "description": "AWS region for Route53 DNS validation",
+                  "pattern": "^[a-z]{2}-[a-z]+-[0-9]{1}$",
+                  "type": "string"
+                },
+                "release": {
+                  "description": "Cert-manager release version (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for cert-manager",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "etcd-backup": {
+              "additionalProperties": false,
+              "properties": {
+                "aws_access_key": {
+                  "description": "AWS access key for S3 backup storage",
+                  "minLength": 16,
+                  "type": "string"
+                },
+                "aws_secret_access_key": {
+                  "description": "AWS secret access key for S3 backup storage",
+                  "minLength": 32,
+                  "type": "string"
+                },
+                "branch": {
+                  "description": "Git branch for etcd-backup (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable automated etcd backups to S3",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Etcd-backup release version (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "s3_host": {
+                  "description": "S3-compatible storage endpoint URL",
+                  "format": "uri",
+                  "type": "string"
+                },
+                "s3_region": {
+                  "description": "S3 region for backup storage",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for etcd-backup",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "external-snapshotter": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "fluxcd": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "gateway": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "gateway-api": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "headlamp": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "keycloak": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "kube-prometheus-stack": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "kyverno": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "loki": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for Loki (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable Loki logging service",
+                  "type": "boolean"
+                },
+                "loki_bucket_name": {
+                  "description": "Loki storage bucket/container name",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "loki_s3_endpoint": {
+                  "description": "S3 endpoint URL for Loki storage",
+                  "format": "uri",
+                  "type": "string"
+                },
+                "loki_s3_force_path_style": {
+                  "default": false,
+                  "description": "Force S3 path style for Loki storage",
+                  "type": "boolean"
+                },
+                "loki_s3_insecure": {
+                  "default": false,
+                  "description": "Allow insecure S3 connections for Loki",
+                  "type": "boolean"
+                },
+                "loki_s3_region": {
+                  "description": "S3 region for Loki storage",
+                  "pattern": "^[a-z]{2}-[a-z]+-[0-9]{1}$",
+                  "type": "string"
+                },
+                "loki_storage_class": {
+                  "description": "Loki storage class for persistent volumes",
+                  "type": "string"
+                },
+                "loki_storage_type": {
+                  "default": "swift",
+                  "description": "Loki storage backend type",
+                  "enum": [
+                    "s3",
+                    "swift"
+                  ],
+                  "type": "string"
+                },
+                "loki_volume_size": {
+                  "default": 10,
+                  "description": "Loki persistent volume size in GB",
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "release": {
+                  "description": "Release version or tag for Loki (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "swift_application_credential_id": {
+                  "description": "Swift application credential ID (UUID)",
+                  "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                  "type": "string"
+                },
+                "swift_auth_url": {
+                  "description": "Swift Keystone V3 authentication URL (must end in /v3)",
+                  "format": "uri",
+                  "pattern": "^https?://.*",
+                  "type": "string"
+                },
+                "swift_auth_version": {
+                  "default": 3,
+                  "description": "Swift authentication version",
+                  "enum": [
+                    2,
+                    3
+                  ],
+                  "type": "integer"
+                },
+                "swift_container_name": {
+                  "description": "Swift container name for Loki logs",
+                  "type": "string"
+                },
+                "swift_region": {
+                  "description": "Swift region name",
+                  "type": "string"
+                },
+                "swift_user_domain_name": {
+                  "description": "Swift user domain name",
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for Loki",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "olm": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "opencenter_release": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "openstack-ccm": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "openstack-csi": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "postgres-operator": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "rbac-manager": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "sources": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "velero": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for Velero (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable Velero backup service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for Velero (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "storage_type": {
+                  "default": "s3",
+                  "description": "Velero storage backend type",
+                  "enum": [
+                    "s3",
+                    "swift",
+                    "gcs",
+                    "azure"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for Velero",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                },
+                "velero_backup_bucket": {
+                  "description": "Velero backup bucket name",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "velero_region": {
+                  "description": "Velero backup region",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "vsphere-csi": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "weave-gitops": {
+              "additionalProperties": false,
+              "properties": {
+                "branch": {
+                  "description": "Git branch for this service (mutually exclusive with release)",
+                  "pattern": "^[a-zA-Z0-9/_-]+$",
+                  "type": "string"
+                },
+                "enabled": {
+                  "default": false,
+                  "description": "Enable or disable this service",
+                  "type": "boolean"
+                },
+                "release": {
+                  "description": "Release version or tag for this service (mutually exclusive with branch)",
+                  "pattern": "^[a-zA-Z0-9._-]+$",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "Service deployment status",
+                  "enum": [
+                    "pending",
+                    "running",
+                    "success",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                "uri": {
+                  "description": "Git repository URI for this service",
+                  "pattern": "^(https?://|git@|ssh://)",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "storage": {
+          "description": "Storage configuration for the cluster",
+          "properties": {
+            "default_storage_class": {
+              "default": "csi-cinder-sc-delete",
+              "description": "Default storage class for persistent volumes",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "talos": {
+          "description": "Talos Linux provider configuration for immutable Kubernetes clusters",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "description": "Enable Talos Linux provider",
+              "type": "boolean"
+            },
+            "image_signature": {
+              "description": "Cryptographic signature of Talos image",
+              "minLength": 64,
+              "type": "string"
+            },
+            "image_url": {
+              "description": "URL to Talos Linux image",
+              "format": "uri",
+              "type": "string"
+            },
+            "machine_config": {
+              "description": "Talos machine configuration settings",
+              "properties": {
+                "apparmor_enabled": {
+                  "default": true,
+                  "description": "Enable AppArmor security profiles",
+                  "type": "boolean"
+                },
+                "disk_encryption": {
+                  "default": true,
+                  "description": "Enable disk encryption with LUKS",
+                  "type": "boolean"
+                },
+                "kubeprism_enabled": {
+                  "default": true,
+                  "description": "Enable KubePrism for internal load balancing",
+                  "type": "boolean"
+                },
+                "log_destination": {
+                  "description": "Destination for Talos system logs",
+                  "format": "uri",
+                  "type": "string"
+                },
+                "seccomp_enabled": {
+                  "default": true,
+                  "description": "Enable Seccomp security profiles",
+                  "type": "boolean"
+                },
+                "system_extensions": {
+                  "description": "List of Talos system extensions to install",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            },
+            "network_config": {
+              "description": "Network topology settings",
+              "properties": {
+                "allowed_cidrs": {
+                  "description": "List of CIDRs allowed to access cluster",
+                  "items": {
+                    "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "control_subnet": {
+                  "default": "10.0.2.0/24",
+                  "description": "CIDR for control plane network",
+                  "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+                  "type": "string"
+                },
+                "data_subnet": {
+                  "default": "10.0.3.0/24",
+                  "description": "CIDR for data plane network",
+                  "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+                  "type": "string"
+                },
+                "management_subnet": {
+                  "default": "10.0.1.0/24",
+                  "description": "CIDR for management network",
+                  "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+                  "type": "string"
+                },
+                "talos_api_port": {
+                  "default": 50000,
+                  "description": "TCP port for Talos API",
+                  "maximum": 65535,
+                  "minimum": 1024,
+                  "type": "integer"
+                },
+                "wireguard_port": {
+                  "default": 51820,
+                  "description": "UDP port for WireGuard VPN",
+                  "maximum": 65535,
+                  "minimum": 1024,
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "pulumi_config": {
+              "description": "Pulumi-specific settings",
+              "properties": {
+                "secrets_passphrase": {
+                  "description": "Passphrase for Pulumi secrets provider (should be SOPS encrypted)",
+                  "minLength": 32,
+                  "type": "string"
+                },
+                "stack_name": {
+                  "description": "Pulumi stack name",
+                  "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+                  "type": "string"
+                },
+                "swift_container": {
+                  "description": "Swift container for Pulumi state",
+                  "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+                  "type": "string"
+                },
+                "swift_prefix": {
+                  "description": "Swift prefix for state isolation",
+                  "pattern": "^[a-z0-9][a-z0-9-/]*[a-z0-9]$",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "security_config": {
+              "description": "Security-related settings",
+              "properties": {
+                "audit_log_enabled": {
+                  "default": true,
+                  "description": "Enable audit logging",
+                  "type": "boolean"
+                },
+                "barbican_key_id": {
+                  "description": "Barbican key ID for encryption",
+                  "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                  "type": "string"
+                },
+                "image_verification": {
+                  "default": true,
+                  "description": "Enable cryptographic image verification",
+                  "type": "boolean"
+                },
+                "mfa_required": {
+                  "default": true,
+                  "description": "Require MFA for administrative access",
+                  "type": "boolean"
+                },
+                "vtpm_enabled": {
+                  "default": true,
+                  "description": "Enable vTPM for hardware-backed encryption",
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "version": {
+              "description": "Talos Linux version",
+              "examples": [
+                "v1.8.0",
+                "v1.7.0"
+              ],
+              "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "type": "string"
+            }
+          },
+          "type": "object"
         }
       },
-      "additionalProperties": false,
-      "type": "object",
       "required": [
         "meta",
         "infrastructure",
         "cluster",
-        "gitops",
-        "managed-service",
-        "services"
-      ]
-    },
-    "SimplifiedOpenStackCloud": {
-      "properties": {
-        "auth_url": {
-          "type": "string"
-        },
-        "insecure": {
-          "type": "boolean"
-        },
-        "region": {
-          "type": "string"
-        },
-        "application_credential_id": {
-          "type": "string"
-        },
-        "application_credential_secret": {
-          "type": "string"
-        },
-        "domain": {
-          "type": "string"
-        },
-        "tenant_name": {
-          "type": "string"
-        },
-        "availability_zone": {
-          "type": "string"
-        },
-        "project_domain_name": {
-          "type": "string"
-        },
-        "user_domain_name": {
-          "type": "string"
-        },
-        "ca": {
-          "type": "string"
-        },
-        "image_id": {
-          "type": "string"
-        },
-        "image_id_windows": {
-          "type": "string"
-        },
-        "networking": {
-          "$ref": "#/$defs/OpenStackNetworkingConfig"
-        },
-        "modules": {
-          "$ref": "#/$defs/OpenStackModulesConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "auth_url",
-        "insecure",
-        "region",
-        "application_credential_id",
-        "application_credential_secret",
-        "domain",
-        "tenant_name",
-        "availability_zone",
-        "project_domain_name",
-        "user_domain_name",
-        "ca",
-        "image_id",
-        "image_id_windows",
-        "networking",
-        "modules"
-      ]
-    },
-    "SimplifiedOpenTofu": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "path": {
-          "type": "string"
-        },
-        "backend": {
-          "$ref": "#/$defs/SimplifiedTofuBackend"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled",
-        "path",
-        "backend"
-      ]
-    },
-    "SimplifiedTofuBackend": {
-      "properties": {
-        "type": {
-          "type": "string"
-        },
-        "local": {
-          "$ref": "#/$defs/SimplifiedTofuLocal"
-        },
-        "s3": {
-          "$ref": "#/$defs/SimplifiedTofuS3"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "type"
-      ]
-    },
-    "SimplifiedTofuLocal": {
-      "properties": {
-        "path": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "path"
-      ]
-    },
-    "SimplifiedTofuS3": {
-      "properties": {
-        "bucket": {
-          "type": "string"
-        },
-        "key": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        },
-        "endpoint": {
-          "type": "string"
-        },
-        "profile": {
-          "type": "string"
-        },
-        "encrypt": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "bucket",
-        "key",
-        "region"
-      ]
-    },
-    "StorageConfig": {
-      "properties": {
-        "default_storage_class": {
-          "type": "string",
-          "description": "Default storage class for persistent volumes",
-          "default": "csi-cinder-sc-delete"
-        },
-        "worker_volume_size": {
-          "type": "integer",
-          "description": "Worker node boot volume size in GB",
-          "default": 40
-        },
-        "worker_volume_destination_type": {
-          "type": "string",
-          "description": "Worker node boot volume destination type",
-          "default": "volume"
-        },
-        "worker_volume_source_type": {
-          "type": "string",
-          "description": "Worker node boot volume source type",
-          "default": "image"
-        },
-        "worker_volume_type": {
-          "type": "string",
-          "description": "Worker node boot volume type",
-          "default": "HA-Standard"
-        },
-        "additional_block_devices": {
-          "items": {
-            "type": "object"
-          },
-          "type": "array",
-          "description": "Additional block devices for worker nodes"
-        }
-      },
-      "additionalProperties": false,
+        "gitops"
+      ],
       "type": "object"
-    },
-    "StoragePlugin": {
-      "properties": {
-        "vsphere": {
-          "$ref": "#/$defs/VsphereConfig"
-        },
-        "cinder": {
-          "$ref": "#/$defs/CinderConfig"
-        },
-        "longhorn": {
-          "$ref": "#/$defs/LonghornConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "vsphere",
-        "cinder",
-        "longhorn"
-      ]
-    },
-    "TalosConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Enable Talos Linux provider"
-        },
-        "version": {
-          "type": "string",
-          "description": "Talos Linux version"
-        },
-        "image_url": {
-          "type": "string",
-          "description": "URL to Talos Linux image"
-        },
-        "image_signature": {
-          "type": "string",
-          "description": "Cryptographic signature of Talos image"
-        },
-        "machine_config": {
-          "$ref": "#/$defs/TalosMachineConfig"
-        },
-        "network_config": {
-          "$ref": "#/$defs/TalosNetworkConfig"
-        },
-        "security_config": {
-          "$ref": "#/$defs/TalosSecurityConfig"
-        },
-        "pulumi_config": {
-          "$ref": "#/$defs/TalosPulumiConfig"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled",
-        "version",
-        "image_url",
-        "image_signature",
-        "machine_config",
-        "network_config",
-        "security_config",
-        "pulumi_config"
-      ]
-    },
-    "TalosMachineConfig": {
-      "properties": {
-        "apparmor_enabled": {
-          "type": "boolean",
-          "description": "Enable AppArmor security profiles",
-          "default": true
-        },
-        "seccomp_enabled": {
-          "type": "boolean",
-          "description": "Enable Seccomp security profiles",
-          "default": true
-        },
-        "disk_encryption": {
-          "type": "boolean",
-          "description": "Enable disk encryption with LUKS",
-          "default": true
-        },
-        "kubeprism_enabled": {
-          "type": "boolean",
-          "description": "Enable KubePrism for internal load balancing",
-          "default": true
-        },
-        "system_extensions": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of Talos system extensions to install"
-        },
-        "log_destination": {
-          "type": "string",
-          "description": "Destination for Talos system logs"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "apparmor_enabled",
-        "seccomp_enabled",
-        "disk_encryption",
-        "kubeprism_enabled"
-      ]
-    },
-    "TalosNetworkConfig": {
-      "properties": {
-        "management_subnet": {
-          "type": "string",
-          "description": "CIDR for management network",
-          "default": "10.0.1.0/24"
-        },
-        "control_subnet": {
-          "type": "string",
-          "description": "CIDR for control plane network",
-          "default": "10.0.2.0/24"
-        },
-        "data_subnet": {
-          "type": "string",
-          "description": "CIDR for data plane network",
-          "default": "10.0.3.0/24"
-        },
-        "wireguard_port": {
-          "type": "integer",
-          "description": "UDP port for WireGuard VPN",
-          "default": 51820
-        },
-        "talos_api_port": {
-          "type": "integer",
-          "description": "TCP port for Talos API",
-          "default": 50000
-        },
-        "allowed_cidrs": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of CIDRs allowed to access cluster"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "management_subnet",
-        "control_subnet",
-        "data_subnet",
-        "wireguard_port",
-        "talos_api_port"
-      ]
-    },
-    "TalosPulumiConfig": {
-      "properties": {
-        "stack_name": {
-          "type": "string",
-          "description": "Pulumi stack name"
-        },
-        "swift_container": {
-          "type": "string",
-          "description": "Swift container for Pulumi state"
-        },
-        "swift_prefix": {
-          "type": "string",
-          "description": "Swift prefix for state isolation"
-        },
-        "secrets_passphrase": {
-          "type": "string",
-          "description": "Passphrase for Pulumi secrets provider"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "stack_name",
-        "swift_container"
-      ]
-    },
-    "TalosSecurityConfig": {
-      "properties": {
-        "vtpm_enabled": {
-          "type": "boolean",
-          "description": "Enable vTPM for hardware-backed encryption",
-          "default": true
-        },
-        "barbican_key_id": {
-          "type": "string",
-          "description": "Barbican key ID for encryption"
-        },
-        "image_verification": {
-          "type": "boolean",
-          "description": "Enable cryptographic image verification",
-          "default": true
-        },
-        "mfa_required": {
-          "type": "boolean",
-          "description": "Require MFA for administrative access",
-          "default": true
-        },
-        "audit_log_enabled": {
-          "type": "boolean",
-          "description": "Enable audit logging",
-          "default": true
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "vtpm_enabled",
-        "image_verification",
-        "mfa_required",
-        "audit_log_enabled"
-      ]
-    },
-    "TempoSecrets": {
-      "properties": {
-        "access_key": {
-          "type": "string",
-          "description": "Tempo S3 access key"
-        },
-        "secret_key": {
-          "type": "string",
-          "description": "Tempo S3 secret key"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "access_key",
-        "secret_key"
-      ]
-    },
-    "VLAN": {
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "VLAN ID"
-        },
-        "mtu": {
-          "type": "integer",
-          "description": "MTU size for VLAN",
-          "default": 1500
-        },
-        "provider": {
-          "type": "string",
-          "description": "Network provider",
-          "default": "physnet1"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
-    },
-    "VSphereCsiSecrets": {
-      "properties": {
-        "vcenter_host": {
-          "type": "string",
-          "description": "vCenter server hostname or IP address"
-        },
-        "username": {
-          "type": "string",
-          "description": "vCenter username"
-        },
-        "password": {
-          "type": "string",
-          "description": "vCenter password"
-        },
-        "datacenters": {
-          "type": "string",
-          "description": "Comma-separated list of datacenters"
-        },
-        "insecure_flag": {
-          "type": "string",
-          "description": "Skip SSL certificate verification (true/false)"
-        },
-        "port": {
-          "type": "string",
-          "description": "vCenter port (default: 443)"
-        },
-        "datastoreurl": {
-          "type": "string",
-          "description": "Datastore URL for vSphere CSI storage class"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "vcenter_host",
-        "username",
-        "password",
-        "datacenters",
-        "insecure_flag",
-        "port",
-        "datastoreurl"
-      ]
-    },
-    "VsphereConfig": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled"
-      ]
-    },
-    "WeaveGitOpsSecrets": {
-      "properties": {
-        "password": {
-          "type": "string",
-          "description": "Weave GitOps admin password"
-        },
-        "password_hash": {
-          "type": "string",
-          "description": "Weave GitOps admin password hash (bcrypt)"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "password",
-        "password_hash"
-      ]
-    },
-    "WindowsWorkers": {
-      "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "windows_user": {
-          "type": "string"
-        },
-        "windows_admin_password": {
-          "type": "string"
-        },
-        "worker_node_bfv_size_windows": {
-          "type": "integer"
-        },
-        "worker_node_bfv_type_windows": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "enabled",
-        "windows_user",
-        "windows_admin_password",
-        "worker_node_bfv_size_windows",
-        "worker_node_bfv_type_windows"
-      ]
-    }
-  },
-  "properties": {
-    "schema_version": {
-      "type": "string"
-    },
-    "metadata": {
-      "$ref": "#/$defs/ConfigMetadata"
-    },
-    "opencenter": {
-      "$ref": "#/$defs/SimplifiedOpenCenter"
     },
     "opentofu": {
-      "$ref": "#/$defs/SimplifiedOpenTofu"
-    },
-    "secrets": {
-      "$ref": "#/$defs/Secrets"
-    },
-    "deployment": {
-      "$ref": "#/$defs/Deployment"
+      "description": "OpenTofu/Terraform infrastructure-as-code configuration",
+      "properties": {
+        "backend": {
+          "description": "OpenTofu state backend configuration",
+          "properties": {
+            "local": {
+              "description": "Local backend configuration",
+              "properties": {
+                "path": {
+                  "default": "terraform.tfstate",
+                  "description": "Path to state file",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "s3": {
+              "description": "S3 backend configuration",
+              "properties": {
+                "bucket": {
+                  "description": "S3 bucket name for state storage",
+                  "minLength": 3,
+                  "type": "string"
+                },
+                "encrypt": {
+                  "default": true,
+                  "description": "Enable server-side encryption",
+                  "type": "boolean"
+                },
+                "endpoint": {
+                  "description": "Custom S3 endpoint URL",
+                  "format": "uri",
+                  "type": "string"
+                },
+                "key": {
+                  "description": "S3 object key for state file",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "profile": {
+                  "description": "AWS CLI profile name",
+                  "type": "string"
+                },
+                "region": {
+                  "description": "AWS region for S3 bucket",
+                  "pattern": "^[a-z]{2}-[a-z]+-[0-9]{1}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "bucket",
+                "key",
+                "region"
+              ],
+              "type": "object"
+            },
+            "type": {
+              "default": "local",
+              "description": "Backend type",
+              "enum": [
+                "local",
+                "s3",
+                "azurerm",
+                "gcs"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        "enabled": {
+          "default": true,
+          "description": "Enable OpenTofu for infrastructure provisioning",
+          "type": "boolean"
+        },
+        "path": {
+          "default": "opentofu",
+          "description": "Path to OpenTofu binary or working directory",
+          "type": "string"
+        }
+      },
+      "type": "object"
     },
     "overrides": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "secrets": {
+      "description": "Secrets management configuration",
+      "properties": {
+        "alert_proxy": {
+          "description": "Alert proxy secret values",
+          "properties": {
+            "account_service_token": {
+              "description": "Alert proxy account service token",
+              "secret": true,
+              "type": "string"
+            },
+            "core_account_number": {
+              "description": "Alert proxy core account number",
+              "secret": true,
+              "type": "string"
+            },
+            "core_device_id": {
+              "description": "Alert proxy core device ID",
+              "secret": true,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "cert_manager": {
+          "description": "Cert-manager secret values",
+          "properties": {
+            "aws_access_key": {
+              "description": "AWS access key for Route53 DNS validation",
+              "secret": true,
+              "type": "string"
+            },
+            "aws_secret_access_key": {
+              "description": "AWS secret access key for Route53 DNS validation",
+              "secret": true,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "grafana": {
+          "description": "Grafana secret values",
+          "properties": {
+            "admin_password": {
+              "description": "Grafana admin password",
+              "secret": true,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "headlamp": {
+          "description": "Headlamp secret values",
+          "properties": {
+            "oidc_client_secret": {
+              "description": "Headlamp OIDC client secret",
+              "secret": true,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "keycloak": {
+          "description": "Keycloak secret values",
+          "properties": {
+            "admin_password": {
+              "description": "Keycloak admin user password",
+              "secret": true,
+              "type": "string"
+            },
+            "client_secret": {
+              "description": "Keycloak OIDC client secret",
+              "secret": true,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "loki": {
+          "description": "Loki secret values",
+          "properties": {
+            "s3_access_key_id": {
+              "description": "S3 access key ID",
+              "secret": true,
+              "type": "string"
+            },
+            "s3_secret_access_key": {
+              "description": "S3 secret access key",
+              "secret": true,
+              "type": "string"
+            },
+            "swift_application_credential_secret": {
+              "description": "Swift application credential secret (recommended)",
+              "secret": true,
+              "type": "string"
+            },
+            "swift_password": {
+              "description": "Swift storage password (deprecated: use application credentials)",
+              "secret": true,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "sops_age_key_file": {
+          "description": "Path to SOPS Age encryption key file",
+          "pattern": "^[~./].*",
+          "type": "string"
+        },
+        "ssh_key": {
+          "description": "SSH key configuration for cluster access",
+          "properties": {
+            "cypher": {
+              "default": "ed25519",
+              "description": "SSH key encryption algorithm",
+              "enum": [
+                "ed25519",
+                "rsa",
+                "ecdsa"
+              ],
+              "type": "string"
+            },
+            "private": {
+              "description": "Path to SSH private key file",
+              "pattern": "^[~./].*",
+              "type": "string"
+            },
+            "public": {
+              "description": "Path to SSH public key file",
+              "pattern": "^[~./].*\\.pub$",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "tempo": {
+          "description": "Tempo secret values",
+          "properties": {
+            "access_key": {
+              "description": "Tempo S3 access key",
+              "secret": true,
+              "type": "string"
+            },
+            "secret_key": {
+              "description": "Tempo S3 secret key",
+              "secret": true,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "weave_gitops": {
+          "description": "Weave GitOps secret values",
+          "properties": {
+            "password": {
+              "description": "Weave GitOps admin password",
+              "secret": true,
+              "type": "string"
+            },
+            "password_hash": {
+              "description": "Weave GitOps admin password hash (bcrypt)",
+              "secret": true,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
       "type": "object"
     }
   },
-  "additionalProperties": false,
-  "type": "object",
   "required": [
-    "opencenter",
-    "opentofu",
-    "secrets"
+    "opencenter"
   ],
-  "title": "OpenCenter Cluster Configuration Schema v2.0",
-  "description": "JSON schema for OpenCenter cluster configuration files (v2.0)",
-  "$id": "https://opencenter.io/schemas/cluster-config-v2.json",
-  "schemaVersion": "2.0"
+  "title": "opencenter Cluster Configuration",
+  "type": "object",
+  "version": "1.0.0"
 }

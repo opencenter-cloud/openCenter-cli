@@ -50,11 +50,6 @@ type ServiceCfg struct {
 	SwiftContainerName           string `yaml:"swift_container_name,omitempty" json:"swift_container_name,omitempty" jsonschema:"description=Swift container name for Loki logs (deprecated)"`
 	SwiftUserDomainName          string `yaml:"swift_user_domain_name,omitempty" json:"swift_user_domain_name,omitempty" jsonschema:"description=Swift user domain name (deprecated)"`
 
-	// Legacy Swift fields (deprecated)
-	SwiftUsername    string `yaml:"swift_username,omitempty" json:"swift_username,omitempty" jsonschema:"description=Swift username (deprecated)"`
-	SwiftProjectName string `yaml:"swift_project_name,omitempty" json:"swift_project_name,omitempty" jsonschema:"description=Swift project name (deprecated)"`
-	SwiftDomainName  string `yaml:"swift_domain_name,omitempty" json:"swift_domain_name,omitempty" jsonschema:"description=Swift domain name (deprecated)"`
-
 	// S3 storage fields (deprecated: should be in loki specific config)
 	LokiS3Endpoint       string `yaml:"loki_s3_endpoint,omitempty" json:"loki_s3_endpoint,omitempty" jsonschema:"description=S3 endpoint URL (deprecated)"`
 	LokiS3Region         string `yaml:"loki_s3_region,omitempty" json:"loki_s3_region,omitempty" jsonschema:"description=S3 region (deprecated)"`

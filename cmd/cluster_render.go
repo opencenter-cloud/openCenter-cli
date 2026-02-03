@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
@@ -61,9 +62,31 @@ Unlike 'cluster setup', this command:
 - Performs safety checks before rendering
 - Creates timestamped backups before overwriting
 - Does not perform Git operations
-- Ideal for iterative development and updates`,
+- Ideal for iterative development and updates
+
+Global Flags:
+- --log-level: Set log level (debug, info, warn, error)
+- --dry-run: Preview operations without making changes`,
 		Args: cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Parse global flags for logging and dry-run
+			globalFlags, err := parseGlobalFlags(cmd)
+			if err != nil {
+				return fmt.Errorf("failed to parse global flags: %w", err)
+			}
+
+			// Apply log level override
+			if globalFlags.LogLevel != "" {
+				if err := config.SetLogLevel(globalFlags.LogLevel); err != nil {
+					return fmt.Errorf("failed to set log level: %w", err)
+				}
+			}
+
+			// Log dry-run mode if enabled
+			if globalFlags.DryRun {
+				config.Info("🧪 DRY RUN MODE: No files will be modified")
+			}
+
 			// Resolve cluster name from args or active cluster
 			name, err := resolveClusterName(args, true)
 			if err != nil {
@@ -83,19 +106,19 @@ Unlike 'cluster setup', this command:
 
 			// Handle different render modes
 			if infra {
-				return renderInfrastructureOnly(cfg, cmd)
+				return renderInfrastructureOnly(cfg, globalFlags.DryRun, cmd)
 			}
 
 			if services {
-				return renderServicesOnly(cfg, force, cmd)
+				return renderServicesOnly(cfg, force, globalFlags.DryRun, cmd)
 			}
 
 			if serviceName != "" {
-				return renderSingleService(cfg, serviceName, force, cmd)
+				return renderSingleService(cfg, serviceName, force, globalFlags.DryRun, cmd)
 			}
 
 			if all {
-				return renderAllServices(cfg, force, cmd)
+				return renderAllServices(cfg, force, globalFlags.DryRun, cmd)
 			}
 
 			// Default: check if already rendered
@@ -130,12 +153,12 @@ func checkRenderStatus(cfg config.Config, cmd *cobra.Command) error {
 		return nil
 	}
 
-	// Not rendered yet, proceed with initial render
-	return renderAllServices(cfg, false, cmd)
+	// Not rendered yet, proceed with initial render (not dry-run)
+	return renderAllServices(cfg, false, false, cmd)
 }
 
 // renderAllServices renders all cluster services and infrastructure
-func renderAllServices(cfg config.Config, force bool, cmd *cobra.Command) error {
+func renderAllServices(cfg config.Config, force bool, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 	gitOpsDir := cfg.GitOps().GitDir
 	kustomizationPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "kustomization.yaml")
@@ -143,6 +166,18 @@ func renderAllServices(cfg config.Config, force bool, cmd *cobra.Command) error 
 	// Check if already rendered and force not specified
 	if _, err := os.Stat(kustomizationPath); err == nil && !force {
 		return fmt.Errorf("services already rendered for cluster '%s', use --force to overwrite (creates backups)", clusterName)
+	}
+
+	if dryRun {
+		fmt.Fprintf(cmd.OutOrStdout(), "🧪 DRY RUN: Would render all services and infrastructure for cluster: %s\n", clusterName)
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Copy base GitOps structure\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Render cluster-specific applications\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Render infrastructure templates\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Provision OpenTofu configuration\n")
+		if force {
+			fmt.Fprintf(cmd.OutOrStdout(), "  - Create timestamped backups before overwriting\n")
+		}
+		return nil
 	}
 
 	// Create backups if force is specified and files exist
@@ -187,7 +222,7 @@ func renderAllServices(cfg config.Config, force bool, cmd *cobra.Command) error 
 }
 
 // renderServicesOnly renders all cluster services without infrastructure
-func renderServicesOnly(cfg config.Config, force bool, cmd *cobra.Command) error {
+func renderServicesOnly(cfg config.Config, force bool, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 	gitOpsDir := cfg.GitOps().GitDir
 	kustomizationPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "kustomization.yaml")
@@ -195,6 +230,16 @@ func renderServicesOnly(cfg config.Config, force bool, cmd *cobra.Command) error
 	// Check if already rendered and force not specified
 	if _, err := os.Stat(kustomizationPath); err == nil && !force {
 		return fmt.Errorf("services already rendered for cluster '%s', use --force to overwrite (creates backups)", clusterName)
+	}
+
+	if dryRun {
+		fmt.Fprintf(cmd.OutOrStdout(), "🧪 DRY RUN: Would render all services (no infrastructure) for cluster: %s\n", clusterName)
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Copy base GitOps structure\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Render cluster-specific applications\n")
+		if force {
+			fmt.Fprintf(cmd.OutOrStdout(), "  - Create timestamped backups before overwriting\n")
+		}
+		return nil
 	}
 
 	// Create backups if force is specified and files exist
@@ -221,7 +266,7 @@ func renderServicesOnly(cfg config.Config, force bool, cmd *cobra.Command) error
 }
 
 // renderSingleService renders a specific service
-func renderSingleService(cfg config.Config, serviceName string, force bool, cmd *cobra.Command) error {
+func renderSingleService(cfg config.Config, serviceName string, force bool, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 
 	// Check if service exists in configuration
@@ -241,6 +286,17 @@ func renderSingleService(cfg config.Config, serviceName string, force bool, cmd 
 
 	if _, err := os.Stat(serviceDir); err == nil && !force {
 		return fmt.Errorf("service '%s' is enabled but files already exist, use --force to overwrite (creates backup)", serviceName)
+	}
+
+	if dryRun {
+		fmt.Fprintf(cmd.OutOrStdout(), "🧪 DRY RUN: Would render service '%s' for cluster: %s\n", serviceName, clusterName)
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Service directory: %s\n", serviceDir)
+		if force {
+			if _, err := os.Stat(serviceDir); err == nil {
+				fmt.Fprintf(cmd.OutOrStdout(), "  - Create timestamped backup before overwriting\n")
+			}
+		}
+		return nil
 	}
 
 	// Create backup if force is specified and files exist
@@ -271,10 +327,20 @@ func renderSingleService(cfg config.Config, serviceName string, force bool, cmd 
 }
 
 // renderInfrastructureOnly renders infrastructure templates only
-func renderInfrastructureOnly(cfg config.Config, cmd *cobra.Command) error {
+func renderInfrastructureOnly(cfg config.Config, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 	gitOpsDir := cfg.GitOps().GitDir
 	infraPath := filepath.Join(gitOpsDir, "infrastructure", "clusters", clusterName)
+
+	if dryRun {
+		fmt.Fprintf(cmd.OutOrStdout(), "🧪 DRY RUN: Would render infrastructure templates for cluster: %s\n", clusterName)
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Render infrastructure cluster templates\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "  - Provision OpenTofu configuration\n")
+		if _, err := os.Stat(infraPath); err == nil {
+			fmt.Fprintf(cmd.OutOrStdout(), "  - Create timestamped backups before overwriting\n")
+		}
+		return nil
+	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Rendering infrastructure templates for cluster: %s\n", clusterName)
 
@@ -320,6 +386,11 @@ func backupApplicationsDirectory(cfg config.Config, cmd *cobra.Command) error {
 			return nil
 		}
 
+		// Skip files that are already backups (contain .bak- in the filename)
+		if strings.Contains(filepath.Base(path), ".bak-") {
+			return nil
+		}
+
 		backupPath := fmt.Sprintf("%s.bak-%s", path, timestamp)
 		if err := copyFile(path, backupPath); err != nil {
 			return fmt.Errorf("failed to backup %s: %w", path, err)
@@ -341,6 +412,11 @@ func backupServiceDirectory(serviceDir, serviceName string, cmd *cobra.Command) 
 			return nil
 		}
 
+		// Skip files that are already backups (contain .bak- in the filename)
+		if strings.Contains(filepath.Base(path), ".bak-") {
+			return nil
+		}
+
 		backupPath := fmt.Sprintf("%s.bak-%s", path, timestamp)
 		if err := copyFile(path, backupPath); err != nil {
 			return fmt.Errorf("failed to backup %s: %w", path, err)
@@ -359,6 +435,11 @@ func backupInfrastructureDirectory(infraPath, clusterName string, cmd *cobra.Com
 			return err
 		}
 		if info.IsDir() {
+			return nil
+		}
+
+		// Skip files that are already backups (contain .bak- in the filename)
+		if strings.Contains(filepath.Base(path), ".bak-") {
 			return nil
 		}
 

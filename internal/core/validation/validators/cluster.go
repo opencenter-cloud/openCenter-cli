@@ -22,7 +22,15 @@ import (
 	"github.com/rackerlabs/opencenter-cli/internal/core/validation"
 )
 
-// ClusterNameValidator validates cluster and organization names.
+// ClusterNameValidator validates cluster names according to Kubernetes naming conventions.
+//
+// Requirements (from Phase 2 Validation Consolidation):
+//   - Length: 1-63 characters
+//   - Character set: lowercase alphanumeric and hyphens only
+//   - Must not start or end with hyphen
+//   - Provides actionable suggestions for common mistakes
+//
+// Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.10
 type ClusterNameValidator struct {
 	pattern *regexp.Regexp
 }
@@ -30,8 +38,8 @@ type ClusterNameValidator struct {
 // NewClusterNameValidator creates a new cluster name validator.
 func NewClusterNameValidator() *ClusterNameValidator {
 	return &ClusterNameValidator{
-		// Pattern: must start with alphanumeric, then alphanumeric/hyphen/underscore/dot, max 63 chars
-		pattern: regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,62}$`),
+		// Pattern: lowercase alphanumeric start/end, hyphens allowed in middle, 1-63 chars
+		pattern: regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`),
 	}
 }
 
@@ -40,79 +48,80 @@ func (v *ClusterNameValidator) Name() string {
 	return "cluster-name"
 }
 
-// Validate validates a cluster or organization name.
+// Priority returns the validator priority.
+// Cluster name validation is fast (format check), so it has high priority.
+func (v *ClusterNameValidator) Priority() int {
+	return validation.PriorityHigh
+}
+
+// Validate validates a cluster name according to Kubernetes naming conventions.
+//
+// The validator checks:
+//   - Name is not empty
+//   - Length is between 1 and 63 characters
+//   - Contains only lowercase alphanumeric characters and hyphens
+//   - Does not start or end with a hyphen
+//
+// Returns a ValidationResult with errors and actionable suggestions.
 func (v *ClusterNameValidator) Validate(ctx context.Context, value interface{}) (*validation.ValidationResult, error) {
-	result := &validation.ValidationResult{
-		Valid:    true,
-		Errors:   []*validation.ValidationIssue{},
-		Warnings: []*validation.ValidationIssue{},
-		Info:     []*validation.ValidationIssue{},
-	}
+	result := validation.NewValidationResult()
 
 	name, ok := value.(string)
 	if !ok {
-		result.AddError("cluster_name", "value must be a string")
+		result.AddError("cluster_name", "value must be a string",
+			"Provide a string value for the cluster name")
 		return result, nil
 	}
 
 	// Check for empty name
 	if name == "" {
-		result.AddError("cluster_name", "cluster name cannot be empty",
-			"Provide a non-empty cluster name")
+		result.AddError("cluster_name", "cluster name is required",
+			"Provide a name using the --name flag",
+			"Example: opencenter cluster init my-cluster",
+			"Name must be lowercase alphanumeric with hyphens")
 		return result, nil
 	}
 
-	// Check for path traversal sequences
-	if strings.Contains(name, "..") {
-		result.AddError("cluster_name", "cluster name cannot contain path traversal sequences (..)",
-			"Remove '..' from the cluster name",
-			"Use only alphanumeric characters, hyphens, underscores, and dots")
-		return result, nil
-	}
-
-	// Check for path separators
-	if strings.Contains(name, "/") || strings.Contains(name, "\\") {
-		result.AddError("cluster_name", "cluster name cannot contain path separators (/ or \\)",
-			"Remove path separators from the cluster name",
-			"Use hyphens (-) instead of slashes for separation")
-		return result, nil
-	}
-
-	// Check length
+	// Check length constraints (1-63 characters)
 	if len(name) > 63 {
 		result.AddError("cluster_name",
-			fmt.Sprintf("cluster name is too long (%d characters, maximum is 63)", len(name)),
-			fmt.Sprintf("Shorten the cluster name to 63 characters or less (currently %d)", len(name)),
-			"Consider using abbreviations or removing redundant parts")
+			fmt.Sprintf("cluster name too long: %d characters (max 63)", len(name)),
+			"Shorten the cluster name to 63 characters or less",
+			"Use abbreviations or shorter identifiers")
 		return result, nil
 	}
 
-	// Validate against pattern
+	// Check pattern: lowercase alphanumeric and hyphens only, no leading/trailing hyphens
 	if !v.pattern.MatchString(name) {
-		suggestions := []string{
-			"Cluster name must start with an alphanumeric character",
-			"Use only alphanumeric characters, hyphens (-), underscores (_), or dots (.)",
-			"Maximum length is 63 characters",
-		}
+		var suggestions []string
 
 		// Provide specific suggestions based on the error
-		if !regexp.MustCompile(`^[a-zA-Z0-9]`).MatchString(name) {
-			suggestions = append(suggestions, fmt.Sprintf("'%s' starts with an invalid character", name))
+		if strings.ToLower(name) != name {
+			suggestions = append(suggestions, "Convert name to lowercase")
+		}
+		if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") {
+			suggestions = append(suggestions, "Remove leading or trailing hyphens")
+		}
+		if strings.Contains(name, "_") {
+			suggestions = append(suggestions, "Replace underscores with hyphens")
+		}
+		if strings.ContainsAny(name, "./@#$%^&*()+=[]{}|\\:;\"'<>,?/") {
+			suggestions = append(suggestions, "Remove special characters")
 		}
 
+		// Add general guidance
+		suggestions = append(suggestions,
+			"Name must contain only lowercase letters, numbers, and hyphens",
+			"Name must start and end with alphanumeric character",
+			"Example: my-cluster-123")
+
 		result.AddError("cluster_name",
-			"cluster name format is invalid",
+			fmt.Sprintf("invalid cluster name format: %s", name),
 			suggestions...)
 		return result, nil
 	}
 
 	// Add warnings for potentially problematic names
-	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") {
-		result.AddWarning("cluster_name",
-			"cluster name starts or ends with a hyphen, which may cause issues with some systems",
-			"Consider removing leading/trailing hyphens")
-	}
-
 	if strings.Contains(name, "--") {
 		result.AddWarning("cluster_name",
 			"cluster name contains consecutive hyphens, which may be confusing",
@@ -148,6 +157,12 @@ func NewOrganizationNameValidator() *OrganizationNameValidator {
 // Name returns the validator name.
 func (v *OrganizationNameValidator) Name() string {
 	return "organization-name"
+}
+
+// Priority returns the validator priority.
+// Organization name validation is fast (format check), so it has high priority.
+func (v *OrganizationNameValidator) Priority() int {
+	return validation.PriorityHigh
 }
 
 // Validate validates an organization name.

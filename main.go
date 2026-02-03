@@ -38,8 +38,17 @@ func main() {
 	cmd.GitTag = gitTag
 	cmd.BuildDate = buildDate
 
+	// Get base directory for path resolver
+	baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
+	if baseDir == "" {
+		home, _ := os.UserHomeDir()
+		baseDir = home + "/.config/opencenter/clusters"
+	} else {
+		baseDir = baseDir + "/clusters"
+	}
+
 	// Create and initialize DI container
-	container, err := di.SetupContainer()
+	container, err := di.SetupContainer(baseDir)
 	if err != nil {
 		// If container setup fails, print error and exit
 		// We can't use the logger here since it's in the container

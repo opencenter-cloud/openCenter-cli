@@ -21,13 +21,21 @@ import (
 
 // mockValidator is a mock validator for testing
 type mockValidator struct {
-	name   string
-	result *ValidationResult
-	err    error
+	name     string
+	priority int
+	result   *ValidationResult
+	err      error
 }
 
 func (m *mockValidator) Name() string {
 	return m.name
+}
+
+func (m *mockValidator) Priority() int {
+	if m.priority == 0 {
+		return PriorityNormal
+	}
+	return m.priority
 }
 
 func (m *mockValidator) Validate(ctx context.Context, value interface{}) (*ValidationResult, error) {

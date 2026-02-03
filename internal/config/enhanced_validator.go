@@ -16,7 +16,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/url"
 	"reflect"
 	"strings"
@@ -34,7 +33,6 @@ type EnhancedConfigValidator struct {
 	autoRepair            bool
 	cloudValidators       map[string]CloudProviderValidator
 	connectivityValidator *ConnectivityValidator
-	multiLayerValidator   V2Validator
 	validationEngine      *corevalidation.ValidationEngine
 }
 
@@ -54,7 +52,6 @@ func NewEnhancedConfigValidator(autoRepair bool) *EnhancedConfigValidator {
 		autoRepair:            autoRepair,
 		cloudValidators:       make(map[string]CloudProviderValidator),
 		connectivityValidator: NewConnectivityValidator(10 * time.Second),
-		multiLayerValidator:   NewMultiLayerValidator(),
 		validationEngine:      corevalidation.NewValidationEngine(),
 	}
 
@@ -65,6 +62,7 @@ func NewEnhancedConfigValidator(autoRepair bool) *EnhancedConfigValidator {
 
 	// Register core validators with the validation engine
 	validator.validationEngine.MustRegister(validators.NewClusterNameValidator())
+	validator.validationEngine.MustRegister(validators.NewNetworkValidator())
 	validator.validationEngine.MustRegister(validators.NewConfigValidator())
 	validator.validationEngine.MustRegister(validators.NewFileValidator())
 	validator.validationEngine.MustRegister(validators.NewSecurityValidator())
@@ -202,16 +200,6 @@ func (v *EnhancedConfigValidator) validateBasicStructure(ctx context.Context, co
 	if config == nil {
 		aggregator.AddError(errors.CreateConfigError("config", "configuration cannot be nil", nil))
 		return
-	}
-
-	// Use multilayer validator for schema validation (includes email, fqdn, etc.)
-	v2Errors := v.multiLayerValidator.ValidateSchema(config)
-	for _, v2Err := range v2Errors {
-		aggregator.AddError(errors.CreateValidationError(
-			v2Err.Field,
-			v2Err.Message,
-			fmt.Sprintf("Fix the %s field", v2Err.Field),
-		))
 	}
 
 	// Use ValidationEngine for cluster name validation
@@ -361,6 +349,41 @@ func (v *EnhancedConfigValidator) validateNetworkConfiguration(ctx context.Conte
 	if config == nil {
 		return
 	}
+
+	// Use ValidationEngine for network validation
+	networkConfig := &validators.NetworkConfig{
+		SubnetNodes:    config.OpenCenter.Cluster.Networking.SubnetNodes,
+		SubnetPods:     config.OpenCenter.Cluster.Kubernetes.SubnetPods,
+		SubnetServices: config.OpenCenter.Cluster.Kubernetes.SubnetServices,
+		DNSNameservers: config.OpenCenter.Cluster.Networking.DNSNameservers,
+		VRRPEnabled:    config.OpenCenter.Cluster.Kubernetes.Networking.VRRPEnabled,
+		VRRPIP:         config.OpenCenter.Cluster.Kubernetes.Networking.VRRPIP,
+	}
+
+	result, err := v.validationEngine.Validate(ctx, "network", networkConfig)
+	if err != nil {
+		aggregator.AddError(errors.CreateValidationError(
+			"opencenter.cluster.networking",
+			fmt.Sprintf("network validation failed: %v", err),
+			"Check network configuration",
+		))
+	} else if result != nil && !result.Valid {
+		for _, issue := range result.Errors {
+			aggregator.AddError(errors.CreateValidationError(
+				fmt.Sprintf("opencenter.cluster.networking.%s", issue.Field),
+				issue.Message,
+				issue.Suggestions...,
+			))
+		}
+		for _, warning := range result.Warnings {
+			aggregator.AddWarning(errors.CreateValidationError(
+				fmt.Sprintf("opencenter.cluster.networking.%s", warning.Field),
+				warning.Message,
+				warning.Suggestions...,
+			))
+		}
+	}
+
 	// Validate network plugin mutual exclusivity
 	networkPlugins := []struct {
 		name    string
@@ -397,9 +420,6 @@ func (v *EnhancedConfigValidator) validateNetworkConfiguration(ctx context.Conte
 			"Cilium provides advanced features like eBPF",
 		))
 	}
-
-	// Validate subnet configurations
-	v.validateSubnetConfiguration(config, aggregator)
 
 	// Validate network plugin specific configuration
 	v.validateNetworkPluginConfiguration(config, aggregator)
@@ -596,60 +616,6 @@ func (v *EnhancedConfigValidator) validateS3BackendConfiguration(config *Config,
 	}
 }
 
-func (v *EnhancedConfigValidator) validateSubnetConfiguration(config *Config, aggregator *errors.ValidationAggregator) {
-	// Validate pod subnet
-	if podSubnet := config.OpenCenter.Cluster.Kubernetes.SubnetPods; podSubnet != "" {
-		if !v.isValidCIDR(podSubnet) {
-			aggregator.AddError(errors.CreateValidationError(
-				"opencenter.cluster.kubernetes.subnet_pods",
-				"invalid pod subnet CIDR format",
-				"Use valid CIDR notation (e.g., '10.42.0.0/16')",
-				"Ensure subnet doesn't conflict with node or service subnets",
-			))
-		}
-	} else {
-		aggregator.AddWarning(errors.CreateValidationError(
-			"opencenter.cluster.kubernetes.subnet_pods",
-			"pod subnet not specified",
-			"Set subnet_pods to a CIDR range (e.g., '10.42.0.0/16')",
-			"Ensure it doesn't conflict with node or service subnets",
-		))
-	}
-
-	// Validate service subnet
-	if serviceSubnet := config.OpenCenter.Cluster.Kubernetes.SubnetServices; serviceSubnet != "" {
-		if !v.isValidCIDR(serviceSubnet) {
-			aggregator.AddError(errors.CreateValidationError(
-				"opencenter.cluster.kubernetes.subnet_services",
-				"invalid service subnet CIDR format",
-				"Use valid CIDR notation (e.g., '10.43.0.0/16')",
-				"Ensure subnet doesn't conflict with node or pod subnets",
-			))
-		}
-	} else {
-		aggregator.AddWarning(errors.CreateValidationError(
-			"opencenter.cluster.kubernetes.subnet_services",
-			"service subnet not specified",
-			"Set subnet_services to a CIDR range (e.g., '10.43.0.0/16')",
-			"Ensure it doesn't conflict with node or pod subnets",
-		))
-	}
-
-	// Check for subnet conflicts
-	if config.OpenCenter.Cluster.Kubernetes.SubnetPods != "" &&
-		config.OpenCenter.Cluster.Kubernetes.SubnetServices != "" {
-		if v.subnetsOverlap(config.OpenCenter.Cluster.Kubernetes.SubnetPods,
-			config.OpenCenter.Cluster.Kubernetes.SubnetServices) {
-			aggregator.AddError(errors.CreateValidationError(
-				"opencenter.cluster.kubernetes.subnet_pods",
-				"pod and service subnets overlap",
-				"Use non-overlapping CIDR ranges for pods and services",
-				"Example: pods=10.42.0.0/16, services=10.43.0.0/16",
-			))
-		}
-	}
-}
-
 func (v *EnhancedConfigValidator) validateNetworkPluginConfiguration(config *Config, aggregator *errors.ValidationAggregator) {
 	// Validate Calico specific configuration
 	if config.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled {
@@ -675,22 +641,6 @@ func (v *EnhancedConfigValidator) validateNetworkPluginConfiguration(config *Con
 			"Or disable cilium_integration in Kube-OVN config",
 		))
 	}
-}
-
-func (v *EnhancedConfigValidator) isValidCIDR(cidr string) bool {
-	_, _, err := net.ParseCIDR(cidr)
-	return err == nil
-}
-
-func (v *EnhancedConfigValidator) subnetsOverlap(cidr1, cidr2 string) bool {
-	_, net1, err1 := net.ParseCIDR(cidr1)
-	_, net2, err2 := net.ParseCIDR(cidr2)
-
-	if err1 != nil || err2 != nil {
-		return false // Can't determine overlap if parsing fails
-	}
-
-	return net1.Contains(net2.IP) || net2.Contains(net1.IP)
 }
 
 func (v *EnhancedConfigValidator) isValidSSHPublicKey(key string) bool {

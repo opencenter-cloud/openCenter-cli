@@ -1,0 +1,26 @@
+mode: set
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:58.80,62.2 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:65.69,67.16 2 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:67.16,69.3 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:70.2,70.18 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:74.91,75.55 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:75.55,77.3 1 0
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:78.2,78.12 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:82.97,87.58 2 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:87.58,89.3 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:92.2,92.49 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:92.49,96.3 2 0
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:98.2,98.12 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:102.56,105.2 2 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:108.77,109.48 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:109.48,111.3 1 0
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:112.2,112.12 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:116.57,117.40 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:117.40,119.3 1 0
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:120.2,120.12 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:124.70,126.16 2 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:126.16,128.3 1 0
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:129.2,129.18 1 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:133.46,135.44 2 1
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:135.44,138.3 1 0
+github.com/rackerlabs/opencenter-cli/internal/util/fs/wrapper.go:139.2,139.43 1 1

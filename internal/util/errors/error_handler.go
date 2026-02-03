@@ -446,6 +446,61 @@ func (h *DefaultErrorHandler) initializeSuggestions() {
 }
 
 // CreateValidationError creates a validation error with suggestions
+func (h *DefaultErrorHandler) CreateValidationError(field, message string, suggestions ...string) *StructuredError {
+	return &StructuredError{
+		Type:        ValidationError,
+		Field:       field,
+		Message:     message,
+		Suggestions: suggestions,
+		Operation:   "validation",
+		Retryable:   false,
+	}
+}
+
+// CreateFileError creates a file operation error with context
+func (h *DefaultErrorHandler) CreateFileError(operation, path string, cause error) *StructuredError {
+	return &StructuredError{
+		Type:      FileError,
+		Message:   fmt.Sprintf("file operation failed: %s", operation),
+		Cause:     cause,
+		Operation: operation,
+		Context:   map[string]interface{}{"path": path},
+		Retryable: isRetryableFileError(cause),
+	}
+}
+
+// CreateConfigError creates a configuration-related error
+func (h *DefaultErrorHandler) CreateConfigError(message string, cause error) *StructuredError {
+	return &StructuredError{
+		Type:      ConfigError,
+		Message:   message,
+		Cause:     cause,
+		Operation: "config_load",
+		Retryable: false,
+	}
+}
+
+// Wrap wraps an error with additional context
+func (h *DefaultErrorHandler) Wrap(err error, operation, context string) error {
+	if err == nil {
+		return nil
+	}
+
+	// If already a StructuredError, preserve it
+	if se, ok := err.(*StructuredError); ok {
+		return se
+	}
+
+	return &StructuredError{
+		Type:      OperationalError,
+		Message:   context,
+		Cause:     err,
+		Operation: operation,
+		Retryable: false,
+	}
+}
+
+// CreateValidationError creates a validation error with suggestions
 func CreateValidationError(field, message string, suggestions ...string) *StructuredError {
 	return &StructuredError{
 		Type:        ValidationError,
@@ -705,4 +760,52 @@ func CreateGenerationErrorWithFile(stage, filePath string, message string, cause
 		Operation:   "gitops_generation",
 		Retryable:   false,
 	}
+}
+
+// CreateFileError creates a file operation error with context
+func CreateFileError(operation, path string, cause error) *StructuredError {
+	suggestions := []string{
+		fmt.Sprintf("Verify the path exists: ls -la %s", path),
+		"Check file permissions and ownership",
+		"Ensure parent directories exist",
+		"Check disk space: df -h",
+	}
+
+	// Determine if the error is retryable based on the cause
+	retryable := isRetryableFileError(cause)
+
+	return &StructuredError{
+		Type:        FileError,
+		Message:     fmt.Sprintf("file operation failed: %s", operation),
+		Cause:       cause,
+		Operation:   operation,
+		Context:     map[string]interface{}{"path": path},
+		Suggestions: suggestions,
+		Retryable:   retryable,
+	}
+}
+
+// isRetryableFileError determines if a file error can be retried
+func isRetryableFileError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Check for temporary errors
+	errStr := strings.ToLower(err.Error())
+	retryablePatterns := []string{
+		"resource temporarily unavailable",
+		"too many open files",
+		"connection reset",
+		"device busy",
+		"temporary failure",
+	}
+
+	for _, pattern := range retryablePatterns {
+		if strings.Contains(errStr, pattern) {
+			return true
+		}
+	}
+
+	return false
 }

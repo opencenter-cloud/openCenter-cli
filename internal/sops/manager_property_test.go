@@ -76,8 +76,8 @@ func TestProperty_SOPSUnavailableError(t *testing.T) {
 			// Create key manager that returns no keys
 			keyManager := crypto.NewDefaultKeyManager(filepath.Join(tempDir, "keys"))
 			encryptor := NewDefaultEncryptor([]string{}, []string{})
-			validator := NewDefaultValidator()
-			manager := NewDefaultSOPSManager(keyManager, encryptor, validator, slog.Default())
+			
+			manager := NewDefaultSOPSManager(keyManager, encryptor, slog.Default())
 
 			// Try to encrypt overlay files (should fail)
 			err := manager.EncryptOverlayFiles(context.Background(), overlayPath, cfg)
@@ -154,8 +154,8 @@ func TestProperty_SOPSUnavailableError(t *testing.T) {
 			// Create key manager that returns no keys
 			keyManager := crypto.NewDefaultKeyManager(filepath.Join(tempDir, "keys"))
 			encryptor := NewDefaultEncryptor([]string{}, []string{})
-			validator := NewDefaultValidator()
-			manager := NewDefaultSOPSManager(keyManager, encryptor, validator, slog.Default())
+			
+			manager := NewDefaultSOPSManager(keyManager, encryptor, slog.Default())
 
 			// Try to create SOPS config (should fail)
 			err := manager.CreateSOPSConfig(overlayPath, cfg)
@@ -232,8 +232,8 @@ func TestProperty_SOPSUnavailableError(t *testing.T) {
 			// Create key manager that returns no keys
 			keyManager := crypto.NewDefaultKeyManager(filepath.Join(tempDir, "keys"))
 			encryptor := NewDefaultEncryptor([]string{}, []string{})
-			validator := NewDefaultValidator()
-			manager := NewDefaultSOPSManager(keyManager, encryptor, validator, slog.Default())
+			
+			manager := NewDefaultSOPSManager(keyManager, encryptor, slog.Default())
 
 			// Try to encrypt overlay files (should fail)
 			err := manager.EncryptOverlayFiles(context.Background(), overlayPath, cfg)
@@ -313,8 +313,8 @@ func TestProperty_MissingKeyErrorWithInstructions(t *testing.T) {
 			// Create key manager
 			keyManager := crypto.NewDefaultKeyManager(filepath.Join(tempDir, "keys"))
 			encryptor := NewDefaultEncryptor([]string{}, []string{})
-			validator := NewDefaultValidator()
-			manager := NewDefaultSOPSManager(keyManager, encryptor, validator, slog.Default())
+			
+			manager := NewDefaultSOPSManager(keyManager, encryptor, slog.Default())
 
 			// Try to create SOPS config (should fail)
 			err := manager.CreateSOPSConfig(overlayPath, cfg)
@@ -503,8 +503,8 @@ func TestProperty_NoPlaceholderKeyFallback(t *testing.T) {
 			// Create key manager that returns no keys
 			keyManager := crypto.NewDefaultKeyManager(filepath.Join(tempDir, "keys"))
 			encryptor := NewDefaultEncryptor([]string{}, []string{})
-			validator := NewDefaultValidator()
-			manager := NewDefaultSOPSManager(keyManager, encryptor, validator, slog.Default())
+			
+			manager := NewDefaultSOPSManager(keyManager, encryptor, slog.Default())
 
 			// Try to create SOPS config (should fail)
 			err := manager.CreateSOPSConfig(overlayPath, cfg)
@@ -557,8 +557,8 @@ func TestProperty_NoPlaceholderKeyFallback(t *testing.T) {
 			// Create manager with no keys
 			keyManager := crypto.NewDefaultKeyManager(filepath.Join(tempDir, "keys"))
 			encryptor := NewDefaultEncryptor([]string{}, []string{})
-			validator := NewDefaultValidator()
-			manager := NewDefaultSOPSManager(keyManager, encryptor, validator, slog.Default())
+			
+			manager := NewDefaultSOPSManager(keyManager, encryptor, slog.Default())
 
 			// Try to encrypt repository secrets (should fail)
 			err := manager.EncryptRepositorySecrets(context.Background(), repoPath, "")

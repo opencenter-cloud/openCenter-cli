@@ -148,7 +148,8 @@ func TestMultipleServicesWithSharedDependencies(t *testing.T) {
 
 // TestSetupContainerIntegration tests the SetupContainer function.
 func TestSetupContainerIntegration(t *testing.T) {
-	container, err := SetupContainer()
+	tmpDir := t.TempDir()
+	container, err := SetupContainer(tmpDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}

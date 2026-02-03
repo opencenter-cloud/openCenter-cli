@@ -27,28 +27,6 @@ func (p *CertManagerPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeSecurity
 }
 
-// Validate validates the service configuration
-func (p *CertManagerPlugin) Validate(config interface{}) error {
-	cfg, ok := config.(*services.CertManagerConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for cert-manager: expected *CertManagerConfig")
-	}
-
-	// Validate LetsEncrypt server URL if specified
-	if cfg.LetsEncryptServer != "" {
-		if !strings.HasPrefix(cfg.LetsEncryptServer, "https://") {
-			return fmt.Errorf("letsencrypt_server must be an HTTPS URL")
-		}
-	}
-
-	// Validate email if specified
-	if cfg.Email != "" && !strings.Contains(cfg.Email, "@") {
-		return fmt.Errorf("email must be a valid email address")
-	}
-
-	return nil
-}
-
 // Render renders the service templates to the workspace
 func (p *CertManagerPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
 	// Template rendering will be handled by the template system

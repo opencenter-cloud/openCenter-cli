@@ -52,8 +52,6 @@ func getContainer() di.Container {
 
 // initializeContainer creates and initializes the DI container with all services
 func initializeContainer() di.Container {
-	container := di.NewContainer()
-
 	// Get base directory for path resolver
 	// Use default config directory: ~/.config/opencenter on Linux/macOS
 	baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
@@ -75,7 +73,16 @@ func initializeContainer() di.Container {
 		baseDir = filepath.Join(baseDir, "clusters")
 	}
 
-	// Register core services as singletons
+	// Use the unified SetupContainer function
+	// Requirements: 5.6
+	container, err := di.SetupContainer(baseDir)
+	if err != nil {
+		// Log error and return a basic container
+		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize DI container: %v\n", err)
+		container = di.NewContainer()
+	}
+
+	// Register domain services (these are not yet in SetupContainer)
 	_ = container.Singleton("PathResolver", func() (*paths.PathResolver, error) {
 		return di.ProvidePathResolver(baseDir)
 	})
@@ -88,7 +95,6 @@ func initializeContainer() di.Container {
 		return di.ProvideValidationEngine()
 	})
 
-	// Register domain services
 	_ = container.Singleton("InitService", di.ProvideInitService)
 	_ = container.Singleton("ValidateService", di.ProvideValidateService)
 	_ = container.Singleton("SetupService", di.ProvideSetupService)

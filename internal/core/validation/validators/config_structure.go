@@ -38,6 +38,12 @@ func (v *ConfigStructureValidator) Name() string {
 	return "config-structure"
 }
 
+// Priority returns the validator priority.
+// Config structure validation is fast (format check), so it has high priority.
+func (v *ConfigStructureValidator) Priority() int {
+	return validation.PriorityHigh
+}
+
 // Validate validates that the configuration uses v2 field structure.
 // It checks for v1 field locations and provides migration examples.
 func (v *ConfigStructureValidator) Validate(ctx context.Context, value interface{}) (*validation.ValidationResult, error) {

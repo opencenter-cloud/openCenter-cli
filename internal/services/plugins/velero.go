@@ -26,21 +26,6 @@ func (p *VeleroPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeStorage
 }
 
-// Validate validates the service configuration
-func (p *VeleroPlugin) Validate(config interface{}) error {
-	cfg, ok := config.(*services.VeleroConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for velero: expected *VeleroConfig")
-	}
-
-	// Validate backup bucket if service is enabled
-	if cfg.IsEnabled() && cfg.BackupBucket == "" {
-		return fmt.Errorf("velero_backup_bucket is required when velero is enabled")
-	}
-
-	return nil
-}
-
 // Render renders the service templates to the workspace
 func (p *VeleroPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
 	// Template rendering will be handled by the template system

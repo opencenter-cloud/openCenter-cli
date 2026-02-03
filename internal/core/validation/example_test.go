@@ -177,6 +177,10 @@ func (v *EmailValidator) Name() string {
 	return "email"
 }
 
+func (v *EmailValidator) Priority() int {
+	return validation.PriorityHigh
+}
+
 func (v *EmailValidator) Validate(ctx context.Context, value interface{}) (*validation.ValidationResult, error) {
 	result := &validation.ValidationResult{Valid: true}
 

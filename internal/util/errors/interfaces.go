@@ -36,6 +36,7 @@ const (
 	CredentialError ErrorType = "credential"
 	ServiceError    ErrorType = "service"
 	GenerationError ErrorType = "generation"
+	OperationalError ErrorType = "operational"
 )
 
 // ErrorHandler interface for handling and formatting errors
@@ -44,6 +45,10 @@ type ErrorHandler interface {
 	FormatError(err error) string
 	GetSuggestions(err error) []string
 	IsRetryable(err error) bool
+	CreateValidationError(field, message string, suggestions ...string) *StructuredError
+	CreateFileError(operation, path string, cause error) *StructuredError
+	CreateConfigError(message string, cause error) *StructuredError
+	Wrap(err error, operation, context string) error
 }
 
 // ErrorWrapper interface for wrapping errors with context
@@ -91,6 +96,15 @@ func (e *StructuredError) Error() string {
 // Unwrap returns the underlying cause error
 func (e *StructuredError) Unwrap() error {
 	return e.Cause
+}
+
+// Is checks if the target error matches this error's type
+func (e *StructuredError) Is(target error) bool {
+	t, ok := target.(*StructuredError)
+	if !ok {
+		return false
+	}
+	return e.Type == t.Type
 }
 
 // ErrorCollection represents a collection of errors

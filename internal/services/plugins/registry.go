@@ -74,6 +74,25 @@ func RegisterBuiltInServices(registry svc.ServiceRegistry) error {
 		}
 	}
 
+	// Register service-specific validators with the ValidationEngine
+	engine := registry.GetValidationEngine()
+	
+	// Register cert-manager validator (only if not already registered)
+	if !engine.Has("service:cert-manager") {
+		certManagerValidator := NewCertManagerValidator()
+		if err := engine.Register(certManagerValidator); err != nil {
+			return fmt.Errorf("failed to register cert-manager validator: %w", err)
+		}
+	}
+	
+	// Register keycloak validator (only if not already registered)
+	if !engine.Has("service:keycloak") {
+		keycloakValidator := NewKeycloakValidator()
+		if err := engine.Register(keycloakValidator); err != nil {
+			return fmt.Errorf("failed to register keycloak validator: %w", err)
+		}
+	}
+
 	return nil
 }
 

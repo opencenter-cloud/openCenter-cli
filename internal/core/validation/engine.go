@@ -17,155 +17,300 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 )
 
-// ValidationEngine provides a unified validation system with pluggable validators.
+// ValidationEngine manages validator registration and execution.
 //
-// The engine manages a registry of validators and provides methods to execute
-// them individually, sequentially, or in parallel. It also integrates a
-// suggestion engine that enhances validation results with helpful suggestions.
-//
-// Thread Safety:
-//
-// ValidationEngine is thread-safe and can be used concurrently from multiple
-// goroutines. All public methods use appropriate locking.
+// The engine provides:
+//   - Thread-safe validator registration and lookup
+//   - Single validator execution via Validate()
+//   - Multiple validator execution via ValidateAll()
+//   - Parallel validation via ValidateParallel()
+//   - Automatic suggestion generation
+//   - Always-run security validators that cannot be bypassed
+//   - Validation result caching with automatic expiration
 //
 // Example usage:
 //
 //	engine := validation.NewValidationEngine()
-//	engine.Register(validators.NewClusterNameValidator())
-//
-//	result, err := engine.Validate(ctx, "cluster-name", "my-cluster")
-//	if err != nil {
-//	    log.Fatal(err)
-//	}
-//	if !result.Valid {
-//	    for _, err := range result.Errors {
-//	        fmt.Printf("Error: %s\n", err.Message)
-//	    }
-//	}
-//
-// For multiple validators:
-//
-//	result, err := engine.ValidateAll(ctx, []string{"cluster-name", "config"}, value)
-//
-// For parallel execution:
-//
-//	result, err := engine.ValidateParallel(ctx, []string{"validator1", "validator2"}, value)
+//	engine.Register(myValidator)
+//	result, err := engine.Validate(ctx, "my-validator", value)
 type ValidationEngine struct {
-	registry         *Registry
-	suggestionEngine *SuggestionEngine
-	mu               sync.RWMutex
+	registry           *Registry
+	suggestionEngine   *SuggestionEngine
+	securityValidators []Validator
+	cache              *ValidationCache
+	mu                 sync.RWMutex
 }
 
 // NewValidationEngine creates a new validation engine.
 //
-// The engine is created with an empty registry and a default suggestion engine.
-// Validators must be registered before use.
+// The engine is initialized with:
+//   - Empty validator registry
+//   - Default suggestion engine with typo detection
+//   - Empty security validators list
+//   - Validation cache with 5-minute TTL
+//
+// Returns:
+//   - *ValidationEngine: New validation engine instance
+func NewValidationEngine() *ValidationEngine {
+	return &ValidationEngine{
+		registry:           NewRegistry(),
+		suggestionEngine:   NewSuggestionEngine(),
+		securityValidators: make([]Validator, 0),
+		cache:              NewValidationCache(5 * time.Minute),
+	}
+}
+
+// NewValidationEngineWithCache creates a new validation engine with custom cache TTL.
+//
+// Parameters:
+//   - cacheTTL: Time-to-live for cache entries (0 disables caching)
+//
+// Returns:
+//   - *ValidationEngine: New validation engine instance
 //
 // Example:
 //
-//	engine := validation.NewValidationEngine()
-//	engine.Register(validators.NewClusterNameValidator())
-//	engine.Register(validators.NewConfigValidator())
-func NewValidationEngine() *ValidationEngine {
+//	// Create engine with 10-minute cache
+//	engine := validation.NewValidationEngineWithCache(10 * time.Minute)
+//	
+//	// Create engine with caching disabled
+//	engine := validation.NewValidationEngineWithCache(0)
+func NewValidationEngineWithCache(cacheTTL time.Duration) *ValidationEngine {
 	return &ValidationEngine{
-		registry:         NewRegistry(),
-		suggestionEngine: NewSuggestionEngine(),
+		registry:           NewRegistry(),
+		suggestionEngine:   NewSuggestionEngine(),
+		securityValidators: make([]Validator, 0),
+		cache:              NewValidationCache(cacheTTL),
 	}
 }
 
 // Register registers a validator with the engine.
 //
-// The validator's Name() must be unique. Attempting to register a validator
+// The validator name must be unique. Attempting to register a validator
 // with a duplicate name returns an error.
 //
 // Parameters:
-//   - validator: The validator to register
+//   - validator: Validator to register (must not be nil)
 //
 // Returns:
-//   - error: Registration failure (duplicate name)
+//   - error: Registration error (nil on success)
 //
 // Example:
 //
-//	err := engine.Register(validators.NewClusterNameValidator())
-//	if err != nil {
-//	    return fmt.Errorf("failed to register validator: %w", err)
-//	}
+//	validator := validation.NewValidatorFunc("cluster-name", validateClusterName)
+//	err := engine.Register(validator)
 func (e *ValidationEngine) Register(validator Validator) error {
 	return e.registry.Register(validator)
 }
 
-// MustRegister registers a validator and panics if registration fails.
+// MustRegister registers a validator and panics on error.
+//
+// This is useful for registering validators during initialization where
+// registration failure should be fatal.
+//
+// Parameters:
+//   - validator: Validator to register
+//
+// Panics:
+//   - If registration fails
+//
+// Example:
+//
+//	engine.MustRegister(myValidator) // Panics if registration fails
 func (e *ValidationEngine) MustRegister(validator Validator) {
 	e.registry.MustRegister(validator)
 }
 
+// RegisterSecurityValidator registers a security validator that always runs.
+//
+// Security validators are executed automatically in all validation operations
+// and cannot be bypassed. This ensures security checks are always applied.
+//
+// Parameters:
+//   - validator: Security validator to register
+//
+// Returns:
+//   - error: Registration error (nil on success)
+//
+// Example:
+//
+//	secValidator := validators.NewSecurityValidator()
+//	err := engine.RegisterSecurityValidator(secValidator)
+func (e *ValidationEngine) RegisterSecurityValidator(validator Validator) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	// Also register in the main registry for explicit access
+	if err := e.registry.Register(validator); err != nil {
+		return err
+	}
+
+	// Add to security validators list
+	e.securityValidators = append(e.securityValidators, validator)
+	return nil
+}
+
+// MustRegisterSecurityValidator registers a security validator and panics on error.
+//
+// Parameters:
+//   - validator: Security validator to register
+//
+// Panics:
+//   - If registration fails
+func (e *ValidationEngine) MustRegisterSecurityValidator(validator Validator) {
+	if err := e.RegisterSecurityValidator(validator); err != nil {
+		panic(fmt.Sprintf("failed to register security validator: %v", err))
+	}
+}
+
 // Unregister removes a validator from the engine.
+//
+// Parameters:
+//   - name: Validator name to remove
+//
+// Returns:
+//   - error: Error if validator not found
 func (e *ValidationEngine) Unregister(name string) error {
 	return e.registry.Unregister(name)
 }
 
 // Has checks if a validator is registered.
+//
+// Parameters:
+//   - name: Validator name to check
+//
+// Returns:
+//   - bool: True if validator exists
 func (e *ValidationEngine) Has(name string) bool {
 	return e.registry.Has(name)
 }
 
-// List returns all registered validator names.
+// List returns names of all registered validators.
+//
+// Returns:
+//   - []string: Validator names (empty if none registered)
 func (e *ValidationEngine) List() []string {
 	return e.registry.List()
 }
 
-// Validate validates a value using a specific validator.
-//
-// This method:
-//  1. Looks up the validator by name
-//  2. Executes the validator
-//  3. Enhances the result with suggestions
-//  4. Returns the validation result
-//
-// Parameters:
-//   - ctx: Context for cancellation and timeouts
-//   - validatorName: Name of the registered validator
-//   - value: Value to validate (type depends on validator)
+// ListSecurityValidators returns names of all registered security validators.
 //
 // Returns:
-//   - *ValidationResult: Validation result with errors, warnings, and suggestions
-//   - error: Validator not found or validation execution error
+//   - []string: Security validator names (empty if none registered)
+func (e *ValidationEngine) ListSecurityValidators() []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	names := make([]string, 0, len(e.securityValidators))
+	for _, validator := range e.securityValidators {
+		names = append(names, validator.Name())
+	}
+	return names
+}
+
+// Validate executes a specific validator.
+//
+// The validator must be registered before calling this method.
+// The context can be used for cancellation and passing metadata.
+//
+// Security validators are automatically executed before the requested validator
+// to ensure security checks cannot be bypassed.
+//
+// Caching: Results are cached based on validator name and data hash. Cached
+// results are returned if available and not expired, avoiding redundant validation.
+//
+// Parameters:
+//   - ctx: Context for cancellation and metadata
+//   - name: Validator name to execute
+//   - value: Value to validate
+//
+// Returns:
+//   - *ValidationResult: Validation result with errors/warnings
+//   - error: Execution error (not validation failure)
 //
 // Example:
 //
 //	result, err := engine.Validate(ctx, "cluster-name", "my-cluster")
 //	if err != nil {
-//	    return fmt.Errorf("validation failed: %w", err)
+//	    return err // Execution error
 //	}
 //	if !result.Valid {
-//	    fmt.Println("Validation errors:")
-//	    for _, err := range result.Errors {
-//	        fmt.Printf("  - %s: %s\n", err.Field, err.Message)
-//	    }
+//	    // Handle validation errors
 //	}
-func (e *ValidationEngine) Validate(ctx context.Context, validatorName string, value interface{}) (*ValidationResult, error) {
-	return e.ValidateWithOptions(ctx, validatorName, value, DefaultValidationOptions())
-}
+func (e *ValidationEngine) Validate(ctx context.Context, name string, value interface{}) (*ValidationResult, error) {
+	// Check cache first
+	if cached := e.cache.Get(name, value); cached != nil {
+		return cached, nil
+	}
 
-// ValidateWithOptions validates a value using a specific validator with options.
-func (e *ValidationEngine) ValidateWithOptions(ctx context.Context, validatorName string, value interface{}, opts *ValidationOptions) (*ValidationResult, error) {
-	validator := e.registry.Get(validatorName)
+	// First, run all security validators (cannot be bypassed)
+	aggregated := NewValidationResult()
+	
+	e.mu.RLock()
+	securityValidators := make([]Validator, len(e.securityValidators))
+	copy(securityValidators, e.securityValidators)
+	e.mu.RUnlock()
+
+	for _, secValidator := range securityValidators {
+		secResult, err := secValidator.Validate(ctx, value)
+		if err != nil {
+			return nil, fmt.Errorf("security validator %q failed: %w", secValidator.Name(), err)
+		}
+		aggregated.Merge(secResult)
+	}
+
+	// If security validation failed, return immediately
+	if !aggregated.Valid {
+		e.suggestionEngine.EnhanceResult(aggregated, nil)
+		return aggregated, nil
+	}
+
+	// Now run the requested validator
+	validator := e.registry.Get(name)
 	if validator == nil {
-		return nil, fmt.Errorf("validator %q not found", validatorName)
+		return nil, fmt.Errorf("validator %q not found", name)
 	}
 
 	result, err := validator.Validate(ctx, value)
 	if err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
+		return nil, err
 	}
 
+	// Merge with security validation results
+	aggregated.Merge(result)
+
 	// Enhance result with suggestions
-	if opts.Context == nil {
-		opts.Context = make(map[string]interface{})
+	e.suggestionEngine.EnhanceResult(aggregated, nil)
+
+	// Cache the result
+	e.cache.Set(name, value, aggregated, 0)
+
+	return aggregated, nil
+}
+
+// ValidateWithOptions executes a validator with custom options.
+//
+// Parameters:
+//   - ctx: Context for cancellation and metadata
+//   - name: Validator name to execute
+//   - value: Value to validate
+//   - opts: Validation options (nil for defaults)
+//
+// Returns:
+//   - *ValidationResult: Validation result
+//   - error: Execution error
+func (e *ValidationEngine) ValidateWithOptions(ctx context.Context, name string, value interface{}, opts *ValidationOptions) (*ValidationResult, error) {
+	if opts == nil {
+		opts = DefaultValidationOptions()
 	}
-	e.suggestionEngine.EnhanceResult(result, opts.Context)
+
+	result, err := e.Validate(ctx, name, value)
+	if err != nil {
+		return nil, err
+	}
 
 	// Filter warnings if not included
 	if !opts.IncludeWarnings {
@@ -175,220 +320,424 @@ func (e *ValidationEngine) ValidateWithOptions(ctx context.Context, validatorNam
 	return result, nil
 }
 
-// ValidateAll validates a value using multiple validators.
-// Validation stops at the first error if StopOnFirstError is true in options.
+// ValidateAll executes multiple validators sequentially.
 //
-// This method executes validators sequentially in the order provided.
-// Use ValidateParallel for concurrent execution of independent validators.
+// All validators are executed even if some fail. The results are aggregated
+// into a single ValidationResult.
 //
 // Parameters:
-//   - ctx: Context for cancellation and timeouts
-//   - validatorNames: Names of validators to execute
+//   - ctx: Context for cancellation and metadata
+//   - names: Validator names to execute
 //   - value: Value to validate
 //
 // Returns:
-//   - *ValidationResult: Merged validation results from all validators
-//   - error: Validator not found or execution error
+//   - *ValidationResult: Aggregated validation result
+//   - error: Execution error (not validation failure)
 //
 // Example:
 //
-//	validators := []string{"cluster-name", "config", "security"}
-//	result, err := engine.ValidateAll(ctx, validators, config)
-//	if err != nil {
-//	    return fmt.Errorf("validation failed: %w", err)
-//	}
-func (e *ValidationEngine) ValidateAll(ctx context.Context, validatorNames []string, value interface{}) (*ValidationResult, error) {
-	return e.ValidateAllWithOptions(ctx, validatorNames, value, DefaultValidationOptions())
+//	result, err := engine.ValidateAll(ctx, []string{"validator1", "validator2"}, value)
+func (e *ValidationEngine) ValidateAll(ctx context.Context, names []string, value interface{}) (*ValidationResult, error) {
+	return e.ValidateAllWithOptions(ctx, names, value, nil)
 }
 
-// ValidateAllWithOptions validates a value using multiple validators with options.
-func (e *ValidationEngine) ValidateAllWithOptions(ctx context.Context, validatorNames []string, value interface{}, opts *ValidationOptions) (*ValidationResult, error) {
-	result := NewValidationResult()
+// ValidateAllWithOptions executes multiple validators with custom options.
+//
+// Security validators are automatically executed first to ensure security
+// checks cannot be bypassed.
+//
+// Validators are sorted by priority before execution, with lower priority
+// values running first. This ensures fast validators (format checks) run
+// before slow validators (network checks, file I/O).
+//
+// Parameters:
+//   - ctx: Context for cancellation and metadata
+//   - names: Validator names to execute
+//   - value: Value to validate
+//   - opts: Validation options (nil for defaults)
+//
+// Returns:
+//   - *ValidationResult: Aggregated validation result
+//   - error: Execution error
+func (e *ValidationEngine) ValidateAllWithOptions(ctx context.Context, names []string, value interface{}, opts *ValidationOptions) (*ValidationResult, error) {
+	if opts == nil {
+		opts = DefaultValidationOptions()
+	}
 
-	for _, name := range validatorNames {
+	aggregated := NewValidationResult()
+
+	// First, run all security validators (cannot be bypassed)
+	e.mu.RLock()
+	securityValidators := make([]Validator, len(e.securityValidators))
+	copy(securityValidators, e.securityValidators)
+	e.mu.RUnlock()
+
+	for _, secValidator := range securityValidators {
 		// Check context cancellation
 		select {
 		case <-ctx.Done():
-			return result, ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
-		validator := e.registry.Get(name)
-		if validator == nil {
-			result.AddError("validator", fmt.Sprintf("validator %q not found", name))
-			if opts.StopOnFirstError {
-				break
-			}
-			continue
-		}
-
-		validationResult, err := validator.Validate(ctx, value)
+		secResult, err := secValidator.Validate(ctx, value)
 		if err != nil {
-			result.AddError(name, fmt.Sprintf("validation error: %v", err))
-			if opts.StopOnFirstError {
-				break
-			}
-			continue
+			return nil, fmt.Errorf("security validator %q failed: %w", secValidator.Name(), err)
 		}
 
 		// Merge results
-		result.Merge(validationResult)
+		aggregated.Merge(secResult)
 
 		// Stop on first error if requested
-		if opts.StopOnFirstError && result.HasErrors() {
+		if opts.StopOnFirstError && !secResult.Valid {
 			break
 		}
 	}
 
-	// Enhance result with suggestions
-	if opts.Context == nil {
-		opts.Context = make(map[string]interface{})
+	// If security validation failed and stop on first error, return immediately
+	if opts.StopOnFirstError && !aggregated.Valid {
+		if !opts.IncludeWarnings {
+			aggregated.Warnings = nil
+		}
+		return aggregated, nil
 	}
-	e.suggestionEngine.EnhanceResult(result, opts.Context)
+
+	// Collect validators and sort by priority
+	validators := make([]Validator, 0, len(names))
+	for _, name := range names {
+		validator := e.registry.Get(name)
+		if validator == nil {
+			return nil, fmt.Errorf("validator %q not found", name)
+		}
+		validators = append(validators, validator)
+	}
+
+	// Sort validators by priority (lower values first)
+	sortValidatorsByPriority(validators)
+
+	// Now run the requested validators in priority order
+	for _, validator := range validators {
+		// Check context cancellation
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		result, err := validator.Validate(ctx, value)
+		if err != nil {
+			return nil, fmt.Errorf("validator %q failed: %w", validator.Name(), err)
+		}
+
+		// Merge results
+		aggregated.Merge(result)
+
+		// Stop on first error if requested
+		if opts.StopOnFirstError && !result.Valid {
+			break
+		}
+	}
 
 	// Filter warnings if not included
 	if !opts.IncludeWarnings {
-		result.Warnings = nil
+		aggregated.Warnings = nil
 	}
 
-	return result, nil
+	return aggregated, nil
 }
 
-// ValidateParallel validates a value using multiple validators in parallel.
-// This is useful for independent validators that can run concurrently.
+// ValidateParallel executes multiple validators in parallel.
 //
-// All validators execute concurrently using goroutines. Results are collected
-// and merged into a single ValidationResult. This method is faster than
+// All validators run concurrently using goroutines. This is faster than
 // ValidateAll for independent validators but uses more resources.
 //
 // Parameters:
-//   - ctx: Context for cancellation and timeouts
-//   - validatorNames: Names of validators to execute concurrently
+//   - ctx: Context for cancellation and metadata
+//   - names: Validator names to execute
 //   - value: Value to validate
 //
 // Returns:
-//   - *ValidationResult: Merged validation results from all validators
-//   - error: Validator not found or execution error
+//   - *ValidationResult: Aggregated validation result
+//   - error: Execution error (not validation failure)
 //
 // Example:
 //
-//	// These validators are independent and can run in parallel
-//	validators := []string{"syntax", "schema", "security"}
-//	result, err := engine.ValidateParallel(ctx, validators, config)
-//	if err != nil {
-//	    return fmt.Errorf("validation failed: %w", err)
-//	}
-func (e *ValidationEngine) ValidateParallel(ctx context.Context, validatorNames []string, value interface{}) (*ValidationResult, error) {
-	return e.ValidateParallelWithOptions(ctx, validatorNames, value, DefaultValidationOptions())
+//	result, err := engine.ValidateParallel(ctx, []string{"validator1", "validator2"}, value)
+func (e *ValidationEngine) ValidateParallel(ctx context.Context, names []string, value interface{}) (*ValidationResult, error) {
+	return e.ValidateParallelWithOptions(ctx, names, value, nil)
 }
 
-// ValidateParallelWithOptions validates a value using multiple validators in parallel with options.
-func (e *ValidationEngine) ValidateParallelWithOptions(ctx context.Context, validatorNames []string, value interface{}, opts *ValidationOptions) (*ValidationResult, error) {
-	result := NewValidationResult()
+// ValidateParallelWithOptions executes multiple validators in parallel with options.
+//
+// Security validators are executed first sequentially to ensure security checks
+// cannot be bypassed, then the requested validators run in parallel.
+//
+// Note: Validators are sorted by priority before parallel execution. While they
+// run concurrently, validators with the same priority level are grouped together.
+//
+// Parameters:
+//   - ctx: Context for cancellation and metadata
+//   - names: Validator names to execute
+//   - value: Value to validate
+//   - opts: Validation options (nil for defaults)
+//
+// Returns:
+//   - *ValidationResult: Aggregated validation result
+//   - error: Execution error
+func (e *ValidationEngine) ValidateParallelWithOptions(ctx context.Context, names []string, value interface{}, opts *ValidationOptions) (*ValidationResult, error) {
+	if opts == nil {
+		opts = DefaultValidationOptions()
+	}
 
-	// Create channels for results
+	aggregated := NewValidationResult()
+
+	// First, run all security validators sequentially (cannot be bypassed)
+	e.mu.RLock()
+	securityValidators := make([]Validator, len(e.securityValidators))
+	copy(securityValidators, e.securityValidators)
+	e.mu.RUnlock()
+
+	for _, secValidator := range securityValidators {
+		secResult, err := secValidator.Validate(ctx, value)
+		if err != nil {
+			return nil, fmt.Errorf("security validator %q failed: %w", secValidator.Name(), err)
+		}
+		aggregated.Merge(secResult)
+	}
+
+	// If security validation failed, return immediately
+	if !aggregated.Valid {
+		if !opts.IncludeWarnings {
+			aggregated.Warnings = nil
+		}
+		return aggregated, nil
+	}
+
+	// Collect validators and sort by priority
+	validators := make([]Validator, 0, len(names))
+	for _, name := range names {
+		validator := e.registry.Get(name)
+		if validator == nil {
+			return nil, fmt.Errorf("validator %q not found", name)
+		}
+		validators = append(validators, validator)
+	}
+
+	// Sort validators by priority (lower values first)
+	sortValidatorsByPriority(validators)
+
+	// Create channels for results and errors
 	type validationJob struct {
 		name   string
 		result *ValidationResult
 		err    error
 	}
 
-	resultChan := make(chan validationJob, len(validatorNames))
+	jobs := make(chan validationJob, len(validators))
 	var wg sync.WaitGroup
 
-	// Start validation goroutines
-	for _, name := range validatorNames {
+	// Launch validators in parallel (already sorted by priority)
+	for _, validator := range validators {
 		wg.Add(1)
-		go func(validatorName string) {
+		go func(v Validator) {
 			defer wg.Done()
 
-			validator := e.registry.Get(validatorName)
-			if validator == nil {
-				resultChan <- validationJob{
-					name: validatorName,
-					err:  fmt.Errorf("validator %q not found", validatorName),
-				}
-				return
-			}
-
-			validationResult, err := validator.Validate(ctx, value)
-			resultChan <- validationJob{
-				name:   validatorName,
-				result: validationResult,
+			result, err := v.Validate(ctx, value)
+			jobs <- validationJob{
+				name:   v.Name(),
+				result: result,
 				err:    err,
 			}
-		}(name)
+		}(validator)
 	}
 
-	// Wait for all validations to complete
+	// Wait for all validators to complete
 	go func() {
 		wg.Wait()
-		close(resultChan)
+		close(jobs)
 	}()
 
-	// Collect results
-	for job := range resultChan {
+	// Aggregate results
+	for job := range jobs {
 		if job.err != nil {
-			result.AddError(job.name, fmt.Sprintf("validation error: %v", job.err))
-			continue
+			return nil, fmt.Errorf("validator %q failed: %w", job.name, job.err)
 		}
-
-		if job.result != nil {
-			result.Merge(job.result)
-		}
+		aggregated.Merge(job.result)
 	}
-
-	// Enhance result with suggestions
-	if opts.Context == nil {
-		opts.Context = make(map[string]interface{})
-	}
-	e.suggestionEngine.EnhanceResult(result, opts.Context)
 
 	// Filter warnings if not included
 	if !opts.IncludeWarnings {
-		result.Warnings = nil
+		aggregated.Warnings = nil
 	}
 
-	return result, nil
+	return aggregated, nil
 }
 
 // AddSuggestionRule adds a custom suggestion rule to the engine.
+//
+// Parameters:
+//   - rule: Suggestion rule to add
 func (e *ValidationEngine) AddSuggestionRule(rule SuggestionRule) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
 	e.suggestionEngine.AddRule(rule)
 }
 
 // GetRegistry returns the validator registry.
+//
+// Returns:
+//   - *Registry: Validator registry
 func (e *ValidationEngine) GetRegistry() *Registry {
 	return e.registry
 }
 
 // GetSuggestionEngine returns the suggestion engine.
+//
+// Returns:
+//   - *SuggestionEngine: Suggestion engine
 func (e *ValidationEngine) GetSuggestionEngine() *SuggestionEngine {
 	return e.suggestionEngine
 }
 
-// defaultEngine is the default global validation engine.
+// GetCache returns the validation cache.
+//
+// Returns:
+//   - *ValidationCache: Validation cache
+func (e *ValidationEngine) GetCache() *ValidationCache {
+	return e.cache
+}
+
+// InvalidateCache invalidates cached results for a specific validator and data.
+//
+// Parameters:
+//   - validatorName: Name of the validator
+//   - data: Data to invalidate
+//
+// Example:
+//
+//	// Data changed - invalidate cache
+//	engine.InvalidateCache("cluster-name", oldData)
+func (e *ValidationEngine) InvalidateCache(validatorName string, data interface{}) {
+	e.cache.Invalidate(validatorName, data)
+}
+
+// InvalidateAllCache invalidates all cached results for a validator.
+//
+// Parameters:
+//   - validatorName: Name of the validator
+//
+// Example:
+//
+//	// Validator logic changed - invalidate all entries
+//	engine.InvalidateAllCache("cluster-name")
+func (e *ValidationEngine) InvalidateAllCache(validatorName string) {
+	e.cache.InvalidateAll(validatorName)
+}
+
+// ClearCache removes all cached validation results.
+//
+// Example:
+//
+//	engine.ClearCache() // Clear all cached results
+func (e *ValidationEngine) ClearCache() {
+	e.cache.Clear()
+}
+
+// CleanExpiredCache removes expired entries from the cache.
+//
+// Returns:
+//   - int: Number of entries removed
+//
+// Example:
+//
+//	removed := engine.CleanExpiredCache()
+//	log.Printf("Cleaned %d expired cache entries", removed)
+func (e *ValidationEngine) CleanExpiredCache() int {
+	return e.cache.CleanExpired()
+}
+
+// CacheStats returns cache statistics.
+//
+// Returns:
+//   - CacheStats: Cache statistics
+func (e *ValidationEngine) CacheStats() CacheStats {
+	return e.cache.Stats()
+}
+
+// defaultEngine is the global default validation engine.
 var defaultEngine = NewValidationEngine()
 
-// DefaultEngine returns the default global validation engine.
+// DefaultEngine returns the global default validation engine.
+//
+// This is useful for simple use cases where a single global engine is sufficient.
+//
+// Returns:
+//   - *ValidationEngine: Global validation engine
 func DefaultEngine() *ValidationEngine {
 	return defaultEngine
 }
 
 // Validate validates a value using the default engine.
-func Validate(ctx context.Context, validatorName string, value interface{}) (*ValidationResult, error) {
-	return defaultEngine.Validate(ctx, validatorName, value)
+//
+// This is a convenience function for simple validation without creating an engine.
+//
+// Parameters:
+//   - ctx: Context for cancellation and metadata
+//   - name: Validator name to execute
+//   - value: Value to validate
+//
+// Returns:
+//   - *ValidationResult: Validation result
+//   - error: Execution error
+func Validate(ctx context.Context, name string, value interface{}) (*ValidationResult, error) {
+	return defaultEngine.Validate(ctx, name, value)
 }
 
-// ValidateAll validates a value using multiple validators with the default engine.
-func ValidateAll(ctx context.Context, validatorNames []string, value interface{}) (*ValidationResult, error) {
-	return defaultEngine.ValidateAll(ctx, validatorNames, value)
+// ValidateAll validates a value using multiple validators from the default engine.
+//
+// Parameters:
+//   - ctx: Context for cancellation and metadata
+//   - names: Validator names to execute
+//   - value: Value to validate
+//
+// Returns:
+//   - *ValidationResult: Aggregated validation result
+//   - error: Execution error
+func ValidateAll(ctx context.Context, names []string, value interface{}) (*ValidationResult, error) {
+	return defaultEngine.ValidateAll(ctx, names, value)
 }
 
-// ValidateParallel validates a value using multiple validators in parallel with the default engine.
-func ValidateParallel(ctx context.Context, validatorNames []string, value interface{}) (*ValidationResult, error) {
-	return defaultEngine.ValidateParallel(ctx, validatorNames, value)
+// ValidateParallel validates a value using multiple validators in parallel from the default engine.
+//
+// Parameters:
+//   - ctx: Context for cancellation and metadata
+//   - names: Validator names to execute
+//   - value: Value to validate
+//
+// Returns:
+//   - *ValidationResult: Aggregated validation result
+//   - error: Execution error
+func ValidateParallel(ctx context.Context, names []string, value interface{}) (*ValidationResult, error) {
+	return defaultEngine.ValidateParallel(ctx, names, value)
+}
+
+// sortValidatorsByPriority sorts validators by priority (lower values first).
+//
+// This ensures fast validators (format checks, simple rules) run before
+// slow validators (network checks, file I/O).
+//
+// Parameters:
+//   - validators: Slice of validators to sort (modified in place)
+func sortValidatorsByPriority(validators []Validator) {
+	// Use a simple insertion sort since validator lists are typically small
+	for i := 1; i < len(validators); i++ {
+		key := validators[i]
+		keyPriority := key.Priority()
+		j := i - 1
+
+		// Move validators with higher priority values to the right
+		for j >= 0 && validators[j].Priority() > keyPriority {
+			validators[j+1] = validators[j]
+			j--
+		}
+		validators[j+1] = key
+	}
 }

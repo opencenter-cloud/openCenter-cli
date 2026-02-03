@@ -19,11 +19,14 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/ui"
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 func TestSetupContainer(t *testing.T) {
-	container, err := SetupContainer()
+	container, err := SetupContainer("/tmp/test-clusters")
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -32,8 +35,56 @@ func TestSetupContainer(t *testing.T) {
 	}
 }
 
+func TestSetupContainer_ErrorHandler(t *testing.T) {
+	container, err := SetupContainer("/tmp/test-clusters")
+	if err != nil {
+		t.Fatalf("SetupContainer() failed: %v", err)
+	}
+
+	var errorHandler errors.ErrorHandler
+	err = container.ResolveAs("ErrorHandler", &errorHandler)
+	if err != nil {
+		t.Errorf("Failed to resolve ErrorHandler: %v", err)
+	}
+	if errorHandler == nil {
+		t.Error("ErrorHandler is nil")
+	}
+}
+
+func TestSetupContainer_FileSystem(t *testing.T) {
+	container, err := SetupContainer("/tmp/test-clusters")
+	if err != nil {
+		t.Fatalf("SetupContainer() failed: %v", err)
+	}
+
+	var fileSystem fs.FileSystem
+	err = container.ResolveAs("FileSystem", &fileSystem)
+	if err != nil {
+		t.Errorf("Failed to resolve FileSystem: %v", err)
+	}
+	if fileSystem == nil {
+		t.Error("FileSystem is nil")
+	}
+}
+
+func TestSetupContainer_PathResolver(t *testing.T) {
+	container, err := SetupContainer("/tmp/test-clusters")
+	if err != nil {
+		t.Fatalf("SetupContainer() failed: %v", err)
+	}
+
+	var pathResolver *paths.PathResolver
+	err = container.ResolveAs("PathResolver", &pathResolver)
+	if err != nil {
+		t.Errorf("Failed to resolve PathResolver: %v", err)
+	}
+	if pathResolver == nil {
+		t.Error("PathResolver is nil")
+	}
+}
+
 func TestSetupContainer_Logger(t *testing.T) {
-	container, err := SetupContainer()
+	container, err := SetupContainer("/tmp/test-clusters")
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -49,7 +100,7 @@ func TestSetupContainer_Logger(t *testing.T) {
 }
 
 func TestSetupContainer_ConfigManager(t *testing.T) {
-	container, err := SetupContainer()
+	container, err := SetupContainer("/tmp/test-clusters")
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -65,7 +116,7 @@ func TestSetupContainer_ConfigManager(t *testing.T) {
 }
 
 func TestSetupContainer_ErrorFormatter(t *testing.T) {
-	container, err := SetupContainer()
+	container, err := SetupContainer("/tmp/test-clusters")
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -81,7 +132,7 @@ func TestSetupContainer_ErrorFormatter(t *testing.T) {
 }
 
 func TestSetupContainer_Singletons(t *testing.T) {
-	container, err := SetupContainer()
+	container, err := SetupContainer("/tmp/test-clusters")
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -102,3 +153,30 @@ func TestSetupContainer_Singletons(t *testing.T) {
 		t.Error("Logger should be a singleton (same instance)")
 	}
 }
+
+func TestSetupContainer_DependencyResolution(t *testing.T) {
+	container, err := SetupContainer("/tmp/test-clusters")
+	if err != nil {
+		t.Fatalf("SetupContainer() failed: %v", err)
+	}
+
+	// FileSystem depends on ErrorHandler
+	// Verify both can be resolved
+	var errorHandler errors.ErrorHandler
+	err = container.ResolveAs("ErrorHandler", &errorHandler)
+	if err != nil {
+		t.Errorf("Failed to resolve ErrorHandler: %v", err)
+	}
+
+	var fileSystem fs.FileSystem
+	err = container.ResolveAs("FileSystem", &fileSystem)
+	if err != nil {
+		t.Errorf("Failed to resolve FileSystem: %v", err)
+	}
+
+	// Verify FileSystem is using the ErrorHandler
+	if fileSystem == nil {
+		t.Error("FileSystem is nil")
+	}
+}
+

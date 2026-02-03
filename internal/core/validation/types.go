@@ -30,6 +30,29 @@ const (
 	SeverityInfo Severity = "info"
 )
 
+// Priority constants for validator execution ordering.
+//
+// Validators with lower priority values execute first. This allows fast,
+// simple validators to run before slow, complex validators.
+//
+// Priority ranges:
+//   - 0-99: High priority (fast validators like format checks)
+//   - 100-199: Normal priority (standard business logic validators)
+//   - 200-299: Low priority (slow validators like network checks, file I/O)
+const (
+	// PriorityHigh is for fast validators that should run first.
+	// Examples: format checks, simple pattern matching, length validation
+	PriorityHigh = 50
+
+	// PriorityNormal is for standard validators with moderate complexity.
+	// Examples: business logic validation, cross-field validation
+	PriorityNormal = 100
+
+	// PriorityLow is for slow validators that should run last.
+	// Examples: network connectivity checks, file I/O, external API calls
+	PriorityLow = 200
+)
+
 // ValidationIssue represents a single validation issue.
 //
 // Each issue contains:
@@ -245,6 +268,7 @@ func (r *ValidationResult) Merge(other *ValidationResult) {
 //   - Implement Validate() to perform validation logic
 //   - Be thread-safe (can be called concurrently)
 //   - Return ValidationResult with errors, warnings, and suggestions
+//   - Define a priority for execution ordering (lower values run first)
 //
 // Example implementation:
 //
@@ -252,6 +276,10 @@ func (r *ValidationResult) Merge(other *ValidationResult) {
 //
 //	func (v *MyValidator) Name() string {
 //	    return "my-validator"
+//	}
+//
+//	func (v *MyValidator) Priority() int {
+//	    return PriorityNormal
 //	}
 //
 //	func (v *MyValidator) Validate(ctx context.Context, value interface{}) (*ValidationResult, error) {
@@ -274,6 +302,21 @@ type Validator interface {
 	//   - string: Unique validator name
 	Name() string
 
+	// Priority returns the execution priority of the validator.
+	//
+	// Validators with lower priority values execute first. This allows fast,
+	// simple validators (like format checks) to run before slow, complex
+	// validators (like network checks or file I/O).
+	//
+	// Standard priority levels:
+	//   - PriorityHigh (0-99): Fast validators (format checks, simple rules)
+	//   - PriorityNormal (100-199): Standard validators (business logic)
+	//   - PriorityLow (200-299): Slow validators (network, file I/O)
+	//
+	// Returns:
+	//   - int: Priority value (lower values execute first)
+	Priority() int
+
 	// Validate performs validation on the given value.
 	// The context can be used for cancellation and passing metadata.
 	//
@@ -295,21 +338,37 @@ type Validator interface {
 
 // ValidatorFunc is a function type that implements the Validator interface.
 type ValidatorFunc struct {
-	name string
-	fn   func(ctx context.Context, value interface{}) (*ValidationResult, error)
+	name     string
+	priority int
+	fn       func(ctx context.Context, value interface{}) (*ValidationResult, error)
 }
 
-// NewValidatorFunc creates a new ValidatorFunc.
+// NewValidatorFunc creates a new ValidatorFunc with normal priority.
 func NewValidatorFunc(name string, fn func(ctx context.Context, value interface{}) (*ValidationResult, error)) *ValidatorFunc {
 	return &ValidatorFunc{
-		name: name,
-		fn:   fn,
+		name:     name,
+		priority: PriorityNormal,
+		fn:       fn,
+	}
+}
+
+// NewValidatorFuncWithPriority creates a new ValidatorFunc with custom priority.
+func NewValidatorFuncWithPriority(name string, priority int, fn func(ctx context.Context, value interface{}) (*ValidationResult, error)) *ValidatorFunc {
+	return &ValidatorFunc{
+		name:     name,
+		priority: priority,
+		fn:       fn,
 	}
 }
 
 // Name returns the validator name.
 func (v *ValidatorFunc) Name() string {
 	return v.name
+}
+
+// Priority returns the validator priority.
+func (v *ValidatorFunc) Priority() int {
+	return v.priority
 }
 
 // Validate executes the validation function.
@@ -334,4 +393,133 @@ func DefaultValidationOptions() *ValidationOptions {
 		IncludeWarnings:  true,
 		Context:          make(map[string]interface{}),
 	}
+}
+
+// ToError converts ValidationResult to a StructuredError.
+//
+// This method provides compatibility with the error handling system by converting
+// validation results into structured errors that can be handled uniformly.
+//
+// Behavior:
+//   - Returns nil if Valid is true (no errors)
+//   - Returns nil if there are no errors (even if Valid is false)
+//   - Returns a single StructuredError if there's one error
+//   - Returns a StructuredError with aggregated messages if there are multiple errors
+//
+// The returned StructuredError includes:
+//   - Type: ValidationError
+//   - Message: Aggregated error messages (semicolon-separated)
+//   - Suggestions: All suggestions from all errors
+//   - Field: Field from first error (if only one error)
+//   - Context: Combined context from all errors
+//   - Retryable: false (validation errors require user action)
+//
+// Example:
+//
+//	result := validator.Validate(ctx, value)
+//	if err := result.ToError(); err != nil {
+//	    return fmt.Errorf("validation failed: %w", err)
+//	}
+//
+// Returns:
+//   - error: StructuredError if validation failed, nil otherwise
+func (r *ValidationResult) ToError() error {
+	// Return nil if validation passed
+	if r.Valid {
+		return nil
+	}
+
+	// Return nil if there are no errors (shouldn't happen if Valid is false, but be defensive)
+	if len(r.Errors) == 0 {
+		return nil
+	}
+
+	// Import the errors package type
+	// Note: We need to import "github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	// to use StructuredError
+
+	// Single error case - return it directly with proper structure
+	if len(r.Errors) == 1 {
+		err := r.Errors[0]
+		return &structuredError{
+			Type:        "validation",
+			Field:       err.Field,
+			Message:     err.Message,
+			Suggestions: err.Suggestions,
+			Context:     err.Context,
+			Retryable:   false,
+		}
+	}
+
+	// Multiple errors - aggregate them
+	var messages []string
+	var allSuggestions []string
+	combinedContext := make(map[string]interface{})
+
+	for _, err := range r.Errors {
+		// Aggregate messages
+		if err.Field != "" {
+			messages = append(messages, fmt.Sprintf("%s: %s", err.Field, err.Message))
+		} else {
+			messages = append(messages, err.Message)
+		}
+
+		// Aggregate suggestions (deduplicate)
+		allSuggestions = append(allSuggestions, err.Suggestions...)
+
+		// Merge context
+		if err.Context != nil {
+			for k, v := range err.Context {
+				combinedContext[k] = v
+			}
+		}
+	}
+
+	// Deduplicate suggestions
+	uniqueSuggestions := make([]string, 0, len(allSuggestions))
+	seen := make(map[string]bool)
+	for _, s := range allSuggestions {
+		if !seen[s] {
+			seen[s] = true
+			uniqueSuggestions = append(uniqueSuggestions, s)
+		}
+	}
+
+	// Create aggregated error
+	aggregatedMessage := ""
+	if len(messages) > 0 {
+		aggregatedMessage = messages[0]
+		if len(messages) > 1 {
+			for _, msg := range messages[1:] {
+				aggregatedMessage += "; " + msg
+			}
+		}
+	}
+
+	return &structuredError{
+		Type:        "validation",
+		Message:     aggregatedMessage,
+		Suggestions: uniqueSuggestions,
+		Context:     combinedContext,
+		Retryable:   false,
+	}
+}
+
+// structuredError is a local implementation of StructuredError to avoid circular imports.
+// This matches the structure in internal/util/errors/interfaces.go
+type structuredError struct {
+	Type        string
+	Field       string
+	Message     string
+	Suggestions []string
+	Context     map[string]interface{}
+	Retryable   bool
+}
+
+// Error implements the error interface
+func (e *structuredError) Error() string {
+	if e.Field != "" {
+		return e.Field + ": " + e.Message
+	}
+	return e.Message
 }

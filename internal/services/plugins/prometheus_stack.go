@@ -26,27 +26,6 @@ func (p *PrometheusStackPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeMonitoring
 }
 
-// Validate validates the service configuration
-func (p *PrometheusStackPlugin) Validate(config interface{}) error {
-	cfg, ok := config.(*services.PrometheusStackConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for prometheus-stack: expected *PrometheusStackConfig")
-	}
-
-	// Validate volume sizes if specified
-	if cfg.GrafanaVolumeSize < 0 {
-		return fmt.Errorf("grafana_volume_size must be non-negative")
-	}
-	if cfg.PrometheusVolumeSize < 0 {
-		return fmt.Errorf("prometheus_volume_size must be non-negative")
-	}
-	if cfg.AlertmanagerVolumeSize < 0 {
-		return fmt.Errorf("alertmanager_volume_size must be non-negative")
-	}
-
-	return nil
-}
-
 // Render renders the service templates to the workspace
 func (p *PrometheusStackPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
 	// Template rendering will be handled by the template system

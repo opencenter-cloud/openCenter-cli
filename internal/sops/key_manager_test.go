@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/rackerlabs/opencenter-cli/internal/util/crypto"
+	testhelpers "github.com/rackerlabs/opencenter-cli/internal/testing"
 )
 
 // **Property 9: Multi-Key SOPS Configuration**
@@ -38,26 +39,18 @@ func TestMultiKeySOPSConfiguration(t *testing.T) {
 
 	// Generate primary key
 	primaryKey, err := manager.GenerateKey(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to generate primary key: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate primary key")
 
 	// Generate additional keys
 	additionalKey1, err := manager.GenerateAdditionalKey(clusterName, 1)
-	if err != nil {
-		t.Fatalf("Failed to generate additional key 1: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate additional key 1")
 
 	additionalKey2, err := manager.GenerateAdditionalKey(clusterName, 2)
-	if err != nil {
-		t.Fatalf("Failed to generate additional key 2: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate additional key 2")
 
 	// List all cluster keys
 	keys, err := manager.ListClusterKeys(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to list cluster keys: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to list cluster keys")
 
 	// Verify we have 3 keys
 	if len(keys) != 3 {
@@ -77,9 +70,7 @@ func TestMultiKeySOPSConfiguration(t *testing.T) {
 
 	// Generate SOPS config
 	sopsConfig, err := manager.GenerateSOPSConfig(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to generate SOPS config: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate SOPS config")
 
 	// Verify SOPS config contains all public keys
 	if !strings.Contains(sopsConfig, primaryKey.PublicKey) {
@@ -121,15 +112,11 @@ func TestMultiKeySOPSConfigurationWithSingleKey(t *testing.T) {
 
 	// Generate only primary key
 	primaryKey, err := manager.GenerateKey(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to generate primary key: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate primary key")
 
 	// List cluster keys
 	keys, err := manager.ListClusterKeys(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to list cluster keys: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to list cluster keys")
 
 	// Verify we have 1 key
 	if len(keys) != 1 {
@@ -138,9 +125,7 @@ func TestMultiKeySOPSConfigurationWithSingleKey(t *testing.T) {
 
 	// Generate SOPS config
 	sopsConfig, err := manager.GenerateSOPSConfig(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to generate SOPS config: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate SOPS config")
 
 	// Verify SOPS config contains the public key
 	if !strings.Contains(sopsConfig, primaryKey.PublicKey) {
@@ -163,26 +148,18 @@ func TestKeyRotation(t *testing.T) {
 
 	// Generate initial keys
 	originalPrimaryKey, err := manager.GenerateKey(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to generate primary key: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate primary key")
 
 	originalAdditionalKey, err := manager.GenerateAdditionalKey(clusterName, 1)
-	if err != nil {
-		t.Fatalf("Failed to generate additional key: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate additional key")
 
 	// Rotate keys
 	err = manager.RotateClusterKeys(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to rotate keys: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to rotate keys")
 
 	// Retrieve new keys
 	newKeys, err := manager.ListClusterKeys(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to list keys after rotation: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to list keys after rotation")
 
 	// Verify we still have 2 keys
 	if len(newKeys) != 2 {
@@ -214,9 +191,7 @@ func TestListClusterKeysNoKeys(t *testing.T) {
 
 	// Try to list keys for non-existent cluster
 	_, err := manager.ListClusterKeys(clusterName)
-	if err == nil {
-		t.Error("Expected error when listing keys for non-existent cluster")
-	}
+	testhelpers.AssertError(t, err, "Expected error when listing keys for non-existent cluster")
 }
 
 func TestGenerateAdditionalKeyIndependence(t *testing.T) {
@@ -231,25 +206,17 @@ func TestGenerateAdditionalKeyIndependence(t *testing.T) {
 
 	// Generate primary key
 	primaryKey, err := manager.GenerateKey(clusterName)
-	if err != nil {
-		t.Fatalf("Failed to generate primary key: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate primary key")
 
 	// Generate additional keys with different indices
 	key1, err := manager.GenerateAdditionalKey(clusterName, 1)
-	if err != nil {
-		t.Fatalf("Failed to generate key 1: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate key 1")
 
 	key2, err := manager.GenerateAdditionalKey(clusterName, 2)
-	if err != nil {
-		t.Fatalf("Failed to generate key 2: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate key 2")
 
 	key5, err := manager.GenerateAdditionalKey(clusterName, 5)
-	if err != nil {
-		t.Fatalf("Failed to generate key 5: %v", err)
-	}
+	testhelpers.AssertNoError(t, err, "Failed to generate key 5")
 
 	// Verify all keys are different
 	keys := []*crypto.AgeKeyPair{primaryKey, key1, key2, key5}

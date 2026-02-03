@@ -55,6 +55,12 @@ func (v *FileValidator) Name() string {
 	return "file"
 }
 
+// Priority returns the validator priority.
+// File validation involves file I/O, so it has low priority.
+func (v *FileValidator) Priority() int {
+	return validation.PriorityLow
+}
+
 // Validate validates a file path or file operation.
 // The value should be a map with "operation" and "path" keys.
 func (v *FileValidator) Validate(ctx context.Context, value interface{}) (*validation.ValidationResult, error) {

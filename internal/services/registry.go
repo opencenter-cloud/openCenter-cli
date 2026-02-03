@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation"
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation/validators"
 )
 
 // ServiceRegistry manages service definitions and plugins
@@ -37,6 +40,12 @@ type ServiceRegistry interface {
 
 	// ExecuteLifecycleHooks executes a lifecycle hook for multiple services in dependency order
 	ExecuteLifecycleHooks(ctx context.Context, services []string, hook string, config interface{}) error
+
+	// GetValidationEngine returns the validation engine used by the registry
+	GetValidationEngine() *validation.ValidationEngine
+
+	// ValidateService validates a service configuration using the ValidationEngine
+	ValidateService(ctx context.Context, serviceName string, config interface{}) (*validation.ValidationResult, error)
 }
 
 // ServiceDefinition defines a complete service with its plugin and metadata
@@ -98,14 +107,24 @@ type ServiceMetadata struct {
 
 // DefaultServiceRegistry is the default implementation of ServiceRegistry
 type DefaultServiceRegistry struct {
-	mu       sync.RWMutex
-	services map[string]ServiceDefinition
+	mu               sync.RWMutex
+	services         map[string]ServiceDefinition
+	validationEngine *validation.ValidationEngine
 }
 
 // NewServiceRegistry creates a new service registry
 func NewServiceRegistry() ServiceRegistry {
 	return &DefaultServiceRegistry{
-		services: make(map[string]ServiceDefinition),
+		services:         make(map[string]ServiceDefinition),
+		validationEngine: validation.NewValidationEngine(),
+	}
+}
+
+// NewServiceRegistryWithEngine creates a new service registry with a custom validation engine
+func NewServiceRegistryWithEngine(engine *validation.ValidationEngine) ServiceRegistry {
+	return &DefaultServiceRegistry{
+		services:         make(map[string]ServiceDefinition),
+		validationEngine: engine,
 	}
 }
 
@@ -130,6 +149,16 @@ func (r *DefaultServiceRegistry) RegisterService(service ServiceDefinition) erro
 	}
 
 	r.services[service.Name] = service
+	
+	// Register service validator with the validation engine
+	// Only register if not already registered
+	serviceValidator := validators.NewServiceValidator(service.Name)
+	if !r.validationEngine.Has(serviceValidator.Name()) {
+		if err := r.validationEngine.Register(serviceValidator); err != nil {
+			return fmt.Errorf("failed to register validator for service %s: %w", service.Name, err)
+		}
+	}
+	
 	return nil
 }
 
@@ -384,6 +413,32 @@ func (r *DefaultServiceRegistry) ExecuteLifecycleHooks(ctx context.Context, serv
 	}
 
 	return nil
+}
+
+// GetValidationEngine returns the validation engine used by the registry
+func (r *DefaultServiceRegistry) GetValidationEngine() *validation.ValidationEngine {
+	return r.validationEngine
+}
+
+// ValidateService validates a service configuration using the ValidationEngine
+func (r *DefaultServiceRegistry) ValidateService(ctx context.Context, serviceName string, config interface{}) (*validation.ValidationResult, error) {
+	// Check if service exists
+	r.mu.RLock()
+	_, exists := r.services[serviceName]
+	r.mu.RUnlock()
+	
+	if !exists {
+		return nil, fmt.Errorf("service %s not found", serviceName)
+	}
+	
+	// Use ValidationEngine to validate the service
+	validatorName := fmt.Sprintf("service:%s", serviceName)
+	result, err := r.validationEngine.Validate(ctx, validatorName, config)
+	if err != nil {
+		return nil, fmt.Errorf("validation failed for service %s: %w", serviceName, err)
+	}
+	
+	return result, nil
 }
 
 // BasicServicePlugin is a basic implementation of ServicePlugin for testing

@@ -31,9 +31,6 @@ type SOPSManager interface {
 	// Encryption operations
 	GetEncryptor() Encryptor
 
-	// Validation operations
-	GetValidator() Validator
-
 	// High-level operations
 	EncryptOverlayFiles(ctx context.Context, overlayPath string, cfg *config.Config) error
 	CreateSOPSConfig(overlayPath string, cfg *config.Config) error
@@ -52,14 +49,6 @@ type Encryptor interface {
 	RotateKeys(ctx context.Context, filePath string, newAgeKeys, newPGPKeys []string) error
 	GetEncryptedContent(filePath string) (string, error)
 	EditEncryptedFile(ctx context.Context, filePath string) error
-}
-
-// Validator interface for SOPS validation operations
-type Validator interface {
-	ValidateEncryption(overlayPath string, cfg *config.Config) error
-	ValidateKeyForProduction(key string) error
-	ValidateSOPSConfig(configPath string) error
-	ValidateEncryptedFile(filePath string) error
 }
 
 // EncryptionConfig represents SOPS encryption configuration

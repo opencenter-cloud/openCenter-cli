@@ -27,10 +27,11 @@ import (
 
 // ConfigurationManager implements the ConfigManagerInterface with caching and validation.
 type ConfigurationManager struct {
-	loader       ConfigLoaderInterface
-	validator    ConfigValidatorInterface
-	pathResolver PathResolverInterface
-	cache        ConfigCacheInterface
+	loader           ConfigLoaderInterface
+	validator        ConfigValidatorInterface
+	pathResolver     PathResolverInterface
+	cache            ConfigCacheInterface
+	validationEngine *validation.ValidationEngine
 
 	// Configuration options
 	enableCache  bool
@@ -47,13 +48,22 @@ func NewConfigurationManager(
 	pathResolver PathResolverInterface,
 	cache ConfigCacheInterface,
 ) *ConfigurationManager {
+	engine := validation.NewValidationEngine()
+	
+	// Register core validators
+	engine.MustRegister(validators.NewClusterNameValidator())
+	engine.MustRegister(validators.NewNetworkValidator())
+	engine.MustRegister(validators.NewConfigValidator())
+	engine.MustRegister(validators.NewSecurityValidator())
+	
 	return &ConfigurationManager{
-		loader:       loader,
-		validator:    validator,
-		pathResolver: pathResolver,
-		cache:        cache,
-		enableCache:  true,
-		cacheTimeout: 5 * time.Minute,
+		loader:           loader,
+		validator:        validator,
+		pathResolver:     pathResolver,
+		cache:            cache,
+		validationEngine: engine,
+		enableCache:      true,
+		cacheTimeout:     5 * time.Minute,
 	}
 }
 
@@ -65,26 +75,29 @@ func NewEnhancedConfigurationManager(
 	autoRepair bool,
 ) *ConfigurationManager {
 	enhancedValidator := NewEnhancedConfigValidator(autoRepair)
+	engine := validation.NewValidationEngine()
+	
+	// Register core validators
+	engine.MustRegister(validators.NewClusterNameValidator())
+	engine.MustRegister(validators.NewNetworkValidator())
+	engine.MustRegister(validators.NewConfigValidator())
+	engine.MustRegister(validators.NewSecurityValidator())
 
 	return &ConfigurationManager{
-		loader:       loader,
-		validator:    enhancedValidator,
-		pathResolver: pathResolver,
-		cache:        cache,
-		enableCache:  true,
-		cacheTimeout: 5 * time.Minute,
+		loader:           loader,
+		validator:        enhancedValidator,
+		pathResolver:     pathResolver,
+		cache:            cache,
+		validationEngine: engine,
+		enableCache:      true,
+		cacheTimeout:     5 * time.Minute,
 	}
 }
 
 // LoadConfig loads a cluster configuration by name with caching support.
 func (cm *ConfigurationManager) LoadConfig(ctx context.Context, clusterName string) (*Config, error) {
 	// Validate cluster name using ValidationEngine
-	engine := validation.DefaultEngine()
-	if !engine.Has("cluster-name") {
-		engine.MustRegister(validators.NewClusterNameValidator())
-	}
-	
-	result, err := engine.Validate(ctx, "cluster-name", clusterName)
+	result, err := cm.validationEngine.Validate(ctx, "cluster-name", clusterName)
 	if err != nil {
 		return nil, fmt.Errorf("cluster name validation failed: %w", err)
 	}
@@ -249,12 +262,7 @@ func (cm *ConfigurationManager) ListConfigs(ctx context.Context) ([]string, erro
 // DeleteConfig removes a cluster configuration.
 func (cm *ConfigurationManager) DeleteConfig(ctx context.Context, clusterName string) error {
 	// Validate cluster name using ValidationEngine
-	engine := validation.DefaultEngine()
-	if !engine.Has("cluster-name") {
-		engine.MustRegister(validators.NewClusterNameValidator())
-	}
-	
-	result, err := engine.Validate(ctx, "cluster-name", clusterName)
+	result, err := cm.validationEngine.Validate(ctx, "cluster-name", clusterName)
 	if err != nil {
 		return fmt.Errorf("cluster name validation failed: %w", err)
 	}
@@ -292,12 +300,7 @@ func (cm *ConfigurationManager) DeleteConfig(ctx context.Context, clusterName st
 // GetConfigPath returns the path to a cluster's configuration file.
 func (cm *ConfigurationManager) GetConfigPath(ctx context.Context, clusterName string) (string, error) {
 	// Validate cluster name using ValidationEngine
-	engine := validation.DefaultEngine()
-	if !engine.Has("cluster-name") {
-		engine.MustRegister(validators.NewClusterNameValidator())
-	}
-	
-	result, err := engine.Validate(ctx, "cluster-name", clusterName)
+	result, err := cm.validationEngine.Validate(ctx, "cluster-name", clusterName)
 	if err != nil {
 		return "", fmt.Errorf("cluster name validation failed: %w", err)
 	}
@@ -321,12 +324,7 @@ func (cm *ConfigurationManager) GetConfigPath(ctx context.Context, clusterName s
 func (cm *ConfigurationManager) SetActiveConfig(ctx context.Context, clusterName string) error {
 	if clusterName != "" {
 		// Validate cluster name using ValidationEngine
-		engine := validation.DefaultEngine()
-		if !engine.Has("cluster-name") {
-			engine.MustRegister(validators.NewClusterNameValidator())
-		}
-		
-		result, err := engine.Validate(ctx, "cluster-name", clusterName)
+		result, err := cm.validationEngine.Validate(ctx, "cluster-name", clusterName)
 		if err != nil {
 			return fmt.Errorf("cluster name validation failed: %w", err)
 		}
@@ -348,6 +346,60 @@ func (cm *ConfigurationManager) SetActiveConfig(ctx context.Context, clusterName
 func (cm *ConfigurationManager) GetActiveConfig(ctx context.Context) (string, error) {
 	// Use the existing GetActive function
 	return GetActive()
+}
+
+// GetValidationEngine returns the ValidationEngine instance.
+func (cm *ConfigurationManager) GetValidationEngine() *validation.ValidationEngine {
+	return cm.validationEngine
+}
+
+// ValidateConfigWithEngine validates a configuration using the ValidationEngine.
+// This method uses the new unified validation system.
+func (cm *ConfigurationManager) ValidateConfigWithEngine(ctx context.Context, config *Config) *ConfigValidationResult {
+	if config == nil {
+		return &ConfigValidationResult{
+			Valid: false,
+			Errors: []*ConfigValidationError{
+				{
+					Type:    "validation",
+					Field:   "config",
+					Message: "configuration cannot be nil",
+				},
+			},
+		}
+	}
+
+	result := &ConfigValidationResult{
+		Valid:    true,
+		Errors:   []*ConfigValidationError{},
+		Warnings: []*ConfigValidationError{},
+	}
+
+	// Validate cluster name
+	clusterName := config.ClusterName()
+	if clusterName != "" {
+		nameResult, err := cm.validationEngine.Validate(ctx, "cluster-name", clusterName)
+		if err != nil {
+			result.Valid = false
+			result.Errors = append(result.Errors, &ConfigValidationError{
+				Type:    "validation",
+				Field:   "opencenter.cluster.cluster_name",
+				Message: fmt.Sprintf("cluster name validation failed: %v", err),
+			})
+		} else if !nameResult.Valid {
+			result.Valid = false
+			for _, issue := range nameResult.Errors {
+				result.Errors = append(result.Errors, &ConfigValidationError{
+					Type:        "validation",
+					Field:       "opencenter.cluster.cluster_name",
+					Message:     issue.Message,
+					Suggestions: issue.Suggestions,
+				})
+			}
+		}
+	}
+
+	return result
 }
 
 // SetCacheEnabled enables or disables configuration caching.

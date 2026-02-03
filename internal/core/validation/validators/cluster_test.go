@@ -44,18 +44,28 @@ func TestClusterNameValidator_Validate(t *testing.T) {
 			wantValid: true,
 		},
 		{
-			name:      "valid with underscores",
-			value:     "my_cluster_01",
-			wantValid: true,
-		},
-		{
-			name:      "valid with dots",
-			value:     "my.cluster.dev",
-			wantValid: true,
-		},
-		{
 			name:      "valid alphanumeric",
 			value:     "cluster123",
+			wantValid: true,
+		},
+		{
+			name:      "valid with hyphens",
+			value:     "my-cluster-01",
+			wantValid: true,
+		},
+		{
+			name:      "valid single character",
+			value:     "a",
+			wantValid: true,
+		},
+		{
+			name:      "valid two characters",
+			value:     "ab",
+			wantValid: true,
+		},
+		{
+			name:      "valid max length (63 chars)",
+			value:     strings.Repeat("a", 63),
 			wantValid: true,
 		},
 		{
@@ -63,7 +73,7 @@ func TestClusterNameValidator_Validate(t *testing.T) {
 			value:         "",
 			wantValid:     false,
 			wantErrors:    1,
-			errorContains: "cannot be empty",
+			errorContains: "required",
 		},
 		{
 			name:          "not a string",
@@ -73,36 +83,43 @@ func TestClusterNameValidator_Validate(t *testing.T) {
 			errorContains: "must be a string",
 		},
 		{
-			name:          "path traversal",
-			value:         "../cluster",
-			wantValid:     false,
-			wantErrors:    1,
-			errorContains: "path traversal",
-		},
-		{
-			name:          "forward slash",
-			value:         "my/cluster",
-			wantValid:     false,
-			wantErrors:    1,
-			errorContains: "path separators",
-		},
-		{
-			name:          "backslash",
-			value:         "my\\cluster",
-			wantValid:     false,
-			wantErrors:    1,
-			errorContains: "path separators",
-		},
-		{
-			name:          "too long",
+			name:          "too long (64 chars)",
 			value:         strings.Repeat("a", 64),
 			wantValid:     false,
 			wantErrors:    1,
 			errorContains: "too long",
 		},
 		{
+			name:          "uppercase letters",
+			value:         "My-Cluster",
+			wantValid:     false,
+			wantErrors:    1,
+			errorContains: "invalid",
+		},
+		{
+			name:          "with underscores",
+			value:         "my_cluster",
+			wantValid:     false,
+			wantErrors:    1,
+			errorContains: "invalid",
+		},
+		{
+			name:          "with dots",
+			value:         "my.cluster",
+			wantValid:     false,
+			wantErrors:    1,
+			errorContains: "invalid",
+		},
+		{
 			name:          "starts with hyphen",
 			value:         "-cluster",
+			wantValid:     false,
+			wantErrors:    1,
+			errorContains: "invalid",
+		},
+		{
+			name:          "ends with hyphen",
+			value:         "cluster-",
 			wantValid:     false,
 			wantErrors:    1,
 			errorContains: "invalid",
@@ -115,10 +132,11 @@ func TestClusterNameValidator_Validate(t *testing.T) {
 			errorContains: "invalid",
 		},
 		{
-			name:         "leading hyphen warning",
-			value:        "a-",
-			wantValid:    true,
-			wantWarnings: 1,
+			name:          "contains special chars",
+			value:         "my@cluster",
+			wantValid:     false,
+			wantErrors:    1,
+			errorContains: "invalid",
 		},
 		{
 			name:         "consecutive hyphens",
@@ -137,11 +155,6 @@ func TestClusterNameValidator_Validate(t *testing.T) {
 			value:        "kube-system",
 			wantValid:    true,
 			wantWarnings: 1,
-		},
-		{
-			name:      "max length valid",
-			value:     strings.Repeat("a", 63),
-			wantValid: true,
 		},
 	}
 
@@ -174,6 +187,13 @@ func TestClusterNameValidator_Validate(t *testing.T) {
 				}
 				if !found {
 					t.Errorf("error message should contain %q, got: %v", tt.errorContains, result.Errors)
+				}
+			}
+
+			// Verify all errors have suggestions (Requirement 2.10)
+			for _, err := range result.Errors {
+				if len(err.Suggestions) == 0 {
+					t.Errorf("error %q has no suggestions (violates Requirement 2.10)", err.Message)
 				}
 			}
 		})

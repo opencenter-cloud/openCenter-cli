@@ -14,18 +14,47 @@
 package di
 
 import (
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/ui"
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // SetupContainer creates and configures a new DI container with all major components.
-// Requirements: 19.2
+// Requirements: 5.2, 5.3, 5.4, 5.5, 19.2
 // Note: This registers the core components that are currently implemented.
 // Additional components will be registered as they are implemented in other phases.
-func SetupContainer() (Container, error) {
+func SetupContainer(baseDir string) (Container, error) {
 	container := NewContainer()
+
+	// Register ErrorHandler as singleton (no dependencies)
+	// Requirements: 5.3
+	if err := container.Singleton("ErrorHandler", func() (errors.ErrorHandler, error) {
+		return errors.NewDefaultErrorHandler(), nil
+	}); err != nil {
+		return nil, fmt.Errorf("registering ErrorHandler: %w", err)
+	}
+
+	// Register FileSystem as singleton (depends on ErrorHandler)
+	// Requirements: 5.4
+	if err := container.Singleton("FileSystem", func(errorHandler errors.ErrorHandler) (fs.FileSystem, error) {
+		return fs.NewDefaultFileSystem(errorHandler), nil
+	}); err != nil {
+		return nil, fmt.Errorf("registering FileSystem: %w", err)
+	}
+
+	// Register PathResolver as singleton (no dependencies for now)
+	// Requirements: 5.5
+	if err := container.Singleton("PathResolver", func() (*paths.PathResolver, error) {
+		return paths.NewPathResolver(baseDir), nil
+	}); err != nil {
+		return nil, fmt.Errorf("registering PathResolver: %w", err)
+	}
 
 	// Register Logger as singleton
 	if err := container.Singleton("logger", func() (*logrus.Logger, error) {
@@ -68,8 +97,9 @@ func SetupContainer() (Container, error) {
 	// - AuditLogger (from security package - Phase 1)
 
 	// Initialize all singletons
+	// Requirements: 5.2
 	if err := container.Initialize(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initializing container: %w", err)
 	}
 
 	return container, nil

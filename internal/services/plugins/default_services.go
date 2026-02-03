@@ -32,15 +32,6 @@ func (p *DefaultServicePlugin) Type() svc.ServiceType {
 	return p.serviceType
 }
 
-// Validate validates the service configuration
-func (p *DefaultServicePlugin) Validate(config interface{}) error {
-	_, ok := config.(*services.DefaultServiceConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for %s: expected *DefaultServiceConfig", p.name)
-	}
-	return nil
-}
-
 // Render renders the service templates to the workspace
 func (p *DefaultServicePlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
 	// Template rendering will be handled by the template system
@@ -91,14 +82,6 @@ func (p *CalicoPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeNetworking
 }
 
-func (p *CalicoPlugin) Validate(config interface{}) error {
-	_, ok := config.(*services.CalicoConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for calico: expected *CalicoConfig")
-	}
-	return nil
-}
-
 func (p *CalicoPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
 	return nil
 }
@@ -147,14 +130,6 @@ func (p *HeadlampPlugin) Name() string {
 
 func (p *HeadlampPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeCore
-}
-
-func (p *HeadlampPlugin) Validate(config interface{}) error {
-	_, ok := config.(*services.HeadlampConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for headlamp: expected *HeadlampConfig")
-	}
-	return nil
 }
 
 func (p *HeadlampPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
@@ -208,14 +183,6 @@ func (p *WeaveGitOpsPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeGitOps
 }
 
-func (p *WeaveGitOpsPlugin) Validate(config interface{}) error {
-	_, ok := config.(*services.WeaveGitOpsConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for weave-gitops: expected *WeaveGitOpsConfig")
-	}
-	return nil
-}
-
 func (p *WeaveGitOpsPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
 	return nil
 }
@@ -261,14 +228,6 @@ func (p *AlertProxyPlugin) Name() string {
 
 func (p *AlertProxyPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeMonitoring
-}
-
-func (p *AlertProxyPlugin) Validate(config interface{}) error {
-	_, ok := config.(*services.AlertProxyConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for alert-proxy: expected *AlertProxyConfig")
-	}
-	return nil
 }
 
 func (p *AlertProxyPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
@@ -322,14 +281,6 @@ func (p *EtcdBackupPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeStorage
 }
 
-func (p *EtcdBackupPlugin) Validate(config interface{}) error {
-	_, ok := config.(*services.EtcdBackupConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for etcd-backup: expected *EtcdBackupConfig")
-	}
-	return nil
-}
-
 func (p *EtcdBackupPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {
 	return nil
 }
@@ -379,14 +330,6 @@ func (p *VSphereCSIPlugin) Name() string {
 
 func (p *VSphereCSIPlugin) Type() svc.ServiceType {
 	return svc.ServiceTypeStorage
-}
-
-func (p *VSphereCSIPlugin) Validate(config interface{}) error {
-	_, ok := config.(*services.VSphereCSIConfig)
-	if !ok {
-		return fmt.Errorf("invalid config type for vsphere-csi: expected *VSphereCSIConfig")
-	}
-	return nil
 }
 
 func (p *VSphereCSIPlugin) Render(ctx context.Context, config interface{}, workspace interface{}) error {

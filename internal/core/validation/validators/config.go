@@ -45,6 +45,12 @@ func (v *ConfigValidator) Name() string {
 	return "config"
 }
 
+// Priority returns the validator priority.
+// Config validation involves business logic checks, so it has normal priority.
+func (v *ConfigValidator) Priority() int {
+	return validation.PriorityNormal
+}
+
 // Validate validates a configuration value based on the context.
 // The value should be a map with "type" and "value" keys.
 func (v *ConfigValidator) Validate(ctx context.Context, value interface{}) (*validation.ValidationResult, error) {

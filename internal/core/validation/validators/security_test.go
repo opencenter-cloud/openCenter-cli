@@ -47,6 +47,16 @@ func TestSecurityValidator_ValidateShellInput(t *testing.T) {
 			wantValid: true,
 		},
 		{
+			name: "path traversal",
+			value: map[string]interface{}{
+				"type":  "shell-input",
+				"value": "../../../etc/passwd",
+			},
+			wantValid:     false,
+			wantErrors:    1,
+			errorContains: "path traversal",
+		},
+		{
 			name: "semicolon injection",
 			value: map[string]interface{}{
 				"type":  "shell-input",
@@ -452,4 +462,197 @@ func BenchmarkSecurityValidator_ValidateCommand(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, _ = validator.Validate(ctx, value)
 	}
+}
+
+func TestSecurityValidator_AuditLogging(t *testing.T) {
+	validator := NewSecurityValidator()
+	ctx := context.Background()
+
+	// Mock audit logger
+	var loggedViolations []struct {
+		actor      string
+		inputType  string
+		reason     string
+	}
+
+	mockLogger := &mockAuditLogger{
+		logFunc: func(ctx context.Context, actor, inputType, reason string) error {
+			loggedViolations = append(loggedViolations, struct {
+				actor      string
+				inputType  string
+				reason     string
+			}{actor, inputType, reason})
+			return nil
+		},
+	}
+
+	validator.SetAuditLogger(mockLogger)
+	validator.SetActor("test-user")
+
+	tests := []struct {
+		name              string
+		value             map[string]interface{}
+		expectViolation   bool
+		expectedInputType string
+	}{
+		{
+			name: "shell injection logs violation",
+			value: map[string]interface{}{
+				"type":  "shell-input",
+				"value": "cluster; rm -rf /",
+			},
+			expectViolation:   true,
+			expectedInputType: "shell_input",
+		},
+		{
+			name: "command injection logs violation",
+			value: map[string]interface{}{
+				"type":  "command",
+				"value": "echo $(whoami)",
+			},
+			expectViolation:   true,
+			expectedInputType: "command",
+		},
+		{
+			name: "plaintext secret logs violation",
+			value: map[string]interface{}{
+				"type":  "secret",
+				"value": "AKIAIOSFODNN7EXAMPLE",
+			},
+			expectViolation:   true,
+			expectedInputType: "secret",
+		},
+		{
+			name: "safe input does not log violation",
+			value: map[string]interface{}{
+				"type":  "shell-input",
+				"value": "my-cluster",
+			},
+			expectViolation: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			loggedViolations = nil // Reset
+
+			result, err := validator.Validate(ctx, tt.value)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if tt.expectViolation {
+				if len(loggedViolations) == 0 {
+					t.Error("expected security violation to be logged, but none was logged")
+				} else {
+					violation := loggedViolations[0]
+					if violation.actor != "test-user" {
+						t.Errorf("expected actor 'test-user', got %q", violation.actor)
+					}
+					if violation.inputType != tt.expectedInputType {
+						t.Errorf("expected inputType %q, got %q", tt.expectedInputType, violation.inputType)
+					}
+				}
+				if result.Valid {
+					t.Error("expected validation to fail for security violation")
+				}
+			} else {
+				if len(loggedViolations) > 0 {
+					t.Errorf("expected no violation to be logged, but got: %v", loggedViolations)
+				}
+			}
+		})
+	}
+}
+
+func TestSecurityValidator_AuditLoggingWithoutLogger(t *testing.T) {
+	validator := NewSecurityValidator()
+	ctx := context.Background()
+
+	// No audit logger set - should not panic
+	value := map[string]interface{}{
+		"type":  "shell-input",
+		"value": "cluster; rm -rf /",
+	}
+
+	result, err := validator.Validate(ctx, value)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.Valid {
+		t.Error("expected validation to fail")
+	}
+}
+
+func TestSecurityValidator_SetActor(t *testing.T) {
+	validator := NewSecurityValidator()
+	ctx := context.Background()
+
+	var loggedActor string
+	mockLogger := &mockAuditLogger{
+		logFunc: func(ctx context.Context, actor, inputType, reason string) error {
+			loggedActor = actor
+			return nil
+		},
+	}
+
+	validator.SetAuditLogger(mockLogger)
+	validator.SetActor("custom-actor")
+
+	value := map[string]interface{}{
+		"type":  "shell-input",
+		"value": "cluster; rm -rf /",
+	}
+
+	_, err := validator.Validate(ctx, value)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if loggedActor != "custom-actor" {
+		t.Errorf("expected actor 'custom-actor', got %q", loggedActor)
+	}
+}
+
+func TestSecurityValidator_DefaultActor(t *testing.T) {
+	validator := NewSecurityValidator()
+	ctx := context.Background()
+
+	var loggedActor string
+	mockLogger := &mockAuditLogger{
+		logFunc: func(ctx context.Context, actor, inputType, reason string) error {
+			loggedActor = actor
+			return nil
+		},
+	}
+
+	validator.SetAuditLogger(mockLogger)
+	// Don't set actor - should default to "system"
+
+	value := map[string]interface{}{
+		"type":  "shell-input",
+		"value": "cluster; rm -rf /",
+	}
+
+	_, err := validator.Validate(ctx, value)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if loggedActor != "system" {
+		t.Errorf("expected default actor 'system', got %q", loggedActor)
+	}
+}
+
+// mockAuditLogger is a mock implementation of the audit logger interface
+type mockAuditLogger struct {
+	logFunc func(ctx context.Context, actor, inputType, reason string) error
+}
+
+func (m *mockAuditLogger) LogInputRejected(ctx context.Context, actor, inputType, reason string) error {
+	if m.logFunc != nil {
+		return m.logFunc(ctx, actor, inputType, reason)
+	}
+	return nil
 }

@@ -24,29 +24,51 @@ import (
 	"path/filepath"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config"
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation"
+	"github.com/rackerlabs/opencenter-cli/internal/core/validation/validators"
 	"github.com/rackerlabs/opencenter-cli/internal/util/crypto"
 	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // DefaultSOPSManager implements SOPSManager interface
 type DefaultSOPSManager struct {
-	keyManager crypto.KeyManager
-	encryptor  Encryptor
-	validator  Validator
-	logger     *slog.Logger
+	keyManager       crypto.KeyManager
+	encryptor        Encryptor
+	validationEngine *validation.ValidationEngine
+	logger           *slog.Logger
 }
 
 // NewDefaultSOPSManager creates a new SOPS manager with dependency injection
-func NewDefaultSOPSManager(keyManager crypto.KeyManager, encryptor Encryptor, validator Validator, logger *slog.Logger) *DefaultSOPSManager {
+func NewDefaultSOPSManager(keyManager crypto.KeyManager, encryptor Encryptor, logger *slog.Logger) *DefaultSOPSManager {
 	if logger == nil {
 		logger = slog.Default()
 	}
 
-	return &DefaultSOPSManager{
-		keyManager: keyManager,
-		encryptor:  encryptor,
-		validator:  validator,
-		logger:     logger,
+	manager := &DefaultSOPSManager{
+		keyManager:       keyManager,
+		encryptor:        encryptor,
+		validationEngine: validation.NewValidationEngine(),
+		logger:           logger,
+	}
+
+	// Register SOPS validators with the validation engine
+	manager.registerValidators()
+
+	return manager
+}
+
+// registerValidators registers all SOPS-related validators with the validation engine
+func (m *DefaultSOPSManager) registerValidators() {
+	// Create a FileSystem instance for the SOPSKeyValidator
+	// We'll use a simple error handler that doesn't require dependencies
+	errorHandler := errors.NewDefaultErrorHandler()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
+
+	// Register the SOPSKeyValidator
+	sopsKeyValidator := validators.NewSOPSKeyValidator(fileSystem)
+	if err := m.validationEngine.Register(sopsKeyValidator); err != nil {
+		m.logger.Warn("Failed to register SOPS key validator", "error", err)
 	}
 }
 
@@ -57,10 +79,9 @@ func NewSOPSManager() *DefaultSOPSManager {
 
 	keyManager := crypto.NewDefaultKeyManager(keyDir)
 	encryptor := NewDefaultEncryptor([]string{}, []string{})
-	validator := NewDefaultValidator()
 	logger := slog.Default()
 
-	return NewDefaultSOPSManager(keyManager, encryptor, validator, logger)
+	return NewDefaultSOPSManager(keyManager, encryptor, logger)
 }
 
 // GetKeyManager returns the key manager
@@ -71,11 +92,6 @@ func (m *DefaultSOPSManager) GetKeyManager() crypto.KeyManager {
 // GetEncryptor returns the encryptor
 func (m *DefaultSOPSManager) GetEncryptor() Encryptor {
 	return m.encryptor
-}
-
-// GetValidator returns the validator
-func (m *DefaultSOPSManager) GetValidator() Validator {
-	return m.validator
 }
 
 // EncryptOverlayFiles encrypts sensitive files in an overlay directory
@@ -199,17 +215,31 @@ func (m *DefaultSOPSManager) CreateSOPSConfig(overlayPath string, cfg *config.Co
 		return err
 	}
 
-	// Validate that we're not using placeholder keys in production
-	if err := m.validator.ValidateKeyForProduction(sopsConfig); err != nil {
-		return &errors.StructuredError{
-			Type:    errors.SOPSError,
-			Message: "Cannot create SOPS config with placeholder key",
-			Cause:   err,
-			Suggestions: []string{
-				"Generate a proper age key using 'opencenter sops generate-key'",
-				"Import an existing age key",
-				"Check the SOPS configuration",
-			},
+	// Validate SOPS key using ValidationEngine
+	if cfg.Secrets.SopsAgeKeyFile != "" {
+		result, err := m.validationEngine.Validate(context.Background(), "sops-key", cfg.Secrets.SopsAgeKeyFile)
+		if err != nil {
+			return &errors.StructuredError{
+				Type:    errors.SOPSError,
+				Message: "SOPS key validation failed",
+				Cause:   err,
+				Suggestions: []string{
+					"Generate a proper age key using 'opencenter sops generate-key'",
+					"Import an existing age key",
+					"Check the SOPS configuration",
+				},
+			}
+		}
+		if result != nil && !result.Valid {
+			return &errors.StructuredError{
+				Type:    errors.SOPSError,
+				Message: "Invalid SOPS key",
+				Suggestions: []string{
+					"Generate a proper age key using 'opencenter sops generate-key'",
+					"Import an existing age key",
+					"Check the SOPS configuration",
+				},
+			}
 		}
 	}
 
@@ -236,7 +266,58 @@ func (m *DefaultSOPSManager) CreateSOPSConfig(overlayPath string, cfg *config.Co
 func (m *DefaultSOPSManager) ValidateEncryption(overlayPath string, cfg *config.Config) error {
 	m.logger.Info("Validating encryption", "overlay_path", overlayPath)
 
-	return m.validator.ValidateEncryption(overlayPath, cfg)
+	// Get the SOPS key file path
+	keyPath := cfg.Secrets.SopsAgeKeyFile
+	if keyPath == "" {
+		// Try to get from key manager
+		if keyNames, err := m.keyManager.ListAgeKeys(); err == nil && len(keyNames) > 0 {
+			// Get the key file path from the key manager
+			homeDir, _ := os.UserHomeDir()
+			keyPath = filepath.Join(homeDir, ".config", "sops", "age", keyNames[0]+".txt")
+		}
+	}
+
+	// Expand home directory if needed
+	if keyPath != "" && keyPath[0] == '~' {
+		homeDir, _ := os.UserHomeDir()
+		keyPath = filepath.Join(homeDir, keyPath[2:])
+	}
+
+	// Validate the SOPS key using ValidationEngine
+	if keyPath != "" {
+		result, err := m.validationEngine.Validate(context.Background(), "sops-key", keyPath)
+		if err != nil {
+			return &errors.StructuredError{
+				Type:    errors.SOPSError,
+				Message: "Failed to validate SOPS key",
+				Cause:   err,
+				Suggestions: []string{
+					"Check that the SOPS key file exists",
+					"Verify the key file is readable",
+					"Ensure the key format is valid",
+				},
+			}
+		}
+
+		// Convert validation result to error if validation failed
+		if !result.Valid {
+			return result.ToError()
+		}
+
+		// Log warnings if any
+		if result.HasWarnings() {
+			for _, warning := range result.Warnings {
+				m.logger.Warn("SOPS key validation warning",
+					"field", warning.Field,
+					"message", warning.Message,
+					"suggestions", warning.Suggestions)
+			}
+		}
+	}
+
+	// Validation is now handled by the ValidationEngine
+	// All SOPS-related validation is performed through the registered validators
+	return nil
 }
 
 // CreateSampleEncryptedSecrets creates sample encrypted secrets in the repository

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // SuggestionRule defines the interface for suggestion generation rules.
@@ -29,6 +30,7 @@ type SuggestionRule interface {
 
 // SuggestionEngine generates helpful suggestions for validation errors.
 type SuggestionEngine struct {
+	mu    sync.RWMutex
 	rules []SuggestionRule
 }
 
@@ -47,6 +49,8 @@ func NewSuggestionEngine() *SuggestionEngine {
 
 // AddRule adds a suggestion rule to the engine.
 func (e *SuggestionEngine) AddRule(rule SuggestionRule) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	e.rules = append(e.rules, rule)
 }
 
@@ -82,7 +86,12 @@ func (e *SuggestionEngine) enhanceIssue(issue *ValidationIssue, context map[stri
 	}
 
 	// Generate new suggestions from rules
-	for _, rule := range e.rules {
+	e.mu.RLock()
+	rules := make([]SuggestionRule, len(e.rules))
+	copy(rules, e.rules)
+	e.mu.RUnlock()
+
+	for _, rule := range rules {
 		newSuggestions := rule.Generate(issue, context)
 		for _, s := range newSuggestions {
 			suggestions[s] = true

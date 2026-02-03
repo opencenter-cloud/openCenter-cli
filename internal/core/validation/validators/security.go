@@ -27,6 +27,8 @@ type SecurityValidator struct {
 	shellMetachars    []string
 	dangerousPatterns []*regexp.Regexp
 	safeEditors       map[string]bool
+	auditLogger       interface{} // Will be *security.AuditLogger but using interface to avoid circular import
+	actor             string
 }
 
 // NewSecurityValidator creates a new security validator.
@@ -58,6 +60,13 @@ func NewSecurityValidator() *SecurityValidator {
 // Name returns the validator name.
 func (v *SecurityValidator) Name() string {
 	return "security"
+}
+
+// Priority returns the validator priority.
+// Security validation is fast (pattern matching), so it has high priority.
+// This ensures security checks run early in the validation pipeline.
+func (v *SecurityValidator) Priority() int {
+	return validation.PriorityHigh
 }
 
 // Validate validates security-related inputs.
@@ -114,10 +123,27 @@ func (v *SecurityValidator) validateShellInput(result *validation.ValidationResu
 		return // Empty input is safe
 	}
 
+	// Check for path traversal attempts
+	if strings.Contains(input, "..") {
+		// Log security violation for audit trail
+		v.logSecurityViolation(context.Background(), "shell_input",
+			"path traversal attempt detected")
+		
+		result.AddError("shell_input",
+			"path traversal detected",
+			"Remove '..' from the path",
+			"Use absolute paths instead")
+		return
+	}
+
 	// Check for dangerous metacharacters
 	dangerousChars := []string{";", "|", "&", "`", "\n", "\r"}
 	for _, char := range dangerousChars {
 		if strings.Contains(input, char) {
+			// Log security violation for audit trail
+			v.logSecurityViolation(context.Background(), "shell_input", 
+				fmt.Sprintf("dangerous shell metacharacter detected: %s", char))
+			
 			result.AddError("shell_input",
 				fmt.Sprintf("input contains dangerous shell metacharacter: %s", char),
 				"Remove shell metacharacters from the input",
@@ -129,6 +155,10 @@ func (v *SecurityValidator) validateShellInput(result *validation.ValidationResu
 	// Check for dangerous patterns
 	for _, pattern := range v.dangerousPatterns {
 		if pattern.MatchString(input) {
+			// Log security violation for audit trail
+			v.logSecurityViolation(context.Background(), "shell_input",
+				"dangerous pattern detected (command substitution or shell expansion)")
+			
 			result.AddError("shell_input",
 				fmt.Sprintf("input contains dangerous pattern: %s", pattern.String()),
 				"Remove command substitution and shell expansion patterns",
@@ -193,6 +223,10 @@ func (v *SecurityValidator) validateEnvironmentVariable(result *validation.Valid
 	// Check for shell metacharacters in value
 	for _, metachar := range v.shellMetachars {
 		if strings.Contains(value, metachar) {
+			// Log security violation for audit trail
+			v.logSecurityViolation(context.Background(), "environment_variable",
+				fmt.Sprintf("shell metacharacter in environment variable value: %s", metachar))
+			
 			result.AddError("environment_variable",
 				fmt.Sprintf("environment variable value contains shell metacharacter: %s", metachar),
 				"Remove shell metacharacters from the value",
@@ -230,6 +264,10 @@ func (v *SecurityValidator) validateEditor(result *validation.ValidationResult, 
 	// Check for shell metacharacters
 	for _, metachar := range v.shellMetachars {
 		if strings.Contains(editor, metachar) {
+			// Log security violation for audit trail
+			v.logSecurityViolation(context.Background(), "editor",
+				fmt.Sprintf("shell metacharacter in editor value: %s", metachar))
+			
 			result.AddError("editor",
 				fmt.Sprintf("editor value contains shell metacharacter: %s", metachar),
 				"Remove shell metacharacters from the editor value",
@@ -275,6 +313,10 @@ func (v *SecurityValidator) validateCommand(result *validation.ValidationResult,
 	// Check for dangerous patterns
 	for _, pattern := range v.dangerousPatterns {
 		if pattern.MatchString(command) {
+			// Log security violation for audit trail
+			v.logSecurityViolation(context.Background(), "command",
+				"dangerous pattern detected in command (command substitution or shell expansion)")
+			
 			result.AddError("command",
 				fmt.Sprintf("command contains dangerous pattern: %s", pattern.String()),
 				"Remove command substitution and shell expansion patterns",
@@ -295,6 +337,10 @@ func (v *SecurityValidator) validateCommand(result *validation.ValidationResult,
 
 	for _, dangerous := range dangerousCommands {
 		if strings.Contains(command, dangerous) {
+			// Log security violation for audit trail
+			v.logSecurityViolation(context.Background(), "command",
+				fmt.Sprintf("dangerous command detected: %s", dangerous))
+			
 			result.AddError("command",
 				fmt.Sprintf("command contains dangerous operation: %s", dangerous),
 				"This command could cause data loss or security issues",
@@ -349,6 +395,10 @@ func (v *SecurityValidator) validateSecret(result *validation.ValidationResult, 
 
 	for name, pattern := range secretPatterns {
 		if pattern.MatchString(secret) {
+			// Log security violation for audit trail
+			v.logSecurityViolation(context.Background(), "secret",
+				fmt.Sprintf("plaintext %s detected", name))
+			
 			result.AddError("secret",
 				fmt.Sprintf("value appears to contain a plaintext %s", name),
 				"Never store secrets in plaintext",
@@ -406,4 +456,31 @@ func (v *SecurityValidator) SetSafeEditors(editors []string) {
 // AddDangerousPattern adds a dangerous pattern to check for.
 func (v *SecurityValidator) AddDangerousPattern(pattern *regexp.Regexp) {
 	v.dangerousPatterns = append(v.dangerousPatterns, pattern)
+}
+
+// SetAuditLogger sets the audit logger for logging security violations.
+func (v *SecurityValidator) SetAuditLogger(logger interface{}) {
+	v.auditLogger = logger
+}
+
+// SetActor sets the actor (user/system) performing the validation.
+func (v *SecurityValidator) SetActor(actor string) {
+	v.actor = actor
+}
+
+// logSecurityViolation logs a security violation to the audit log if configured.
+func (v *SecurityValidator) logSecurityViolation(ctx context.Context, violationType, reason string) {
+	if v.auditLogger != nil {
+		// Use type assertion to call the method
+		// This is safe because we control what gets set via SetAuditLogger
+		if logger, ok := v.auditLogger.(interface {
+			LogInputRejected(ctx context.Context, actor, inputType, reason string) error
+		}); ok {
+			actor := v.actor
+			if actor == "" {
+				actor = "system"
+			}
+			_ = logger.LogInputRejected(ctx, actor, violationType, reason)
+		}
+	}
 }

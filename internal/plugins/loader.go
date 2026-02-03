@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	coreconfig "github.com/rackerlabs/opencenter-cli/internal/core/config"
+	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -100,7 +100,7 @@ func discoverPluginBinaries() []string {
 	}
 
 	// 2) configDir/plugins
-	if cfgDir, err := coreconfig.ResolveConfigDir(); err == nil && cfgDir != "" {
+	if cfgDir, err := config.ResolveConfigDir(); err == nil && cfgDir != "" {
 		results = append(results, findPrefixedExecutables(filepath.Join(cfgDir, "plugins"))...)
 	}
 

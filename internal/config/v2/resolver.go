@@ -19,6 +19,9 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // ReferenceResolver resolves ${ref:path.to.value}, ${env:VAR}, and ${file:path} references
@@ -31,10 +34,13 @@ type ReferenceResolver struct {
 	filePattern      *regexp.Regexp
 	visited          map[string]bool // For circular reference detection
 	maxDepth         int             // Maximum recursion depth
+	fileSystem       fs.FileSystem
 }
 
 // NewReferenceResolver creates a new reference resolver with caching support.
 func NewReferenceResolver() *ReferenceResolver {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	return &ReferenceResolver{
 		cache:            make(map[string]interface{}),
 		referencePattern: regexp.MustCompile(`\$\{ref:([^}]+)\}`),
@@ -42,6 +48,7 @@ func NewReferenceResolver() *ReferenceResolver {
 		filePattern:      regexp.MustCompile(`\$\{file:([^}]+)\}`),
 		visited:          make(map[string]bool),
 		maxDepth:         10, // Prevent infinite recursion
+		fileSystem:       fileSystem,
 	}
 }
 
@@ -297,7 +304,7 @@ func (r *ReferenceResolver) resolveReference(str string, currentPath string) (st
 			}
 
 			// Read file content
-			content, err := os.ReadFile(filePath)
+			content, err := r.fileSystem.ReadFile(filePath)
 			if err != nil {
 				return "", fmt.Errorf("failed to read file ${file:%s}: %w", filePath, err)
 			}

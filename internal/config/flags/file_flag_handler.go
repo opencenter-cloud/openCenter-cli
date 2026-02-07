@@ -20,14 +20,23 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // FileFlagHandler handles --base-config, --merge-config, and --config-stack flags
-type FileFlagHandler struct{}
+type FileFlagHandler struct {
+	fileSystem fs.FileSystem
+}
 
 // NewFileFlagHandler creates a new file flag handler
 func NewFileFlagHandler() *FileFlagHandler {
-	return &FileFlagHandler{}
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
+	return &FileFlagHandler{
+		fileSystem: fileSystem,
+	}
 }
 
 // CanHandle returns true if this handler can process the given flag
@@ -154,7 +163,7 @@ func (h *FileFlagHandler) detectFileType(filePath string) string {
 
 // LoadConfigurationFile loads and parses a configuration file
 func (h *FileFlagHandler) LoadConfigurationFile(configFile *ConfigFileFlag) (*Configuration, error) {
-	data, err := os.ReadFile(configFile.Path)
+	data, err := h.fileSystem.ReadFile(configFile.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file '%s': %w", configFile.Path, err)
 	}

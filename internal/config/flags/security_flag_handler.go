@@ -18,18 +18,24 @@ import (
 	"os"
 	"strings"
 
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 	"github.com/rackerlabs/opencenter-cli/internal/util/security"
 )
 
 // SecurityFlagHandler handles security-related flags and warnings
 type SecurityFlagHandler struct {
-	masker security.CredentialMasker
+	masker     security.CredentialMasker
+	fileSystem fs.FileSystem
 }
 
 // NewSecurityFlagHandler creates a new security flag handler
 func NewSecurityFlagHandler() *SecurityFlagHandler {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	return &SecurityFlagHandler{
-		masker: security.NewDefaultCredentialMasker(),
+		masker:     security.NewDefaultCredentialMasker(),
+		fileSystem: fileSystem,
 	}
 }
 
@@ -100,7 +106,7 @@ func (h *SecurityFlagHandler) parseSecureTemplateVar(flagName, value string) (*S
 			return nil, fmt.Errorf("file path cannot be empty for secure template variable %s", key)
 		}
 
-		content, err := os.ReadFile(filePath)
+		content, err := h.fileSystem.ReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read secure template variable file %s: %w", filePath, err)
 		}

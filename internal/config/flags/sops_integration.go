@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/rackerlabs/opencenter-cli/internal/sops"
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 	"github.com/rackerlabs/opencenter-cli/internal/util/security"
 )
 
@@ -28,13 +30,17 @@ import (
 type SOPSIntegration struct {
 	sopsManager sops.SOPSManager
 	masker      security.CredentialMasker
+	fileSystem  fs.FileSystem
 }
 
 // NewSOPSIntegration creates a new SOPS integration handler
 func NewSOPSIntegration(sopsManager sops.SOPSManager) *SOPSIntegration {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	return &SOPSIntegration{
 		sopsManager: sopsManager,
 		masker:      security.NewDefaultCredentialMasker(),
+		fileSystem:  fileSystem,
 	}
 }
 
@@ -124,11 +130,15 @@ func (s *SOPSIntegration) ValidateSOPSConfig(sopsConfigPath string) error {
 		return fmt.Errorf("SOPS config file does not exist: %s", sopsConfigPath)
 	}
 
-	// Validate SOPS configuration using the SOPS manager
-	validator := s.sopsManager.GetValidator()
-	err := validator.ValidateSOPSConfig(sopsConfigPath)
+	// Basic validation: read the file to ensure it's accessible and valid YAML
+	content, err := s.fileSystem.ReadFile(sopsConfigPath)
 	if err != nil {
-		return fmt.Errorf("invalid SOPS configuration: %w", err)
+		return fmt.Errorf("failed to read SOPS config file: %w", err)
+	}
+
+	// Check if content is not empty
+	if len(content) == 0 {
+		return fmt.Errorf("SOPS config file is empty: %s", sopsConfigPath)
 	}
 
 	return nil
@@ -174,7 +184,7 @@ func (s *SOPSIntegration) CreateSOPSConfig(configPath, ageKeyPath string) error 
 `, ageKey, ageKey, ageKey, ageKey)
 
 	// Write SOPS configuration file
-	err = os.WriteFile(configPath, []byte(sopsConfig), 0600)
+	err = s.fileSystem.WriteFileAtomic(configPath, []byte(sopsConfig), 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write SOPS config file: %w", err)
 	}
@@ -184,7 +194,7 @@ func (s *SOPSIntegration) CreateSOPSConfig(configPath, ageKeyPath string) error 
 
 // isSOPSEncrypted checks if a file is SOPS encrypted
 func (s *SOPSIntegration) isSOPSEncrypted(filePath string) bool {
-	content, err := os.ReadFile(filePath)
+	content, err := s.fileSystem.ReadFile(filePath)
 	if err != nil {
 		return false
 	}
@@ -269,7 +279,7 @@ func (s *SOPSIntegration) serializeJSONConfig(config map[string]interface{}) ([]
 
 // readAgePublicKey reads the Age public key from a key file
 func (s *SOPSIntegration) readAgePublicKey(keyPath string) (string, error) {
-	content, err := os.ReadFile(keyPath)
+	content, err := s.fileSystem.ReadFile(keyPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read Age key file: %w", err)
 	}

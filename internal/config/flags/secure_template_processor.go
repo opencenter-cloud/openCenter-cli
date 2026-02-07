@@ -18,6 +18,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 	"github.com/rackerlabs/opencenter-cli/internal/util/security"
 )
 
@@ -26,14 +28,18 @@ type SecureTemplateProcessor struct {
 	masker          security.CredentialMasker
 	secureVars      map[string]string
 	warningsEnabled bool
+	fileSystem      fs.FileSystem
 }
 
 // NewSecureTemplateProcessor creates a new secure template processor
 func NewSecureTemplateProcessor() *SecureTemplateProcessor {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	return &SecureTemplateProcessor{
 		masker:          security.NewDefaultCredentialMasker(),
 		secureVars:      make(map[string]string),
 		warningsEnabled: true,
+		fileSystem:      fileSystem,
 	}
 }
 
@@ -161,7 +167,7 @@ func (p *SecureTemplateProcessor) LoadSecureVariableFromFile(key, filePath strin
 	}
 
 	// Read file content
-	content, err := os.ReadFile(filePath)
+	content, err := p.fileSystem.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read secure template variable file %s: %w", filePath, err)
 	}

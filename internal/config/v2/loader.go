@@ -15,26 +15,31 @@ package v2
 
 import (
 	"fmt"
-	"os"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/rackerlabs/opencenter-cli/internal/config/defaults"
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // ConfigLoader implements the v2 configuration loading pipeline.
 // Pipeline: Load YAML → Normalize → Resolve References → Apply Defaults → Validate → Freeze
 // Requirements: 6.3, 15.1
 type ConfigLoader struct {
-	hydrator  defaults.Hydrator
-	validator Validator
+	hydrator   defaults.Hydrator
+	validator  Validator
+	fileSystem fs.FileSystem
 }
 
 // NewConfigLoader creates a new v2 configuration loader with all pipeline components.
 func NewConfigLoader(registry defaults.Registry) *ConfigLoader {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	return &ConfigLoader{
-		hydrator:  defaults.NewHydrator(registry),
-		validator: NewValidator(),
+		hydrator:   defaults.NewHydrator(registry),
+		validator:  NewValidator(),
+		fileSystem: fileSystem,
 	}
 }
 
@@ -43,7 +48,7 @@ func NewConfigLoader(registry defaults.Registry) *ConfigLoader {
 // Requirements: 6.3, 15.1
 func (cl *ConfigLoader) LoadFromFile(filePath string) (*Config, error) {
 	// Stage 1: Load YAML
-	data, err := os.ReadFile(filePath)
+	data, err := cl.fileSystem.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
@@ -179,8 +184,8 @@ func (cl *ConfigLoader) SaveToFile(cfg *Config, filePath string) error {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
 
-	// Write to file with secure permissions
-	if err := os.WriteFile(filePath, data, 0600); err != nil {
+	// Write to file with secure permissions using atomic write
+	if err := cl.fileSystem.WriteFileAtomic(filePath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write configuration file: %w", err)
 	}
 

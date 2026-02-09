@@ -25,14 +25,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
 	"github.com/rackerlabs/opencenter-cli/internal/util/files"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // DefaultKeyManager implements KeyManager interface
 type DefaultKeyManager struct {
-	keyDir    string
-	generator KeyGenerator
-	validator KeyValidator
+	keyDir     string
+	generator  KeyGenerator
+	validator  KeyValidator
+	fileSystem fs.FileSystem
 }
 
 // NewDefaultKeyManager creates a new default key manager
@@ -40,10 +43,13 @@ func NewDefaultKeyManager(keyDir string) *DefaultKeyManager {
 	if keyDir == "" {
 		keyDir = filepath.Join(os.Getenv("HOME"), ".config", "sops", "age")
 	}
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	return &DefaultKeyManager{
-		keyDir:    keyDir,
-		generator: NewAgeKeyGenerator(),
-		validator: NewAgeKeyValidator(),
+		keyDir:     keyDir,
+		generator:  NewAgeKeyGenerator(),
+		validator:  NewAgeKeyValidator(),
+		fileSystem: fileSystem,
 	}
 }
 
@@ -131,7 +137,7 @@ func (m *DefaultKeyManager) SaveAgeKey(keyPair *AgeKeyPair, keyName string) erro
 func (m *DefaultKeyManager) LoadAgeKey(keyName string) (*AgeKeyPair, error) {
 	// Load private key
 	privateKeyPath := filepath.Join(m.keyDir, fmt.Sprintf("%s.txt", keyName))
-	privateKeyData, err := os.ReadFile(privateKeyPath)
+	privateKeyData, err := m.fileSystem.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key: %w", err)
 	}
@@ -144,7 +150,7 @@ func (m *DefaultKeyManager) LoadAgeKey(keyName string) (*AgeKeyPair, error) {
 
 	// Load public key
 	publicKeyPath := filepath.Join(m.keyDir, fmt.Sprintf("%s.pub", keyName))
-	publicKeyData, err := os.ReadFile(publicKeyPath)
+	publicKeyData, err := m.fileSystem.ReadFile(publicKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key: %w", err)
 	}

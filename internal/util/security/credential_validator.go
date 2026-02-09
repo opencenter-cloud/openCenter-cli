@@ -22,23 +22,30 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // DefaultCredentialValidator implements CredentialValidator interface
 type DefaultCredentialValidator struct {
-	masker *DefaultCredentialMasker
+	masker     *DefaultCredentialMasker
+	fileSystem fs.FileSystem
 }
 
 // NewDefaultCredentialValidator creates a new credential validator
 func NewDefaultCredentialValidator() *DefaultCredentialValidator {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	return &DefaultCredentialValidator{
-		masker: NewDefaultCredentialMasker(),
+		masker:     NewDefaultCredentialMasker(),
+		fileSystem: fileSystem,
 	}
 }
 
 // ValidateNoCredentialsInConfig validates that a config file doesn't contain plaintext credentials
 func (v *DefaultCredentialValidator) ValidateNoCredentialsInConfig(configPath string) error {
-	content, err := os.ReadFile(configPath)
+	content, err := v.fileSystem.ReadFile(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -53,7 +60,7 @@ func (v *DefaultCredentialValidator) ValidateNoCredentialsInConfig(configPath st
 
 // ValidateNoCredentialsInLogs validates that a log file doesn't contain credentials
 func (v *DefaultCredentialValidator) ValidateNoCredentialsInLogs(logPath string) error {
-	content, err := os.ReadFile(logPath)
+	content, err := v.fileSystem.ReadFile(logPath)
 	if err != nil {
 		return fmt.Errorf("failed to read log file: %w", err)
 	}

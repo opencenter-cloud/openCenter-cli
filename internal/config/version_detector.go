@@ -15,8 +15,9 @@ package config
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,7 +31,11 @@ type SchemaVersionInfo struct {
 // DetectSchemaVersionFromFile detects the schema version from a configuration file.
 // Requirements: 13.1, 13.2, 13.3
 func DetectSchemaVersionFromFile(filePath string) (*SchemaVersionInfo, error) {
-	data, err := os.ReadFile(filePath)
+	// Initialize FileSystem for reading
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
+
+	data, err := fileSystem.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}

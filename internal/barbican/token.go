@@ -18,12 +18,25 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 	"github.com/zalando/go-keyring"
 )
 
 const (
 	serviceName = "opencenter-cli"
 )
+
+var (
+	// Global FileSystem instance for token operations
+	tokenFileSystem fs.FileSystem
+)
+
+func init() {
+	// Initialize FileSystem for token operations
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	tokenFileSystem = fs.NewDefaultFileSystem(errorHandler)
+}
 
 func getUser() string {
 	user := os.Getenv("USER")
@@ -54,11 +67,11 @@ func StoreToken(token string) error {
 		return fmt.Errorf("keyring failed (%v) and unable to get cache path: %w", err, pathErr)
 	}
 
-	if mkdirErr := os.MkdirAll(filepath.Dir(path), 0700); mkdirErr != nil {
+	if mkdirErr := tokenFileSystem.MkdirAll(filepath.Dir(path), 0700); mkdirErr != nil {
 		return fmt.Errorf("keyring failed (%v) and unable to create cache dir: %w", err, mkdirErr)
 	}
 
-	if writeErr := os.WriteFile(path, []byte(token), 0600); writeErr != nil {
+	if writeErr := tokenFileSystem.WriteFileAtomic(path, []byte(token), 0600); writeErr != nil {
 		return fmt.Errorf("keyring failed (%v) and unable to write token file: %w", err, writeErr)
 	}
 
@@ -77,7 +90,7 @@ func LoadToken() (string, error) {
 		return "", fmt.Errorf("keyring failed (%v) and unable to get cache path: %w", err, pathErr)
 	}
 
-	fileToken, readErr := os.ReadFile(path)
+	fileToken, readErr := tokenFileSystem.ReadFile(path)
 	if readErr != nil {
 		// If both fail, return the keyring error as primary, but hint at file error
 		return "", fmt.Errorf("failed to retrieve token from keyring (%v) and file (%v)", err, readErr)

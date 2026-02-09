@@ -106,7 +106,7 @@ func TestProperty_StructuredErrorUsage(t *testing.T) {
 				return true
 			}
 
-			handler := NewDefaultErrorHandler()
+			handler := NewDefaultErrorHandlerWithoutMasking()
 			err := fmt.Errorf("%s", message)
 
 			structuredErr := handler.HandleError(err)
@@ -381,7 +381,7 @@ func TestProperty_ErrorTypeClassification(t *testing.T) {
 				return true
 			}
 
-			handler := NewDefaultErrorHandler()
+			handler := NewDefaultErrorHandlerWithoutMasking()
 
 			// Test validation errors
 			if keyword == "validation" || keyword == "invalid" {
@@ -419,7 +419,7 @@ func TestProperty_ErrorRetryability(t *testing.T) {
 	// Property: Network errors are retryable
 	properties.Property("network errors are retryable", prop.ForAll(
 		func(networkKeyword string) bool {
-			handler := NewDefaultErrorHandler()
+			handler := NewDefaultErrorHandlerWithoutMasking()
 			err := fmt.Errorf("%s error", networkKeyword)
 
 			isRetryable := handler.IsRetryable(err)
@@ -433,7 +433,7 @@ func TestProperty_ErrorRetryability(t *testing.T) {
 	// Property: Validation errors are not retryable
 	properties.Property("validation errors are not retryable", prop.ForAll(
 		func(validationKeyword string) bool {
-			handler := NewDefaultErrorHandler()
+			handler := NewDefaultErrorHandlerWithoutMasking()
 			err := fmt.Errorf("%s error", validationKeyword)
 
 			isRetryable := handler.IsRetryable(err)

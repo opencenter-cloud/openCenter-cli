@@ -22,17 +22,24 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // DefaultFileOperator implements FileOperator interface
 type DefaultFileOperator struct {
-	validator FileValidator
+	validator  FileValidator
+	fileSystem fs.FileSystem
 }
 
 // NewDefaultFileOperator creates a new default file operator
 func NewDefaultFileOperator() *DefaultFileOperator {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	return &DefaultFileOperator{
-		validator: NewDefaultFileValidator(),
+		validator:  NewDefaultFileValidator(),
+		fileSystem: fileSystem,
 	}
 }
 
@@ -46,7 +53,7 @@ func (f *DefaultFileOperator) ReadFile(filename string) ([]byte, error) {
 		return nil, fmt.Errorf("file not readable: %w", err)
 	}
 
-	data, err := os.ReadFile(filename)
+	data, err := f.fileSystem.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filename, err)
 	}
@@ -61,7 +68,7 @@ func (f *DefaultFileOperator) WriteFile(filename string, data []byte, perm os.Fi
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
 
-	if err := os.WriteFile(filename, data, perm); err != nil {
+	if err := f.fileSystem.WriteFile(filename, data, perm); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filename, err)
 	}
 
@@ -213,7 +220,7 @@ func (f *DefaultFileOperator) ensureParentDir(filename string) error {
 		return nil
 	}
 
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := f.fileSystem.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory %s: %w", parentDir, err)
 	}
 

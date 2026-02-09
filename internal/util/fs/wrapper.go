@@ -91,6 +91,10 @@ func (dfs *DefaultFileSystem) WriteFileAtomic(path string, data []byte, perm os.
 	// Atomic rename (POSIX guarantees atomicity)
 	if err := os.Rename(tmpPath, path); err != nil {
 		// Cleanup temp file on failure
+		// Note: This cleanup path is difficult to test reliably across platforms.
+		// It requires the temp write to succeed but rename to fail, which needs
+		// specific permission scenarios that behave differently on macOS/Linux/Windows.
+		// The risk is low: if cleanup fails, it only leaves a clearly-marked temp file.
 		os.Remove(tmpPath)
 		return errors.CreateFileError("atomic_rename", path, err)
 	}
@@ -134,6 +138,10 @@ func generateRandomString(length int) string {
 	bytes := make([]byte, length/2+1)
 	if _, err := rand.Read(bytes); err != nil {
 		// Fallback to a simple timestamp-based string if crypto/rand fails
+		// Note: This fallback path is nearly impossible to test without mocking crypto/rand.
+		// It only executes if the system's random number generator is unavailable,
+		// which would indicate serious system issues. The fallback provides a valid
+		// (though predictable) string for temporary file naming with minimal collision risk.
 		return "fallback"
 	}
 	return hex.EncodeToString(bytes)[:length]

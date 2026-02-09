@@ -16,10 +16,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"reflect"
 
 	"github.com/invopop/jsonschema"
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
 
 // SchemaGenerator generates JSON schemas from Go struct definitions
@@ -33,7 +34,8 @@ type SchemaGenerator interface {
 
 // schemaGenerator implements SchemaGenerator interface
 type schemaGenerator struct {
-	reflector *jsonschema.Reflector
+	reflector  *jsonschema.Reflector
+	fileSystem fs.FileSystem
 }
 
 // NewSchemaGenerator creates a new schema generator
@@ -44,8 +46,12 @@ func NewSchemaGenerator() SchemaGenerator {
 		ExpandedStruct:            true,
 	}
 
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
+
 	return &schemaGenerator{
-		reflector: reflector,
+		reflector:  reflector,
+		fileSystem: fileSystem,
 	}
 }
 
@@ -83,8 +89,8 @@ func (g *schemaGenerator) WriteToFile(schema *jsonschema.Schema, path string) er
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
-	// Write to file
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	// Write to file using FileSystem abstraction
+	if err := g.fileSystem.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("failed to write schema file: %w", err)
 	}
 

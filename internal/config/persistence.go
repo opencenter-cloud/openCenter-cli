@@ -107,8 +107,6 @@ func Validate(cfg Config) []error {
 // environment variable. If the variable is not set, it falls back to the user's
 // standard config directory (e.g., ~/.config/opencenter on Linux).
 // The directory is created if it does not exist.
-//
-// This is the internal implementation used by internal/core/config.
 func ResolveConfigDir() (string, error) {
 	var err error
 	dir := os.Getenv("OPENCENTER_CONFIG_DIR")
@@ -329,7 +327,7 @@ func ConfigPath(name string) (string, error) {
 // with the actual cluster configuration. The opencenter values take precedence over
 // schema defaults.
 //
-// Deprecated: Use internal/core/config.ConfigManager.Load() with merge options instead.
+// Deprecated: Use ConfigurationManager.Load() with merge options instead.
 // This function will be removed in v2.0.0.
 // Migration: Replace GenerateCompleteConfig(name) with configManager.Load(path, LoadOptions{MergeDefaults: true})
 //
@@ -342,7 +340,7 @@ func ConfigPath(name string) (string, error) {
 func GenerateCompleteConfig(name string) (Config, error) {
 	logDeprecationWarning(
 		"config.GenerateCompleteConfig()",
-		"internal/core/config.ConfigManager.Load() with merge options",
+		"ConfigurationManager.Load() with merge options",
 		"v2.0.0",
 	)
 	// Generate schema defaults as YAML
@@ -422,7 +420,7 @@ func mergeYAMLMaps(base, override map[string]any) map[string]any {
 // GenerateCompleteConfigYAML generates a complete configuration YAML by merging schema defaults
 // with the actual cluster configuration, preserving all YAML structure.
 //
-// Deprecated: Use internal/core/config.ConfigManager.Load() with merge options and marshal to YAML instead.
+// Deprecated: Use ConfigurationManager.Load() with merge options and marshal to YAML instead.
 // This function will be removed in v2.0.0.
 // Migration: Use configManager.Load() then yaml.Marshal() for YAML output.
 //
@@ -435,7 +433,7 @@ func mergeYAMLMaps(base, override map[string]any) map[string]any {
 func GenerateCompleteConfigYAML(name string) ([]byte, error) {
 	logDeprecationWarning(
 		"config.GenerateCompleteConfigYAML()",
-		"internal/core/config.ConfigManager.Load() with yaml.Marshal()",
+		"ConfigurationManager.Load() with yaml.Marshal()",
 		"v2.0.0",
 	)
 	// Generate schema defaults as YAML
@@ -483,7 +481,7 @@ func GenerateCompleteConfigYAML(name string) ([]byte, error) {
 // SaveDebugConfig saves a complete configuration to the GitOps directory as .opencenter.yaml
 // for debugging purposes. This is only called when OPENCENTER_DEBUG environment variable exists.
 //
-// Deprecated: Use internal/core/config.ConfigManager for debug configuration output.
+// Deprecated: Use ConfigurationManager for debug configuration output.
 // This function will be removed in v2.0.0.
 // Migration: Use configManager.Load() and save to debug location manually.
 //
@@ -496,7 +494,7 @@ func GenerateCompleteConfigYAML(name string) ([]byte, error) {
 func SaveDebugConfig(clusterName, gitDir string) error {
 	logDeprecationWarning(
 		"config.SaveDebugConfig()",
-		"internal/core/config.ConfigManager",
+		"ConfigurationManager",
 		"v2.0.0",
 	)
 	if gitDir == "" {
@@ -527,7 +525,7 @@ func SaveDebugConfig(clusterName, gitDir string) error {
 // Save writes the configuration to a YAML file. The file is saved with 0600
 // permissions to protect sensitive data.
 //
-// Deprecated: Use internal/core/config.ConfigManager.Save() instead.
+// Deprecated: Use ConfigurationManager.Save() instead.
 // This function will be removed in v2.0.0.
 // Migration: Replace Save(cfg) with configManager.Save(path, config)
 //
@@ -887,7 +885,7 @@ func activeClusterPath() (string, error) {
 // SetActive writes the given cluster name into the active marker file.
 // If the name is empty, the marker file is removed.
 //
-// Deprecated: Use internal/core/config.ConfigManager for active cluster management.
+// Deprecated: Use ConfigurationManager for active cluster management.
 // This function will be removed in v2.0.0.
 // Migration: Use configManager methods for active cluster tracking.
 //
@@ -899,7 +897,7 @@ func activeClusterPath() (string, error) {
 func SetActive(name string) error {
 	logDeprecationWarning(
 		"config.SetActive()",
-		"internal/core/config.ConfigManager",
+		"ConfigurationManager",
 		"v2.0.0",
 	)
 	path, err := activeClusterPath()
@@ -920,7 +918,7 @@ func SetActive(name string) error {
 // 2. Session file (if shell integration is active)
 // 3. Persistent selection from marker file
 //
-// Deprecated: Use internal/core/config.ConfigManager for active cluster retrieval.
+// Deprecated: Use ConfigurationManager for active cluster retrieval.
 // This function will be removed in v2.0.0.
 // Migration: Use configManager methods for active cluster retrieval.
 //
@@ -930,7 +928,7 @@ func SetActive(name string) error {
 func GetActive() (string, error) {
 	logDeprecationWarning(
 		"config.GetActive()",
-		"internal/core/config.ConfigManager",
+		"ConfigurationManager",
 		"v2.0.0",
 	)
 	// Priority 1: Check environment variable (highest priority)

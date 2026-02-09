@@ -16,13 +16,15 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
-// Test v1 config detection and routing
+// Test v1 config detection and rejection
 // Requirements: 13.2, 13.3
+// In v2.0.0, v1 configs should be rejected with a clear error message
 func TestDetectSchemaVersion_V1Config(t *testing.T) {
-	// Test explicit v1 version
+	// Test explicit v1 version - should be rejected
 	v1ConfigExplicit := `
 schema_version: "1.0"
 opencenter:
@@ -30,21 +32,14 @@ opencenter:
     name: test-cluster
 `
 
-	info, err := DetectSchemaVersionFromBytes([]byte(v1ConfigExplicit))
-	if err != nil {
-		t.Fatalf("Failed to detect schema version: %v", err)
+	_, err := DetectSchemaVersionFromBytes([]byte(v1ConfigExplicit))
+	if err == nil {
+		t.Fatal("Expected error for v1 config, got nil")
 	}
 
-	if info.Version != "1.0" {
-		t.Errorf("Expected version 1.0, got %s", info.Version)
-	}
-
-	if !info.IsV1 {
-		t.Error("Expected IsV1 to be true")
-	}
-
-	if info.IsV2 {
-		t.Error("Expected IsV2 to be false")
+	expectedMsg := "v1 configurations are not supported"
+	if !strings.Contains(err.Error(), expectedMsg) {
+		t.Errorf("Expected error message to contain %q, got: %v", expectedMsg, err)
 	}
 }
 
@@ -85,22 +80,14 @@ opencenter:
     name: test-cluster
 `
 
-	info, err := DetectSchemaVersionFromBytes([]byte(configNoVersion))
-	if err != nil {
-		t.Fatalf("Failed to detect schema version: %v", err)
+	_, err := DetectSchemaVersionFromBytes([]byte(configNoVersion))
+	if err == nil {
+		t.Fatal("Expected error for config with missing schema_version, got nil")
 	}
 
-	// Should default to v1 for backward compatibility
-	if info.Version != "1.0" {
-		t.Errorf("Expected default version 1.0, got %s", info.Version)
-	}
-
-	if !info.IsV1 {
-		t.Error("Expected IsV1 to be true for missing version")
-	}
-
-	if info.IsV2 {
-		t.Error("Expected IsV2 to be false for missing version")
+	expectedMsg := "v1 configurations are not supported"
+	if !strings.Contains(err.Error(), expectedMsg) {
+		t.Errorf("Expected error message to contain %q, got: %v", expectedMsg, err)
 	}
 }
 
@@ -136,13 +123,14 @@ opencenter:
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
-	info, err := DetectSchemaVersionFromFile(testFile)
-	if err != nil {
-		t.Fatalf("Failed to detect schema version from file: %v", err)
+	_, err := DetectSchemaVersionFromFile(testFile)
+	if err == nil {
+		t.Fatal("Expected error for v1 config file, got nil")
 	}
 
-	if info.Version != "1.0" {
-		t.Errorf("Expected version 1.0, got %s", info.Version)
+	expectedMsg := "v1 configurations are not supported"
+	if !strings.Contains(err.Error(), expectedMsg) {
+		t.Errorf("Expected error message to contain %q, got: %v", expectedMsg, err)
 	}
 }
 

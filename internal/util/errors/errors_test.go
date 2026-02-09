@@ -185,7 +185,7 @@ func TestValidationResult(t *testing.T) {
 
 // TestDefaultErrorHandler verifies error handler functionality
 func TestDefaultErrorHandler(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	t.Run("HandleError with nil", func(t *testing.T) {
 		result := handler.HandleError(nil)
@@ -1150,7 +1150,7 @@ func TestGenerationErrorWithFile(t *testing.T) {
 
 // TestFormatErrorWithContext verifies error formatting includes file context and operation
 func TestFormatErrorWithContext(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	t.Run("FormatError with file context", func(t *testing.T) {
 		err := &StructuredError{
@@ -1246,7 +1246,7 @@ func TestFormatErrorWithContext(t *testing.T) {
 
 // TestDetermineErrorType verifies error type detection from error messages
 func TestDetermineErrorType(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	tests := []struct {
 		name     string
@@ -1293,7 +1293,7 @@ func TestDetermineErrorType(t *testing.T) {
 
 // TestGetSuggestionsComprehensive verifies suggestions for all error types
 func TestGetSuggestionsComprehensive(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	tests := []struct {
 		name           string
@@ -1325,7 +1325,7 @@ func TestGetSuggestionsComprehensive(t *testing.T) {
 
 // TestIsRetryableComprehensive verifies retryable detection for various errors
 func TestIsRetryableComprehensive(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	tests := []struct {
 		name      string
@@ -1690,7 +1690,7 @@ func TestWrapperHelperEdgeCases(t *testing.T) {
 
 // TestFormatErrorEdgeCases verifies edge cases in error formatting
 func TestFormatErrorEdgeCases(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	t.Run("FormatError with UserError type", func(t *testing.T) {
 		err := &StructuredError{
@@ -1724,7 +1724,7 @@ func TestFormatErrorEdgeCases(t *testing.T) {
 
 // TestGetSuggestionsAllErrorTypes verifies suggestions for all error message patterns
 func TestGetSuggestionsAllErrorTypes(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	tests := []struct {
 		name   string
@@ -1907,7 +1907,7 @@ func TestUnwrapErrorWithStructuredError(t *testing.T) {
 
 // TestIsRetryableEdgeCases verifies edge cases in IsRetryable
 func TestIsRetryableEdgeCases(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	t.Run("nil error", func(t *testing.T) {
 		if handler.IsRetryable(nil) {
@@ -1926,7 +1926,7 @@ func TestIsRetryableEdgeCases(t *testing.T) {
 
 // TestDetermineErrorTypeEdgeCases verifies edge cases in determineErrorType
 func TestDetermineErrorTypeEdgeCases(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	t.Run("nil error", func(t *testing.T) {
 		errorType := handler.determineErrorType(nil)
@@ -1946,7 +1946,7 @@ func TestDetermineErrorTypeEdgeCases(t *testing.T) {
 
 // TestFormatErrorWithNilError verifies FormatError with nil error
 func TestFormatErrorWithNilError(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	formatted := handler.FormatError(nil)
 	if formatted != "" {
@@ -1956,7 +1956,7 @@ func TestFormatErrorWithNilError(t *testing.T) {
 
 // TestGetSuggestionsWithStructuredError verifies GetSuggestions with structured error
 func TestGetSuggestionsWithStructuredError(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	err := &StructuredError{
 		Type:        ValidationError,
@@ -1984,7 +1984,7 @@ func TestGetSuggestionsWithStructuredError(t *testing.T) {
 
 // TestGetSuggestionsWithNilError verifies GetSuggestions with nil error
 func TestGetSuggestionsWithNilError(t *testing.T) {
-	handler := NewDefaultErrorHandler()
+	handler := NewDefaultErrorHandlerWithoutMasking()
 
 	suggestions := handler.GetSuggestions(nil)
 	if suggestions != nil {

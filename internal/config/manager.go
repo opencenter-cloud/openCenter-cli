@@ -218,6 +218,78 @@ func (cm *ConfigurationManager) Load(ctx context.Context, name string) (*Config,
 	return config, nil
 }
 
+// LoadWithoutValidation loads a configuration from disk or cache without validation.
+//
+// This method is primarily intended for testing scenarios where you need to load
+// incomplete or invalid configurations. In production code, use Load() instead.
+//
+// The load process follows these steps:
+//  1. Check cache for existing configuration (fast path)
+//  2. Resolve configuration file path using PathResolver
+//  3. Read and parse configuration file
+//  4. Store in cache for future loads (NO VALIDATION)
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeouts
+//   - name: Cluster name to load
+//
+// Returns:
+//   - *Config: Loaded configuration (not validated)
+//   - error: Load or parse error
+//
+// Example:
+//
+//	config, err := manager.LoadWithoutValidation(ctx, "test-cluster")
+//	if err != nil {
+//	    return fmt.Errorf("failed to load config: %w", err)
+//	}
+func (cm *ConfigurationManager) LoadWithoutValidation(ctx context.Context, name string) (*Config, error) {
+	if name == "" {
+		return nil, errors.WrapWithOperation(
+			fmt.Errorf("cluster name cannot be empty"),
+			"load",
+		)
+	}
+
+	// Check cache first (fast path)
+	if cached, found := cm.cache.Get(ctx, name); found {
+		return cached, nil
+	}
+
+	// Resolve configuration path
+	clusterPaths, err := cm.pathResolver.ResolveWithFallback(ctx, name)
+	if err != nil {
+		return nil, errors.WrapWithOperation(
+			NewPathError(name, "", err),
+			"load",
+		)
+	}
+
+	configPath := clusterPaths.ConfigPath
+
+	// Check if file exists
+	if !cm.fileSystem.Exists(configPath) {
+		return nil, errors.WrapWithOperation(
+			NewFileError("read", configPath, fmt.Errorf("configuration file not found")),
+			"load",
+		)
+	}
+
+	// Load configuration from file
+	config, err := cm.loader.LoadFromFile(ctx, configPath)
+	if err != nil {
+		// Check if it's a parse error - wrap with appropriate context
+		return nil, errors.WrapWithOperation(
+			NewParseError(configPath, 0, 0, err),
+			"load",
+		)
+	}
+
+	// Cache the loaded configuration (without validation)
+	cm.cache.Set(ctx, name, config)
+
+	return config, nil
+}
 // Save saves a configuration to disk atomically.
 //
 // The save process follows these steps:
@@ -268,6 +340,90 @@ func (cm *ConfigurationManager) Save(ctx context.Context, config *Config) error 
 	if !result.Valid {
 		return errors.WrapWithOperation(
 			result.ToError(),
+			"save",
+		)
+	}
+
+	// Resolve configuration path
+	organization := config.OpenCenter.Meta.Organization
+	clusterPaths, err := cm.pathResolver.Resolve(ctx, clusterName, organization)
+	if err != nil {
+		return errors.WrapWithOperation(
+			NewPathError(clusterName, organization, err),
+			"save",
+		)
+	}
+
+	configPath := clusterPaths.ConfigPath
+
+	// Create backup if file exists
+	if cm.fileSystem.Exists(configPath) {
+		backupPath := configPath + ".backup"
+		data, err := cm.fileSystem.ReadFile(configPath)
+		if err != nil {
+			return errors.WrapWithOperation(
+				NewFileError("read", configPath, err),
+				"save",
+			)
+		}
+
+		if err := cm.fileSystem.WriteFile(backupPath, data, 0600); err != nil {
+			return errors.WrapWithOperation(
+				NewFileError("write", backupPath, err),
+				"save",
+			)
+		}
+	}
+
+	// Save configuration atomically
+	if err := cm.loader.SaveToFile(ctx, configPath, config); err != nil {
+		return errors.WrapWithOperation(
+			NewFileError("write", configPath, err),
+			"save",
+		)
+	}
+
+	// Invalidate cache entry
+	cm.cache.Invalidate(ctx, clusterName)
+
+	return nil
+}
+// SaveWithoutValidation saves a configuration to disk atomically without validation.
+//
+// This method is primarily intended for testing scenarios where you need to save
+// incomplete or invalid configurations. In production code, use Save() instead.
+//
+// The save process follows these steps:
+//  1. Resolve configuration file path
+//  2. Create backup of existing file (if exists)
+//  3. Write configuration atomically using FileSystem
+//  4. Invalidate cache entry for this cluster
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeouts
+//   - config: Configuration to save
+//
+// Returns:
+//   - error: Path resolution or write error
+//
+// Example:
+//
+//	err := manager.SaveWithoutValidation(ctx, config)
+//	if err != nil {
+//	    return fmt.Errorf("failed to save config: %w", err)
+//	}
+func (cm *ConfigurationManager) SaveWithoutValidation(ctx context.Context, config *Config) error {
+	if config == nil {
+		return errors.WrapWithOperation(
+			fmt.Errorf("configuration cannot be nil"),
+			"save",
+		)
+	}
+
+	clusterName := config.ClusterName()
+	if clusterName == "" {
+		return errors.WrapWithOperation(
+			NewValidationError("cluster_name", "cluster name cannot be empty", nil),
 			"save",
 		)
 	}

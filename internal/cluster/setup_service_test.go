@@ -11,7 +11,23 @@ import (
 	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/core/validation"
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
+	testhelpers "github.com/rackerlabs/opencenter-cli/internal/testing"
 )
+
+// createTestSetupService creates a SetupService with test dependencies
+// that uses LoadWithoutValidation for loading configs in tests
+func createTestSetupService(pathResolver *paths.PathResolver) *SetupService {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
+	validator := validation.NewValidationEngine()
+	cache := config.NewConfigCache()
+	loader := config.NewConfigIOHandler(fileSystem)
+	configMgr := config.NewConfigurationManagerWithDeps(loader, validator, cache, pathResolver, fileSystem)
+	
+	return NewSetupServiceWithConfigMgr(pathResolver, validator, configMgr)
+}
 
 func TestNewSetupService(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -37,7 +53,9 @@ func TestSetupService_generateGitOpsManifests_DryRun(t *testing.T) {
 	tmpDir := t.TempDir()
 	gitDir := filepath.Join(tmpDir, "gitops")
 
-	cfg := config.Config{}
+	cfg := config.Config{
+		SchemaVersion: "2.0",
+	}
 	cfg.OpenCenter.Meta.Name = "test-cluster"
 	cfg.OpenCenter.GitOps.GitDir = gitDir
 	cfg.OpenCenter.Infrastructure.Provider = "openstack"
@@ -254,19 +272,18 @@ func TestSetupService_Setup(t *testing.T) {
 	}
 
 	// Create a minimal config
-	cfg := config.Config{}
+	cfg := config.Config{
+		SchemaVersion: "2.0",
+	}
 	cfg.OpenCenter.Cluster.ClusterName = "test-cluster"
 	cfg.OpenCenter.Meta.Name = "test-cluster"
 	cfg.OpenCenter.GitOps.GitDir = gitDir
 	cfg.OpenCenter.Infrastructure.Provider = "kind"
 
 	// Save config
-	if err := config.Save(cfg); err != nil {
-		t.Fatalf("failed to save config: %v", err)
-	}
+	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 
-	validationEngine := validation.NewValidationEngine()
-	service := NewSetupService(pathResolver, validationEngine)
+	service := createTestSetupService(pathResolver)
 
 	opts := SetupOptions{
 		ClusterName:    "test-cluster",
@@ -307,19 +324,18 @@ func TestSetupService_Setup_MissingGitDir(t *testing.T) {
 	}
 
 	// Create a config without git_dir
-	cfg := config.Config{}
+	cfg := config.Config{
+		SchemaVersion: "2.0",
+	}
 	cfg.OpenCenter.Cluster.ClusterName = "test-cluster"
 	cfg.OpenCenter.Meta.Name = "test-cluster"
 	cfg.OpenCenter.GitOps.GitDir = "" // Empty git_dir
 	cfg.OpenCenter.Infrastructure.Provider = "kind"
 
 	// Save config
-	if err := config.Save(cfg); err != nil {
-		t.Fatalf("failed to save config: %v", err)
-	}
+	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 
-	validationEngine := validation.NewValidationEngine()
-	service := NewSetupService(pathResolver, validationEngine)
+	service := createTestSetupService(pathResolver)
 
 	opts := SetupOptions{
 		ClusterName:    "test-cluster",
@@ -348,19 +364,18 @@ func TestSetupService_Setup_ValidationFailure(t *testing.T) {
 	}
 
 	// Create an invalid config
-	cfg := config.Config{}
+	cfg := config.Config{
+		SchemaVersion: "2.0",
+	}
 	cfg.OpenCenter.Cluster.ClusterName = "test-cluster"
 	cfg.OpenCenter.Meta.Name = "test-cluster"
 	cfg.OpenCenter.GitOps.GitDir = gitDir
 	cfg.OpenCenter.Infrastructure.Provider = "kind"
 
 	// Save config
-	if err := config.Save(cfg); err != nil {
-		t.Fatalf("failed to save config: %v", err)
-	}
+	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 
-	validationEngine := validation.NewValidationEngine()
-	service := NewSetupService(pathResolver, validationEngine)
+	service := createTestSetupService(pathResolver)
 
 	opts := SetupOptions{
 		ClusterName:    "test-cluster",
@@ -395,18 +410,17 @@ func TestSetupService_Setup_WithForce(t *testing.T) {
 		t.Fatalf("failed to create cluster directories: %v", err)
 	}
 
-	cfg := config.Config{}
+	cfg := config.Config{
+		SchemaVersion: "2.0",
+	}
 	cfg.OpenCenter.Cluster.ClusterName = "test-cluster"
 	cfg.OpenCenter.Meta.Name = "test-cluster"
 	cfg.OpenCenter.GitOps.GitDir = gitDir
 	cfg.OpenCenter.Infrastructure.Provider = "kind"
 
-	if err := config.Save(cfg); err != nil {
-		t.Fatalf("failed to save config: %v", err)
-	}
+	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 
-	validationEngine := validation.NewValidationEngine()
-	service := NewSetupService(pathResolver, validationEngine)
+	service := createTestSetupService(pathResolver)
 
 	opts := SetupOptions{
 		ClusterName:    "test-cluster",

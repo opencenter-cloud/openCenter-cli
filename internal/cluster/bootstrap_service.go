@@ -148,7 +148,16 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 	// Load configuration using ConfigurationManager
 	var cfg config.Config
 	if s.configurationMgr != nil {
-		loadedCfg, err := s.configurationMgr.Load(ctx, opts.ClusterName)
+		var loadedCfg *config.Config
+		var err error
+		
+		// Use LoadWithoutValidation if validation will be skipped anyway
+		if opts.SkipValidation {
+			loadedCfg, err = s.configurationMgr.LoadWithoutValidation(ctx, opts.ClusterName)
+		} else {
+			loadedCfg, err = s.configurationMgr.Load(ctx, opts.ClusterName)
+		}
+		
 		if err != nil {
 			return nil, fmt.Errorf("loading configuration: %w", err)
 		}
@@ -159,7 +168,14 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 		if err != nil {
 			return nil, fmt.Errorf("creating configuration manager: %w", err)
 		}
-		loadedCfg, err := tempMgr.Load(ctx, opts.ClusterName)
+		
+		var loadedCfg *config.Config
+		if opts.SkipValidation {
+			loadedCfg, err = tempMgr.LoadWithoutValidation(ctx, opts.ClusterName)
+		} else {
+			loadedCfg, err = tempMgr.Load(ctx, opts.ClusterName)
+		}
+		
 		if err != nil {
 			return nil, fmt.Errorf("loading configuration: %w", err)
 		}

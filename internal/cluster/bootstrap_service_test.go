@@ -11,7 +11,24 @@ import (
 	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/core/validation"
 	"github.com/rackerlabs/opencenter-cli/internal/core/validation/validators"
+	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
+	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
+	testhelpers "github.com/rackerlabs/opencenter-cli/internal/testing"
 )
+
+// createTestBootstrapService creates a BootstrapService with test dependencies
+func createTestBootstrapService(pathResolver *paths.PathResolver) *BootstrapService {
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
+	validator := validation.NewValidationEngine()
+	configValidator := validators.NewConfigValidator()
+	validator.Register(configValidator)
+	cache := config.NewConfigCache()
+	loader := config.NewConfigIOHandler(fileSystem)
+	configMgr := config.NewConfigurationManagerWithDeps(loader, validator, cache, pathResolver, fileSystem)
+	
+	return NewBootstrapServiceWithConfigMgr(pathResolver, validator, configMgr, fileSystem)
+}
 
 func TestBootstrapService_Bootstrap(t *testing.T) {
 	// Create temporary directory for test
@@ -20,15 +37,8 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 	// Create path resolver with test directory
 	pathResolver := paths.NewPathResolver(tmpDir)
 
-	// Create validation engine with config validator
-	validationEngine := validation.NewValidationEngine()
-	configValidator := validators.NewConfigValidator()
-	if err := validationEngine.Register(configValidator); err != nil {
-		t.Fatalf("Failed to register config validator: %v", err)
-	}
-
-	// Create bootstrap service
-	bootstrapService := NewBootstrapService(pathResolver, validationEngine)
+	// Create bootstrap service with test dependencies
+	bootstrapService := createTestBootstrapService(pathResolver)
 
 	tests := []struct {
 		name    string
@@ -71,9 +81,7 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 				cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "gitops")
 
 				// Save config
-				if err := config.Save(cfg); err != nil {
-					t.Fatalf("Failed to save config: %v", err)
-				}
+				testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 
 				return clusterName
 			},
@@ -113,9 +121,7 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 				cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "gitops")
 
 				// Save config
-				if err := config.Save(cfg); err != nil {
-					t.Fatalf("Failed to save config: %v", err)
-				}
+				testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 
 				return clusterName
 			},

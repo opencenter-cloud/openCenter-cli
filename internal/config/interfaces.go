@@ -51,20 +51,6 @@ type ActiveConfigManager interface {
 	GetActiveConfig(ctx context.Context) (string, error)
 }
 
-// ConfigManagerInterface defines the interface for configuration management operations.
-// This interface provides abstraction for loading, validating, and managing cluster configurations.
-// Deprecated: Use specific interfaces (ConfigLoader, ConfigPersister, ConfigLister, ActiveConfigManager)
-// This interface is maintained for backward compatibility and will be removed in v2.0.0
-type ConfigManagerInterface interface {
-	ConfigLoader
-	ConfigPersister
-	ConfigLister
-	ActiveConfigManager
-
-	// ValidateConfig validates a cluster configuration
-	ValidateConfig(ctx context.Context, config *Config) *ConfigValidationResult
-}
-
 // ConfigValidatorInterface defines the interface for configuration validation.
 type ConfigValidatorInterface interface {
 	// Validate performs comprehensive validation on a configuration

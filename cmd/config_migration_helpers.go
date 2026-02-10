@@ -37,7 +37,6 @@ func getConfigManager() (*config.ConfigurationManager, error) {
 }
 
 // loadConfig loads a cluster configuration using the new ConfigurationManager.
-// This is a migration helper to replace config.Load() calls.
 func loadConfig(ctx context.Context, name string) (config.Config, error) {
 	manager, err := getConfigManager()
 	if err != nil {
@@ -53,7 +52,6 @@ func loadConfig(ctx context.Context, name string) (config.Config, error) {
 }
 
 // saveConfig saves a cluster configuration using the new ConfigurationManager.
-// This is a migration helper to replace config.Save() calls.
 func saveConfig(ctx context.Context, cfg config.Config) error {
 	manager, err := getConfigManager()
 	if err != nil {

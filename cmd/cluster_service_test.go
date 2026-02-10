@@ -14,6 +14,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,10 +47,12 @@ func setupServiceTestEnv(t *testing.T, clusterName string) (string, func()) {
 		t.Fatalf("failed to create cluster directory: %v", err)
 	}
 
-	// Create a basic config file
+	// Create a basic config file using new API
 	cfg := config.NewDefault(clusterName)
 	cfg.OpenCenter.GitOps.GitDir = filepath.Join(cfgDir, "gitops")
-	if err := config.Save(cfg); err != nil {
+	
+	ctx := context.Background()
+	if err := saveConfig(ctx, cfg); err != nil {
 		cleanup()
 		t.Fatalf("failed to save initial config: %v", err)
 	}
@@ -171,7 +174,7 @@ func TestClusterServiceEnable(t *testing.T) {
 
 			// Pre-populate config if testing "already enabled" or "force re-enable" scenario
 			if strings.Contains(tt.name, "already enabled") || strings.Contains(tt.name, "force re-enable") {
-				cfg, err := config.Load(uniqueCluster)
+				cfg, err := loadConfig(context.Background(), uniqueCluster)
 				if err != nil {
 					t.Fatalf("failed to load config: %v", err)
 				}
@@ -179,7 +182,7 @@ func TestClusterServiceEnable(t *testing.T) {
 					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.Services[tt.serviceName] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
-				if err := config.Save(cfg); err != nil {
+				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
 			}
@@ -217,7 +220,7 @@ func TestClusterServiceEnable(t *testing.T) {
 
 			// Run custom validation if provided
 			if tt.validate != nil {
-				cfg, err := config.Load(uniqueCluster)
+				cfg, err := loadConfig(context.Background(), uniqueCluster)
 				if err != nil {
 					t.Fatalf("failed to load config for validation: %v", err)
 				}
@@ -244,7 +247,7 @@ func TestClusterServiceDisable(t *testing.T) {
 			serviceName: "prometheus",
 			args:        []string{"prometheus"},
 			setupFunc: func(t *testing.T, clusterName string) {
-				cfg, err := config.Load(clusterName)
+				cfg, err := loadConfig(context.Background(), clusterName)
 				if err != nil {
 					t.Fatalf("failed to load config: %v", err)
 				}
@@ -252,7 +255,7 @@ func TestClusterServiceDisable(t *testing.T) {
 					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.Services["prometheus"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
-				if err := config.Save(cfg); err != nil {
+				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
 			},
@@ -271,7 +274,7 @@ func TestClusterServiceDisable(t *testing.T) {
 			serviceName: "custom-app",
 			args:        []string{"custom-app", "--managed"},
 			setupFunc: func(t *testing.T, clusterName string) {
-				cfg, err := config.Load(clusterName)
+				cfg, err := loadConfig(context.Background(), clusterName)
 				if err != nil {
 					t.Fatalf("failed to load config: %v", err)
 				}
@@ -279,7 +282,7 @@ func TestClusterServiceDisable(t *testing.T) {
 					cfg.OpenCenter.ManagedService = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.ManagedService["custom-app"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
-				if err := config.Save(cfg); err != nil {
+				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
 			},
@@ -308,7 +311,7 @@ func TestClusterServiceDisable(t *testing.T) {
 			serviceName: "prometheus",
 			args:        []string{"prometheus"},
 			setupFunc: func(t *testing.T, clusterName string) {
-				cfg, err := config.Load(clusterName)
+				cfg, err := loadConfig(context.Background(), clusterName)
 				if err != nil {
 					t.Fatalf("failed to load config: %v", err)
 				}
@@ -316,7 +319,7 @@ func TestClusterServiceDisable(t *testing.T) {
 					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.Services["prometheus"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}}
-				if err := config.Save(cfg); err != nil {
+				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
 			},
@@ -330,7 +333,7 @@ func TestClusterServiceDisable(t *testing.T) {
 			serviceName: "grafana",
 			args:        []string{"grafana", "--cluster=explicit-test-disable-service-with-explicit-cluster-flag"},
 			setupFunc: func(t *testing.T, clusterName string) {
-				cfg, err := config.Load(clusterName)
+				cfg, err := loadConfig(context.Background(), clusterName)
 				if err != nil {
 					t.Fatalf("failed to load config: %v", err)
 				}
@@ -338,7 +341,7 @@ func TestClusterServiceDisable(t *testing.T) {
 					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.Services["grafana"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
-				if err := config.Save(cfg); err != nil {
+				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
 			},
@@ -398,7 +401,7 @@ func TestClusterServiceDisable(t *testing.T) {
 
 			// Run custom validation if provided
 			if tt.validate != nil {
-				cfg, err := config.Load(uniqueCluster)
+				cfg, err := loadConfig(context.Background(), uniqueCluster)
 				if err != nil {
 					t.Fatalf("failed to load config for validation: %v", err)
 				}
@@ -454,7 +457,7 @@ func TestClusterServiceEnableDisableRoundtrip(t *testing.T) {
 	}
 
 	// Verify it's enabled
-	cfg, err := config.Load(clusterName)
+	cfg, err := loadConfig(context.Background(), clusterName)
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
@@ -473,7 +476,7 @@ func TestClusterServiceEnableDisableRoundtrip(t *testing.T) {
 	}
 
 	// Verify it's disabled
-	cfg, err = config.Load(clusterName)
+	cfg, err = loadConfig(context.Background(), clusterName)
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
@@ -492,7 +495,7 @@ func TestClusterServiceEnableDisableRoundtrip(t *testing.T) {
 	}
 
 	// Verify it's enabled again
-	cfg, err = config.Load(clusterName)
+	cfg, err = loadConfig(context.Background(), clusterName)
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
@@ -531,7 +534,7 @@ func TestClusterServiceStatus(t *testing.T) {
 			name:        "display status with enabled services",
 			clusterName: "test-cluster",
 			setupFunc: func(t *testing.T, clusterName string) {
-				cfg, err := config.Load(clusterName)
+				cfg, err := loadConfig(context.Background(), clusterName)
 				if err != nil {
 					t.Fatalf("failed to load config: %v", err)
 				}
@@ -540,7 +543,7 @@ func TestClusterServiceStatus(t *testing.T) {
 				}
 				cfg.OpenCenter.Services["prometheus"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: "running"}}
 				cfg.OpenCenter.Services["grafana"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false, Status: "pending"}}
-				if err := config.Save(cfg); err != nil {
+				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
 			},
@@ -567,7 +570,7 @@ func TestClusterServiceStatus(t *testing.T) {
 			name:        "display status with managed services",
 			clusterName: "test-cluster",
 			setupFunc: func(t *testing.T, clusterName string) {
-				cfg, err := config.Load(clusterName)
+				cfg, err := loadConfig(context.Background(), clusterName)
 				if err != nil {
 					t.Fatalf("failed to load config: %v", err)
 				}
@@ -575,7 +578,7 @@ func TestClusterServiceStatus(t *testing.T) {
 					cfg.OpenCenter.ManagedService = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.ManagedService["custom-app"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: "success"}}
-				if err := config.Save(cfg); err != nil {
+				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
 			},
@@ -596,7 +599,7 @@ func TestClusterServiceStatus(t *testing.T) {
 			name:        "display status with empty status field",
 			clusterName: "test-cluster",
 			setupFunc: func(t *testing.T, clusterName string) {
-				cfg, err := config.Load(clusterName)
+				cfg, err := loadConfig(context.Background(), clusterName)
 				if err != nil {
 					t.Fatalf("failed to load config: %v", err)
 				}
@@ -604,7 +607,7 @@ func TestClusterServiceStatus(t *testing.T) {
 					cfg.OpenCenter.Services = make(config.ServiceMap)
 				}
 				cfg.OpenCenter.Services["loki"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: ""}}
-				if err := config.Save(cfg); err != nil {
+				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
 			},

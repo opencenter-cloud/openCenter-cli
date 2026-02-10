@@ -36,6 +36,29 @@ Removing all deprecated code after Phase 1-4 completion. The deprecated code was
 
 ## Part 2: Deprecated Persistence Functions - ⏳ IN PROGRESS
 
+### Test Infrastructure Fix - ✅ COMPLETE
+
+**Commit**: 0949177  
+**Date**: February 9, 2026
+
+Before removing deprecated functions, we needed to fix the test infrastructure to work with ConfigurationManager's validation requirements.
+
+**Changes Made**:
+1. Added `SaveWithoutValidation()` method to ConfigurationManager
+2. Added `LoadWithoutValidation()` method to ConfigurationManager
+3. Created `internal/testing/config_helpers.go` with test utilities:
+   - `SaveConfig(t, cfg)` - saves config without validation
+   - `SaveConfigWithPathResolver(t, cfg, pathResolver)` - for tests with custom paths
+   - `LoadConfig(t, name)` - loads config
+   - `ValidateConfig(t, cfg)` - validates config
+4. Updated Setup and Bootstrap services to use LoadWithoutValidation when SkipValidation=true
+5. Fixed all cluster service tests to use new infrastructure
+
+**Impact**:
+- All setup and bootstrap tests now passing
+- Tests can work with incomplete configs
+- Production code still validates properly
+
 ### Functions to Remove
 
 From `internal/config/persistence.go`:

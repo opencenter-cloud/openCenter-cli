@@ -38,7 +38,7 @@ Removing all deprecated code after Phase 1-4 completion. The deprecated code was
 
 ### Test Infrastructure Fix - ✅ COMPLETE
 
-**Commit**: 0949177  
+**Commits**: 0949177, 516f791  
 **Date**: February 9, 2026
 
 Before removing deprecated functions, we needed to fix the test infrastructure to work with ConfigurationManager's validation requirements.
@@ -46,8 +46,59 @@ Before removing deprecated functions, we needed to fix the test infrastructure t
 **Changes Made**:
 1. Added `SaveWithoutValidation()` method to ConfigurationManager
 2. Added `LoadWithoutValidation()` method to ConfigurationManager
-3. Created `internal/testing/config_helpers.go` with test utilities:
-   - `SaveConfig(t, cfg)` - saves config without validation
+3. Created `internal/testing/config_helpers.go` with test utilities
+4. Updated Setup and Bootstrap services to use LoadWithoutValidation when SkipValidation=true
+5. Fixed all cluster service tests - all passing
+
+### CMD Files Migration - ✅ COMPLETE
+
+**Commits**: 8cec9d2, 08681b6  
+**Date**: February 9, 2026
+
+Migrated all production cmd files from deprecated config functions to new ConfigurationManager APIs.
+
+**Changes Made**:
+1. Created `getConfigPath()` helper function in config_migration_helpers.go
+2. Migrated 7 cmd files to use new APIs:
+   - cluster_config.go
+   - cluster_config_update.go
+   - cluster_destroy.go
+   - cluster_edit.go
+   - cluster_info.go
+   - cluster_lock.go
+   - cluster_select.go
+3. Updated cmd/cluster_service_test.go to use new APIs
+4. Removed duplicate code and unused imports
+5. All cmd files compile successfully
+
+**Impact**:
+- **Files Modified**: 8 cmd files
+- **Lines Changed**: ~150 lines
+- **Breaking Changes**: None (internal refactoring only)
+- **Build Status**: ✅ Compiles successfully
+
+### Remaining Work - 🔄 TODO
+
+**Status**: Deprecated functions still exist in `internal/config/persistence.go` but are only used by:
+1. Test files (internal/config/migration/scanner_test.go)
+2. Migration scanner examples (strings showing old vs new code)
+
+**Functions to Remove** (once test files are updated):
+- `Save(cfg Config) error` - 10 lines
+- `Load(name string) (Config, error)` - 20 lines  
+- `Validate(cfg Config) []error` - 15 lines
+- `ConfigPath(name string) (string, error)` - 120 lines
+- `GenerateCompleteConfig(name string) (Config, error)` - 60 lines
+- `GenerateCompleteConfigYAML(name string) ([]byte, error)` - 50 lines
+- `SaveDebugConfig(clusterName, gitDir string) error` - 25 lines
+
+**Total Lines to Remove**: ~300 lines
+
+**Next Steps**:
+1. Update internal/config/migration/scanner_test.go to not use deprecated functions
+2. Remove all deprecated functions from persistence.go
+3. Run full test suite
+4. Final commit
    - `SaveConfigWithPathResolver(t, cfg, pathResolver)` - for tests with custom paths
    - `LoadConfig(t, name)` - loads config
    - `ValidateConfig(t, cfg)` - validates config

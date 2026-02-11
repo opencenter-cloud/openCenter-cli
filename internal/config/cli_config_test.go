@@ -190,7 +190,7 @@ func TestConfigManagerSetGetValue(t *testing.T) {
 	}{
 		{"logging.level", "debug"},
 		{"logging.format", "json"},
-		{"behavior.verbose", true},
+		{"behavior.dryRun", true},
 		{"defaults.provider", "aws"},
 		{"logging.file.maxSize", 200},
 	}
@@ -268,7 +268,7 @@ func TestConfigManagerMergeWithDefaults(t *testing.T) {
 			Level: "debug",
 		},
 		Behavior: BehaviorConfig{
-			Verbose: true,
+			DryRun: true,
 		},
 	}
 
@@ -280,8 +280,8 @@ func TestConfigManagerMergeWithDefaults(t *testing.T) {
 		t.Errorf("Expected merged log level 'debug', got '%s'", merged.Logging.Level)
 	}
 
-	if merged.Behavior.Verbose != true {
-		t.Errorf("Expected merged verbose true, got %v", merged.Behavior.Verbose)
+	if merged.Behavior.DryRun != true {
+		t.Errorf("Expected merged dryRun true, got %v", merged.Behavior.DryRun)
 	}
 
 	// Check that default values are filled in
@@ -717,7 +717,6 @@ paths:
 behavior:
   autoConfirm: false
   dryRun: false
-  verbose: false
 defaults:
   provider: openstack
   region: "{{ .OpenCenter.Cluster.ClusterRegion }}"
@@ -753,7 +752,7 @@ func TestConfigurationPrecedence(t *testing.T) {
 	// Create base configuration file
 	baseConfig := DefaultCLIConfig()
 	baseConfig.Logging.Level = "info"
-	baseConfig.Behavior.Verbose = false
+	baseConfig.Behavior.DryRun = false
 
 	data, err := yaml.Marshal(baseConfig)
 	if err != nil {
@@ -791,7 +790,6 @@ paths:
 behavior:
   autoConfirm: false
   dryRun: false
-  verbose: false
 defaults:
   provider: openstack
   region: "{{ .OpenCenter.Cluster.ClusterRegion }}"
@@ -854,10 +852,10 @@ func TestConfigManagerDotNotationEdgeCases(t *testing.T) {
 		},
 		{
 			name:        "invalid type for boolean field",
-			key:         "behavior.verbose",
+			key:         "behavior.dryRun",
 			value:       "not-a-boolean",
 			expectError: true,
-			errorMsg:    "verbose must be a boolean",
+			errorMsg:    "dryRun must be a boolean",
 		},
 		{
 			name:        "valid nested file config",

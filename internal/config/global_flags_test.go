@@ -28,7 +28,6 @@ type GlobalFlags struct {
 	DryRun   bool
 	LogLevel string
 	Set      []string
-	Verbose  bool
 }
 
 func TestGlobalFlagOverrides(t *testing.T) {
@@ -44,29 +43,24 @@ func TestGlobalFlagOverrides(t *testing.T) {
 	baseConfig := cm.GetConfig()
 
 	tests := []struct {
-		name          string
-		globalFlags   *GlobalFlags
-		expectLevel   string
-		expectDryRun  bool
-		expectVerbose bool
+		name         string
+		globalFlags  *GlobalFlags
+		expectLevel  string
+		expectDryRun bool
 	}{
-		{
-			name: "verbose flag overrides log level",
-			globalFlags: &GlobalFlags{
-				Verbose:  true,
-				LogLevel: "warn", // Should be overridden by verbose
-			},
-			expectLevel:   "debug",
-			expectVerbose: true,
-		},
 		{
 			name: "explicit log level",
 			globalFlags: &GlobalFlags{
 				LogLevel: "info",
-				Verbose:  false,
 			},
-			expectLevel:   "info",
-			expectVerbose: false,
+			expectLevel: "info",
+		},
+		{
+			name: "debug log level",
+			globalFlags: &GlobalFlags{
+				LogLevel: "debug",
+			},
+			expectLevel: "debug",
 		},
 		{
 			name: "dry-run flag",
@@ -80,11 +74,9 @@ func TestGlobalFlagOverrides(t *testing.T) {
 			globalFlags: &GlobalFlags{
 				LogLevel: "error",
 				DryRun:   true,
-				Verbose:  false,
 			},
-			expectLevel:   "error",
-			expectDryRun:  true,
-			expectVerbose: false,
+			expectLevel:  "error",
+			expectDryRun: true,
 		},
 	}
 
@@ -97,10 +89,6 @@ func TestGlobalFlagOverrides(t *testing.T) {
 			if tt.globalFlags.LogLevel != "" && tt.globalFlags.LogLevel != "warn" {
 				testConfig.Logging.Level = tt.globalFlags.LogLevel
 			}
-			if tt.globalFlags.Verbose {
-				testConfig.Logging.Level = "debug"
-				testConfig.Behavior.Verbose = true
-			}
 			if tt.globalFlags.DryRun {
 				testConfig.Behavior.DryRun = true
 			}
@@ -111,9 +99,6 @@ func TestGlobalFlagOverrides(t *testing.T) {
 			}
 			if testConfig.Behavior.DryRun != tt.expectDryRun {
 				t.Errorf("Expected dry-run %v, got %v", tt.expectDryRun, testConfig.Behavior.DryRun)
-			}
-			if testConfig.Behavior.Verbose != tt.expectVerbose {
-				t.Errorf("Expected verbose %v, got %v", tt.expectVerbose, testConfig.Behavior.Verbose)
 			}
 		})
 	}
@@ -146,10 +131,10 @@ func TestSetFlagParsing(t *testing.T) {
 		},
 		{
 			name:     "set boolean value true",
-			setFlags: []string{"behavior.verbose=true"},
+			setFlags: []string{"behavior.dryRun=true"},
 			verifyFunc: func(config *CLIConfig) error {
-				if !config.Behavior.Verbose {
-					t.Errorf("Expected verbose true, got %v", config.Behavior.Verbose)
+				if !config.Behavior.DryRun {
+					t.Errorf("Expected dryRun true, got %v", config.Behavior.DryRun)
 				}
 				return nil
 			},
@@ -469,17 +454,17 @@ func TestGlobalFlagValidation(t *testing.T) {
 		{
 			name: "valid boolean via set flag",
 			globalFlags: &GlobalFlags{
-				Set: []string{"behavior.verbose=true"},
+				Set: []string{"behavior.dryRun=true"},
 			},
 			expectError: false,
 		},
 		{
 			name: "invalid boolean via set flag",
 			globalFlags: &GlobalFlags{
-				Set: []string{"behavior.verbose=not-a-boolean"},
+				Set: []string{"behavior.dryRun=not-a-boolean"},
 			},
 			expectError: true,
-			errorField:  "behavior.verbose",
+			errorField:  "behavior.dryRun",
 		},
 		{
 			name: "valid integer via set flag",

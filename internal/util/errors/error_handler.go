@@ -282,7 +282,7 @@ func (h *DefaultErrorHandler) GetSuggestions(err error) []string {
 			"Review the error message for specific details",
 			"Check system logs for additional context",
 			"Consult documentation at https://docs.opencenter.io",
-			"Run with --debug flag for verbose output",
+			"Run with --log-level debug for detailed output",
 		}
 	}
 

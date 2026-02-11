@@ -156,7 +156,7 @@ func (f *DefaultErrorFormatter) FormatMultiple(errs []error, maxErrors int) stri
 
 	// Add note if there are more errors
 	if len(errs) > limit {
-		result += fmt.Sprintf("\n\n... and %d more errors (use --verbose to see all)", len(errs)-limit)
+		result += fmt.Sprintf("\n\n... and %d more errors (use --log-level debug to see all)", len(errs)-limit)
 	}
 
 	return result
@@ -345,7 +345,7 @@ func (f *DefaultErrorFormatter) FormatMultipleWithLimit(errs []error, maxErrors 
 
 	// Add note if there are more errors
 	if len(errs) > limit {
-		result += fmt.Sprintf("\n\n... and %d more errors (use --verbose to see all)", len(errs)-limit)
+		result += fmt.Sprintf("\n\n... and %d more errors (use --log-level debug to see all)", len(errs)-limit)
 	}
 
 	return result

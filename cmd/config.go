@@ -114,7 +114,6 @@ Supported configuration sections:
   - paths.pluginsDir (string)
   - behavior.autoConfirm (boolean)
   - behavior.dryRun (boolean)
-  - behavior.verbose (boolean)
   - defaults.provider (string)
   - defaults.region (string)
   - defaults.environment (string)`,
@@ -223,7 +222,6 @@ Default values:
   - paths.pluginsDir: ~/.config/opencenter/plugins
   - behavior.autoConfirm: false
   - behavior.dryRun: false
-  - behavior.verbose: false
   - defaults.provider: openstack
   - defaults.region: {{ .OpenCenter.Cluster.ClusterRegion }}
   - defaults.environment: dev`,

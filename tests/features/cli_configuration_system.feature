@@ -108,10 +108,6 @@ Feature: CLI Configuration System Integration
     Then the exit code should be 0
     # The command should run with debug logging (overriding the config file's info level)
 
-    When I run "opencenter cluster list --verbose --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    # The command should run with verbose mode enabled
-
     When I run "opencenter cluster list --dry-run --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     # The command should run in dry-run mode
@@ -258,11 +254,11 @@ Feature: CLI Configuration System Integration
 
   @config @precedence @set_flag_highest
   Scenario: --set flag has highest precedence for configuration values
-    Given I run "opencenter config set behavior.verbose false --config-dir <<tmp>>/conf"
+    Given I run "opencenter config set behavior.dryRun false --config-dir <<tmp>>/conf"
     And the exit code should be 0
-    When I run "opencenter cluster list --verbose --set behavior.verbose=false --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster list --set behavior.dryRun=true --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    # The --set flag should override even the --verbose flag
+    # The --set flag should override the config file value
 
   @config @precedence @complete_hierarchy
   Scenario: Complete precedence hierarchy works correctly

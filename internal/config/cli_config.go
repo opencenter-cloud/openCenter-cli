@@ -62,7 +62,6 @@ type PathsConfig struct {
 type BehaviorConfig struct {
 	AutoConfirm bool `yaml:"autoConfirm"`
 	DryRun      bool `yaml:"dryRun"`
-	Verbose     bool `yaml:"verbose"`
 }
 
 // DefaultsConfig contains default values for cluster operations.
@@ -223,7 +222,6 @@ func DefaultCLIConfig() *CLIConfig {
 		Behavior: BehaviorConfig{
 			AutoConfirm: false,
 			DryRun:      false,
-			Verbose:     false,
 		},
 		Defaults: DefaultsConfig{
 			Provider:    "openstack",
@@ -376,7 +374,6 @@ func (cm *ConfigManager) mergeWithDefaults(config *CLIConfig) *CLIConfig {
 	// Merge behavior configuration
 	merged.Behavior.AutoConfirm = config.Behavior.AutoConfirm
 	merged.Behavior.DryRun = config.Behavior.DryRun
-	merged.Behavior.Verbose = config.Behavior.Verbose
 
 	// Merge defaults configuration
 	if config.Defaults.Provider != "" {
@@ -849,17 +846,6 @@ func (cm *ConfigManager) setBehaviorValue(behavior *BehaviorConfig, parts []stri
 				Message: "dryRun must be a boolean",
 			}
 		}
-	case "verbose":
-		if boolVal, err := convertToBool(value); err == nil {
-			behavior.Verbose = boolVal
-		} else {
-			return &ConfigError{
-				Type:    "validation",
-				Field:   "behavior.verbose",
-				Value:   value,
-				Message: "verbose must be a boolean",
-			}
-		}
 	default:
 		return &ConfigError{
 			Type:    "validation",
@@ -1042,8 +1028,6 @@ func (cm *ConfigManager) getBehaviorValue(behavior *BehaviorConfig, parts []stri
 		return behavior.AutoConfirm, nil
 	case "dryRun":
 		return behavior.DryRun, nil
-	case "verbose":
-		return behavior.Verbose, nil
 	default:
 		return nil, &ConfigError{
 			Type:    "validation",

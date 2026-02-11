@@ -30,9 +30,6 @@ Feature: CLI Configuration System Integration Tests
     When I run "opencenter cluster list --log-level debug --config-dir <<tmp>>/conf"
     Then the exit code should be 0
 
-    When I run "opencenter cluster list --verbose --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-
     When I run "opencenter cluster list --dry-run --config-dir <<tmp>>/conf"
     Then the exit code should be 0
 

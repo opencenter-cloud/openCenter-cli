@@ -96,7 +96,6 @@ func TestParseGlobalFlags(t *testing.T) {
 				"dry-run":     false,
 				"log-level":   "warn",
 				"set":         []string{},
-				"verbose":     false,
 				"show-active": false,
 			},
 			expected: &GlobalFlags{
@@ -104,18 +103,16 @@ func TestParseGlobalFlags(t *testing.T) {
 				DryRun:     false,
 				LogLevel:   "warn",
 				Set:        []string{},
-				Verbose:    false,
 				ShowActive: false,
 			},
 		},
 		{
-			name: "verbose flag overrides log level",
+			name: "debug log level",
 			flags: map[string]interface{}{
 				"config":      "",
 				"dry-run":     false,
-				"log-level":   "warn",
+				"log-level":   "debug",
 				"set":         []string{},
-				"verbose":     true,
 				"show-active": false,
 			},
 			expected: &GlobalFlags{
@@ -123,7 +120,6 @@ func TestParseGlobalFlags(t *testing.T) {
 				DryRun:     false,
 				LogLevel:   "debug",
 				Set:        []string{},
-				Verbose:    true,
 				ShowActive: false,
 			},
 		},
@@ -137,7 +133,6 @@ func TestParseGlobalFlags(t *testing.T) {
 			cmd.Flags().Bool("dry-run", false, "")
 			cmd.Flags().String("log-level", "warn", "")
 			cmd.Flags().StringArray("set", []string{}, "")
-			cmd.Flags().Bool("verbose", false, "")
 			cmd.Flags().Bool("show-active", false, "")
 
 			// Set flag values
@@ -171,9 +166,6 @@ func TestParseGlobalFlags(t *testing.T) {
 			}
 			if result.LogLevel != tt.expected.LogLevel {
 				t.Errorf("LogLevel = %v, want %v", result.LogLevel, tt.expected.LogLevel)
-			}
-			if result.Verbose != tt.expected.Verbose {
-				t.Errorf("Verbose = %v, want %v", result.Verbose, tt.expected.Verbose)
 			}
 			if result.ShowActive != tt.expected.ShowActive {
 				t.Errorf("ShowActive = %v, want %v", result.ShowActive, tt.expected.ShowActive)

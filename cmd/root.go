@@ -120,7 +120,6 @@ type GlobalFlags struct {
 	DryRun     bool     // --dry-run: enable dry-run mode
 	LogLevel   string   // --log-level: set log level explicitly
 	Set        []string // --set: override configuration values using dot notation
-	Verbose    bool     // --verbose: enable verbose logging
 	ShowActive bool     // --show-active: display the current active cluster
 }
 
@@ -155,6 +154,80 @@ Support: https://github.com/rackerlabs/opencenter-cli/issues`,
 
   # Bootstrap a cluster with GitOps
   opencenter cluster bootstrap my-cluster`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Parse and apply global flags for all commands
+		globalFlags, err := parseGlobalFlags(cmd)
+		if err != nil {
+			return fmt.Errorf("failed to parse global flags: %w", err)
+		}
+
+		// Apply log level if specified
+		if globalFlags.LogLevel != "" {
+			if err := config.SetLogLevel(globalFlags.LogLevel); err != nil {
+				return fmt.Errorf("failed to set log level: %w", err)
+			}
+		}
+
+		// Log environment and configuration paths for debugging
+		config.Debug("=== OpenCenter CLI Debug Information ===")
+		config.Debugf("Command: %s", cmd.CommandPath())
+		config.Debugf("Arguments: %v", args)
+		
+		// Log environment variables
+		config.Debug("Environment Variables:")
+		if configDir := os.Getenv("OPENCENTER_CONFIG_DIR"); configDir != "" {
+			config.Debugf("  OPENCENTER_CONFIG_DIR: %s", configDir)
+		} else {
+			config.Debug("  OPENCENTER_CONFIG_DIR: (not set)")
+		}
+		if home, err := os.UserHomeDir(); err == nil {
+			config.Debugf("  HOME: %s", home)
+		}
+		
+		// Log configuration paths
+		config.Debug("Configuration Paths:")
+		if runtime.GOOS == "windows" {
+			if appData := os.Getenv("APPDATA"); appData != "" {
+				config.Debugf("  APPDATA: %s", appData)
+			}
+			if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
+				config.Debugf("  LOCALAPPDATA: %s", localAppData)
+			}
+		}
+		
+		// Log computed base directory
+		baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
+		if baseDir == "" {
+			if runtime.GOOS == "windows" {
+				base := os.Getenv("APPDATA")
+				if base == "" {
+					base = os.Getenv("LOCALAPPDATA")
+				}
+				if base == "" {
+					base = os.Getenv("USERPROFILE")
+				}
+				baseDir = filepath.Join(base, "opencenter", "clusters")
+			} else {
+				home, _ := os.UserHomeDir()
+				baseDir = filepath.Join(home, ".config", "opencenter", "clusters")
+			}
+		} else {
+			baseDir = filepath.Join(baseDir, "clusters")
+		}
+		config.Debugf("  Clusters Directory: %s", baseDir)
+		
+		// Log global flags
+		config.Debug("Global Flags:")
+		config.Debugf("  --log-level: %s", globalFlags.LogLevel)
+		config.Debugf("  --dry-run: %v", globalFlags.DryRun)
+		config.Debugf("  --config: %s", globalFlags.Config)
+		if len(globalFlags.Set) > 0 {
+			config.Debugf("  --set: %v", globalFlags.Set)
+		}
+		config.Debug("========================================")
+
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -218,7 +291,6 @@ func addGlobalFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().Bool("dry-run", false, "enable dry-run mode to print planned actions without executing them")
 	cmd.PersistentFlags().String("log-level", "warn", "set log level explicitly (debug, info, warn, error)")
 	cmd.PersistentFlags().StringArray("set", []string{}, "override configuration values using dot notation (e.g., --set spec.provider=openstack)")
-	cmd.PersistentFlags().Bool("verbose", false, "enable verbose logging by setting log level to debug")
 	cmd.PersistentFlags().Bool("show-active", false, "display the current active cluster")
 }
 
@@ -228,20 +300,13 @@ func parseGlobalFlags(cmd *cobra.Command) (*GlobalFlags, error) {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	logLevel, _ := cmd.Flags().GetString("log-level")
 	set, _ := cmd.Flags().GetStringArray("set")
-	verbose, _ := cmd.Flags().GetBool("verbose")
 	showActive, _ := cmd.Flags().GetBool("show-active")
-
-	// If verbose is set, override log level to debug
-	if verbose {
-		logLevel = "debug"
-	}
 
 	return &GlobalFlags{
 		Config:     config,
 		DryRun:     dryRun,
 		LogLevel:   logLevel,
 		Set:        set,
-		Verbose:    verbose,
 		ShowActive: showActive,
 	}, nil
 }

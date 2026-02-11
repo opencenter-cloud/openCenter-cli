@@ -18,6 +18,7 @@ import (
 	"os"
 
 	"github.com/rackerlabs/opencenter-cli/cmd"
+	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/di"
 )
 
@@ -41,8 +42,8 @@ func main() {
 	// Get base directory for path resolver
 	baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
 	if baseDir == "" {
-		home, _ := os.UserHomeDir()
-		baseDir = home + "/.config/opencenter/clusters"
+		// Load from CLI config
+		baseDir = config.GetClustersDir()
 	} else {
 		baseDir = baseDir + "/clusters"
 	}

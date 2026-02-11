@@ -55,19 +55,8 @@ func initializeContainer() di.Container {
 	// Use default config directory: ~/.config/opencenter on Linux/macOS
 	baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
 	if baseDir == "" {
-		if runtime.GOOS == "windows" {
-			base := os.Getenv("APPDATA")
-			if base == "" {
-				base = os.Getenv("LOCALAPPDATA")
-			}
-			if base == "" {
-				base = os.Getenv("USERPROFILE")
-			}
-			baseDir = filepath.Join(base, "opencenter", "clusters")
-		} else {
-			home, _ := os.UserHomeDir()
-			baseDir = filepath.Join(home, ".config", "opencenter", "clusters")
-		}
+		// Load from CLI config
+		baseDir = config.GetClustersDir()
 	} else {
 		baseDir = filepath.Join(baseDir, "clusters")
 	}
@@ -198,19 +187,8 @@ Support: https://github.com/rackerlabs/opencenter-cli/issues`,
 		// Log computed base directory
 		baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
 		if baseDir == "" {
-			if runtime.GOOS == "windows" {
-				base := os.Getenv("APPDATA")
-				if base == "" {
-					base = os.Getenv("LOCALAPPDATA")
-				}
-				if base == "" {
-					base = os.Getenv("USERPROFILE")
-				}
-				baseDir = filepath.Join(base, "opencenter", "clusters")
-			} else {
-				home, _ := os.UserHomeDir()
-				baseDir = filepath.Join(home, ".config", "opencenter", "clusters")
-			}
+			// Load from CLI config
+			baseDir = config.GetClustersDir()
 		} else {
 			baseDir = filepath.Join(baseDir, "clusters")
 		}

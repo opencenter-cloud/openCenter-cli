@@ -313,7 +313,7 @@ func RenderClusterApps(cfg config.Config) error {
 
 	// Try to use PathResolver to get the applications directory
 	var target string
-	baseDir := filepath.Join(os.Getenv("HOME"), ".config", "opencenter", "clusters")
+	baseDir := config.GetClustersDir()
 	resolver := paths.NewPathResolver(baseDir)
 	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
 	if err == nil {
@@ -428,7 +428,7 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 
 	// Try to use PathResolver to get the cluster directory
 	var target string
-	baseDir := filepath.Join(os.Getenv("HOME"), ".config", "opencenter", "clusters")
+	baseDir := config.GetClustersDir()
 	resolver := paths.NewPathResolver(baseDir)
 	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
 	if err == nil {
@@ -472,7 +472,7 @@ func RenderSingleService(cfg config.Config, serviceName string, isManaged bool) 
 
 	// Try to use PathResolver to get the applications directory
 	var target string
-	baseDir := filepath.Join(os.Getenv("HOME"), ".config", "opencenter", "clusters")
+	baseDir := config.GetClustersDir()
 	resolver := paths.NewPathResolver(baseDir)
 	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
 	if err == nil {

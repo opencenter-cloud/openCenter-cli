@@ -87,8 +87,18 @@ func NewConfigurationManager() (*ConfigurationManager, error) {
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
-	// Create PathResolver with default base directory
+	// Load CLI config to get the correct clusters directory
 	baseDir := filepath.Join(os.Getenv("HOME"), ".config", "opencenter", "clusters")
+	cliConfigManager, err := NewConfigManager("")
+	if err == nil {
+		// Successfully loaded CLI config, use its clustersDir
+		if cliConfigManager.GetConfig().Paths.ClustersDir != "" {
+			baseDir = cliConfigManager.GetConfig().Paths.ClustersDir
+		}
+	}
+	// If CLI config loading fails, fall back to default baseDir
+
+	// Create PathResolver with base directory from CLI config
 	pathResolver := paths.NewPathResolver(baseDir)
 
 	// Create ValidationEngine

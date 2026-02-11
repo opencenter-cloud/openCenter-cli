@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	internalConfig "github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
 	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
@@ -88,11 +89,8 @@ func NewLockManager(config LockConfig) (LockManager, error) {
 
 	// Set default lock directory for file backend
 	if config.Backend == "file" && config.LockDir == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get user home directory: %w", err)
-		}
-		config.LockDir = filepath.Join(homeDir, ".config", "opencenter", "locks")
+		configDir := internalConfig.GetConfigDir()
+		config.LockDir = filepath.Join(configDir, "locks")
 	}
 
 	// Create the backend

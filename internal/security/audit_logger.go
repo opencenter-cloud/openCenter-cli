@@ -30,6 +30,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
 	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 )
@@ -683,12 +684,8 @@ func generateEventID() string {
 
 // GetDefaultAuditLogPath returns the default audit log path
 func GetDefaultAuditLogPath() string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "/tmp/opencenter-audit.log"
-	}
-
-	return filepath.Join(homeDir, ".config", "opencenter", "audit", "audit.log")
+	configDir := config.GetConfigDir()
+	return filepath.Join(configDir, "audit", "audit.log")
 }
 
 // NewDefaultAuditLogger creates an audit logger with default settings

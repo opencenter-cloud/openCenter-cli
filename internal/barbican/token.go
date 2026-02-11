@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/util/errors"
 	"github.com/rackerlabs/opencenter-cli/internal/util/fs"
 	"github.com/zalando/go-keyring"
@@ -48,11 +49,8 @@ func getUser() string {
 
 // Fallback path for headless environments
 func getTokenCachePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".config", "opencenter", "barbican", "token"), nil
+	configDir := config.GetConfigDir()
+	return filepath.Join(configDir, "barbican", "token"), nil
 }
 
 func StoreToken(token string) error {

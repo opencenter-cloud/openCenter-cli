@@ -2,7 +2,7 @@ package config
 
 // Infrastructure represents the infrastructure configuration block.
 type Infrastructure struct {
-	Provider            string        `yaml:"provider" json:"provider" validate:"required,oneof=openstack aws gcp azure baremetal vsphere"`
+	Provider            string        `yaml:"provider" json:"provider" validate:"required,oneof=openstack aws gcp azure baremetal vsphere vmware"`
 	Cloud               CloudConfig   `yaml:"cloud" json:"cloud" validate:"required"`
 	SSHUser             string        `yaml:"ssh_user" json:"ssh_user" validate:"required"`
 	SSHKeyPath          string        `yaml:"ssh_key_path,omitempty" json:"ssh_key_path,omitempty" jsonschema:"description=Path to SSH private key for cluster access"`
@@ -29,6 +29,7 @@ type BastionConfig struct {
 type CloudConfig struct {
 	AWS       SimplifiedAWSCloud       `yaml:"aws" json:"aws"`
 	OpenStack SimplifiedOpenStackCloud `yaml:"openstack" json:"openstack"`
+	VMware    VMwareCloud              `yaml:"vmware" json:"vmware"`
 }
 
 // Cloud holds provider-specific configuration. Currently, only OpenStack is supported.
@@ -73,6 +74,7 @@ type SimplifiedCloud struct {
 	Provider  string                   `yaml:"provider" json:"provider"`
 	OpenStack SimplifiedOpenStackCloud `yaml:"openstack" json:"openstack"`
 	AWS       SimplifiedAWSCloud       `yaml:"aws" json:"aws"`
+	VMware    VMwareCloud              `yaml:"vmware" json:"vmware"`
 }
 
 // SimplifiedOpenStackCloud represents the OpenStack configuration
@@ -128,4 +130,26 @@ type OpenStackModulesConfig struct {
 // OpenstackNovaModuleConfig represents the openstack-nova module configuration
 type OpenstackNovaModuleConfig struct {
 	Source string `yaml:"source" json:"source"`
+}
+
+// VMwareCloud contains options for VMware vSphere environments.
+// VMware is treated as baremetal for deployment purposes - nodes must be pre-provisioned.
+type VMwareCloud struct {
+	VCenterServer string   `yaml:"vcenter_server" json:"vcenter_server" jsonschema:"description=vCenter server hostname or IP address"`
+	Datacenter    string   `yaml:"datacenter" json:"datacenter" jsonschema:"description=VMware datacenter name"`
+	Datastore     string   `yaml:"datastore" json:"datastore" jsonschema:"description=Default datastore for persistent volumes"`
+	Cluster       string   `yaml:"cluster" json:"cluster" jsonschema:"description=VMware compute cluster name"`
+	ResourcePool  string   `yaml:"resource_pool" json:"resource_pool" jsonschema:"description=Resource pool for VMs (optional)"`
+	Folder        string   `yaml:"folder" json:"folder" jsonschema:"description=VM folder path (optional)"`
+	Network       string   `yaml:"network" json:"network" jsonschema:"description=Network name for VMs"`
+	Nodes         []VMNode `yaml:"nodes" json:"nodes" jsonschema:"description=Pre-provisioned VM nodes"`
+}
+
+// VMNode represents a pre-provisioned VMware VM node.
+type VMNode struct {
+	Name       string `yaml:"name" json:"name" validate:"required" jsonschema:"description=Node hostname"`
+	IP         string `yaml:"ip" json:"ip" validate:"required,ipv4" jsonschema:"description=Node IP address"`
+	Role       string `yaml:"role" json:"role" validate:"required,oneof=master worker" jsonschema:"description=Node role (master or worker)"`
+	UUID       string `yaml:"uuid" json:"uuid" jsonschema:"description=VM UUID (optional)"`
+	MACAddress string `yaml:"mac_address" json:"mac_address" jsonschema:"description=Primary network interface MAC address (optional)"`
 }

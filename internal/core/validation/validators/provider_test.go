@@ -770,3 +770,120 @@ func TestProviderValidator_OpenStackNetworking(t *testing.T) {
 		})
 	}
 }
+
+
+func TestProviderValidator_VMware(t *testing.T) {
+	validator := NewProviderValidator()
+	ctx := context.Background()
+
+	tests := []struct {
+		name        string
+		config      map[string]interface{}
+		expectError bool
+	}{
+		{
+			name: "missing nodes",
+			config: map[string]interface{}{
+				"provider": "vmware",
+				"config":   map[string]interface{}{},
+			},
+			expectError: true,
+		},
+		{
+			name: "empty nodes list",
+			config: map[string]interface{}{
+				"provider": "vmware",
+				"config": map[string]interface{}{
+					"nodes": []interface{}{},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "node missing required fields",
+			config: map[string]interface{}{
+				"provider": "vmware",
+				"config": map[string]interface{}{
+					"nodes": []interface{}{
+						map[string]interface{}{
+							"name": "node1",
+						},
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "node with invalid IP",
+			config: map[string]interface{}{
+				"provider": "vmware",
+				"config": map[string]interface{}{
+					"nodes": []interface{}{
+						map[string]interface{}{
+							"name": "node1",
+							"ip":   "invalid-ip",
+							"role": "master",
+						},
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "node with invalid role",
+			config: map[string]interface{}{
+				"provider": "vmware",
+				"config": map[string]interface{}{
+					"nodes": []interface{}{
+						map[string]interface{}{
+							"name": "node1",
+							"ip":   "192.168.1.10",
+							"role": "invalid",
+						},
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "valid configuration",
+			config: map[string]interface{}{
+				"provider": "vmware",
+				"config": map[string]interface{}{
+					"vcenter_server": "vcenter.example.com",
+					"datacenter":     "DC1",
+					"datastore":      "datastore1",
+					"nodes": []interface{}{
+						map[string]interface{}{
+							"name":        "master-1",
+							"ip":          "192.168.1.10",
+							"role":        "master",
+							"uuid":        "12345678-1234-1234-1234-123456789abc",
+							"mac_address": "00:50:56:12:34:56",
+						},
+						map[string]interface{}{
+							"name": "worker-1",
+							"ip":   "192.168.1.20",
+							"role": "worker",
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := validator.Validate(ctx, tt.config)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			hasErrors := len(result.Errors) > 0
+			if hasErrors != tt.expectError {
+				t.Errorf("expected error: %v, got errors: %v", tt.expectError, result.Errors)
+			}
+		})
+	}
+}

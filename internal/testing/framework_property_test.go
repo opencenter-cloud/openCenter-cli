@@ -346,5 +346,5 @@ func TestProperty_GeneratorConsistency(t *testing.T) {
 // Generators for property-based testing
 
 func genValidProvider() gopter.Gen {
-	return gen.OneConstOf("openstack", "aws", "baremetal", "kind", "talos")
+	return gen.OneConstOf("openstack", "aws", "baremetal", "kind", "talos", "vmware")
 }

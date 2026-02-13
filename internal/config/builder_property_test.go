@@ -516,7 +516,7 @@ func genOrganization() gopter.Gen {
 }
 
 func genProvider() gopter.Gen {
-	return gen.OneConstOf("openstack", "aws", "baremetal", "kind")
+	return gen.OneConstOf("openstack", "aws", "baremetal", "kind", "vmware")
 }
 
 func genNodeCount() gopter.Gen {

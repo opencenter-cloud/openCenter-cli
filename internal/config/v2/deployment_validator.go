@@ -41,7 +41,7 @@ func (d *KubesprayDeployment) ValidateConfig(cfg *Config) error {
 // ValidateCompatibility validates Kubespray compatibility with infrastructure provider.
 func (d *KubesprayDeployment) ValidateCompatibility(provider string) error {
 	// Kubespray supports all providers
-	validProviders := []string{"openstack", "aws", "gcp", "azure", "baremetal", "vsphere"}
+	validProviders := []string{"openstack", "aws", "gcp", "azure", "baremetal", "vsphere", "vmware"}
 	for _, p := range validProviders {
 		if provider == p {
 			return nil
@@ -74,14 +74,14 @@ func (d *TalosDeployment) ValidateConfig(cfg *Config) error {
 
 // ValidateCompatibility validates Talos compatibility with infrastructure provider.
 func (d *TalosDeployment) ValidateCompatibility(provider string) error {
-	// Talos supports most providers except baremetal
+	// Talos supports most providers except baremetal and vmware
 	validProviders := []string{"openstack", "aws", "gcp", "azure", "vsphere"}
 	for _, p := range validProviders {
 		if provider == p {
 			return nil
 		}
 	}
-	return fmt.Errorf("talos does not support provider: %s", provider)
+	return fmt.Errorf("talos does not support provider: %s (baremetal and vmware require pre-provisioned nodes)", provider)
 }
 
 // GetMethodName returns the deployment method name.
@@ -123,8 +123,8 @@ func (d *KamajiDeployment) ValidateConfig(cfg *Config) error {
 
 // ValidateCompatibility validates Kamaji compatibility with infrastructure provider.
 func (d *KamajiDeployment) ValidateCompatibility(provider string) error {
-	// Kamaji supports OpenStack, AWS, GCP, Azure, vSphere
-	validProviders := []string{"openstack", "aws", "gcp", "azure", "vsphere"}
+	// Kamaji supports OpenStack, AWS, GCP, Azure, vSphere, VMware
+	validProviders := []string{"openstack", "aws", "gcp", "azure", "vsphere", "vmware"}
 	for _, p := range validProviders {
 		if provider == p {
 			return nil

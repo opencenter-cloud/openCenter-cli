@@ -46,6 +46,7 @@ func NewProviderValidator() *ProviderValidator {
 			"azure":     true,
 			"baremetal": true,
 			"vsphere":   true,
+			"vmware":    true,
 		},
 	}
 }
@@ -83,7 +84,7 @@ func (v *ProviderValidator) Validate(ctx context.Context, value interface{}) (*v
 	if !ok {
 		result.AddError("provider", "provider name is required",
 			"Specify the cloud provider",
-			"Supported providers: openstack, aws, gcp, azure, baremetal, vsphere")
+			"Supported providers: openstack, aws, gcp, azure, baremetal, vsphere, vmware")
 		return result, nil
 	}
 
@@ -137,6 +138,8 @@ func (v *ProviderValidator) Validate(ctx context.Context, value interface{}) (*v
 		v.validateVSphereConfig(result, config)
 	case "baremetal":
 		v.validateBaremetalConfig(result, config)
+	case "vmware":
+		v.validateVMwareConfig(result, config)
 	}
 
 	return result, nil
@@ -485,4 +488,134 @@ func (v *ProviderValidator) SetSupportedProviders(providers []string) {
 	for _, provider := range providers {
 		v.supportedProviders[strings.ToLower(provider)] = true
 	}
+}
+
+// validateVMwareConfig validates VMware provider configuration.
+// VMware is treated as baremetal - requires pre-provisioned nodes.
+func (v *ProviderValidator) validateVMwareConfig(result *validation.ValidationResult, config map[string]interface{}) {
+	// VMware requires node definitions (treated as baremetal)
+	if nodesVal, ok := config["nodes"]; !ok || nodesVal == nil {
+		result.AddError("provider.vmware.nodes",
+			"nodes configuration is required for VMware provider",
+			"Provide a list of pre-provisioned VM nodes",
+			"Example: nodes: [{name: master-1, ip: 192.168.1.10, role: master}]")
+		return
+	}
+
+	// Validate nodes if present
+	if nodes, ok := config["nodes"].([]interface{}); ok {
+		if len(nodes) == 0 {
+			result.AddError("provider.vmware.nodes",
+				"at least one node is required for VMware provider",
+				"Add VM node definitions to the configuration")
+			return
+		}
+
+		for i, nodeVal := range nodes {
+			if node, ok := nodeVal.(map[string]interface{}); ok {
+				v.validateVMwareNode(result, node, i)
+			}
+		}
+	}
+
+	// Validate vCenter configuration (optional but recommended)
+	if vcenterVal, ok := config["vcenter_server"]; ok {
+		if vcenter, ok := vcenterVal.(string); ok && vcenter != "" {
+			// Check if it's a valid hostname or IP
+			if net.ParseIP(vcenter) == nil {
+				// Not an IP, check if it's a valid hostname
+				if _, err := url.Parse("https://" + vcenter); err != nil {
+					result.AddWarning("provider.vmware.vcenter_server",
+						fmt.Sprintf("vcenter_server may not be a valid hostname: %s", vcenter),
+						"Verify the vCenter server address is correct",
+						"Example: vcenter.example.com or 192.168.1.100")
+				}
+			}
+		}
+	}
+
+	// Validate datacenter if present
+	if datacenterVal, ok := config["datacenter"]; ok {
+		if datacenter, ok := datacenterVal.(string); ok && datacenter == "" {
+			result.AddWarning("provider.vmware.datacenter",
+				"datacenter is empty",
+				"Provide the VMware datacenter name for CSI driver configuration")
+		}
+	}
+
+	// Validate datastore if present
+	if datastoreVal, ok := config["datastore"]; ok {
+		if datastore, ok := datastoreVal.(string); ok && datastore == "" {
+			result.AddWarning("provider.vmware.datastore",
+				"datastore is empty",
+				"Provide the default datastore name for persistent volumes")
+		}
+	}
+}
+
+// validateVMwareNode validates a single VMware VM node configuration.
+func (v *ProviderValidator) validateVMwareNode(result *validation.ValidationResult, node map[string]interface{}, index int) {
+	// Required fields for each node
+	requiredFields := []string{"name", "ip", "role"}
+
+	for _, field := range requiredFields {
+		if val, ok := node[field]; !ok || val == "" {
+			result.AddError(fmt.Sprintf("provider.vmware.nodes[%d].%s", index, field),
+				fmt.Sprintf("%s is required for VMware node", field),
+				fmt.Sprintf("Provide the %s value for node %d", field, index))
+		}
+	}
+
+	// Validate IP address
+	if ipVal, ok := node["ip"]; ok {
+		if ip, ok := ipVal.(string); ok && ip != "" {
+			if net.ParseIP(ip) == nil {
+				result.AddError(fmt.Sprintf("provider.vmware.nodes[%d].ip", index),
+					fmt.Sprintf("invalid IP address: %s", ip),
+					"Provide a valid IPv4 or IPv6 address",
+					"Example: 192.168.1.10 or 2001:db8::1")
+			}
+		}
+	}
+
+	// Validate role
+	if roleVal, ok := node["role"]; ok {
+		if role, ok := roleVal.(string); ok && role != "" {
+			if role != "master" && role != "worker" {
+				result.AddError(fmt.Sprintf("provider.vmware.nodes[%d].role", index),
+					fmt.Sprintf("invalid role: %s", role),
+					"Role must be either 'master' or 'worker'")
+			}
+		}
+	}
+
+	// Validate MAC address format if present
+	if macVal, ok := node["mac_address"]; ok {
+		if mac, ok := macVal.(string); ok && mac != "" {
+			// Simple MAC address validation (XX:XX:XX:XX:XX:XX format)
+			if !isValidMACAddress(mac) {
+				result.AddWarning(fmt.Sprintf("provider.vmware.nodes[%d].mac_address", index),
+					fmt.Sprintf("MAC address may not be valid: %s", mac),
+					"Use standard MAC address format",
+					"Example: 00:50:56:12:34:56")
+			}
+		}
+	}
+}
+
+// isValidMACAddress checks if a string is a valid MAC address.
+func isValidMACAddress(mac string) bool {
+	// Simple validation for common MAC address formats
+	// Supports: XX:XX:XX:XX:XX:XX, XX-XX-XX-XX-XX-XX, XXXXXXXXXXXX
+	mac = strings.ReplaceAll(mac, ":", "")
+	mac = strings.ReplaceAll(mac, "-", "")
+	if len(mac) != 12 {
+		return false
+	}
+	for _, c := range mac {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }

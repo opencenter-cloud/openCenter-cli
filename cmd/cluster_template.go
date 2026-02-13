@@ -70,7 +70,7 @@ available option.`,
 			minimal, _ := cmd.Flags().GetBool("minimal")
 
 			// Validate provider
-			validProviders := []string{"openstack", "aws", "talos", "kind", "baremetal", "all"}
+			validProviders := []string{"openstack", "aws", "talos", "kind", "baremetal", "vmware", "all"}
 			if provider != "" && provider != "all" {
 				valid := false
 				for _, p := range validProviders {
@@ -80,7 +80,7 @@ available option.`,
 					}
 				}
 				if !valid {
-					return fmt.Errorf("invalid provider '%s', must be one of: openstack, aws, talos, kind, baremetal, all", provider)
+					return fmt.Errorf("invalid provider '%s', must be one of: openstack, aws, talos, kind, baremetal, vmware, all", provider)
 				}
 			}
 
@@ -128,7 +128,7 @@ available option.`,
 	}
 
 	cmd.Flags().String("out", "", "output file path (default stdout)")
-	cmd.Flags().String("provider", "all", "generate template for specific provider (openstack, aws, talos, kind, baremetal, all)")
+	cmd.Flags().String("provider", "all", "generate template for specific provider (openstack, aws, talos, kind, baremetal, vmware, all)")
 	cmd.Flags().Bool("comments", false, "include inline comments explaining each field")
 	cmd.Flags().Bool("minimal", false, "generate minimal template with only required fields")
 
@@ -183,10 +183,14 @@ func generateCompleteTemplate(provider string) config.Config {
 	case "baremetal":
 		cfg.OpenCenter.Infrastructure.Provider = "baremetal"
 		populateBaremetalConfig(&cfg)
+	case "vmware":
+		cfg.OpenCenter.Infrastructure.Provider = "vmware"
+		populateVMwareConfig(&cfg)
 	case "all", "":
 		// Include all provider configurations
 		populateOpenStackConfig(&cfg)
 		populateAWSConfig(&cfg)
+		populateVMwareConfig(&cfg)
 	}
 
 	return cfg
@@ -461,11 +465,11 @@ func addInfrastructureComments(key, value *yaml.Node, provider string) {
 
 		switch subKey.Value {
 		case "provider":
-			subKey.LineComment = fmt.Sprintf("Cloud provider: %s (openstack, aws, talos, kind, baremetal)", provider)
+			subKey.LineComment = fmt.Sprintf("Cloud provider: %s (openstack, aws, talos, kind, baremetal, vmware)", provider)
 		case "cloud":
 			addCloudComments(subKey, subValue, provider)
 		case "bastion":
-			subKey.LineComment = "Bastion host configuration for baremetal"
+			subKey.LineComment = "Bastion host configuration for baremetal/vmware"
 		}
 	}
 }
@@ -490,6 +494,8 @@ func addCloudComments(key, value *yaml.Node, provider string) {
 			addOpenStackComments(subKey, subValue)
 		case "aws":
 			addAWSComments(subKey, subValue)
+		case "vmware":
+			addVMwareComments(subKey, subValue)
 		}
 	}
 }
@@ -732,6 +738,69 @@ func addDeploymentComments(key, value *yaml.Node) {
 			subKey.LineComment = "Deployment status"
 		case "last_updated":
 			subKey.LineComment = "Last deployment update timestamp"
+		}
+	}
+}
+
+// populateVMwareConfig adds VMware-specific configuration
+// VMware is treated as baremetal - requires pre-provisioned VMs
+func populateVMwareConfig(cfg *config.Config) {
+	cfg.OpenCenter.Infrastructure.Cloud.VMware.VCenterServer = "vcenter.example.com"
+	cfg.OpenCenter.Infrastructure.Cloud.VMware.Datacenter = "Datacenter1"
+	cfg.OpenCenter.Infrastructure.Cloud.VMware.Datastore = "datastore1"
+	cfg.OpenCenter.Infrastructure.Cloud.VMware.Cluster = "Cluster1"
+	cfg.OpenCenter.Infrastructure.Cloud.VMware.ResourcePool = ""
+	cfg.OpenCenter.Infrastructure.Cloud.VMware.Folder = "/vm/kubernetes"
+	cfg.OpenCenter.Infrastructure.Cloud.VMware.Network = "VM Network"
+	cfg.OpenCenter.Infrastructure.Cloud.VMware.Nodes = []config.VMNode{
+		{
+			Name:       "master-1.example.com",
+			IP:         "192.168.1.10",
+			Role:       "master",
+			UUID:       "",
+			MACAddress: "00:50:56:12:34:56",
+		},
+		{
+			Name:       "worker-1.example.com",
+			IP:         "192.168.1.20",
+			Role:       "worker",
+			UUID:       "",
+			MACAddress: "00:50:56:12:34:57",
+		},
+	}
+	cfg.OpenCenter.Infrastructure.Bastion.Address = "bastion.example.com"
+}
+
+// addVMwareComments adds comments for VMware configuration
+func addVMwareComments(key, value *yaml.Node) {
+	key.HeadComment = "VMware vSphere configuration (treated as baremetal - requires pre-provisioned VMs)"
+
+	if value.Kind != yaml.MappingNode {
+		return
+	}
+
+	for i := 0; i < len(value.Content); i += 2 {
+		if i+1 >= len(value.Content) {
+			break
+		}
+		subKey := value.Content[i]
+		switch subKey.Value {
+		case "vcenter_server":
+			subKey.LineComment = "vCenter server hostname or IP"
+		case "datacenter":
+			subKey.LineComment = "VMware datacenter name"
+		case "datastore":
+			subKey.LineComment = "Default datastore for persistent volumes"
+		case "cluster":
+			subKey.LineComment = "VMware compute cluster name"
+		case "resource_pool":
+			subKey.LineComment = "Resource pool for VMs (optional)"
+		case "folder":
+			subKey.LineComment = "VM folder path (optional)"
+		case "network":
+			subKey.LineComment = "Network name for VMs"
+		case "nodes":
+			subKey.LineComment = "Pre-provisioned VM nodes (name, ip, role required)"
 		}
 	}
 }

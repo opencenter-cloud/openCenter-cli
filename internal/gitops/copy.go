@@ -752,6 +752,8 @@ func RenderInfrastructureClusterAtomic(cfg config.Config, workspace *GitOpsWorks
 	switch provider {
 	case "baremetal":
 		mainTfTemplate = "main-baremetal.tf.tpl"
+	case "vmware":
+		mainTfTemplate = "main-vmware.tf.tpl"
 	default:
 		// openstack and all other providers use main-default.tf.tpl
 		mainTfTemplate = "main-default.tf.tpl"
@@ -774,7 +776,7 @@ func RenderInfrastructureClusterAtomic(cfg config.Config, workspace *GitOpsWorks
 		filename := d.Name()
 
 		// Skip provider-specific main.tf templates that don't match current provider
-		if filename == "main-baremetal.tf.tpl" || filename == "main-default.tf.tpl" {
+		if filename == "main-baremetal.tf.tpl" || filename == "main-vmware.tf.tpl" || filename == "main-default.tf.tpl" {
 			if filename != mainTfTemplate {
 				// Skip this template, it's not for the current provider
 				return nil

@@ -682,7 +682,7 @@ func genTemplateWithProvider() gopter.Gen {
 
 // genProviderName generates a provider name for testing
 func genProviderName() gopter.Gen {
-	return gen.OneConstOf("openstack", "aws", "baremetal", "vsphere", "kind")
+	return gen.OneConstOf("openstack", "aws", "baremetal", "vsphere", "kind", "vmware")
 }
 
 // genTemplateDefinition generates a random template definition

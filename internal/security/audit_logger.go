@@ -279,6 +279,149 @@ func (l *AuditLogger) LogTemplateValidationFailed(ctx context.Context, actor, te
 	return l.LogEvent(ctx, event)
 }
 
+// LogSecretsSync logs a secrets synchronization event
+func (l *AuditLogger) LogSecretsSync(ctx context.Context, actor, cluster string, filesCreated, filesUpdated, filesUnchanged int) error {
+	event := AuditEvent{
+		EventType: "secrets.sync",
+		Actor:     actor,
+		Resource:  cluster,
+		Action:    "sync",
+		Result:    "success",
+		Details: map[string]interface{}{
+			"files_created":   filesCreated,
+			"files_updated":   filesUpdated,
+			"files_unchanged": filesUnchanged,
+		},
+	}
+	return l.LogEvent(ctx, event)
+}
+
+// LogSecretsSyncFailed logs a failed secrets synchronization event
+func (l *AuditLogger) LogSecretsSyncFailed(ctx context.Context, actor, cluster, reason string) error {
+	event := AuditEvent{
+		EventType: "secrets.sync",
+		Actor:     actor,
+		Resource:  cluster,
+		Action:    "sync",
+		Result:    "failure",
+		Details: map[string]interface{}{
+			"reason": reason,
+		},
+	}
+	return l.LogEvent(ctx, event)
+}
+
+// LogDriftDetected logs a secrets drift detection event
+func (l *AuditLogger) LogDriftDetected(ctx context.Context, actor, cluster string, driftCount, missingCount, orphanedCount int) error {
+	event := AuditEvent{
+		EventType: "secrets.drift_detected",
+		Actor:     actor,
+		Resource:  cluster,
+		Action:    "validate",
+		Result:    "drift_detected",
+		Details: map[string]interface{}{
+			"drift_items":       driftCount,
+			"missing_manifests": missingCount,
+			"orphaned_secrets":  orphanedCount,
+		},
+	}
+	return l.LogEvent(ctx, event)
+}
+
+// LogSecretsValidated logs a successful secrets validation event (no drift)
+func (l *AuditLogger) LogSecretsValidated(ctx context.Context, actor, cluster string) error {
+	event := AuditEvent{
+		EventType: "secrets.validated",
+		Actor:     actor,
+		Resource:  cluster,
+		Action:    "validate",
+		Result:    "success",
+		Details: map[string]interface{}{
+			"drift_detected": false,
+		},
+	}
+	return l.LogEvent(ctx, event)
+}
+
+// LogKeyRevoked logs a key revocation event
+func (l *AuditLogger) LogKeyRevoked(ctx context.Context, actor, cluster, keyFingerprint, revokedUser string, filesReencrypted int) error {
+	details := map[string]interface{}{
+		"key_fingerprint":   keyFingerprint,
+		"files_reencrypted": filesReencrypted,
+	}
+	if revokedUser != "" {
+		details["revoked_user"] = revokedUser
+	}
+
+	event := AuditEvent{
+		EventType: "key.revoked",
+		Actor:     actor,
+		Resource:  cluster,
+		Action:    "revoke",
+		Result:    "success",
+		Details:   details,
+	}
+	return l.LogEvent(ctx, event)
+}
+
+// LogKeyRevocationFailed logs a failed key revocation event
+func (l *AuditLogger) LogKeyRevocationFailed(ctx context.Context, actor, cluster, keyFingerprint, reason string) error {
+	event := AuditEvent{
+		EventType: "key.revoked",
+		Actor:     actor,
+		Resource:  cluster,
+		Action:    "revoke",
+		Result:    "failure",
+		Details: map[string]interface{}{
+			"key_fingerprint": keyFingerprint,
+			"reason":          reason,
+		},
+	}
+	return l.LogEvent(ctx, event)
+}
+
+// LogKeyExpired logs a key expiration warning or error event
+func (l *AuditLogger) LogKeyExpired(ctx context.Context, actor, cluster, keyType, keyFingerprint string, daysRemaining int) error {
+	result := "warning"
+	if daysRemaining < 0 {
+		result = "expired"
+	}
+
+	event := AuditEvent{
+		EventType: "key.expired",
+		Actor:     actor,
+		Resource:  cluster,
+		Action:    "check_expiration",
+		Result:    result,
+		Details: map[string]interface{}{
+			"key_type":        keyType,
+			"key_fingerprint": keyFingerprint,
+			"days_remaining":  daysRemaining,
+		},
+	}
+	return l.LogEvent(ctx, event)
+}
+
+// LogSecretDecrypted logs a secret decryption event
+func (l *AuditLogger) LogSecretDecrypted(ctx context.Context, actor, cluster, manifestPath string, success bool) error {
+	result := "success"
+	if !success {
+		result = "failure"
+	}
+
+	event := AuditEvent{
+		EventType: "secret.decrypted",
+		Actor:     actor,
+		Resource:  cluster,
+		Action:    "decrypt",
+		Result:    result,
+		Details: map[string]interface{}{
+			"manifest_path": manifestPath,
+		},
+	}
+	return l.LogEvent(ctx, event)
+}
+
 // QueryEvents retrieves audit log entries based on filter
 func (l *AuditLogger) QueryEvents(ctx context.Context, filter EventFilter) ([]AuditEvent, error) {
 	if !l.enabled || l.logPath == "" {
@@ -696,4 +839,54 @@ func NewDefaultAuditLogger() (*AuditLogger, error) {
 	}
 
 	return NewAuditLogger(config)
+}
+
+// QueryEventsSince retrieves audit log entries since a given duration
+// duration examples: "24h", "7d", "30m"
+func (l *AuditLogger) QueryEventsSince(ctx context.Context, since time.Duration, eventType string) ([]AuditEvent, error) {
+	startTime := time.Now().Add(-since)
+
+	filter := EventFilter{
+		StartTime: startTime,
+	}
+
+	if eventType != "" {
+		filter.EventType = eventType
+	}
+
+	return l.QueryEvents(ctx, filter)
+}
+
+// ExportEventsToJSON exports audit events to a JSON file
+func (l *AuditLogger) ExportEventsToJSON(events []AuditEvent, filePath string) error {
+	// Marshal events to JSON with indentation for readability
+	data, err := json.MarshalIndent(events, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal events to JSON: %w", err)
+	}
+
+	// Write to file with secure permissions
+	if err := os.WriteFile(filePath, data, 0600); err != nil {
+		return fmt.Errorf("failed to write JSON file: %w", err)
+	}
+
+	return nil
+}
+
+// ParseDuration parses a duration string with support for days
+// Supports: "24h", "7d", "30m", "1h30m", etc.
+func ParseDuration(s string) (time.Duration, error) {
+	// Check if the string contains 'd' for days
+	if len(s) > 0 && s[len(s)-1] == 'd' {
+		// Parse the number of days
+		daysStr := s[:len(s)-1]
+		var days int
+		if _, err := fmt.Sscanf(daysStr, "%d", &days); err != nil {
+			return 0, fmt.Errorf("invalid duration format: %s", s)
+		}
+		return time.Duration(days) * 24 * time.Hour, nil
+	}
+
+	// Otherwise use standard time.ParseDuration
+	return time.ParseDuration(s)
 }

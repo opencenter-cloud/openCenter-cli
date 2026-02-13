@@ -26,7 +26,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Add SOPS encryption/decryption for registry file
     - _Requirements: 4.7, 4.8, 9.1, 9.2_
   
-  - [x]* 2.2 Write property test for Key Registry
+  - [x] 2.2 Write property test for Key Registry
     - **Property 10: Key Registry Completeness**
     - **Validates: Requirements 4.7, 4.8, 9.2, 9.3**
   
@@ -36,7 +36,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Return ExpirationReport with expired, warning, and valid keys
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
   
-  - [ ]* 2.4 Write property test for expiration calculation
+  - [x] 2.4 Write property test for expiration calculation
     - **Property 9: Key Expiration Calculation**
     - **Validates: Requirements 4.2, 4.3, 4.4**
   
@@ -60,11 +60,11 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Ensure proper SOPS encryption of generated manifests
     - _Requirements: 1.2, 1.3, 1.4, 1.9_
   
-  - [ ]* 3.3 Write property test for sync round-trip
+  - [x] 3.3 Write property test for sync round-trip
     - **Property 1: Sync Round-Trip Consistency**
     - **Validates: Requirements 1.1, 1.2, 2.1, 2.2**
   
-  - [ ]* 3.4 Write property test for field preservation
+  - [x] 3.4 Write property test for field preservation
     - **Property 6: Manifest Field Preservation**
     - **Validates: Requirements 1.4**
   
@@ -75,11 +75,11 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Check for unencrypted secrets (security violations)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
   
-  - [ ]* 3.6 Write property test for drift detection
+  - [x] 3.6 Write property test for drift detection
     - **Property 2: Drift Detection Accuracy**
     - **Validates: Requirements 2.3, 2.4, 2.5**
   
-  - [ ]* 3.7 Write property test for unencrypted secret detection
+  - [x] 3.7 Write property test for unencrypted secret detection
     - **Property 3: Unencrypted Secret Detection**
     - **Validates: Requirements 2.6, 7.2, 7.3**
   
@@ -87,7 +87,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Service filtering is implemented in mapSecretsToManifests
     - _Requirements: 1.6_
   
-  - [ ]* 3.9 Write property test for service filtering
+  - [x] 3.9 Write property test for service filtering
     - **Property 5: Service Filter Correctness**
     - **Validates: Requirements 1.6**
   
@@ -109,7 +109,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Test re-encryption with both keys
     - _Requirements: 3.1, 3.2, 3.3, 3.7_
   
-  - [ ]* 5.3 Write property test for dual-key decryption
+  - [x] 5.3 Write property test for dual-key decryption
     - **Property 7: Key Rotation Dual-Key Decryption**
     - **Validates: Requirements 3.2, 3.3**
   
@@ -119,7 +119,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Update registry with archived status for old key
     - _Requirements: 3.4_
   
-  - [ ]* 5.5 Write property test for rotation completion
+  - [x] 5.5 Write property test for rotation completion
     - **Property 8: Key Rotation Completion**
     - **Validates: Requirements 3.4, 3.7**
   
@@ -147,7 +147,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Update registry with revocation info
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
   
-  - [ ]* 7.3 Write property test for revocation effectiveness
+  - [x] 7.3 Write property test for revocation effectiveness
     - **Property 14: Revocation Effectiveness**
     - **Validates: Requirements 6.2, 6.3**
   
@@ -173,7 +173,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Extend existing AuditLogger interface with secrets methods
     - _Requirements: 5.6, 5.7_
   
-  - [ ] 6.2 Write property test for audit event recording
+  - [x] 6.2 Write property test for audit event recording
     - **Property 11: Audit Log Event Recording**
     - **Validates: Requirements 5.6, 5.7, 3.10, 6.4**
   
@@ -183,11 +183,11 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Add export to JSON file
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
   
-  - [ ] 6.4 Write property test for audit log filtering
+  - [x] 6.4 Write property test for audit log filtering
     - **Property 13: Audit Log Filtering**
     - **Validates: Requirements 5.3, 5.4**
   
-  - [ ] 6.5 Write property test for audit log integrity
+  - [x] 6.5 Write property test for audit log integrity
     - **Property 12: Audit Log Integrity**
     - **Validates: Requirements 5.8, 5.9**
   
@@ -216,7 +216,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Validate staged manifests against config
     - _Requirements: 7.2, 7.3, 7.4, 7.5, 7.6, 7.7_
   
-  - [ ] 7.4 Write property test for plaintext key detection
+  - [x] 7.4 Write property test for plaintext key detection
     - **Property 17: Pre-Commit Plaintext Key Detection**
     - **Validates: Requirements 7.6, 7.7**
   
@@ -237,7 +237,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Implement organization filtering
     - _Requirements: 8.1, 8.2, 8.3_
   
-  - [ ] 8.3 Write property test for multi-cluster coverage
+  - [x] 8.3 Write property test for multi-cluster coverage
     - **Property 15: Multi-Cluster Sync Coverage**
     - **Validates: Requirements 8.1, 8.5, 8.7**
   
@@ -247,7 +247,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Report failures at end with summary
     - _Requirements: 8.4, 8.5, 8.6, 8.7_
   
-  - [ ] 8.5 Write property test for failure isolation
+  - [x] 8.5 Write property test for failure isolation
     - **Property 16: Multi-Cluster Failure Isolation**
     - **Validates: Requirements 8.5, 8.6**
 
@@ -259,7 +259,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Display summary of created, updated, unchanged files
     - _Requirements: 1.1-1.9, 8.1-8.8_
   
-  - [ ] 9.2 Write property test for dry-run immutability
+  - [x] 9.2 Write property test for dry-run immutability
     - **Property 4: Dry-Run Immutability**
     - **Validates: Requirements 1.5, 3.8, 6.8, 8.8**
   
@@ -313,7 +313,7 @@ Most core functionality has been implemented. Remaining work focuses on optional
     - Display key metadata: cluster, type, fingerprint, created, expires, status
     - _Requirements: 9.5, 9.6, 9.7_
   
-  - [ ]* 9.10 Write property test for JSON output validity
+  - [x] 9.10 Write property test for JSON output validity
     - **Property 18: JSON Output Validity**
     - **Validates: Requirements 2.9, 4.6, 5.5**
 

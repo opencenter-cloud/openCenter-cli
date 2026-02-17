@@ -1,0 +1,770 @@
+# Manage Multiple Clusters with Organizations
+
+**Purpose:** For platform teams, shows how to manage multiple Kubernetes clusters using organization-based structure, covering organization setup through cluster management.
+
+By the end of this tutorial, you'll understand how to organize and manage multiple clusters for different teams, environments, or regions using openCenter's organization model.
+
+**Time:** 30-40 minutes
+
+## What You'll Build
+
+A multi-cluster setup with:
+- 1 organization (my-company)
+- 3 clusters (dev, staging, production)
+- Shared configuration (organization-level defaults)
+- Cluster-specific configuration (environment-specific settings)
+- Centralized secrets management
+- GitOps workflow for all clusters
+
+## Prerequisites
+
+Before starting, ensure you have:
+
+**Tools:**
+- openCenter CLI installed
+- Git installed
+- Access to infrastructure provider (OpenStack, VMware, or Kind)
+- Text editor
+
+**Knowledge:**
+- Completed [Getting Started](getting-started.md) tutorial
+- Familiar with openCenter configuration
+- Basic Git knowledge
+
+## Understanding Organizations
+
+**Organization:** A logical grouping of clusters that share:
+- Configuration defaults
+- Secrets (SSH keys, SOPS Age keys)
+- GitOps repository structure
+- Naming conventions
+
+**Use Cases:**
+- **Multi-environment:** dev, staging, production clusters
+- **Multi-region:** us-east, us-west, eu-west clusters
+- **Multi-tenant:** team-a, team-b, team-c clusters
+- **Multi-purpose:** app-clusters, data-clusters, ml-clusters
+
+**File Structure:**
+
+```
+~/.config/opencenter/
+└── clusters/
+    └── my-company/              # Organization
+        ├── .dev-config.yaml     # Dev cluster config
+        ├── .staging-config.yaml # Staging cluster config
+        ├── .prod-config.yaml    # Production cluster config
+        └── secrets/
+            ├── age/             # Shared SOPS keys
+            └── ssh/             # Shared SSH keys
+```
+
+**Evidence:** `tests/features/workflow.feature:16-19`, `.kiro/steering/structure.md:118-128`
+
+## Step 1: Create Organization Structure
+
+Create an organization with shared defaults:
+
+```bash
+# Create organization directory
+mkdir -p ~/.config/opencenter/clusters/my-company
+
+# Create organization defaults file
+cat > ~/.config/opencenter/clusters/my-company/.defaults.yaml <<EOF
+# Organization-wide defaults for my-company
+opencenter:
+  meta:
+    organization: my-company
+    region: us-east-1
+  
+  cluster:
+    kubernetes:
+      version: "1.33.5"
+    
+    networking:
+      pod_subnet: "10.42.0.0/16"
+      service_subnet: "10.43.0.0/16"
+      cni_plugin: calico
+  
+  services:
+    # Core services enabled for all clusters
+    cert-manager:
+      enabled: true
+    
+    keycloak:
+      enabled: true
+    
+    kube-prometheus-stack:
+      enabled: true
+    
+    loki:
+      enabled: true
+EOF
+```
+
+**What this provides:**
+- Consistent Kubernetes version across all clusters
+- Consistent networking configuration
+- Consistent core services
+- Easy to update all clusters (change defaults file)
+
+## Step 2: Create Development Cluster
+
+Create a development cluster with Kind:
+
+```bash
+# Initialize dev cluster
+opencenter cluster init dev \
+  --org my-company \
+  --type kind
+
+# Customize for development
+opencenter cluster edit dev
+```
+
+**Development-specific configuration:**
+
+```yaml
+opencenter:
+  meta:
+    name: dev
+    environment: development
+    organization: my-company
+  
+  infrastructure:
+    provider: kind
+    kind:
+      cluster_name: my-company-dev
+      control_plane_nodes: 1  # Single control plane for dev
+      worker_nodes: 2         # Minimal workers
+  
+  cluster:
+    # Inherits from organization defaults
+    # Override only what's different
+    master_count: 1
+    worker_count: 2
+  
+  services:
+    # Inherits core services from organization defaults
+    # Disable resource-intensive services for dev
+    kube-prometheus-stack:
+      enabled: false  # Disable monitoring in dev
+    
+    loki:
+      enabled: false  # Disable logging in dev
+    
+    headlamp:
+      enabled: true  # Enable dashboard for dev
+```
+
+**Deploy development cluster:**
+
+```bash
+# Validate
+opencenter cluster validate dev
+
+# Generate GitOps repository
+opencenter cluster setup dev --render --git-dir ~/my-company-gitops
+
+# Bootstrap
+opencenter cluster bootstrap dev
+```
+
+## Step 3: Create Staging Cluster
+
+Create a staging cluster on OpenStack:
+
+```bash
+# Initialize staging cluster
+opencenter cluster init staging \
+  --org my-company \
+  --type openstack
+
+# Customize for staging
+opencenter cluster edit staging
+```
+
+**Staging-specific configuration:**
+
+```yaml
+opencenter:
+  meta:
+    name: staging
+    environment: staging
+    organization: my-company
+  
+  infrastructure:
+    provider: openstack
+    openstack:
+      region: us-east-1
+      project_name: my-company-staging
+      # ... (OpenStack credentials)
+  
+  cluster:
+    # Inherits from organization defaults
+    # Staging mirrors production but smaller
+    master_count: 3  # HA for staging
+    worker_count: 2  # Fewer workers than prod
+    
+    master_flavor: "gp.0.4.8"
+    worker_flavor: "gp.0.4.16"
+  
+  services:
+    # Inherits core services from organization defaults
+    # Enable all services to match production
+    velero:
+      enabled: true
+      s3_bucket: "my-company-staging-backups"
+    
+    harbor:
+      enabled: true
+      hostname: "harbor.my-company.staging.us-east-1.k8s.opencenter.cloud"
+```
+
+**Deploy staging cluster:**
+
+```bash
+# Validate
+opencenter cluster validate staging
+
+# Generate GitOps repository (same repo, different overlay)
+opencenter cluster setup staging --render --git-dir ~/my-company-gitops
+
+# Bootstrap
+opencenter cluster bootstrap staging
+```
+
+## Step 4: Create Production Cluster
+
+Create a production cluster on OpenStack:
+
+```bash
+# Initialize production cluster
+opencenter cluster init prod \
+  --org my-company \
+  --type openstack
+
+# Customize for production
+opencenter cluster edit prod
+```
+
+**Production-specific configuration:**
+
+```yaml
+opencenter:
+  meta:
+    name: prod
+    environment: production
+    organization: my-company
+  
+  infrastructure:
+    provider: openstack
+    openstack:
+      region: us-east-1
+      project_name: my-company-production
+      # ... (OpenStack credentials)
+  
+  cluster:
+    # Inherits from organization defaults
+    # Production has more resources
+    master_count: 3  # HA required
+    worker_count: 5  # More workers for capacity
+    
+    master_flavor: "gp.0.4.8"
+    worker_flavor: "gp.0.8.32"  # Larger workers
+  
+  services:
+    # Inherits core services from organization defaults
+    # Enable all production services
+    velero:
+      enabled: true
+      s3_bucket: "my-company-prod-backups"
+      backup_schedule: "0 2 * * *"  # Daily at 2 AM
+    
+    harbor:
+      enabled: true
+      hostname: "harbor.my-company.prod.us-east-1.k8s.opencenter.cloud"
+    
+    # Production-specific settings
+    kube-prometheus-stack:
+      enabled: true
+      retention_days: 90  # Longer retention for prod
+    
+    loki:
+      enabled: true
+      retention_days: 90  # Longer retention for prod
+```
+
+**Deploy production cluster:**
+
+```bash
+# Validate
+opencenter cluster validate prod
+
+# Generate GitOps repository (same repo, different overlay)
+opencenter cluster setup prod --render --git-dir ~/my-company-gitops
+
+# Bootstrap
+opencenter cluster bootstrap prod
+```
+
+## Step 5: Review GitOps Repository Structure
+
+Your GitOps repository now contains all three clusters:
+
+```
+~/my-company-gitops/
+├── .gitignore
+├── README.md
+│
+├── applications/
+│   └── overlays/
+│       ├── dev/                 # Dev cluster overlay
+│       │   ├── flux-system/
+│       │   ├── services/
+│       │   └── managed-services/
+│       │
+│       ├── staging/             # Staging cluster overlay
+│       │   ├── flux-system/
+│       │   ├── services/
+│       │   └── managed-services/
+│       │
+│       └── prod/                # Production cluster overlay
+│           ├── flux-system/
+│           ├── services/
+│           └── managed-services/
+│
+└── infrastructure/
+    └── clusters/
+        ├── dev/                 # Dev infrastructure
+        │   ├── kind-config.yaml
+        │   └── kubeconfig.yaml
+        │
+        ├── staging/             # Staging infrastructure
+        │   ├── main.tf
+        │   ├── inventory/
+        │   └── kubeconfig.yaml
+        │
+        └── prod/                # Production infrastructure
+            ├── main.tf
+            ├── inventory/
+            └── kubeconfig.yaml
+```
+
+**Benefits:**
+- Single repository for all clusters
+- Shared base manifests (DRY principle)
+- Environment-specific overlays
+- Easy to compare configurations
+- Unified Git history
+
+## Step 6: Manage Clusters
+
+Switch between clusters easily:
+
+```bash
+# List all clusters in organization
+opencenter cluster list --org my-company
+
+# Expected output:
+# CLUSTER    ENVIRONMENT    PROVIDER    STATUS
+# dev        development    kind        running
+# staging    staging        openstack   running
+# prod       production     openstack   running
+
+# Select active cluster
+opencenter cluster select my-company/dev
+
+# Check cluster status
+opencenter cluster status
+
+# Switch to staging
+opencenter cluster select my-company/staging
+
+# Switch to production
+opencenter cluster select my-company/prod
+```
+
+**Kubeconfig management:**
+
+```bash
+# Set kubeconfig for dev
+export KUBECONFIG=~/my-company-gitops/infrastructure/clusters/dev/kubeconfig.yaml
+
+# Set kubeconfig for staging
+export KUBECONFIG=~/my-company-gitops/infrastructure/clusters/staging/kubeconfig.yaml
+
+# Set kubeconfig for production
+export KUBECONFIG=~/my-company-gitops/infrastructure/clusters/prod/kubeconfig.yaml
+
+# Or use kubectx for easy switching
+kubectx dev=~/my-company-gitops/infrastructure/clusters/dev/kubeconfig.yaml
+kubectx staging=~/my-company-gitops/infrastructure/clusters/staging/kubeconfig.yaml
+kubectx prod=~/my-company-gitops/infrastructure/clusters/prod/kubeconfig.yaml
+
+# Switch contexts
+kubectx dev
+kubectx staging
+kubectx prod
+```
+
+## Step 7: Centralized Secrets Management
+
+Manage secrets across all clusters:
+
+```bash
+# Organization-level secrets (shared across all clusters)
+opencenter sops generate-key --org my-company
+
+# Cluster-specific secrets
+opencenter sops generate-key --cluster my-company/dev
+opencenter sops generate-key --cluster my-company/staging
+opencenter sops generate-key --cluster my-company/prod
+
+# Encrypt secrets for specific cluster
+opencenter sops secrets-encrypt --cluster my-company/prod
+
+# Rotate keys for all clusters in organization
+opencenter sops rotate-key --org my-company
+
+# Check key expiration for all clusters
+opencenter sops check-keys --org my-company
+```
+
+**Secrets structure:**
+
+```
+~/.config/opencenter/clusters/my-company/
+└── secrets/
+    ├── age/
+    │   ├── org-key.txt          # Organization-level key
+    │   ├── dev-key.txt          # Dev cluster key
+    │   ├── staging-key.txt      # Staging cluster key
+    │   └── prod-key.txt         # Production cluster key
+    └── ssh/
+        ├── org-key              # Organization-level SSH key
+        ├── dev-key              # Dev cluster SSH key
+        ├── staging-key          # Staging cluster SSH key
+        └── prod-key             # Production cluster SSH key
+```
+
+## Step 8: Update All Clusters
+
+Update organization defaults to affect all clusters:
+
+```bash
+# Edit organization defaults
+vim ~/.config/opencenter/clusters/my-company/.defaults.yaml
+
+# Example: Update Kubernetes version for all clusters
+opencenter:
+  cluster:
+    kubernetes:
+      version: "1.34.0"  # Updated version
+
+# Regenerate all cluster configurations
+opencenter cluster setup dev --render --git-dir ~/my-company-gitops
+opencenter cluster setup staging --render --git-dir ~/my-company-gitops
+opencenter cluster setup prod --render --git-dir ~/my-company-gitops
+
+# Commit changes
+cd ~/my-company-gitops
+git add .
+git commit -m "Update Kubernetes version to 1.34.0 for all clusters"
+git push
+
+# FluxCD will reconcile changes automatically
+```
+
+## Step 9: Promote Changes Across Environments
+
+Promote changes from dev → staging → production:
+
+```bash
+# 1. Test change in dev
+cd ~/my-company-gitops
+git checkout -b feature/new-service
+
+# Edit dev overlay
+vim applications/overlays/dev/managed-services/my-app/deployment.yaml
+
+# Commit and push
+git add .
+git commit -m "Add new application to dev"
+git push origin feature/new-service
+
+# 2. Test in dev cluster
+# Wait for FluxCD to reconcile
+flux get kustomizations --context dev
+
+# Verify application works
+kubectl get pods -n my-app --context dev
+
+# 3. Promote to staging
+# Copy configuration to staging overlay
+cp -r applications/overlays/dev/managed-services/my-app \
+      applications/overlays/staging/managed-services/
+
+# Commit and push
+git add .
+git commit -m "Promote my-app to staging"
+git push origin feature/new-service
+
+# 4. Test in staging cluster
+flux get kustomizations --context staging
+kubectl get pods -n my-app --context staging
+
+# 5. Promote to production
+# Copy configuration to production overlay
+cp -r applications/overlays/staging/managed-services/my-app \
+      applications/overlays/prod/managed-services/
+
+# Commit and push
+git add .
+git commit -m "Promote my-app to production"
+git push origin feature/new-service
+
+# 6. Merge to main
+git checkout main
+git merge feature/new-service
+git push origin main
+```
+
+## Check Your Work
+
+Verify multi-cluster setup:
+
+- [ ] All 3 clusters are running
+- [ ] Can switch between clusters easily
+- [ ] Organization defaults are shared
+- [ ] Cluster-specific configurations work
+- [ ] Secrets are managed centrally
+- [ ] GitOps repository contains all clusters
+- [ ] Can promote changes across environments
+
+## Troubleshooting
+
+### Cluster Selection Fails
+
+**Error:**
+```
+Error: Cluster not found: my-company/dev
+```
+
+**Solution:**
+
+```bash
+# List available clusters
+opencenter cluster list
+
+# Verify organization name
+ls ~/.config/opencenter/clusters/
+
+# Verify cluster name
+ls ~/.config/opencenter/clusters/my-company/
+
+# Use correct organization/cluster name
+opencenter cluster select my-company/dev
+```
+
+### Organization Defaults Not Applied
+
+**Error:**
+```
+Cluster configuration doesn't inherit organization defaults
+```
+
+**Solution:**
+
+```bash
+# Verify organization defaults file exists
+cat ~/.config/opencenter/clusters/my-company/.defaults.yaml
+
+# Regenerate cluster configuration
+opencenter cluster init dev --org my-company --type kind
+
+# Organization defaults are applied during init
+```
+
+### Secrets Not Shared
+
+**Error:**
+```
+Each cluster has different SOPS keys
+```
+
+**Solution:**
+
+```bash
+# Use organization-level key for shared secrets
+opencenter sops generate-key --org my-company
+
+# Configure .sops.yaml to use organization key
+cat > ~/my-company-gitops/.sops.yaml <<EOF
+creation_rules:
+  - path_regex: 'secrets/shared/.*\.yaml$'
+    age: >-
+      age1... (organization key)
+  
+  - path_regex: 'applications/overlays/dev/.*\.yaml$'
+    age: >-
+      age1... (dev cluster key)
+  
+  - path_regex: 'applications/overlays/staging/.*\.yaml$'
+    age: >-
+      age1... (staging cluster key)
+  
+  - path_regex: 'applications/overlays/prod/.*\.yaml$'
+    age: >-
+      age1... (prod cluster key)
+EOF
+```
+
+## Best Practices
+
+### 1. Use Consistent Naming
+
+**Practice:** Use consistent naming across all clusters.
+
+**Example:**
+
+```
+Organization: my-company
+Clusters: dev, staging, prod (not development, stg, production)
+Hostnames: <service>.my-company.<cluster>.<region>.k8s.opencenter.cloud
+```
+
+**Rationale:** Easier to manage, clearer communication, fewer mistakes.
+
+### 2. Test in Dev First
+
+**Practice:** Always test changes in dev before staging/production.
+
+**Workflow:**
+
+```
+1. Develop in dev cluster
+2. Test in dev cluster
+3. Promote to staging
+4. Test in staging
+5. Promote to production
+```
+
+**Rationale:** Catch issues early, reduce production incidents.
+
+### 3. Use Environment-Specific Configurations
+
+**Practice:** Keep environment-specific settings in overlays.
+
+**Example:**
+
+```yaml
+# Dev: Small resources, fast iteration
+replicas: 1
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Staging: Production-like, cost-optimized
+replicas: 2
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Production: Full resources, high availability
+replicas: 3
+resources:
+  requests:
+    cpu: 1000m
+    memory: 1Gi
+```
+
+**Rationale:** Optimize costs (dev), test production-like (staging), ensure reliability (production).
+
+### 4. Automate Promotions
+
+**Practice:** Use CI/CD to automate promotions.
+
+**Example:**
+
+```yaml
+# .github/workflows/promote.yaml
+name: Promote to Staging
+on:
+  push:
+    branches: [main]
+    paths: ['applications/overlays/dev/**']
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Copy to staging
+        run: |
+          cp -r applications/overlays/dev/managed-services/* \
+                applications/overlays/staging/managed-services/
+      - name: Commit and push
+        run: |
+          git add .
+          git commit -m "Auto-promote dev to staging"
+          git push
+```
+
+**Rationale:** Reduce manual errors, faster promotions, consistent process.
+
+### 5. Monitor All Clusters
+
+**Practice:** Centralized monitoring for all clusters.
+
+**Tools:**
+- Grafana (multi-cluster dashboards)
+- Prometheus (federated metrics)
+- Loki (centralized logging)
+
+**Rationale:** Single pane of glass, easier troubleshooting, better visibility.
+
+## Next Steps
+
+Now that you have a multi-cluster setup, explore these topics:
+
+**Cluster Management:**
+- [Backup and Restore](../how-to/backup-and-restore.md) - Disaster recovery for all clusters
+- [Upgrade Kubernetes](../how-to/upgrade-kubernetes.md) - Upgrade all clusters
+- [Migrate Clusters](../how-to/migrate-clusters.md) - Migrate between providers
+
+**Advanced Topics:**
+- [Integrate CI/CD](../how-to/integrate-ci-cd.md) - Automate deployments
+- [Configuration Lifecycle](../explanation/configuration-lifecycle.md) - Configuration management
+
+**Understanding:**
+- [Organization Model](../explanation/organization-model.md) - Multi-tenancy patterns
+- [GitOps Workflow](../explanation/gitops-workflow.md) - How GitOps works
+
+## What You Learned
+
+In this tutorial, you:
+
+- Created an organization structure for multiple clusters
+- Configured organization-wide defaults
+- Deployed dev, staging, and production clusters
+- Managed clusters with consistent configuration
+- Centralized secrets management
+- Promoted changes across environments
+- Learned multi-cluster best practices
+
+You now have a production-ready multi-cluster setup with centralized management!
+
+---
+
+## Evidence
+
+This tutorial is based on:
+
+- Organization pattern: `tests/features/workflow.feature:16-19`
+- File structure: `.kiro/steering/structure.md:118-128`
+- Multi-cluster workflow: Session 2 B0 section 14
+- Secrets management: `internal/sops/manager.go`
+- GitOps structure: `internal/gitops/`, Ecosystem.md

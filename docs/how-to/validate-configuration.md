@@ -1,0 +1,382 @@
+# Validate Configuration
+
+**Purpose:** For all users, shows how to validate cluster configuration before deployment, covering validation types and error resolution.
+
+Validation catches configuration errors before you deploy, saving time and preventing failed deployments. This guide shows you how to validate your configuration and fix common errors.
+
+## Prerequisites
+
+- openCenter CLI installed
+- Cluster configuration file created (via `opencenter cluster init`)
+- Active cluster selected (via `opencenter cluster select`)
+
+## Basic Validation
+
+Validate your active cluster configuration:
+
+```bash
+opencenter cluster validate
+```
+
+This performs:
+- Schema validation against JSON schema
+- Required field validation
+- Cross-field dependency validation
+- Network configuration validation
+- SOPS key validation
+
+Expected output for valid configuration:
+```
+✓ Schema validation passed
+✓ Required fields present
+✓ Network configuration valid
+✓ SOPS configuration valid
+
+Configuration is valid
+```
+
+## Validate Specific Cluster
+
+Validate a cluster without selecting it:
+
+```bash
+opencenter cluster validate my-cluster
+```
+
+Or validate a specific configuration file:
+
+```bash
+opencenter cluster validate --config /path/to/config.yaml
+```
+
+## Validation with Connectivity Checks
+
+Check connectivity to cloud provider APIs:
+
+```bash
+opencenter cluster validate --check-connectivity
+```
+
+This validates:
+- Cloud provider credentials are correct
+- API endpoints are reachable
+- Required permissions are granted
+- Quotas are sufficient
+
+## Provider-Specific Validation
+
+Perform provider-specific validation checks:
+
+```bash
+opencenter cluster validate --check-provider
+```
+
+This validates:
+- OpenStack: Image IDs exist, flavors available, networks accessible
+- VMware: vCenter connectivity, datastore access, VM templates exist
+- AWS: VPC configuration, subnet availability, security groups
+
+## Verbose Output
+
+See detailed validation information:
+
+```bash
+opencenter cluster validate --verbose
+```
+
+This shows:
+- Each validation step
+- Field-by-field checks
+- Warning messages
+- Suggestions for improvements
+
+## Generate Debug Configuration
+
+Create a complete configuration file for debugging:
+
+```bash
+opencenter cluster validate --generate-debug-config
+```
+
+This creates a file with:
+- All configuration values (including defaults)
+- Resolved template variables
+- Computed fields
+- Validation results
+
+Output location: `./debug-config-<cluster>-<timestamp>.yaml`
+
+Specify custom output directory:
+
+```bash
+opencenter cluster validate --generate-debug-config --output-dir /tmp
+```
+
+## Common Validation Errors
+
+### Missing Required Fields
+
+**Error:**
+```
+ERROR: Required field missing: opencenter.infrastructure.cloud.openstack.application_credential_id
+```
+
+**Fix:** Add the required field to your configuration:
+```yaml
+opencenter:
+  infrastructure:
+    cloud:
+      openstack:
+        application_credential_id: "your-app-cred-id"
+```
+
+### Invalid CIDR Format
+
+**Error:**
+```
+ERROR: Invalid CIDR format: opencenter.cluster.kubernetes.subnet_pods
+Value: "10.42.0.0/33"
+```
+
+**Fix:** Use valid CIDR notation (prefix length 0-32):
+```yaml
+opencenter:
+  cluster:
+    kubernetes:
+      subnet_pods: "10.42.0.0/16"
+```
+
+### Overlapping Subnets
+
+**Error:**
+```
+ERROR: Subnet overlap detected
+Field: opencenter.cluster.kubernetes.subnet_services
+Overlaps with: opencenter.cluster.kubernetes.subnet_pods
+```
+
+**Fix:** Use non-overlapping CIDR ranges:
+```yaml
+opencenter:
+  cluster:
+    kubernetes:
+      subnet_pods: "10.42.0.0/16"
+      subnet_services: "10.43.0.0/16"
+```
+
+### VRRP IP Required
+
+**Error:**
+```
+ERROR: vrrp_ip must be set when use_octavia=false and vrrp_enabled=true
+Field: opencenter.cluster.networking.vrrp_ip
+```
+
+**Fix:** Set VRRP IP address:
+```yaml
+opencenter:
+  cluster:
+    networking:
+      use_octavia: false
+      vrrp_enabled: true
+      vrrp_ip: "10.0.0.10"
+```
+
+### Invalid Kubernetes Version
+
+**Error:**
+```
+ERROR: Invalid Kubernetes version format
+Field: opencenter.cluster.kubernetes.version
+Value: "1.33"
+Expected: "1.33.5" (semantic version)
+```
+
+**Fix:** Use full semantic version:
+```yaml
+opencenter:
+  cluster:
+    kubernetes:
+      version: "1.33.5"
+```
+
+### CNI Plugin Conflict
+
+**Error:**
+```
+ERROR: Multiple CNI plugins enabled
+Only one CNI plugin can be enabled at a time
+Enabled: calico, cilium
+```
+
+**Fix:** Enable only one CNI plugin:
+```yaml
+opencenter:
+  cluster:
+    kubernetes:
+      network_plugin:
+        calico:
+          enabled: true
+        cilium:
+          enabled: false
+```
+
+### Missing SOPS Key
+
+**Error:**
+```
+ERROR: SOPS age key file not found
+Field: secrets.sopsAgeKeyFile
+Path: ~/.config/sops/age/my-cluster-key.txt
+```
+
+**Fix:** Generate SOPS key:
+```bash
+opencenter sops generate-key --cluster my-cluster
+```
+
+Or specify existing key:
+```yaml
+secrets:
+  sopsAgeKeyFile: "/path/to/existing/key.txt"
+```
+
+### Invalid Provider Configuration
+
+**Error:**
+```
+ERROR: Provider-specific validation failed
+Provider: openstack
+Issue: Image ID not found: 799dcf97-3656-4361-8187-13ab1b295e33
+```
+
+**Fix:** Use valid image ID from your OpenStack cloud:
+```bash
+# List available images
+openstack image list
+
+# Update configuration
+opencenter cluster config set opencenter.infrastructure.cloud.openstack.image_id <valid-image-id>
+```
+
+## Validation Workflow
+
+Recommended validation workflow before deployment:
+
+1. **Basic validation:**
+   ```bash
+   opencenter cluster validate
+   ```
+
+2. **Fix any errors** shown in output
+
+3. **Validate with connectivity:**
+   ```bash
+   opencenter cluster validate --check-connectivity
+   ```
+
+4. **Provider-specific checks:**
+   ```bash
+   opencenter cluster validate --check-provider
+   ```
+
+5. **Generate debug config** (if needed):
+   ```bash
+   opencenter cluster validate --generate-debug-config
+   ```
+
+6. **Proceed to setup:**
+   ```bash
+   opencenter cluster setup --render
+   ```
+
+## Validation in CI/CD
+
+Integrate validation into your CI/CD pipeline:
+
+```bash
+#!/bin/bash
+set -e
+
+# Validate configuration
+opencenter cluster validate --config cluster-config.yaml
+
+# Validate connectivity (if credentials available)
+if [ -n "$OPENSTACK_APPLICATION_CREDENTIAL_ID" ]; then
+  opencenter cluster validate --config cluster-config.yaml --check-connectivity
+fi
+
+# Generate debug config for artifacts
+opencenter cluster validate --config cluster-config.yaml \
+  --generate-debug-config \
+  --output-dir ./artifacts
+```
+
+## Troubleshooting
+
+### Validation Hangs
+
+**Problem:** Validation command appears stuck
+
+**Cause:** Connectivity check timing out
+
+**Solution:** Skip connectivity checks:
+```bash
+opencenter cluster validate  # Without --check-connectivity
+```
+
+### False Positive Errors
+
+**Problem:** Validation reports errors for valid configuration
+
+**Cause:** Schema version mismatch
+
+**Solution:** Check schema version:
+```yaml
+schema_version: "2.0"  # Must be "2.0"
+```
+
+Migrate v1 configurations:
+```bash
+opencenter cluster migrate my-cluster
+```
+
+### Provider Validation Fails
+
+**Problem:** Provider-specific validation fails with credentials error
+
+**Cause:** Credentials not accessible or expired
+
+**Solution:** Verify credentials:
+```bash
+# OpenStack
+openstack token issue
+
+# AWS
+aws sts get-caller-identity
+```
+
+Update credentials in configuration if expired.
+
+## Next Steps
+
+After successful validation:
+
+- [Setup GitOps Repository](../tutorials/getting-started.md#step-6-setup-gitops-repository)
+- [Bootstrap Cluster](../tutorials/getting-started.md#step-8-bootstrap-cluster)
+- [Customize Services](customize-services.md)
+- [Configure Networking](configure-networking.md)
+
+---
+
+## Evidence
+
+This how-to guide is based on:
+
+- Validation command: `cmd/cluster_validate.go:1-108`
+- Validation options: `cmd/cluster_validate.go:66-74`
+- Validation flags: `cmd/cluster_validate.go:100-105`
+- Workflow validation: `tests/features/workflow.feature:38-50`
+- Product validation layers: `.kiro/steering/product.md:10`
+- Session 1 validation review: A7
+- Session 2 facts inventory: B0 section 13

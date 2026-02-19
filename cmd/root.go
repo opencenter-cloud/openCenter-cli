@@ -247,7 +247,6 @@ func ExecuteWithContext(ctx context.Context, version string) error {
 	// Register subcommands
 	rootCmd.AddCommand(NewClusterCmd())
 	rootCmd.AddCommand(NewConfigCmd())
-	rootCmd.AddCommand(NewSOPSCmd())
 	rootCmd.AddCommand(NewSecretsCmd())
 	rootCmd.AddCommand(NewPluginsCmd())
 	rootCmd.AddCommand(NewVersionCmd())

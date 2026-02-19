@@ -25,10 +25,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newClusterSyncSecretsCmd creates the command for synchronizing secrets across clusters.
-func newClusterSyncSecretsCmd() *cobra.Command {
+// newSecretsSyncCmd creates the command for synchronizing secrets across clusters.
+func newSecretsSyncCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sync-secrets [cluster]",
+		Use:   "sync [cluster]",
 		Short: "Synchronize secrets from config to encrypted manifests",
 		Long: `Synchronize secrets from the cluster configuration file to encrypted manifests.
 
@@ -48,32 +48,33 @@ If no cluster name is provided, uses the currently active cluster.
 Multi-cluster mode (--all flag) processes all clusters in parallel with configurable
 concurrency. Use --organization to filter to a specific organization.`,
 		Example: `  # Sync secrets for active cluster
-  opencenter cluster sync-secrets
+  opencenter secrets sync
 
   # Sync secrets for specific cluster
-  opencenter cluster sync-secrets my-cluster
+  opencenter secrets sync my-cluster
 
   # Sync only specific services
-  opencenter cluster sync-secrets my-cluster --services=cert-manager,loki
+  opencenter secrets sync my-cluster --services=cert-manager,loki
 
   # Preview changes without applying (dry-run)
-  opencenter cluster sync-secrets my-cluster --dry-run
+  opencenter secrets sync my-cluster --dry-run
 
   # Force sync even if no drift detected
-  opencenter cluster sync-secrets my-cluster --force
+  opencenter secrets sync my-cluster --force
 
   # Sync all clusters in organization
-  opencenter cluster sync-secrets --all --organization=myorg
+  opencenter secrets sync --all --organization=myorg
 
   # Sync all clusters with custom concurrency
-  opencenter cluster sync-secrets --all --concurrency=8
+  opencenter secrets sync --all --concurrency=8
 
   # Stop on first error
-  opencenter cluster sync-secrets --all --stop-on-error`,
+  opencenter secrets sync --all --stop-on-error`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: runClusterSyncSecrets,
 	}
 
+	cmd.Flags().String("cluster", "", "Cluster name (uses active cluster if not specified)")
 	cmd.Flags().StringSlice("services", []string{}, "Comma-separated list of services to sync (e.g., cert-manager,loki)")
 	cmd.Flags().Bool("dry-run", false, "Preview changes without applying them")
 	cmd.Flags().Bool("force", false, "Overwrite manifests even if no drift detected")
@@ -89,6 +90,7 @@ func runClusterSyncSecrets(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Get flags
+	clusterFlag, _ := cmd.Flags().GetString("cluster")
 	services, _ := cmd.Flags().GetStringSlice("services")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	force, _ := cmd.Flags().GetBool("force")
@@ -115,10 +117,17 @@ func runClusterSyncSecrets(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	// Single cluster sync
-	clusterName, err := resolveClusterName(args, true)
-	if err != nil {
-		return err
+	// Single cluster sync - resolve cluster name from flag or args
+	var clusterName string
+	if clusterFlag != "" {
+		clusterName = clusterFlag
+	} else if len(args) > 0 {
+		clusterName = args[0]
+	} else {
+		clusterName, err = resolveClusterName(args, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Build sync options

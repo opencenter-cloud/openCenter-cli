@@ -43,6 +43,26 @@ go build -ldflags "\
 echo "Built opencenter ${VERSION} (${GIT_COMMIT:0:7})"
 '''
 
+# Build and install to local bin directory
+local-install = '''
+#!/usr/bin/env bash
+set -e
+
+# Run the build task
+mise run build
+
+# Ensure ~/.local/bin exists
+mkdir -p ~/.local/bin
+
+# Copy binary to ~/.local/bin
+cp bin/opencenter ~/.local/bin/opencenter
+
+# Make it executable
+chmod +x ~/.local/bin/opencenter
+
+echo "Installed opencenter to ~/.local/bin/opencenter"
+'''
+
 # Enhance CLI to support array indexing in flags
 enhance-array-flags = '''
 #!/usr/bin/env bash

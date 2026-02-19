@@ -23,10 +23,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newClusterValidateSecretsCmd creates the command for validating secrets drift.
-func newClusterValidateSecretsCmd() *cobra.Command {
+// newSecretsValidateCmd creates the command for validating secrets drift.
+func newSecretsValidateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "validate-secrets [cluster]",
+		Use:   "validate [cluster]",
 		Short: "Validate secrets for configuration drift",
 		Long: `Validate secrets by comparing config file against encrypted manifests.
 
@@ -43,16 +43,16 @@ drift exists. This makes it suitable for CI/CD pipelines.
 
 If no cluster name is provided, uses the currently active cluster.`,
 		Example: `  # Validate secrets for active cluster
-  opencenter cluster validate-secrets
+  opencenter secrets validate
 
   # Validate secrets for specific cluster
-  opencenter cluster validate-secrets my-cluster
+  opencenter secrets validate my-cluster
 
   # Auto-fix detected drift
-  opencenter cluster validate-secrets my-cluster --fix
+  opencenter secrets validate my-cluster --fix
 
   # Output in JSON format for CI/CD
-  opencenter cluster validate-secrets my-cluster --output json`,
+  opencenter secrets validate my-cluster --output json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: runClusterValidateSecrets,
 	}
@@ -172,7 +172,7 @@ func displayValidationResultText(cmd *cobra.Command, clusterName string, result 
 	fmt.Fprintln(cmd.OutOrStdout())
 
 	if result.ExitCode == 1 {
-		fmt.Fprintln(cmd.OutOrStdout(), "Run 'opencenter cluster sync-secrets' to fix drift, or use --fix flag.")
+		fmt.Fprintln(cmd.OutOrStdout(), "Run 'opencenter secrets sync' to fix drift, or use --fix flag.")
 	}
 }
 

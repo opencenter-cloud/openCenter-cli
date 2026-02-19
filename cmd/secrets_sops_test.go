@@ -250,9 +250,9 @@ func TestSOPSPathMatcher(t *testing.T) {
     age: age1test123
   - path_regex: 'secrets/ssh/(?!.*\.pub$).*'
     age: age1test123
-  - path_regex: 'secrets/age/keys/.*-key\.txt$'
+  - path_regex: 'secrets/age/keys/.*-key\.txt'
     age: age1test123
-  - path_regex: 'applications/overlays/[^/]+/(managed-services|services)/.*/.*\.ya?ml$'
+  - path_regex: 'applications/overlays/[^/]+/(managed-services|services)/.*/.*\.ya?ml'
     encrypted_regex: "^(secret)$"
     age: age1test123
 `
@@ -405,7 +405,7 @@ func TestExtractBasePattern(t *testing.T) {
 		},
 		{
 			name:     "pattern without exclusions",
-			pattern:  `secrets/age/keys/.*-key\.txt$`,
+			pattern:  `secrets/age/keys/.*-key\.txt`,
 			expected: "",
 		},
 		{

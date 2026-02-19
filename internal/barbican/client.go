@@ -38,6 +38,25 @@ type Client struct {
 
 // NewClient creates a new Barbican client.
 func NewClient(cfg *config.BarbicanConfig) (*Client, error) {
+	if cfg.AuthURL == "" {
+		return nil, fmt.Errorf("barbican backend requires auth_url to be configured\n\n" +
+			"The 'opencenter secrets' commands are designed for Barbican (OpenStack Key Manager).\n" +
+			"Your cluster is likely configured to use a different secrets backend (sops or file).\n\n" +
+			"To fix this issue, choose one of the following options:\n\n" +
+			"1. If you need Barbican, configure authentication:\n" +
+			"   opencenter cluster edit <cluster-name>\n" +
+			"   # Set opencenter.secrets.backend to 'barbican'\n" +
+			"   # Set opencenter.secrets.barbican.auth_url to your OpenStack Keystone endpoint\n" +
+			"   # Example: https://keystone.example.com:5000/v3\n\n" +
+			"2. If using SOPS backend (recommended for GitOps):\n" +
+			"   # SOPS secrets are managed through GitOps manifests, not via CLI commands\n" +
+			"   # Use: opencenter cluster sync-secrets <cluster-name>\n" +
+			"   # Use: opencenter cluster validate-secrets <cluster-name>\n\n" +
+			"3. If using file-based secrets:\n" +
+			"   # File secrets are stored in the cluster configuration\n" +
+			"   # Edit directly: opencenter cluster edit <cluster-name>")
+	}
+
 	provider, err := openstack.NewClient(cfg.AuthURL)
 	if err != nil {
 		return nil, fmt.Errorf("could not create OpenStack client: %w", err)

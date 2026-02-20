@@ -83,8 +83,11 @@ If no cluster name is provided, updates the currently active cluster.`,
 				return fmt.Errorf("failed to load configuration: %w", err)
 			}
 
+			// Extract just the cluster name (without organization prefix)
+			actualClusterName := extractClusterName(name)
+
 			// Get configuration file path
-			configPath, err := getConfigPath(ctx, name, cfg.OpenCenter.Meta.Organization)
+			configPath, err := getConfigPath(ctx, actualClusterName, cfg.OpenCenter.Meta.Organization)
 			if err != nil {
 				return fmt.Errorf("failed to resolve configuration path: %w", err)
 			}

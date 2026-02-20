@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/rackerlabs/opencenter-cli/internal/cluster"
+	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/core/paths"
 	"github.com/rackerlabs/opencenter-cli/internal/di"
 	"github.com/rackerlabs/opencenter-cli/internal/util"
@@ -121,15 +122,13 @@ func runClusterInit(cmd *cobra.Command, args []string) error {
 
 // setupContainer initializes the DI container with all required services
 func setupContainer(container di.Container) error {
-	// Get base directory from environment or use default
+	// Get base directory from environment or use default from CLI config
 	baseDir := os.Getenv("OPENCENTER_CONFIG_DIR")
 	if baseDir == "" {
-		// Use default config directory
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("getting home directory: %w", err)
-		}
-		baseDir = filepath.Join(home, ".config", "opencenter")
+		// Load from CLI config (this reads the clustersDir from config.yaml)
+		baseDir = config.GetClustersDir()
+	} else {
+		baseDir = filepath.Join(baseDir, "clusters")
 	}
 
 	pathResolver, err := di.ProvidePathResolver(baseDir)

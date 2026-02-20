@@ -429,6 +429,8 @@ func (r *PathResolver) CreateClusterDirectories(ctx context.Context, clusterName
 	}
 
 	// Resolve paths using organization-based strategy
+	// NOTE: We call Resolve() directly on the strategy, bypassing CanResolve() check
+	// because we're creating a NEW cluster that doesn't exist yet
 	r.mu.RLock()
 	strategy := r.strategies[0]
 	validatePaths := r.options.ValidatePaths

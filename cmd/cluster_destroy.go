@@ -132,8 +132,11 @@ If no cluster name is provided, the active cluster will be destroyed.`,
 				}
 			}
 
+			// Extract just the cluster name (without organization prefix)
+			actualClusterName := extractClusterName(name)
+
 			if configDir != "" {
-				configPath, pathErr := getConfigPath(ctx, name, cfg.OpenCenter.Meta.Organization)
+				configPath, pathErr := getConfigPath(ctx, actualClusterName, cfg.OpenCenter.Meta.Organization)
 				if pathErr == nil && filepath.Dir(configPath) != configDir {
 					// Not a flat config, safe to update status
 					cfg.OpenCenter.Meta.Status = "destroyed"
@@ -154,7 +157,7 @@ If no cluster name is provided, the active cluster will be destroyed.`,
 			}
 
 			// Get the config file path
-			configPath, err := getConfigPath(ctx, name, cfg.OpenCenter.Meta.Organization)
+			configPath, err := getConfigPath(ctx, actualClusterName, cfg.OpenCenter.Meta.Organization)
 			if err != nil {
 				return fmt.Errorf("failed to resolve config path: %w", err)
 			}

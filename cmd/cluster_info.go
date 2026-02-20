@@ -31,10 +31,15 @@ func newClusterInfoCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "info [name]",
 		Short: "Show configuration for a cluster",
+		Long: `Show configuration for a cluster.
+
+The cluster name can be specified in two formats:
+  - cluster-name (uses organization from config)
+  - organization/cluster-name (explicit organization)`,
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
-			name, err := resolveClusterName(args, false)
+			identifier, err := resolveClusterName(args, false)
 			if err != nil {
 				return err
 			}
@@ -45,7 +50,7 @@ func newClusterInfoCmd() *cobra.Command {
 			}
 
 			ctx := cmd.Context()
-			cfg, err := loadConfig(ctx, name)
+			cfg, clusterName, organization, err := loadConfigWithIdentifier(ctx, identifier)
 			if err != nil {
 				return err
 			}
@@ -54,7 +59,7 @@ func newClusterInfoCmd() *cobra.Command {
 			exportOnly, _ := cmd.Flags().GetBool("export-only")
 			if exportOnly {
 				shellOverride, _ := cmd.Flags().GetString("shell")
-				return handleExportOnly(cmd, name, shellOverride)
+				return handleExportOnly(cmd, clusterName, shellOverride)
 			}
 
 			// Handle --validate flag
@@ -73,7 +78,7 @@ func newClusterInfoCmd() *cobra.Command {
 			}
 
 			// Get the full path to the config file
-			configPath, err := getConfigPath(ctx, name, cfg.OpenCenter.Meta.Organization)
+			configPath, err := getConfigPath(ctx, clusterName, organization)
 			if err != nil {
 				return fmt.Errorf("failed to resolve config path: %w", err)
 			}
@@ -123,10 +128,11 @@ func newClusterInfoCmd() *cobra.Command {
 
 			// Print metadata and config path in human-readable format
 			// Show "Active cluster:" if this is the active cluster or we're in the git directory
+			displayName := identifier
 			if isActiveCluster || isInGitDir {
-				fmt.Fprintf(cmd.OutOrStdout(), "Active cluster: %s\n", name)
+				fmt.Fprintf(cmd.OutOrStdout(), "Active cluster: %s\n", displayName)
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", name)
+				fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", displayName)
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Config Path: %s\n\n", configPath)
 
@@ -161,7 +167,7 @@ func newClusterInfoCmd() *cobra.Command {
 			// Check lock status with detailed information
 			lockMgr, err := resilience.NewLockManager(resilience.DefaultLockConfig)
 			if err == nil {
-				lockInfo, err := lockMgr.GetLockInfo(name)
+				lockInfo, err := lockMgr.GetLockInfo(clusterName)
 				if err != nil {
 					fmt.Fprintf(cmd.ErrOrStderr(), "\nWarning: Failed to read lock info: %v\n", err)
 				} else if lockInfo != nil {

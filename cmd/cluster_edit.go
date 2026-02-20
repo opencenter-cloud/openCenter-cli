@@ -98,13 +98,16 @@ Examples:
 			}
 
 			// Get the configuration file path
-			// Load config to get organization
+			// Load config to get organization (this handles organization/cluster format)
 			cfg, err := loadConfig(ctx, clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load configuration for cluster '%s': %w", clusterName, err)
 			}
 			
-			configPath, err := getConfigPath(ctx, clusterName, cfg.OpenCenter.Meta.Organization)
+			// Extract just the cluster name (without organization prefix)
+			actualClusterName := extractClusterName(clusterName)
+			
+			configPath, err := getConfigPath(ctx, actualClusterName, cfg.OpenCenter.Meta.Organization)
 			if err != nil {
 				return fmt.Errorf("failed to get config path for cluster '%s': %w", clusterName, err)
 			}
@@ -117,6 +120,13 @@ Examples:
 			// Check if the configuration file exists
 			if _, err := os.Stat(configPath); os.IsNotExist(err) {
 				return fmt.Errorf("cluster configuration file '%s' not found. Use 'opencenter cluster list' to see available clusters", clusterName)
+			}
+
+			// Check if dry-run mode is enabled
+			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			if dryRun {
+				fmt.Fprintf(cmd.OutOrStdout(), "Would open %s for editing\n", configPath)
+				return nil
 			}
 
 			// Determine the editor to use

@@ -178,7 +178,7 @@ func TestOrgBasedStrategy_Resolve(t *testing.T) {
 					t.Errorf("BinPath = %s, want %s", paths.BinPath, expectedBin)
 				}
 
-				expectedConfig := filepath.Join(expectedClusterDir, ".test-cluster-config.yaml")
+				expectedConfig := filepath.Join(expectedOrgDir, ".test-cluster-config.yaml")
 				if paths.ConfigPath != expectedConfig {
 					t.Errorf("ConfigPath = %s, want %s", paths.ConfigPath, expectedConfig)
 				}
@@ -214,7 +214,7 @@ func TestOrgBasedStrategy_Resolve(t *testing.T) {
 			clusterName:  "my-test-cluster",
 			organization: "my-org",
 			validate: func(t *testing.T, paths *ClusterPaths) {
-				expectedConfig := filepath.Join(tmpDir, "my-org", "infrastructure", "clusters", "my-test-cluster", ".my-test-cluster-config.yaml")
+				expectedConfig := filepath.Join(tmpDir, "my-org", ".my-test-cluster-config.yaml")
 				if paths.ConfigPath != expectedConfig {
 					t.Errorf("ConfigPath = %s, want %s", paths.ConfigPath, expectedConfig)
 				}

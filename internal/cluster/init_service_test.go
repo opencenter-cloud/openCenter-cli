@@ -62,13 +62,7 @@ func TestInitService_Initialize(t *testing.T) {
 				NoGitInit:    true, // Skip git init for faster test
 			},
 			wantErr: false,
-			setup: func() {
-				// Create cluster directories before initialization
-				ctx := context.Background()
-				if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
-					t.Fatalf("Failed to create cluster directories: %v", err)
-				}
-			},
+			// No setup needed - Initialize should create directories
 		},
 		{
 			name: "invalid cluster name",
@@ -415,9 +409,6 @@ func TestInitService_Initialize_WithKeyGeneration(t *testing.T) {
 	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	ctx := context.Background()
-	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
-		t.Fatalf("Failed to create cluster directories: %v", err)
-	}
 
 	opts := InitOptions{
 		ClusterName:  "test-cluster",
@@ -454,9 +445,6 @@ func TestInitService_Initialize_WithGitInit(t *testing.T) {
 	initService := NewInitService(pathResolver, validationEngine, configManager)
 
 	ctx := context.Background()
-	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
-		t.Fatalf("Failed to create cluster directories: %v", err)
-	}
 
 	opts := InitOptions{
 		ClusterName:  "test-cluster",
@@ -495,9 +483,6 @@ func TestInitService_Initialize_DifferentProviders(t *testing.T) {
 		t.Run(provider, func(t *testing.T) {
 			clusterName := "test-cluster-" + provider
 			ctx := context.Background()
-			if err := pathResolver.CreateClusterDirectories(ctx, clusterName, "test-org"); err != nil {
-				t.Fatalf("Failed to create cluster directories: %v", err)
-			}
 
 			opts := InitOptions{
 				ClusterName:  clusterName,

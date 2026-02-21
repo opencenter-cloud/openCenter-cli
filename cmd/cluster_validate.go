@@ -129,8 +129,9 @@ If no cluster name is provided, validates the currently active cluster.`,
 				fmt.Fprintf(cmd.OutOrStdout(), "\nDebug config saved to: %s\n", result.DebugConfigPath)
 			}
 
-			// Return error if validation failed
+			// Return error if validation failed, but silence usage since we already showed the validation output
 			if !result.Valid {
+				cmd.SilenceUsage = true
 				return fmt.Errorf("validation failed")
 			}
 

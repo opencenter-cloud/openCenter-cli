@@ -14,15 +14,18 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/rackerlabs/opencenter-cli/internal/config"
 	"github.com/rackerlabs/opencenter-cli/internal/resilience"
 	"github.com/spf13/cobra"
 )
@@ -164,6 +167,19 @@ The cluster name can be specified in two formats:
 			}
 			fmt.Fprint(cmd.OutOrStdout(), string(data))
 
+			// Print enabled services
+			if err := printEnabledServices(cmd, &cfg); err != nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "\nWarning: Failed to retrieve service information: %v\n", err)
+			}
+
+			// Print GitOps status if cluster is in bootstrap stage or later
+			status := strings.ToLower(cfg.OpenCenter.Meta.Status)
+			if status == "deployed" || status == "bootstrap" {
+				if err := printGitOpsStatus(cmd, &cfg, clusterName); err != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "\nWarning: Failed to retrieve GitOps status: %v\n", err)
+				}
+			}
+
 			// Check lock status with detailed information
 			lockMgr, err := resilience.NewLockManager(resilience.DefaultLockConfig)
 			if err == nil {
@@ -267,4 +283,191 @@ func handleExportOnly(cmd *cobra.Command, clusterName string, shellOverride stri
 	}
 
 	return nil
+}
+
+// printEnabledServices prints the list of enabled services from the configuration
+func printEnabledServices(cmd *cobra.Command, cfg *config.Config) error {
+	fmt.Fprintln(cmd.OutOrStdout(), "\nEnabled Services:")
+
+	// Collect enabled services from cfg.OpenCenter.Services
+	enabledServices := []string{}
+	for serviceName, serviceConfig := range cfg.OpenCenter.Services {
+		// Check if service is enabled
+		if configMap, ok := serviceConfig.(map[string]interface{}); ok {
+			if enabled, ok := configMap["enabled"].(bool); ok && enabled {
+				// Get status if available
+				status := "unknown"
+				if statusVal, ok := configMap["status"].(string); ok && statusVal != "" {
+					status = statusVal
+				}
+				enabledServices = append(enabledServices, fmt.Sprintf("  - %s (status: %s)", serviceName, status))
+			}
+		}
+	}
+
+	// Sort for consistent output
+	if len(enabledServices) == 0 {
+		fmt.Fprintln(cmd.OutOrStdout(), "  No services enabled")
+	} else {
+		// Sort alphabetically
+		sortStrings(enabledServices)
+		for _, service := range enabledServices {
+			fmt.Fprintln(cmd.OutOrStdout(), service)
+		}
+	}
+
+	return nil
+}
+
+// sortStrings sorts a slice of strings in place
+func sortStrings(s []string) {
+	// Simple bubble sort for small lists
+	for i := 0; i < len(s); i++ {
+		for j := i + 1; j < len(s); j++ {
+			if s[i] > s[j] {
+				s[i], s[j] = s[j], s[i]
+			}
+		}
+	}
+}
+
+// printGitOpsStatus prints the GitOps reconciliation status using kubectl
+func printGitOpsStatus(cmd *cobra.Command, cfg *config.Config, clusterName string) error {
+	fmt.Fprintln(cmd.OutOrStdout(), "\nGitOps Status:")
+
+	// Check if kubeconfig exists
+	kubeconfigPath := getKubeconfigPath(cfg, clusterName)
+	if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
+		fmt.Fprintln(cmd.OutOrStdout(), "  Kubeconfig not found - cluster may not be deployed yet")
+		return nil
+	}
+
+	// Try to get Flux Kustomization status
+	ctx := cmd.Context()
+	kustomizations, err := getFluxKustomizations(ctx, kubeconfigPath)
+	if err != nil {
+		fmt.Fprintf(cmd.OutOrStdout(), "  Unable to retrieve GitOps status: %v\n", err)
+		fmt.Fprintln(cmd.OutOrStdout(), "  Hint: Ensure kubectl is installed and cluster is accessible")
+		return nil
+	}
+
+	if len(kustomizations) == 0 {
+		fmt.Fprintln(cmd.OutOrStdout(), "  No Flux Kustomizations found - FluxCD may not be bootstrapped yet")
+		return nil
+	}
+
+	// Print kustomization status
+	fmt.Fprintf(cmd.OutOrStdout(), "  Kustomizations: %d total\n", len(kustomizations))
+	
+	readyCount := 0
+	for _, k := range kustomizations {
+		if k.Ready {
+			readyCount++
+		}
+	}
+	
+	fmt.Fprintf(cmd.OutOrStdout(), "  Ready: %d/%d\n", readyCount, len(kustomizations))
+	
+	// Show details of non-ready kustomizations
+	if readyCount < len(kustomizations) {
+		fmt.Fprintln(cmd.OutOrStdout(), "  Not Ready:")
+		for _, k := range kustomizations {
+			if !k.Ready {
+				fmt.Fprintf(cmd.OutOrStdout(), "    - %s/%s: %s\n", k.Namespace, k.Name, k.Message)
+			}
+		}
+	}
+
+	return nil
+}
+
+// getKubeconfigPath returns the path to the kubeconfig file for the cluster
+func getKubeconfigPath(cfg *config.Config, clusterName string) string {
+	// Try to get from GitOps directory first
+	if cfg.OpenCenter.GitOps.GitDir != "" {
+		gitDir := cfg.OpenCenter.GitOps.GitDir
+		// Expand tilde
+		if strings.HasPrefix(gitDir, "~/") {
+			if home, err := os.UserHomeDir(); err == nil {
+				gitDir = filepath.Join(home, gitDir[2:])
+			}
+		}
+		gitDir = os.ExpandEnv(gitDir)
+		
+		kubeconfigPath := filepath.Join(gitDir, "infrastructure", "clusters", clusterName, "kubeconfig.yaml")
+		if _, err := os.Stat(kubeconfigPath); err == nil {
+			return kubeconfigPath
+		}
+	}
+	
+	// Fallback to default location
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".kube", "config")
+}
+
+// FluxKustomization represents a Flux Kustomization resource
+type FluxKustomization struct {
+	Name      string
+	Namespace string
+	Ready     bool
+	Message   string
+}
+
+// getFluxKustomizations retrieves Flux Kustomization status using kubectl
+func getFluxKustomizations(ctx context.Context, kubeconfigPath string) ([]FluxKustomization, error) {
+	// Use kubectl to get kustomizations
+	cmd := exec.CommandContext(ctx, "kubectl", 
+		"--kubeconfig", kubeconfigPath,
+		"get", "kustomizations.kustomize.toolkit.fluxcd.io",
+		"-A",
+		"-o", "json")
+	
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("kubectl command failed: %w", err)
+	}
+
+	// Parse JSON output
+	var result struct {
+		Items []struct {
+			Metadata struct {
+				Name      string `json:"name"`
+				Namespace string `json:"namespace"`
+			} `json:"metadata"`
+			Status struct {
+				Conditions []struct {
+					Type    string `json:"type"`
+					Status  string `json:"status"`
+					Message string `json:"message"`
+				} `json:"conditions"`
+			} `json:"status"`
+		} `json:"items"`
+	}
+
+	if err := json.Unmarshal(output, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse kubectl output: %w", err)
+	}
+
+	kustomizations := make([]FluxKustomization, 0, len(result.Items))
+	for _, item := range result.Items {
+		k := FluxKustomization{
+			Name:      item.Metadata.Name,
+			Namespace: item.Metadata.Namespace,
+			Ready:     false,
+			Message:   "Unknown",
+		}
+
+		// Check Ready condition
+		for _, cond := range item.Status.Conditions {
+			if cond.Type == "Ready" {
+				k.Ready = (cond.Status == "True")
+				k.Message = cond.Message
+				break
+			}
+		}
+
+		kustomizations = append(kustomizations, k)
+	}
+
+	return kustomizations, nil
 }

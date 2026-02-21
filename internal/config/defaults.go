@@ -154,7 +154,7 @@ func defaultConfig(name string) Config {
 				SSHAuthorizedKeys:  getDefaultSSHKeys(cliDefaults),
 				BaseDomain:         "k8s.opencenter.cloud",
 				ClusterFQDN:        fmt.Sprintf("%s.%s.k8s.opencenter.cloud", name, region),
-				AdminEmail:         "",
+				AdminEmail:         "admin@example.com",
 				Networking: ClusterNetworkingConfig{
 					NTPServers:     []string{fmt.Sprintf("time.%s.rackspace.com", strings.ToLower(region)), fmt.Sprintf("time2.%s.rackspace.com", strings.ToLower(region))},
 					DNSNameservers: []string{"8.8.8.8", "8.8.4.4"},

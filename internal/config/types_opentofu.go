@@ -46,7 +46,7 @@ type SimplifiedTofuBackend struct {
 
 // SimplifiedTofuLocal represents the local backend
 type SimplifiedTofuLocal struct {
-	Path string `yaml:"path" json:"path" validate:"required"`
+	Path string `yaml:"path" json:"path"`
 }
 
 // SimplifiedTofuS3 represents the S3 backend

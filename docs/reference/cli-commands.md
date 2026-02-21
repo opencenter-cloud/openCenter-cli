@@ -195,7 +195,7 @@ opencenter cluster status my-cluster
 
 ### cluster info
 
-Show detailed cluster information.
+Show detailed cluster information including enabled services and GitOps status.
 
 ```bash
 opencenter cluster info [name] [flags]
@@ -205,16 +205,80 @@ opencenter cluster info [name] [flags]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--format` | string | yaml | Output format (yaml, json) |
+| `--json` | bool | false | Output in JSON format |
+| `--validate` | bool | false | Validate cluster configuration invariants |
+| `--export-only` | bool | false | Only output export commands for shell evaluation |
+| `--shell` | string | auto | Override shell detection (bash, zsh, fish, powershell) |
+
+**Output Sections:**
+
+The command displays the following information:
+
+1. **Cluster Metadata** - Name, organization, provider, environment, region, status
+2. **GitOps Configuration** - Git directory and repository URL
+3. **Enabled Services** - List of enabled services with their deployment status
+4. **GitOps Status** (if cluster is in bootstrap or deployed stage) - FluxCD Kustomization reconciliation status
+5. **Lock Status** - Current cluster lock information if locked
 
 **Examples:**
 
 ```bash
-# Show cluster info
+# Show cluster info for active cluster
+opencenter cluster info
+
+# Show cluster info for specific cluster
 opencenter cluster info my-cluster
 
+# Show cluster info with organization prefix
+opencenter cluster info 1861184-Metro-Bank-PLC/k8s-sandbox
+
 # JSON format
-opencenter cluster info my-cluster --format json
+opencenter cluster info my-cluster --json
+
+# Validate configuration
+opencenter cluster info my-cluster --validate
+
+# Export environment variables only
+opencenter cluster info my-cluster --export-only
+```
+
+**Example Output:**
+
+```
+Active cluster: 1861184-Metro-Bank-PLC/k8s-sandbox
+Config Path: /Users/user/.config/opencenter/clusters/1861184-Metro-Bank-PLC/k8s-sandbox/.k8s-sandbox-config.yaml
+
+git_dir: ~/customers/1861184-Metro-Bank-PLC
+git_url: git@github.com:1861184-Metro-Bank-PLC/metro-bank-gitops.git
+
+Metadata:
+  name: Metro Bank Sandbox
+  cluster_name: k8s-sandbox
+  organization: 1861184-Metro-Bank-PLC
+  provider: vmware
+  env: sandbox
+  region: sjc3
+  status: deployed
+
+Enabled Services:
+  - calico (status: success)
+  - cert-manager (status: success)
+  - gateway (status: success)
+  - harbor (status: success)
+  - keycloak (status: success)
+  - kube-prometheus-stack (status: success)
+  - kyverno (status: success)
+  - loki (status: success)
+  - longhorn (status: success)
+  - metallb (status: success)
+  - velero (status: success)
+
+GitOps Status:
+  Kustomizations: 15 total
+  Ready: 15/15
+
+Lock Status:
+  status: available
 ```
 
 ### cluster edit

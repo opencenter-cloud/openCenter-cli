@@ -318,6 +318,21 @@ func (s *InitService) createDefaultConfig(opts InitOptions) (config.Config, map[
 		cfg.OpenCenter.Infrastructure.Provider = opts.Provider
 	}
 
+	// Set storage plugin based on provider type
+	provider := cfg.OpenCenter.Infrastructure.Provider
+	switch provider {
+	case "openstack":
+		cfg.OpenCenter.Cluster.Kubernetes.StoragePlugin.Cinder.Enabled = true
+		cfg.OpenCenter.Cluster.Kubernetes.StoragePlugin.Vsphere.Enabled = false
+	case "vmware":
+		cfg.OpenCenter.Cluster.Kubernetes.StoragePlugin.Vsphere.Enabled = true
+		cfg.OpenCenter.Cluster.Kubernetes.StoragePlugin.Cinder.Enabled = false
+	default:
+		// For other providers (kind, baremetal, aws), leave storage plugins disabled by default
+		cfg.OpenCenter.Cluster.Kubernetes.StoragePlugin.Cinder.Enabled = false
+		cfg.OpenCenter.Cluster.Kubernetes.StoragePlugin.Vsphere.Enabled = false
+	}
+
 	// Set initial stage and status
 	cfg.OpenCenter.Meta.Stage = config.StageInit
 	cfg.OpenCenter.Meta.Status = config.StatusSuccess

@@ -1,6 +1,16 @@
-# openCenter Documentation
+# openCenter CLI Documentation
 
-Welcome to the openCenter documentation. openCenter is a CLI tool that streamlines Kubernetes cluster bootstrapping by transforming a single declarative YAML configuration into a production-ready GitOps repository.
+Welcome to the openCenter CLI documentation. openCenter is a command-line tool that transforms a single declarative YAML configuration into a production-ready Kubernetes cluster with GitOps management.
+
+## What is openCenter?
+
+openCenter standardizes cluster bootstrapping across multiple infrastructure providers (OpenStack, VMware, AWS, Kind), providing:
+
+- **Configuration-First Workflow:** Single YAML file defines infrastructure, Kubernetes, services, and secrets
+- **Built-in Validation:** Schema validation, business rules, and provider-specific checks
+- **GitOps Native:** Automated FluxCD-ready repository generation with Kustomize overlays
+- **Secrets Management:** SOPS Age encryption for safe version control
+- **Platform Services:** 20+ pre-configured services (monitoring, logging, ingress, auth, storage)
 
 ## Quick Start
 
@@ -9,6 +19,7 @@ New to openCenter? Start here:
 - **[Getting Started Tutorial](tutorials/getting-started.md)** - Create your first cluster in 10 minutes
 - **[CLI Commands Reference](reference/cli-commands.md)** - Quick command reference
 - **[Configuration Schema](reference/configuration-schema.md)** - Configuration file structure
+- **[Navigation Guide](_nav.md)** - Find the right documentation for your needs
 
 ## Documentation by Type
 

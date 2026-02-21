@@ -317,9 +317,9 @@ func TestDefaultConfigNewFields(t *testing.T) {
 			t.Errorf("expected ClusterFQDN '%s', got %s", expectedFQDN, cfg.OpenCenter.Cluster.ClusterFQDN)
 		}
 
-		// Fix: expect empty string as per current implementation
-		if cfg.OpenCenter.Cluster.AdminEmail != "" {
-			t.Errorf("expected AdminEmail '', got %s", cfg.OpenCenter.Cluster.AdminEmail)
+		// AdminEmail should have default value
+		if cfg.OpenCenter.Cluster.AdminEmail != "admin@example.com" {
+			t.Errorf("expected AdminEmail 'admin@example.com', got %s", cfg.OpenCenter.Cluster.AdminEmail)
 		}
 	})
 
@@ -465,7 +465,7 @@ func TestDefaultConfigMatchesSpecifications(t *testing.T) {
 		{
 			name:     "AdminEmail default",
 			getValue: func(c Config) any { return c.OpenCenter.Cluster.AdminEmail },
-			expected: "", // Updated expectation to match implementation
+			expected: "admin@example.com",
 		},
 		{
 			name:     "GitOpsBaseRepo default",

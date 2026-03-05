@@ -440,15 +440,31 @@ func (m *DefaultMigrator) migrateDeployment(v1 *config.Config) DeploymentConfig 
 
 // migrateOpenTofu migrates OpenTofu configuration.
 func (m *DefaultMigrator) migrateOpenTofu(v1 *config.Config) OpenTofuConfig {
+	backend := BackendConfig{
+		Type:   v1.OpenTofu.Backend.Type,
+		Config: make(map[string]any),
+	}
+
+	// Populate nested backend configs based on type
+	switch v1.OpenTofu.Backend.Type {
+	case "local":
+		if v1.OpenTofu.Backend.Local.Path != "" {
+			backend.Local = &LocalBackendConfig{
+				Path: v1.OpenTofu.Backend.Local.Path,
+			}
+		}
+	case "s3":
+		if v1.OpenTofu.Backend.S3.Bucket != "" {
+			backend.S3 = &S3BackendConfig{
+				Bucket: v1.OpenTofu.Backend.S3.Bucket,
+				Key:    v1.OpenTofu.Backend.S3.Key,
+				Region: v1.OpenTofu.Backend.S3.Region,
+			}
+		}
+	}
+
 	return OpenTofuConfig{
-		Backend: BackendConfig{
-			Type:   v1.OpenTofu.Backend.Type,
-			Bucket: v1.OpenTofu.Backend.S3.Bucket,
-			Key:    v1.OpenTofu.Backend.S3.Key,
-			Region: v1.OpenTofu.Backend.S3.Region,
-			Path:   v1.OpenTofu.Backend.Local.Path,
-			Config: make(map[string]any),
-		},
+		Backend: backend,
 	}
 }
 

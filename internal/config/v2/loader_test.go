@@ -94,7 +94,8 @@ deployment:
 opentofu:
   backend:
     type: local
-    path: "/tmp/terraform.tfstate"
+    local:
+      path: "/tmp/terraform.tfstate"
 secrets:
   global:
     aws_access_key: ""
@@ -274,7 +275,9 @@ func TestConfigLoader_SaveToFile(t *testing.T) {
 		OpenTofu: OpenTofuConfig{
 			Backend: BackendConfig{
 				Type: "local",
-				Path: "/tmp/terraform.tfstate",
+				Local: &LocalBackendConfig{
+					Path: "/tmp/terraform.tfstate",
+				},
 			},
 		},
 		Secrets: SecretsConfig{
@@ -372,7 +375,8 @@ deployment:
 opentofu:
   backend:
     type: local
-    path: "/tmp/terraform.tfstate"
+    local:
+      path: "/tmp/terraform.tfstate"
 secrets:
   global: {}
 `

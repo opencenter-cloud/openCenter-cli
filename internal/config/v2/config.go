@@ -63,12 +63,24 @@ type OpenTofuConfig struct {
 // BackendConfig represents OpenTofu backend configuration.
 // Requirements: 20.1, 20.2, 20.3, 20.4
 type BackendConfig struct {
-	Type   string         `yaml:"type" json:"type" validate:"required,oneof=s3 local remote"`
-	Bucket string         `yaml:"bucket,omitempty" json:"bucket,omitempty" validate:"required_if=Type s3"`
-	Key    string         `yaml:"key,omitempty" json:"key,omitempty" validate:"required_if=Type s3"`
-	Region string         `yaml:"region,omitempty" json:"region,omitempty" validate:"required_if=Type s3"`
-	Path   string         `yaml:"path,omitempty" json:"path,omitempty" validate:"required_if=Type local"`
-	Config map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
+	Type   string             `yaml:"type" json:"type" validate:"required,oneof=s3 local remote"`
+	Local  *LocalBackendConfig `yaml:"local,omitempty" json:"local,omitempty"`
+	S3     *S3BackendConfig    `yaml:"s3,omitempty" json:"s3,omitempty"`
+	Config map[string]any     `yaml:"config,omitempty" json:"config,omitempty"`
+}
+
+// LocalBackendConfig represents local backend configuration.
+// Requirements: 20.2
+type LocalBackendConfig struct {
+	Path string `yaml:"path" json:"path" validate:"required"`
+}
+
+// S3BackendConfig represents S3 backend configuration.
+// Requirements: 20.3
+type S3BackendConfig struct {
+	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
+	Key    string `yaml:"key" json:"key" validate:"required"`
+	Region string `yaml:"region" json:"region" validate:"required"`
 }
 
 // SecretsConfig represents secrets configuration.

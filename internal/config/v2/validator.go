@@ -110,8 +110,39 @@ func (v *defaultValidator) ValidateSchema(cfg *Config) error {
 // ValidateBusinessRules validates cross-field dependencies and value ranges.
 // Requirements: 11.2
 func (v *defaultValidator) ValidateBusinessRules(cfg *Config) error {
-	// Placeholder for business rules validation
-	// This will be implemented in subsequent tasks
+	// Validate OpenTofu backend configuration
+	if err := v.validateOpenTofuBackend(&cfg.OpenTofu); err != nil {
+		return err
+	}
+
+	// Placeholder for additional business rules validation
+	return nil
+}
+
+// validateOpenTofuBackend validates that the appropriate backend configuration is present.
+func (v *defaultValidator) validateOpenTofuBackend(opentofu *OpenTofuConfig) error {
+	backend := &opentofu.Backend
+
+	switch backend.Type {
+	case "local":
+		if backend.Local == nil {
+			return fmt.Errorf("opentofu.backend.local — conditionally required based on related field: local backend requires 'local' section with 'path' field")
+		}
+		if backend.Local.Path == "" {
+			return fmt.Errorf("opentofu.backend.local.path — required, currently empty")
+		}
+	case "s3":
+		if backend.S3 == nil {
+			return fmt.Errorf("opentofu.backend.s3 — conditionally required based on related field: S3 backend requires 's3' section with bucket, key, and region")
+		}
+		// The nested struct validation will handle the required fields
+	case "remote":
+		// Remote backend uses the Config map
+		if len(backend.Config) == 0 {
+			return fmt.Errorf("opentofu.backend.config — conditionally required based on related field: remote backend requires 'config' section")
+		}
+	}
+
 	return nil
 }
 

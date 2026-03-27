@@ -346,10 +346,7 @@ opencenter cluster validate  # Without --check-connectivity
 schema_version: "2.0"  # Must be "2.0"
 ```
 
-Migrate v1 configurations:
-```bash
-opencenter cluster migrate my-cluster
-```
+Any other `schema_version` value is invalid.
 
 ### Provider Validation Fails
 

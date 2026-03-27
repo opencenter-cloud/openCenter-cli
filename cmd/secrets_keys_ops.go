@@ -127,7 +127,7 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 				return filepath.SkipDir
 			}
 
-			if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+			if !info.IsDir() && isSOPSYAMLFile(path) {
 				if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && isEncrypted {
 					fmt.Printf("  📄 Would re-encrypt: %s\n", path)
 				}
@@ -185,7 +185,7 @@ func executeSOPSRotateKey(ctx context.Context, keyFile, searchPath string, dryRu
 			return filepath.SkipDir
 		}
 
-		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+		if !info.IsDir() && isSOPSYAMLFile(path) {
 			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && isEncrypted {
 				fmt.Printf("🔄 Re-encrypting: %s\n", path)
 				if err := encryptor.RotateKeys(ctx, path, []string{newKey.PublicKey}, nil); err != nil {

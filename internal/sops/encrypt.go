@@ -94,6 +94,12 @@ func (e *DefaultEncryptor) EncryptFile(ctx context.Context, filePath string, con
 	// Build SOPS command
 	args := []string{"-e"}
 
+	// If the file extension is not recognized by SOPS as YAML (e.g. .yaml.enc),
+	// explicitly tell SOPS to treat it as YAML.
+	if needsExplicitYAMLType(filePath) {
+		args = append(args, "--input-type", "yaml", "--output-type", "yaml")
+	}
+
 	// Add encryption keys
 	if len(config.AgeKeys) > 0 {
 		args = append(args, "--age", strings.Join(config.AgeKeys, ","))
@@ -260,6 +266,12 @@ func (e *DefaultEncryptor) DecryptFile(ctx context.Context, filePath string, out
 	// Build SOPS command
 	args := []string{"-d"}
 
+	// If the file extension is not recognized by SOPS as YAML (e.g. .yaml.enc),
+	// explicitly tell SOPS to treat it as YAML.
+	if needsExplicitYAMLType(filePath) {
+		args = append(args, "--input-type", "yaml", "--output-type", "yaml")
+	}
+
 	// Add output path if specified
 	if outputPath != "" {
 		args = append(args, "--output", outputPath)
@@ -313,6 +325,12 @@ func (e *DefaultEncryptor) IsFileEncrypted(filePath string) (bool, error) {
 func (e *DefaultEncryptor) RotateKeys(ctx context.Context, filePath string, newAgeKeys, newPGPKeys []string) error {
 	// Build SOPS command for key rotation
 	args := []string{"-r"}
+
+	// If the file extension is not recognized by SOPS as YAML (e.g. .yaml.enc),
+	// explicitly tell SOPS to treat it as YAML.
+	if needsExplicitYAMLType(filePath) {
+		args = append(args, "--input-type", "yaml", "--output-type", "yaml")
+	}
 
 	// Add new encryption keys
 	if len(newAgeKeys) > 0 {
@@ -375,7 +393,15 @@ func (e *DefaultEncryptor) GetEncryptedContent(filePath string) (string, error) 
 // EditEncryptedFile opens an encrypted file for editing with SOPS
 func (e *DefaultEncryptor) EditEncryptedFile(ctx context.Context, filePath string) error {
 	// Build SOPS command for editing
-	args := []string{filePath}
+	args := []string{}
+
+	// If the file extension is not recognized by SOPS as YAML (e.g. .yaml.enc),
+	// explicitly tell SOPS to treat it as YAML.
+	if needsExplicitYAMLType(filePath) {
+		args = append(args, "--input-type", "yaml", "--output-type", "yaml")
+	}
+
+	args = append(args, filePath)
 
 	// Execute SOPS command
 	cmd := exec.CommandContext(ctx, "sops", args...)
@@ -458,6 +484,21 @@ func (e *DefaultEncryptor) DecryptFilesParallel(ctx context.Context, filePaths [
 }
 
 // Helper functions
+
+// needsExplicitYAMLType returns true when the file extension is not one that
+// SOPS auto-detects as YAML (e.g. .yaml.enc, .yml.enc). In those cases the
+// caller must pass --input-type yaml --output-type yaml to the sops binary.
+func needsExplicitYAMLType(filePath string) bool {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	// SOPS natively recognises .yaml, .yml, .json, .env, .ini
+	// Anything else (like .enc) needs an explicit type hint.
+	switch ext {
+	case ".yaml", ".yml", ".json", ".env", ".ini":
+		return false
+	default:
+		return true
+	}
+}
 
 // checkSOPSVersion checks if SOPS is available and returns version info
 func checkSOPSVersion(ctx context.Context) (string, error) {

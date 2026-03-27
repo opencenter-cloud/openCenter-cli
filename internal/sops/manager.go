@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
@@ -347,7 +348,10 @@ func (m *DefaultSOPSManager) EncryptRepositorySecrets(ctx context.Context, repoP
 
 		// Skip directories and non-YAML files
 		ext := filepath.Ext(path)
-		if info.IsDir() || (ext != ".yaml" && ext != ".yml") {
+		lower := strings.ToLower(path)
+		isYAML := ext == ".yaml" || ext == ".yml" ||
+			strings.HasSuffix(lower, ".yaml.enc") || strings.HasSuffix(lower, ".yml.enc")
+		if info.IsDir() || !isYAML {
 			return nil
 		}
 

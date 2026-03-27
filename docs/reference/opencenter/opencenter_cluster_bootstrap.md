@@ -13,7 +13,7 @@ based on the cluster configuration. The bootstrap process varies by provider:
 - Kind: Creates a local Kubernetes cluster using kind
 
 Only v2 configurations (schema_version: "2.0") are supported.
-v1 configurations will be rejected with migration instructions.
+Configurations with any other schema version are invalid.
 
 The bootstrap process is resumable - if a step fails, you can fix the issue
 and re-run bootstrap to continue from where it left off.

@@ -87,16 +87,10 @@ Only v2 configurations (schema_version: "2.0") are supported
 
 **Diagnosis:** Configuration uses old schema format.
 
-**Solution:** Migrate configuration:
-
-```bash
-opencenter cluster migrate my-cluster
-```
-
-Or manually update:
+**Solution:** Update the configuration to use the canonical schema version:
 
 ```yaml
-schema_version: "2.0"  # Change from "1.0"
+schema_version: "2.0"
 ```
 
 ### Invalid CIDR Ranges

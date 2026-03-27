@@ -22,8 +22,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 )
 
-// ConfigStructureValidator validates that configuration uses v2 field structure only.
-// It rejects v1 field locations and provides migration guidance.
+// ConfigStructureValidator validates that configuration uses the canonical schema 2 field structure only.
 //
 // Validates: Requirements 1.4
 type ConfigStructureValidator struct{}
@@ -44,8 +43,7 @@ func (v *ConfigStructureValidator) Priority() int {
 	return validation.PriorityHigh
 }
 
-// Validate validates that the configuration uses v2 field structure.
-// It checks for v1 field locations and provides migration examples.
+// Validate validates that the configuration uses the canonical schema 2 field structure.
 func (v *ConfigStructureValidator) Validate(ctx context.Context, value interface{}) (*validation.ValidationResult, error) {
 	result := &validation.ValidationResult{
 		Valid:    true,
@@ -65,29 +63,28 @@ func (v *ConfigStructureValidator) Validate(ctx context.Context, value interface
 		}
 	}
 
-	// Check for v1 field locations
+	// Check for unsupported legacy field locations.
 	v.checkV1FieldLocations(result, configMap)
 
 	return result, nil
 }
 
-// checkV1FieldLocations checks for v1 field locations in the configuration.
+// checkV1FieldLocations checks for unsupported legacy field locations in the configuration.
 func (v *ConfigStructureValidator) checkV1FieldLocations(result *validation.ValidationResult, configMap map[string]interface{}) {
-	// Check for opencenter.cluster.networking (v1 location)
+	// Check for opencenter.cluster.networking (legacy location)
 	if opencenter, ok := configMap["opencenter"].(map[string]interface{}); ok {
 		if cluster, ok := opencenter["cluster"].(map[string]interface{}); ok {
-			// Check for v1 networking location
+			// Check for legacy networking location.
 			if networking, ok := cluster["networking"].(map[string]interface{}); ok {
 				if vrrpIP, exists := networking["vrrp_ip"]; exists && vrrpIP != nil {
 					result.AddError("config-structure",
-						"Configuration uses v1 field location: opencenter.cluster.networking.vrrp_ip",
-						"v2.0.0 requires v2 field structure",
-						"Migration: opencenter.cluster.networking.vrrp_ip → opencenter.infrastructure.networking.vrrp_ip",
-						"To upgrade: Install opencenter v1.x and run 'opencenter cluster migrate-config'")
+						"Unsupported field location: opencenter.cluster.networking.vrrp_ip",
+						"Schema 2 requires infrastructure networking fields under opencenter.infrastructure.networking",
+						"Use: opencenter.infrastructure.networking.vrrp_ip")
 				}
 			}
 
-			// Check for v1 kubernetes flavor fields
+			// Check for legacy kubernetes flavor fields.
 			if kubernetes, ok := cluster["kubernetes"].(map[string]interface{}); ok {
 				v1FlavorFields := []string{
 					"flavor_control_plane",
@@ -98,36 +95,33 @@ func (v *ConfigStructureValidator) checkV1FieldLocations(result *validation.Vali
 				for _, field := range v1FlavorFields {
 					if value, exists := kubernetes[field]; exists && value != nil {
 						result.AddError("config-structure",
-							fmt.Sprintf("Configuration uses v1 field location: opencenter.cluster.kubernetes.%s", field),
-							"v2.0.0 requires v2 field structure",
-							fmt.Sprintf("Migration: opencenter.cluster.kubernetes.%s → opencenter.infrastructure.compute.%s", field, field),
-							"To upgrade: Install opencenter v1.x and run 'opencenter cluster migrate-config'")
+							fmt.Sprintf("Unsupported field location: opencenter.cluster.kubernetes.%s", field),
+							"Schema 2 requires compute sizing fields under opencenter.infrastructure.compute",
+							fmt.Sprintf("Use: opencenter.infrastructure.compute.%s", field))
 					}
 				}
 			}
 		}
 
-		// Check for v1 storage location (top-level under opencenter)
+		// Check for legacy storage location (top-level under opencenter).
 		if storage, ok := opencenter["storage"].(map[string]interface{}); ok {
 			// Check if storage has any non-empty values
 			if hasNonEmptyValues(storage) {
 				result.AddError("config-structure",
-					"Configuration uses v1 field location: opencenter.storage",
-					"v2.0.0 requires v2 field structure",
-					"Migration: opencenter.storage → opencenter.infrastructure.storage",
-					"To upgrade: Install opencenter v1.x and run 'opencenter cluster migrate-config'")
+					"Unsupported field location: opencenter.storage",
+					"Schema 2 requires storage fields under opencenter.infrastructure.storage",
+					"Use: opencenter.infrastructure.storage")
 			}
 		}
 	}
 
-	// Check for top-level storage field (another v1 pattern)
+	// Check for top-level storage field (another legacy pattern).
 	if storage, ok := configMap["storage"].(map[string]interface{}); ok {
 		if hasNonEmptyValues(storage) {
 			result.AddError("config-structure",
-				"Configuration uses v1 field location: storage (top-level)",
-				"v2.0.0 requires v2 field structure",
-				"Migration: storage → opencenter.infrastructure.storage",
-				"To upgrade: Install opencenter v1.x and run 'opencenter cluster migrate-config'")
+				"Unsupported field location: storage (top-level)",
+				"Schema 2 requires storage fields under opencenter.infrastructure.storage",
+				"Use: opencenter.infrastructure.storage")
 		}
 	}
 }

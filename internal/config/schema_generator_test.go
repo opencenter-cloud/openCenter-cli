@@ -45,12 +45,12 @@ func TestSchemaGenerator_Generate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "reject v1.0 schema",
+			name:    "reject unsupported 1.0 schema",
 			version: "1.0",
 			wantErr: true,
 		},
 		{
-			name:    "reject v1 schema",
+			name:    "reject unsupported v1 alias",
 			version: "v1",
 			wantErr: true,
 		},

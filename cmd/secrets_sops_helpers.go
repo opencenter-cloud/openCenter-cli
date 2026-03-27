@@ -195,6 +195,17 @@ func shouldSkipDirectory(dirPath string) bool {
 	return false
 }
 
+// isSOPSYAMLFile returns true if the file extension indicates a YAML file that
+// SOPS should process. This includes standard .yaml/.yml as well as .yaml.enc
+// and .yml.enc variants used for encrypted kubeconfigs and similar artifacts.
+func isSOPSYAMLFile(path string) bool {
+	lower := strings.ToLower(path)
+	return strings.HasSuffix(lower, ".yaml") ||
+		strings.HasSuffix(lower, ".yml") ||
+		strings.HasSuffix(lower, ".yaml.enc") ||
+		strings.HasSuffix(lower, ".yml.enc")
+}
+
 // shouldFileBeEncrypted determines if a file should be encrypted based on patterns
 func shouldFileBeEncrypted(filePath string) bool {
 	// Check file name patterns that typically contain secrets
@@ -538,7 +549,7 @@ func executeSOPSSecretsEncrypt(ctx context.Context, keyFile, searchPath string, 
 			return nil
 		}
 
-		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+		if !info.IsDir() && isSOPSYAMLFile(path) {
 			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && !isEncrypted {
 				// Use SOPS path matcher if available, otherwise fall back to basic matching
 				shouldEncrypt := pathMatcher.ShouldEncryptPath(path)
@@ -660,7 +671,7 @@ func executeSOPSSecretsDecrypt(ctx context.Context, keyFile, searchPath string, 
 			return nil
 		}
 
-		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+		if !info.IsDir() && isSOPSYAMLFile(path) {
 			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && isEncrypted {
 				filesToDecrypt = append(filesToDecrypt, path)
 			}
@@ -772,7 +783,7 @@ func executeSOPSSecretsList(ctx context.Context, keyFile, searchPath string, dry
 			return nil
 		}
 
-		if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+		if !info.IsDir() && isSOPSYAMLFile(path) {
 			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil {
 				if isEncrypted {
 					encryptedFiles = append(encryptedFiles, path)

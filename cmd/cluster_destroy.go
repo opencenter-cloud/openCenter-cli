@@ -78,7 +78,7 @@ If no cluster name is provided, the active cluster will be destroyed.`,
 			defer lockMgr.Release(lock)
 
 			// Load cluster configuration
-			cfg, err := loadConfigV2Only(name)
+			cfg, err := loadCanonicalConfig(name)
 			if err != nil {
 				return err
 			}

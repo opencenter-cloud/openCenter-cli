@@ -99,7 +99,7 @@ Global Flags:
 			}
 
 			// Load configuration
-			cfg, err := loadConfigV2Only(name)
+			cfg, err := loadCanonicalConfig(name)
 			if err != nil {
 				return err
 			}

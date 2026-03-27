@@ -143,7 +143,13 @@ func (lm *lockManager) AcquireWithMetadata(ctx context.Context, resource string,
 		return nil, fmt.Errorf("failed to generate owner ID: %w", err)
 	}
 
-	// Try to acquire the lock with retries
+	// Try once immediately so short acquire timeouts do not expire before the
+	// first attempt, then retry on a fixed interval while the context is alive.
+	lock, err := lm.backend.acquire(acquireCtx, resource, owner, ttl, metadata)
+	if err == nil {
+		return lock, nil
+	}
+
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -157,7 +163,6 @@ func (lm *lockManager) AcquireWithMetadata(ctx context.Context, resource string,
 			if err == nil {
 				return lock, nil
 			}
-			// Continue retrying on error
 		}
 	}
 }

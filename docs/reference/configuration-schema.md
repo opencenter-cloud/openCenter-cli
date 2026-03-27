@@ -22,7 +22,7 @@ Current schema version: `2.0`
 schema_version: "2.0"
 ```
 
-**Note:** Only v2 configurations are supported. V1 configurations must be migrated using `opencenter cluster migrate`.
+**Note:** Only `schema_version: "2.0"` is supported. Any other schema version is invalid.
 
 ## Top-Level Structure
 

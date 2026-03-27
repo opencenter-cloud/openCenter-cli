@@ -35,7 +35,7 @@ The generated repository follows the openCenter GitOps pattern with
 infrastructure/, applications/, and secrets/ directories.
 
 Only v2 configurations (schema_version: "2.0") are supported.
-v1 configurations will be rejected with migration instructions.
+Configurations with any other schema version are invalid.
 
 If no cluster name is provided, the currently active cluster is used.`,
 		Example: `  # Set up the active cluster
@@ -75,7 +75,7 @@ func runClusterSetup(cmd *cobra.Command, args []string) error {
 	organization := ""
 
 	// Reject planned providers that are not yet available
-	cfg, err := loadConfigV2Only(name)
+	cfg, err := loadCanonicalConfig(name)
 	if err == nil {
 		organization = cfg.OpenCenter.Meta.Organization
 		if err := checkProviderAvailability(cfg.OpenCenter.Infrastructure.Provider); err != nil {

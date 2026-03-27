@@ -79,7 +79,6 @@ func TestConfigStructureValidator_RejectsV1NetworkingLocation(t *testing.T) {
 	// Check error message
 	assert.Contains(t, result.Errors[0].Message, "opencenter.cluster.networking.vrrp_ip")
 	assert.Contains(t, result.Errors[0].Suggestions[1], "opencenter.infrastructure.networking.vrrp_ip")
-	assert.Contains(t, result.Errors[0].Suggestions[2], "migrate-config")
 }
 
 func TestConfigStructureValidator_RejectsV1KubernetesFlavorFields(t *testing.T) {

@@ -240,7 +240,7 @@ The `CloudProviderFactory` (`internal/cloud/factory.go`) maintains a registry of
 
 ## Configuration Model
 
-- Schema version: `2.0` only (v1 rejected with migration instructions)
+- Schema version: `2.0` only
 - Root struct: `Config` in `internal/config/types.go`
 - Sections: `opencenter` (cluster, infrastructure, services, gitops, meta), `opentofu`, `secrets`, `deployment`, `overrides`
 - Storage: `~/.config/opencenter/clusters/<organization>/<cluster>/.<cluster>-config.yaml`

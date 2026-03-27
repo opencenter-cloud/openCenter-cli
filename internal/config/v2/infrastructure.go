@@ -33,6 +33,8 @@ type InfrastructureConfig struct {
 type SSHConfig struct {
 	AuthorizedKeys []string `yaml:"authorized_keys" json:"authorized_keys" validate:"required,min=1"`
 	Username       string   `yaml:"username,omitempty" json:"username,omitempty"`
+	User           string   `yaml:"user,omitempty" json:"user,omitempty"`
+	KeyPath        string   `yaml:"key_path,omitempty" json:"key_path,omitempty"`
 }
 
 // NodeNamingConfig represents node naming configuration.
@@ -62,6 +64,7 @@ type NetworkingConfig struct {
 	VRRPEnabled bool   `yaml:"vrrp_enabled" json:"vrrp_enabled"`
 
 	// Load balancing
+	UseOctavia           bool   `yaml:"use_octavia,omitempty" json:"use_octavia,omitempty"`
 	LoadbalancerProvider string `yaml:"loadbalancer_provider" json:"loadbalancer_provider" validate:"required,oneof=ovn octavia metallb cloud-native"`
 
 	// DNS
@@ -177,19 +180,65 @@ type CloudConfig struct {
 // OpenStackCloudConfig represents OpenStack-specific configuration.
 // Requirements: 4.3
 type OpenStackCloudConfig struct {
-	AuthURL           string   `yaml:"auth_url" json:"auth_url" validate:"required,url"`
-	Region            string   `yaml:"region" json:"region" validate:"required"`
-	ProjectID         string   `yaml:"project_id" json:"project_id" validate:"required"`
-	ProjectName       string   `yaml:"project_name,omitempty" json:"project_name,omitempty"`
-	UserDomainName    string   `yaml:"user_domain_name,omitempty" json:"user_domain_name,omitempty"`
-	ProjectDomainName string   `yaml:"project_domain_name,omitempty" json:"project_domain_name,omitempty"`
-	ImageID           string   `yaml:"image_id" json:"image_id" validate:"required"`
-	NetworkID         string   `yaml:"network_id" json:"network_id" validate:"required"`
-	SubnetID          string   `yaml:"subnet_id,omitempty" json:"subnet_id,omitempty"`
-	FloatingIPPool    string   `yaml:"floating_ip_pool,omitempty" json:"floating_ip_pool,omitempty"`
-	AvailabilityZones []string `yaml:"availability_zones,omitempty" json:"availability_zones,omitempty"`
-	UseOctavia        bool     `yaml:"use_octavia" json:"use_octavia"`
-	UseDesignate      bool     `yaml:"use_designate" json:"use_designate"`
+	AuthURL                     string                     `yaml:"auth_url" json:"auth_url" validate:"required,url"`
+	Region                      string                     `yaml:"region" json:"region" validate:"required"`
+	ProjectID                   string                     `yaml:"project_id" json:"project_id" validate:"required"`
+	ProjectName                 string                     `yaml:"project_name,omitempty" json:"project_name,omitempty"`
+	ApplicationCredentialID     string                     `yaml:"application_credential_id,omitempty" json:"application_credential_id,omitempty"`
+	ApplicationCredentialSecret string                     `yaml:"application_credential_secret,omitempty" json:"application_credential_secret,omitempty"`
+	Insecure                    bool                       `yaml:"insecure,omitempty" json:"insecure,omitempty"`
+	Domain                      string                     `yaml:"domain,omitempty" json:"domain,omitempty"`
+	DomainName                  string                     `yaml:"domain_name,omitempty" json:"domain_name,omitempty"`
+	TenantName                  string                     `yaml:"tenant_name,omitempty" json:"tenant_name,omitempty"`
+	UserDomainName              string                     `yaml:"user_domain_name,omitempty" json:"user_domain_name,omitempty"`
+	ProjectDomainName           string                     `yaml:"project_domain_name,omitempty" json:"project_domain_name,omitempty"`
+	ImageID                     string                     `yaml:"image_id" json:"image_id" validate:"required"`
+	ImageIDWindows              string                     `yaml:"image_id_windows,omitempty" json:"image_id_windows,omitempty"`
+	ImageName                   string                     `yaml:"image_name,omitempty" json:"image_name,omitempty"`
+	AvailabilityZone            string                     `yaml:"availability_zone,omitempty" json:"availability_zone,omitempty"`
+	NetworkID                   string                     `yaml:"network_id" json:"network_id" validate:"required"`
+	NetworkName                 string                     `yaml:"network_name,omitempty" json:"network_name,omitempty"`
+	SubnetID                    string                     `yaml:"subnet_id,omitempty" json:"subnet_id,omitempty"`
+	FloatingIPPool              string                     `yaml:"floating_ip_pool,omitempty" json:"floating_ip_pool,omitempty"`
+	FloatingNetworkID           string                     `yaml:"floating_network_id,omitempty" json:"floating_network_id,omitempty"`
+	ExternalNetworkName         string                     `yaml:"external_network_name,omitempty" json:"external_network_name,omitempty"`
+	RouterExternalNetworkID     string                     `yaml:"router_external_network_id,omitempty" json:"router_external_network_id,omitempty"`
+	DNSZoneName                 string                     `yaml:"dns_zone_name,omitempty" json:"dns_zone_name,omitempty"`
+	AvailabilityZones           []string                   `yaml:"availability_zones,omitempty" json:"availability_zones,omitempty"`
+	UseOctavia                  bool                       `yaml:"use_octavia" json:"use_octavia"`
+	UseDesignate                bool                       `yaml:"use_designate" json:"use_designate"`
+	CA                          string                     `yaml:"ca,omitempty" json:"ca,omitempty"`
+	Networking                  *OpenStackNetworkingConfig `yaml:"networking,omitempty" json:"networking,omitempty"`
+	Modules                     OpenStackModulesConfig     `yaml:"modules,omitempty" json:"modules,omitempty"`
+}
+
+type OpenStackNetworkingConfig struct {
+	FloatingIPPool          string           `yaml:"floating_ip_pool,omitempty" json:"floating_ip_pool,omitempty"`
+	FloatingNetworkID       string           `yaml:"floating_network_id,omitempty" json:"floating_network_id,omitempty"`
+	NetworkID               string           `yaml:"network_id,omitempty" json:"network_id,omitempty"`
+	RouterExternalNetworkID string           `yaml:"router_external_network_id,omitempty" json:"router_external_network_id,omitempty"`
+	SubnetID                string           `yaml:"subnet_id,omitempty" json:"subnet_id,omitempty"`
+	K8sAPIPortACL           []string         `yaml:"k8s_api_port_acl,omitempty" json:"k8s_api_port_acl,omitempty"`
+	Designate               DesignateConfig  `yaml:"designate,omitempty" json:"designate,omitempty"`
+	VLAN                    VLANConfigLegacy `yaml:"vlan,omitempty" json:"vlan,omitempty"`
+}
+
+type DesignateConfig struct {
+	DNSZoneName string `yaml:"dns_zone_name,omitempty" json:"dns_zone_name,omitempty"`
+}
+
+type VLANConfigLegacy struct {
+	ID       string `yaml:"id,omitempty" json:"id,omitempty"`
+	MTU      int    `yaml:"mtu,omitempty" json:"mtu,omitempty"`
+	Provider string `yaml:"provider,omitempty" json:"provider,omitempty"`
+}
+
+type OpenStackModulesConfig struct {
+	OpenstackNova OpenstackNovaModuleConfig `yaml:"openstack_nova,omitempty" json:"openstack_nova,omitempty"`
+}
+
+type OpenstackNovaModuleConfig struct {
+	Source string `yaml:"source,omitempty" json:"source,omitempty"`
 }
 
 // AWSCloudConfig represents AWS-specific configuration.

@@ -13,7 +13,7 @@ The v2 schema redesigns opencenter-cli's configuration system to eliminate dupli
 3. **Deployment Abstraction**: Deployment method (how) separated from infrastructure provider (where)
 4. **Reference Resolution**: Explicit `${path.to.value}` syntax for shared resources
 5. **Context-Aware Defaults**: Provider-region registry supplies intelligent defaults
-6. **Backward Compatibility**: v1 and v2 coexist during migration period
+6. **Strict Validation**: only `schema_version: "2.0"` is accepted
 
 ## Package Structure
 
@@ -199,7 +199,7 @@ Phase 4 (Intelligence) will implement:
 - Service dependency validation
 - Required secrets validation
 
-Phase 5 (Bridge) will implement:
-- v1 to v2 migration tooling
-- Schema version detection
-- Backward compatibility support
+Future work will focus on:
+- Reference resolution improvements
+- Service provider polymorphism
+- Required secrets validation

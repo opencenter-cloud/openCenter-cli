@@ -75,7 +75,9 @@ func loadConfig(ctx context.Context, name string) (config.Config, error) {
 
 // loadConfigWithIdentifier loads a cluster configuration using an identifier that may include organization.
 // The identifier can be in format "cluster-name" or "organization/cluster-name".
-// If organization is specified, it validates that the cluster belongs to that organization.
+// If organization is specified, it uses the ConfigurationManager directly with the full
+// identifier so that path resolution targets the correct organization directory. This avoids
+// ambiguity when multiple organizations contain a cluster with the same name.
 func loadConfigWithIdentifier(ctx context.Context, identifier string) (config.Config, string, string, error) {
 	// Parse organization and cluster name from the identifier
 	var clusterName, organization string
@@ -88,13 +90,29 @@ func loadConfigWithIdentifier(ctx context.Context, identifier string) (config.Co
 		// Organization will be determined from config
 	}
 
-	// Load the config
-	cfg, err := loadConfig(ctx, clusterName)
-	if err != nil {
-		return config.Config{}, "", "", err
+	// When organization is known, load via manager.Load with the full "org/cluster"
+	// identifier so it uses Resolve (org-scoped) instead of ResolveWithFallback.
+	// This prevents incorrect matches when multiple orgs share a cluster name.
+	var cfg config.Config
+	var err error
+	if organization != "" {
+		manager, mErr := getConfigManager()
+		if mErr != nil {
+			return config.Config{}, "", "", mErr
+		}
+		loaded, lErr := manager.Load(ctx, identifier)
+		if lErr != nil {
+			return config.Config{}, "", "", lErr
+		}
+		cfg = *loaded
+	} else {
+		cfg, err = loadConfig(ctx, clusterName)
+		if err != nil {
+			return config.Config{}, "", "", err
+		}
 	}
 
-	// If organization was specified in the identifier, verify it matches
+	// If organization was specified in the identifier, verify it matches the config metadata
 	if organization != "" && cfg.OpenCenter.Meta.Organization != organization {
 		return config.Config{}, "", "", fmt.Errorf("cluster %s not found in organization %s (found in %s)",
 			clusterName, organization, cfg.OpenCenter.Meta.Organization)
@@ -212,16 +230,15 @@ func normalizeClusterDisplayName(name string) string {
 	return name
 }
 
-// loadConfigV2Only loads a cluster configuration and rejects v1 configs.
-// This is a wrapper around loadConfig that enforces v2-only support.
+// loadCanonicalConfig loads a cluster configuration and enforces the canonical schema.
 //
 // Parameters:
 //   - clusterName: The cluster name to load
 //
 // Returns:
 //   - config.Config: The loaded configuration
-//   - error: An error if the config cannot be loaded or is v1
-func loadConfigV2Only(clusterName string) (config.Config, error) {
+//   - error: An error if the config cannot be loaded or does not use schema_version "2.0"
+func loadCanonicalConfig(clusterName string) (config.Config, error) {
 	ctx := context.Background()
 	cfg, err := loadConfig(ctx, clusterName)
 	if err != nil {
@@ -230,14 +247,7 @@ func loadConfigV2Only(clusterName string) (config.Config, error) {
 
 	// Check schema version - only v2 is supported
 	if cfg.SchemaVersion != "2.0" {
-		return cfg, fmt.Errorf(`v1 configurations are not supported in v2.0.0
-
-To upgrade to v2.0.0:
-1. Install opencenter v1.x
-2. Run: opencenter cluster migrate-config %s
-3. Upgrade to opencenter v2.0.0
-
-See: https://docs.opencenter.io/migration/v1-to-v2`, clusterName)
+		return cfg, fmt.Errorf("invalid schema version for cluster %s: expected 2.0, got %q", clusterName, cfg.SchemaVersion)
 	}
 
 	return cfg, nil

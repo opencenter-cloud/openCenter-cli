@@ -19,92 +19,35 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/defaults"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
-// TestSchemaVersionDetection tests that the validate command correctly detects schema versions.
-// Requirements: 13.2
-func TestSchemaVersionDetection(t *testing.T) {
-	tests := []struct {
-		name              string
-		configContent     string
-		expectedV1        bool
-		expectedV2        bool
-		expectError       bool
-		expectedErrSubstr string
-	}{
-		{
-			name: "v1 config with explicit version",
-			configContent: `schema_version: "1.0"
-opencenter:
-  cluster:
-    cluster_name: test-cluster`,
-			expectedV1:        false,
-			expectedV2:        false,
-			expectError:       true,
-			expectedErrSubstr: "v1 configurations are not supported",
-		},
-		{
-			name: "v1 config without version (backward compatibility)",
-			configContent: `opencenter:
-  cluster:
-    cluster_name: test-cluster`,
-			expectedV1:        false,
-			expectedV2:        false,
-			expectError:       true,
-			expectedErrSubstr: "v1 configurations are not supported",
-		},
-		{
-			name: "v2 config with explicit version",
-			configContent: `schema_version: "2.0"
-opencenter:
+// TestValidateConfigRequiresSchemaVersion ensures configs without the canonical schema version fail validation.
+func TestValidateConfigRequiresSchemaVersion(t *testing.T) {
+	invalidConfig := `opencenter:
   meta:
     name: test-cluster
     organization: test-org
     env: dev
-    region: sjc3`,
-			expectedV1:  false,
-			expectedV2:  true,
-			expectError: false,
-		},
+    region: sjc3`
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "test-config.yaml")
+
+	if err := os.WriteFile(configPath, []byte(invalidConfig), 0600); err != nil {
+		t.Fatalf("failed to write test config: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create temporary config file
-			tmpDir := t.TempDir()
-			configPath := filepath.Join(tmpDir, "test-config.yaml")
+	registry := defaults.NewRegistry()
+	loader := v2.NewConfigLoader(registry)
 
-			if err := os.WriteFile(configPath, []byte(tt.configContent), 0600); err != nil {
-				t.Fatalf("failed to write test config: %v", err)
-			}
-
-			// Detect schema version
-			versionInfo, err := config.DetectSchemaVersionFromFile(configPath)
-
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				} else if tt.expectedErrSubstr != "" && !strings.Contains(err.Error(), tt.expectedErrSubstr) {
-					t.Fatalf("expected error containing %q, got %v", tt.expectedErrSubstr, err)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if versionInfo.IsV1 != tt.expectedV1 {
-				t.Errorf("expected IsV1=%v, got %v", tt.expectedV1, versionInfo.IsV1)
-			}
-
-			if versionInfo.IsV2 != tt.expectedV2 {
-				t.Errorf("expected IsV2=%v, got %v", tt.expectedV2, versionInfo.IsV2)
-			}
-		})
+	_, err := loader.LoadFromFile(configPath)
+	if err == nil {
+		t.Fatal("expected schema version validation error")
+	}
+	if !strings.Contains(err.Error(), "expected '2.0'") {
+		t.Fatalf("expected canonical schema version error, got %v", err)
 	}
 }
 
@@ -146,60 +89,15 @@ func TestValidateV2ConfigIntegration(t *testing.T) {
 		t.Skipf("test config not found: %s", configPath)
 	}
 
-	// Detect schema version
-	versionInfo, err := config.DetectSchemaVersionFromFile(configPath)
+	registry := defaults.NewRegistry()
+	loader := v2.NewConfigLoader(registry)
+	cfg, err := loader.LoadFromFile(configPath)
 	if err != nil {
-		t.Fatalf("failed to detect schema version: %v", err)
+		t.Fatalf("failed to load v2 config: %v", err)
 	}
 
-	if !versionInfo.IsV2 {
-		t.Errorf("expected v2 config, got v1")
-	}
-
-	if versionInfo.Version != "2.0" {
-		t.Errorf("expected version '2.0', got '%s'", versionInfo.Version)
-	}
-}
-
-// TestValidateV1ConfigBackwardCompatibility tests that v1 configs are detected
-// and rejected with migration guidance in v2.
-// Requirements: 13.3
-func TestValidateV1ConfigBackwardCompatibility(t *testing.T) {
-	// Create a minimal v1 config without schema_version field
-	v1Config := `opencenter:
-  cluster:
-    cluster_name: test-v1-cluster
-    base_domain: test.com
-    admin_email: admin@test.com
-    kubernetes:
-      version: "1.28.5"
-      api_port: 6443
-      subnet_pods: "10.233.64.0/18"
-      subnet_services: "10.233.0.0/18"
-  infrastructure:
-    provider: openstack
-    os_version: "ubuntu-22.04"
-  deployment:
-    method: kubespray
-`
-
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "v1-config.yaml")
-
-	if err := os.WriteFile(configPath, []byte(v1Config), 0600); err != nil {
-		t.Fatalf("failed to write test config: %v", err)
-	}
-
-	// Detect schema version - missing schema_version should still be treated as v1
-	versionInfo, err := config.DetectSchemaVersionFromFile(configPath)
-	if err == nil {
-		t.Fatal("expected v1 config rejection, got nil error")
-	}
-	if !strings.Contains(err.Error(), "v1 configurations are not supported") {
-		t.Fatalf("expected v1 rejection message, got %v", err)
-	}
-	if versionInfo != nil {
-		t.Fatalf("expected no version info for rejected v1 config, got %#v", versionInfo)
+	if cfg.SchemaVersion != "2.0" {
+		t.Errorf("expected version '2.0', got '%s'", cfg.SchemaVersion)
 	}
 }
 
@@ -285,21 +183,10 @@ secrets:
 		t.Fatalf("failed to write test config: %v", err)
 	}
 
-	// Detect schema version
-	versionInfo, err := config.DetectSchemaVersionFromFile(configPath)
-	if err != nil {
-		t.Fatalf("failed to detect schema version: %v", err)
-	}
-
-	if !versionInfo.IsV2 {
-		t.Errorf("expected v2 config, got v1")
-	}
-
-	// Try to load and validate - should fail with field path errors
 	registry := defaults.NewRegistry()
 	loader := v2.NewConfigLoader(registry)
 
-	_, err = loader.LoadFromFile(configPath)
+	_, err := loader.LoadFromFile(configPath)
 	if err == nil {
 		t.Error("expected validation error but got none")
 	}

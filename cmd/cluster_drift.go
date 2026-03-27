@@ -103,7 +103,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 			}
 
 			// Load configuration
-			cfg, err := loadConfigV2Only(clusterName)
+			cfg, err := loadCanonicalConfig(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
@@ -194,7 +194,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 			confirm, _ := cmd.Flags().GetBool("confirm")
 
 			// Load configuration
-			cfg, err := loadConfigV2Only(clusterName)
+			cfg, err := loadCanonicalConfig(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
@@ -308,7 +308,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 			}
 
 			// Load configuration
-			cfg, err := loadConfigV2Only(clusterName)
+			cfg, err := loadCanonicalConfig(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}

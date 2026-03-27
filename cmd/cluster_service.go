@@ -85,7 +85,7 @@ Examples:
 			}
 
 			// Load configuration
-			cfg, err := loadConfigV2Only(clusterName)
+			cfg, err := loadCanonicalConfig(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration for '%s': %w", clusterName, err)
 			}
@@ -206,7 +206,7 @@ Examples:
 			}
 
 			// Load configuration
-			cfg, err := loadConfigV2Only(clusterName)
+			cfg, err := loadCanonicalConfig(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration for '%s': %w", clusterName, err)
 			}
@@ -397,7 +397,7 @@ Examples:
 			}
 
 			// Load configuration
-			cfg, err := loadConfigV2Only(clusterName)
+			cfg, err := loadCanonicalConfig(clusterName)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration for '%s': %w", clusterName, err)
 			}

@@ -131,3 +131,70 @@ func TestBuildEnvironment(t *testing.T) {
 		t.Fatal("expected PATH to be preserved")
 	}
 }
+
+func TestDeleteClusterRemovesExistingCluster(t *testing.T) {
+	runner := &fakeRunner{
+		handlers: map[string]func(args []string) ([]byte, error){
+			"kind get clusters": func(args []string) ([]byte, error) {
+				return []byte("dev\nworkload\n"), nil
+			},
+			"kind delete cluster --name workload": func(args []string) ([]byte, error) {
+				return []byte("Deleting cluster \"workload\" ...\n"), nil
+			},
+		},
+	}
+
+	provider := NewProviderWithRunner(runner)
+	if err := provider.DeleteCluster(context.Background(), "workload", nil); err != nil {
+		t.Fatalf("DeleteCluster returned error: %v", err)
+	}
+
+	if len(runner.calls) != 2 {
+		t.Fatalf("expected 2 command calls (get clusters + delete), got %d", len(runner.calls))
+	}
+	if runner.calls[1].name != "kind" || runner.calls[1].args[0] != "delete" {
+		t.Fatalf("expected delete cluster call, got: %s %v", runner.calls[1].name, runner.calls[1].args)
+	}
+}
+
+func TestDeleteClusterSkipsWhenAbsent(t *testing.T) {
+	runner := &fakeRunner{
+		handlers: map[string]func(args []string) ([]byte, error){
+			"kind get clusters": func(args []string) ([]byte, error) {
+				return []byte("other-cluster\n"), nil
+			},
+		},
+	}
+
+	provider := NewProviderWithRunner(runner)
+	if err := provider.DeleteCluster(context.Background(), "workload", nil); err != nil {
+		t.Fatalf("DeleteCluster returned error: %v", err)
+	}
+
+	// Only the existence check should have been called, no delete.
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected 1 command call (get clusters only), got %d", len(runner.calls))
+	}
+}
+
+func TestDeleteClusterPropagatesDeleteError(t *testing.T) {
+	runner := &fakeRunner{
+		handlers: map[string]func(args []string) ([]byte, error){
+			"kind get clusters": func(args []string) ([]byte, error) {
+				return []byte("workload\n"), nil
+			},
+			"kind delete cluster --name workload": func(args []string) ([]byte, error) {
+				return nil, fmt.Errorf("command failed: kind delete cluster: exit status 1")
+			},
+		},
+	}
+
+	provider := NewProviderWithRunner(runner)
+	err := provider.DeleteCluster(context.Background(), "workload", nil)
+	if err == nil {
+		t.Fatal("expected DeleteCluster to return an error")
+	}
+	if !strings.Contains(err.Error(), "exit status 1") {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+}

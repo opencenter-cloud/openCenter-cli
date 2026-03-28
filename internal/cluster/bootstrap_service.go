@@ -135,6 +135,12 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 	}
 
 	// Load configuration using ConfigurationManager
+	// Build the full identifier (org/cluster) for config loading when organization is known
+	configIdentifier := opts.ClusterName
+	if opts.Organization != "" {
+		configIdentifier = opts.Organization + "/" + opts.ClusterName
+	}
+
 	var cfg config.Config
 	if s.configurationMgr != nil {
 		var loadedCfg *config.Config
@@ -142,9 +148,9 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 
 		// Use LoadWithoutValidation if validation will be skipped anyway
 		if opts.SkipValidation {
-			loadedCfg, err = s.configurationMgr.LoadWithoutValidation(ctx, opts.ClusterName)
+			loadedCfg, err = s.configurationMgr.LoadWithoutValidation(ctx, configIdentifier)
 		} else {
-			loadedCfg, err = s.configurationMgr.Load(ctx, opts.ClusterName)
+			loadedCfg, err = s.configurationMgr.Load(ctx, configIdentifier)
 		}
 
 		if err != nil {
@@ -160,9 +166,9 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 
 		var loadedCfg *config.Config
 		if opts.SkipValidation {
-			loadedCfg, err = tempMgr.LoadWithoutValidation(ctx, opts.ClusterName)
+			loadedCfg, err = tempMgr.LoadWithoutValidation(ctx, configIdentifier)
 		} else {
-			loadedCfg, err = tempMgr.Load(ctx, opts.ClusterName)
+			loadedCfg, err = tempMgr.Load(ctx, configIdentifier)
 		}
 
 		if err != nil {

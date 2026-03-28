@@ -180,6 +180,16 @@ func parseInitOptions(cmd *cobra.Command, args []string) (cluster.InitOptions, e
 	// Parse flags
 	opts.Organization, _ = cmd.Flags().GetString("org")
 	opts.Provider, _ = cmd.Flags().GetString("type")
+
+	// Handle org/cluster identifier format: extract organization if embedded
+	// in the cluster name and no explicit --org was provided
+	if strings.Contains(opts.ClusterName, "/") {
+		parts := strings.SplitN(opts.ClusterName, "/", 2)
+		if opts.Organization == "" {
+			opts.Organization = parts[0]
+		}
+		opts.ClusterName = parts[1]
+	}
 	opts.Force, _ = cmd.Flags().GetBool("force")
 	opts.Strict, _ = cmd.Flags().GetBool("strict")
 	opts.NoKeyGen, _ = cmd.Flags().GetBool("no-keygen")

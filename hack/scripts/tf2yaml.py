@@ -1,10 +1,33 @@
 #!/usr/bin/env python3
+"""Lightweight Terraform-to-YAML converter.
+
+Extracts ``locals`` and ``module`` blocks from a .tf file and emits a
+simplified YAML representation.  This is intentionally *not* a full HCL
+parser — it only handles the subset of syntax we actually use in
+openCenter infrastructure definitions (scalar assignments, single-line
+lists, and one-level-deep object values).  Anything more complex should
+be handled by a proper HCL library.
+
+Usage:
+    tf2yaml.py <input.tf> <output.yaml>
+"""
+
 import re
 import sys
 from pathlib import Path
 
 
+# ---------------------------------------------------------------------------
+# Low-level text helpers
+# ---------------------------------------------------------------------------
+
 def strip_inline_comments(line: str) -> str:
+    """Remove ``#`` and ``//`` comments while respecting quoted strings.
+
+    Terraform allows both comment styles.  A naïve split would break on
+    comment characters that appear inside string literals, so we walk the
+    line character-by-character and track quoting state.
+    """
     s = line
     out = []
     i = 0
@@ -13,13 +36,16 @@ def strip_inline_comments(line: str) -> str:
     while i < len(s):
         ch = s[i]
         nxt = s[i + 1] if i + 1 < len(s) else ''
+
+        # Preserve escaped characters verbatim so that an escaped quote
+        # (e.g. \") does not toggle the quoting state.
         if ch == '\\':
-            # keep escape and next char
             if i + 1 < len(s):
                 out.append(ch)
                 out.append(nxt)
                 i += 2
                 continue
+
         if not in_single and ch == '"':
             in_double = not in_double
             out.append(ch)
@@ -30,16 +56,24 @@ def strip_inline_comments(line: str) -> str:
             out.append(ch)
             i += 1
             continue
+
+        # Only treat # and // as comment markers when outside any string.
         if not in_single and not in_double:
-            # line comment start with // or #
             if ch == '#' or (ch == '/' and nxt == '/'):
                 break
+
         out.append(ch)
         i += 1
     return ''.join(out).rstrip()
 
 
 def count_braces_outside_strings(s: str) -> tuple[int, int]:
+    """Return (open_count, close_count) of ``{`` / ``}`` ignoring strings.
+
+    Used to track brace depth when collecting multi-line blocks so we
+    stop at the correct closing brace rather than one embedded in a
+    string literal.
+    """
     open_b = close_b = 0
     in_single = in_double = False
     esc = False
@@ -71,27 +105,57 @@ def count_braces_outside_strings(s: str) -> tuple[int, int]:
     return open_b, close_b
 
 
+# ---------------------------------------------------------------------------
+# Value conversion
+# ---------------------------------------------------------------------------
+
 def to_yaml_scalar(val: str) -> str:
+    """Convert a Terraform scalar value to a YAML-safe representation.
+
+    Handles the value types we encounter in openCenter .tf files:
+    inline lists, booleans, integers, and strings.  Unrecognised values
+    are single-quoted to avoid YAML interpretation surprises (e.g. a
+    bare ``yes`` being parsed as boolean).
+    """
     v = val.strip().rstrip(',')
-    # Lists in one line
+
+    # Inline lists like ["a", "b"] — pass through as-is.
     if v.startswith('[') and v.endswith(']'):
         return v
-    # Booleans
+
+    # Terraform booleans map directly to YAML booleans.
     if v in ('true', 'false'):
         return v
-    # Integers
+
+    # Bare integers need no quoting.
     if re.fullmatch(r"[0-9]+", v):
         return v
-    # Already quoted strings
+
+    # Already-quoted strings are kept as-is to preserve the author's
+    # intent (double vs. single quotes, interpolation markers, etc.).
     if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
         return v
-    # Default: quote as string, use single quotes; escape single quotes
+
+    # Everything else is single-quoted.  Internal single quotes are
+    # escaped by doubling them per YAML spec.
     return "'" + v.replace("'", "''") + "'"
 
 
+# ---------------------------------------------------------------------------
+# Block / assignment parsing
+# ---------------------------------------------------------------------------
+
 def parse_assignments(lines: list[str], i: int) -> tuple[dict, int]:
-    """Parse simple key = value assignments until end index.
-    Returns (mapping, next_index).
+    """Walk ``key = value`` lines and return a dict of parsed values.
+
+    Handles three value shapes:
+      1. Scalar  — ``key = "value"``
+      2. Single-line object — ``key = { a = 1, b = 2 }``
+      3. Multi-line object  — opening ``{`` on the assignment line,
+         closing ``}`` on a later line.
+
+    Stops when it hits a bare ``}`` (end of enclosing block) or runs
+    out of lines.  Returns (mapping, next_line_index).
     """
     mapping: dict[str, object] = {}
     n = len(lines)
@@ -101,18 +165,22 @@ def parse_assignments(lines: list[str], i: int) -> tuple[dict, int]:
         if not line:
             i += 1
             continue
-        # End of block?
+
+        # A bare closing brace ends the current block.
         if line == '}':
             i += 1
             break
+
         m = re.match(r"^([A-Za-z0-9_]+)\s*=\s*(.+)$", line)
         if not m:
             i += 1
             continue
         key, val = m.group(1), m.group(2).strip()
-        # Object value
-        if val.startswith('{') and not val.endswith('}'):  # multiline object
-            # accumulate until balanced
+
+        # --- Multi-line object: opening brace without a matching close ---
+        if val.startswith('{') and not val.endswith('}'):
+            # Accumulate lines until braces balance.  Depth tracking
+            # prevents stopping early on nested objects.
             acc = [val]
             depth = 0
             ob, cb = count_braces_outside_strings(val)
@@ -128,45 +196,67 @@ def parse_assignments(lines: list[str], i: int) -> tuple[dict, int]:
             obj = parse_object(val_full)
             mapping[key] = obj
             continue
-        elif val.startswith('{') and val.endswith('}'):  # single-line object
+
+        # --- Single-line object: ``{ ... }`` on one line ---
+        elif val.startswith('{') and val.endswith('}'):
             mapping[key] = parse_object(val)
+
+        # --- Scalar value ---
         else:
             mapping[key] = to_yaml_scalar(val)
+
         i += 1
     return mapping, i
 
 
 def parse_object(s: str) -> dict:
-    # remove outer braces
+    """Parse a brace-delimited Terraform object into a flat dict.
+
+    Strips the outer ``{ }`` and delegates to ``parse_assignments`` for
+    the inner key/value pairs.
+    """
     inner = s.strip()
     if inner.startswith('{'):
         inner = inner[1:]
-    if inner.endswith('}'): 
+    if inner.endswith('}'):
         inner = inner[:-1]
     lines = [ln for ln in inner.splitlines()]
-    # Convert object assignments
-    i = 0
-    mapping, _ = parse_assignments(lines, i)
+    mapping, _ = parse_assignments(lines, 0)
     return mapping
 
 
+# ---------------------------------------------------------------------------
+# Top-level block extractors
+# ---------------------------------------------------------------------------
+
 def parse_locals(src: str) -> dict:
+    """Extract the first ``locals { … }`` block from Terraform source.
+
+    Only top-level scalar assignments are captured — nested blocks and
+    expressions are outside the scope of this converter.  Returns an
+    empty dict when no locals block is found.
+    """
     m = re.search(r"(?m)^\s*locals\s*\{", src)
     if not m:
         return {}
     i = m.end()
     rest = src[i:]
     lines = rest.splitlines()
-    # parse until matching closing brace of the locals block
+
+    # Walk lines while tracking brace depth so we stop at the closing
+    # brace of the locals block, not at a nested one.
     mapping = {}
     depth = 1
     i_line = 0
     while i_line < len(lines):
         raw = lines[i_line]
         ob, cb = count_braces_outside_strings(raw)
-        # If this line would close the block entirely, stop before processing
+
+        # Check *before* processing: if this line's closing braces
+        # would drop depth to zero, the locals block is done.
         if depth - cb <= 0:
             break
+
         line = strip_inline_comments(raw).rstrip()
         m2 = re.match(r"^\s*([A-Za-z0-9_]+)\s*=\s*(.+?)\s*$", line)
         if m2:
@@ -179,6 +269,12 @@ def parse_locals(src: str) -> dict:
 
 
 def parse_modules(src: str) -> dict:
+    """Extract all ``module "<name>" { … }`` blocks from Terraform source.
+
+    Each module's body is parsed with ``parse_assignments`` so nested
+    object values (e.g. provider configs) are handled correctly.
+    Returns a dict keyed by module name.
+    """
     modules: dict[str, dict] = {}
     lines = src.splitlines()
     n = len(lines)
@@ -191,7 +287,10 @@ def parse_modules(src: str) -> dict:
             i += 1
             continue
         name = m.group(1)
-        # collect block lines until matching closing brace
+
+        # Collect every line inside the module block by tracking brace
+        # depth.  We start at depth 1 (the opening brace on the module
+        # line) and stop when we return to zero.
         block_lines = []
         depth = 1
         i += 1
@@ -201,16 +300,25 @@ def parse_modules(src: str) -> dict:
             ob, cb = count_braces_outside_strings(lr)
             depth += ob - cb
             i += 1
-        # remove trailing closing brace line from block_lines if present
-        # (parse_assignments will stop at '}' anyway)
+
+        # parse_assignments will stop at the trailing ``}`` naturally.
         mod_map, _ = parse_assignments(block_lines, 0)
         modules[name] = mod_map
     return modules
 
 
+# ---------------------------------------------------------------------------
+# YAML output
+# ---------------------------------------------------------------------------
+
 def write_yaml(locals_map: dict, modules_map: dict, out: Path):
+    """Write a two-section YAML file: ``locals`` then ``modules``.
+
+    Supports one level of nesting (dict values) which covers the object
+    attributes we use in openCenter Terraform definitions.  Deeper
+    nesting would need a recursive writer or a proper YAML library.
+    """
     with out.open('w') as f:
-        # locals
         f.write('locals:\n')
         for k, v in locals_map.items():
             if isinstance(v, dict):
@@ -219,7 +327,7 @@ def write_yaml(locals_map: dict, modules_map: dict, out: Path):
                     f.write(f'    {sk}: {sv}\n')
             else:
                 f.write(f'  {k}: {v}\n')
-        # modules
+
         f.write('modules:\n')
         for mname, attrs in modules_map.items():
             f.write(f'  {mname}:\n')
@@ -232,7 +340,12 @@ def write_yaml(locals_map: dict, modules_map: dict, out: Path):
                     f.write(f'    {k}: {v}\n')
 
 
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
 def main(argv):
+    """Read a .tf file, extract locals + modules, and write YAML."""
     if len(argv) < 2:
         print('Usage: tf2yaml.py <input.tf> <output.yaml>', file=sys.stderr)
         return 2
@@ -247,4 +360,3 @@ def main(argv):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
-

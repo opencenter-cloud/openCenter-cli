@@ -76,6 +76,13 @@ func runClusterBootstrap(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Extract just the cluster name (without organization prefix) for path resolution
+	actualClusterName := extractClusterName(name)
+	organization := ""
+	if err == nil {
+		organization = cfg.OpenCenter.Meta.Organization
+	}
+
 	// Acquire lock for bootstrap operation
 	lockMgr, err := resilience.NewLockManager(resilience.DefaultLockConfig)
 	if err != nil {
@@ -104,10 +111,11 @@ func runClusterBootstrap(cmd *cobra.Command, args []string) error {
 	}
 
 	// Parse command-line options
-	opts, err := parseBootstrapOptions(cmd, args, name)
+	opts, err := parseBootstrapOptions(cmd, args, actualClusterName)
 	if err != nil {
 		return err
 	}
+	opts.Organization = organization
 
 	if !opts.DryRun {
 		if err := config.UpdateStatus(name, config.StageBootstrap, config.StatusRunning); err != nil {

@@ -83,6 +83,9 @@ func runClusterSetup(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Extract just the cluster name (without organization prefix) for path resolution
+	actualClusterName := extractClusterName(name)
+
 	// Resolve SetupService from global DI container
 	container := getContainer()
 	var setupService *cluster.SetupService
@@ -96,7 +99,7 @@ func runClusterSetup(cmd *cobra.Command, args []string) error {
 	skipValidation, _ := cmd.Flags().GetBool("skip-validation")
 
 	opts := cluster.SetupOptions{
-		ClusterName:    name,
+		ClusterName:    actualClusterName,
 		Organization:   organization,
 		DryRun:         dryRun,
 		SkipValidation: skipValidation,

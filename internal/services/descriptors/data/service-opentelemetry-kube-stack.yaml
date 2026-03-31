@@ -1,0 +1,10 @@
+name: service-opentelemetry-kube-stack
+layer: services
+service: opentelemetry-kube-stack
+aggregate_targets:
+  - observability-shared
+  - services-fluxcd-aggregate
+roots:
+  - path: services/opentelemetry-kube-stack
+files:
+  - template: services/fluxcd/opentelemetry-kube-stack.yaml.tpl

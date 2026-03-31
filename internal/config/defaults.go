@@ -330,6 +330,11 @@ func defaultConfig(name string) Config {
 				"fluxcd":               &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 				"gateway":              &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 				"gateway-api":          &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
+				"harbor": &services.HarborConfig{
+					BaseConfig: services.BaseConfig{
+						Enabled: false,
+					},
+				},
 				"headlamp": &services.HeadlampConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled:  true, // Enabled by default for OpenStack provider
@@ -347,6 +352,7 @@ func defaultConfig(name string) Config {
 					ClientID:    "kubernetes",
 					FrontendURL: fmt.Sprintf("https://auth.%s.%s.k8s.opencenter.cloud", name, region),
 				},
+				"kafka-cluster": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 				"kube-prometheus-stack": &services.PrometheusStackConfig{
 					BaseConfig: services.BaseConfig{
 						Enabled: true, // Enabled by default for OpenStack provider
@@ -370,11 +376,28 @@ func defaultConfig(name string) Config {
 					SwiftRegion:     strings.ToUpper(region),
 					SwiftDomainName: "Default",
 				},
-				"olm":               &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
-				"openstack-ccm":     &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
-				"openstack-csi":     &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
+				"longhorn": &services.LonghornConfig{
+					BaseConfig: services.BaseConfig{
+						Enabled: false,
+					},
+				},
+				"metallb": &services.MetalLBConfig{
+					BaseConfig: services.BaseConfig{
+						Enabled: false,
+					},
+				},
+				"mimir":         &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
+				"olm":           &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
+				"openstack-ccm": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
+				"openstack-csi": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
+				"opentelemetry-kube-stack": &services.OpenTelemetryConfig{
+					BaseConfig: services.BaseConfig{
+						Enabled: false,
+					},
+				},
 				"postgres-operator": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 				"rbac-manager":      &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
+				"sealed-secrets":    &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 				"sources":           &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 				"tempo": &services.TempoConfig{
 					BaseConfig: services.BaseConfig{

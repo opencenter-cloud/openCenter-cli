@@ -1,0 +1,11 @@
+name: service-vsphere-csi
+layer: services
+service: vsphere-csi
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/vsphere-csi
+files:
+  - template: services/sources/opencenter-vsphere-csi.yaml.tpl
+  - template: services/fluxcd/vsphere-csi.yaml.tpl

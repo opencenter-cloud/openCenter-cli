@@ -1,0 +1,10 @@
+name: service-loki
+layer: services
+service: loki
+aggregate_targets:
+  - observability-shared
+  - services-fluxcd-aggregate
+roots:
+  - path: services/loki
+files:
+  - template: services/fluxcd/loki.yaml.tpl

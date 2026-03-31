@@ -13,6 +13,8 @@
 
 package v2
 
+import overlaycfg "github.com/opencenter-cloud/opencenter-cli/internal/config/overlay"
+
 // Config represents the root v2 configuration structure.
 // Requirements: 1.1, 1.3, 1.4, 1.5, 1.6, 1.7
 type Config struct {
@@ -92,11 +94,12 @@ type S3BackendConfig struct {
 // SecretsConfig represents secrets configuration.
 // Requirements: 18.1, 18.2, 18.3
 type SecretsConfig struct {
-	SopsAgeKeyFile string         `yaml:"sops_age_key_file,omitempty" json:"sops_age_key_file,omitempty"`
-	SSHKey         SSHKeyConfig   `yaml:"ssh_key,omitempty" json:"ssh_key,omitempty"`
-	Global         GlobalSecrets  `yaml:"global,omitempty" json:"global,omitempty"`
-	ServiceSecrets map[string]any `yaml:"service_secrets,omitempty" json:"service_secrets,omitempty"`
-	SOPSConfig     SOPSConfig     `yaml:"sops,omitempty" json:"sops,omitempty"`
+	SopsAgeKeyFile string             `yaml:"sops_age_key_file,omitempty" json:"sops_age_key_file,omitempty"`
+	SSHKey         SSHKeyConfig       `yaml:"ssh_key,omitempty" json:"ssh_key,omitempty"`
+	Global         GlobalSecrets      `yaml:"global,omitempty" json:"global,omitempty"`
+	ServiceSecrets map[string]any     `yaml:"service_secrets,omitempty" json:"service_secrets,omitempty"`
+	SOPSConfig     SOPSConfig         `yaml:"sops,omitempty" json:"sops,omitempty"`
+	OverlayUnits   overlaycfg.Secrets `yaml:"overlay_units,omitempty" json:"overlay_units,omitempty"`
 }
 
 // GlobalSecrets holds infrastructure-wide credentials.
@@ -153,23 +156,24 @@ type BarbicanConfig struct {
 // GitOpsConfig represents GitOps repository configuration.
 // Requirements: 19.1
 type GitOpsConfig struct {
-	GitDir            string           `yaml:"git_dir,omitempty" json:"git_dir,omitempty"`
-	GitURL            string           `yaml:"git_url" json:"git_url" validate:"required"`
-	GitSSHKey         string           `yaml:"git_ssh_key,omitempty" json:"git_ssh_key,omitempty"`
-	GitSSHPub         string           `yaml:"git_ssh_pub,omitempty" json:"git_ssh_pub,omitempty"`
-	GitBranch         string           `yaml:"git_branch,omitempty" json:"git_branch,omitempty"`
-	Release           string           `yaml:"release,omitempty" json:"release,omitempty"`
-	Branch            string           `yaml:"branch,omitempty" json:"branch,omitempty"`
-	URI               string           `yaml:"uri,omitempty" json:"uri,omitempty"`
-	GitPath           string           `yaml:"git_path,omitempty" json:"git_path,omitempty"`
-	BaseRepoURL       string           `yaml:"base_repo_url,omitempty" json:"base_repo_url,omitempty"`
-	BaseRepoRelease   string           `yaml:"base_repo_release,omitempty" json:"base_repo_release,omitempty"`
-	GitOpsBaseRepo    string           `yaml:"gitops_base_repo,omitempty" json:"gitops_base_repo,omitempty"`
-	GitOpsBaseRelease string           `yaml:"gitops_base_release,omitempty" json:"gitops_base_release,omitempty"`
-	GitOpsBranch      string           `yaml:"gitops_branch,omitempty" json:"gitops_branch,omitempty"`
-	Flux              GitOpsFluxConfig `yaml:"flux,omitempty" json:"flux,omitempty"`
-	FluxInterval      string           `yaml:"flux_interval,omitempty" json:"flux_interval,omitempty"`
-	FluxPrune         bool             `yaml:"flux_prune" json:"flux_prune"`
+	GitDir            string                 `yaml:"git_dir,omitempty" json:"git_dir,omitempty"`
+	GitURL            string                 `yaml:"git_url" json:"git_url" validate:"required"`
+	GitSSHKey         string                 `yaml:"git_ssh_key,omitempty" json:"git_ssh_key,omitempty"`
+	GitSSHPub         string                 `yaml:"git_ssh_pub,omitempty" json:"git_ssh_pub,omitempty"`
+	GitBranch         string                 `yaml:"git_branch,omitempty" json:"git_branch,omitempty"`
+	Release           string                 `yaml:"release,omitempty" json:"release,omitempty"`
+	Branch            string                 `yaml:"branch,omitempty" json:"branch,omitempty"`
+	URI               string                 `yaml:"uri,omitempty" json:"uri,omitempty"`
+	GitPath           string                 `yaml:"git_path,omitempty" json:"git_path,omitempty"`
+	BaseRepoURL       string                 `yaml:"base_repo_url,omitempty" json:"base_repo_url,omitempty"`
+	BaseRepoRelease   string                 `yaml:"base_repo_release,omitempty" json:"base_repo_release,omitempty"`
+	GitOpsBaseRepo    string                 `yaml:"gitops_base_repo,omitempty" json:"gitops_base_repo,omitempty"`
+	GitOpsBaseRelease string                 `yaml:"gitops_base_release,omitempty" json:"gitops_base_release,omitempty"`
+	GitOpsBranch      string                 `yaml:"gitops_branch,omitempty" json:"gitops_branch,omitempty"`
+	Flux              GitOpsFluxConfig       `yaml:"flux,omitempty" json:"flux,omitempty"`
+	FluxInterval      string                 `yaml:"flux_interval,omitempty" json:"flux_interval,omitempty"`
+	FluxPrune         bool                   `yaml:"flux_prune" json:"flux_prune"`
+	OverlayUnits      overlaycfg.UnitsConfig `yaml:"overlay_units,omitempty" json:"overlay_units,omitempty"`
 }
 
 type GitOpsFluxConfig struct {

@@ -80,6 +80,8 @@ For understanding concepts and design:
 - [Architecture](explanation/architecture.md) - System design and decisions
 - [GitOps Workflow](explanation/gitops-workflow.md) - Repository structure
 - [Security Model](explanation/security-model.md) - Security architecture
+- [Plugin Internal Services](explanation/plugin-internal-services.md) - Service plugins, cert-manager behavior, and how to add a new service
+- [Plugin External CLI](explanation/plugin-external-cli.md) - Command plugin discovery and execution model
 - [Configuration Lifecycle](explanation/configuration-lifecycle.md) - Config management
 - [Provider Comparison](explanation/provider-comparison.md) - Choosing providers
 - [Drift Detection](explanation/drift-detection.md) - Drift and reconciliation

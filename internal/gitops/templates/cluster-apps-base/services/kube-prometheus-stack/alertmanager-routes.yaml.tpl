@@ -15,7 +15,7 @@ spec:
     clientID: "opencenter"  
     clientSecret:
       name: "gateway-oidc-secret" 
-    redirectURL: "{{ (index .OpenCenter.Services "kube-prometheus-stack").Hostname | default (printf "alertmanager.%s" .OpenCenter.Cluster.ClusterFQDN) }}/oauth2/callback"
+    redirectURL: "https://{{ (index .OpenCenter.Services "kube-prometheus-stack").Hostname | default (printf "alertmanager.%s" .OpenCenter.Cluster.ClusterFQDN) }}/oauth2/callback"
     scopes:
       - openid
       - profile

@@ -1,0 +1,17 @@
+name: service-harbor
+layer: services
+service: harbor
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+files:
+  - template: services/harbor/httproute.yaml.tpl
+  - template: services/harbor/kustomization.yaml.tpl
+  - template: services/harbor/helm-values/override-values.yaml.tpl
+  - template: services/harbor/certificate.yaml.tpl
+    when:
+      field: opencenter.services.harbor.emit_certificate
+      operator: true
+  - template: services/sources/opencenter-harbor.yaml.tpl
+  - template: services/fluxcd/harbor-namespace.yaml.tpl
+  - template: services/fluxcd/harbor.yaml.tpl

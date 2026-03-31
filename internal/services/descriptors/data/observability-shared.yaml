@@ -1,0 +1,5 @@
+name: observability-shared
+layer: services
+files:
+  - template: services/sources/opencenter-observability.yaml.tpl
+  - template: services/fluxcd/observability-namespace.yaml.tpl

@@ -1,0 +1,4 @@
+name: services-sources-aggregate
+layer: services
+files:
+  - template: services/sources/kustomization.yaml.tpl

@@ -1,0 +1,9 @@
+name: service-gateway
+layer: services
+service: gateway
+aggregate_targets:
+  - services-fluxcd-aggregate
+roots:
+  - path: services/gateway
+files:
+  - template: services/fluxcd/gateway.yaml.tpl

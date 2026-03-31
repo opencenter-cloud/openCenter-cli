@@ -1,0 +1,9 @@
+name: service-weave-gitops
+layer: services
+service: weave-gitops
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+files:
+  - template: services/sources/opencenter-weave-gitops.yaml.tpl
+  - template: services/fluxcd/weave-gitops.yaml.tpl

@@ -1,0 +1,11 @@
+name: service-openstack-ccm
+layer: services
+service: openstack-ccm
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/openstack-ccm
+files:
+  - template: services/sources/opencenter-openstack-ccm.yaml.tpl
+  - template: services/fluxcd/openstack-ccm.yaml.tpl

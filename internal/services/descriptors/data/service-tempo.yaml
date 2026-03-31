@@ -1,0 +1,10 @@
+name: service-tempo
+layer: services
+service: tempo
+aggregate_targets:
+  - observability-shared
+  - services-fluxcd-aggregate
+roots:
+  - path: services/tempo
+files:
+  - template: services/fluxcd/tempo.yaml.tpl

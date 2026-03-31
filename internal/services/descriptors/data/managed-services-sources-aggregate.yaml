@@ -1,0 +1,4 @@
+name: managed-services-sources-aggregate
+layer: managed-services
+files:
+  - template: managed-services/sources/kustomization.yaml.tpl

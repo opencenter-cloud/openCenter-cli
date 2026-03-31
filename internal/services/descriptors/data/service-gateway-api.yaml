@@ -1,0 +1,11 @@
+name: service-gateway-api
+layer: services
+service: gateway-api
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/gateway-api
+files:
+  - template: services/sources/opencenter-gateway-api.yaml.tpl
+  - template: services/fluxcd/gateway-api.yaml.tpl

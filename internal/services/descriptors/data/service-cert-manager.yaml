@@ -1,0 +1,11 @@
+name: service-cert-manager
+layer: services
+service: cert-manager
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/cert-manager
+files:
+  - template: services/sources/opencenter-cert-manager.yaml.tpl
+  - template: services/fluxcd/cert-manager.yaml.tpl

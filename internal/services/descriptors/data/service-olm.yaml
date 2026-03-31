@@ -1,0 +1,12 @@
+name: service-olm
+layer: services
+service: olm
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/olm
+files:
+  - template: services/sources/opencenter-olm.yaml.tpl
+  - template: services/sources/opencenter-olm-config.yaml.tpl
+  - template: services/fluxcd/olm.yaml.tpl

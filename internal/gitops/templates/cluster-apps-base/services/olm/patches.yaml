@@ -6,21 +6,21 @@ metadata:
   namespace: olm
 spec:
   podSelector:
-  matchLabels:
-  app: olm-operator
+    matchLabels:
+      app: olm-operator
   ingress:
-  - ports:
-    - port: metrics
-  protocol: TCP
+    - ports:
+        - port: metrics
+          protocol: TCP
   egress:
-  - ports:
-    - port: 443
-  protocol: TCP
-  - ports:
-    - port: 53
-  protocol: TCP
-    - port: 53
-  protocol: UDP
+    - ports:
+        - port: 443
+          protocol: TCP
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
   policyTypes: [Ingress, Egress]
 ---
 apiVersion: networking.k8s.io/v1
@@ -30,24 +30,24 @@ metadata:
   namespace: olm
 spec:
   podSelector:
-  matchLabels:
-  app: catalog-operator
+    matchLabels:
+      app: catalog-operator
   ingress:
-  - ports:
-    - port: metrics
-  protocol: TCP
+    - ports:
+        - port: metrics
+          protocol: TCP
   egress:
-  - ports:
-    - port: 443
-  protocol: TCP
-  - ports:
-    - port: 53
-  protocol: TCP
-    - port: 53
-  protocol: UDP
-  - ports:
-    - protocol: TCP
-  port: 50051
+    - ports:
+        - port: 443
+          protocol: TCP
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+    - ports:
+        - protocol: TCP
+          port: 50051
   policyTypes: [Ingress, Egress]
 ---
 apiVersion: networking.k8s.io/v1
@@ -57,22 +57,22 @@ metadata:
   namespace: olm
 spec:
   podSelector:
-  matchLabels:
-  app: packageserver
+    matchLabels:
+      app: packageserver
   ingress:
-  - ports:
-    - protocol: TCP
-  port: 5443
+    - ports:
+        - protocol: TCP
+          port: 5443
   egress:
-  - ports:
-    - port: 443
-  protocol: TCP
-  - ports:
-    - port: 53
-  protocol: TCP
-    - port: 53
-  protocol: UDP
-  - ports:
-    - protocol: TCP
-  port: 50051
+    - ports:
+        - port: 443
+          protocol: TCP
+    - ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+    - ports:
+        - protocol: TCP
+          port: 50051
   policyTypes: [Ingress, Egress]

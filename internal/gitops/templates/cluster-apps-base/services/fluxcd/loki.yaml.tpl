@@ -14,7 +14,7 @@ spec:
       namespace: flux-system
     - name: kube-prometheus-stack-override
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
@@ -44,7 +44,7 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:

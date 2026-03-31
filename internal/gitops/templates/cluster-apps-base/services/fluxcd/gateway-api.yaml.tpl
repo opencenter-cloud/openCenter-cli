@@ -29,6 +29,23 @@ spec:
       app.kubernetes.io/part-of: envoy-gateway
       app.kubernetes.io/managed-by: flux
       opencenter/managed-by: opencenter
+  patches:
+    - target:
+        kind: Namespace
+        name: envoy-gateway-system
+      patch: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: envoy-gateway-system
+          labels:
+            istio-injection: enabled
+            pod-security.kubernetes.io/enforce: privileged
+            pod-security.kubernetes.io/enforce-version: latest
+            pod-security.kubernetes.io/warn: baseline
+            pod-security.kubernetes.io/warn-version: latest
+            pod-security.kubernetes.io/audit: baseline
+            pod-security.kubernetes.io/audit-version: latest
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

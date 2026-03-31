@@ -1,0 +1,11 @@
+name: service-headlamp
+layer: services
+service: headlamp
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/headlamp
+files:
+  - template: services/sources/opencenter-headlamp.yaml.tpl
+  - template: services/fluxcd/headlamp.yaml.tpl

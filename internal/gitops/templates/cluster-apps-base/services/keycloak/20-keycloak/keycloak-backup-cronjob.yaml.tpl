@@ -1,4 +1,4 @@
-{{- if .OpenCenter.Services.keycloak.BackupEnabled | default true }}
+{{- if .OpenCenter.Services.keycloak.BackupEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount

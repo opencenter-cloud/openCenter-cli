@@ -1,5 +1,7 @@
 package config
 
+import overlaycfg "github.com/opencenter-cloud/opencenter-cli/internal/config/overlay"
+
 // Secrets holds paths or settings for secret management tools.
 type Secrets struct {
 	SopsAgeKeyFile string `yaml:"sops_age_key_file" json:"sops_age_key_file"`
@@ -9,15 +11,16 @@ type Secrets struct {
 	Global GlobalSecrets `yaml:"global" json:"global"`
 
 	// Service-specific secrets
-	CertManager CertManagerSecrets `yaml:"cert_manager" json:"cert_manager"`
-	Loki        LokiSecrets        `yaml:"loki" json:"loki"`
-	Keycloak    KeycloakSecrets    `yaml:"keycloak" json:"keycloak"`
-	Headlamp    HeadlampSecrets    `yaml:"headlamp" json:"headlamp"`
-	WeaveGitOps WeaveGitOpsSecrets `yaml:"weave_gitops" json:"weave_gitops"`
-	Grafana     GrafanaSecrets     `yaml:"grafana" json:"grafana"`
-	Tempo       TempoSecrets       `yaml:"tempo" json:"tempo"`
-	AlertProxy  AlertProxySecrets  `yaml:"alert_proxy" json:"alert_proxy"`
-	VSphereCsi  VSphereCsiSecrets  `yaml:"vsphere_csi" json:"vsphere_csi"`
+	CertManager  CertManagerSecrets `yaml:"cert_manager" json:"cert_manager"`
+	Loki         LokiSecrets        `yaml:"loki" json:"loki"`
+	Keycloak     KeycloakSecrets    `yaml:"keycloak" json:"keycloak"`
+	Headlamp     HeadlampSecrets    `yaml:"headlamp" json:"headlamp"`
+	WeaveGitOps  WeaveGitOpsSecrets `yaml:"weave_gitops" json:"weave_gitops"`
+	Grafana      GrafanaSecrets     `yaml:"grafana" json:"grafana"`
+	Tempo        TempoSecrets       `yaml:"tempo" json:"tempo"`
+	AlertProxy   AlertProxySecrets  `yaml:"alert_proxy" json:"alert_proxy"`
+	VSphereCsi   VSphereCsiSecrets  `yaml:"vsphere_csi" json:"vsphere_csi"`
+	OverlayUnits overlaycfg.Secrets `yaml:"overlay_units,omitempty" json:"overlay_units,omitempty"`
 }
 
 // SSHKey holds SSH key configuration for cluster access

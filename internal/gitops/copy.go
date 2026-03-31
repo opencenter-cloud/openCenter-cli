@@ -25,7 +25,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
-	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	utilfs "github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
 )
@@ -307,9 +306,9 @@ func RenderClusterApps(cfg config.Config) error {
 		return err
 	}
 
-	// Clean up disabled services before rendering
-	if err := cleanupDisabledServices(target, cfg); err != nil {
-		return fmt.Errorf("failed to cleanup disabled services: %w", err)
+	// Remove all renderer-owned paths before copying the freshly rendered overlay.
+	if err := cleanupRendererOwnedOverlay(target); err != nil {
+		return fmt.Errorf("failed to cleanup renderer-owned paths: %w", err)
 	}
 
 	// Create a temporary workspace for atomic operations
@@ -446,12 +445,6 @@ func RenderSingleService(cfg config.Config, serviceName string, isManaged bool) 
 		return err
 	}
 
-	// Determine the service directory prefix
-	servicePrefix := "services"
-	if isManaged {
-		servicePrefix = "managed-services"
-	}
-
 	// Create a temporary workspace for atomic operations
 	tempDir := os.TempDir()
 	manager := NewWorkspaceManager(tempDir)
@@ -461,80 +454,23 @@ func RenderSingleService(cfg config.Config, serviceName string, isManaged bool) 
 	}
 	defer manager.CleanupWorkspace(context.Background(), workspace)
 
-	// Walk embedded cluster-apps-base files and only process the specified service
-	err = fs.WalkDir(Files, "templates/cluster-apps-base", func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if d.IsDir() {
-			return nil
-		}
-
-		rel, err := filepath.Rel("templates/cluster-apps-base", path)
-		if err != nil {
-			return err
-		}
-
-		pathParts := strings.Split(rel, string(filepath.Separator))
-
-		// Only process files for the specified service
-		shouldProcess := false
-
-		// Check if this file belongs to the service directory
-		if len(pathParts) >= 2 && pathParts[0] == servicePrefix && pathParts[1] == serviceName {
-			shouldProcess = true
-		}
-
-		// Check if this is a source file for the service
-		if len(pathParts) >= 3 && pathParts[0] == servicePrefix && pathParts[1] == "sources" {
-			filename := pathParts[len(pathParts)-1]
-			expectedFilename := fmt.Sprintf("opencenter-%s.yaml", serviceName)
-			expectedFilenameTPL := fmt.Sprintf("opencenter-%s.yaml.tpl", serviceName)
-			if filename == expectedFilename || filename == expectedFilenameTPL {
-				shouldProcess = true
-			}
-		}
-
-		// Check if this is a fluxcd file for the service
-		if len(pathParts) >= 3 && pathParts[0] == servicePrefix && pathParts[1] == "fluxcd" {
-			filename := pathParts[len(pathParts)-1]
-			expectedFilename := fmt.Sprintf("%s.yaml", serviceName)
-			expectedFilenameTPL := fmt.Sprintf("%s.yaml.tpl", serviceName)
-			if filename == expectedFilename || filename == expectedFilenameTPL {
-				shouldProcess = true
-			}
-		}
-
-		if !shouldProcess {
-			return nil
-		}
-
-		// Replace cluster-name and cluster_name placeholders in filename
-		relWithClusterName := strings.ReplaceAll(rel, "cluster-name", clusterName)
-		relWithClusterName = strings.ReplaceAll(relWithClusterName, "cluster_name", clusterName)
-
-		dst := filepath.Join(workspace.RootDir, relWithClusterName)
-
-		// If template file, process and strip template extension
-		if strings.HasSuffix(d.Name(), ".tmpl") || strings.HasSuffix(d.Name(), ".tpl") {
-			if strings.HasSuffix(d.Name(), ".tmpl") {
-				dst = strings.TrimSuffix(dst, ".tmpl")
-			} else {
-				dst = strings.TrimSuffix(dst, ".tpl")
-			}
-			return renderTemplateAtomic(path, dst, cfg, workspace)
-		}
-
-		// Copy file as-is
-		return copyFileAtomic(path, dst, workspace)
-	})
-
+	actions, err := planSingleServiceActions(cfg, serviceName, isManaged)
 	if err != nil {
 		return err
 	}
 
-	// Copy files from workspace to target
-	return copyWorkspaceToTarget(workspace.RootDir, target)
+	targetRoot, err := resolveClusterAppsTarget(workspace, cfg)
+	if err != nil {
+		return err
+	}
+	if err := writeClusterAppActions(actions, targetRoot, cfg, workspace); err != nil {
+		return err
+	}
+
+	if err := cleanupSingleServiceOutputs(target, serviceName, isManaged, actions); err != nil {
+		return err
+	}
+	return copyWorkspaceToTarget(targetRoot, target)
 }
 
 // IsServiceDisabled checks if a service configuration has Enabled set to false.
@@ -619,61 +555,17 @@ func CopyBaseAtomic(cfg config.Config, render bool, workspace *GitOpsWorkspace) 
 // This is the workspace-aware version of RenderClusterApps that ensures all file operations
 // are atomic and can be rolled back if needed.
 func RenderClusterAppsAtomic(cfg config.Config, workspace *GitOpsWorkspace) error {
-	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return fmt.Errorf("cluster name is empty")
+	target, err := resolveClusterAppsTarget(workspace, cfg)
+	if err != nil {
+		return err
 	}
 
-	// Try to use PathResolver to get the applications directory relative to workspace
-	var target string
-	resolver := paths.NewPathResolver(workspace.RootDir)
-	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
-	if err == nil {
-		// Successfully resolved paths
-		target = clusterPaths.ApplicationsDir
-	} else {
-		// Fallback to workspace root for test environments or when cluster doesn't exist yet
-		target = filepath.Join(workspace.RootDir, "applications", "overlays", clusterName)
+	actions, err := planClusterAppActions(cfg)
+	if err != nil {
+		return err
 	}
 
-	// Walk embedded cluster-apps-base files
-	return fs.WalkDir(Files, "templates/cluster-apps-base", func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if d.IsDir() {
-			return nil
-		}
-
-		rel, err := filepath.Rel("templates/cluster-apps-base", path)
-		if err != nil {
-			return err
-		}
-
-		// Skip files for disabled services
-		if shouldSkipFile(rel, cfg) {
-			return nil
-		}
-
-		// Replace cluster-name and cluster_name placeholders in filename
-		relWithClusterName := strings.ReplaceAll(rel, "cluster-name", clusterName)
-		relWithClusterName = strings.ReplaceAll(relWithClusterName, "cluster_name", clusterName)
-
-		dst := filepath.Join(target, relWithClusterName)
-
-		// If template file, process and strip template extension
-		if strings.HasSuffix(d.Name(), ".tmpl") || strings.HasSuffix(d.Name(), ".tpl") {
-			if strings.HasSuffix(d.Name(), ".tmpl") {
-				dst = strings.TrimSuffix(dst, ".tmpl")
-			} else {
-				dst = strings.TrimSuffix(dst, ".tpl")
-			}
-			return renderTemplateAtomic(path, dst, cfg, workspace)
-		}
-
-		// Copy file as-is
-		return copyFileAtomic(path, dst, workspace)
-	})
+	return writeClusterAppActions(actions, target, cfg, workspace)
 }
 
 // RenderInfrastructureClusterAtomic renders infrastructure-cluster-template to infrastructure/clusters/<cluster-name>/

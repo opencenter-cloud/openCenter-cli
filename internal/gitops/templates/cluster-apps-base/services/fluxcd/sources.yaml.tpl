@@ -5,7 +5,7 @@ metadata:
   name: sources
   namespace: flux-system
 spec:
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/sources

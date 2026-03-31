@@ -1,0 +1,5 @@
+name: managed-services-fluxcd-aggregate
+layer: managed-services
+files:
+  - template: managed-services/fluxcd/kustomization.yaml.tpl
+  - template: managed-services/fluxcd/sources.yaml.tpl

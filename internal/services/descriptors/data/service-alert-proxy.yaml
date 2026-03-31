@@ -1,0 +1,11 @@
+name: service-alert-proxy
+layer: managed-services
+managed_service: alert-proxy
+aggregate_targets:
+  - managed-services-fluxcd-aggregate
+  - managed-services-sources-aggregate
+roots:
+  - path: managed-services/alert-proxy
+files:
+  - template: managed-services/sources/opencenter-alert-proxy.yaml.tpl
+  - template: managed-services/fluxcd/alert-proxy.yaml.tpl

@@ -1,0 +1,9 @@
+name: service-rbac-manager
+layer: services
+service: rbac-manager
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+files:
+  - template: services/sources/opencenter-rbac-manager.yaml.tpl
+  - template: services/fluxcd/rbac-manager.yaml.tpl

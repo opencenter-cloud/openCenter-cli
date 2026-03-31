@@ -1,0 +1,12 @@
+name: service-kube-prometheus-stack
+layer: services
+service: kube-prometheus-stack
+aggregate_targets:
+  - observability-shared
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/kube-prometheus-stack
+files:
+  - template: services/sources/opencenter-kube-prometheus-stack.yaml.tpl
+  - template: services/fluxcd/kube-prometheus-stack.yaml.tpl

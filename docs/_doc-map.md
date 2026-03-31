@@ -94,6 +94,8 @@ This map helps:
 | [Architecture](explanation/architecture.md) | Architect/Developer | System design and decisions | Core components, patterns, principles | `internal/` structure, design docs |
 | [GitOps Workflow](explanation/gitops-workflow.md) | Operator/Architect | Repository structure and reconciliation | GitOps patterns, FluxCD integration | `internal/gitops/`, ecosystem.md |
 | [Security Model](explanation/security-model.md) | Architect/Operator | Security architecture and controls | SOPS, encryption, validation | `internal/sops/`, `internal/security/` |
+| [Plugin Internal Services](explanation/plugin-internal-services.md) | Developer/Architect | Explain internal service plugins used for platform services | Typed config, cert-manager behavior, validation, rendering, extension points | `internal/services/`, `internal/config/`, `internal/gitops/` |
+| [Plugin External CLI](explanation/plugin-external-cli.md) | Developer/Architect | Explain executable command plugins exposed as top-level CLI commands | Discovery order, Cobra wiring, argument forwarding, extension constraints | `cmd/root.go`, `internal/plugins/loader.go` |
 | [Configuration Lifecycle](explanation/configuration-lifecycle.md) | Architect/Operator | Configuration management | Init, validate, setup, bootstrap | `cmd/cluster*.go` |
 | [Provider Comparison](explanation/provider-comparison.md) | Architect | Choosing infrastructure providers | Provider trade-offs | `internal/cloud/` implementations |
 | [Drift Detection](explanation/drift-detection.md) | Architect/Operator | Configuration drift and reconciliation | Drift detection patterns | `internal/operations/drift_detector.go` |

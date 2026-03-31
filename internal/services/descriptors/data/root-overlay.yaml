@@ -1,0 +1,9 @@
+name: root-overlay
+layer: root
+files:
+  - template: kustomization.yaml
+    render: true
+  - template: .sops.yaml.tpl
+    when:
+      field: opencenter.gitops.overlay_units.sops.enabled
+      operator: true

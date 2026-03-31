@@ -1,0 +1,9 @@
+name: service-external-snapshotter
+layer: services
+service: external-snapshotter
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+files:
+  - template: services/sources/opencenter-external-snapshotter.yaml.tpl
+  - template: services/fluxcd/external-snapshotter.yaml.tpl

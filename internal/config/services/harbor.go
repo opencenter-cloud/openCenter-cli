@@ -24,8 +24,9 @@ type HarborConfig struct {
 	S3Region string `yaml:"s3_region" json:"s3_region,omitempty" jsonschema:"description=S3 region"`
 
 	// Admin configuration
-	AdminPassword string `yaml:"admin_password" json:"admin_password,omitempty" jsonschema:"description=Harbor admin password,secret=true"`
-	ExternalURL   string `yaml:"external_url" json:"external_url,omitempty" jsonschema:"description=External URL for Harbor"`
+	AdminPassword   string `yaml:"admin_password" json:"admin_password,omitempty" jsonschema:"description=Harbor admin password,secret=true"`
+	ExternalURL     string `yaml:"external_url" json:"external_url,omitempty" jsonschema:"description=External URL for Harbor"`
+	EmitCertificate bool   `yaml:"emit_certificate,omitempty" json:"emit_certificate,omitempty" jsonschema:"description=Render the Harbor TLS certificate manifest"`
 }
 
 func init() {

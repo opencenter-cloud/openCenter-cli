@@ -1,0 +1,10 @@
+name: service-mimir
+layer: services
+service: mimir
+aggregate_targets:
+  - observability-shared
+  - services-fluxcd-aggregate
+files:
+  - template: services/mimir/kustomization.yaml
+  - template: services/mimir/helm-values/override-values.yaml.tpl
+  - template: services/fluxcd/mimir.yaml.tpl

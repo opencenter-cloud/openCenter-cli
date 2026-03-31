@@ -1,0 +1,11 @@
+name: service-postgres-operator
+layer: services
+service: postgres-operator
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/postgres-operator
+files:
+  - template: services/sources/opencenter-postgres-operator.yaml.tpl
+  - template: services/fluxcd/postgres-operator.yaml.tpl

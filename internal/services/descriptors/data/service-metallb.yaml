@@ -1,0 +1,11 @@
+name: service-metallb
+layer: services
+service: metallb
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/metallb
+files:
+  - template: services/sources/opencenter-metallb.yaml.tpl
+  - template: services/fluxcd/metallb.yaml.tpl

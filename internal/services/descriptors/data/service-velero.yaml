@@ -1,0 +1,11 @@
+name: service-velero
+layer: services
+service: velero
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/velero
+files:
+  - template: services/sources/opencenter-velero.yaml.tpl
+  - template: services/fluxcd/velero.yaml.tpl

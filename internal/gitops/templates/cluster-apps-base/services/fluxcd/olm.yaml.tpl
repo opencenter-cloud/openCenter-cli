@@ -8,12 +8,13 @@ spec:
   dependsOn:
     - name: sources
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: opencenter-olm-config
+    namespace: flux-system
   path: ./applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/olm
   prune: true
   wait: true

@@ -1,0 +1,5 @@
+name: service-etcd-backup
+layer: services
+service: etcd-backup
+roots:
+  - path: services/etcd-backup

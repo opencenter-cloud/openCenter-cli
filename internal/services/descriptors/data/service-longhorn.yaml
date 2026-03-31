@@ -1,0 +1,9 @@
+name: service-longhorn
+layer: services
+service: longhorn
+aggregate_targets:
+  - services-fluxcd-aggregate
+roots:
+  - path: services/longhorn
+files:
+  - template: services/fluxcd/longhorn.yaml.tpl

@@ -1,0 +1,12 @@
+name: service-kyverno
+layer: services
+service: kyverno
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/kyverno
+files:
+  - template: services/sources/opencenter-kyverno.yaml.tpl
+  - template: services/sources/opencenter-kyverno-ruleset.yaml.tpl
+  - template: services/fluxcd/kyverno.yaml.tpl

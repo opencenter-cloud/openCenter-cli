@@ -1,0 +1,29 @@
+name: service-keycloak
+layer: services
+service: keycloak
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/keycloak
+    excludes:
+      - 10-operator/patch-subscription.yaml.tpl
+      - 20-keycloak/keycloak-backup-cronjob.yaml.tpl
+      - 20-keycloak/keycloak-hpa.yaml.tpl
+files:
+  - template: services/keycloak/10-operator/patch-subscription.yaml.tpl
+    when:
+      field: opencenter.meta.region
+      operator: equals
+      value: ord1
+  - template: services/keycloak/20-keycloak/keycloak-backup-cronjob.yaml.tpl
+    when:
+      field: opencenter.services.keycloak.backup_enabled
+      operator: true
+  - template: services/keycloak/20-keycloak/keycloak-hpa.yaml.tpl
+    when:
+      field: opencenter.services.keycloak.max_replicas
+      operator: exists
+  - template: services/sources/opencenter-keycloak.yaml.tpl
+  - template: services/sources/opencenter-keycloak-config.yaml.tpl
+  - template: services/fluxcd/keycloak.yaml.tpl

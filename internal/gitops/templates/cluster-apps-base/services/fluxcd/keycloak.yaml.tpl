@@ -12,7 +12,7 @@ spec:
       namespace: flux-system
     - name: postgres-operator-override
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -44,7 +44,7 @@ spec:
       namespace: flux-system
     - name: keycloak-postgres
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -54,6 +54,7 @@ spec:
   path: applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/keycloak/10-operator
   targetNamespace: keycloak
   prune: true
+  wait: true
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment
@@ -84,7 +85,7 @@ spec:
       namespace: flux-system
     - name: gateway
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -93,7 +94,12 @@ spec:
     namespace: flux-system
   path: applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/keycloak/20-keycloak
   targetNamespace: keycloak
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
   prune: true
+  wait: true
   healthChecks:
     - apiVersion: apps/v1
       kind: StatefulSet
@@ -116,7 +122,7 @@ spec:
       namespace: flux-system
     - name: rbac-manager-base
       namespace: flux-system
-  interval: 5m
+  interval: 15m
   retryInterval: 1m
   timeout: 10m
   sourceRef:

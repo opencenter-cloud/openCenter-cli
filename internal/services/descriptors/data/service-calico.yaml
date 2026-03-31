@@ -1,0 +1,5 @@
+name: service-calico
+layer: services
+service: calico
+roots:
+  - path: services/calico

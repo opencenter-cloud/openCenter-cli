@@ -237,6 +237,7 @@ func overlayLegacyGitOps(dst *Config, src *v2.Config) {
 	dst.OpenCenter.GitOps.GitOpsBranch = src.OpenCenter.GitOps.GitOpsBranch
 	dst.OpenCenter.GitOps.Flux.Interval = firstNonEmpty(src.OpenCenter.GitOps.Flux.Interval, src.OpenCenter.GitOps.FluxInterval)
 	dst.OpenCenter.GitOps.Flux.Prune = src.OpenCenter.GitOps.Flux.Prune || src.OpenCenter.GitOps.FluxPrune
+	dst.OpenCenter.GitOps.OverlayUnits = src.OpenCenter.GitOps.OverlayUnits
 }
 
 func overlayLegacyOpenTofu(dst *Config, src *v2.Config) {
@@ -271,6 +272,7 @@ func overlayLegacySecrets(dst *Config, src *v2.Config) {
 	dst.OpenCenter.Secrets.Barbican.UserDomainName = src.OpenCenter.Secrets.Barbican.UserDomainName
 	dst.OpenCenter.Secrets.Barbican.ProjectDomainName = src.OpenCenter.Secrets.Barbican.ProjectDomainName
 	dst.OpenCenter.Secrets.Barbican.CACert = src.OpenCenter.Secrets.Barbican.CACert
+	dst.Secrets.OverlayUnits = src.Secrets.OverlayUnits
 }
 
 func overlayLegacyServices(dst *Config, src *v2.Config) {

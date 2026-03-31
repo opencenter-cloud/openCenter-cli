@@ -16,12 +16,15 @@ func init() {
 		"fluxcd",
 		"gateway",
 		"gateway-api",
+		"kafka-cluster",
 		"kyverno",
+		"mimir",
 		"olm",
 		"openstack-ccm",
 		"openstack-csi",
 		"postgres-operator",
 		"rbac-manager",
+		"sealed-secrets",
 		"sources",
 	}
 

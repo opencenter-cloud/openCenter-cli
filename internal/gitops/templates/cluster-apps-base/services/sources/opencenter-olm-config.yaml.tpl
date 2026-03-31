@@ -6,13 +6,13 @@ metadata:
   namespace: flux-system
 spec:
   interval: 15m
-  url: ssh://git@github.com/rpc-environments/000000-opencenter-example.git
+  url: {{ .OpenCenter.GitOps.GitURL }}
   ref:
-  branch: main
+    branch: main
   secretRef:
-  name: flux-system
+    name: flux-system
   include:
-  - repository:
-    name: opencenter-olm
-  fromPath: applications/base/services/olm
-  toPath: applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/base/olm/
+    - repository:
+        name: opencenter-olm
+      fromPath: applications/base/services/olm
+      toPath: applications/overlays/{{ .OpenCenter.Cluster.ClusterName }}/services/base/olm/

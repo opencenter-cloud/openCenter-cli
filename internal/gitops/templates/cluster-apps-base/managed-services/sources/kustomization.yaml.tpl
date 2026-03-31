@@ -5,5 +5,5 @@ namespace: flux-system
 resources:
 {{- $managedServices := .OpenCenter.ManagedService }}
 {{- if (index $managedServices "alert-proxy").Enabled }}
-  - "opencenter-alert-proxy.yaml"
+  - "./opencenter-alert-proxy.yaml"
 {{- end }}

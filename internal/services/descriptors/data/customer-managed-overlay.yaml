@@ -1,0 +1,19 @@
+name: customer-managed-overlay
+layer: customer-managed
+enabled_when:
+  field: opencenter.gitops.overlay_units.customer_managed.enabled
+  operator: true
+aggregate_targets:
+  - root-overlay
+files:
+  - template: customer-managed/fluxcd/customer-managed.yaml.tpl
+  - template: customer-managed/fluxcd/kustomization.yaml
+  - template: customer-managed/fluxcd/sources.yaml.tpl
+  - template: customer-managed/sources/kustomization.yaml.tpl
+  - template: customer-managed/sources/repository.yaml.tpl
+    output: customer-managed/sources/{{ .OpenCenter.GitOps.OverlayUnits.CustomerManaged.RepositoryName }}.yaml
+  - template: customer-managed/sources/repository-secret.yaml.tpl
+    output: customer-managed/sources/{{ .OpenCenter.GitOps.OverlayUnits.CustomerManaged.RepositoryName }}-secret.yaml
+    when:
+      field: opencenter.gitops.overlay_units.customer_managed.emit_secret
+      operator: true

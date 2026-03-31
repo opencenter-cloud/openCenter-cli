@@ -1,0 +1,11 @@
+name: service-openstack-csi
+layer: services
+service: openstack-csi
+aggregate_targets:
+  - services-fluxcd-aggregate
+  - services-sources-aggregate
+roots:
+  - path: services/openstack-csi
+files:
+  - template: services/sources/opencenter-openstack-csi.yaml.tpl
+  - template: services/fluxcd/openstack-csi.yaml.tpl

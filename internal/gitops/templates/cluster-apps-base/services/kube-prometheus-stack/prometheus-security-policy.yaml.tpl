@@ -11,11 +11,11 @@ spec:
     name: prometheus-gateway-route
   oidc:
     provider:
-      issuer: "https://auth.{{ .OpenCenter.Cluster.ClusterName }}.{{ .OpenCenter.Meta.Region }}.k8s.opencenter.cloud/realms/opencenter"
+      issuer: "https://{{ .OpenCenter.Services.keycloak.Hostname | default (printf "auth.%s" .OpenCenter.Cluster.ClusterFQDN) }}/realms/opencenter"
     clientID: "opencenter"  
     clientSecret:
       name: "gateway-oidc-secret" 
-    redirectURL: "https://prometheus.{{ .OpenCenter.Cluster.ClusterName }}.{{ .OpenCenter.Meta.Region }}.k8s.opencenter.cloud/oauth2/callback"
+    redirectURL: "https://{{ (index .OpenCenter.Services "kube-prometheus-stack").Hostname | default (printf "prometheus.%s" .OpenCenter.Cluster.ClusterFQDN) }}/oauth2/callback"
     scopes:
       - openid
       - profile

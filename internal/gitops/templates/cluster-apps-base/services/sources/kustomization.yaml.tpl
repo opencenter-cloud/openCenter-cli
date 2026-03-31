@@ -10,9 +10,18 @@ resources:
 {{- if (index $services "cert-manager").Enabled }}
   - "opencenter-cert-manager.yaml"
 {{- end }}
+{{- if (index $services "harbor").Enabled }}
+  - "opencenter-harbor.yaml"
+{{- end }}
+{{- if (index $services "headlamp").Enabled }}
+  - "opencenter-headlamp.yaml"
+{{- end }}
 {{- if (index $services "olm").Enabled }}
   - "opencenter-olm.yaml"
   - "opencenter-olm-config.yaml"
+{{- end }}
+{{- if (index $services "kafka-cluster").Enabled }}
+  - "opencenter-strimzi-kafka-operator.yaml"
 {{- end }}
 {{- if (index $services "velero").Enabled }}
   - "opencenter-velero.yaml"
@@ -37,6 +46,7 @@ resources:
 {{- end }}
 {{- if (index $services "kyverno").Enabled }}
   - "opencenter-kyverno.yaml"
+  - "opencenter-kyverno-ruleset.yaml"
 {{- end }}
 {{- if (index $services "keycloak").Enabled }}
   - "opencenter-keycloak.yaml"

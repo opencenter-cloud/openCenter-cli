@@ -1,0 +1,6 @@
+name: services-fluxcd-aggregate
+layer: services
+files:
+  - template: services/fluxcd/kustomization.yaml.tpl
+  - template: services/fluxcd/sources.yaml.tpl
+  - template: services/fluxcd/fluxcd-configs/podmonitor.yaml

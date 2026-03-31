@@ -4,4 +4,4 @@ metadata:
   name: rackspace-ca
 spec:
   ca:
-  secretName: rackspace-root-secret
+    secretName: rackspace-root-secret

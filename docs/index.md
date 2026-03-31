@@ -80,6 +80,8 @@ Conceptual explanations and background:
 - **[Architecture](explanation/architecture.md)** - System design and decisions
 - **[GitOps Workflow](explanation/gitops-workflow.md)** - Repository structure
 - **[Security Model](explanation/security-model.md)** - Security architecture
+- **[Plugin Internal Services](explanation/plugin-internal-services.md)** - Service plugins, cert-manager behavior, and how to add a new service
+- **[Plugin External CLI](explanation/plugin-external-cli.md)** - Command plugin discovery and execution model
 - **[Provider Comparison](explanation/provider-comparison.md)** - Choosing providers
 - **[Configuration Lifecycle](explanation/configuration-lifecycle.md)** - Config management
 

@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"gopkg.in/yaml.v3"
 )
@@ -586,12 +586,15 @@ func (r *DefaultKeyRotator) generateSSHKey(ctx context.Context, cluster string, 
 	keyPath := filepath.Join(sshDir, fmt.Sprintf("%s-ssh-%s", cluster, timestamp))
 
 	// Generate SSH key using ssh-keygen
-	cmd := exec.CommandContext(ctx, "ssh-keygen",
+	cmd, err := security.GetDefaultCommandRunner().PrepareCommandContext(ctx, "ssh-keygen",
 		"-t", "ed25519",
 		"-f", keyPath,
 		"-N", "", // No passphrase
 		"-C", fmt.Sprintf("%s-cluster-key", cluster),
 	)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to prepare ssh-keygen command: %w", err)
+	}
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

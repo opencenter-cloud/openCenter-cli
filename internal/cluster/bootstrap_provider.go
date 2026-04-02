@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 )
 
 type lifecycleBootstrapProvider interface {
@@ -18,10 +18,19 @@ type lifecycleCommandRunner interface {
 	Run(ctx context.Context, dir string, env map[string]string, name string, args ...string) ([]byte, error)
 }
 
-type execLifecycleCommandRunner struct{}
+type execLifecycleCommandRunner struct {
+	commandRunner security.CommandRunner
+}
 
-func (execLifecycleCommandRunner) Run(ctx context.Context, dir string, env map[string]string, name string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
+func newExecLifecycleCommandRunner() execLifecycleCommandRunner {
+	return execLifecycleCommandRunner{commandRunner: security.GetDefaultCommandRunner()}
+}
+
+func (r execLifecycleCommandRunner) Run(ctx context.Context, dir string, env map[string]string, name string, args ...string) ([]byte, error) {
+	cmd, err := r.commandRunner.PrepareCommandContext(ctx, name, args...)
+	if err != nil {
+		return nil, fmt.Errorf("preparing command %s: %w", name, err)
+	}
 	cmd.Dir = dir
 
 	envList := os.Environ()

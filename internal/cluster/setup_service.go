@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/tofu"
 )
 
@@ -37,6 +37,7 @@ type SetupService struct {
 	pathResolver     *paths.PathResolver
 	validationEngine *validation.ValidationEngine
 	configurationMgr *config.ConfigurationManager
+	commandRunner    security.CommandRunner
 }
 
 // NewSetupService creates a new SetupService
@@ -63,6 +64,7 @@ func NewSetupServiceWithConfigMgr(
 		pathResolver:     pathResolver,
 		validationEngine: validationEngine,
 		configurationMgr: configurationMgr,
+		commandRunner:    security.GetDefaultCommandRunner(),
 	}
 }
 
@@ -256,34 +258,35 @@ func (s *SetupService) validateManifests(clusterPaths *paths.ClusterPaths) error
 func (s *SetupService) commitChanges(ctx context.Context, clusterPaths *paths.ClusterPaths) (string, error) {
 	gitDir := clusterPaths.GitOpsDir
 
-	// Change to git directory
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("getting current directory: %w", err)
-	}
-	defer os.Chdir(originalDir)
-
-	if err := os.Chdir(gitDir); err != nil {
-		return "", fmt.Errorf("changing to git directory: %w", err)
-	}
-
 	// Check if git repository is initialized
 	if _, err := os.Stat(filepath.Join(gitDir, ".git")); os.IsNotExist(err) {
 		// Initialize git repository
-		cmd := exec.CommandContext(ctx, "git", "init")
+		cmd, err := s.commandRunner.PrepareCommandContext(ctx, "git", "init")
+		if err != nil {
+			return "", fmt.Errorf("preparing git init: %w", err)
+		}
+		cmd.Dir = gitDir
 		if err := cmd.Run(); err != nil {
 			return "", fmt.Errorf("initializing git repository: %w", err)
 		}
 	}
 
 	// Stage all files
-	cmd := exec.CommandContext(ctx, "git", "add", ".")
+	cmd, err := s.commandRunner.PrepareCommandContext(ctx, "git", "add", ".")
+	if err != nil {
+		return "", fmt.Errorf("preparing git add: %w", err)
+	}
+	cmd.Dir = gitDir
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("staging files: %w", err)
 	}
 
 	// Check if there are changes to commit
-	cmd = exec.CommandContext(ctx, "git", "status", "--porcelain")
+	cmd, err = s.commandRunner.PrepareCommandContext(ctx, "git", "status", "--porcelain")
+	if err != nil {
+		return "", fmt.Errorf("preparing git status: %w", err)
+	}
+	cmd.Dir = gitDir
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("checking git status: %w", err)
@@ -296,13 +299,21 @@ func (s *SetupService) commitChanges(ctx context.Context, clusterPaths *paths.Cl
 
 	// Commit changes
 	commitMessage := "Initialize GitOps repository structure\n\n- Add base GitOps structure\n- Add cluster-specific applications\n- Add infrastructure templates"
-	cmd = exec.CommandContext(ctx, "git", "commit", "-m", commitMessage)
+	cmd, err = s.commandRunner.PrepareCommandContext(ctx, "git", "commit", "-m", commitMessage)
+	if err != nil {
+		return "", fmt.Errorf("preparing git commit: %w", err)
+	}
+	cmd.Dir = gitDir
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("committing changes: %w", err)
 	}
 
 	// Get commit hash
-	cmd = exec.CommandContext(ctx, "git", "rev-parse", "HEAD")
+	cmd, err = s.commandRunner.PrepareCommandContext(ctx, "git", "rev-parse", "HEAD")
+	if err != nil {
+		return "", fmt.Errorf("preparing git rev-parse: %w", err)
+	}
+	cmd.Dir = gitDir
 	output, err = cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("getting commit hash: %w", err)

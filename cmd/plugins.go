@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/plugins"
@@ -24,21 +23,16 @@ func newPluginsListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List discovered external plugins",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			disc := plugins.Discover()
+			disc := plugins.DiscoverDetailed()
 			if len(disc) == 0 {
 				fmt.Fprintln(cmd.OutOrStdout(), "No plugins found.")
 				fmt.Fprintln(cmd.OutOrStdout(), "Discovery order: OPENCENTER_PLUGINS_DIR, <config-dir>/plugins, PATH")
 				return nil
 			}
-			// Sort for stable output
-			names := make([]string, 0, len(disc))
-			for name := range disc {
-				names = append(names, name)
-			}
-			sort.Strings(names)
-			for _, name := range names {
+			for _, name := range plugins.SortedPluginNames(disc) {
 				use := strings.TrimPrefix(name, plugins.BinaryPrefix)
-				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\n", use, disc[name])
+				info := disc[name]
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\n", use, info.Path, info.Status)
 			}
 			return nil
 		},

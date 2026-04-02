@@ -21,6 +21,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation/validators"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 )
 
@@ -76,6 +77,28 @@ func ProvideValidationEngine() (*validation.ValidationEngine, error) {
 // Requirements: 19.2
 func ProvideErrorFormatter() (ui.ErrorFormatter, error) {
 	return ui.NewDefaultErrorFormatter(), nil
+}
+
+func ProvideAuditLogger() (*security.AuditLogger, error) {
+	return security.NewDefaultAuditLogger()
+}
+
+func ProvideInputValidator(auditLogger *security.AuditLogger) (security.InputValidator, error) {
+	validator := security.NewDefaultInputValidator()
+	validator.SetAuditLogger(auditLogger)
+	return validator, nil
+}
+
+func ProvideCredentialMasker() (security.CredentialMasker, error) {
+	return security.NewDefaultCredentialMasker(), nil
+}
+
+func ProvideCommandSanitizer() (security.CommandSanitizer, error) {
+	return security.NewDefaultCommandSanitizer(), nil
+}
+
+func ProvideCommandRunner(sanitizer security.CommandSanitizer) (security.CommandRunner, error) {
+	return security.NewCommandRunner(sanitizer), nil
 }
 
 // ProvideInitService creates a new InitService with dependencies.

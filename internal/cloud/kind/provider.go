@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 )
 
 const defaultReadyPollInterval = 5 * time.Second
@@ -45,10 +46,19 @@ type commandRunner interface {
 	Run(ctx context.Context, env map[string]string, name string, args ...string) ([]byte, error)
 }
 
-type execRunner struct{}
+type execRunner struct {
+	commandRunner security.CommandRunner
+}
 
-func (execRunner) Run(ctx context.Context, env map[string]string, name string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
+func newExecRunner() execRunner {
+	return execRunner{commandRunner: security.GetDefaultCommandRunner()}
+}
+
+func (r execRunner) Run(ctx context.Context, env map[string]string, name string, args ...string) ([]byte, error) {
+	cmd, err := r.commandRunner.PrepareCommandContext(ctx, name, args...)
+	if err != nil {
+		return nil, fmt.Errorf("preparing command %s: %w", name, err)
+	}
 
 	envList := os.Environ()
 	for key, value := range env {
@@ -72,7 +82,7 @@ type Provider struct {
 
 func NewProvider() *Provider {
 	return &Provider{
-		runner:            execRunner{},
+		runner:            newExecRunner(),
 		readyPollInterval: defaultReadyPollInterval,
 	}
 }

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
 )
@@ -34,6 +35,7 @@ type DefaultEncryptor struct {
 	ageKeys    []string
 	pgpKeys    []string
 	fileSystem fs.FileSystem
+	runner     security.CommandRunner
 }
 
 // NewDefaultEncryptor creates a new SOPS encryptor
@@ -46,7 +48,17 @@ func NewDefaultEncryptor(ageKeys, pgpKeys []string) *DefaultEncryptor {
 		ageKeys:    ageKeys,
 		pgpKeys:    pgpKeys,
 		fileSystem: fileSystem,
+		runner:     security.GetDefaultCommandRunner(),
 	}
+}
+
+func (e *DefaultEncryptor) prepareSOPSCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
+	cmd, err := e.runner.PrepareCommandContext(ctx, "sops", args...)
+	if err != nil {
+		return nil, err
+	}
+	cmd.Env = os.Environ()
+	return cmd, nil
 }
 
 // EncryptFile encrypts a single file with SOPS
@@ -132,10 +144,15 @@ func (e *DefaultEncryptor) EncryptFile(ctx context.Context, filePath string, con
 	args = append(args, filePath)
 
 	// Execute SOPS command
-	cmd := exec.CommandContext(ctx, "sops", args...)
-
-	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
-	cmd.Env = os.Environ()
+	cmd, err := e.prepareSOPSCommand(ctx, args...)
+	if err != nil {
+		return &errors.StructuredError{
+			Type:    errors.SOPSError,
+			Field:   filePath,
+			Message: "Failed to prepare SOPS command",
+			Cause:   err,
+		}
+	}
 
 	if config.Verbose {
 		cmd.Stdout = os.Stdout
@@ -280,10 +297,15 @@ func (e *DefaultEncryptor) DecryptFile(ctx context.Context, filePath string, out
 	args = append(args, filePath)
 
 	// Execute SOPS command
-	cmd := exec.CommandContext(ctx, "sops", args...)
-
-	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
-	cmd.Env = os.Environ()
+	cmd, err := e.prepareSOPSCommand(ctx, args...)
+	if err != nil {
+		return &errors.StructuredError{
+			Type:    errors.SOPSError,
+			Field:   filePath,
+			Message: "Failed to prepare SOPS command",
+			Cause:   err,
+		}
+	}
 
 	if outputPath == "" {
 		cmd.Stdout = os.Stdout
@@ -344,10 +366,15 @@ func (e *DefaultEncryptor) RotateKeys(ctx context.Context, filePath string, newA
 	args = append(args, "-i", filePath)
 
 	// Execute SOPS command
-	cmd := exec.CommandContext(ctx, "sops", args...)
-
-	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
-	cmd.Env = os.Environ()
+	cmd, err := e.prepareSOPSCommand(ctx, args...)
+	if err != nil {
+		return &errors.StructuredError{
+			Type:    errors.SOPSError,
+			Field:   filePath,
+			Message: "Failed to prepare SOPS command",
+			Cause:   err,
+		}
+	}
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -404,10 +431,15 @@ func (e *DefaultEncryptor) EditEncryptedFile(ctx context.Context, filePath strin
 	args = append(args, filePath)
 
 	// Execute SOPS command
-	cmd := exec.CommandContext(ctx, "sops", args...)
-
-	// Inherit environment variables (including SOPS_AGE_KEY_FILE)
-	cmd.Env = os.Environ()
+	cmd, err := e.prepareSOPSCommand(ctx, args...)
+	if err != nil {
+		return &errors.StructuredError{
+			Type:    errors.SOPSError,
+			Field:   filePath,
+			Message: "Failed to prepare SOPS command",
+			Cause:   err,
+		}
+	}
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -502,7 +534,10 @@ func needsExplicitYAMLType(filePath string) bool {
 
 // checkSOPSVersion checks if SOPS is available and returns version info
 func checkSOPSVersion(ctx context.Context) (string, error) {
-	cmd := exec.CommandContext(ctx, "sops", "--version")
+	cmd, err := security.GetDefaultCommandRunner().PrepareCommandContext(ctx, "sops", "--version")
+	if err != nil {
+		return "", fmt.Errorf("failed to prepare SOPS version command: %w", err)
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("SOPS not found or not executable: %w", err)

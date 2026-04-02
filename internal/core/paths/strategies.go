@@ -17,8 +17,16 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+var allowedPathVariables = map[string]struct{}{
+	"HOME":                  {},
+	"OPENCENTER_CONFIG_DIR": {},
+}
+
+var pathVariablePattern = regexp.MustCompile(`\$(\w+)|\$\{([^}]+)\}`)
 
 // ResolutionStrategy defines the interface for path resolution strategies.
 // Currently only supports organization-based structure.
@@ -172,10 +180,34 @@ func ExpandPath(path string) string {
 		}
 	}
 
-	// Expand environment variables
-	path = os.ExpandEnv(path)
+	// Expand the documented allowlist of path variables only.
+	path = expandAllowedPathVariables(path, os.LookupEnv)
 
 	return path
+}
+
+func expandAllowedPathVariables(path string, lookupEnv func(string) (string, bool)) string {
+	return pathVariablePattern.ReplaceAllStringFunc(path, func(match string) string {
+		groups := pathVariablePattern.FindStringSubmatch(match)
+		if len(groups) != 3 {
+			return match
+		}
+
+		name := groups[1]
+		if name == "" {
+			name = groups[2]
+		}
+
+		if _, allowed := allowedPathVariables[name]; !allowed {
+			return match
+		}
+
+		if value, ok := lookupEnv(name); ok {
+			return value
+		}
+
+		return match
+	})
 }
 
 // expandPath is an internal alias for ExpandPath for backward compatibility

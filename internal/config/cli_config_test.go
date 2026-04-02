@@ -694,13 +694,9 @@ func TestLoggingHelperFunctions(t *testing.T) {
 }
 
 func TestEnvironmentExpansion(t *testing.T) {
-	// Set up test environment variables
-	os.Setenv("TEST_CONFIG_DIR", "/tmp/test-config")
-	os.Setenv("TEST_CLUSTERS_DIR", "/tmp/test-clusters")
-	defer func() {
-		os.Unsetenv("TEST_CONFIG_DIR")
-		os.Unsetenv("TEST_CLUSTERS_DIR")
-	}()
+	// Set up allowlisted path environment variables
+	t.Setenv("HOME", "/tmp/test-home")
+	t.Setenv("OPENCENTER_CONFIG_DIR", "/tmp/opencenter")
 
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
@@ -712,8 +708,8 @@ logging:
   format: text
   output: stderr
 paths:
-  configDir: ${TEST_CONFIG_DIR}
-  clustersDir: ${TEST_CLUSTERS_DIR}
+  configDir: ${HOME}/test-config
+  clustersDir: ${OPENCENTER_CONFIG_DIR}/clusters
 behavior:
   autoConfirm: false
   dryRun: false
@@ -735,13 +731,13 @@ defaults:
 
 	config := cm.GetConfig()
 
-	// Verify environment variables were expanded
-	if config.Paths.ConfigDir != "/tmp/test-config" {
-		t.Errorf("Expected configDir '/tmp/test-config', got '%s'", config.Paths.ConfigDir)
+	// Verify allowlisted path variables were expanded
+	if config.Paths.ConfigDir != "/tmp/test-home/test-config" {
+		t.Errorf("Expected configDir '/tmp/test-home/test-config', got '%s'", config.Paths.ConfigDir)
 	}
 
-	if config.Paths.ClustersDir != "/tmp/test-clusters" {
-		t.Errorf("Expected clustersDir '/tmp/test-clusters', got '%s'", config.Paths.ClustersDir)
+	if config.Paths.ClustersDir != "/tmp/opencenter/clusters" {
+		t.Errorf("Expected clustersDir '/tmp/opencenter/clusters', got '%s'", config.Paths.ClustersDir)
 	}
 }
 

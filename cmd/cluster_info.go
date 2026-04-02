@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,7 +25,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	corepaths "github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/resilience"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +40,7 @@ func newClusterInfoCmd() *cobra.Command {
 The cluster name can be specified in two formats:
   - cluster-name (uses organization from config)
   - organization/cluster-name (explicit organization)`,
-		Args:  cobra.MaximumNArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
 			identifier, err := resolveClusterName(args, true)
@@ -91,14 +92,7 @@ The cluster name can be specified in two formats:
 			if cfg.OpenCenter.GitOps.GitDir != "" {
 				cwd, err := os.Getwd()
 				if err == nil {
-					gitDir := cfg.OpenCenter.GitOps.GitDir
-					// Expand tilde and environment variables
-					if strings.HasPrefix(gitDir, "~/") {
-						if home, err := os.UserHomeDir(); err == nil {
-							gitDir = filepath.Join(home, gitDir[2:])
-						}
-					}
-					gitDir = os.ExpandEnv(gitDir)
+					gitDir := corepaths.ExpandPath(cfg.OpenCenter.GitOps.GitDir)
 
 					if absGitDir, err := filepath.Abs(gitDir); err == nil {
 						if absCwd, err := filepath.Abs(cwd); err == nil {
@@ -358,16 +352,16 @@ func printGitOpsStatus(cmd *cobra.Command, cfg *config.Config, clusterName strin
 
 	// Print kustomization status
 	fmt.Fprintf(cmd.OutOrStdout(), "  Kustomizations: %d total\n", len(kustomizations))
-	
+
 	readyCount := 0
 	for _, k := range kustomizations {
 		if k.Ready {
 			readyCount++
 		}
 	}
-	
+
 	fmt.Fprintf(cmd.OutOrStdout(), "  Ready: %d/%d\n", readyCount, len(kustomizations))
-	
+
 	// Show details of non-ready kustomizations
 	if readyCount < len(kustomizations) {
 		fmt.Fprintln(cmd.OutOrStdout(), "  Not Ready:")
@@ -385,21 +379,14 @@ func printGitOpsStatus(cmd *cobra.Command, cfg *config.Config, clusterName strin
 func getKubeconfigPath(cfg *config.Config, clusterName string) string {
 	// Try to get from GitOps directory first
 	if cfg.OpenCenter.GitOps.GitDir != "" {
-		gitDir := cfg.OpenCenter.GitOps.GitDir
-		// Expand tilde
-		if strings.HasPrefix(gitDir, "~/") {
-			if home, err := os.UserHomeDir(); err == nil {
-				gitDir = filepath.Join(home, gitDir[2:])
-			}
-		}
-		gitDir = os.ExpandEnv(gitDir)
-		
+		gitDir := corepaths.ExpandPath(cfg.OpenCenter.GitOps.GitDir)
+
 		kubeconfigPath := filepath.Join(gitDir, "infrastructure", "clusters", clusterName, "kubeconfig.yaml")
 		if _, err := os.Stat(kubeconfigPath); err == nil {
 			return kubeconfigPath
 		}
 	}
-	
+
 	// Fallback to default location
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".kube", "config")
@@ -416,12 +403,15 @@ type FluxKustomization struct {
 // getFluxKustomizations retrieves Flux Kustomization status using kubectl
 func getFluxKustomizations(ctx context.Context, kubeconfigPath string) ([]FluxKustomization, error) {
 	// Use kubectl to get kustomizations
-	cmd := exec.CommandContext(ctx, "kubectl", 
+	cmd, err := security.GetDefaultCommandRunner().PrepareCommandContext(ctx, "kubectl",
 		"--kubeconfig", kubeconfigPath,
 		"get", "kustomizations.kustomize.toolkit.fluxcd.io",
 		"-A",
 		"-o", "json")
-	
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare kubectl command: %w", err)
+	}
+
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("kubectl command failed: %w", err)

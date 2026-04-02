@@ -19,6 +19,7 @@ import (
 	"os/exec"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -62,11 +63,18 @@ Examples:
 			if editor == "" {
 				return fmt.Errorf("no editor found: set EDITOR environment variable or install vim, vi, or nano")
 			}
+			sanitizer := security.NewDefaultCommandSanitizer()
+			if err := sanitizer.ValidateEditor(editor); err != nil {
+				return fmt.Errorf("invalid EDITOR environment variable: %w", err)
+			}
 
 			fmt.Printf("Opening %s in %s...\n", configPath, editor)
 
 			// Open the editor
-			editorCmd := exec.Command(editor, configPath)
+			editorCmd, err := security.GetDefaultCommandRunner().PrepareCommand(editor, configPath)
+			if err != nil {
+				return fmt.Errorf("failed to prepare editor command: %w", err)
+			}
 			editorCmd.Stdin = os.Stdin
 			editorCmd.Stdout = os.Stdout
 			editorCmd.Stderr = os.Stderr

@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/crypto"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
@@ -35,6 +36,7 @@ type GitIntegrator struct {
 	repoPath   string
 	encryptor  Encryptor
 	fileSystem fs.FileSystem
+	runner     security.CommandRunner
 }
 
 // NewGitIntegrator creates a new Git integrator
@@ -47,7 +49,16 @@ func NewGitIntegrator(repoPath string, encryptor Encryptor) *GitIntegrator {
 		repoPath:   repoPath,
 		encryptor:  encryptor,
 		fileSystem: fileSystem,
+		runner:     security.GetDefaultCommandRunner(),
 	}
+}
+
+func (g *GitIntegrator) prepareGitCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
+	cmd, err := g.runner.PrepareCommandContext(ctx, "git", args...)
+	if err != nil {
+		return nil, err
+	}
+	return cmd, nil
 }
 
 // CommitConfig represents Git commit configuration
@@ -147,7 +158,10 @@ func (g *GitIntegrator) stageEncryptedFiles(ctx context.Context, cfg *config.Con
 		}
 
 		// Stage the file
-		cmd := exec.CommandContext(ctx, "git", "add", file)
+		cmd, err := g.prepareGitCommand(ctx, "add", file)
+		if err != nil {
+			return fmt.Errorf("failed to prepare git add for %s: %w", file, err)
+		}
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to stage file %s: %w", file, err)
 		}
@@ -182,7 +196,10 @@ func (g *GitIntegrator) commitChanges(ctx context.Context, commitCfg CommitConfi
 		args = append(args, "--dry-run")
 	}
 
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd, err := g.prepareGitCommand(ctx, args...)
+	if err != nil {
+		return fmt.Errorf("failed to prepare git commit: %w", err)
+	}
 
 	if commitCfg.Verbose {
 		cmd.Stdout = os.Stdout
@@ -220,7 +237,10 @@ func (g *GitIntegrator) PushChanges(ctx context.Context, remote, branch string) 
 		args = append(args, branch)
 	}
 
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd, err := g.prepareGitCommand(ctx, args...)
+	if err != nil {
+		return fmt.Errorf("failed to prepare git push: %w", err)
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -241,7 +261,10 @@ func (g *GitIntegrator) CloneRepository(ctx context.Context, repoURL, targetDir,
 
 	args = append(args, repoURL, targetDir)
 
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd, err := g.prepareGitCommand(ctx, args...)
+	if err != nil {
+		return fmt.Errorf("failed to prepare git clone: %w", err)
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -279,7 +302,10 @@ func (g *GitIntegrator) GetCurrentBranch(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to change to repository directory: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, "git", "branch", "--show-current")
+	cmd, err := g.prepareGitCommand(ctx, "branch", "--show-current")
+	if err != nil {
+		return "", fmt.Errorf("failed to prepare git branch: %w", err)
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get current branch: %w", err)
@@ -305,7 +331,10 @@ func (g *GitIntegrator) GetRemoteURL(ctx context.Context, remote string) (string
 		return "", fmt.Errorf("failed to change to repository directory: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, "git", "remote", "get-url", remote)
+	cmd, err := g.prepareGitCommand(ctx, "remote", "get-url", remote)
+	if err != nil {
+		return "", fmt.Errorf("failed to prepare git remote get-url: %w", err)
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get remote URL: %w", err)
@@ -327,7 +356,10 @@ func (g *GitIntegrator) CheckForChanges(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("failed to change to repository directory: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
+	cmd, err := g.prepareGitCommand(ctx, "status", "--porcelain")
+	if err != nil {
+		return false, fmt.Errorf("failed to prepare git status: %w", err)
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		return false, fmt.Errorf("failed to check git status: %w", err)
@@ -422,7 +454,10 @@ func (g *GitIntegrator) ConfigureSOPSDiff(ctx context.Context) error {
 	}
 
 	// Configure SOPS diff tool
-	cmd := exec.CommandContext(ctx, "git", "config", "diff.sopsdiffer.textconv", "sops -d")
+	cmd, err := g.prepareGitCommand(ctx, "config", "diff.sopsdiffer.textconv", "sops -d")
+	if err != nil {
+		return fmt.Errorf("failed to prepare git config diff.sopsdiffer.textconv: %w", err)
+	}
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to configure SOPS diff: %w", err)
 	}
@@ -444,13 +479,19 @@ func (g *GitIntegrator) ValidateGitConfig(ctx context.Context) error {
 	}
 
 	// Check if user.name is configured
-	cmd := exec.CommandContext(ctx, "git", "config", "user.name")
+	cmd, err := g.prepareGitCommand(ctx, "config", "user.name")
+	if err != nil {
+		return fmt.Errorf("failed to prepare git config user.name: %w", err)
+	}
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("git user.name not configured: %w", err)
 	}
 
 	// Check if user.email is configured
-	cmd = exec.CommandContext(ctx, "git", "config", "user.email")
+	cmd, err = g.prepareGitCommand(ctx, "config", "user.email")
+	if err != nil {
+		return fmt.Errorf("failed to prepare git config user.email: %w", err)
+	}
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("git user.email not configured: %w", err)
 	}
@@ -487,7 +528,10 @@ func (g *GitIntegrator) GetLastCommitHash(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to change to repository directory: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, "git", "rev-parse", "HEAD")
+	cmd, err := g.prepareGitCommand(ctx, "rev-parse", "HEAD")
+	if err != nil {
+		return "", fmt.Errorf("failed to prepare git rev-parse: %w", err)
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get last commit hash: %w", err)

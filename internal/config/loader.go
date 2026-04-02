@@ -16,7 +16,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
 	"gopkg.in/yaml.v3"
@@ -75,11 +74,7 @@ func (cl *ConfigIOHandler) LoadFromFile(ctx context.Context, path string) (*Conf
 //   - *Config: The parsed configuration
 //   - error: An error if the data cannot be parsed
 func (cl *ConfigIOHandler) LoadFromBytes(ctx context.Context, data []byte) (*Config, error) {
-	// Expand environment variables in the raw YAML data
-	// This allows users to use ${VAR} or $VAR in their config file
-	expandedData := []byte(os.ExpandEnv(string(data)))
-
-	if config, err, handled := cl.loadNativeV2(expandedData); handled {
+	if config, err, handled := cl.loadNativeV2(data); handled {
 		if err != nil {
 			return nil, NewParseError("", 0, 0, err)
 		}
@@ -87,7 +82,7 @@ func (cl *ConfigIOHandler) LoadFromBytes(ctx context.Context, data []byte) (*Con
 	}
 
 	// Unmarshal the YAML data
-	config, err := cl.UnmarshalConfig(expandedData)
+	config, err := cl.UnmarshalConfig(data)
 	if err != nil {
 		// Return parse error with context
 		return nil, NewParseError("", 0, 0, err)

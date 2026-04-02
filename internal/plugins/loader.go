@@ -1,14 +1,19 @@
 package plugins
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -16,6 +21,20 @@ import (
 const BinaryPrefix = "opencenter-"
 
 var binaryPrefixLower = strings.ToLower(BinaryPrefix)
+
+const (
+	VerificationStatusVerified         = "verified"
+	VerificationStatusUnverified       = "unverified"
+	VerificationStatusChecksumMismatch = "checksum-mismatch"
+	VerificationStatusError            = "verification-error"
+)
+
+// PluginInfo contains the discovered path and verification metadata for a plugin.
+type PluginInfo struct {
+	Path    string
+	Status  string
+	Message string
+}
 
 // LoadExternalPlugins discovers external plugin binaries and attaches them as
 // cobra Commands to the provided root command. A plugin is any executable whose
@@ -33,9 +52,9 @@ func LoadExternalPlugins(root *cobra.Command) {
 	}
 
 	// Discover executables
-	discovered := Discover()
+	discovered := DiscoverDetailed()
 
-	for name, full := range discovered {
+	for name, info := range discovered {
 		if !hasBinaryPrefix(name) {
 			continue
 		}
@@ -54,7 +73,16 @@ func LoadExternalPlugins(root *cobra.Command) {
 			DisableFlagParsing: true, // forward flags transparently
 			Args:               cobra.ArbitraryArgs,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return runExternal(full, args)
+				switch info.Status {
+				case VerificationStatusChecksumMismatch:
+					return fmt.Errorf("refusing to run plugin %s: %s", use, info.Message)
+				case VerificationStatusError:
+					return fmt.Errorf("cannot verify plugin %s: %s", use, info.Message)
+				case VerificationStatusUnverified:
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: plugin %s is unverified; add its checksum to %s\n", use, checksumsFilePath())
+				}
+
+				return runExternal(info.Path, args)
 			},
 		}
 
@@ -65,18 +93,42 @@ func LoadExternalPlugins(root *cobra.Command) {
 // Discover returns a map of discovered plugin binary basenames to their full paths,
 // using the same discovery rules as LoadExternalPlugins.
 func Discover() map[string]string {
-	pluginBins := discoverPluginBinaries()
 	seen := map[string]string{}
+	for name, info := range DiscoverDetailed() {
+		seen[name] = info.Path
+	}
+	return seen
+}
+
+// DiscoverDetailed returns the discovered plugin paths and verification state.
+func DiscoverDetailed() map[string]PluginInfo {
+	pluginBins := discoverPluginBinaries()
+	checksums, checksumErr := loadPluginChecksums()
+	seen := map[string]PluginInfo{}
+
 	for _, bin := range pluginBins {
 		name := filepath.Base(bin)
-		seen[name] = bin
+		info := PluginInfo{Path: bin}
+
+		if checksumErr != nil {
+			info.Status = VerificationStatusError
+			info.Message = checksumErr.Error()
+		} else {
+			info.Status, info.Message = verifyPlugin(name, bin, checksums)
+		}
+
+		seen[name] = info
 	}
+
 	return seen
 }
 
 func runExternal(path string, args []string) error {
 	// Prepend the subcommand name to args is NOT needed: we map it already.
-	c := exec.Command(path, args...)
+	c, err := security.GetDefaultCommandRunner().PrepareCommand(path, args...)
+	if err != nil {
+		return fmt.Errorf("preparing plugin command: %w", err)
+	}
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Stdin = os.Stdin
@@ -111,6 +163,82 @@ func discoverPluginBinaries() []string {
 	}
 
 	return results
+}
+
+func loadPluginChecksums() (map[string]string, error) {
+	path := checksumsFilePath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return map[string]string{}, nil
+		}
+		return nil, fmt.Errorf("read checksums file: %w", err)
+	}
+
+	checksums := make(map[string]string)
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			return nil, fmt.Errorf("invalid checksum entry: %q", line)
+		}
+
+		filename := strings.TrimPrefix(fields[len(fields)-1], "*")
+		checksums[filepath.Base(filename)] = fields[0]
+	}
+
+	return checksums, nil
+}
+
+func verifyPlugin(name, path string, checksums map[string]string) (string, string) {
+	expected, ok := checksums[name]
+	if !ok {
+		return VerificationStatusUnverified, "no checksum entry"
+	}
+
+	actual, err := sha256ForFile(path)
+	if err != nil {
+		return VerificationStatusError, err.Error()
+	}
+
+	if !strings.EqualFold(actual, expected) {
+		return VerificationStatusChecksumMismatch, fmt.Sprintf("checksum mismatch for %s", name)
+	}
+
+	return VerificationStatusVerified, "checksum verified"
+}
+
+func sha256ForFile(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("open plugin %s: %w", path, err)
+	}
+	defer file.Close()
+
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, file); err != nil {
+		return "", fmt.Errorf("hash plugin %s: %w", path, err)
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil)), nil
+}
+
+func checksumsFilePath() string {
+	return filepath.Join(config.GetPluginsDir(), "checksums.txt")
+}
+
+// SortedPluginNames returns discovered plugin names in a stable order.
+func SortedPluginNames(discovered map[string]PluginInfo) []string {
+	names := make([]string, 0, len(discovered))
+	for name := range discovered {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func findPrefixedExecutables(dir string) []string {

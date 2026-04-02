@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -27,6 +26,7 @@ import (
 	kindprovider "github.com/opencenter-cloud/opencenter-cli/internal/cloud/kind"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 )
 
 // newClusterStatusCmd creates the "cluster status" command.
@@ -322,13 +322,20 @@ func cloudClusterStatus(ctx context.Context, kubeconfigPath string) (bool, strin
 
 	statusCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
+	runner := security.GetDefaultCommandRunner()
 
-	clusterInfoCmd := exec.CommandContext(statusCtx, "kubectl", "--kubeconfig", kubeconfigPath, "cluster-info")
+	clusterInfoCmd, err := runner.PrepareCommandContext(statusCtx, "kubectl", "--kubeconfig", kubeconfigPath, "cluster-info")
+	if err != nil {
+		return false, "", err.Error()
+	}
 	if err := clusterInfoCmd.Run(); err != nil {
 		return false, "", err.Error()
 	}
 
-	endpointCmd := exec.CommandContext(statusCtx, "kubectl", "--kubeconfig", kubeconfigPath, "config", "view", "--minify", "-o", "jsonpath={.clusters[0].cluster.server}")
+	endpointCmd, err := runner.PrepareCommandContext(statusCtx, "kubectl", "--kubeconfig", kubeconfigPath, "config", "view", "--minify", "-o", "jsonpath={.clusters[0].cluster.server}")
+	if err != nil {
+		return false, "", err.Error()
+	}
 	output, err := endpointCmd.Output()
 	if err != nil {
 		return false, "", err.Error()

@@ -20,9 +20,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/crypto"
 )
 
@@ -66,7 +66,10 @@ func SetupSOPSEnvironment(keyManager crypto.KeyManager, keyName string) error {
 
 // CheckSOPSInstallation checks if SOPS is properly installed
 func CheckSOPSInstallation(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "sops", "--version")
+	cmd, err := security.GetDefaultCommandRunner().PrepareCommandContext(ctx, "sops", "--version")
+	if err != nil {
+		return fmt.Errorf("failed to prepare sops version command: %w", err)
+	}
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("SOPS is not installed or not in PATH: %w", err)
 	}

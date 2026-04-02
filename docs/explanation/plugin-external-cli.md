@@ -146,6 +146,16 @@ This mechanism is intentionally narrow:
 
 That simplicity is the main design tradeoff: easy to extend, but limited to command delegation.
 
+## Checksum Verification
+
+External plugins can be verified with a checksum allowlist:
+
+- store checksums in `<config-dir>/plugins/checksums.txt`
+- use standard `sha256sum` formatting: `<sha256>  <filename>`
+- entries are matched by plugin basename
+- unverified plugins emit a warning when executed
+- checksum mismatches block execution
+
 ## Related Reading
 
 - [Plugin Internal Services](plugin-internal-services.md)

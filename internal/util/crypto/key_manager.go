@@ -20,11 +20,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/files"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
@@ -368,7 +368,10 @@ func (m *DefaultKeyManager) GenerateKeyForCluster(clusterName string) (*AgeKeyPa
 
 // CheckAgeInstallation checks if age is properly installed
 func (m *DefaultKeyManager) CheckAgeInstallation(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "age", "--version")
+	cmd, err := security.GetDefaultCommandRunner().PrepareCommandContext(ctx, "age", "--version")
+	if err != nil {
+		return fmt.Errorf("failed to prepare age version command: %w", err)
+	}
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("age is not installed or not in PATH: %w", err)
 	}

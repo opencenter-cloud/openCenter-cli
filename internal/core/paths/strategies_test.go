@@ -315,6 +315,29 @@ func TestExpandPath(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:  "allowlisted config dir expansion",
+			input: "${OPENCENTER_CONFIG_DIR}/test",
+			validate: func(t *testing.T, result string) {
+				configDir := t.TempDir()
+				t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
+
+				expected := filepath.Join(configDir, "test")
+				actual := ExpandPath("${OPENCENTER_CONFIG_DIR}/test")
+				if actual != expected {
+					t.Errorf("ExpandPath() = %s, want %s", actual, expected)
+				}
+			},
+		},
+		{
+			name:  "non-allowlisted environment variable remains literal",
+			input: "${AWS_SECRET_ACCESS_KEY}/test",
+			validate: func(t *testing.T, result string) {
+				if result != "${AWS_SECRET_ACCESS_KEY}/test" {
+					t.Errorf("ExpandPath() = %s, want literal path", result)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -61,6 +61,7 @@ Examples:
 			clusterValidator := validators.NewClusterNameValidator()
 			pathValidator := security.NewDefaultInputValidator()
 			sanitizer := security.NewDefaultCommandSanitizer()
+			runner := security.GetDefaultCommandRunner()
 
 			var clusterName string
 
@@ -103,10 +104,10 @@ Examples:
 			if err != nil {
 				return fmt.Errorf("failed to load configuration for cluster '%s': %w", clusterName, err)
 			}
-			
+
 			// Extract just the cluster name (without organization prefix)
 			actualClusterName := extractClusterName(clusterName)
-			
+
 			configPath, err := getConfigPath(ctx, actualClusterName, cfg.OpenCenter.Meta.Organization)
 			if err != nil {
 				return fmt.Errorf("failed to get config path for cluster '%s': %w", clusterName, err)
@@ -147,9 +148,9 @@ Examples:
 			fmt.Fprintf(cmd.OutOrStdout(), "Opening %s in %s...\n", configPath, editor)
 
 			// Use sanitized command execution (Requirements: 1.3, 1.4)
-			editorCmd, err := sanitizer.SanitizeCommand(editor, []string{configPath})
+			editorCmd, err := runner.PrepareCommand(editor, configPath)
 			if err != nil {
-				return fmt.Errorf("failed to sanitize editor command: %w", err)
+				return fmt.Errorf("failed to prepare editor command: %w", err)
 			}
 
 			editorCmd.Stdin = os.Stdin

@@ -6,7 +6,6 @@ import (
 	stderrors "errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
 )
@@ -66,6 +66,7 @@ type BootstrapService struct {
 	configurationMgr *config.ConfigurationManager
 	fileSystem       fs.FileSystem
 	runner           lifecycleCommandRunner
+	commandRunner    security.CommandRunner
 }
 
 // NewBootstrapService creates a new BootstrapService
@@ -100,7 +101,8 @@ func NewBootstrapServiceWithConfigMgr(
 		validationEngine: validationEngine,
 		configurationMgr: configurationMgr,
 		fileSystem:       fileSystem,
-		runner:           execLifecycleCommandRunner{},
+		runner:           newExecLifecycleCommandRunner(),
+		commandRunner:    security.GetDefaultCommandRunner(),
 	}
 }
 
@@ -441,14 +443,20 @@ func (s *BootstrapService) waitForCloudCluster(ctx context.Context, cfg *config.
 				args = append(args, "--kubeconfig", kubeconfigPath)
 			}
 			args = append(args, "cluster-info")
-			cmd := exec.CommandContext(ctx, "kubectl", args...)
+			cmd, err := s.commandRunner.PrepareCommandContext(ctx, "kubectl", args...)
+			if err != nil {
+				return "", fmt.Errorf("preparing kubectl cluster-info: %w", err)
+			}
 			if err := cmd.Run(); err == nil {
 				args = []string{}
 				if strings.TrimSpace(kubeconfigPath) != "" {
 					args = append(args, "--kubeconfig", kubeconfigPath)
 				}
 				args = append(args, "config", "view", "--minify", "-o", "jsonpath={.clusters[0].cluster.server}")
-				cmd = exec.CommandContext(ctx, "kubectl", args...)
+				cmd, err = s.commandRunner.PrepareCommandContext(ctx, "kubectl", args...)
+				if err != nil {
+					return "", fmt.Errorf("preparing kubectl endpoint lookup: %w", err)
+				}
 				output, err := cmd.Output()
 				if err != nil {
 					return "", fmt.Errorf("getting cluster endpoint: %w", err)
@@ -530,7 +538,10 @@ func (s *BootstrapService) runCommand(ctx context.Context, dir string, env map[s
 
 // runCommandWithInput executes a command with stdin input
 func (s *BootstrapService) runCommandWithInput(ctx context.Context, dir string, env map[string]string, input string, name string, args ...string) error {
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd, err := s.commandRunner.PrepareCommandContext(ctx, name, args...)
+	if err != nil {
+		return fmt.Errorf("preparing command %s: %w", name, err)
+	}
 	cmd.Dir = dir
 	cmd.Stdin = strings.NewReader(input)
 

@@ -358,11 +358,14 @@ rm -rf ~/.cache/opencenter/
 **Structure:**
 ```
 ~/.config/opencenter/plugins/
+├── checksums.txt            # Optional sha256sum allowlist
 ├── opencenter-plugin-name   # Plugin executable
 └── opencenter-plugin-other  # Another plugin
 ```
 
 **Discovery:** Plugins must be named `opencenter-<plugin-name>` and be executable.
+
+**Verification:** `checksums.txt`, when present, uses standard `sha256sum` formatting and is matched by plugin basename.
 
 **Evidence:** `internal/plugins/`, `cmd/plugins.go`
 

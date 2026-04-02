@@ -332,6 +332,7 @@ This project is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) fo
 ## Support
 
 - **Documentation:** [docs/](docs/)
+- **Security Policy:** [SECURITY.md](SECURITY.md)
 - **Issues:** [GitHub Issues](https://github.com/opencenter-cloud/openCenter-cli/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/opencenter-cloud/openCenter-cli/discussions)
 

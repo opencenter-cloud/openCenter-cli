@@ -20,6 +20,7 @@ import (
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
+	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
@@ -78,6 +79,28 @@ func SetupContainer(baseDir string) (Container, error) {
 	// Register ErrorFormatter as singleton
 	if err := container.Singleton("errorFormatter", func() (ui.ErrorFormatter, error) {
 		return ui.NewDefaultErrorFormatter(), nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := container.Singleton("AuditLogger", ProvideAuditLogger); err != nil {
+		return nil, err
+	}
+
+	if err := container.Singleton("InputValidator", ProvideInputValidator); err != nil {
+		return nil, err
+	}
+
+	if err := container.Singleton("CredentialMasker", ProvideCredentialMasker); err != nil {
+		return nil, err
+	}
+
+	if err := container.Singleton("CommandSanitizer", ProvideCommandSanitizer); err != nil {
+		return nil, err
+	}
+
+	if err := container.Singleton("CommandRunner", func(sanitizer security.CommandSanitizer) (security.CommandRunner, error) {
+		return ProvideCommandRunner(sanitizer)
 	}); err != nil {
 		return nil, err
 	}

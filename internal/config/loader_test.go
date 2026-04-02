@@ -216,6 +216,23 @@ opencenter:
 			},
 		},
 		{
+			name: "config does not expand arbitrary environment variables",
+			data: []byte(`
+schema_version: "2.0"
+opencenter:
+  cluster:
+    cluster_name: test-cluster
+  gitops:
+    git_dir: ${AWS_SECRET_ACCESS_KEY}
+`),
+			expectError: false,
+			checkFunc: func(t *testing.T, cfg *Config) {
+				if cfg.OpenCenter.GitOps.GitDir != "${AWS_SECRET_ACCESS_KEY}" {
+					t.Errorf("expected literal git_dir, got %q", cfg.OpenCenter.GitOps.GitDir)
+				}
+			},
+		},
+		{
 			name:        "invalid YAML",
 			data:        []byte(`invalid: yaml: [broken`),
 			expectError: true,
@@ -522,17 +539,16 @@ func TestConfigIOHandler_SaveAndLoad(t *testing.T) {
 	}
 }
 
-// TestConfigIOHandler_EnvironmentVariableExpansion tests that environment variables are expanded
-func TestConfigIOHandler_EnvironmentVariableExpansion(t *testing.T) {
+// TestConfigIOHandler_EnvironmentVariablesRemainLiteral verifies that raw config
+// loading does not expand arbitrary environment variables.
+func TestConfigIOHandler_EnvironmentVariablesRemainLiteral(t *testing.T) {
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := utilfs.NewDefaultFileSystem(errorHandler)
 	loader := NewConfigIOHandler(fileSystem)
 	ctx := context.Background()
 
-	// Set test environment variable
 	testValue := "expanded-value"
-	os.Setenv("TEST_CONFIG_VAR", testValue)
-	defer os.Unsetenv("TEST_CONFIG_VAR")
+	t.Setenv("TEST_CONFIG_VAR", testValue)
 
 	configData := []byte(`
 schema_version: "2.0"
@@ -546,9 +562,9 @@ opencenter:
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	if config.OpenCenter.Cluster.ClusterName != testValue {
-		t.Errorf("expected cluster name %q (expanded), got %q",
-			testValue, config.OpenCenter.Cluster.ClusterName)
+	if config.OpenCenter.Cluster.ClusterName != "${TEST_CONFIG_VAR}" {
+		t.Errorf("expected literal cluster name, got %q",
+			config.OpenCenter.Cluster.ClusterName)
 	}
 }
 

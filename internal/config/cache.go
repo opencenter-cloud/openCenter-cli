@@ -15,95 +15,52 @@ package config
 
 import (
 	"context"
-	"sync"
 	"time"
-)
 
-// cacheEntry represents a cached configuration with metadata.
-type cacheEntry struct {
-	config    *Config
-	loadedAt  time.Time
-	expiresAt time.Time
-}
+	configcache "github.com/opencenter-cloud/opencenter-cli/internal/config/cache"
+)
 
 // ConfigCache provides thread-safe caching of configurations.
 // It stores loaded configurations in memory to avoid repeated disk reads.
 type ConfigCache struct {
-	entries map[string]*cacheEntry
-	mu      sync.RWMutex
+	cache *configcache.NamedCache[*Config]
 }
 
 // NewConfigCache creates a new ConfigCache instance.
 func NewConfigCache() *ConfigCache {
 	return &ConfigCache{
-		entries: make(map[string]*cacheEntry),
+		cache: configcache.NewNamedCache[*Config](),
 	}
 }
 
 // Get retrieves a configuration from cache.
 // Returns the cached config and true if found and not expired, nil and false otherwise.
 func (cc *ConfigCache) Get(ctx context.Context, name string) (*Config, bool) {
-	cc.mu.RLock()
-	defer cc.mu.RUnlock()
-
-	entry, exists := cc.entries[name]
-	if !exists {
-		return nil, false
-	}
-
-	// Check if entry has expired
-	if !entry.expiresAt.IsZero() && time.Now().After(entry.expiresAt) {
-		return nil, false
-	}
-
-	return entry.config, true
+	return cc.cache.Get(ctx, name)
 }
 
 // Set stores a configuration in cache with optional expiration.
 // If expiration is zero, the entry never expires.
 func (cc *ConfigCache) Set(ctx context.Context, name string, config *Config) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-
-	cc.entries[name] = &cacheEntry{
-		config:    config,
-		loadedAt:  time.Now(),
-		expiresAt: time.Time{}, // No expiration by default
-	}
+	cc.cache.Set(ctx, name, config)
 }
 
 // SetWithExpiration stores a configuration in cache with a specific expiration time.
 func (cc *ConfigCache) SetWithExpiration(ctx context.Context, name string, config *Config, expiresAt time.Time) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-
-	cc.entries[name] = &cacheEntry{
-		config:    config,
-		loadedAt:  time.Now(),
-		expiresAt: expiresAt,
-	}
+	cc.cache.SetWithExpiration(ctx, name, config, expiresAt)
 }
 
 // Invalidate removes a specific entry from cache.
 func (cc *ConfigCache) Invalidate(ctx context.Context, name string) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-
-	delete(cc.entries, name)
+	cc.cache.Invalidate(ctx, name)
 }
 
 // Clear removes all entries from cache.
 func (cc *ConfigCache) Clear(ctx context.Context) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-
-	cc.entries = make(map[string]*cacheEntry)
+	cc.cache.Clear(ctx)
 }
 
 // Size returns the number of cached entries.
 func (cc *ConfigCache) Size() int {
-	cc.mu.RLock()
-	defer cc.mu.RUnlock()
-
-	return len(cc.entries)
+	return cc.cache.Size()
 }

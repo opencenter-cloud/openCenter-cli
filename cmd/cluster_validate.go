@@ -59,14 +59,11 @@ If no cluster name is provided, validates the currently active cluster.`,
   opencenter cluster validate my-cluster --generate-debug-config`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get DI container
-			container := getContainer()
-
-			// Resolve ValidateService
-			var validateService *cluster.ValidateService
-			if err := container.ResolveAs("ValidateService", &validateService); err != nil {
-				return fmt.Errorf("failed to resolve ValidateService: %w", err)
+			app, err := GetApp(cmd.Context())
+			if err != nil {
+				return err
 			}
+			validateService := app.ValidateService
 
 			// Check if a configuration file was provided via --config flag
 			configFile, _ := cmd.Flags().GetString("config")
@@ -75,7 +72,6 @@ If no cluster name is provided, validates the currently active cluster.`,
 			var clusterName string
 			var organization string
 			var provider string
-			var err error
 			if configFile == "" {
 				// Determine identifier from args or active cluster
 				var identifier string

@@ -108,18 +108,7 @@ func NewClient(cfg *config.BarbicanConfig) (*Client, error) {
 
 // Login authenticates with Keystone and returns a token.
 func (c *Client) Login(ctx context.Context, username, password string) (string, error) {
-	// Re-use the existing Authenticate function logic but through the client or direct call.
-	// Since Authenticate is stateless and takes config, we can call it.
-	// However, the signature of Authenticate is slightly different (takes passwordIn bool).
-	// We can refactor Authenticate or just inline the logic here since we have the password string.
-
-	// Actually, I can just call Authenticate passing passwordIn=false since I have the password.
-	// But Authenticate reads from stdin if passwordIn is true.
-	// Wait, Authenticate signature is:
-	// func Authenticate(ctx context.Context, cfg *config.BarbicanConfig, username, password string, passwordIn bool) (string, error)
-	// So if I pass passwordIn=false, it uses the password argument.
-
-	return Authenticate(ctx, c.config, username, password, false)
+	return Authenticate(ctx, c.config, username, password)
 }
 
 // GetSecret retrieves a secret from Barbican.

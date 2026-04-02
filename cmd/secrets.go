@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/barbican"
@@ -97,14 +96,9 @@ func newSecretsLoginCmd() *cobra.Command {
 				return err
 			}
 
-			var password string
-			if passwordIn {
-				// Read password from stdin
-				bytePassword, err := io.ReadAll(os.Stdin)
-				if err != nil {
-					return fmt.Errorf("could not read password from stdin: %w", err)
-				}
-				password = strings.TrimSpace(string(bytePassword))
+			password, err := readSecretsLoginPassword(cmd, passwordIn)
+			if err != nil {
+				return err
 			}
 
 			token, err := client.Login(cmd.Context(), username, password)
@@ -123,7 +117,7 @@ func newSecretsLoginCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&username, "username", "", "OpenStack username")
 	cmd.Flags().StringVar(&projectID, "project-id", "", "OpenStack project ID")
-	cmd.Flags().BoolVar(&passwordIn, "password-stdin", false, "Read password from stdin")
+	cmd.Flags().BoolVar(&passwordIn, "password-stdin", false, "Read password from stdin (required for non-interactive use)")
 
 	return cmd
 }

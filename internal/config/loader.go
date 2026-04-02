@@ -17,8 +17,8 @@ import (
 	"context"
 	"fmt"
 
+	configpersistence "github.com/opencenter-cloud/opencenter-cli/internal/config/persistence"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
-	"gopkg.in/yaml.v3"
 )
 
 // ConfigIOHandler handles configuration file I/O operations.
@@ -150,7 +150,7 @@ func (cl *ConfigIOHandler) MarshalConfig(config *Config) ([]byte, error) {
 		return nil, NewValidationError("", "configuration cannot be nil", nil)
 	}
 
-	data, err := yaml.Marshal(config)
+	data, err := configpersistence.MarshalYAML(config)
 	if err != nil {
 		return nil, NewParseError("", 0, 0, fmt.Errorf("failed to marshal configuration to YAML: %w", err))
 	}
@@ -168,14 +168,12 @@ func (cl *ConfigIOHandler) MarshalConfig(config *Config) ([]byte, error) {
 //   - *Config: The parsed configuration
 //   - error: An error if unmarshaling fails
 func (cl *ConfigIOHandler) UnmarshalConfig(data []byte) (*Config, error) {
-	if len(data) == 0 {
-		return nil, NewValidationError("", "configuration data cannot be empty", nil)
-	}
-
-	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	config, err := configpersistence.UnmarshalYAML[Config](data)
+	if err != nil {
+		if len(data) == 0 {
+			return nil, NewValidationError("", "configuration data cannot be empty", nil)
+		}
 		return nil, NewParseError("", 0, 0, fmt.Errorf("failed to unmarshal YAML configuration: %w", err))
 	}
-
-	return &config, nil
+	return config, nil
 }

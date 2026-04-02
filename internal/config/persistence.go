@@ -15,14 +15,10 @@ package config
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 	"sync"
 
+	configpersistence "github.com/opencenter-cloud/opencenter-cli/internal/config/persistence"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation/validators"
 )
 
@@ -41,50 +37,12 @@ func getGlobalManager() (*ConfigurationManager, error) {
 	return globalManager, globalManagerErr
 }
 
-
-
-
 // ResolveConfigDir resolves the configuration directory based on the OPENCENTER_CONFIG_DIR
 // environment variable. If the variable is not set, it falls back to the user's
 // standard config directory (e.g., ~/.config/opencenter on Linux).
 // The directory is created if it does not exist.
 func ResolveConfigDir() (string, error) {
-	var err error
-	dir := os.Getenv("OPENCENTER_CONFIG_DIR")
-	if dir == "" {
-		// Determine OS-specific config directory
-		switch runtime.GOOS {
-		case "windows":
-			base := os.Getenv("APPDATA")
-			if base == "" {
-				base = os.Getenv("LOCALAPPDATA")
-			}
-			if base == "" {
-				base = os.Getenv("USERPROFILE")
-			}
-			dir = filepath.Join(base, "opencenter")
-		default:
-			home, herr := os.UserHomeDir()
-			if herr != nil {
-				err = herr
-				return "", err
-			}
-			dir = filepath.Join(home, ".config", "opencenter")
-		}
-	}
-	// Ensure absolute path
-	if !filepath.IsAbs(dir) {
-		dir, err = filepath.Abs(dir)
-		if err != nil {
-			return "", err
-		}
-	}
-	// Create directory if not exists
-	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
-		err = mkErr
-		return "", err
-	}
-	return dir, err
+	return configpersistence.ResolveConfigDir()
 }
 
 // ParseClusterIdentifier parses a cluster identifier which can be in one of two formats:
@@ -99,65 +57,21 @@ func ResolveConfigDir() (string, error) {
 //   - clusterName: The cluster name.
 //   - error: An error if the identifier is invalid.
 func ParseClusterIdentifier(identifier string) (organization string, clusterName string, err error) {
-	if identifier == "" {
-		return "", "", errors.New("cluster identifier cannot be empty")
-	}
-
-	// Check for organization/cluster format
-	if strings.Contains(identifier, "/") {
-		parts := strings.SplitN(identifier, "/", 2)
-		if len(parts) != 2 {
-			return "", "", errors.New("invalid cluster identifier format: expected 'organization/cluster'")
-		}
-		organization = parts[0]
-		clusterName = parts[1]
-
-		// Basic validation for organization (allow more flexible format than cluster names)
-		if organization == "" {
-			return "", "", errors.New("organization name cannot be empty")
-		}
-
-		// Validate cluster name using ValidationEngine
+	validateClusterName := func(name string) error {
 		ctx := context.Background()
 		validator := validators.NewClusterNameValidator()
 
-		result, err := validator.Validate(ctx, clusterName)
+		result, err := validator.Validate(ctx, name)
 		if err != nil {
-			return "", "", fmt.Errorf("cluster name validation failed: %w", err)
+			return fmt.Errorf("cluster name validation failed: %w", err)
 		}
 		if !result.Valid {
-			return "", "", fmt.Errorf("invalid cluster name: %s", result.Errors[0].Message)
+			return fmt.Errorf("invalid cluster name: %s", result.Errors[0].Message)
 		}
-
-		return organization, clusterName, nil
+		return nil
 	}
 
-	// Just cluster name, use default organization
-	ctx := context.Background()
-	validator := validators.NewClusterNameValidator()
-
-	result, err := validator.Validate(ctx, identifier)
-	if err != nil {
-		return "", "", fmt.Errorf("cluster name validation failed: %w", err)
-	}
-	if !result.Valid {
-		return "", "", fmt.Errorf("invalid cluster name: %s", result.Errors[0].Message)
-	}
-
-	return "opencenter", identifier, nil
+	return configpersistence.ParseClusterIdentifier(identifier, validateClusterName)
 }
 
-
-
-
-
-
-
-
-
-
 // List returns a sorted list of cluster names from the configuration directory.
-
-
-
-

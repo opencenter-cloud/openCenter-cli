@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	configvalidation "github.com/opencenter-cloud/opencenter-cli/internal/config/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 )
 
@@ -266,32 +267,7 @@ func (cv *ConnectivityValidator) validateAWSCredentialFormat(config *Config) []*
 // Helper methods for credential format validation
 
 func (cv *ConnectivityValidator) isValidUUID(uuid string) bool {
-	// Basic UUID format validation
-	if len(uuid) != 36 {
-		return false
-	}
-
-	// Check for proper hyphen placement
-	if uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-' {
-		return false
-	}
-
-	// Check for valid hex characters
-	validChars := "0123456789abcdefABCDEF-"
-	for _, char := range uuid {
-		found := false
-		for _, validChar := range validChars {
-			if char == validChar {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-
-	return true
+	return configvalidation.IsValidUUID(uuid)
 }
 
 func (cv *ConnectivityValidator) isValidAWSAccessKey(key string) bool {

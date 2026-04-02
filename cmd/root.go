@@ -24,8 +24,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
-	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
-	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
 	"github.com/opencenter-cloud/opencenter-cli/internal/plugins"
 )
@@ -33,10 +31,14 @@ import (
 // ContainerKey is the context key for the DI container
 type contextKey string
 
-const ContainerKey contextKey = "container"
+const (
+	AppKey       contextKey = "app"
+	ContainerKey contextKey = "container"
+)
 
 var (
 	globalContainer di.Container
+	globalApp       *di.App
 	containerOnce   sync.Once
 )
 
@@ -45,52 +47,62 @@ var (
 // picks up the current path resolver configuration.
 func resetContainerForTests() {
 	globalContainer = nil
+	globalApp = nil
 	containerOnce = sync.Once{}
 }
 
-// getContainer returns the global DI container, initializing it if necessary
+// getContainer returns the global application container, initializing it if necessary.
 func getContainer() di.Container {
+	if globalContainer != nil {
+		return globalContainer
+	}
 	containerOnce.Do(func() {
 		globalContainer = initializeContainer()
 	})
 	return globalContainer
 }
 
-// initializeContainer creates and initializes the DI container with all services
+func initializeApp() (*di.App, error) {
+	return di.NewApp(config.ResolveClustersDir())
+}
+
+// initializeContainer creates the legacy service locator backed by the typed app graph.
 func initializeContainer() di.Container {
 	baseDir := config.ResolveClustersDir()
 
-	// Use the unified SetupContainer function
-	// Requirements: 5.6
-	container, err := di.SetupContainer(baseDir)
-	if err != nil {
-		// Log error and return a basic container
-		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize DI container: %v\n", err)
-		container = di.NewContainer()
+	app, err := di.NewApp(baseDir)
+	if err == nil {
+		globalApp = app
+		return di.NewAppContainer(app)
 	}
 
-	// Register domain services (these are not yet in SetupContainer)
-	_ = container.Singleton("PathResolver", func() (*paths.PathResolver, error) {
-		return di.ProvidePathResolver(baseDir)
-	})
-
-	_ = container.Singleton("ConfigManager", func() (*config.ConfigManager, error) {
-		return di.ProvideConfigManager()
-	})
-
-	_ = container.Singleton("ValidationEngine", func() (*validation.ValidationEngine, error) {
-		return di.ProvideValidationEngine()
-	})
-
-	_ = container.Singleton("InitService", di.ProvideInitService)
-	_ = container.Singleton("ValidateService", di.ProvideValidateService)
-	_ = container.Singleton("SetupService", di.ProvideSetupService)
-	_ = container.Singleton("BootstrapService", di.ProvideBootstrapService)
-
-	// Initialize all singletons
-	_ = container.Initialize()
-
+	// Typed wiring is the default path. Fall back only if startup wiring fails.
+	fmt.Fprintf(os.Stderr, "Warning: Failed to initialize typed app graph: %v\n", err)
+	container, legacyErr := di.SetupContainer(baseDir)
+	if legacyErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize legacy DI container: %v\n", legacyErr)
+		return di.NewContainer()
+	}
 	return container
+}
+
+// GetApp retrieves the typed application graph from the context.
+func GetApp(ctx context.Context) (*di.App, error) {
+	app, ok := ctx.Value(AppKey).(*di.App)
+	if ok && app != nil {
+		return app, nil
+	}
+
+	if globalApp != nil {
+		return globalApp, nil
+	}
+
+	container := getContainer()
+	if container != nil && globalApp != nil {
+		return globalApp, nil
+	}
+
+	return nil, fmt.Errorf("application graph not found in context")
 }
 
 // GetContainer retrieves the DI container from the context
@@ -242,8 +254,17 @@ func ExecuteWithContext(ctx context.Context, version string) error {
 		}
 	}
 
-	// Initialize DI container and add to context
-	container := getContainer()
+	app, err := initializeApp()
+	if err != nil {
+		return fmt.Errorf("initialize application graph: %w", err)
+	}
+	globalApp = app
+	container := di.NewAppContainer(app)
+	globalContainer = container
+	containerOnce = sync.Once{}
+
+	// Initialize app graph and add to context
+	ctx = context.WithValue(ctx, AppKey, app)
 	ctx = context.WithValue(ctx, ContainerKey, container)
 
 	// Add global persistent flags

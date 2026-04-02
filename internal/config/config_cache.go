@@ -13,130 +13,25 @@
 
 package config
 
-import (
-	"sync"
-)
-
-// configCache provides caching for default configurations to reduce allocations.
-// This significantly improves performance for repeated config generation operations.
-type configCache struct {
-	mu              sync.RWMutex
-	defaultConfigs  map[string]*Config
-	schemaDefaults  map[string][]byte
-	completeConfigs map[string]*Config
-}
+import configcache "github.com/opencenter-cloud/opencenter-cli/internal/config/cache"
 
 // globalConfigCache is the singleton cache instance.
-var globalConfigCache = &configCache{
-	defaultConfigs:  make(map[string]*Config),
-	schemaDefaults:  make(map[string][]byte),
-	completeConfigs: make(map[string]*Config),
-}
-
-// getDefaultConfig retrieves a cached default config or generates a new one.
-// This reduces allocations by ~98KB per call when cache hits.
-func (c *configCache) getDefaultConfig(clusterName string) Config {
-	// Try read lock first (fast path)
-	c.mu.RLock()
-	if cached, ok := c.defaultConfigs[clusterName]; ok {
-		c.mu.RUnlock()
-		// Return a copy to prevent mutation of cached value
-		return *cached
-	}
-	c.mu.RUnlock()
-
-	// Generate new config (slow path)
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Double-check after acquiring write lock
-	if cached, ok := c.defaultConfigs[clusterName]; ok {
-		return *cached
-	}
-
-	// Generate and cache
-	config := defaultConfig(clusterName)
-	c.defaultConfigs[clusterName] = &config
-	return config
-}
-
-// getSchemaDefaults retrieves cached schema defaults or generates new ones.
-// This reduces allocations by ~1.1MB per call when cache hits.
-func (c *configCache) getSchemaDefaults(clusterName string) ([]byte, error) {
-	// Try read lock first (fast path)
-	c.mu.RLock()
-	if cached, ok := c.schemaDefaults[clusterName]; ok {
-		c.mu.RUnlock()
-		// Return a copy to prevent mutation of cached value
-		result := make([]byte, len(cached))
-		copy(result, cached)
-		return result, nil
-	}
-	c.mu.RUnlock()
-
-	// Generate new defaults (slow path)
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Double-check after acquiring write lock
-	if cached, ok := c.schemaDefaults[clusterName]; ok {
-		result := make([]byte, len(cached))
-		copy(result, cached)
-		return result, nil
-	}
-
-	// Generate and cache
-	defaults, err := GenerateDefaultFromSchema(clusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	c.schemaDefaults[clusterName] = defaults
-	return defaults, nil
-}
-
-// invalidateDefaultConfig removes a cached default config.
-func (c *configCache) invalidateDefaultConfig(clusterName string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.defaultConfigs, clusterName)
-	delete(c.schemaDefaults, clusterName)
-	delete(c.completeConfigs, clusterName)
-}
-
-// invalidateAll clears all cached configs.
-func (c *configCache) invalidateAll() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.defaultConfigs = make(map[string]*Config)
-	c.schemaDefaults = make(map[string][]byte)
-	c.completeConfigs = make(map[string]*Config)
-}
-
-// getCacheStats returns cache statistics for monitoring.
-func (c *configCache) getCacheStats() CacheStats {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return CacheStats{
-		DefaultConfigCount:  len(c.defaultConfigs),
-		SchemaDefaultsCount: len(c.schemaDefaults),
-		CompleteConfigCount: len(c.completeConfigs),
-	}
-}
+var globalConfigCache = configcache.NewDefaultsCache(
+	func(clusterName string) Config {
+		return defaultConfig(clusterName)
+	},
+	GenerateDefaultFromSchema,
+)
 
 // CacheStats provides statistics about the config cache.
-type CacheStats struct {
-	DefaultConfigCount  int
-	SchemaDefaultsCount int
-	CompleteConfigCount int
-}
+type CacheStats = configcache.Stats
 
 // GetCachedDefaultConfig retrieves a cached default config or generates a new one.
 // This is the public API for accessing cached default configs.
 //
 // Performance: Reduces allocations by ~98KB per call on cache hits.
 func GetCachedDefaultConfig(clusterName string) Config {
-	return globalConfigCache.getDefaultConfig(clusterName)
+	return globalConfigCache.GetDefaultConfig(clusterName)
 }
 
 // GetCachedSchemaDefaults retrieves cached schema defaults or generates new ones.
@@ -144,22 +39,22 @@ func GetCachedDefaultConfig(clusterName string) Config {
 //
 // Performance: Reduces allocations by ~1.1MB per call on cache hits.
 func GetCachedSchemaDefaults(clusterName string) ([]byte, error) {
-	return globalConfigCache.getSchemaDefaults(clusterName)
+	return globalConfigCache.GetSchemaDefaults(clusterName)
 }
 
 // InvalidateConfigCache removes a cached config for a specific cluster.
 // Call this when a cluster's configuration changes.
 func InvalidateConfigCache(clusterName string) {
-	globalConfigCache.invalidateDefaultConfig(clusterName)
+	globalConfigCache.Invalidate(clusterName)
 }
 
 // InvalidateAllConfigCaches clears all cached configs.
 // Call this when global configuration changes or for testing.
 func InvalidateAllConfigCaches() {
-	globalConfigCache.invalidateAll()
+	globalConfigCache.InvalidateAll()
 }
 
 // GetConfigCacheStats returns cache statistics for monitoring.
 func GetConfigCacheStats() CacheStats {
-	return globalConfigCache.getCacheStats()
+	return globalConfigCache.Stats()
 }

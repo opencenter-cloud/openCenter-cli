@@ -22,6 +22,25 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
 )
 
+func TestGetApp(t *testing.T) {
+	tempDir := t.TempDir()
+	prepareCommandTestEnv(t, tempDir)
+
+	app, err := di.NewApp(tempDir)
+	if err != nil {
+		t.Fatalf("NewApp() failed: %v", err)
+	}
+
+	ctx := context.WithValue(context.Background(), AppKey, app)
+	retrieved, err := GetApp(ctx)
+	if err != nil {
+		t.Fatalf("GetApp() failed: %v", err)
+	}
+	if retrieved != app {
+		t.Fatal("GetApp() returned a different app instance")
+	}
+}
+
 // TestGetContainer tests retrieving the DI container from context
 func TestGetContainer(t *testing.T) {
 	// Create a test container

@@ -231,6 +231,10 @@ mise run build-all
 # Create release
 mise run release v1.0.0
 
+# Publish official release
+git tag -a v1.0.0 -m "Release 1.0.0"
+git push origin v1.0.0
+
 # Generate JSON schema
 mise run schema
 
@@ -245,6 +249,8 @@ mise run gitea-up
 ```
 
 See [Mise Tasks Reference](docs/reference/mise-tasks.md) for complete list.
+
+Tagged releases are published by GitHub Actions. Use `mise run release` for local preflight builds, then push a `v*` tag to create the signed release artifacts.
 
 ## Project Structure
 

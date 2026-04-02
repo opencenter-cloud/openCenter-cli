@@ -14,14 +14,14 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 
+	configschema "github.com/opencenter-cloud/opencenter-cli/internal/config/schema"
 	"gopkg.in/yaml.v3"
 )
 
 // SchemaVersion represents the current schema version.
-const SchemaVersion = "2.0"
+const SchemaVersion = configschema.Version
 
 // GenerateSchema returns a JSON schema (Draft 2020-12) describing the current
 // cluster configuration structure. The schema mirrors the structure emitted by
@@ -1702,10 +1702,7 @@ func GenerateSchema(pretty bool) ([]byte, error) {
 		},
 	}
 
-	if pretty {
-		return json.MarshalIndent(schema, "", "  ")
-	}
-	return json.Marshal(schema)
+	return configschema.MarshalDocument(schema, pretty)
 }
 
 // GenerateDefaultFromSchema returns the YAML defaults used by cluster init.

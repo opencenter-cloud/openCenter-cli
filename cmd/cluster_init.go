@@ -98,17 +98,11 @@ don't already exist, unless --no-keygen is specified.`,
 func runClusterInit(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
-	// Initialize DI container
-	container := di.NewContainer()
-	if err := setupContainer(container); err != nil {
-		return fmt.Errorf("setting up DI container: %w", err)
+	app, err := di.NewApp(config.ResolveClustersDir())
+	if err != nil {
+		return fmt.Errorf("initialize application graph: %w", err)
 	}
-
-	// Resolve InitService from container
-	var initService *cluster.InitService
-	if err := container.ResolveAs("init-service", &initService); err != nil {
-		return fmt.Errorf("resolving init service: %w", err)
-	}
+	initService := app.InitService
 
 	// Parse command-line options
 	opts, err := parseInitOptions(cmd, args)

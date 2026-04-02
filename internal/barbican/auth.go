@@ -19,21 +19,10 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
-	"io"
-	"os"
 )
 
 // Authenticate handles the authentication against Keystone and returns a token.
-func Authenticate(ctx context.Context, cfg *config.BarbicanConfig, username, password string, passwordIn bool) (string, error) {
-	if passwordIn {
-		// Read password from stdin
-		bytePassword, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return "", fmt.Errorf("could not read password from stdin: %w", err)
-		}
-		password = string(bytePassword)
-	}
-
+func Authenticate(ctx context.Context, cfg *config.BarbicanConfig, username, password string) (string, error) {
 	provider, err := openstack.NewClient(cfg.AuthURL)
 	if err != nil {
 		return "", fmt.Errorf("could not create OpenStack client: %w", err)

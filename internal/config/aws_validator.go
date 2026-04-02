@@ -16,9 +16,9 @@ package config
 import (
 	"context"
 	"fmt"
-	"net"
 	"regexp"
 
+	configvalidation "github.com/opencenter-cloud/opencenter-cli/internal/config/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 )
 
@@ -231,9 +231,7 @@ func (v *AWSValidator) isValidAWSSecretKey(key string) bool {
 }
 
 func (v *AWSValidator) isValidAWSRegion(region string) bool {
-	// Basic AWS region format validation
-	regionPattern := regexp.MustCompile(`^[a-z]{2}-[a-z]+-\d+$`)
-	return regionPattern.MatchString(region)
+	return configvalidation.IsValidAWSRegion(region)
 }
 
 func (v *AWSValidator) isValidVPCID(vpcID string) bool {
@@ -243,17 +241,9 @@ func (v *AWSValidator) isValidVPCID(vpcID string) bool {
 }
 
 func (v *AWSValidator) isValidCIDR(cidr string) bool {
-	_, _, err := net.ParseCIDR(cidr)
-	return err == nil
+	return configvalidation.IsValidCIDR(cidr)
 }
 
 func (v *AWSValidator) subnetsOverlap(cidr1, cidr2 string) bool {
-	_, net1, err1 := net.ParseCIDR(cidr1)
-	_, net2, err2 := net.ParseCIDR(cidr2)
-
-	if err1 != nil || err2 != nil {
-		return false
-	}
-
-	return net1.Contains(net2.IP) || net2.Contains(net1.IP)
+	return configvalidation.SubnetsOverlap(cidr1, cidr2)
 }

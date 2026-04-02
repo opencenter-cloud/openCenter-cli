@@ -17,10 +17,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
+	configvalidation "github.com/opencenter-cloud/opencenter-cli/internal/config/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 )
 
@@ -222,69 +222,13 @@ func (v *OpenStackValidator) validateNetworkConfiguration(os SimplifiedOpenStack
 // Helper methods
 
 func (v *OpenStackValidator) isValidUUID(uuid string) bool {
-	// Basic UUID format validation
-	if len(uuid) != 36 {
-		return false
-	}
-
-	// Check for proper hyphen placement
-	if uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-' {
-		return false
-	}
-
-	// Check for valid hex characters
-	validChars := "0123456789abcdefABCDEF-"
-	for _, char := range uuid {
-		found := false
-		for _, validChar := range validChars {
-			if char == validChar {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-
-	return true
+	return configvalidation.IsValidUUID(uuid)
 }
 
 func (v *OpenStackValidator) isValidURL(rawURL string) bool {
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return false
-	}
-
-	return parsedURL.Scheme == "http" || parsedURL.Scheme == "https"
+	return configvalidation.IsValidURL(rawURL)
 }
 
 func (v *OpenStackValidator) isValidIP(ip string) bool {
-	// Simple IP validation - could be enhanced with net.ParseIP
-	parts := strings.Split(ip, ".")
-	if len(parts) != 4 {
-		// Check for IPv6 (basic check)
-		return strings.Contains(ip, ":")
-	}
-
-	// IPv4 validation
-	for _, part := range parts {
-		if len(part) == 0 || len(part) > 3 {
-			return false
-		}
-
-		num := 0
-		for _, char := range part {
-			if char < '0' || char > '9' {
-				return false
-			}
-			num = num*10 + int(char-'0')
-		}
-
-		if num > 255 {
-			return false
-		}
-	}
-
-	return true
+	return configvalidation.IsValidIP(ip)
 }

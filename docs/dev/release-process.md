@@ -95,106 +95,42 @@ mise run test-integration
 All tests must pass before proceeding.
 
 
-## Step 2: Build Release Binaries
+## Step 2: Push The Release Tag
 
-### Build for All Platforms
-
-```bash
-# Build release binaries with version
-mise run release v1.2.0
-```
-
-This creates binaries in `bin/release/`:
-- `opencenter-1.2.0-linux-amd64`
-- `opencenter-1.2.0-linux-arm64`
-- `opencenter-1.2.0-darwin-amd64`
-- `opencenter-1.2.0-darwin-arm64`
-
-### Verify Binaries
-
-Test each binary:
+The GitHub Actions release workflow is the source of truth for published artifacts.
 
 ```bash
-# Linux AMD64
-./bin/release/opencenter-1.2.0-linux-amd64 version
-
-# macOS ARM64
-./bin/release/opencenter-1.2.0-darwin-arm64 version
-```
-
-Expected output shows correct version, commit, and build date.
-
-### Generate Release Notes
-
-Release notes are auto-generated:
-
-```bash
-# Generate release notes
-mise run publish 1.2.0
-```
-
-Creates `bin/release/RELEASE_NOTES_1.2.0.md` with:
-- Changes in this release (from git log)
-- Installation instructions
-- Platform support
-- Known issues
-
-Review and edit release notes as needed.
-
-## Step 3: Create Git Tag
-
-### Tag Release
-
-```bash
-# Create annotated tag
 git tag -a v1.2.0 -m "Release 1.2.0"
-
-# Verify tag
-git tag -l v1.2.0
-git show v1.2.0
-```
-
-### Push Tag
-
-```bash
-# Push tag to origin
 git push origin v1.2.0
 ```
 
-This triggers CI to build and test the release.
+The tag-triggered workflow builds the supported Linux and macOS binaries, generates
+`checksums.txt`, signs the release assets with cosign keyless signing, emits an SBOM,
+and creates the GitHub release automatically.
 
-## Step 4: Create GitHub Release
+## Step 3: Watch The Release Workflow
 
-### Using GitHub CLI
+Use GitHub Actions or the GitHub CLI to monitor the run:
 
 ```bash
-# Create release with binaries
-gh release create v1.2.0 \
-  --repo opencenter-cloud/openCenter-cli \
-  --title "opencenter 1.2.0" \
-  --notes-file bin/release/RELEASE_NOTES_1.2.0.md \
-  bin/release/opencenter-*
+gh run list --workflow release.yml
+gh run watch
 ```
 
-For pre-releases:
-```bash
-gh release create v1.2.0-rc1 \
-  --repo opencenter-cloud/openCenter-cli \
-  --title "opencenter 1.2.0-rc1" \
-  --notes-file bin/release/RELEASE_NOTES_1.2.0-rc1.md \
-  --prerelease \
-  bin/release/opencenter-*
-```
+## Step 4: Verify Release
 
-### Using GitHub Web UI
+### Review Generated Assets
 
-1. Navigate to https://github.com/opencenter-cloud/openCenter-cli/releases/new
-2. Select tag: `v1.2.0`
-3. Set title: `opencenter 1.2.0`
-4. Paste release notes from `bin/release/RELEASE_NOTES_1.2.0.md`
-5. Upload binaries from `bin/release/`
-6. Check "Set as the latest release"
-7. Click "Publish release"
+Verify the GitHub release contains:
+- the four platform binaries
+- `checksums.txt`
+- cosign signature and certificate files
+- `opencenter.spdx.json`
+
+### Local Dry Run Helper
+
+`mise run release <version>` remains available for local preflight builds and manual
+artifact inspection, but it is no longer the publishing mechanism for official releases.
 
 ## Step 5: Verify Release
 

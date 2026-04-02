@@ -86,12 +86,11 @@ func runClusterSetup(cmd *cobra.Command, args []string) error {
 	// Extract just the cluster name (without organization prefix) for path resolution
 	actualClusterName := extractClusterName(name)
 
-	// Resolve SetupService from global DI container
-	container := getContainer()
-	var setupService *cluster.SetupService
-	if err := container.ResolveAs("SetupService", &setupService); err != nil {
-		return fmt.Errorf("resolving setup service: %w", err)
+	app, err := GetApp(cmd.Context())
+	if err != nil {
+		return err
 	}
+	setupService := app.SetupService
 
 	// Parse flags into SetupOptions
 	force, _ := cmd.Flags().GetBool("force")

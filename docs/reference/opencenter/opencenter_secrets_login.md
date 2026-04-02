@@ -10,7 +10,7 @@ opencenter secrets login [flags]
 
 ```
   -h, --help                help for login
-      --password-stdin      Read password from stdin
+      --password-stdin      Read password from stdin (required for non-interactive use)
       --project-id string   OpenStack project ID
       --username string     OpenStack username
 ```

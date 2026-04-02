@@ -80,6 +80,8 @@ mise run build-all
 - `bin/opencenter-darwin-amd64`
 - `bin/opencenter-darwin-arm64`
 
+For official releases, push a `v*` tag and let `.github/workflows/release.yml` publish the signed artifacts. Use `mise run release` only for local preflight builds.
+
 **Evidence:** `.kiro/steering/tech.md:58`
 
 ## Test Tasks

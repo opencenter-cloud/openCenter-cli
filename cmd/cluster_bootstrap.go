@@ -98,17 +98,11 @@ func runClusterBootstrap(cmd *cobra.Command, args []string) error {
 	}
 	defer lockMgr.Release(lock)
 
-	// Initialize DI container
-	container := di.NewContainer()
-	if err := setupBootstrapContainer(container); err != nil {
-		return fmt.Errorf("setting up DI container: %w", err)
+	app, err := di.NewApp(config.ResolveClustersDir())
+	if err != nil {
+		return fmt.Errorf("initialize application graph: %w", err)
 	}
-
-	// Resolve BootstrapService from container
-	var bootstrapService *cluster.BootstrapService
-	if err := container.ResolveAs("bootstrap-service", &bootstrapService); err != nil {
-		return fmt.Errorf("resolving bootstrap service: %w", err)
-	}
+	bootstrapService := app.BootstrapService
 
 	// Parse command-line options
 	opts, err := parseBootstrapOptions(cmd, args, actualClusterName)

@@ -35,7 +35,7 @@ func newRootCmd() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&stateDir, "state-dir", "", "plugin state directory (defaults to ./.opencenter-local)")
+	cmd.PersistentFlags().StringVar(&stateDir, "state-dir", "", "plugin state directory (defaults to $OPENCENTER_CONFIG_DIR/local)")
 	cmd.PersistentFlags().StringVar(&configDir, "config-dir", "", "override openCenter config directory")
 
 	cmd.AddCommand(newGiteaCmd(&stateDir))

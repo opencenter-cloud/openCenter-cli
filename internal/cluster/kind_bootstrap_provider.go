@@ -51,7 +51,7 @@ func (p *kindBootstrapProvider) BuildSteps(cfg *config.Config, clusterPaths *pat
 	kindClusterName := resolveKindClusterName(cfg)
 
 	executor := localdev.NewExecutor()
-	// stateDir is empty so the localdev layout resolves to .opencenter-local/ in cwd.
+	// stateDir is empty so the localdev layout resolves to <OPENCENTER_CONFIG_DIR>/local.
 	stateDir := ""
 
 	clusterIdentifier := cfg.ClusterName()

@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
-const defaultStateDirName = ".opencenter-local"
+const defaultLocalSubdir = "local"
 
 // Layout describes the local-dev plugin state directory.
 type Layout struct {
@@ -25,13 +26,16 @@ type Layout struct {
 }
 
 // ResolveLayout returns the absolute state layout for the plugin.
+// When root is empty the layout defaults to <OPENCENTER_CONFIG_DIR>/local,
+// keeping all state inside the standard configuration tree instead of
+// creating a dot-directory in the working directory.
 func ResolveLayout(root string) (Layout, error) {
 	if root == "" {
-		cwd, err := os.Getwd()
+		configDir, err := resolveConfigDir()
 		if err != nil {
-			return Layout{}, fmt.Errorf("get current directory: %w", err)
+			return Layout{}, fmt.Errorf("resolve config directory: %w", err)
 		}
-		root = filepath.Join(cwd, defaultStateDirName)
+		root = filepath.Join(configDir, defaultLocalSubdir)
 	}
 
 	absRoot, err := filepath.Abs(root)
@@ -64,4 +68,35 @@ func (l Layout) Ensure() error {
 		}
 	}
 	return nil
+}
+
+// resolveConfigDir returns the openCenter configuration directory.
+// It mirrors the logic in internal/config/persistence without importing
+// that package, avoiding a circular dependency.
+func resolveConfigDir() (string, error) {
+	if dir := os.Getenv("OPENCENTER_CONFIG_DIR"); dir != "" {
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			return "", fmt.Errorf("resolve OPENCENTER_CONFIG_DIR: %w", err)
+		}
+		return abs, nil
+	}
+
+	switch runtime.GOOS {
+	case "windows":
+		base := os.Getenv("APPDATA")
+		if base == "" {
+			base = os.Getenv("LOCALAPPDATA")
+		}
+		if base == "" {
+			base = os.Getenv("USERPROFILE")
+		}
+		return filepath.Join(base, "opencenter"), nil
+	default:
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(home, ".config", "opencenter"), nil
+	}
 }

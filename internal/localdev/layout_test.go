@@ -6,35 +6,18 @@ import (
 	"testing"
 )
 
-func TestResolveLayout_DefaultsToDotOpenCenterLocal(t *testing.T) {
-	wd := t.TempDir()
-	previous, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(previous) })
-	if err := os.Chdir(wd); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
+func TestResolveLayout_DefaultsToConfigDirLocal(t *testing.T) {
+	configDir := t.TempDir()
+	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
 
 	layout, err := ResolveLayout("")
 	if err != nil {
 		t.Fatalf("ResolveLayout() error = %v", err)
 	}
 
-	resolvedWD, err := filepath.EvalSymlinks(wd)
-	if err != nil {
-		t.Fatalf("EvalSymlinks(%q) error = %v", wd, err)
-	}
-	resolvedParent, err := filepath.EvalSymlinks(filepath.Dir(layout.Root))
-	if err != nil {
-		t.Fatalf("EvalSymlinks(%q) error = %v", filepath.Dir(layout.Root), err)
-	}
-	if resolvedParent != resolvedWD {
-		t.Fatalf("layout.Root parent = %q, want %q", resolvedParent, resolvedWD)
-	}
-	if filepath.Base(layout.Root) != ".opencenter-local" {
-		t.Fatalf("layout.Root base = %q, want .opencenter-local", filepath.Base(layout.Root))
+	wantRoot := filepath.Join(configDir, "local")
+	if layout.Root != wantRoot {
+		t.Fatalf("layout.Root = %q, want %q", layout.Root, wantRoot)
 	}
 	if layout.AdminTokenPath != filepath.Join(layout.Root, "tokens", "gitea-admin.token") {
 		t.Fatalf("unexpected admin token path: %s", layout.AdminTokenPath)

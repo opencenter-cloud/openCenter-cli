@@ -42,7 +42,7 @@ flux --version
 opencenter local gitea up
 ```
 
-Starts a disposable Gitea container (`docker.gitea.com/gitea:1.24.5`) and provisions a test user, API tokens, and a `test-repo` repository. State is written to `.opencenter-local/` in the current directory.
+Starts a disposable Gitea container (`docker.gitea.com/gitea:1.24.5`) and provisions a test user, API tokens, and a `test-repo` repository. State is written to `$OPENCENTER_CONFIG_DIR/local/` (typically `~/.config/opencenter/local/`).
 
 Verify:
 
@@ -128,14 +128,13 @@ The command prompts for confirmation unless `--force` is passed.
 opencenter local gitea destroy
 ```
 
-Stops the Gitea container and removes the `.opencenter-local/` state directory (metadata, tokens, certificates, mounted data). This is separate from `cluster destroy` because a single Gitea instance can serve multiple local clusters.
+Stops the Gitea container and removes the local state directory (`$OPENCENTER_CONFIG_DIR/local/` — metadata, tokens, certificates, mounted data). This is separate from `cluster destroy` because a single Gitea instance can serve multiple local clusters.
 
 ### Verify nothing is left
 
 ```bash
 kind get clusters                # should not list my-cluster
 opencenter cluster list          # should not list my-cluster
-ls .opencenter-local 2>/dev/null # should fail if gitea destroy succeeded
 ```
 
 ## Troubleshooting

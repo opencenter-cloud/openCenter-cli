@@ -49,6 +49,12 @@ func NewService(executor localdev.Executor, stateDir string) (*Service, error) {
 }
 
 // Bootstrap runs `flux bootstrap git` against the attached local Gitea repo.
+//
+// The bootstrap URL uses the host's routable IP (e.g. 172.16.0.146:3001)
+// rather than localhost. Podman binds the Gitea port on 0.0.0.0, so this
+// IP is reachable from both the macOS host (where the flux CLI clones) and
+// from inside the Kind cluster (where the source-controller reconciles).
+// This eliminates the need for a post-bootstrap kubectl patch.
 func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*BootstrapResult, error) {
 	cluster, err := s.resolver.Resolve(ctx, clusterIdentifier)
 	if err != nil {
@@ -71,6 +77,9 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 	}
 	if status.KindIP == "" {
 		return nil, fmt.Errorf("local gitea is not attached to the kind network; run `opencenter local gitea attach-kind --cluster %s` first", cluster.ClusterName)
+	}
+	if status.HostRepoURL == "" {
+		return nil, fmt.Errorf("no routable host IP found; Gitea must be reachable from both the host and the Kind cluster")
 	}
 	if !status.UserTokenExists {
 		return nil, fmt.Errorf("missing Gitea user token at %s", status.UserTokenPath)
@@ -96,13 +105,10 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 		return nil, err
 	}
 
-	// Use localhost for the initial bootstrap clone (runs on the host).
-	// The Kind network IP is unreachable from the host; localhost is
-	// port-forwarded to the Gitea container.
-	hostURL := fmt.Sprintf("https://localhost:%d/%s/%s.git", status.Metadata.HTTPSPort, status.Metadata.RepoOwner, status.Metadata.RepoName)
-	// The in-cluster URL uses the Kind network IP so the Flux
-	// source-controller inside the cluster can reach Gitea.
-	inClusterURL := fmt.Sprintf("https://%s:%d/%s/%s.git", status.KindIP, status.Metadata.HTTPSPort, status.Metadata.RepoOwner, status.Metadata.RepoName)
+	// Use the host's routable IP for the bootstrap URL. This single URL
+	// works from both the host (flux CLI clone) and inside the cluster
+	// (source-controller reconciliation) because Podman binds on 0.0.0.0.
+	repoURL := status.HostRepoURL
 	bootstrapPath := filepathForFlux(cluster.ClusterName)
 	kubeconfigEnv := map[string]string{"KUBECONFIG": cluster.Paths.KubeconfigPath}
 
@@ -112,7 +118,7 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 		Env:  kubeconfigEnv,
 		Args: []string{
 			"bootstrap", "git",
-			"--url=" + hostURL,
+			"--url=" + repoURL,
 			"--branch=" + branch,
 			"--path=" + bootstrapPath,
 			"--token-auth",
@@ -122,22 +128,6 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 		},
 	}); err != nil {
 		return nil, fmt.Errorf("flux bootstrap git: %w", err)
-	}
-
-	// Patch the in-cluster GitRepository URL to the Kind network IP so
-	// the source-controller can reach Gitea from inside the cluster.
-	patchJSON := fmt.Sprintf(`{"spec":{"url":"%s"}}`, inClusterURL)
-	if _, err := s.executor.Run(ctx, localdev.RunOptions{
-		Name: "kubectl",
-		Env:  kubeconfigEnv,
-		Args: []string{
-			"patch", "gitrepository", "flux-system",
-			"-n", "flux-system",
-			"--type=merge",
-			"-p", patchJSON,
-		},
-	}); err != nil {
-		return nil, fmt.Errorf("patch flux-system GitRepository URL to in-cluster address: %w", err)
 	}
 
 	if _, err := s.gitops.PullRebase(ctx, gitDir); err != nil {
@@ -153,7 +143,7 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 
 	return &BootstrapResult{
 		GitDir:         gitDir,
-		RepoURL:        inClusterURL,
+		RepoURL:        repoURL,
 		Branch:         branch,
 		KubeconfigPath: cluster.Paths.KubeconfigPath,
 	}, nil

@@ -165,7 +165,9 @@ func writeGiteaState(t *testing.T, stateDir string) *gitea.Status {
 		Metadata:     metadata,
 		BaseURL:      "https://localhost:3001",
 		LocalRepoURL: "https://localhost:3001/newuser/test-repo.git",
+		HostRepoURL:  "https://192.168.1.100:3001/newuser/test-repo.git",
 		KindIP:       "10.89.0.11",
+		HostIP:       "192.168.1.100",
 		Running:      true,
 		CAPath:       layout.CACertPath,
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,7 +35,7 @@ func (f *fakeExecutor) RunStreaming(ctx context.Context, opts localdev.RunOption
 	return err
 }
 
-func TestBootstrapUsesKindIPURLAndReconciles(t *testing.T) {
+func TestBootstrapUsesHostIPURLAndReconciles(t *testing.T) {
 	configDir := t.TempDir()
 	stateDir := t.TempDir()
 	gitDir := filepath.Join(t.TempDir(), "gitops")
@@ -60,18 +61,12 @@ func TestBootstrapUsesKindIPURLAndReconciles(t *testing.T) {
 			"git branch --show-current": func(opts localdev.RunOptions) ([]byte, error) {
 				return []byte("main"), nil
 			},
-			// Bootstrap uses localhost (host-reachable) for the initial clone.
-			fmt.Sprintf("flux bootstrap git --url=https://localhost:3001/newuser/test-repo.git --branch=main --path=applications/overlays/%s --token-auth --username=newuser --password=user-token --ca-file=%s", clusterName, status.CAPath): func(opts localdev.RunOptions) ([]byte, error) {
+			// Bootstrap uses the host's routable IP — reachable from both
+			// the host (flux CLI clone) and inside the Kind cluster
+			// (source-controller reconciliation).
+			fmt.Sprintf("flux bootstrap git --url=%s --branch=main --path=applications/overlays/%s --token-auth --username=newuser --password=user-token --ca-file=%s", status.HostRepoURL, clusterName, status.CAPath): func(opts localdev.RunOptions) ([]byte, error) {
 				if opts.Env["KUBECONFIG"] != clusterCtx.Paths.KubeconfigPath {
 					t.Fatalf("bootstrap KUBECONFIG = %q, want %q", opts.Env["KUBECONFIG"], clusterCtx.Paths.KubeconfigPath)
-				}
-				return nil, nil
-			},
-			// After bootstrap, the GitRepository is patched to the Kind network IP
-			// so the in-cluster source-controller can reach Gitea.
-			fmt.Sprintf(`kubectl patch gitrepository flux-system -n flux-system --type=merge -p {"spec":{"url":"https://%s:3001/newuser/test-repo.git"}}`, status.KindIP): func(opts localdev.RunOptions) ([]byte, error) {
-				if opts.Env["KUBECONFIG"] != clusterCtx.Paths.KubeconfigPath {
-					t.Fatalf("patch KUBECONFIG = %q, want %q", opts.Env["KUBECONFIG"], clusterCtx.Paths.KubeconfigPath)
 				}
 				return nil, nil
 			},
@@ -96,9 +91,8 @@ func TestBootstrapUsesKindIPURLAndReconciles(t *testing.T) {
 		t.Fatalf("Bootstrap() error = %v", err)
 	}
 
-	wantURL := "https://10.89.0.11:3001/newuser/test-repo.git"
-	if result.RepoURL != wantURL {
-		t.Fatalf("RepoURL = %q, want %q", result.RepoURL, wantURL)
+	if result.RepoURL != status.HostRepoURL {
+		t.Fatalf("RepoURL = %q, want %q", result.RepoURL, status.HostRepoURL)
 	}
 	if result.KubeconfigPath != clusterCtx.Paths.KubeconfigPath {
 		t.Fatalf("KubeconfigPath = %q, want %q", result.KubeconfigPath, clusterCtx.Paths.KubeconfigPath)
@@ -183,12 +177,43 @@ func writeGiteaState(t *testing.T, stateDir string) *gitea.Status {
 		t.Fatalf("write ca: %v", err)
 	}
 
+	// Use the real host IP so the test matches what Status() produces
+	// at runtime (hostRoutableIP reads real network interfaces).
+	hostIP := resolveTestHostIP(t)
+	hostRepoURL := fmt.Sprintf("https://%s:3001/newuser/test-repo.git", hostIP)
+
 	return &gitea.Status{
 		Metadata:     metadata,
 		BaseURL:      "https://localhost:3001",
 		LocalRepoURL: "https://localhost:3001/newuser/test-repo.git",
+		HostRepoURL:  hostRepoURL,
 		KindIP:       "10.89.0.11",
+		HostIP:       hostIP,
 		Running:      true,
 		CAPath:       layout.CACertPath,
 	}
+}
+
+// resolveTestHostIP returns the first non-loopback IPv4 address, matching
+// the logic in gitea.hostRoutableIP(). Tests use this to build expected
+// URLs that agree with the real Status() output.
+func resolveTestHostIP(t *testing.T) string {
+	t.Helper()
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		t.Fatalf("net.InterfaceAddrs() error = %v", err)
+	}
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		ip := ipNet.IP
+		if ip.IsLoopback() || ip.To4() == nil {
+			continue
+		}
+		return ip.String()
+	}
+	t.Fatal("no routable IPv4 address found for test")
+	return ""
 }

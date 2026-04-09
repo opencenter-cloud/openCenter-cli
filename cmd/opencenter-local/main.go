@@ -100,6 +100,12 @@ func newGiteaCmd(stateDir *string) *cobra.Command {
 			if status.KindIP != "" {
 				fmt.Fprintf(cmd.OutOrStdout(), "Kind IP: %s\n", status.KindIP)
 			}
+			if status.HostIP != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "Host IP: %s\n", status.HostIP)
+			}
+			if status.HostRepoURL != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "Bootstrap repo URL: %s\n", status.HostRepoURL)
+			}
 			fmt.Fprintf(cmd.OutOrStdout(), "CA certificate: %s\n", status.CAPath)
 			fmt.Fprintf(cmd.OutOrStdout(), "Admin token present: %t (%s)\n", status.AdminTokenExists, status.AdminTokenPath)
 			fmt.Fprintf(cmd.OutOrStdout(), "User token present: %t (%s)\n", status.UserTokenExists, status.UserTokenPath)
@@ -152,7 +158,8 @@ func newGiteaCmd(stateDir *string) *cobra.Command {
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Kind network attached.\n")
 			fmt.Fprintf(cmd.OutOrStdout(), "Kind IP: %s\n", result.KindIP)
-			fmt.Fprintf(cmd.OutOrStdout(), "In-cluster repo URL: %s\n", result.InClusterRepoURL)
+			fmt.Fprintf(cmd.OutOrStdout(), "Host IP: %s\n", result.HostIP)
+			fmt.Fprintf(cmd.OutOrStdout(), "Bootstrap repo URL: %s\n", result.InClusterRepoURL)
 			fmt.Fprintf(cmd.OutOrStdout(), "CA certificate: %s\n", result.CAPath)
 			return nil
 		},

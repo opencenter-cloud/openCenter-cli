@@ -67,9 +67,11 @@ type Status struct {
 	Metadata         Metadata
 	BaseURL          string
 	LocalRepoURL     string
+	HostRepoURL      string
 	AttachedNetworks []string
 	KindAttached     bool
 	KindIP           string
+	HostIP           string
 	Running          bool
 	AdminTokenPath   string
 	UserTokenPath    string
@@ -229,13 +231,24 @@ func (s *Service) Status(ctx context.Context) (*Status, error) {
 	adminTokenExists := fileExists(s.layout.AdminTokenPath)
 	userTokenExists := fileExists(s.layout.UserTokenPath)
 
+	hostIP := ""
+	hostRepoURL := ""
+	if kindIP != "" {
+		hostIP, _ = hostRoutableIP()
+		if hostIP != "" {
+			hostRepoURL = fmt.Sprintf("https://%s:%d/%s/%s.git", hostIP, metadata.HTTPSPort, metadata.RepoOwner, metadata.RepoName)
+		}
+	}
+
 	return &Status{
 		Metadata:         metadata,
 		BaseURL:          fmt.Sprintf("https://localhost:%d", metadata.HTTPSPort),
 		LocalRepoURL:     fmt.Sprintf("https://localhost:%d/%s/%s.git", metadata.HTTPSPort, metadata.RepoOwner, metadata.RepoName),
+		HostRepoURL:      hostRepoURL,
 		AttachedNetworks: networks,
 		KindAttached:     kindIP != "",
 		KindIP:           kindIP,
+		HostIP:           hostIP,
 		Running:          running,
 		AdminTokenPath:   s.layout.AdminTokenPath,
 		UserTokenPath:    s.layout.UserTokenPath,
@@ -257,6 +270,11 @@ func (s *Service) Destroy(ctx context.Context) error {
 }
 
 // AttachKind connects Gitea to the default Kind network and reissues the TLS cert.
+//
+// The regenerated certificate includes the Kind network IP and the host's
+// routable IP as SANs. This allows a single URL (using the host IP) to work
+// from both the macOS host and from inside the Kind cluster, because Podman
+// binds the Gitea port on 0.0.0.0.
 func (s *Service) AttachKind(ctx context.Context) (*AttachResult, error) {
 	if err := s.connectKindNetwork(ctx); err != nil {
 		return nil, err
@@ -270,7 +288,12 @@ func (s *Service) AttachKind(ctx context.Context) (*AttachResult, error) {
 		return nil, fmt.Errorf("gitea container is not attached to the kind network")
 	}
 
-	if err := s.writeCertificates([]string{initialIP}); err != nil {
+	certIPs := []string{initialIP}
+	if hostIP, err := hostRoutableIP(); err == nil && hostIP != "" {
+		certIPs = append(certIPs, hostIP)
+	}
+
+	if err := s.writeCertificates(certIPs); err != nil {
 		return nil, err
 	}
 	if err := s.restart(ctx); err != nil {
@@ -285,7 +308,8 @@ func (s *Service) AttachKind(ctx context.Context) (*AttachResult, error) {
 		return nil, err
 	}
 	if finalIP != "" && finalIP != initialIP {
-		if err := s.writeCertificates([]string{finalIP}); err != nil {
+		certIPs[0] = finalIP
+		if err := s.writeCertificates(certIPs); err != nil {
 			return nil, err
 		}
 		if err := s.restart(ctx); err != nil {
@@ -305,9 +329,16 @@ func (s *Service) AttachKind(ctx context.Context) (*AttachResult, error) {
 		return nil, fmt.Errorf("gitea kind network IP is empty after attach")
 	}
 
+	hostRepoURL := status.HostRepoURL
+	if hostRepoURL == "" {
+		// Fallback: if no routable host IP was found, use the Kind IP
+		// (reachable from inside the cluster but not from the host).
+		hostRepoURL = fmt.Sprintf("https://%s:%d/%s/%s.git", kindIP, status.Metadata.HTTPSPort, status.Metadata.RepoOwner, status.Metadata.RepoName)
+	}
+
 	return &AttachResult{
 		Status:           *status,
-		InClusterRepoURL: fmt.Sprintf("https://%s:%d/%s/%s.git", kindIP, status.Metadata.HTTPSPort, status.Metadata.RepoOwner, status.Metadata.RepoName),
+		InClusterRepoURL: hostRepoURL,
 	}, nil
 }
 
@@ -697,6 +728,28 @@ func writePEMFile(pathname, pemType string, der []byte, mode os.FileMode) error 
 func fileExists(pathname string) bool {
 	_, err := os.Stat(pathname)
 	return err == nil
+}
+
+// hostRoutableIP returns the first non-loopback IPv4 address of the host.
+// Podman binds container ports on 0.0.0.0, so this IP is reachable from
+// both the host and from inside the Kind cluster (via the Podman VM bridge).
+func hostRoutableIP() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", fmt.Errorf("list network interfaces: %w", err)
+	}
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		ip := ipNet.IP
+		if ip.IsLoopback() || ip.To4() == nil {
+			continue
+		}
+		return ip.String(), nil
+	}
+	return "", fmt.Errorf("no routable IPv4 address found")
 }
 
 func (s *Service) commandRuntime() string {

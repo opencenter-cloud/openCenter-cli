@@ -34,6 +34,101 @@ kind --version
 flux --version
 ```
 
+## Bootstrap Flow
+
+The sequence diagram below shows the internal calls made by `opencenter cluster bootstrap` for a Kind cluster. Podman binds the Gitea container port on `0.0.0.0`, so the host's routable IP (e.g. `172.16.0.146:3001`) is reachable from both the macOS host and from inside the Kind cluster. During `gitea-attach-kind`, the TLS certificate is regenerated with the host IP as a SAN, and all subsequent operations use this single URL.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User (host)
+    participant CLI as opencenter CLI
+    participant BS as BootstrapService
+    participant KBP as KindBootstrapProvider
+    participant Kind as kind CLI
+    participant Gitea as Gitea Container
+    participant GitOps as GitOps Service
+    participant Flux as flux CLI
+    participant K8s as Kind Cluster (K8s API)
+
+    User->>CLI: opencenter cluster bootstrap my-cluster --container-runtime podman
+    CLI->>BS: Bootstrap(ctx, opts)
+    BS->>BS: loadConfig, resolvePaths, acquireLock
+    BS->>KBP: BuildSteps(cfg, clusterPaths, opts)
+    KBP-->>BS: []bootstrapStep (5 steps)
+
+    Note over BS: Step execution loop (resumable via state file)
+
+    rect rgb(230, 245, 255)
+        Note over BS,Kind: Step 1: kind-create
+        BS->>Kind: kind create cluster --config kind-config.yaml
+        Kind->>Kind: Pull kindest/node image, create containers
+        Kind-->>BS: cluster ready (control-plane + workers)
+    end
+
+    rect rgb(230, 245, 255)
+        Note over BS,Kind: Step 2: kind-export-kubeconfig
+        BS->>Kind: kind export kubeconfig --name my-cluster
+        Kind-->>BS: kubeconfig written to infrastructure/clusters/my-cluster/kubeconfig.yaml
+    end
+
+    rect rgb(255, 243, 224)
+        Note over BS,Gitea: Step 3: gitea-attach-kind
+        BS->>Gitea: gitea.NewService → Status(ctx)
+        Gitea-->>BS: Running: true
+        BS->>Gitea: AttachKind(ctx)
+        Gitea->>Gitea: podman network connect kind gitea
+        Gitea->>Gitea: kindIP(ctx) → e.g. 10.89.0.38
+        Gitea->>Gitea: hostRoutableIP() → e.g. 172.16.0.146
+        Gitea->>Gitea: writeCertificates([10.89.0.38, 172.16.0.146])<br/>SANs: localhost, gitea, 127.0.0.1, ::1, 10.89.0.38, 172.16.0.146
+        Gitea->>Gitea: podman restart gitea
+        Gitea->>Gitea: waitForAPI(ctx)
+        Note over Gitea: Verify IP stable after restart<br/>(re-cert + restart if IP changed)
+        Gitea-->>BS: AttachResult{HostIP: 172.16.0.146, HostRepoURL: https://172.16.0.146:3001/...}
+    end
+
+    rect rgb(232, 245, 233)
+        Note over BS,Gitea: Step 4: gitops-push
+        BS->>GitOps: Push(ctx, "local/my-cluster")
+        GitOps->>GitOps: resolve cluster → git_dir
+        GitOps->>Gitea: Status(ctx)
+        Gitea-->>GitOps: LocalRepoURL: https://localhost:3001/newuser/test-repo.git
+        GitOps->>GitOps: git remote set-url origin https://localhost:3001/...
+        GitOps->>Gitea: git push -u origin main (via localhost:3001, token auth, CA cert)
+        Gitea-->>GitOps: push accepted
+        GitOps-->>BS: PushResult{RemoteURL: localhost:3001, Branch: main}
+    end
+
+    rect rgb(232, 245, 233)
+        Note over BS,K8s: Step 5: flux-bootstrap
+        BS->>Flux: flux.NewService → Bootstrap(ctx, "local/my-cluster")
+        Flux->>Gitea: Status(ctx)
+        Gitea-->>Flux: HostRepoURL: https://172.16.0.146:3001/..., UserToken: present
+
+        Note over Flux: Single URL for both host and cluster:<br/>repoURL = https://172.16.0.146:3001/...
+
+        Flux->>Flux: flux bootstrap git --url=repoURL --branch=main --path=applications/overlays/my-cluster --token-auth --ca-file=ca.pem
+        Note over Flux,K8s: flux bootstrap git internally:
+        Flux->>Gitea: 1. Clone repo via 172.16.0.146:3001 (host → Gitea ✅)
+        Flux->>Flux: 2. Generate gotk-components.yaml, gotk-sync.yaml
+        Flux->>Gitea: 3. Commit & push manifests via 172.16.0.146:3001 ✅
+        Flux->>K8s: 4. kubectl apply gotk-components (installs Flux controllers)
+        Flux->>K8s: 5. kubectl apply gotk-sync (creates GitRepository CR with url=172.16.0.146:3001)
+        K8s->>Gitea: 6. source-controller clones https://172.16.0.146:3001/... ✅
+        Note over K8s,Gitea: ✅ Works: Podman binds on 0.0.0.0<br/>so the host IP is reachable from<br/>inside the Kind cluster via the<br/>Podman VM bridge.
+        Flux-->>Flux: ✅ health check passes (GitRepository ready)
+
+        Flux->>GitOps: git pull --rebase (sync Flux commits to local checkout)
+        Flux->>Flux: flux reconcile source git flux-system
+        Flux-->>BS: BootstrapResult{RepoURL: https://172.16.0.146:3001/...}
+    end
+
+    BS-->>CLI: ✅ bootstrap complete
+    CLI-->>User: Bootstrap successful
+```
+
+The host's routable IP (`172.16.0.146`) works from both contexts because Podman binds the Gitea container port on `0.0.0.0`. The TLS certificate includes this IP as a SAN (added during `gitea-attach-kind`), so HTTPS verification succeeds everywhere. No post-bootstrap patching is needed.
+
 ## Steps
 
 ### 1. Start Local Gitea
@@ -166,15 +261,23 @@ opencenter cluster bootstrap my-cluster --container-runtime podman --restart
 
 ### Bootstrap Fails at `flux-bootstrap` With Connection Timeout
 
-The `flux` CLI on the host cannot reach the Gitea container at the Kind network IP. Verify Gitea is attached to the Kind network:
+The Flux source-controller inside the cluster cannot reach Gitea at the host IP. Verify Gitea is attached to the Kind network and the host IP is set:
 
 ```bash
 opencenter local gitea status
 ```
 
-Check that `Kind Attached: true` and `Kind IP` is set. If not, re-run bootstrap from the attach step:
+Check that `Kind Attached: true`, `Host IP` is set, and `Bootstrap repo URL` shows the host IP (not `localhost`). If not, re-run bootstrap from the attach step:
 
 ```bash
+opencenter cluster bootstrap my-cluster --container-runtime podman --from-step gitea-attach-kind
+```
+
+If the host IP changed (e.g. after switching networks), destroy and recreate Gitea to regenerate the TLS certificate:
+
+```bash
+opencenter local gitea destroy
+opencenter local gitea up
 opencenter cluster bootstrap my-cluster --container-runtime podman --from-step gitea-attach-kind
 ```
 

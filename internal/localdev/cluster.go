@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 )
 
@@ -14,7 +15,7 @@ type ClusterContext struct {
 	Identifier   string
 	ClusterName  string
 	Organization string
-	Config       *config.Config
+	Config       *v2.Config
 	Paths        *paths.ClusterPaths
 }
 

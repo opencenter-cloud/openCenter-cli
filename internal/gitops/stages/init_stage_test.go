@@ -17,7 +17,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -171,8 +171,8 @@ func TestInitStage_Properties(t *testing.T) {
 }
 
 // createTestConfig creates a minimal test configuration.
-func createTestConfig(provider string) config.Config {
-	return config.Config{
+func createTestConfig(provider string) v2.Config {
+	return v2.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
 				Name:         "test-cluster",

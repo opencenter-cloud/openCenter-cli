@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // TestWorkspaceIsolatedEnvironment verifies that workspace provides an isolated

@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -568,7 +568,7 @@ func TestValidationStage_DryRun(t *testing.T) {
 }
 
 // createTestConfigWithSecrets creates a test configuration with secrets backend configured.
-func createTestConfigWithSecrets() config.Config {
+func createTestConfigWithSecrets() v2.Config {
 	cfg := createTestConfig("openstack")
 	cfg.OpenCenter.Secrets.Backend = "sops"
 	return cfg

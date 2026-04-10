@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // TestWorkspaceCleanupCheckpoints tests that cleanup removes all checkpoints.

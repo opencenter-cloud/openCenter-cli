@@ -108,13 +108,18 @@ The exported credentials can be used with:
 			}
 
 			// Load cluster configuration
-			cfg, err := loadConfig(cmd.Context(), name)
+			_, err := loadConfig(cmd.Context(), name)
 			if err != nil {
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
 
+			nativeCfg, _, _, _, err := loadNativeV2ConfigWithIdentifier(cmd.Context(), name)
+			if err != nil {
+				return fmt.Errorf("failed to load native cluster configuration: %w", err)
+			}
+
 			// Create credentials extractor
-			extractor := credentials.NewExtractor(cfg)
+			extractor := credentials.NewExtractor(*nativeCfg)
 
 			// Export credentials based on provider
 			switch provider {

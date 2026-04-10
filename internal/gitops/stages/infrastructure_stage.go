@@ -19,7 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/template"
@@ -180,7 +180,7 @@ func (is *InfrastructureStage) Validate(ctx context.Context, workspace *gitops.G
 }
 
 // DryRun returns a plan of what this stage would create.
-func (is *InfrastructureStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.StagePlan, error) {
+func (is *InfrastructureStage) DryRun(ctx context.Context, cfg v2.Config) (*gitops.StagePlan, error) {
 	provider := cfg.OpenCenter.Infrastructure.Provider
 	if provider == "" {
 		return nil, fmt.Errorf("provider not specified in configuration")
@@ -231,7 +231,7 @@ func (is *InfrastructureStage) DryRun(ctx context.Context, cfg config.Config) (*
 
 // getOutputPath determines the output path for a template.
 // It uses the template metadata to determine the appropriate location.
-func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, cfg config.Config) string {
+func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, cfg v2.Config) string {
 	// Default path structure: infrastructure/clusters/<cluster-name>/<template-name>
 	clusterName := cfg.ClusterName()
 
@@ -281,7 +281,7 @@ func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, c
 }
 
 // evaluateConditions checks if all conditions for a template are met.
-func (is *InfrastructureStage) evaluateConditions(conditions []template.RenderCondition, cfg config.Config) bool {
+func (is *InfrastructureStage) evaluateConditions(conditions []template.RenderCondition, cfg v2.Config) bool {
 	// If no conditions, template should be rendered
 	if len(conditions) == 0 {
 		return true
@@ -298,7 +298,7 @@ func (is *InfrastructureStage) evaluateConditions(conditions []template.RenderCo
 }
 
 // evaluateCondition checks if a single condition is met.
-func (is *InfrastructureStage) evaluateCondition(condition template.RenderCondition, cfg config.Config) bool {
+func (is *InfrastructureStage) evaluateCondition(condition template.RenderCondition, cfg v2.Config) bool {
 	// Get the field value from configuration
 	fieldValue := is.getFieldValue(condition.Field, cfg)
 
@@ -334,7 +334,7 @@ func (is *InfrastructureStage) evaluateCondition(condition template.RenderCondit
 
 // getFieldValue extracts a field value from the configuration using dot notation.
 // For example: "opencenter.infrastructure.provider" returns the provider value.
-func (is *InfrastructureStage) getFieldValue(field string, cfg config.Config) interface{} {
+func (is *InfrastructureStage) getFieldValue(field string, cfg v2.Config) interface{} {
 	// Simple field extraction - in a real implementation, this would use reflection
 	// or a more sophisticated path resolution mechanism
 	switch field {

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"gopkg.in/yaml.v3"
@@ -582,7 +583,7 @@ func (m *DefaultSecretsManager) GetSecretSources(ctx context.Context, cluster st
 // both the parsed config and the file path.
 //
 // Returns ErrConfigNotFound if the config file does not exist.
-func (m *DefaultSecretsManager) loadClusterConfig(ctx context.Context, cluster string) (*config.Config, string, error) {
+func (m *DefaultSecretsManager) loadClusterConfig(ctx context.Context, cluster string) (*v2.Config, string, error) {
 	// Determine config file path
 	configPath, err := m.getConfigPath(ctx, cluster)
 	if err != nil {
@@ -620,93 +621,35 @@ func (m *DefaultSecretsManager) getConfigPath(ctx context.Context, cluster strin
 
 // extractSecretsFromConfig extracts all secrets from the config file.
 // It returns a map of service names to their secret values.
-func (m *DefaultSecretsManager) extractSecretsFromConfig(cfg *config.Config) (map[string]map[string]interface{}, error) {
+func (m *DefaultSecretsManager) extractSecretsFromConfig(cfg *v2.Config) (map[string]map[string]interface{}, error) {
 	secretsMap := make(map[string]map[string]interface{})
 
-	// Extract cert-manager secrets
-	if cfg.Secrets.CertManager.AWSAccessKey != "" || cfg.Secrets.CertManager.AWSSecretAccessKey != "" {
-		secretsMap["cert-manager"] = map[string]interface{}{
-			"aws_access_key":        cfg.Secrets.CertManager.AWSAccessKey,
-			"aws_secret_access_key": cfg.Secrets.CertManager.AWSSecretAccessKey,
+	for rawService, rawSecrets := range cfg.Secrets.ServiceSecrets {
+		serviceSecrets, ok := rawSecrets.(map[string]any)
+		if !ok {
+			continue
 		}
-	}
 
-	// Extract Loki secrets
-	lokiSecrets := make(map[string]interface{})
-	if cfg.Secrets.Loki.SwiftPassword != "" {
-		lokiSecrets["swift_password"] = cfg.Secrets.Loki.SwiftPassword
-	}
-	if cfg.Secrets.Loki.SwiftApplicationCredentialSecret != "" {
-		lokiSecrets["swift_application_credential_secret"] = cfg.Secrets.Loki.SwiftApplicationCredentialSecret
-	}
-	if cfg.Secrets.Loki.S3AccessKeyID != "" {
-		lokiSecrets["s3_access_key_id"] = cfg.Secrets.Loki.S3AccessKeyID
-	}
-	if cfg.Secrets.Loki.S3SecretAccessKey != "" {
-		lokiSecrets["s3_secret_access_key"] = cfg.Secrets.Loki.S3SecretAccessKey
-	}
-	if len(lokiSecrets) > 0 {
-		secretsMap["loki"] = lokiSecrets
-	}
-
-	// Extract Keycloak secrets
-	if cfg.Secrets.Keycloak.ClientSecret != "" || cfg.Secrets.Keycloak.AdminPassword != "" {
-		secretsMap["keycloak"] = map[string]interface{}{
-			"client_secret":  cfg.Secrets.Keycloak.ClientSecret,
-			"admin_password": cfg.Secrets.Keycloak.AdminPassword,
+		filtered := make(map[string]interface{})
+		for key, value := range serviceSecrets {
+			switch typed := value.(type) {
+			case string:
+				if strings.TrimSpace(typed) != "" {
+					filtered[key] = typed
+				}
+			case nil:
+				continue
+			default:
+				filtered[key] = value
+			}
 		}
-	}
 
-	// Extract Headlamp secrets
-	if cfg.Secrets.Headlamp.OIDCClientSecret != "" {
-		secretsMap["headlamp"] = map[string]interface{}{
-			"oidc_client_secret": cfg.Secrets.Headlamp.OIDCClientSecret,
+		if len(filtered) == 0 {
+			continue
 		}
-	}
 
-	// Extract Weave GitOps secrets
-	if cfg.Secrets.WeaveGitOps.Password != "" || cfg.Secrets.WeaveGitOps.PasswordHash != "" {
-		secretsMap["weave-gitops"] = map[string]interface{}{
-			"password":      cfg.Secrets.WeaveGitOps.Password,
-			"password_hash": cfg.Secrets.WeaveGitOps.PasswordHash,
-		}
-	}
-
-	// Extract Grafana secrets
-	if cfg.Secrets.Grafana.AdminPassword != "" {
-		secretsMap["grafana"] = map[string]interface{}{
-			"admin_password": cfg.Secrets.Grafana.AdminPassword,
-		}
-	}
-
-	// Extract Tempo secrets
-	if cfg.Secrets.Tempo.AccessKey != "" || cfg.Secrets.Tempo.SecretKey != "" {
-		secretsMap["tempo"] = map[string]interface{}{
-			"access_key": cfg.Secrets.Tempo.AccessKey,
-			"secret_key": cfg.Secrets.Tempo.SecretKey,
-		}
-	}
-
-	// Extract Alert Proxy secrets
-	if cfg.Secrets.AlertProxy.CoreDeviceId != "" || cfg.Secrets.AlertProxy.AccountServiceToken != "" || cfg.Secrets.AlertProxy.CoreAccountNumber != "" {
-		secretsMap["alert-proxy"] = map[string]interface{}{
-			"core_device_id":        cfg.Secrets.AlertProxy.CoreDeviceId,
-			"account_service_token": cfg.Secrets.AlertProxy.AccountServiceToken,
-			"core_account_number":   cfg.Secrets.AlertProxy.CoreAccountNumber,
-		}
-	}
-
-	// Extract vSphere CSI secrets
-	if cfg.Secrets.VSphereCsi.VCenterHost != "" || cfg.Secrets.VSphereCsi.Username != "" || cfg.Secrets.VSphereCsi.Password != "" {
-		secretsMap["vsphere-csi"] = map[string]interface{}{
-			"vcenter_host":  cfg.Secrets.VSphereCsi.VCenterHost,
-			"username":      cfg.Secrets.VSphereCsi.Username,
-			"password":      cfg.Secrets.VSphereCsi.Password,
-			"datacenters":   cfg.Secrets.VSphereCsi.Datacenters,
-			"insecure_flag": cfg.Secrets.VSphereCsi.InsecureFlag,
-			"port":          cfg.Secrets.VSphereCsi.Port,
-			"datastoreurl":  cfg.Secrets.VSphereCsi.Datastoreurl,
-		}
+		serviceName := strings.ReplaceAll(rawService, "_", "-")
+		secretsMap[serviceName] = filtered
 	}
 
 	return secretsMap, nil
@@ -715,7 +658,7 @@ func (m *DefaultSecretsManager) extractSecretsFromConfig(cfg *config.Config) (ma
 // mapSecretsToManifests maps config secrets to their corresponding manifest file paths.
 // It returns a map of service names to manifest paths, optionally filtered by the services list.
 func (m *DefaultSecretsManager) mapSecretsToManifests(
-	cfg *config.Config,
+	cfg *v2.Config,
 	secretsMap map[string]map[string]interface{},
 	serviceFilter []string,
 ) (map[string]string, error) {
@@ -744,27 +687,27 @@ func (m *DefaultSecretsManager) mapSecretsToManifests(
 
 // getManifestPath returns the expected manifest path for a service.
 // The path is relative to the overlay directory.
-func (m *DefaultSecretsManager) getManifestPath(service string, cfg *config.Config) string {
+func (m *DefaultSecretsManager) getManifestPath(service string, cfg *v2.Config) string {
 	// Standard path pattern: services/<service>/secret.yaml
 	return filepath.Join("services", service, "secret.yaml")
 }
 
 // getOverlayPath determines the overlay directory path for the cluster.
 // The overlay directory contains the FluxCD manifests and service configurations.
-func (m *DefaultSecretsManager) getOverlayPath(configPath string, cfg *config.Config) (string, error) {
+func (m *DefaultSecretsManager) getOverlayPath(configPath string, cfg *v2.Config) (string, error) {
 	// The overlay path is typically in the GitOps repository
 	// Pattern: <repo>/applications/overlays/<cluster>/
 
 	// For now, construct the expected path based on GitOps config
-	if cfg.OpenCenter.GitOps.GitDir == "" {
+	if cfg.GitDir() == "" {
 		return "", fmt.Errorf("gitops.git_dir not configured")
 	}
 
 	overlayPath := filepath.Join(
-		cfg.OpenCenter.GitOps.GitDir,
+		cfg.GitDir(),
 		"applications",
 		"overlays",
-		cfg.OpenCenter.Cluster.ClusterName,
+		cfg.ClusterName(),
 	)
 
 	return overlayPath, nil
@@ -772,10 +715,10 @@ func (m *DefaultSecretsManager) getOverlayPath(configPath string, cfg *config.Co
 
 // getAgeKey retrieves the Age key for the cluster from the config.
 // Returns ErrKeyNotFound if the Age key is not configured or not found.
-func (m *DefaultSecretsManager) getAgeKey(cfg *config.Config) (string, error) {
+func (m *DefaultSecretsManager) getAgeKey(cfg *v2.Config) (string, error) {
 	if cfg.Secrets.SopsAgeKeyFile == "" {
 		return "", &ErrKeyNotFound{
-			Cluster: cfg.OpenCenter.Cluster.ClusterName,
+			Cluster: cfg.ClusterName(),
 			KeyType: KeyTypeAge,
 		}
 	}
@@ -794,7 +737,7 @@ func (m *DefaultSecretsManager) getAgeKey(cfg *config.Config) (string, error) {
 	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
 		return "", NewKeyNotFoundError(
-			cfg.OpenCenter.Cluster.ClusterName,
+			cfg.ClusterName(),
 			KeyTypeAge,
 			fmt.Errorf("failed to read Age key file at %s: %w", keyPath, err),
 		)
@@ -813,7 +756,7 @@ func (m *DefaultSecretsManager) getAgeKey(cfg *config.Config) (string, error) {
 	}
 
 	return "", NewKeyNotFoundError(
-		cfg.OpenCenter.Cluster.ClusterName,
+		cfg.ClusterName(),
 		KeyTypeAge,
 		fmt.Errorf("public key not found in Age key file at %s", keyPath),
 	)
@@ -821,10 +764,10 @@ func (m *DefaultSecretsManager) getAgeKey(cfg *config.Config) (string, error) {
 
 // getAgeKeyPath retrieves the Age key file path for the cluster from the config.
 // Returns ErrKeyNotFound if the Age key is not configured or not found.
-func (m *DefaultSecretsManager) getAgeKeyPath(cfg *config.Config) (string, error) {
+func (m *DefaultSecretsManager) getAgeKeyPath(cfg *v2.Config) (string, error) {
 	if cfg.Secrets.SopsAgeKeyFile == "" {
 		return "", &ErrKeyNotFound{
-			Cluster: cfg.OpenCenter.Cluster.ClusterName,
+			Cluster: cfg.ClusterName(),
 			KeyType: KeyTypeAge,
 		}
 	}
@@ -842,7 +785,7 @@ func (m *DefaultSecretsManager) getAgeKeyPath(cfg *config.Config) (string, error
 	// Check if key file exists
 	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
 		return "", NewKeyNotFoundError(
-			cfg.OpenCenter.Cluster.ClusterName,
+			cfg.ClusterName(),
 			KeyTypeAge,
 			fmt.Errorf("Age key file not found at %s", keyPath),
 		)

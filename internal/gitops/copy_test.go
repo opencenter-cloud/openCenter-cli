@@ -20,8 +20,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/provision"
 	"gopkg.in/yaml.v3"
 )

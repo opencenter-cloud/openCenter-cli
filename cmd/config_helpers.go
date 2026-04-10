@@ -53,10 +53,10 @@ func getConfigManager() (*config.ConfigurationManager, error) {
 	return globalConfigManager, configManagerErr
 }
 
-// loadConfig loads a cluster configuration using the ConfigurationManager.
+// loadConfig loads a native v2 cluster configuration.
 // The name parameter can be in format "cluster-name" or "organization/cluster-name".
 // If organization is specified, it validates that the cluster belongs to that organization.
-func loadConfig(ctx context.Context, name string) (config.Config, error) {
+func loadConfig(ctx context.Context, name string) (v2.Config, error) {
 	// Check if name contains organization prefix
 	parts := strings.Split(name, "/")
 	if len(parts) == 2 {
@@ -68,12 +68,12 @@ func loadConfig(ctx context.Context, name string) (config.Config, error) {
 	// Simple cluster name - load directly
 	manager, err := getConfigManager()
 	if err != nil {
-		return config.Config{}, err
+		return v2.Config{}, err
 	}
 
 	cfg, err := manager.Load(ctx, name)
 	if err != nil {
-		return config.Config{}, err
+		return v2.Config{}, err
 	}
 
 	return *cfg, nil
@@ -84,7 +84,7 @@ func loadConfig(ctx context.Context, name string) (config.Config, error) {
 // If organization is specified, it uses the ConfigurationManager directly with the full
 // identifier so that path resolution targets the correct organization directory. This avoids
 // ambiguity when multiple organizations contain a cluster with the same name.
-func loadConfigWithIdentifier(ctx context.Context, identifier string) (config.Config, string, string, error) {
+func loadConfigWithIdentifier(ctx context.Context, identifier string) (v2.Config, string, string, error) {
 	// Parse organization and cluster name from the identifier
 	var clusterName, organization string
 	parts := strings.Split(identifier, "/")
@@ -99,28 +99,28 @@ func loadConfigWithIdentifier(ctx context.Context, identifier string) (config.Co
 	// When organization is known, load via manager.Load with the full "org/cluster"
 	// identifier so it uses Resolve (org-scoped) instead of ResolveWithFallback.
 	// This prevents incorrect matches when multiple orgs share a cluster name.
-	var cfg config.Config
+	var cfg v2.Config
 	var err error
 	if organization != "" {
 		manager, mErr := getConfigManager()
 		if mErr != nil {
-			return config.Config{}, "", "", mErr
+			return v2.Config{}, "", "", mErr
 		}
 		loaded, lErr := manager.Load(ctx, identifier)
 		if lErr != nil {
-			return config.Config{}, "", "", lErr
+			return v2.Config{}, "", "", lErr
 		}
 		cfg = *loaded
 	} else {
 		cfg, err = loadConfig(ctx, clusterName)
 		if err != nil {
-			return config.Config{}, "", "", err
+			return v2.Config{}, "", "", err
 		}
 	}
 
 	// If organization was specified in the identifier, verify it matches the config metadata
 	if organization != "" && cfg.OpenCenter.Meta.Organization != organization {
-		return config.Config{}, "", "", fmt.Errorf("cluster %s not found in organization %s (found in %s)",
+		return v2.Config{}, "", "", fmt.Errorf("cluster %s not found in organization %s (found in %s)",
 			clusterName, organization, cfg.OpenCenter.Meta.Organization)
 	}
 
@@ -138,8 +138,8 @@ func extractClusterName(identifier string) string {
 	return identifier
 }
 
-// saveConfig saves a cluster configuration using the ConfigurationManager.
-func saveConfig(ctx context.Context, cfg config.Config) error {
+// saveConfig saves a native v2 cluster configuration using the ConfigurationManager.
+func saveConfig(ctx context.Context, cfg v2.Config) error {
 	manager, err := getConfigManager()
 	if err != nil {
 		return err
@@ -351,9 +351,9 @@ func normalizeClusterDisplayName(name string) string {
 //   - clusterName: The cluster name to load
 //
 // Returns:
-//   - config.Config: The loaded configuration
+//   - v2.Config: The loaded configuration
 //   - error: An error if the config cannot be loaded or does not use schema_version "2.0"
-func loadCanonicalConfig(clusterName string) (config.Config, error) {
+func loadCanonicalConfig(clusterName string) (v2.Config, error) {
 	ctx := context.Background()
 	cfg, err := loadConfig(ctx, clusterName)
 	if err != nil {

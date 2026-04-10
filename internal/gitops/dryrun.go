@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // DryRunWorkspace is a workspace that tracks operations without making filesystem changes.
@@ -38,7 +38,7 @@ type DryRunWorkspace struct {
 	TempDir string
 
 	// Config is the cluster configuration associated with this workspace
-	Config config.Config
+	Config v2.Config
 
 	// Metadata stores arbitrary key-value pairs for workspace context
 	Metadata map[string]interface{}
@@ -95,7 +95,7 @@ type DryRunFile struct {
 }
 
 // NewDryRunWorkspace creates a new dry-run workspace that simulates operations.
-func NewDryRunWorkspace(cfg config.Config) *DryRunWorkspace {
+func NewDryRunWorkspace(cfg v2.Config) *DryRunWorkspace {
 	workspaceID := fmt.Sprintf("dryrun-%s-%d", cfg.ClusterName(), time.Now().UnixNano())
 
 	return &DryRunWorkspace{
@@ -410,7 +410,7 @@ func NewDryRunWorkspaceManager() *DryRunWorkspaceManager {
 }
 
 // CreateWorkspace creates a new dry-run workspace.
-func (m *DryRunWorkspaceManager) CreateWorkspace(ctx context.Context, cfg config.Config) (*GitOpsWorkspace, error) {
+func (m *DryRunWorkspaceManager) CreateWorkspace(ctx context.Context, cfg v2.Config) (*GitOpsWorkspace, error) {
 	dryRunWS := NewDryRunWorkspace(cfg)
 
 	m.mu.Lock()

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/metrics"
 )
 
@@ -69,7 +69,7 @@ type GenerationStage interface {
 	Validate(ctx context.Context, workspace *GitOpsWorkspace) error
 
 	// DryRun returns a plan of what this stage would do without executing
-	DryRun(ctx context.Context, cfg config.Config) (*StagePlan, error)
+	DryRun(ctx context.Context, cfg v2.Config) (*StagePlan, error)
 }
 
 // NewPipelineGenerator creates a new pipeline-based GitOps generator.
@@ -95,7 +95,7 @@ func NewPipelineGeneratorWithOptions(workspaceManager WorkspaceManager, stages [
 
 // Generate executes the complete GitOps generation pipeline.
 // Stages are executed in order, with automatic rollback on failure.
-func (pg *PipelineGenerator) Generate(ctx context.Context, cfg config.Config) error {
+func (pg *PipelineGenerator) Generate(ctx context.Context, cfg v2.Config) error {
 	startTime := time.Now()
 	var generationErr error
 	clusterName := cfg.OpenCenter.Meta.Name
@@ -210,7 +210,7 @@ func (pg *PipelineGenerator) Generate(ctx context.Context, cfg config.Config) er
 // GenerateDryRun performs a dry-run of the generation process.
 // It executes all stages with a dry-run workspace that records operations without
 // making filesystem changes, providing an accurate preview of what would be generated.
-func (pg *PipelineGenerator) GenerateDryRun(ctx context.Context, cfg config.Config) (*GenerationPlan, error) {
+func (pg *PipelineGenerator) GenerateDryRun(ctx context.Context, cfg v2.Config) (*GenerationPlan, error) {
 	startTime := time.Now()
 
 	// Create a dry-run workspace that tracks operations without filesystem changes

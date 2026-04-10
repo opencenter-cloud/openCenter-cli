@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/services"
 	"github.com/opencenter-cloud/opencenter-cli/internal/template"
 	"github.com/stretchr/testify/assert"
@@ -613,7 +613,7 @@ func TestServiceStageConditions(t *testing.T) {
 
 // Helper functions
 
-func createTestConfigWithServices(enabledServices []string) config.Config {
+func createTestConfigWithServices(enabledServices []string) v2.Config {
 	services := make(config.ServiceMap)
 	for _, svc := range enabledServices {
 		services[svc] = config.ServiceCfg{
@@ -621,7 +621,7 @@ func createTestConfigWithServices(enabledServices []string) config.Config {
 		}
 	}
 
-	return config.Config{
+	return v2.Config{
 		SchemaVersion: "1.0.0",
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{

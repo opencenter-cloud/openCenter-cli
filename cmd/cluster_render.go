@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/tofu"
 	"github.com/spf13/cobra"
@@ -99,7 +100,7 @@ Global Flags:
 			}
 
 			// Load configuration
-			cfg, err := loadCanonicalConfig(name)
+			cfg, _, _, _, err := loadNativeV2ConfigWithIdentifier(cmd.Context(), name)
 			if err != nil {
 				return err
 			}
@@ -135,7 +136,7 @@ Global Flags:
 }
 
 // checkRenderStatus checks if services have already been rendered
-func checkRenderStatus(cfg config.Config, cmd *cobra.Command) error {
+func checkRenderStatus(cfg *v2.Config, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 	gitOpsDir := cfg.GitOps().GitDir
 	kustomizationPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "kustomization.yaml")
@@ -159,7 +160,7 @@ func checkRenderStatus(cfg config.Config, cmd *cobra.Command) error {
 }
 
 // renderAllServices renders all cluster services and infrastructure
-func renderAllServices(cfg config.Config, force bool, dryRun bool, cmd *cobra.Command) error {
+func renderAllServices(cfg *v2.Config, force bool, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 	gitOpsDir := cfg.GitOps().GitDir
 	kustomizationPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "kustomization.yaml")
@@ -199,22 +200,22 @@ func renderAllServices(cfg config.Config, force bool, dryRun bool, cmd *cobra.Co
 	fmt.Fprintf(cmd.OutOrStdout(), "Rendering all services and infrastructure for cluster: %s\n", clusterName)
 
 	// Copy base GitOps structure
-	if err := gitops.CopyBase(cfg, true); err != nil {
+	if err := gitops.CopyBase(*cfg, true); err != nil {
 		return fmt.Errorf("failed to copy base GitOps structure: %w", err)
 	}
 
 	// Render cluster-specific applications
-	if err := gitops.RenderClusterApps(cfg); err != nil {
+	if err := gitops.RenderClusterApps(*cfg); err != nil {
 		return fmt.Errorf("failed to render cluster apps: %w", err)
 	}
 
 	// Render infrastructure templates
-	if err := gitops.RenderInfrastructureCluster(cfg); err != nil {
+	if err := gitops.RenderInfrastructureCluster(*cfg); err != nil {
 		return fmt.Errorf("failed to render infrastructure cluster: %w", err)
 	}
 
 	// Provision OpenTofu (renders main.tf and provider.tf)
-	if err := tofu.Provision(cfg); err != nil {
+	if err := tofu.Provision(*cfg); err != nil {
 		return fmt.Errorf("failed to provision opentofu: %w", err)
 	}
 
@@ -224,7 +225,7 @@ func renderAllServices(cfg config.Config, force bool, dryRun bool, cmd *cobra.Co
 }
 
 // renderServicesOnly renders all cluster services without infrastructure
-func renderServicesOnly(cfg config.Config, force bool, dryRun bool, cmd *cobra.Command) error {
+func renderServicesOnly(cfg *v2.Config, force bool, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 	gitOpsDir := cfg.GitOps().GitDir
 	kustomizationPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "kustomization.yaml")
@@ -254,12 +255,12 @@ func renderServicesOnly(cfg config.Config, force bool, dryRun bool, cmd *cobra.C
 	fmt.Fprintf(cmd.OutOrStdout(), "Rendering all services (no infrastructure) for cluster: %s\n", clusterName)
 
 	// Copy base GitOps structure
-	if err := gitops.CopyBase(cfg, true); err != nil {
+	if err := gitops.CopyBase(*cfg, true); err != nil {
 		return fmt.Errorf("failed to copy base GitOps structure: %w", err)
 	}
 
 	// Render cluster-specific applications
-	if err := gitops.RenderClusterApps(cfg); err != nil {
+	if err := gitops.RenderClusterApps(*cfg); err != nil {
 		return fmt.Errorf("failed to render cluster apps: %w", err)
 	}
 
@@ -269,7 +270,7 @@ func renderServicesOnly(cfg config.Config, force bool, dryRun bool, cmd *cobra.C
 }
 
 // renderSingleService renders a specific service
-func renderSingleService(cfg config.Config, serviceName string, force bool, dryRun bool, cmd *cobra.Command) error {
+func renderSingleService(cfg *v2.Config, serviceName string, force bool, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 
 	// Check if service exists in configuration
@@ -321,7 +322,7 @@ func renderSingleService(cfg config.Config, serviceName string, force bool, dryR
 	}
 
 	// Render the single service
-	if err := gitops.RenderSingleService(cfg, serviceName, isManaged); err != nil {
+	if err := gitops.RenderSingleService(*cfg, serviceName, isManaged); err != nil {
 		return fmt.Errorf("failed to render service '%s': %w", serviceName, err)
 	}
 
@@ -331,7 +332,7 @@ func renderSingleService(cfg config.Config, serviceName string, force bool, dryR
 }
 
 // renderInfrastructureOnly renders infrastructure templates only
-func renderInfrastructureOnly(cfg config.Config, dryRun bool, cmd *cobra.Command) error {
+func renderInfrastructureOnly(cfg *v2.Config, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 	gitOpsDir := cfg.GitOps().GitDir
 	infraPath := filepath.Join(gitOpsDir, "infrastructure", "clusters", clusterName)
@@ -356,12 +357,12 @@ func renderInfrastructureOnly(cfg config.Config, dryRun bool, cmd *cobra.Command
 	}
 
 	// Render infrastructure templates
-	if err := gitops.RenderInfrastructureCluster(cfg); err != nil {
+	if err := gitops.RenderInfrastructureCluster(*cfg); err != nil {
 		return fmt.Errorf("failed to render infrastructure cluster: %w", err)
 	}
 
 	// Provision OpenTofu (renders main.tf and provider.tf)
-	if err := tofu.Provision(cfg); err != nil {
+	if err := tofu.Provision(*cfg); err != nil {
 		return fmt.Errorf("failed to provision opentofu: %w", err)
 	}
 
@@ -371,7 +372,7 @@ func renderInfrastructureOnly(cfg config.Config, dryRun bool, cmd *cobra.Command
 }
 
 // backupApplicationsDirectory creates backups of all files in the applications overlay directory
-func backupApplicationsDirectory(cfg config.Config, cmd *cobra.Command) error {
+func backupApplicationsDirectory(cfg *v2.Config, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
 	gitOpsDir := cfg.GitOps().GitDir
 	appsPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName)

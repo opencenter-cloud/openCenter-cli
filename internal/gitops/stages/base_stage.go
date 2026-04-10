@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 )
 
@@ -78,7 +78,7 @@ func (bs BaseStage) Validate(ctx context.Context, workspace *gitops.GitOpsWorksp
 
 // DryRun is a default implementation that returns an empty plan.
 // Concrete stages should override this method.
-func (bs BaseStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.StagePlan, error) {
+func (bs BaseStage) DryRun(ctx context.Context, cfg v2.Config) (*gitops.StagePlan, error) {
 	return &gitops.StagePlan{
 		Name:         bs.name,
 		Description:  bs.description,

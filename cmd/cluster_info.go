@@ -69,11 +69,11 @@ The cluster name can be specified in two formats:
 			// Handle --validate flag
 			validate, _ := cmd.Flags().GetBool("validate")
 			if validate {
-				manager, err := getConfigManager()
+				nativeCfg, _, _, _, err := loadNativeV2ConfigWithIdentifier(ctx, identifier)
 				if err != nil {
-					return fmt.Errorf("failed to get config manager: %w", err)
+					return fmt.Errorf("failed to load native config: %w", err)
 				}
-				if err := manager.Validate(ctx, &cfg); err != nil {
+				if err := validateNativeV2Config(nativeCfg); err != nil {
 					fmt.Fprintln(cmd.ErrOrStderr(), err)
 					return fmt.Errorf("validation failed")
 				}

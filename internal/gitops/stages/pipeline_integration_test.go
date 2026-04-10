@@ -17,7 +17,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,7 +45,7 @@ func TestPipelineIntegration_WithInitStage(t *testing.T) {
 	})
 
 	// Create test configuration
-	cfg := config.Config{
+	cfg := v2.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
 				Name:         "test-cluster",
@@ -108,7 +108,7 @@ func TestPipelineIntegration_DryRun(t *testing.T) {
 	generator := gitops.NewPipelineGenerator(workspaceManager, stageList)
 
 	// Create test configuration
-	cfg := config.Config{
+	cfg := v2.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
 				Name:         "test-cluster",

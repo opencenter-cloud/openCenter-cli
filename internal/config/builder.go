@@ -584,18 +584,14 @@ func (b *FluentConfigBuilder) WithDefaults() ConfigBuilder {
 //	}
 func (b *FluentConfigBuilder) Save(ctx context.Context) error {
 	// Build the configuration (includes validation)
-	config, err := b.Build()
+	_, err := b.Build()
 	if err != nil {
 		return err
 	}
 
-	// Check if manager is available
-	if b.manager == nil {
-		return fmt.Errorf("cannot save: builder not created from ConfigurationManager")
-	}
-
-	// Save using the manager
-	return b.manager.Save(ctx, &config)
+	// The legacy fluent builder still produces the deprecated config root.
+	// Native v2 initialization paths should be used instead of saving through it.
+	return fmt.Errorf("legacy fluent builder save is not supported after the native v2 cutover")
 }
 
 // Build constructs the final configuration and validates it.

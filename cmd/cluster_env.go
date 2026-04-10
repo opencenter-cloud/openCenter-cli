@@ -126,8 +126,13 @@ This is useful for:
 				}
 			}
 
+			nativeCfg, _, _, _, err := loadNativeV2ConfigWithIdentifier(cmd.Context(), clusterName)
+			if err != nil {
+				return fmt.Errorf("failed to load native cluster configuration: %w", err)
+			}
+
 			// Create credentials extractor
-			extractor := credentials.NewExtractor(cfg)
+			extractor := credentials.NewExtractor(*nativeCfg)
 
 			var output strings.Builder
 

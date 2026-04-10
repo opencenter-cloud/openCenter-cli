@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,7 @@ type mockStage struct {
 	executeFunc  func(ctx context.Context, workspace *GitOpsWorkspace) error
 	rollbackFunc func(ctx context.Context, workspace *GitOpsWorkspace) error
 	validateFunc func(ctx context.Context, workspace *GitOpsWorkspace) error
-	dryRunFunc   func(ctx context.Context, cfg config.Config) (*StagePlan, error)
+	dryRunFunc   func(ctx context.Context, cfg v2.Config) (*StagePlan, error)
 	executed     bool
 	rolledBack   bool
 	validated    bool
@@ -53,7 +53,7 @@ func newMockStage(name, description string, dependencies []string) *mockStage {
 		validateFunc: func(ctx context.Context, workspace *GitOpsWorkspace) error {
 			return nil
 		},
-		dryRunFunc: func(ctx context.Context, cfg config.Config) (*StagePlan, error) {
+		dryRunFunc: func(ctx context.Context, cfg v2.Config) (*StagePlan, error) {
 			return &StagePlan{
 				Name:         name,
 				Description:  description,
@@ -92,7 +92,7 @@ func (ms *mockStage) Validate(ctx context.Context, workspace *GitOpsWorkspace) e
 	return ms.validateFunc(ctx, workspace)
 }
 
-func (ms *mockStage) DryRun(ctx context.Context, cfg config.Config) (*StagePlan, error) {
+func (ms *mockStage) DryRun(ctx context.Context, cfg v2.Config) (*StagePlan, error) {
 	return ms.dryRunFunc(ctx, cfg)
 }
 
@@ -242,7 +242,7 @@ func TestPipelineGenerator_GenerateDryRun(t *testing.T) {
 
 	// Create mock stages with dry-run plans
 	stage1 := newMockStage("stage1", "First stage", []string{})
-	stage1.dryRunFunc = func(ctx context.Context, cfg config.Config) (*StagePlan, error) {
+	stage1.dryRunFunc = func(ctx context.Context, cfg v2.Config) (*StagePlan, error) {
 		return &StagePlan{
 			Name:         "stage1",
 			Description:  "First stage",
@@ -253,7 +253,7 @@ func TestPipelineGenerator_GenerateDryRun(t *testing.T) {
 	}
 
 	stage2 := newMockStage("stage2", "Second stage", []string{"stage1"})
-	stage2.dryRunFunc = func(ctx context.Context, cfg config.Config) (*StagePlan, error) {
+	stage2.dryRunFunc = func(ctx context.Context, cfg v2.Config) (*StagePlan, error) {
 		return &StagePlan{
 			Name:         "stage2",
 			Description:  "Second stage",
@@ -618,8 +618,8 @@ func TestPipelineGenerator_CheckpointCreation(t *testing.T) {
 }
 
 // createTestConfig creates a minimal test configuration.
-func createTestConfig() config.Config {
-	return config.Config{
+func createTestConfig() v2.Config {
+	return v2.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
 				Name:         "test-cluster",

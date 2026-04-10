@@ -30,6 +30,7 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util"
 	yaml "gopkg.in/yaml.v3"
 	"regexp"
@@ -386,7 +387,10 @@ func nestedStringValue(data map[string]any, parts ...string) string {
 // given name. It uses the config package to populate and save the
 // file into the isolated configuration directory.
 func (w *world) createCluster(name string) error {
-	cfg := config.NewDefault(name)
+	cfg, err := v2.NewV2Default(name, "openstack")
+	if err != nil {
+		return err
+	}
 
 	// Inject required values for tests since defaults were removed
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://identity.example.com/v3"
@@ -416,7 +420,7 @@ func (w *world) createCluster(name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create config manager: %w", err)
 	}
-	return mgr.Save(context.Background(), &cfg)
+	return mgr.Save(context.Background(), cfg)
 }
 
 // setActiveCluster writes the active marker file for the given
@@ -463,7 +467,7 @@ func (w *world) setConfigValue(path, value string) error {
 	setNested(m, strings.Split(path, "."), value)
 	// marshal back to Config using YAML
 	b, _ := yaml.Marshal(m)
-	var newCfg config.Config
+	var newCfg v2.Config
 	_ = yaml.Unmarshal(b, &newCfg)
 	newCfg.OpenCenter.Cluster.ClusterName = active
 	return mgr.Save(context.Background(), &newCfg)

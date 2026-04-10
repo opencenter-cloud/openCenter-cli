@@ -24,7 +24,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	utilfs "github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
 )
@@ -136,7 +136,7 @@ func copyWorkspaceToTarget(workspaceDir, targetDir string) error {
 //
 // Outputs:
 //   - error: An error if one occurred during the copy or render operation.
-func CopyBase(cfg config.Config, render bool) error {
+func CopyBase(cfg v2.Config, render bool) error {
 	target := cfg.GitOps().GitDir
 	if target == "" {
 		return fmt.Errorf("opencenter.gitops.git_dir must be set")
@@ -163,7 +163,7 @@ func CopyBase(cfg config.Config, render bool) error {
 // renderTemplateAtomic reads the embedded template file at path, executes
 // it using the provided configuration, and writes the result atomically to dst.
 // It handles special cases where template files contain non-Go template syntax.
-func renderTemplateAtomic(path, dst string, cfg config.Config, workspace *GitOpsWorkspace) error {
+func renderTemplateAtomic(path, dst string, cfg v2.Config, workspace *GitOpsWorkspace) error {
 	data, err := Files.ReadFile(path)
 	if err != nil {
 		return err
@@ -227,7 +227,7 @@ func copyFileAtomic(src, dst string, workspace *GitOpsWorkspace) error {
 // The active renderer uses descriptor-driven planning via planClusterAppActions instead.
 // This function is retained for reference and rollback purposes until formal cutover
 // approval removes it. See docs/dev/rendering-contract.md for details.
-func shouldSkipFile(relPath string, cfg config.Config) bool {
+func shouldSkipFile(relPath string, cfg v2.Config) bool {
 	pathParts := strings.Split(relPath, string(filepath.Separator))
 
 	// Skip files in disabled services directories
@@ -276,7 +276,7 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 				extractedServiceName = strings.TrimSuffix(extractedServiceName, ".yaml.tpl")
 
 				// Only skip if the managed service is explicitly present and disabled
-				if service, exists := cfg.OpenCenter.ManagedService[extractedServiceName]; exists {
+				if service, exists := managedServices(cfg)[extractedServiceName]; exists {
 					if IsServiceDisabled(service) {
 						return true
 					}
@@ -284,7 +284,7 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 			}
 		} else if serviceName != "fluxcd" {
 			// Regular managed service directory check (fluxcd is structural, not a service)
-			if service, exists := cfg.OpenCenter.ManagedService[serviceName]; exists {
+			if service, exists := managedServices(cfg)[serviceName]; exists {
 				if IsServiceDisabled(service) {
 					return true
 				}
@@ -299,7 +299,7 @@ func shouldSkipFile(relPath string, cfg config.Config) bool {
 // This function processes all files in the cluster-apps-base template directory,
 // renders .tmpl files with the cluster configuration, and copies others as-is.
 // It skips directories for disabled services and managed services.
-func RenderClusterApps(cfg config.Config) error {
+func RenderClusterApps(cfg v2.Config) error {
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
 		return fmt.Errorf("cluster name is empty")
@@ -338,7 +338,7 @@ func RenderClusterApps(cfg config.Config) error {
 
 // cleanupDisabledServices removes service directories that are not enabled in the configuration.
 // This ensures that when services are disabled or removed from config, their directories are cleaned up.
-func cleanupDisabledServices(targetDir string, cfg config.Config) error {
+func cleanupDisabledServices(targetDir string, cfg v2.Config) error {
 	// Clean up regular services
 	servicesDir := filepath.Join(targetDir, "services")
 	if _, err := os.Stat(servicesDir); err == nil {
@@ -388,7 +388,7 @@ func cleanupDisabledServices(targetDir string, cfg config.Config) error {
 			}
 
 			// Check if managed service should be removed
-			if service, exists := cfg.OpenCenter.ManagedService[serviceName]; !exists || IsServiceDisabled(service) {
+			if service, exists := managedServices(cfg)[serviceName]; !exists || IsServiceDisabled(service) {
 				serviceDir := filepath.Join(managedServicesDir, serviceName)
 				if err := os.RemoveAll(serviceDir); err != nil {
 					return fmt.Errorf("failed to remove disabled managed service directory %s: %w", serviceName, err)
@@ -404,7 +404,7 @@ func cleanupDisabledServices(targetDir string, cfg config.Config) error {
 // This function processes all files in the infrastructure-cluster-template directory,
 // renders .tmpl and .tpl files with the cluster configuration, and copies others as-is.
 // It selects the appropriate main.tf template based on the infrastructure provider type.
-func RenderInfrastructureCluster(cfg config.Config) error {
+func RenderInfrastructureCluster(cfg v2.Config) error {
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
 		return fmt.Errorf("cluster name is empty")
@@ -438,7 +438,7 @@ func RenderInfrastructureCluster(cfg config.Config) error {
 
 // RenderSingleService renders only the specified service to the cluster apps directory.
 // This is useful for updating a single service without re-rendering the entire cluster.
-func RenderSingleService(cfg config.Config, serviceName string, isManaged bool) error {
+func RenderSingleService(cfg v2.Config, serviceName string, isManaged bool) error {
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
 		return fmt.Errorf("cluster name is empty")
@@ -517,7 +517,7 @@ func IsServiceDisabled(serviceCfg any) bool {
 //
 // Outputs:
 //   - error: An error if one occurred during the copy or render operation.
-func CopyBaseAtomic(cfg config.Config, render bool, workspace *GitOpsWorkspace) error {
+func CopyBaseAtomic(cfg v2.Config, render bool, workspace *GitOpsWorkspace) error {
 	target := workspace.RootDir
 
 	// Walk embedded files
@@ -559,7 +559,7 @@ func CopyBaseAtomic(cfg config.Config, render bool, workspace *GitOpsWorkspace) 
 //
 // This is the workspace-aware version of RenderClusterApps that ensures all file operations
 // are atomic and can be rolled back if needed.
-func RenderClusterAppsAtomic(cfg config.Config, workspace *GitOpsWorkspace) error {
+func RenderClusterAppsAtomic(cfg v2.Config, workspace *GitOpsWorkspace) error {
 	target, err := resolveClusterAppsTarget(workspace, cfg)
 	if err != nil {
 		return err
@@ -578,7 +578,7 @@ func RenderClusterAppsAtomic(cfg config.Config, workspace *GitOpsWorkspace) erro
 //
 // This is the workspace-aware version of RenderInfrastructureCluster that ensures all file operations
 // are atomic and can be rolled back if needed.
-func RenderInfrastructureClusterAtomic(cfg config.Config, workspace *GitOpsWorkspace) error {
+func RenderInfrastructureClusterAtomic(cfg v2.Config, workspace *GitOpsWorkspace) error {
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
 		return fmt.Errorf("cluster name is empty")

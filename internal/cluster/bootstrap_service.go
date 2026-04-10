@@ -12,6 +12,7 @@ import (
 
 	kindprovider "github.com/opencenter-cloud/opencenter-cli/internal/cloud/kind"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/security"
@@ -143,9 +144,9 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 		configIdentifier = opts.Organization + "/" + opts.ClusterName
 	}
 
-	var cfg config.Config
+	var cfg v2.Config
 	if s.configurationMgr != nil {
-		var loadedCfg *config.Config
+		var loadedCfg *v2.Config
 		var err error
 
 		// Use LoadWithoutValidation if validation will be skipped anyway
@@ -166,7 +167,7 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 			return nil, fmt.Errorf("creating configuration manager: %w", err)
 		}
 
-		var loadedCfg *config.Config
+		var loadedCfg *v2.Config
 		if opts.SkipValidation {
 			loadedCfg, err = tempMgr.LoadWithoutValidation(ctx, configIdentifier)
 		} else {
@@ -202,11 +203,6 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 	if strings.TrimSpace(opts.KubeconfigPath) == "" {
 		opts.KubeconfigPath = clusterPaths.KubeconfigPath
 	}
-	if strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) == "kind" &&
-		strings.TrimSpace(opts.ContainerRuntime) == "" &&
-		cfg.OpenCenter.Infrastructure.Kind != nil {
-		opts.ContainerRuntime = cfg.OpenCenter.Infrastructure.Kind.Runtime
-	}
 
 	// Provision infrastructure
 	if !opts.DryRun {
@@ -239,8 +235,8 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 }
 
 // provisionInfrastructure provisions the infrastructure for the cluster
-func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *config.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions, result *BootstrapResult) error {
-	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
+func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions, result *BootstrapResult) error {
+	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 	if provider == "" {
 		provider = "openstack"
 	}
@@ -357,12 +353,12 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *con
 }
 
 // deployCluster deploys the Kubernetes cluster
-func (s *BootstrapService) deployCluster(ctx context.Context, cfg *config.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions, result *BootstrapResult) error {
+func (s *BootstrapService) deployCluster(ctx context.Context, cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions, result *BootstrapResult) error {
 	// For most providers, deployment is handled by the infrastructure provisioning step
 	// This method is a placeholder for future provider-specific deployment logic
 	// that may be separate from infrastructure provisioning
 
-	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
+	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 
 	switch provider {
 	case "kind":
@@ -379,12 +375,12 @@ func (s *BootstrapService) deployCluster(ctx context.Context, cfg *config.Config
 }
 
 // waitForReady waits for the cluster to be ready and returns the endpoint
-func (s *BootstrapService) waitForReady(ctx context.Context, cfg *config.Config, timeout time.Duration, kubeconfigPath string) (string, error) {
+func (s *BootstrapService) waitForReady(ctx context.Context, cfg *v2.Config, timeout time.Duration, kubeconfigPath string) (string, error) {
 	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
+	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 
 	switch provider {
 	case "kind":
@@ -404,7 +400,7 @@ func (s *BootstrapService) waitForKindCluster(ctx context.Context, kubeconfigPat
 }
 
 // waitForCloudCluster waits for a cloud cluster to be ready
-func (s *BootstrapService) waitForCloudCluster(ctx context.Context, cfg *config.Config, kubeconfigPath string) (string, error) {
+func (s *BootstrapService) waitForCloudCluster(ctx context.Context, cfg *v2.Config, kubeconfigPath string) (string, error) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -447,7 +443,7 @@ func (s *BootstrapService) waitForCloudCluster(ctx context.Context, cfg *config.
 // Helper methods
 
 // buildEnvironment builds the environment variables for command execution
-func (s *BootstrapService) validateBootstrapConfig(cfg *config.Config) error {
+func (s *BootstrapService) validateBootstrapConfig(cfg *v2.Config) error {
 	if cfg == nil {
 		return fmt.Errorf("configuration is nil")
 	}
@@ -455,7 +451,7 @@ func (s *BootstrapService) validateBootstrapConfig(cfg *config.Config) error {
 		return fmt.Errorf("cluster name must be set")
 	}
 
-	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
+	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 	if provider == "" {
 		return fmt.Errorf("opencenter.infrastructure.provider must be set")
 	}

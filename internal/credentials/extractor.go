@@ -14,16 +14,16 @@
 package credentials
 
 import (
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // Extractor extracts cloud provider credentials from cluster configuration
 type Extractor struct {
-	config config.Config
+	config v2.Config
 }
 
 // NewExtractor creates a new credentials extractor
-func NewExtractor(cfg config.Config) *Extractor {
+func NewExtractor(cfg v2.Config) *Extractor {
 	return &Extractor{
 		config: cfg,
 	}
@@ -35,26 +35,15 @@ func (e *Extractor) ExtractAWS() (*AWSCredentials, error) {
 
 	// Extract from infrastructure cloud configuration
 	awsCloud := e.config.OpenCenter.Infrastructure.Cloud.AWS
-	if awsCloud.Profile != "" {
-		creds.Profile = awsCloud.Profile
-	}
 	if awsCloud.Region != "" {
 		creds.Region = awsCloud.Region
 	}
 	if awsCloud.VPCID != "" {
 		creds.VPCID = awsCloud.VPCID
 	}
-	creds.PrivateSubnets = awsCloud.PrivateSubnets
-	creds.PublicSubnets = awsCloud.PublicSubnets
+	creds.PrivateSubnets = append(creds.PrivateSubnets, awsCloud.SubnetIDs...)
 
 	// Extract from legacy cluster-level AWS credentials first (lower priority)
-	if e.config.OpenCenter.Cluster.AWSAccessKey != "" {
-		creds.AccessKeyID = e.config.OpenCenter.Cluster.AWSAccessKey
-	}
-	if e.config.OpenCenter.Cluster.AWSSecretAccessKey != "" {
-		creds.SecretAccessKey = e.config.OpenCenter.Cluster.AWSSecretAccessKey
-	}
-
 	// Extract from global infrastructure AWS secrets (highest priority - overwrites cluster-level)
 	infraSecrets := e.config.Secrets.Global.AWS.Infrastructure
 	if infraSecrets.AccessKey != "" {
@@ -81,11 +70,13 @@ func (e *Extractor) ExtractOpenStack() (*OpenStackCredentials, error) {
 	creds.ApplicationCredentialID = osCloud.ApplicationCredentialID
 	creds.ApplicationCredentialSecret = osCloud.ApplicationCredentialSecret
 	creds.Domain = osCloud.Domain
-	creds.TenantName = osCloud.TenantName
+	creds.TenantName = osCloud.ProjectName
 	creds.ProjectDomainName = osCloud.ProjectDomainName
 	creds.UserDomainName = osCloud.UserDomainName
-	creds.FloatingNetworkID = osCloud.Networking.FloatingNetworkId
-	creds.SubnetID = osCloud.Networking.SubnetId
+	if osCloud.Networking != nil {
+		creds.FloatingNetworkID = osCloud.Networking.FloatingNetworkID
+		creds.SubnetID = osCloud.Networking.SubnetID
+	}
 	creds.Insecure = osCloud.Insecure
 
 	return creds, nil

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	overlaycfg "github.com/opencenter-cloud/opencenter-cli/internal/config/overlay"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // TestPlanClusterAppActionsRejectsInvalidOverlayConfig verifies that
@@ -15,12 +15,12 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		mutate  func(*config.Config)
+		mutate  func(*v2.Config)
 		wantErr string
 	}{
 		{
 			name: "http repository scheme rejected",
-			mutate: func(cfg *config.Config) {
+			mutate: func(cfg *v2.Config) {
 				cfg.OpenCenter.GitOps.OverlayUnits.CustomerManaged = overlaycfg.CustomerManagedConfig{
 					Enabled:        true,
 					RepositoryName: "test-repo",
@@ -34,7 +34,7 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 		},
 		{
 			name: "empty repository name rejected",
-			mutate: func(cfg *config.Config) {
+			mutate: func(cfg *v2.Config) {
 				cfg.OpenCenter.GitOps.OverlayUnits.CustomerManaged = overlaycfg.CustomerManagedConfig{
 					Enabled:        true,
 					RepositoryName: "",
@@ -48,7 +48,7 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 		},
 		{
 			name: "emit_secret without identity rejected",
-			mutate: func(cfg *config.Config) {
+			mutate: func(cfg *v2.Config) {
 				cfg.OpenCenter.GitOps.OverlayUnits.CustomerManaged = overlaycfg.CustomerManagedConfig{
 					Enabled:        true,
 					RepositoryName: "test-repo",
@@ -63,7 +63,7 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 		},
 		{
 			name: "sops with empty age recipient rejected",
-			mutate: func(cfg *config.Config) {
+			mutate: func(cfg *v2.Config) {
 				cfg.OpenCenter.GitOps.OverlayUnits.SOPS = overlaycfg.SOPSGenerationConfig{
 					Enabled: true,
 					Rules: []overlaycfg.SOPSGenerationRule{
@@ -75,7 +75,7 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 		},
 		{
 			name: "sops with no rules rejected",
-			mutate: func(cfg *config.Config) {
+			mutate: func(cfg *v2.Config) {
 				cfg.OpenCenter.GitOps.OverlayUnits.SOPS = overlaycfg.SOPSGenerationConfig{
 					Enabled: true,
 					Rules:   []overlaycfg.SOPSGenerationRule{},
@@ -85,7 +85,7 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 		},
 		{
 			name: "kustomization without leading slash rejected",
-			mutate: func(cfg *config.Config) {
+			mutate: func(cfg *v2.Config) {
 				cfg.OpenCenter.GitOps.OverlayUnits.CustomerManaged = overlaycfg.CustomerManagedConfig{
 					Enabled:        true,
 					RepositoryName: "test-repo",
@@ -99,7 +99,7 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 		},
 		{
 			name: "emit_secret over https rejected",
-			mutate: func(cfg *config.Config) {
+			mutate: func(cfg *v2.Config) {
 				cfg.OpenCenter.GitOps.OverlayUnits.CustomerManaged = overlaycfg.CustomerManagedConfig{
 					Enabled:        true,
 					RepositoryName: "test-repo",

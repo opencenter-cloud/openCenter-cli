@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	openstackprovider "github.com/opencenter-cloud/opencenter-cli/internal/cloud/openstack"
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/credentials"
 )
@@ -21,7 +21,7 @@ func newOpenStackBootstrapProvider(runner lifecycleCommandRunner) lifecycleBoots
 	return &openstackBootstrapProvider{runner: runner}
 }
 
-func (p *openstackBootstrapProvider) BuildSteps(cfg *config.Config, _ *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error) {
+func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, _ *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error) {
 	clusterDir, err := infrastructureClusterDir(cfg)
 	if err != nil {
 		return nil, err
@@ -118,14 +118,14 @@ func mergeBootstrapEnvironment(target, extra map[string]string) {
 	}
 }
 
-func infrastructureClusterDir(cfg *config.Config) (string, error) {
+func infrastructureClusterDir(cfg *v2.Config) (string, error) {
 	if cfg == nil {
 		return "", fmt.Errorf("configuration is nil")
 	}
 
-	gitDir := strings.TrimSpace(cfg.GitOps().GitDir)
+	gitDir := strings.TrimSpace(cfg.GitDir())
 	if gitDir == "" {
-		return "", fmt.Errorf("gitops.git_dir must be configured for provider %q", cfg.OpenCenter.Infrastructure.Provider)
+		return "", fmt.Errorf("gitops.git_dir must be configured for provider %q", cfg.Provider())
 	}
 
 	clusterName := strings.TrimSpace(cfg.ClusterName())

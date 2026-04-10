@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +31,7 @@ func TestKubeletRotateServerCertsRendering(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Create a test configuration with KubeletRotateServerCerts set to true
-	cfg := &config.Config{
+	cfg := &v2.Config{
 		SchemaVersion: "v2.0.0",
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
@@ -101,7 +101,7 @@ func TestKubeletRotateServerCertsDefaultValue(t *testing.T) {
 	// Create a test configuration WITHOUT explicitly setting KubeletRotateServerCerts
 	// When not set, it will be the Go zero value (false)
 	// Users should explicitly set this in their config or use cluster init which sets defaults
-	cfg := &config.Config{
+	cfg := &v2.Config{
 		SchemaVersion: "v2.0.0",
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{

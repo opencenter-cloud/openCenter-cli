@@ -18,35 +18,36 @@ import (
 	"time"
 
 	configcache "github.com/opencenter-cloud/opencenter-cli/internal/config/cache"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // ConfigCache provides thread-safe caching of configurations.
 // It stores loaded configurations in memory to avoid repeated disk reads.
 type ConfigCache struct {
-	cache *configcache.NamedCache[*Config]
+	cache *configcache.NamedCache[*v2.Config]
 }
 
 // NewConfigCache creates a new ConfigCache instance.
 func NewConfigCache() *ConfigCache {
 	return &ConfigCache{
-		cache: configcache.NewNamedCache[*Config](),
+		cache: configcache.NewNamedCache[*v2.Config](),
 	}
 }
 
 // Get retrieves a configuration from cache.
 // Returns the cached config and true if found and not expired, nil and false otherwise.
-func (cc *ConfigCache) Get(ctx context.Context, name string) (*Config, bool) {
+func (cc *ConfigCache) Get(ctx context.Context, name string) (*v2.Config, bool) {
 	return cc.cache.Get(ctx, name)
 }
 
 // Set stores a configuration in cache with optional expiration.
 // If expiration is zero, the entry never expires.
-func (cc *ConfigCache) Set(ctx context.Context, name string, config *Config) {
+func (cc *ConfigCache) Set(ctx context.Context, name string, config *v2.Config) {
 	cc.cache.Set(ctx, name, config)
 }
 
 // SetWithExpiration stores a configuration in cache with a specific expiration time.
-func (cc *ConfigCache) SetWithExpiration(ctx context.Context, name string, config *Config, expiresAt time.Time) {
+func (cc *ConfigCache) SetWithExpiration(ctx context.Context, name string, config *v2.Config, expiresAt time.Time) {
 	cc.cache.SetWithExpiration(ctx, name, config, expiresAt)
 }
 

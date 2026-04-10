@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // GitOpsGenerator defines the interface for GitOps repository generation.
@@ -25,11 +25,11 @@ import (
 type GitOpsGenerator interface {
 	// Generate creates a complete GitOps repository based on the provided configuration.
 	// The generation process executes in discrete stages with automatic rollback on failure.
-	Generate(ctx context.Context, cfg config.Config) error
+	Generate(ctx context.Context, cfg v2.Config) error
 
 	// GenerateDryRun previews the generation process without making filesystem changes.
 	// It returns a plan describing what would be generated.
-	GenerateDryRun(ctx context.Context, cfg config.Config) (*GenerationPlan, error)
+	GenerateDryRun(ctx context.Context, cfg v2.Config) (*GenerationPlan, error)
 
 	// Rollback restores the workspace to a previous checkpoint state.
 	// This is typically called automatically on stage failure but can be invoked manually.

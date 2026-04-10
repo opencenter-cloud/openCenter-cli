@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/template"
 	"github.com/stretchr/testify/assert"
@@ -488,8 +488,8 @@ func TestInfrastructureStageConditions(t *testing.T) {
 
 // Helper functions
 
-func createTestConfigInfra(provider string) config.Config {
-	return config.Config{
+func createTestConfigInfra(provider string) v2.Config {
+	return v2.Config{
 		SchemaVersion: "1.0.0",
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
@@ -506,7 +506,7 @@ func createTestConfigInfra(provider string) config.Config {
 	}
 }
 
-func createTestWorkspace(t *testing.T, rootDir string, cfg config.Config) *gitops.GitOpsWorkspace {
+func createTestWorkspace(t *testing.T, rootDir string, cfg v2.Config) *gitops.GitOpsWorkspace {
 	workspace := &gitops.GitOpsWorkspace{
 		RootDir: rootDir,
 		TempDir: filepath.Join(rootDir, ".tmp"),

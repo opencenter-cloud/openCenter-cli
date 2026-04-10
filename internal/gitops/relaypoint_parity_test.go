@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -150,7 +150,7 @@ func TestRelayPointRenderingParity(t *testing.T) {
 	}
 }
 
-func loadParityConfig(t *testing.T, path string) config.Config {
+func loadParityConfig(t *testing.T, path string) v2.Config {
 	t.Helper()
 
 	data, err := os.ReadFile(path)
@@ -158,7 +158,7 @@ func loadParityConfig(t *testing.T, path string) config.Config {
 		t.Fatalf("read config %s: %v", path, err)
 	}
 
-	var cfg config.Config
+	var cfg v2.Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		t.Fatalf("unmarshal config %s: %v", path, err)
 	}

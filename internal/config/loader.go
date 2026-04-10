@@ -17,8 +17,10 @@ import (
 	"context"
 	"fmt"
 
-	configpersistence "github.com/opencenter-cloud/opencenter-cli/internal/config/persistence"
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/defaults"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
+	"gopkg.in/yaml.v3"
 )
 
 // ConfigIOHandler handles configuration file I/O operations.
@@ -26,12 +28,14 @@ import (
 // the FileSystem interface for atomic operations.
 type ConfigIOHandler struct {
 	fileSystem fs.FileSystem
+	loader     *v2.ConfigLoader
 }
 
 // NewConfigIOHandler creates a new ConfigIOHandler with the given FileSystem.
 func NewConfigIOHandler(fileSystem fs.FileSystem) *ConfigIOHandler {
 	return &ConfigIOHandler{
 		fileSystem: fileSystem,
+		loader:     v2.NewConfigLoaderWithFileSystem(defaults.NewRegistry(), fileSystem),
 	}
 }
 
@@ -46,18 +50,13 @@ func NewConfigIOHandler(fileSystem fs.FileSystem) *ConfigIOHandler {
 // Returns:
 //   - *Config: The parsed configuration
 //   - error: An error if the file cannot be read or parsed
-func (cl *ConfigIOHandler) LoadFromFile(ctx context.Context, path string) (*Config, error) {
-	// Read file using FileSystem interface
-	data, err := cl.fileSystem.ReadFile(path)
-	if err != nil {
-		return nil, NewFileError("read", path, err)
-	}
+func (cl *ConfigIOHandler) LoadFromFile(ctx context.Context, path string) (*v2.Config, error) {
+	_ = ctx
 
-	// Parse the YAML data
-	config, err := cl.LoadFromBytes(ctx, data)
+	// Read file using FileSystem interface
+	config, err := cl.loader.LoadFromFile(path)
 	if err != nil {
-		// Wrap with file context for better error messages
-		return nil, WrapParseError(err, path, 0, 0)
+		return nil, WrapParseError(NewParseError(path, 0, 0, err), path, 0, 0)
 	}
 
 	return config, nil
@@ -73,40 +72,15 @@ func (cl *ConfigIOHandler) LoadFromFile(ctx context.Context, path string) (*Conf
 // Returns:
 //   - *Config: The parsed configuration
 //   - error: An error if the data cannot be parsed
-func (cl *ConfigIOHandler) LoadFromBytes(ctx context.Context, data []byte) (*Config, error) {
-	if config, err, handled := cl.loadNativeV2(data); handled {
-		if err != nil {
-			return nil, NewParseError("", 0, 0, err)
-		}
-		return config, nil
-	}
+func (cl *ConfigIOHandler) LoadFromBytes(ctx context.Context, data []byte) (*v2.Config, error) {
+	_ = ctx
 
-	// Unmarshal the YAML data
-	config, err := cl.UnmarshalConfig(data)
+	config, err := cl.loader.LoadFromBytes(data)
 	if err != nil {
-		// Return parse error with context
 		return nil, NewParseError("", 0, 0, err)
 	}
 
 	return config, nil
-}
-
-func (cl *ConfigIOHandler) loadNativeV2(data []byte) (*Config, error, bool) {
-	loader := defaultLegacyV2Loader()
-	v2Config, err := loader.LoadFromBytes(data)
-	if err != nil {
-		if isNativeV2ConfigData(data) {
-			return nil, fmt.Errorf("failed to load native v2 configuration: %w", err), true
-		}
-		return nil, nil, false
-	}
-
-	legacyConfig, err := convertNativeV2ToLegacyConfig(v2Config)
-	if err != nil {
-		return nil, fmt.Errorf("convert native v2 configuration: %w", err), true
-	}
-
-	return &legacyConfig, nil, true
 }
 
 // SaveToFile writes a configuration to a file atomically.
@@ -120,16 +94,14 @@ func (cl *ConfigIOHandler) loadNativeV2(data []byte) (*Config, error, bool) {
 //
 // Returns:
 //   - error: An error if the configuration cannot be marshaled or written
-func (cl *ConfigIOHandler) SaveToFile(ctx context.Context, path string, config *Config) error {
-	// Marshal the configuration to YAML
-	data, err := cl.MarshalConfig(config)
-	if err != nil {
-		return NewParseError(path, 0, 0, err)
+func (cl *ConfigIOHandler) SaveToFile(ctx context.Context, path string, config *v2.Config) error {
+	_ = ctx
+
+	if config == nil {
+		return NewValidationError("", "configuration cannot be nil", nil)
 	}
 
-	// Write atomically using FileSystem interface
-	// Use 0600 permissions to protect sensitive data
-	if err := cl.fileSystem.WriteFileAtomic(path, data, 0o600); err != nil {
+	if err := cl.loader.SaveToFile(config, path); err != nil {
 		return NewFileError("write", path, err)
 	}
 
@@ -145,12 +117,12 @@ func (cl *ConfigIOHandler) SaveToFile(ctx context.Context, path string, config *
 // Returns:
 //   - []byte: The YAML-encoded configuration
 //   - error: An error if marshaling fails
-func (cl *ConfigIOHandler) MarshalConfig(config *Config) ([]byte, error) {
+func (cl *ConfigIOHandler) MarshalConfig(config *v2.Config) ([]byte, error) {
 	if config == nil {
 		return nil, NewValidationError("", "configuration cannot be nil", nil)
 	}
 
-	data, err := configpersistence.MarshalYAML(config)
+	data, err := yaml.Marshal(config)
 	if err != nil {
 		return nil, NewParseError("", 0, 0, fmt.Errorf("failed to marshal configuration to YAML: %w", err))
 	}
@@ -167,13 +139,27 @@ func (cl *ConfigIOHandler) MarshalConfig(config *Config) ([]byte, error) {
 // Returns:
 //   - *Config: The parsed configuration
 //   - error: An error if unmarshaling fails
-func (cl *ConfigIOHandler) UnmarshalConfig(data []byte) (*Config, error) {
-	config, err := configpersistence.UnmarshalYAML[Config](data)
+func (cl *ConfigIOHandler) UnmarshalConfig(data []byte) (*v2.Config, error) {
+	if len(data) == 0 {
+		return nil, NewValidationError("", "configuration data cannot be empty", nil)
+	}
+
+	config, err := cl.loader.LoadFromBytes(data)
 	if err != nil {
-		if len(data) == 0 {
-			return nil, NewValidationError("", "configuration data cannot be empty", nil)
-		}
 		return nil, NewParseError("", 0, 0, fmt.Errorf("failed to unmarshal YAML configuration: %w", err))
 	}
 	return config, nil
+}
+
+// ValidateConfig validates a native v2 configuration through the same
+// load/normalize/default/validate pipeline used for persisted files.
+func (cl *ConfigIOHandler) ValidateConfig(ctx context.Context, config *v2.Config) error {
+	_ = ctx
+
+	data, err := cl.MarshalConfig(config)
+	if err != nil {
+		return err
+	}
+	_, err = cl.loader.LoadFromBytes(data)
+	return err
 }

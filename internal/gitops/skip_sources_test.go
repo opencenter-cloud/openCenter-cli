@@ -16,21 +16,21 @@ package gitops
 import (
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 	tests := []struct {
 		name     string
 		relPath  string
-		cfg      config.Config
+		cfg      v2.Config
 		expected bool
 	}{
 		{
 			name:    "skip source file for disabled service",
 			relPath: "services/sources/opencenter-cert-manager.yaml.tpl",
-			cfg: config.Config{
+			cfg: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Services: config.ServiceMap{
 						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: false}},
@@ -42,7 +42,7 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 		{
 			name:    "include source file for enabled service",
 			relPath: "services/sources/opencenter-cert-manager.yaml.tpl",
-			cfg: config.Config{
+			cfg: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Services: config.ServiceMap{
 						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: true}},
@@ -54,7 +54,7 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 		{
 			name:    "skip source file for disabled managed service",
 			relPath: "managed-services/sources/opencenter-alert-proxy.yaml.tpl",
-			cfg: config.Config{
+			cfg: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					ManagedService: config.ServiceMap{
 						"alert-proxy": &services.AlertProxyConfig{BaseConfig: services.BaseConfig{Enabled: false}},
@@ -66,7 +66,7 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 		{
 			name:    "include source file for enabled managed service",
 			relPath: "managed-services/sources/opencenter-alert-proxy.yaml.tpl",
-			cfg: config.Config{
+			cfg: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					ManagedService: config.ServiceMap{
 						"alert-proxy": &services.AlertProxyConfig{BaseConfig: services.BaseConfig{Enabled: true}},
@@ -78,7 +78,7 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 		{
 			name:    "skip service directory for disabled service",
 			relPath: "services/cert-manager/kustomization.yaml",
-			cfg: config.Config{
+			cfg: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Services: config.ServiceMap{
 						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: false}},
@@ -90,7 +90,7 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 		{
 			name:    "include service directory for enabled service",
 			relPath: "services/cert-manager/kustomization.yaml",
-			cfg: config.Config{
+			cfg: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Services: config.ServiceMap{
 						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: true}},
@@ -102,7 +102,7 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 		{
 			name:    "include source file for non-existent service (default behavior)",
 			relPath: "services/sources/opencenter-unknown-service.yaml.tpl",
-			cfg: config.Config{
+			cfg: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Services: config.ServiceMap{},
 				},
@@ -112,7 +112,7 @@ func TestShouldSkipFile_DisabledServiceSources(t *testing.T) {
 		{
 			name:    "include kustomization file in sources directory",
 			relPath: "services/sources/kustomization.yaml.tpl",
-			cfg: config.Config{
+			cfg: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Services: config.ServiceMap{
 						"cert-manager": &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: false}},

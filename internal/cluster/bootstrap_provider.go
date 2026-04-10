@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 )
 
 type lifecycleBootstrapProvider interface {
-	BuildSteps(cfg *config.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error)
+	BuildSteps(cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error)
 }
 
 type lifecycleCommandRunner interface {

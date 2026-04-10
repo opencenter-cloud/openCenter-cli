@@ -14,7 +14,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	descriptorcfg "github.com/opencenter-cloud/opencenter-cli/internal/services/descriptors"
 )
@@ -43,7 +43,7 @@ func loadClusterDescriptorRegistry() (*descriptorcfg.Registry, error) {
 	return clusterDescriptorRegistry, clusterDescriptorErr
 }
 
-func resolveClusterAppsTarget(workspace *GitOpsWorkspace, cfg config.Config) (string, error) {
+func resolveClusterAppsTarget(workspace *GitOpsWorkspace, cfg v2.Config) (string, error) {
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
 		return "", fmt.Errorf("cluster name is empty")
@@ -58,7 +58,7 @@ func resolveClusterAppsTarget(workspace *GitOpsWorkspace, cfg config.Config) (st
 	return filepath.Join(workspace.RootDir, "applications", "overlays", clusterName), nil
 }
 
-func renderOutputPath(path string, cfg config.Config) (string, error) {
+func renderOutputPath(path string, cfg v2.Config) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("output path is empty")
 	}
@@ -105,7 +105,7 @@ func inferDescriptorRender(path string, override *bool) bool {
 	return strings.HasSuffix(path, ".tpl") || strings.HasSuffix(path, ".tmpl") || strings.HasSuffix(path, ".jtpl")
 }
 
-func buildConfigView(cfg config.Config) (map[string]any, error) {
+func buildConfigView(cfg v2.Config) (map[string]any, error) {
 	data, err := json.Marshal(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("marshal config view: %w", err)
@@ -166,19 +166,19 @@ func evaluateDescriptorCondition(view map[string]any, condition *descriptorcfg.C
 	}
 }
 
-func isDescriptorEnabled(cfg config.Config, view map[string]any, descriptor descriptorcfg.Descriptor) (bool, error) {
+func isDescriptorEnabled(cfg v2.Config, view map[string]any, descriptor descriptorcfg.Descriptor) (bool, error) {
 	if descriptor.Service != "" {
 		service, exists := cfg.OpenCenter.Services[descriptor.Service]
 		return exists && !IsServiceDisabled(service), nil
 	}
 	if descriptor.ManagedService != "" {
-		service, exists := cfg.OpenCenter.ManagedService[descriptor.ManagedService]
+		service, exists := managedServices(cfg)[descriptor.ManagedService]
 		return exists && !IsServiceDisabled(service), nil
 	}
 	return evaluateDescriptorCondition(view, descriptor.EnabledWhen)
 }
 
-func expandDescriptorActions(descriptor descriptorcfg.Descriptor, cfg config.Config, view map[string]any) ([]clusterAppAction, error) {
+func expandDescriptorActions(descriptor descriptorcfg.Descriptor, cfg v2.Config, view map[string]any) ([]clusterAppAction, error) {
 	var actions []clusterAppAction
 
 	for _, root := range descriptor.Roots {
@@ -339,7 +339,7 @@ func validateDescriptorCoverage(registry *descriptorcfg.Registry) error {
 	return nil
 }
 
-func planClusterAppActions(cfg config.Config) ([]clusterAppAction, error) {
+func planClusterAppActions(cfg v2.Config) ([]clusterAppAction, error) {
 	if err := validateOverlayUnitConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -423,7 +423,7 @@ func descriptorEnableReason(d descriptorcfg.Descriptor, enabled bool) string {
 	return "disabled (unknown reason)"
 }
 
-func planSingleServiceActions(cfg config.Config, serviceName string, isManaged bool) ([]clusterAppAction, error) {
+func planSingleServiceActions(cfg v2.Config, serviceName string, isManaged bool) ([]clusterAppAction, error) {
 	if err := validateOverlayUnitConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -490,7 +490,7 @@ func planSingleServiceActions(cfg config.Config, serviceName string, isManaged b
 	return actions, nil
 }
 
-func writeClusterAppActions(actions []clusterAppAction, target string, cfg config.Config, workspace *GitOpsWorkspace) error {
+func writeClusterAppActions(actions []clusterAppAction, target string, cfg v2.Config, workspace *GitOpsWorkspace) error {
 	for _, action := range actions {
 		dst := filepath.Join(target, action.Output)
 		if action.Render {

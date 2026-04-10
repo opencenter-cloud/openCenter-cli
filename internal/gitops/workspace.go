@@ -21,14 +21,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // WorkspaceManager manages GitOps workspace lifecycle including creation,
 // cleanup, and resource management.
 type WorkspaceManager interface {
 	// CreateWorkspace creates a new isolated workspace for GitOps generation
-	CreateWorkspace(ctx context.Context, cfg config.Config) (*GitOpsWorkspace, error)
+	CreateWorkspace(ctx context.Context, cfg v2.Config) (*GitOpsWorkspace, error)
 
 	// CleanupWorkspace removes a workspace and all its resources
 	CleanupWorkspace(ctx context.Context, workspace *GitOpsWorkspace) error
@@ -50,7 +50,7 @@ type GitOpsWorkspace struct {
 	TempDir string
 
 	// Config is the cluster configuration associated with this workspace
-	Config config.Config
+	Config v2.Config
 
 	// Metadata stores arbitrary key-value pairs for workspace context
 	Metadata map[string]interface{}
@@ -138,7 +138,7 @@ func NewWorkspaceManagerWithOptions(baseDir string, maxAge, cleanupInterval time
 
 // CreateWorkspace creates a new isolated workspace for GitOps generation.
 // The workspace provides an isolated environment with its own directory structure.
-func (m *DefaultWorkspaceManager) CreateWorkspace(ctx context.Context, cfg config.Config) (*GitOpsWorkspace, error) {
+func (m *DefaultWorkspaceManager) CreateWorkspace(ctx context.Context, cfg v2.Config) (*GitOpsWorkspace, error) {
 	// Generate unique workspace ID
 	workspaceID := fmt.Sprintf("workspace-%s-%d", cfg.ClusterName(), time.Now().UnixNano())
 

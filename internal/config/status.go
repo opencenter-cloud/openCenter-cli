@@ -16,7 +16,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -30,34 +29,6 @@ func UpdateStatus(clusterName, stage, status string) error {
 	}
 
 	ctx := context.Background()
-	configPath, err := resolveClusterConfigPath(ctx, mgr, clusterName)
-	if err != nil {
-		return fmt.Errorf("failed to resolve cluster configuration path for status update: %w", err)
-	}
-
-	data, err := mgr.fileSystem.ReadFile(configPath)
-	if err != nil {
-		return fmt.Errorf("failed to read cluster configuration for status update: %w", err)
-	}
-
-	if isNativeV2ConfigData(data) {
-		loader := defaultLegacyV2Loader()
-		cfg, err := loader.LoadFromBytes(data)
-		if err != nil {
-			return fmt.Errorf("failed to load native v2 cluster configuration for status update: %w", err)
-		}
-
-		cfg.OpenCenter.Meta.Stage = stage
-		cfg.OpenCenter.Meta.Status = status
-		cfg.Metadata.UpdatedAt = time.Now().Format(time.RFC3339Nano)
-
-		if err := loader.SaveToFile(cfg, configPath); err != nil {
-			return fmt.Errorf("failed to save native v2 cluster configuration with new status: %w", err)
-		}
-
-		return nil
-	}
-
 	cfg, err := mgr.Load(ctx, clusterName)
 	if err != nil {
 		return fmt.Errorf("failed to load cluster configuration for status update: %w", err)
@@ -65,6 +36,7 @@ func UpdateStatus(clusterName, stage, status string) error {
 
 	cfg.OpenCenter.Meta.Stage = stage
 	cfg.OpenCenter.Meta.Status = status
+	cfg.Metadata.UpdatedAt = time.Now().Format(time.RFC3339Nano)
 
 	if err := mgr.Save(context.Background(), cfg); err != nil {
 		return fmt.Errorf("failed to save cluster configuration with new status: %w", err)
@@ -74,20 +46,12 @@ func UpdateStatus(clusterName, stage, status string) error {
 }
 
 func resolveClusterConfigPath(ctx context.Context, mgr *ConfigurationManager, clusterName string) (string, error) {
-	if strings.Contains(clusterName, "/") {
-		parts := strings.SplitN(clusterName, "/", 2)
-		if len(parts) != 2 {
-			return "", fmt.Errorf("invalid cluster identifier format: expected 'organization/cluster'")
-		}
-
-		clusterPaths, err := mgr.pathResolver.Resolve(ctx, parts[1], parts[0])
-		if err != nil {
-			return "", err
-		}
-		return clusterPaths.ConfigPath, nil
+	cfg, err := mgr.Load(ctx, clusterName)
+	if err != nil {
+		return "", err
 	}
 
-	clusterPaths, err := mgr.pathResolver.ResolveWithFallback(ctx, clusterName)
+	clusterPaths, err := mgr.pathResolver.Resolve(ctx, cfg.ClusterName(), cfg.Organization())
 	if err != nil {
 		return "", err
 	}

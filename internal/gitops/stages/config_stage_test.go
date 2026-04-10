@@ -22,7 +22,7 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	tmpl "github.com/opencenter-cloud/opencenter-cli/internal/template"
 )
@@ -145,14 +145,14 @@ func (m *mockTemplateRegistry) UnregisterTemplate(name string) error {
 func TestConfigStage_Execute(t *testing.T) {
 	tests := []struct {
 		name          string
-		config        config.Config
+		config        v2.Config
 		templates     []tmpl.TemplateDefinition
 		wantErr       bool
 		expectedFiles []string
 	}{
 		{
 			name: "creates default configuration files",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -177,7 +177,7 @@ func TestConfigStage_Execute(t *testing.T) {
 		},
 		{
 			name: "renders configuration templates",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -212,7 +212,7 @@ func TestConfigStage_Execute(t *testing.T) {
 		},
 		{
 			name: "fails when cluster name is missing",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -284,7 +284,7 @@ func TestConfigStage_Execute(t *testing.T) {
 func TestConfigStage_Rollback(t *testing.T) {
 	// Create temporary workspace
 	tempDir := t.TempDir()
-	cfg := config.Config{
+	cfg := v2.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
 				Organization: "test-org",
@@ -344,13 +344,13 @@ func TestConfigStage_Rollback(t *testing.T) {
 func TestConfigStage_Validate(t *testing.T) {
 	tests := []struct {
 		name       string
-		config     config.Config
+		config     v2.Config
 		setupFiles []string
 		wantErr    bool
 	}{
 		{
 			name: "validates successfully with all required files",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -370,7 +370,7 @@ func TestConfigStage_Validate(t *testing.T) {
 		},
 		{
 			name: "fails when required files are missing",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -387,7 +387,7 @@ func TestConfigStage_Validate(t *testing.T) {
 		},
 		{
 			name: "fails when cluster name is missing",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -444,14 +444,14 @@ func TestConfigStage_Validate(t *testing.T) {
 func TestConfigStage_DryRun(t *testing.T) {
 	tests := []struct {
 		name              string
-		config            config.Config
+		config            v2.Config
 		templates         []tmpl.TemplateDefinition
 		wantErr           bool
 		expectedFileCount int
 	}{
 		{
 			name: "returns plan with default configuration files",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -470,7 +470,7 @@ func TestConfigStage_DryRun(t *testing.T) {
 		},
 		{
 			name: "includes template files in plan",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -495,7 +495,7 @@ func TestConfigStage_DryRun(t *testing.T) {
 		},
 		{
 			name: "fails when cluster name is missing",
-			config: config.Config{
+			config: v2.Config{
 				OpenCenter: config.SimplifiedOpenCenter{
 					Meta: config.ClusterMeta{
 						Organization: "test-org",
@@ -557,7 +557,7 @@ func TestConfigStage_DryRun(t *testing.T) {
 func TestConfigStage_CreateDefaultConfigs(t *testing.T) {
 	// Create temporary workspace
 	tempDir := t.TempDir()
-	cfg := config.Config{
+	cfg := v2.Config{
 		OpenCenter: config.SimplifiedOpenCenter{
 			Meta: config.ClusterMeta{
 				Organization: "test-org",

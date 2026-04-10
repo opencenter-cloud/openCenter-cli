@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 )
@@ -253,7 +253,7 @@ func (vs *ValidationStage) Validate(ctx context.Context, workspace *gitops.GitOp
 }
 
 // DryRun returns a plan for the validation stage.
-func (vs *ValidationStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.StagePlan, error) {
+func (vs *ValidationStage) DryRun(ctx context.Context, cfg v2.Config) (*gitops.StagePlan, error) {
 	return &gitops.StagePlan{
 		Name:         vs.Name(),
 		Description:  vs.Description(),

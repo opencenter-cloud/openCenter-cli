@@ -19,7 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/services"
 	"github.com/opencenter-cloud/opencenter-cli/internal/template"
@@ -205,7 +205,7 @@ func (ss *ServiceStage) Validate(ctx context.Context, workspace *gitops.GitOpsWo
 }
 
 // DryRun returns a plan of what this stage would create.
-func (ss *ServiceStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.StagePlan, error) {
+func (ss *ServiceStage) DryRun(ctx context.Context, cfg v2.Config) (*gitops.StagePlan, error) {
 	// Get enabled services from configuration
 	enabledServices := ss.getEnabledServices(cfg)
 	if len(enabledServices) == 0 {
@@ -264,18 +264,23 @@ func (ss *ServiceStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.
 }
 
 // getEnabledServices extracts the list of enabled service names from the configuration.
-func (ss *ServiceStage) getEnabledServices(cfg config.Config) []string {
+func (ss *ServiceStage) getEnabledServices(cfg v2.Config) []string {
 	enabled := make([]string, 0)
 
-	// Check both Services and ManagedService maps
+	managedServices := cfg.OpenCenter.ManagedServices
+	if len(managedServices) == 0 {
+		managedServices = cfg.OpenCenter.LegacyManaged
+	}
+
+	// Check both Services and ManagedServices maps
 	for name, serviceAny := range cfg.OpenCenter.Services {
-		if service, ok := serviceAny.(config.ServiceCfg); ok && service.Enabled {
+		if !gitops.IsServiceDisabled(serviceAny) {
 			enabled = append(enabled, name)
 		}
 	}
 
-	for name, serviceAny := range cfg.OpenCenter.ManagedService {
-		if service, ok := serviceAny.(config.ServiceCfg); ok && service.Enabled {
+	for name, serviceAny := range managedServices {
+		if !gitops.IsServiceDisabled(serviceAny) {
 			enabled = append(enabled, name)
 		}
 	}
@@ -285,7 +290,7 @@ func (ss *ServiceStage) getEnabledServices(cfg config.Config) []string {
 
 // getOutputPath determines the output path for a service template.
 // It uses the template metadata to determine the appropriate location.
-func (ss *ServiceStage) getOutputPath(tmpl template.TemplateDefinition, cfg config.Config) string {
+func (ss *ServiceStage) getOutputPath(tmpl template.TemplateDefinition, cfg v2.Config) string {
 	clusterName := cfg.ClusterName()
 
 	// If template has a custom output path in metadata tags, use the first tag
@@ -312,7 +317,7 @@ func (ss *ServiceStage) getOutputPath(tmpl template.TemplateDefinition, cfg conf
 }
 
 // evaluateConditions checks if all conditions for a template are met.
-func (ss *ServiceStage) evaluateConditions(conditions []template.RenderCondition, cfg config.Config) bool {
+func (ss *ServiceStage) evaluateConditions(conditions []template.RenderCondition, cfg v2.Config) bool {
 	// If no conditions, template should be rendered
 	if len(conditions) == 0 {
 		return true
@@ -329,7 +334,7 @@ func (ss *ServiceStage) evaluateConditions(conditions []template.RenderCondition
 }
 
 // evaluateCondition checks if a single condition is met.
-func (ss *ServiceStage) evaluateCondition(condition template.RenderCondition, cfg config.Config) bool {
+func (ss *ServiceStage) evaluateCondition(condition template.RenderCondition, cfg v2.Config) bool {
 	// Get the field value from configuration
 	fieldValue := ss.getFieldValue(condition.Field, cfg)
 
@@ -364,7 +369,7 @@ func (ss *ServiceStage) evaluateCondition(condition template.RenderCondition, cf
 }
 
 // getFieldValue extracts a field value from the configuration using dot notation.
-func (ss *ServiceStage) getFieldValue(field string, cfg config.Config) interface{} {
+func (ss *ServiceStage) getFieldValue(field string, cfg v2.Config) interface{} {
 	// Simple field extraction - in a real implementation, this would use reflection
 	// or a more sophisticated path resolution mechanism
 	switch field {
@@ -378,15 +383,15 @@ func (ss *ServiceStage) getFieldValue(field string, cfg config.Config) interface
 		// Check if it's a service enablement field
 		if len(field) > 8 && field[:8] == "service." {
 			serviceName := field[8:]
-			if serviceAny, ok := cfg.OpenCenter.Services[serviceName]; ok {
-				if service, ok := serviceAny.(config.ServiceCfg); ok {
-					return service.Enabled
-				}
+			managedServices := cfg.OpenCenter.ManagedServices
+			if len(managedServices) == 0 {
+				managedServices = cfg.OpenCenter.LegacyManaged
 			}
-			if serviceAny, ok := cfg.OpenCenter.ManagedService[serviceName]; ok {
-				if service, ok := serviceAny.(config.ServiceCfg); ok {
-					return service.Enabled
-				}
+			if serviceAny, ok := cfg.OpenCenter.Services[serviceName]; ok {
+				return !gitops.IsServiceDisabled(serviceAny)
+			}
+			if serviceAny, ok := managedServices[serviceName]; ok {
+				return !gitops.IsServiceDisabled(serviceAny)
 			}
 		}
 		return nil

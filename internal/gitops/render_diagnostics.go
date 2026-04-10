@@ -8,17 +8,17 @@ import (
 // rendering operation. It records which descriptors were evaluated, why
 // each was included or excluded, and which files were produced.
 type RenderDiagnostics struct {
-	Cluster     string                `json:"cluster"`
-	Descriptors []DescriptorDecision  `json:"descriptors"`
-	Actions     []ActionDiagnostic    `json:"actions,omitempty"`
-	Undeclared  []string              `json:"undeclared,omitempty"`
+	Cluster     string               `json:"cluster"`
+	Descriptors []DescriptorDecision `json:"descriptors"`
+	Actions     []ActionDiagnostic   `json:"actions,omitempty"`
+	Undeclared  []string             `json:"undeclared,omitempty"`
 }
 
 // DescriptorDecision records the evaluation result for one descriptor.
 type DescriptorDecision struct {
-	Name     string `json:"name"`
-	Enabled  bool   `json:"enabled"`
-	Reason   string `json:"reason"`
+	Name    string `json:"name"`
+	Enabled bool   `json:"enabled"`
+	Reason  string `json:"reason"`
 }
 
 // ActionDiagnostic records one file action produced by the renderer.

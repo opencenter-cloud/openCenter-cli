@@ -19,7 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/template"
@@ -287,7 +287,7 @@ func (cs *ConfigStage) Validate(ctx context.Context, workspace *gitops.GitOpsWor
 }
 
 // DryRun returns a plan of what this stage would create.
-func (cs *ConfigStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.StagePlan, error) {
+func (cs *ConfigStage) DryRun(ctx context.Context, cfg v2.Config) (*gitops.StagePlan, error) {
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
 		return nil, fmt.Errorf("cluster name not specified in configuration")
@@ -368,7 +368,7 @@ func (cs *ConfigStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.S
 }
 
 // getOutputPath determines the output path for a configuration template.
-func (cs *ConfigStage) getOutputPath(tmpl template.TemplateDefinition, cfg config.Config) string {
+func (cs *ConfigStage) getOutputPath(tmpl template.TemplateDefinition, cfg v2.Config) string {
 	clusterName := cfg.ClusterName()
 
 	// If template has a custom output path in metadata tags, use the first tag
@@ -404,7 +404,7 @@ func (cs *ConfigStage) getOutputPath(tmpl template.TemplateDefinition, cfg confi
 }
 
 // evaluateConditions checks if all conditions for a template are met.
-func (cs *ConfigStage) evaluateConditions(conditions []template.RenderCondition, cfg config.Config) bool {
+func (cs *ConfigStage) evaluateConditions(conditions []template.RenderCondition, cfg v2.Config) bool {
 	// If no conditions, template should be rendered
 	if len(conditions) == 0 {
 		return true
@@ -421,7 +421,7 @@ func (cs *ConfigStage) evaluateConditions(conditions []template.RenderCondition,
 }
 
 // evaluateCondition checks if a single condition is met.
-func (cs *ConfigStage) evaluateCondition(condition template.RenderCondition, cfg config.Config) bool {
+func (cs *ConfigStage) evaluateCondition(condition template.RenderCondition, cfg v2.Config) bool {
 	// Get the field value from configuration
 	fieldValue := cs.getFieldValue(condition.Field, cfg)
 
@@ -456,7 +456,7 @@ func (cs *ConfigStage) evaluateCondition(condition template.RenderCondition, cfg
 }
 
 // getFieldValue extracts a field value from the configuration using dot notation.
-func (cs *ConfigStage) getFieldValue(field string, cfg config.Config) interface{} {
+func (cs *ConfigStage) getFieldValue(field string, cfg v2.Config) interface{} {
 	// Simple field extraction - in a real implementation, this would use reflection
 	// or a more sophisticated path resolution mechanism
 	switch field {

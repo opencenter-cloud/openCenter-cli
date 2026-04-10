@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	kindprovider "github.com/opencenter-cloud/opencenter-cli/internal/cloud/kind"
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev/flux"
@@ -43,7 +43,7 @@ func newKindBootstrapProvider(runner lifecycleCommandRunner) lifecycleBootstrapP
 // infrastructure, attach the Git remote, push the GitOps tree, and
 // bootstrap FluxCD — all within a single `opencenter cluster bootstrap`
 // invocation.
-func (p *kindBootstrapProvider) BuildSteps(cfg *config.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error) {
+func (p *kindBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error) {
 	kindProvider := kindprovider.NewProvider()
 	runtime := kindprovider.ResolveRuntime(opts.ContainerRuntime)
 	env := kindprovider.BuildEnvironment(runtime)
@@ -55,7 +55,7 @@ func (p *kindBootstrapProvider) BuildSteps(cfg *config.Config, clusterPaths *pat
 	stateDir := ""
 
 	clusterIdentifier := cfg.ClusterName()
-	if org := strings.TrimSpace(cfg.OpenCenter.Meta.Organization); org != "" {
+	if org := strings.TrimSpace(cfg.Organization()); org != "" {
 		clusterIdentifier = org + "/" + clusterIdentifier
 	}
 
@@ -152,8 +152,8 @@ func (p *kindBootstrapProvider) BuildSteps(cfg *config.Config, clusterPaths *pat
 
 // resolveGitDir returns the GitOps directory for the cluster, falling back to
 // the cluster paths when the config does not specify one.
-func resolveGitDir(cfg *config.Config, clusterPaths *paths.ClusterPaths) (string, error) {
-	gitDir := strings.TrimSpace(cfg.GitOps().GitDir)
+func resolveGitDir(cfg *v2.Config, clusterPaths *paths.ClusterPaths) (string, error) {
+	gitDir := strings.TrimSpace(cfg.GitDir())
 	if gitDir == "" {
 		gitDir = clusterPaths.GitOpsDir
 	}
@@ -165,11 +165,6 @@ func resolveGitDir(cfg *config.Config, clusterPaths *paths.ClusterPaths) (string
 
 // resolveKindClusterName returns the Kind cluster name, preferring an explicit
 // override from the config when set.
-func resolveKindClusterName(cfg *config.Config) string {
-	if cfg != nil && cfg.OpenCenter.Infrastructure.Kind != nil {
-		if name := strings.TrimSpace(cfg.OpenCenter.Infrastructure.Kind.ClusterNameOverride); name != "" {
-			return name
-		}
-	}
+func resolveKindClusterName(cfg *v2.Config) string {
 	return cfg.ClusterName()
 }

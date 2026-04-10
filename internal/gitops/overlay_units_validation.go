@@ -6,12 +6,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 var dns1123NamePattern = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 
-func validateOverlayUnitConfig(cfg config.Config) error {
+func validateOverlayUnitConfig(cfg v2.Config) error {
 	if err := validateCustomerManagedOverlay(cfg); err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func validateOverlayUnitConfig(cfg config.Config) error {
 	return nil
 }
 
-func validateCustomerManagedOverlay(cfg config.Config) error {
+func validateCustomerManagedOverlay(cfg v2.Config) error {
 	customer := cfg.OpenCenter.GitOps.OverlayUnits.CustomerManaged
 	if !customer.Enabled {
 		return nil
@@ -85,7 +85,7 @@ func validateCustomerManagedOverlay(cfg config.Config) error {
 	return nil
 }
 
-func validateSOPSOverlay(cfg config.Config) error {
+func validateSOPSOverlay(cfg v2.Config) error {
 	sopsConfig := cfg.OpenCenter.GitOps.OverlayUnits.SOPS
 	if !sopsConfig.Enabled {
 		return nil

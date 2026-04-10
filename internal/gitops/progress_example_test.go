@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 )
 
@@ -39,7 +39,7 @@ func ExampleProgressReporter() {
 	generator.SetProgressCallback(reporter.Callback())
 
 	// Create configuration
-	cfg := config.Config{
+	cfg := v2.Config{
 		// Configure your cluster here
 	}
 
@@ -142,7 +142,7 @@ func ExamplePipelineGenerator_withProgress() {
 	generator := gitops.NewPipelineGeneratorWithOptions(workspaceManager, stages, options)
 
 	// Create configuration
-	cfg := config.Config{
+	cfg := v2.Config{
 		// Configure your cluster
 	}
 

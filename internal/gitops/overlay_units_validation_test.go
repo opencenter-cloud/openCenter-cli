@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	overlaycfg "github.com/opencenter-cloud/opencenter-cli/internal/config/overlay"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 func TestValidateOverlayUnitConfigRejectsInvalidRepositoryScheme(t *testing.T) {

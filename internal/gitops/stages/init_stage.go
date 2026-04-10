@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 )
 
@@ -155,7 +155,7 @@ func (is *InitStage) Validate(ctx context.Context, workspace *gitops.GitOpsWorks
 }
 
 // DryRun returns a plan of what this stage would create.
-func (is *InitStage) DryRun(ctx context.Context, cfg config.Config) (*gitops.StagePlan, error) {
+func (is *InitStage) DryRun(ctx context.Context, cfg v2.Config) (*gitops.StagePlan, error) {
 	return &gitops.StagePlan{
 		Name:        is.Name(),
 		Description: is.Description(),

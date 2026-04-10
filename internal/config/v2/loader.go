@@ -48,6 +48,13 @@ type ConfigLoader struct {
 func NewConfigLoader(registry defaults.Registry) *ConfigLoader {
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
+	return NewConfigLoaderWithFileSystem(registry, fileSystem)
+}
+
+// NewConfigLoaderWithFileSystem creates a new v2 configuration loader with an
+// explicit filesystem. This keeps higher-level managers testable while using
+// the same native v2 pipeline for every load/save/validate operation.
+func NewConfigLoaderWithFileSystem(registry defaults.Registry, fileSystem fs.FileSystem) *ConfigLoader {
 	return &ConfigLoader{
 		hydrator:   defaults.NewHydrator(registry),
 		validator:  NewValidator(),

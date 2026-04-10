@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/provision"
 )
 
@@ -17,7 +17,7 @@ import (
 // - "s3" or "aws" -> provider.s3.tf.tpl
 // Note: main.tf is rendered by RenderInfrastructureCluster from the static template
 // to preserve human-readable ordering of locals and modules.
-func Provision(cfg config.Config) error {
+func Provision(cfg v2.Config) error {
 	if cfg.OpenCenter.Infrastructure.Provider == "kind" {
 		return nil
 	}

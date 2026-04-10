@@ -16,12 +16,14 @@ package config
 import (
 	"context"
 	"fmt"
+
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // ConfigLoader defines the interface for loading cluster configurations.
 type ConfigLoader interface {
 	// LoadConfig loads a cluster configuration by name
-	LoadConfig(ctx context.Context, clusterName string) (*Config, error)
+	LoadConfig(ctx context.Context, clusterName string) (*v2.Config, error)
 
 	// GetConfigPath returns the path to a cluster's configuration file
 	GetConfigPath(ctx context.Context, clusterName string) (string, error)
@@ -30,7 +32,7 @@ type ConfigLoader interface {
 // ConfigPersister defines the interface for saving and deleting configurations.
 type ConfigPersister interface {
 	// SaveConfig saves a cluster configuration
-	SaveConfig(ctx context.Context, config *Config) error
+	SaveConfig(ctx context.Context, config *v2.Config) error
 
 	// DeleteConfig removes a cluster configuration
 	DeleteConfig(ctx context.Context, clusterName string) error
@@ -54,19 +56,19 @@ type ActiveConfigManager interface {
 // ConfigValidatorInterface defines the interface for configuration validation.
 type ConfigValidatorInterface interface {
 	// Validate performs comprehensive validation on a configuration
-	Validate(ctx context.Context, config *Config) *ConfigValidationResult
+	Validate(ctx context.Context, config *v2.Config) *ConfigValidationResult
 
 	// ValidateStructure validates the basic structure of a configuration
-	ValidateStructure(ctx context.Context, config *Config) *ConfigValidationResult
+	ValidateStructure(ctx context.Context, config *v2.Config) *ConfigValidationResult
 
 	// ValidateSemantics validates the semantic correctness of a configuration
-	ValidateSemantics(ctx context.Context, config *Config) *ConfigValidationResult
+	ValidateSemantics(ctx context.Context, config *v2.Config) *ConfigValidationResult
 
 	// ValidateNetworking validates network plugin configuration
-	ValidateNetworking(ctx context.Context, config *Config) *ConfigValidationResult
+	ValidateNetworking(ctx context.Context, config *v2.Config) *ConfigValidationResult
 
 	// ValidateCloudProvider validates cloud provider specific configuration
-	ValidateCloudProvider(ctx context.Context, config *Config) *ConfigValidationResult
+	ValidateCloudProvider(ctx context.Context, config *v2.Config) *ConfigValidationResult
 }
 
 // ConfigValidationResult represents the result of configuration validation.

@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/provision"
 )
 
@@ -33,7 +33,7 @@ import (
 //
 // Outputs:
 //   - error: An error if one occurred during file generation.
-func Provision(cfg config.Config) error {
+func Provision(cfg v2.Config) error {
 	svc, ok := cfg.OpenCenter.Services["ansible"]
 	if ok {
 		// Check if enabled using reflection

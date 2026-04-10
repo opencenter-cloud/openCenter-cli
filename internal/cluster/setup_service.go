@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
@@ -83,9 +84,9 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 		configIdentifier = opts.Organization + "/" + opts.ClusterName
 	}
 
-	var cfg config.Config
+	var cfg v2.Config
 	if s.configurationMgr != nil {
-		var loadedCfg *config.Config
+		var loadedCfg *v2.Config
 		var err error
 
 		// Use LoadWithoutValidation if validation will be skipped anyway
@@ -106,7 +107,7 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 			return nil, fmt.Errorf("creating configuration manager: %w", err)
 		}
 
-		var loadedCfg *config.Config
+		var loadedCfg *v2.Config
 		if opts.SkipValidation {
 			loadedCfg, err = tempMgr.LoadWithoutValidation(ctx, configIdentifier)
 		} else {
@@ -125,7 +126,7 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 	}
 
 	// Validate that git_dir is set
-	gitDir := cfg.GitOps().GitDir
+	gitDir := cfg.GitDir()
 	if gitDir == "" || strings.HasPrefix(gitDir, "./testdata/test-git-repo-") {
 		return nil, fmt.Errorf("opencenter.gitops.git_dir must be set in the configuration")
 	}
@@ -182,7 +183,7 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 }
 
 // generateGitOpsManifests generates GitOps manifests from configuration
-func (s *SetupService) generateGitOpsManifests(ctx context.Context, cfg config.Config, clusterPaths *paths.ClusterPaths, dryRun bool) (int, error) {
+func (s *SetupService) generateGitOpsManifests(ctx context.Context, cfg v2.Config, clusterPaths *paths.ClusterPaths, dryRun bool) (int, error) {
 	if dryRun {
 		// In dry-run mode, just count what would be generated
 		// For now, return an estimate
@@ -219,18 +220,18 @@ func (s *SetupService) generateGitOpsManifests(ctx context.Context, cfg config.C
 	return manifestCount, nil
 }
 
-func (s *SetupService) validateSetupConfig(cfg *config.Config) error {
+func (s *SetupService) validateSetupConfig(cfg *v2.Config) error {
 	if cfg == nil {
 		return fmt.Errorf("configuration is nil")
 	}
 	if strings.TrimSpace(cfg.ClusterName()) == "" {
 		return fmt.Errorf("cluster name must be set")
 	}
-	if strings.TrimSpace(cfg.GitOps().GitDir) == "" {
+	if strings.TrimSpace(cfg.GitDir()) == "" {
 		return fmt.Errorf("opencenter.gitops.git_dir must be set in the configuration")
 	}
 
-	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
+	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 	if provider == "" {
 		return fmt.Errorf("opencenter.infrastructure.provider must be set")
 	}

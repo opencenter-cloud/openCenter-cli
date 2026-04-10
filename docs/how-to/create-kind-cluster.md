@@ -190,6 +190,8 @@ opencenter cluster bootstrap my-cluster --container-runtime podman
 
 Substitute `docker` if that is your runtime. This command runs the full Kind bootstrap sequence:
 
+Before starting, the command checks whether the GitOps directory has uncommitted changes. If it does, you are prompted to commit them. The `gitea-rebase` step runs `git pull --rebase`, which requires a clean working tree. If you decline, bootstrap aborts with a message explaining what to do.
+
 1. `kind-create` — Creates the Kind cluster using the generated `kind-config.yaml`
 2. `kind-export-kubeconfig` — Exports the kubeconfig to the cluster's infrastructure directory
 3. `gitea-attach-kind` — Connects the local Gitea container to the Kind network and reissues the TLS certificate with the in-cluster IP

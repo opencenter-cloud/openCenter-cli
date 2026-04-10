@@ -16,6 +16,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
 	"github.com/opencenter-cloud/opencenter-cli/internal/resilience"
+	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -111,6 +114,16 @@ func runClusterBootstrap(cmd *cobra.Command, args []string) error {
 	}
 	opts.Organization = organization
 
+	// Pre-check: ensure the GitOps working tree is clean before bootstrap.
+	// A dirty tree causes git pull --rebase to fail during the gitea-rebase step.
+	if !opts.DryRun {
+		if gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.GitDir); gitDir != "" {
+			if err := ensureCleanWorkingTree(ctx, cmd, gitDir); err != nil {
+				return err
+			}
+		}
+	}
+
 	if !opts.DryRun {
 		if err := config.UpdateStatus(name, config.StageBootstrap, config.StatusRunning); err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)
@@ -188,4 +201,45 @@ func parseBootstrapOptions(cmd *cobra.Command, args []string, clusterName string
 	}
 
 	return opts, nil
+}
+
+// ensureCleanWorkingTree checks whether the GitOps directory has uncommitted
+// changes. If it does, the user is prompted to commit them before proceeding.
+// Returning an error aborts the bootstrap.
+func ensureCleanWorkingTree(ctx context.Context, cmd *cobra.Command, gitDir string) error {
+	statusCmd := exec.CommandContext(ctx, "git", "-C", gitDir, "status", "--porcelain")
+	output, err := statusCmd.Output()
+	if err != nil {
+		// Not a git repo or git not available — skip the check silently.
+		return nil
+	}
+	if len(strings.TrimSpace(string(output))) == 0 {
+		return nil
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "The GitOps directory has uncommitted changes:\n%s\n", strings.TrimRight(string(output), "\n"))
+
+	testMode := os.Getenv("OPENCENTER_TEST_MODE") != ""
+	prompter := ui.GetPrompter(os.Stdin, cmd.OutOrStdout(), testMode)
+
+	confirmed, err := prompter.Confirm(ctx, "Commit all changes before continuing?")
+	if err != nil {
+		return fmt.Errorf("confirmation prompt failed: %w", err)
+	}
+	if !confirmed {
+		return fmt.Errorf("bootstrap aborted: uncommitted changes in %s\nPlease commit or stash your changes and retry", gitDir)
+	}
+
+	addCmd := exec.CommandContext(ctx, "git", "-C", gitDir, "add", "-A")
+	if out, err := addCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git add failed: %s: %w", strings.TrimSpace(string(out)), err)
+	}
+
+	commitCmd := exec.CommandContext(ctx, "git", "-C", gitDir, "commit", "-m", "committing staged changes")
+	if out, err := commitCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git commit failed: %s: %w", strings.TrimSpace(string(out)), err)
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "Changes committed successfully.\n")
+	return nil
 }

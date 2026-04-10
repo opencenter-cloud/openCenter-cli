@@ -131,6 +131,16 @@ func (c Config) GitDir() string {
 	return strings.TrimSpace(c.OpenCenter.GitOps.GitDir)
 }
 
+// ConfiguredGitURL returns the Git URL only when it has been explicitly set
+// to something other than the schema default placeholder.
+func (c Config) ConfiguredGitURL() string {
+	value := strings.TrimSpace(c.OpenCenter.GitOps.GitURL)
+	if value == "" || value == defaultGitURLPlaceholder {
+		return ""
+	}
+	return value
+}
+
 // GitBranchOrDefault returns the configured Git branch, defaulting to main.
 func (c Config) GitBranchOrDefault() string {
 	if branch := strings.TrimSpace(c.OpenCenter.GitOps.GitBranch); branch != "" {

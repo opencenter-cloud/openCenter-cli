@@ -99,7 +99,66 @@ func TestBootstrapUsesHostIPURLAndReconciles(t *testing.T) {
 	}
 }
 
+func TestBootstrapPrefersConfiguredGitURLAndTokenPath(t *testing.T) {
+	configDir := t.TempDir()
+	stateDir := t.TempDir()
+	gitDir := filepath.Join(t.TempDir(), "gitops")
+	clusterName := "dev-cluster"
+	org := "local"
+	configuredTokenPath := filepath.Join(t.TempDir(), "cluster-user.token")
+	configuredRepoURL := "https://172.16.0.200:3001/newuser/test-repo.git"
+	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
+
+	if err := os.WriteFile(configuredTokenPath, []byte("configured-user-token"), 0o600); err != nil {
+		t.Fatalf("write configured token: %v", err)
+	}
+
+	clusterCtx := writeClusterFixtureWithGitOps(t, configDir, clusterName, org, gitDir, configuredRepoURL, configuredTokenPath)
+	status := writeGiteaState(t, stateDir)
+
+	executor := &fakeExecutor{
+		t: t,
+		handlers: map[string]func(opts localdev.RunOptions) ([]byte, error){
+			"podman inspect --format {{.State.Running}} gitea": func(opts localdev.RunOptions) ([]byte, error) {
+				return []byte("true"), nil
+			},
+			"podman inspect --format {{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{\"\\n\"}}{{end}} gitea": func(opts localdev.RunOptions) ([]byte, error) {
+				return []byte("podman\nkind\n"), nil
+			},
+			"podman inspect --format {{with index .NetworkSettings.Networks \"kind\"}}{{.IPAddress}}{{end}} gitea": func(opts localdev.RunOptions) ([]byte, error) {
+				return []byte(status.KindIP), nil
+			},
+			"git branch --show-current": func(opts localdev.RunOptions) ([]byte, error) {
+				return []byte("main"), nil
+			},
+			fmt.Sprintf("flux bootstrap git --url=%s --branch=main --path=applications/overlays/%s --token-auth --username=newuser --password=configured-user-token --ca-file=%s", configuredRepoURL, clusterName, status.CAPath): func(opts localdev.RunOptions) ([]byte, error) {
+				if opts.Env["KUBECONFIG"] != clusterCtx.Paths.KubeconfigPath {
+					t.Fatalf("bootstrap KUBECONFIG = %q, want %q", opts.Env["KUBECONFIG"], clusterCtx.Paths.KubeconfigPath)
+				}
+				return nil, nil
+			},
+		},
+	}
+
+	service, err := NewService(executor, stateDir)
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	result, err := service.Bootstrap(context.Background(), org+"/"+clusterName)
+	if err != nil {
+		t.Fatalf("Bootstrap() error = %v", err)
+	}
+
+	if result.RepoURL != configuredRepoURL {
+		t.Fatalf("RepoURL = %q, want %q", result.RepoURL, configuredRepoURL)
+	}
+}
+
 func writeClusterFixture(t *testing.T, configDir, clusterName, org, gitDir string) *localdev.ClusterContext {
+	return writeClusterFixtureWithGitOps(t, configDir, clusterName, org, gitDir, "", "")
+}
+
+func writeClusterFixtureWithGitOps(t *testing.T, configDir, clusterName, org, gitDir, gitURL, gitToken string) *localdev.ClusterContext {
 	t.Helper()
 
 	cfg, err := v2.NewV2Default(clusterName, "kind")
@@ -108,6 +167,12 @@ func writeClusterFixture(t *testing.T, configDir, clusterName, org, gitDir strin
 	}
 	cfg.OpenCenter.Meta.Organization = org
 	cfg.OpenCenter.GitOps.GitDir = gitDir
+	if gitURL != "" {
+		cfg.OpenCenter.GitOps.GitURL = gitURL
+	}
+	if gitToken != "" {
+		cfg.OpenCenter.GitOps.GitToken = gitToken
+	}
 	cfg.OpenCenter.Infrastructure.Kind.Runtime = "podman"
 
 	data, err := yaml.Marshal(cfg)

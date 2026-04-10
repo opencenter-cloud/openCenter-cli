@@ -57,8 +57,9 @@ func NewService(executor localdev.Executor, stateDir string) (*Service, error) {
 // subcommand handles arbitrary HTTPS URLs correctly.
 //
 // The config field git_token_provider: gitea signals that token-based HTTPS
-// auth should be used (not SSH). The token is read from the Gitea service
-// state directory at runtime.
+// auth should be used (not SSH). When git_token is configured, it is treated
+// as the authoritative token file path; otherwise the local Gitea state token
+// is used as a fallback.
 //
 // The bootstrap URL uses the host's routable IP (e.g. 172.16.0.146:3001)
 // rather than localhost. Podman binds the Gitea port on 0.0.0.0, so this
@@ -87,12 +88,6 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 	if status.KindIP == "" {
 		return nil, fmt.Errorf("local gitea is not attached to the kind network; run `opencenter local gitea attach-kind --cluster %s` first", cluster.ClusterName)
 	}
-	if status.HostRepoURL == "" {
-		return nil, fmt.Errorf("no routable host IP found; Gitea must be reachable from both the host and the Kind cluster")
-	}
-	if !status.UserTokenExists {
-		return nil, fmt.Errorf("missing Gitea user token at %s", status.UserTokenPath)
-	}
 
 	gitDir := strings.TrimSpace(cluster.Config.GitOps().GitDir)
 	if gitDir == "" {
@@ -105,9 +100,22 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 		return nil, fmt.Errorf("cluster kubeconfig %s: %w", cluster.Paths.KubeconfigPath, err)
 	}
 
-	tokenBytes, err := os.ReadFile(status.UserTokenPath)
+	repoURL := cluster.Config.ConfiguredGitURL()
+	if repoURL == "" {
+		repoURL = status.HostRepoURL
+	}
+	if repoURL == "" {
+		return nil, fmt.Errorf("cluster %q does not define git_url and no routable host IP was found for local Gitea", clusterIdentifier)
+	}
+
+	tokenPath, err := resolveTokenPath(strings.TrimSpace(cluster.Config.OpenCenter.GitOps.GitToken), status.UserTokenPath, status.UserTokenExists)
 	if err != nil {
-		return nil, fmt.Errorf("read Gitea user token: %w", err)
+		return nil, err
+	}
+
+	tokenBytes, err := os.ReadFile(tokenPath)
+	if err != nil {
+		return nil, fmt.Errorf("read git token %s: %w", tokenPath, err)
 	}
 	token := strings.TrimSpace(string(tokenBytes))
 
@@ -116,7 +124,6 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 		return nil, err
 	}
 
-	repoURL := status.HostRepoURL
 	bootstrapPath := filepathForFlux(cluster.ClusterName)
 	kubeconfigEnv := map[string]string{"KUBECONFIG": cluster.Paths.KubeconfigPath}
 
@@ -150,4 +157,20 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 
 func filepathForFlux(clusterName string) string {
 	return "applications/overlays/" + clusterName
+}
+
+func resolveTokenPath(configuredPath, fallbackPath string, fallbackExists bool) (string, error) {
+	if configuredPath != "" {
+		if _, err := os.Stat(configuredPath); err != nil {
+			return "", fmt.Errorf("configured git token %s: %w", configuredPath, err)
+		}
+		return configuredPath, nil
+	}
+	if !fallbackExists {
+		return "", fmt.Errorf("missing Gitea user token at %s", fallbackPath)
+	}
+	if _, err := os.Stat(fallbackPath); err != nil {
+		return "", fmt.Errorf("gitea user token %s: %w", fallbackPath, err)
+	}
+	return fallbackPath, nil
 }

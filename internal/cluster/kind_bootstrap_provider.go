@@ -136,7 +136,7 @@ func (p *kindBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths.C
 				if err != nil {
 					return fmt.Errorf("resolve git dir: %w", err)
 				}
-				if _, err := gitopsService.PullRebase(ctx, gitDir); err != nil {
+				if _, err := gitopsService.PullRebase(ctx, clusterIdentifier, gitDir); err != nil {
 					return fmt.Errorf("rebase from gitea: %w", err)
 				}
 				return nil

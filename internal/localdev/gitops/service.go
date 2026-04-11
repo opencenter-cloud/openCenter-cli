@@ -123,6 +123,23 @@ func (s *Service) PullRebase(ctx context.Context, clusterIdentifier, gitDir stri
 	if err != nil {
 		return "", err
 	}
+
+	// Ensure the origin remote exists before attempting to pull.
+	// The GitOps directory may not have a remote configured after cluster setup.
+	remoteURL := cluster.Config.ConfiguredGitURL()
+	if remoteURL == "" {
+		remoteURL = status.HostRepoURL // Prefer host-routable URL for Kind clusters
+	}
+	if remoteURL == "" {
+		remoteURL = status.LocalRepoURL
+	}
+	if remoteURL == "" {
+		return "", fmt.Errorf("cluster %q does not define git_url and local gitea repository URL is unavailable", clusterIdentifier)
+	}
+	if err := s.ensureRemote(ctx, gitDir, defaultRemoteName, remoteURL); err != nil {
+		return "", err
+	}
+
 	branch, err := s.currentBranch(ctx, gitDir)
 	if err != nil {
 		return "", err

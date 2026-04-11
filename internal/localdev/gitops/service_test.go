@@ -169,7 +169,10 @@ func TestPullRebasePrefersConfiguredGitTokenPath(t *testing.T) {
 	status := writeGiteaState(t, stateDir)
 	authHeader := "Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte(status.Metadata.RepoOwner+":configured-user-token"))
 
-	executor := &fakeExecutor{
+	// Track the remote URL that ensureRemote adds so we can verify it was called
+	var addedRemoteURL string
+
+	executor := &dynamicFakeExecutor{
 		t: t,
 		handlers: map[string]func(opts localdev.RunOptions) ([]byte, error){
 			"podman inspect --format {{.State.Running}} gitea": func(opts localdev.RunOptions) ([]byte, error) {
@@ -181,6 +184,10 @@ func TestPullRebasePrefersConfiguredGitTokenPath(t *testing.T) {
 			"podman inspect --format {{with index .NetworkSettings.Networks \"kind\"}}{{.IPAddress}}{{end}} gitea": func(opts localdev.RunOptions) ([]byte, error) {
 				return []byte("10.89.0.11"), nil
 			},
+			// ensureRemote checks if origin exists; return error to simulate missing remote
+			"git remote get-url origin": func(opts localdev.RunOptions) ([]byte, error) {
+				return nil, fmt.Errorf("error: No such remote 'origin'")
+			},
 			"git branch --show-current": func(opts localdev.RunOptions) ([]byte, error) {
 				return []byte("main"), nil
 			},
@@ -188,6 +195,13 @@ func TestPullRebasePrefersConfiguredGitTokenPath(t *testing.T) {
 				return []byte(""), nil
 			},
 			fmt.Sprintf("git -c http.sslCAInfo=%s -c http.extraHeader=%s pull --rebase origin main", status.CAPath, authHeader): func(opts localdev.RunOptions) ([]byte, error) {
+				return nil, nil
+			},
+		},
+		prefixHandlers: map[string]func(opts localdev.RunOptions) ([]byte, error){
+			// Handle git remote add with dynamic URL (depends on hostRoutableIP())
+			"git remote add origin ": func(opts localdev.RunOptions) ([]byte, error) {
+				addedRemoteURL = opts.Args[3]
 				return nil, nil
 			},
 		},
@@ -205,6 +219,47 @@ func TestPullRebasePrefersConfiguredGitTokenPath(t *testing.T) {
 	if branch != "main" {
 		t.Fatalf("Branch = %q, want main", branch)
 	}
+
+	// Verify ensureRemote was called to add the origin
+	if addedRemoteURL == "" {
+		t.Fatal("expected ensureRemote to add origin remote, but it was not called")
+	}
+	// The URL should be the host-routable URL (computed from hostRoutableIP())
+	if !strings.Contains(addedRemoteURL, ":3001/newuser/test-repo.git") {
+		t.Fatalf("added remote URL %q does not look like expected Gitea URL", addedRemoteURL)
+	}
+}
+
+// dynamicFakeExecutor extends fakeExecutor with prefix-based matching for dynamic commands
+type dynamicFakeExecutor struct {
+	t              *testing.T
+	handlers       map[string]func(opts localdev.RunOptions) ([]byte, error)
+	prefixHandlers map[string]func(opts localdev.RunOptions) ([]byte, error)
+	calls          []localdev.RunOptions
+}
+
+func (f *dynamicFakeExecutor) Run(ctx context.Context, opts localdev.RunOptions) ([]byte, error) {
+	f.calls = append(f.calls, opts)
+	key := opts.Name + " " + strings.Join(opts.Args, " ")
+
+	// Check prefix handlers first
+	for prefix, handler := range f.prefixHandlers {
+		if strings.HasPrefix(key, prefix) {
+			return handler(opts)
+		}
+	}
+
+	// Fall back to exact match handlers
+	handler, ok := f.handlers[key]
+	if !ok {
+		f.t.Fatalf("unexpected command: %s", key)
+	}
+	return handler(opts)
+}
+
+func (f *dynamicFakeExecutor) RunStreaming(ctx context.Context, opts localdev.RunOptions) error {
+	_, err := f.Run(ctx, opts)
+	return err
 }
 
 func writeClusterFixture(t *testing.T, configDir, clusterName, org, gitDir string) {

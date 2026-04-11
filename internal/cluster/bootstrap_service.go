@@ -1,10 +1,12 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	stderrors "errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,6 +58,8 @@ type BootstrapResult struct {
 	ClusterReady              bool
 	Duration                  time.Duration
 	Endpoint                  string
+	LogPath                   string
+	ResumeStatePath           string
 	StepsCompleted            []string
 	StepsFailed               []string
 }
@@ -190,9 +194,28 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 		StepsFailed:    []string{},
 	}
 
+	var runtimePaths *bootstrapRuntimePaths
+	if !opts.DryRun {
+		runtimePaths, err = resolveBootstrapRuntimePaths(&cfg, opts.LogPath, startTime)
+		if err != nil {
+			return result, fmt.Errorf("resolving bootstrap runtime paths: %w", err)
+		}
+		result.LogPath = runtimePaths.LogPath
+
+		logFile, err := openBootstrapLogFile(runtimePaths.LogPath)
+		if err != nil {
+			return result, err
+		}
+		defer logFile.Close()
+
+		ctx = withBootstrapLogWriter(ctx, logFile)
+		logBootstrapMessage(ctx, "bootstrap started for %s/%s", cfg.Organization(), cfg.ClusterName())
+	}
+
 	if !opts.SkipValidation {
 		if err := s.validateBootstrapConfig(&cfg); err != nil {
-			return nil, fmt.Errorf("validation failed: %w", err)
+			logBootstrapMessage(ctx, "bootstrap validation failed: %v", err)
+			return result, fmt.Errorf("validation failed: %w", err)
 		}
 	}
 
@@ -206,7 +229,8 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 
 	// Provision infrastructure
 	if !opts.DryRun {
-		if err := s.provisionInfrastructure(ctx, &cfg, clusterPaths, &opts, result); err != nil {
+		if err := s.provisionInfrastructure(ctx, &cfg, clusterPaths, &opts, runtimePaths, result); err != nil {
+			logBootstrapMessage(ctx, "bootstrap failed during infrastructure provisioning: %v", err)
 			return result, fmt.Errorf("provisioning infrastructure: %w", err)
 		}
 		result.InfrastructureProvisioned = true
@@ -215,6 +239,7 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 	// Deploy cluster
 	if !opts.DryRun {
 		if err := s.deployCluster(ctx, &cfg, clusterPaths, &opts, result); err != nil {
+			logBootstrapMessage(ctx, "bootstrap failed during cluster deployment: %v", err)
 			return result, fmt.Errorf("deploying cluster: %w", err)
 		}
 		result.ClusterDeployed = true
@@ -224,6 +249,7 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 	if !opts.DryRun {
 		endpoint, err := s.waitForReady(ctx, &cfg, opts.Timeout, opts.KubeconfigPath)
 		if err != nil {
+			logBootstrapMessage(ctx, "bootstrap failed while waiting for readiness: %v", err)
 			return result, fmt.Errorf("waiting for cluster ready: %w", err)
 		}
 		result.ClusterReady = true
@@ -231,11 +257,21 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 	}
 
 	result.Duration = time.Since(startTime)
+	if !opts.DryRun {
+		if err := s.removeBootstrapState(runtimePaths.StatePath); err != nil {
+			logBootstrapMessage(ctx, "warning: failed to remove bootstrap state %s: %v", runtimePaths.StatePath, err)
+		}
+		if err := s.removeBootstrapState(runtimePaths.LegacyStatePath); err != nil {
+			logBootstrapMessage(ctx, "warning: failed to remove legacy bootstrap state %s: %v", runtimePaths.LegacyStatePath, err)
+		}
+		result.ResumeStatePath = ""
+		logBootstrapMessage(ctx, "bootstrap completed in %s", result.Duration.Round(time.Second))
+	}
 	return result, nil
 }
 
 // provisionInfrastructure provisions the infrastructure for the cluster
-func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions, result *BootstrapResult) error {
+func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions, runtimePaths *bootstrapRuntimePaths, result *BootstrapResult) error {
 	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 	if provider == "" {
 		provider = "openstack"
@@ -246,17 +282,32 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 		return err
 	}
 
-	// Determine state path
-	statePath := filepath.Join(clusterDir, "logs", "bootstrap-state.json")
-
-	// Load or create bootstrap state
-	state, stateEnabled, err := s.loadBootstrapState(statePath)
-	if err != nil {
-		return fmt.Errorf("loading bootstrap state: %w", err)
+	statePath := ""
+	legacyStatePath := ""
+	if runtimePaths != nil {
+		statePath = runtimePaths.StatePath
+		legacyStatePath = runtimePaths.LegacyStatePath
 	}
 
-	if opts.Restart && stateEnabled {
-		state = s.newBootstrapState()
+	state := s.newBootstrapState()
+	stateEnabled := strings.TrimSpace(statePath) != ""
+	if opts.Restart {
+		if err := s.removeBootstrapState(statePath); err != nil {
+			return fmt.Errorf("clearing bootstrap state: %w", err)
+		}
+		if err := s.removeBootstrapState(legacyStatePath); err != nil {
+			return fmt.Errorf("clearing legacy bootstrap state: %w", err)
+		}
+		logBootstrapMessage(ctx, "bootstrap restart requested; cleared saved state")
+	} else if stateEnabled {
+		loadedState, loadedPath, err := s.loadBootstrapStateWithFallback(statePath, legacyStatePath)
+		if err != nil {
+			return fmt.Errorf("loading bootstrap state: %w", err)
+		}
+		state = loadedState
+		if loadedPath != "" {
+			logBootstrapMessage(ctx, "resuming bootstrap from %s", loadedPath)
+		}
 	}
 
 	// Build steps based on provider
@@ -315,6 +366,7 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 	for _, step := range selectedSteps {
 		// Skip if already completed (unless ignoring state)
 		if !ignoreState && stateEnabled && s.isStepSuccess(state, step.ID) {
+			logBootstrapMessage(ctx, "step skipped from saved state: %s", step.ID)
 			continue
 		}
 
@@ -325,6 +377,7 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 				return err
 			}
 		}
+		logBootstrapMessage(ctx, "step started: %s - %s", step.ID, step.Description)
 
 		// Execute step
 		if err := step.Run(ctx); err != nil {
@@ -336,6 +389,8 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 				}
 			}
 			result.StepsFailed = append(result.StepsFailed, step.ID)
+			result.ResumeStatePath = statePath
+			logBootstrapMessage(ctx, "step failed: %s: %v", step.ID, err)
 			return fmt.Errorf("step %q failed: %w", step.ID, err)
 		}
 
@@ -347,6 +402,7 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 			}
 		}
 		result.StepsCompleted = append(result.StepsCompleted, step.ID)
+		logBootstrapMessage(ctx, "step completed: %s", step.ID)
 	}
 
 	return nil
@@ -379,19 +435,33 @@ func (s *BootstrapService) waitForReady(ctx context.Context, cfg *v2.Config, tim
 	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	logBootstrapMessage(ctx, "waiting for cluster readiness with timeout %s", timeout)
 
 	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 
+	var (
+		endpoint string
+		err      error
+	)
+
 	switch provider {
 	case "kind":
-		return s.waitForKindCluster(ctx, kubeconfigPath)
+		endpoint, err = s.waitForKindCluster(ctx, kubeconfigPath)
 
 	case "openstack", "aws", "gcp", "azure":
-		return s.waitForCloudCluster(ctx, cfg, kubeconfigPath)
+		endpoint, err = s.waitForCloudCluster(ctx, cfg, kubeconfigPath)
 
 	default:
-		return "", fmt.Errorf("unsupported provider %q", provider)
+		err = fmt.Errorf("unsupported provider %q", provider)
 	}
+
+	if err != nil {
+		logBootstrapMessage(ctx, "cluster readiness check failed: %v", err)
+		return "", err
+	}
+
+	logBootstrapMessage(ctx, "cluster readiness confirmed: %s", endpoint)
+	return endpoint, nil
 }
 
 // waitForKindCluster waits for a kind cluster to be ready
@@ -516,7 +586,17 @@ func (s *BootstrapService) runCommandWithInput(ctx context.Context, dir string, 
 	cmd.Env = envList
 
 	// Run command
-	output, err := cmd.CombinedOutput()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if writer := bootstrapLogWriter(ctx); writer != nil {
+		cmd.Stdout = io.MultiWriter(&stdout, writer)
+		cmd.Stderr = io.MultiWriter(&stderr, writer)
+	} else {
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+	}
+	err = cmd.Run()
+	output := append(stdout.Bytes(), stderr.Bytes()...)
 	if err != nil {
 		return fmt.Errorf("command failed: %s %v: %w\nOutput: %s", name, args, err, string(output))
 	}
@@ -564,13 +644,37 @@ func (s *BootstrapService) loadBootstrapState(path string) (*bootstrapState, boo
 	return &state, true, nil
 }
 
+func (s *BootstrapService) loadBootstrapStateWithFallback(path, fallbackPath string) (*bootstrapState, string, error) {
+	state, enabled, err := s.loadBootstrapState(path)
+	if err != nil {
+		return nil, "", err
+	}
+	if enabled && s.fileSystem.Exists(path) {
+		return state, path, nil
+	}
+
+	if strings.TrimSpace(fallbackPath) == "" {
+		return state, "", nil
+	}
+
+	legacyState, enabled, err := s.loadBootstrapState(fallbackPath)
+	if err != nil {
+		return nil, "", err
+	}
+	if enabled && s.fileSystem.Exists(fallbackPath) {
+		return legacyState, fallbackPath, nil
+	}
+
+	return state, "", nil
+}
+
 // saveBootstrapState saves the bootstrap state to disk
 func (s *BootstrapService) saveBootstrapState(path string, state *bootstrapState) error {
 	if strings.TrimSpace(path) == "" {
 		return nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := s.fileSystem.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("creating bootstrap state directory: %w", err)
 	}
 
@@ -579,8 +683,24 @@ func (s *BootstrapService) saveBootstrapState(path string, state *bootstrapState
 		return fmt.Errorf("serializing bootstrap state: %w", err)
 	}
 
-	if err := s.fileSystem.WriteFile(path, data, 0o644); err != nil {
+	if err := s.fileSystem.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("writing bootstrap state: %w", err)
+	}
+
+	return nil
+}
+
+func (s *BootstrapService) removeBootstrapState(path string) error {
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+
+	if !s.fileSystem.Exists(path) {
+		return nil
+	}
+
+	if err := s.fileSystem.Remove(path); err != nil && !os.IsNotExist(stderrors.Unwrap(err)) {
+		return fmt.Errorf("removing bootstrap state: %w", err)
 	}
 
 	return nil

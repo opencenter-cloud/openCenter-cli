@@ -52,6 +52,21 @@ func TestClusterBootstrapIntegration(t *testing.T) {
 		t.Fatalf("expected kubeconfig at cluster-owned path: %v", err)
 	}
 
+	stateRoot := filepath.Join(dir, ".local", "state", "opencenter")
+	logDir := filepath.Join(stateRoot, "logs", "bootstrap", "opencenter", "kind-bootstrap-int")
+	entries, err := os.ReadDir(logDir)
+	if err != nil {
+		t.Fatalf("expected bootstrap log directory at %s: %v", logDir, err)
+	}
+	if len(entries) == 0 {
+		t.Fatalf("expected at least one bootstrap log in %s", logDir)
+	}
+
+	statePath := filepath.Join(stateRoot, "bootstrap", "opencenter", "kind-bootstrap-int", "state.json")
+	if _, err := os.Stat(statePath); !os.IsNotExist(err) {
+		t.Fatalf("expected bootstrap state cleanup at %s, got err=%v", statePath, err)
+	}
+
 	kindLog, err := os.ReadFile(filepath.Join(stateDir, "kind.log"))
 	if err != nil {
 		t.Fatalf("read fake kind log: %v", err)

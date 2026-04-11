@@ -21,6 +21,7 @@ openCenter CLI uses environment variables for:
 - Credential management
 - Behavior customization
 - CI/CD integration
+- Runtime state location
 
 **Configuration Precedence (highest to lowest):**
 1. Command-line flags (`--set`)
@@ -49,6 +50,52 @@ opencenter cluster init my-cluster
 - Cluster configuration location
 - Secrets storage location
 - CLI defaults location
+
+### OPENCENTER_STATE_DIR
+
+Runtime state directory location.
+
+**Default:** `${XDG_STATE_HOME:-~/.local/state}/opencenter`
+
+**Usage:**
+```bash
+export OPENCENTER_STATE_DIR=/custom/state
+opencenter cluster bootstrap my-cluster
+```
+
+**What it affects:**
+- Bootstrap resume state location
+- Default bootstrap log location
+- Audit log location
+- File lock location
+
+**Example:**
+```bash
+export OPENCENTER_STATE_DIR=/tmp/opencenter-state
+opencenter cluster bootstrap dev-cluster
+
+# Files created under:
+# /tmp/opencenter-state/bootstrap/<org>/<cluster>/state.json
+# /tmp/opencenter-state/logs/bootstrap/<org>/<cluster>/bootstrap-YYYYMMDDTHHMMSSZ.log
+# /tmp/opencenter-state/audit/audit.log
+# /tmp/opencenter-state/locks/
+```
+
+### XDG_STATE_HOME
+
+Base XDG state directory used when `OPENCENTER_STATE_DIR` is unset.
+
+**Default:** `~/.local/state`
+
+**Usage:**
+```bash
+export XDG_STATE_HOME=/srv/state
+opencenter cluster bootstrap my-cluster
+```
+
+**What it affects:**
+- Default base directory for openCenter runtime state
+- Expands to `${XDG_STATE_HOME}/opencenter`
 
 **Example:**
 ```bash

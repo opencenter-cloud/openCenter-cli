@@ -16,6 +16,7 @@ Default values:
   - paths.configDir: ~/.config/opencenter
   - paths.clustersDir: ~/.config/opencenter/clusters
   - paths.pluginsDir: ~/.config/opencenter/plugins
+  - paths.stateDir: ~/.local/state/opencenter
   - behavior.autoConfirm: false
   - behavior.dryRun: false
   - defaults.provider: openstack

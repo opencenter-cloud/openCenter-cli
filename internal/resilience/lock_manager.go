@@ -48,7 +48,7 @@ type LockConfig struct {
 // DefaultLockConfig provides sensible defaults
 var DefaultLockConfig = LockConfig{
 	Backend:        "file",
-	LockDir:        "", // Will be set to ~/.config/opencenter/locks
+	LockDir:        "", // Will be set to <stateDir>/locks
 	DefaultTTL:     1 * time.Hour,
 	AcquireTimeout: 30 * time.Second,
 }
@@ -93,8 +93,8 @@ func NewLockManager(config LockConfig) (LockManager, error) {
 
 	// Set default lock directory for file backend
 	if config.Backend == "file" && config.LockDir == "" {
-		configDir := internalConfig.GetConfigDir()
-		config.LockDir = filepath.Join(configDir, "locks")
+		stateDir := internalConfig.GetStateDir()
+		config.LockDir = filepath.Join(stateDir, "locks")
 	}
 
 	// Create the backend

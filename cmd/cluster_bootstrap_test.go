@@ -97,6 +97,52 @@ func TestClusterBootstrapDryRunKind(t *testing.T) {
 	}
 }
 
+func TestClusterBootstrapFailurePrintsLogAndResumeState(t *testing.T) {
+	cfgDir := t.TempDir()
+	gitDir := filepath.Join(t.TempDir(), "repo")
+	clusterDir := filepath.Join(gitDir, "infrastructure", "clusters", "demo")
+	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
+		t.Fatalf("mkdir cluster dir: %v", err)
+	}
+
+	writeTestConfig(t, cfgDir, "demo", "openstack", gitDir)
+	prepareCommandTestEnv(t, cfgDir)
+
+	cmd := newClusterBootstrapCmd()
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(errOut)
+	cmd.SetArgs([]string{"demo"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected bootstrap command to fail")
+	}
+	if !strings.Contains(err.Error(), "openstack credentials are incomplete") {
+		t.Fatalf("unexpected bootstrap error: %v", err)
+	}
+
+	stateRoot := filepath.Join(cfgDir, ".local", "state", "opencenter")
+	expectedLogDir := filepath.Join(stateRoot, "logs", "bootstrap", "opencenter", "demo")
+	if _, statErr := os.Stat(expectedLogDir); statErr != nil {
+		t.Fatalf("expected bootstrap log directory at %s: %v", expectedLogDir, statErr)
+	}
+
+	expectedStatePath := filepath.Join(stateRoot, "bootstrap", "opencenter", "demo", "state.json")
+	if _, statErr := os.Stat(expectedStatePath); statErr != nil {
+		t.Fatalf("expected bootstrap state at %s: %v", expectedStatePath, statErr)
+	}
+
+	stderr := errOut.String()
+	if !strings.Contains(stderr, "Bootstrap log:") {
+		t.Fatalf("expected bootstrap log path in stderr, got: %s", stderr)
+	}
+	if !strings.Contains(stderr, "Resume state:") {
+		t.Fatalf("expected resume state path in stderr, got: %s", stderr)
+	}
+}
+
 // initGitRepo initializes a bare-minimum git repo in dir with an initial commit.
 func initGitRepo(t *testing.T, dir string) {
 	t.Helper()

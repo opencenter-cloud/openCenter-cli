@@ -98,6 +98,7 @@ Examples:
   opencenter config set logging.level debug
   opencenter config set paths.clustersDir ~/my-clusters
   opencenter config set paths.pluginsDir ~/my-plugins
+  opencenter config set paths.stateDir ~/.local/state/opencenter
   opencenter config set behavior.autoConfirm true
   opencenter config set defaults.provider openstack
 
@@ -112,6 +113,7 @@ Supported configuration sections:
   - paths.configDir (string)
   - paths.clustersDir (string)
   - paths.pluginsDir (string)
+  - paths.stateDir (string)
   - behavior.autoConfirm (boolean)
   - behavior.dryRun (boolean)
   - defaults.provider (string)
@@ -161,6 +163,7 @@ Examples:
   opencenter config get logging.level
   opencenter config get paths.clustersDir
   opencenter config get paths.pluginsDir
+  opencenter config get paths.stateDir
   opencenter config get behavior.autoConfirm
 
 Use dot notation to access nested configuration values. If the key doesn't exist,
@@ -220,6 +223,7 @@ Default values:
   - paths.configDir: ~/.config/opencenter
   - paths.clustersDir: ~/.config/opencenter/clusters
   - paths.pluginsDir: ~/.config/opencenter/plugins
+  - paths.stateDir: ~/.local/state/opencenter
   - behavior.autoConfirm: false
   - behavior.dryRun: false
   - defaults.provider: openstack

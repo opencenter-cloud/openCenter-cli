@@ -866,8 +866,8 @@ func loadOrCreateSigningKey(path string) ([]byte, error) {
 
 // GetDefaultAuditLogPath returns the default audit log path
 func GetDefaultAuditLogPath() string {
-	configDir := config.GetConfigDir()
-	return filepath.Join(configDir, "audit", "audit.log")
+	stateDir := config.GetStateDir()
+	return filepath.Join(stateDir, "audit", "audit.log")
 }
 
 // GetDefaultAuditSigningKeyPath returns the default audit signing key path.

@@ -56,6 +56,7 @@ type PathsConfig struct {
 	ConfigDir   string `yaml:"configDir"`
 	ClustersDir string `yaml:"clustersDir"`
 	PluginsDir  string `yaml:"pluginsDir"`
+	StateDir    string `yaml:"stateDir"`
 }
 
 // BehaviorConfig controls CLI behavior settings.
@@ -138,6 +139,8 @@ func (ce *ConfigError) Suggestions() []string {
 			return []string{"Use a non-negative integer value (days)"}
 		case "paths.configDir", "paths.clustersDir":
 			return []string{"Use an absolute path or path starting with ~"}
+		case "paths.stateDir":
+			return []string{"Use an absolute path or path starting with ~"}
 		}
 	case "permission":
 		return []string{
@@ -198,9 +201,10 @@ func NewConfigManager(configPath string) (*ConfigManager, error) {
 
 // DefaultCLIConfig returns the default CLI configuration.
 func DefaultCLIConfig() *CLIConfig {
-	configDir, _ := ResolveConfigDir()
+	configDir := DefaultConfigDir()
 	clustersDir := filepath.Join(configDir, "clusters")
 	pluginsDir := filepath.Join(configDir, "plugins")
+	stateDir := DefaultStateDir()
 
 	return &CLIConfig{
 		Logging: LoggingConfig{
@@ -218,6 +222,7 @@ func DefaultCLIConfig() *CLIConfig {
 			ConfigDir:   configDir,
 			ClustersDir: clustersDir,
 			PluginsDir:  pluginsDir,
+			StateDir:    stateDir,
 		},
 		Behavior: BehaviorConfig{
 			AutoConfirm: false,
@@ -370,6 +375,9 @@ func (cm *ConfigManager) mergeWithDefaults(config *CLIConfig) *CLIConfig {
 	if config.Paths.PluginsDir != "" {
 		merged.Paths.PluginsDir = config.Paths.PluginsDir
 	}
+	if config.Paths.StateDir != "" {
+		merged.Paths.StateDir = config.Paths.StateDir
+	}
 
 	// Merge behavior configuration
 	merged.Behavior.AutoConfirm = config.Behavior.AutoConfirm
@@ -397,6 +405,7 @@ func (cm *ConfigManager) expandConfigPaths() {
 	cm.config.Paths.ConfigDir = corePaths.ExpandPath(cm.config.Paths.ConfigDir)
 	cm.config.Paths.ClustersDir = corePaths.ExpandPath(cm.config.Paths.ClustersDir)
 	cm.config.Paths.PluginsDir = corePaths.ExpandPath(cm.config.Paths.PluginsDir)
+	cm.config.Paths.StateDir = corePaths.ExpandPath(cm.config.Paths.StateDir)
 }
 
 // Save saves the current configuration to the file system.
@@ -801,6 +810,17 @@ func (cm *ConfigManager) setPathsValue(paths *PathsConfig, parts []string, value
 				Message: "pluginsDir must be a string",
 			}
 		}
+	case "stateDir":
+		if str, ok := value.(string); ok {
+			paths.StateDir = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "paths.stateDir",
+				Value:   value,
+				Message: "stateDir must be a string",
+			}
+		}
 	default:
 		return &ConfigError{
 			Type:    "validation",
@@ -1008,6 +1028,8 @@ func (cm *ConfigManager) getPathsValue(paths *PathsConfig, parts []string) (inte
 		return paths.ClustersDir, nil
 	case "pluginsDir":
 		return paths.PluginsDir, nil
+	case "stateDir":
+		return paths.StateDir, nil
 	default:
 		return nil, &ConfigError{
 			Type:    "validation",
@@ -1397,6 +1419,56 @@ func (cv *ConfigValidator) validatePathsWithResult(paths *PathsConfig, result *V
 			}
 		}
 	}
+
+	// Validate state directory
+	if paths.StateDir == "" {
+		if cv.autoRepair {
+			paths.StateDir = defaults.Paths.StateDir
+			result.Repaired = append(result.Repaired, &ConfigError{
+				Type:     "validation",
+				Field:    "paths.stateDir",
+				Value:    paths.StateDir,
+				Message:  fmt.Sprintf("empty stateDir, repaired to default '%s'", defaults.Paths.StateDir),
+				Repaired: true,
+			})
+		} else {
+			result.Errors = append(result.Errors, &ConfigError{
+				Type:    "validation",
+				Field:   "paths.stateDir",
+				Value:   paths.StateDir,
+				Message: "stateDir cannot be empty",
+			})
+		}
+	} else {
+		expandedPath := corePaths.ExpandPath(paths.StateDir)
+		if err := cv.validateDirectoryPath(expandedPath); err != nil {
+			if cv.autoRepair {
+				if createErr := os.MkdirAll(expandedPath, 0755); createErr != nil {
+					result.Errors = append(result.Errors, &ConfigError{
+						Type:    "permission",
+						Field:   "paths.stateDir",
+						Value:   paths.StateDir,
+						Message: fmt.Sprintf("cannot create stateDir '%s': %v", expandedPath, createErr),
+					})
+				} else {
+					result.Repaired = append(result.Repaired, &ConfigError{
+						Type:     "permission",
+						Field:    "paths.stateDir",
+						Value:    paths.StateDir,
+						Message:  fmt.Sprintf("created missing stateDir '%s'", expandedPath),
+						Repaired: true,
+					})
+				}
+			} else {
+				result.Warnings = append(result.Warnings, &ConfigError{
+					Type:    "path",
+					Field:   "paths.stateDir",
+					Value:   paths.StateDir,
+					Message: fmt.Sprintf("stateDir path may not be accessible: %v", err),
+				})
+			}
+		}
+	}
 }
 
 // validateBehaviorWithResult validates the behavior configuration.
@@ -1454,6 +1526,7 @@ func (cv *ConfigValidator) validateDependenciesWithResult(config *CLIConfig, res
 	expandedConfigDir := corePaths.ExpandPath(config.Paths.ConfigDir)
 	expandedClustersDir := corePaths.ExpandPath(config.Paths.ClustersDir)
 	expandedPluginsDir := corePaths.ExpandPath(config.Paths.PluginsDir)
+	expandedStateDir := corePaths.ExpandPath(config.Paths.StateDir)
 
 	// Check disk space for config directory
 	if err := cv.checkDiskSpace(expandedConfigDir); err != nil {
@@ -1482,6 +1555,14 @@ func (cv *ConfigValidator) validateDependenciesWithResult(config *CLIConfig, res
 			Field:   "paths.pluginsDir",
 			Value:   expandedPluginsDir,
 			Message: fmt.Sprintf("disk space warning for pluginsDir: %v", err),
+		})
+	}
+	if err := cv.checkDiskSpace(expandedStateDir); err != nil {
+		result.Warnings = append(result.Warnings, &ConfigError{
+			Type:    "dependency",
+			Field:   "paths.stateDir",
+			Value:   expandedStateDir,
+			Message: fmt.Sprintf("disk space warning for stateDir: %v", err),
 		})
 	}
 

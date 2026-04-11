@@ -18,6 +18,9 @@ Configurations with any other schema version are invalid.
 The bootstrap process is resumable - if a step fails, you can fix the issue
 and re-run bootstrap to continue from where it left off.
 
+Bootstrap logs and resumable state are written under the openCenter state
+directory by default instead of the GitOps repository.
+
 ```
 opencenter cluster bootstrap [name] [flags]
 ```
@@ -30,7 +33,7 @@ opencenter cluster bootstrap [name] [flags]
       --from-step string           restart bootstrap from the specified step ID
   -h, --help                       help for bootstrap
       --kubeconfig string          path to kubeconfig used by bootstrap actions (defaults to the cluster-owned kubeconfig path)
-      --log string                 log file path (defaults to <git_dir>/infrastructure/clusters/<name>/logs/bootstrap-YYYY-MM-DD-TIMESTAMP.log)
+      --log string                 log file path (defaults to <state_dir>/logs/bootstrap/<org>/<name>/bootstrap-YYYYMMDDTHHMMSSZ.log)
       --restart                    rerun all bootstrap steps and ignore saved state
       --step string                run a single bootstrap step by ID
 ```

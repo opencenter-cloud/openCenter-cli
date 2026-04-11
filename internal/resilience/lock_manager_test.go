@@ -52,6 +52,26 @@ func TestNewLockManager(t *testing.T) {
 	}
 }
 
+func TestNewLockManager_DefaultLockDirUsesStateDir(t *testing.T) {
+	stateDir := t.TempDir()
+	t.Setenv("OPENCENTER_STATE_DIR", stateDir)
+
+	lm, err := NewLockManager(LockConfig{Backend: "file"})
+	if err != nil {
+		t.Fatalf("NewLockManager() error = %v", err)
+	}
+
+	manager, ok := lm.(*lockManager)
+	if !ok {
+		t.Fatalf("expected *lockManager, got %T", lm)
+	}
+
+	expected := filepath.Join(stateDir, "locks")
+	if manager.config.LockDir != expected {
+		t.Fatalf("lock dir = %s, want %s", manager.config.LockDir, expected)
+	}
+}
+
 func TestLockManager_AcquireAndRelease(t *testing.T) {
 	lockDir := t.TempDir()
 	config := LockConfig{

@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"text/template"
@@ -62,6 +63,54 @@ func TestResolveConfigDir(t *testing.T) {
 	if dir != absExpected {
 		t.Errorf("expected config dir %s, but got %s", absExpected, dir)
 	}
+}
+
+func TestResolveStateDir(t *testing.T) {
+	t.Run("default behavior", func(t *testing.T) {
+		os.Unsetenv("OPENCENTER_STATE_DIR")
+		os.Unsetenv("XDG_STATE_HOME")
+
+		dir, err := ResolveStateDir()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var expected string
+		switch runtime.GOOS {
+		case "windows":
+			base := os.Getenv("LOCALAPPDATA")
+			if base == "" {
+				base = os.Getenv("APPDATA")
+			}
+			if base == "" {
+				base = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
+			}
+			expected = filepath.Join(base, "opencenter", "state")
+		default:
+			home, _ := os.UserHomeDir()
+			expected = filepath.Join(home, ".local", "state", "opencenter")
+		}
+
+		if dir != expected {
+			t.Errorf("expected state dir %s, but got %s", expected, dir)
+		}
+	})
+
+	t.Run("env override", func(t *testing.T) {
+		testDir := "testdata/opencenter-state-test"
+		os.Setenv("OPENCENTER_STATE_DIR", testDir)
+		defer os.Unsetenv("OPENCENTER_STATE_DIR")
+
+		dir, err := ResolveStateDir()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		absExpected, _ := filepath.Abs(testDir)
+		if dir != absExpected {
+			t.Errorf("expected state dir %s, but got %s", absExpected, dir)
+		}
+	})
 }
 
 func TestConfigHelperMethods(t *testing.T) {

@@ -330,6 +330,34 @@ func TestExpandPath(t *testing.T) {
 			},
 		},
 		{
+			name:  "allowlisted state dir expansion",
+			input: "${OPENCENTER_STATE_DIR}/test",
+			validate: func(t *testing.T, result string) {
+				stateDir := t.TempDir()
+				t.Setenv("OPENCENTER_STATE_DIR", stateDir)
+
+				expected := filepath.Join(stateDir, "test")
+				actual := ExpandPath("${OPENCENTER_STATE_DIR}/test")
+				if actual != expected {
+					t.Errorf("ExpandPath() = %s, want %s", actual, expected)
+				}
+			},
+		},
+		{
+			name:  "allowlisted xdg state home expansion",
+			input: "${XDG_STATE_HOME}/test",
+			validate: func(t *testing.T, result string) {
+				stateHome := t.TempDir()
+				t.Setenv("XDG_STATE_HOME", stateHome)
+
+				expected := filepath.Join(stateHome, "test")
+				actual := ExpandPath("${XDG_STATE_HOME}/test")
+				if actual != expected {
+					t.Errorf("ExpandPath() = %s, want %s", actual, expected)
+				}
+			},
+		},
+		{
 			name:  "non-allowlisted environment variable remains literal",
 			input: "${AWS_SECRET_ACCESS_KEY}/test",
 			validate: func(t *testing.T, result string) {

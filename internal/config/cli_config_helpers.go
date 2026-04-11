@@ -16,6 +16,9 @@ package config
 import (
 	"os"
 	"path/filepath"
+
+	configpersistence "github.com/opencenter-cloud/opencenter-cli/internal/config/persistence"
+	corePaths "github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 )
 
 // ResolveClustersDir returns the runtime clusters directory.
@@ -28,15 +31,15 @@ func ResolveClustersDir() string {
 	if cliConfigManager, err := NewConfigManager(""); err == nil && cliConfigManager != nil {
 		clustersDir := cliConfigManager.GetConfig().Paths.ClustersDir
 		if clustersDir != "" {
-			return clustersDir
+			return normalizeDirectoryPath(clustersDir)
 		}
 	}
 
 	if dir := os.Getenv("OPENCENTER_CONFIG_DIR"); dir != "" {
-		return filepath.Join(dir, "clusters")
+		return normalizeDirectoryPath(filepath.Join(dir, "clusters"))
 	}
 
-	return filepath.Join(getDefaultConfigDir(), "clusters")
+	return normalizeDirectoryPath(filepath.Join(DefaultConfigDir(), "clusters"))
 }
 
 // GetClustersDir returns the clusters directory from the CLI config.
@@ -48,12 +51,12 @@ func GetClustersDir() string {
 	if err == nil && cliConfigManager != nil {
 		clustersDir := cliConfigManager.GetConfig().Paths.ClustersDir
 		if clustersDir != "" {
-			return clustersDir
+			return normalizeDirectoryPath(clustersDir)
 		}
 	}
 
 	// Fallback to default
-	return filepath.Join(getDefaultConfigDir(), "clusters")
+	return normalizeDirectoryPath(filepath.Join(DefaultConfigDir(), "clusters"))
 }
 
 // GetConfigDir returns the configuration directory from the CLI config.
@@ -64,12 +67,12 @@ func GetConfigDir() string {
 	if err == nil && cliConfigManager != nil {
 		configDir := cliConfigManager.GetConfig().Paths.ConfigDir
 		if configDir != "" {
-			return configDir
+			return normalizeDirectoryPath(configDir)
 		}
 	}
 
 	// Fallback to default
-	return getDefaultConfigDir()
+	return DefaultConfigDir()
 }
 
 // GetPluginsDir returns the plugins directory from the CLI config.
@@ -80,26 +83,35 @@ func GetPluginsDir() string {
 	if err == nil && cliConfigManager != nil {
 		pluginsDir := cliConfigManager.GetConfig().Paths.PluginsDir
 		if pluginsDir != "" {
-			return pluginsDir
+			return normalizeDirectoryPath(pluginsDir)
 		}
 	}
 
 	// Fallback to default
-	return filepath.Join(getDefaultConfigDir(), "plugins")
+	return normalizeDirectoryPath(filepath.Join(DefaultConfigDir(), "plugins"))
 }
 
-// getDefaultConfigDir returns the default configuration directory.
-// This is a helper function used by the other Get*Dir functions.
-func getDefaultConfigDir() string {
-	home := os.Getenv("HOME")
-	if home == "" {
-		// Try to get home directory
-		if homeDir, err := os.UserHomeDir(); err == nil {
-			home = homeDir
-		} else {
-			// Last resort fallback
-			return "/tmp/opencenter"
+// GetStateDir returns the runtime state directory using the precedence:
+// OPENCENTER_STATE_DIR, CLI config paths.stateDir, then the platform default.
+func GetStateDir() string {
+	if stateDir := os.Getenv("OPENCENTER_STATE_DIR"); stateDir != "" {
+		return normalizeDirectoryPath(stateDir)
+	}
+
+	if cliConfigManager, err := NewConfigManager(""); err == nil && cliConfigManager != nil {
+		stateDir := cliConfigManager.GetConfig().Paths.StateDir
+		if stateDir != "" {
+			return normalizeDirectoryPath(stateDir)
 		}
 	}
-	return filepath.Join(home, ".config", "opencenter")
+
+	return DefaultStateDir()
+}
+
+func normalizeDirectoryPath(path string) string {
+	expanded := corePaths.ExpandPath(path)
+	if normalized, err := configpersistence.NormalizeDir(expanded); err == nil {
+		return normalized
+	}
+	return expanded
 }

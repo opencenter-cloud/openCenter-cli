@@ -1,8 +1,10 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
@@ -39,7 +41,19 @@ func (r execLifecycleCommandRunner) Run(ctx context.Context, dir string, env map
 	}
 	cmd.Env = envList
 
-	output, err := cmd.CombinedOutput()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	if writer := bootstrapLogWriter(ctx); writer != nil {
+		cmd.Stdout = io.MultiWriter(&stdout, writer)
+		cmd.Stderr = io.MultiWriter(&stderr, writer)
+	} else {
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+	}
+
+	err = cmd.Run()
+	output := append(stdout.Bytes(), stderr.Bytes()...)
 	if err != nil {
 		return output, fmt.Errorf("command failed: %s %v: %w\nOutput: %s", name, args, err, string(output))
 	}

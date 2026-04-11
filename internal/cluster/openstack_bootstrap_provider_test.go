@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 )
@@ -149,6 +150,9 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 		t.Fatalf("mkdir cluster dir: %v", err)
 	}
 
+	stateRoot := t.TempDir()
+	t.Setenv("OPENCENTER_STATE_DIR", stateRoot)
+
 	statePath := filepath.Join(clusterDir, "logs", "bootstrap-state.json")
 	state := bootstrapService.newBootstrapState()
 	bootstrapService.setStepStatus(state, "openstack-preflight", bootstrapStatusSuccess, "")
@@ -157,10 +161,15 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 		t.Fatalf("save bootstrap state: %v", err)
 	}
 
+	runtimePaths, err := resolveBootstrapRuntimePaths(&cfg, "", time.Now())
+	if err != nil {
+		t.Fatalf("resolve bootstrap runtime paths: %v", err)
+	}
+
 	result := &BootstrapResult{}
 	if err := bootstrapService.provisionInfrastructure(ctx, &cfg, clusterPaths, &BootstrapOptions{
 		KubeconfigPath: clusterPaths.KubeconfigPath,
-	}, result); err != nil {
+	}, runtimePaths, result); err != nil {
 		t.Fatalf("provisionInfrastructure() error = %v", err)
 	}
 
@@ -172,5 +181,8 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 	}
 	if _, err := os.Stat(clusterPaths.KubeconfigPath); err != nil {
 		t.Fatalf("expected cluster-owned kubeconfig at %s: %v", clusterPaths.KubeconfigPath, err)
+	}
+	if _, err := os.Stat(runtimePaths.StatePath); err != nil {
+		t.Fatalf("expected migrated bootstrap state at %s: %v", runtimePaths.StatePath, err)
 	}
 }

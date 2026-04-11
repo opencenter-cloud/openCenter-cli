@@ -12,18 +12,16 @@ tags: [files, paths, locations, configuration]
 
 **Purpose:** For all users, provides complete reference of configuration and data file locations used by openCenter CLI.
 
-This reference documents all file and directory locations used by openCenter for configuration, secrets, caches, and generated files.
+This reference documents the file and directory locations openCenter uses for configuration, runtime state, caches, and generated files.
 
 ## Overview
 
-openCenter CLI uses standard XDG Base Directory conventions for file organization:
+openCenter CLI separates persistent configuration from mutable runtime state:
 
 - **Configuration:** `~/.config/opencenter/`
-- **Data:** `~/.local/share/opencenter/`
+- **State:** `~/.local/state/opencenter/`
 - **Cache:** `~/.cache/opencenter/`
-- **Runtime:** `/tmp/opencenter/`
-
-**Evidence:** `.kiro/steering/structure.md:118-128`, Session 2 B0 section 14
+- **GitOps repository output:** user-selected working tree
 
 ## Configuration Directory
 
@@ -277,75 +275,73 @@ rm -rf ~/.cache/opencenter/
 
 **TTL:** 1 hour (configurable)
 
-## Data Directory
+## State Directory
 
-### Base Data Directory
+### Base State Directory
 
-**Location:** `~/.local/share/opencenter/`
+**Location:** `~/.local/state/opencenter/`
 
-**Purpose:** Persistent data files.
-
-**Contents:**
-```
-~/.local/share/opencenter/
-├── logs/                    # CLI logs
-├── backups/                 # Configuration backups
-└── plugins/                 # Plugin data
-```
-
-### Logs
-
-**Location:** `~/.local/share/opencenter/logs/`
-
-**Purpose:** CLI operation logs.
-
-**Example:**
-```
-~/.local/share/opencenter/logs/
-├── opencenter.log           # Current log
-├── opencenter.log.1         # Rotated log
-└── opencenter.log.2         # Rotated log
-```
-
-**Rotation:** Daily, keep 7 days
-
-**Log level:** Controlled by `OPENCENTER_LOG_LEVEL` environment variable
-
-### Configuration Backups
-
-**Location:** `~/.local/share/opencenter/backups/`
-
-**Purpose:** Automatic configuration backups before changes.
-
-**Example:**
-```
-~/.local/share/opencenter/backups/
-├── prod-cluster-20260217-100000.yaml
-├── prod-cluster-20260216-100000.yaml
-└── prod-cluster-20260215-100000.yaml
-```
-
-**Retention:** 30 days
-
-## Runtime Directory
-
-### Temporary Files
-
-**Location:** `/tmp/opencenter/`
-
-**Purpose:** Temporary files during operations.
+**Purpose:** Runtime artifacts that should not dirty the GitOps repository.
 
 **Contents:**
 ```
-/tmp/opencenter/
-├── <pid>/                   # Process-specific temp files
-│   ├── rendered-templates/
-│   ├── validation-results/
-│   └── provider-responses/
-└── locks/                   # Process locks
+~/.local/state/opencenter/
+├── audit/
+│   └── audit.log            # Default audit log
+├── bootstrap/
+│   └── <organization>/<cluster>/
+│       └── state.json       # Bootstrap resume checkpoint
+├── locks/                   # File locks for cluster operations
+└── logs/
+    └── bootstrap/
+        └── <organization>/<cluster>/
+            └── bootstrap-YYYYMMDDTHHMMSSZ.log
 ```
 
-**Cleanup:** Automatic on process exit
+**Environment variables:**
+- `OPENCENTER_STATE_DIR`
+- `XDG_STATE_HOME` (fallback base when `OPENCENTER_STATE_DIR` is unset)
+
+### Bootstrap Resume State
+
+**Location:** `~/.local/state/opencenter/bootstrap/<organization>/<cluster>/state.json`
+
+**Purpose:** Stores resumable bootstrap step state after a failed or interrupted bootstrap.
+
+**Behavior:**
+- Created during bootstrap when a resumable step is recorded
+- Deleted automatically after a successful bootstrap
+- Legacy repo-local state at `infrastructure/clusters/<cluster>/logs/bootstrap-state.json` is still read for compatibility during migration
+
+**Permissions:** `0600`
+
+### Bootstrap Logs
+
+**Location:** `~/.local/state/opencenter/logs/bootstrap/<organization>/<cluster>/bootstrap-YYYYMMDDTHHMMSSZ.log`
+
+**Purpose:** Per-run bootstrap logs written outside the GitOps repository.
+
+**Example:**
+```
+~/.local/state/opencenter/logs/bootstrap/my-company/prod-cluster/
+└── bootstrap-20260411T154500Z.log
+```
+
+**Override:** `opencenter cluster bootstrap --log /path/to/file.log`
+
+**Permissions:** `0600`
+
+### Audit Log
+
+**Location:** `~/.local/state/opencenter/audit/audit.log`
+
+**Purpose:** Default append-only audit log for security-sensitive operations.
+
+### File Locks
+
+**Location:** `~/.local/state/opencenter/locks/`
+
+**Purpose:** Prevents concurrent cluster mutations against the same target.
 
 ## Plugin Directory
 
@@ -389,20 +385,17 @@ kubectl get nodes
 
 ## Environment Variable Overrides
 
-All default locations can be overridden with environment variables:
+Supported location overrides:
 
 | Location | Environment Variable | Default |
 |----------|---------------------|---------|
 | Config directory | `OPENCENTER_CONFIG_DIR` | `~/.config/opencenter` |
-| Data directory | `OPENCENTER_DATA_DIR` | `~/.local/share/opencenter` |
-| Cache directory | `OPENCENTER_CACHE_DIR` | `~/.cache/opencenter` |
-| Log file | `OPENCENTER_LOG_FILE` | `~/.local/share/opencenter/logs/opencenter.log` |
+| State directory | `OPENCENTER_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/opencenter` |
 
 **Example:**
 ```bash
 export OPENCENTER_CONFIG_DIR=/custom/config
-export OPENCENTER_DATA_DIR=/custom/data
-export OPENCENTER_CACHE_DIR=/custom/cache
+export OPENCENTER_STATE_DIR=/custom/state
 ```
 
 ## File Permissions
@@ -416,7 +409,8 @@ export OPENCENTER_CACHE_DIR=/custom/cache
 | SSH public keys | `0644` | Can be shared |
 | SOPS Age keys | `0600` | Security requirement |
 | Kubeconfig | `0600` | Contains cluster credentials |
-| Logs | `0644` | Readable for debugging |
+| Runtime logs | `0600` | May contain command output and error details |
+| Runtime state | `0600` | Resume checkpoints may contain sensitive context |
 | Cache files | `0644` | Non-sensitive |
 
 ### Setting Permissions

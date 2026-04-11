@@ -45,6 +45,22 @@ func ResolveConfigDir() (string, error) {
 	return configpersistence.ResolveConfigDir()
 }
 
+// DefaultConfigDir returns the side-effect-free default configuration directory path.
+func DefaultConfigDir() string {
+	return configpersistence.DefaultConfigDir()
+}
+
+// ResolveStateDir resolves the runtime state directory based on OPENCENTER_STATE_DIR,
+// CLI config, or the platform default and creates it if needed.
+func ResolveStateDir() (string, error) {
+	return configpersistence.ResolveDir(GetStateDir())
+}
+
+// DefaultStateDir returns the side-effect-free default runtime state directory path.
+func DefaultStateDir() string {
+	return configpersistence.DefaultStateDir()
+}
+
 // ParseClusterIdentifier parses a cluster identifier which can be in one of two formats:
 // 1. "cluster" - just the cluster name (uses default "opencenter" organization)
 // 2. "organization/cluster" - organization and cluster name

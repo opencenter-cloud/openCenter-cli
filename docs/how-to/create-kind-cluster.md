@@ -315,7 +315,7 @@ opencenter cluster bootstrap my-cluster --container-runtime podman --from-step g
 If bootstrap was interrupted:
 
 ```bash
-rm -f ~/.config/opencenter/locks/my-cluster.lock
+rm -f ~/.local/state/opencenter/locks/my-cluster.lock
 opencenter cluster bootstrap my-cluster --container-runtime podman --restart
 ```
 

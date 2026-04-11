@@ -10,6 +10,7 @@ Examples:
   opencenter config get logging.level
   opencenter config get paths.clustersDir
   opencenter config get paths.pluginsDir
+  opencenter config get paths.stateDir
   opencenter config get behavior.autoConfirm
 
 Use dot notation to access nested configuration values. If the key doesn't exist,

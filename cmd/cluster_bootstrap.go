@@ -53,7 +53,7 @@ and re-run bootstrap to continue from where it left off.`,
 
 	cmd.Flags().Bool("dry-run", false, "show planned actions without executing")
 	cmd.Flags().String("kubeconfig", "", "path to kubeconfig used by bootstrap actions (defaults to the cluster-owned kubeconfig path)")
-	cmd.Flags().String("log", "", "log file path (defaults to <git_dir>/infrastructure/clusters/<name>/logs/bootstrap-YYYY-MM-DD-TIMESTAMP.log)")
+	cmd.Flags().String("log", "", "log file path (defaults to <state_dir>/logs/bootstrap/<org>/<name>/bootstrap-YYYYMMDDTHHMMSSZ.log)")
 	cmd.Flags().String("container-runtime", "", "container runtime for kind clusters (docker or podman)")
 	cmd.Flags().Bool("restart", false, "rerun all bootstrap steps and ignore saved state")
 	cmd.Flags().String("step", "", "run a single bootstrap step by ID")
@@ -145,6 +145,14 @@ func runClusterBootstrap(cmd *cobra.Command, args []string) error {
 				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", statusErr)
 			}
 		}
+		if result != nil {
+			if strings.TrimSpace(result.LogPath) != "" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "Bootstrap log: %s\n", result.LogPath)
+			}
+			if strings.TrimSpace(result.ResumeStatePath) != "" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "Resume state: %s\n", result.ResumeStatePath)
+			}
+		}
 		return err
 	}
 
@@ -152,6 +160,9 @@ func runClusterBootstrap(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(cmd.OutOrStdout(), "Bootstrap complete in %v\n", result.Duration.Round(time.Second))
 	if result.Endpoint != "" {
 		fmt.Fprintf(cmd.OutOrStdout(), "Cluster endpoint: %s\n", result.Endpoint)
+	}
+	if strings.TrimSpace(result.LogPath) != "" {
+		fmt.Fprintf(cmd.OutOrStdout(), "Bootstrap log: %s\n", result.LogPath)
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "Steps completed: %d\n", len(result.StepsCompleted))
 	if len(result.StepsFailed) > 0 {

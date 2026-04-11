@@ -23,6 +23,21 @@ import (
 	"testing"
 )
 
+func TestDefaultAuditPathsUseStateAndConfigRoots(t *testing.T) {
+	stateDir := t.TempDir()
+	configDir := t.TempDir()
+	t.Setenv("OPENCENTER_STATE_DIR", stateDir)
+	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
+
+	if got := GetDefaultAuditLogPath(); got != filepath.Join(stateDir, "audit", "audit.log") {
+		t.Fatalf("GetDefaultAuditLogPath() = %s", got)
+	}
+
+	if got := GetDefaultAuditSigningKeyPath(); got != filepath.Join(configDir, "audit", "audit.key") {
+		t.Fatalf("GetDefaultAuditSigningKeyPath() = %s", got)
+	}
+}
+
 func TestAuditLogger_LogEvent(t *testing.T) {
 	// Create temporary log file
 	tmpDir := t.TempDir()

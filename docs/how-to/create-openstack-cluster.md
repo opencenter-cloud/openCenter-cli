@@ -291,7 +291,7 @@ flux reconcile kustomization <name> --with-source
 ### Bootstrap interrupted / stale lock
 
 ```bash
-rm -f ~/.config/opencenter/locks/prod-cluster.lock
+rm -f ~/.local/state/opencenter/locks/prod-cluster.lock
 opencenter cluster bootstrap prod-cluster --restart
 ```
 

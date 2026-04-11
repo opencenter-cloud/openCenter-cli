@@ -49,6 +49,10 @@ func TestDefaultCLIConfig(t *testing.T) {
 	if config.Defaults.Provider != "openstack" {
 		t.Errorf("Expected default provider 'openstack', got '%s'", config.Defaults.Provider)
 	}
+
+	if config.Paths.StateDir == "" {
+		t.Error("Expected default stateDir to be populated")
+	}
 }
 
 func TestConfigValidator(t *testing.T) {
@@ -144,6 +148,7 @@ func TestConfigValidatorPathValidation(t *testing.T) {
 	invalidConfig := DefaultCLIConfig()
 	invalidConfig.Paths.ConfigDir = ""
 	invalidConfig.Paths.ClustersDir = ""
+	invalidConfig.Paths.StateDir = ""
 
 	result := validator.ValidateWithResult(invalidConfig)
 
@@ -151,8 +156,8 @@ func TestConfigValidatorPathValidation(t *testing.T) {
 		t.Error("Configuration with empty paths should not be valid")
 	}
 
-	if len(result.Errors) < 2 {
-		t.Errorf("Expected at least 2 path errors, got %d", len(result.Errors))
+	if len(result.Errors) < 3 {
+		t.Errorf("Expected at least 3 path errors, got %d", len(result.Errors))
 	}
 }
 
@@ -193,6 +198,7 @@ func TestConfigManagerSetGetValue(t *testing.T) {
 		{"behavior.dryRun", true},
 		{"defaults.provider", "aws"},
 		{"logging.file.maxSize", 200},
+		{"paths.stateDir", filepath.Join(tmpDir, "state")},
 	}
 
 	for _, test := range tests {
@@ -972,8 +978,8 @@ func TestConfigValidatorComprehensive(t *testing.T) {
 			},
 			autoRepair:     false,
 			expectValid:    false,
-			expectErrors:   8, // level, format, output, maxSize, maxBackups, maxAge, configDir, clustersDir, pluginsDir
-			expectWarnings: 7, // autoConfirm without dryRun, provider, region, environment, disk space warnings (configDir, clustersDir, pluginsDir)
+			expectErrors:   9, // level, format, maxSize, maxBackups, maxAge, configDir, clustersDir, pluginsDir, stateDir
+			expectWarnings: 8, // autoConfirm without dryRun, provider, region, environment, disk space warnings (configDir, clustersDir, pluginsDir, stateDir)
 			expectRepairs:  0,
 		},
 		{
@@ -1007,7 +1013,7 @@ func TestConfigValidatorComprehensive(t *testing.T) {
 			expectValid:    true,
 			expectErrors:   0,
 			expectWarnings: 4, // Warnings are not auto-repaired (excluding disk space warnings which are repaired)
-			expectRepairs:  8, // All validation errors should be repaired (including pluginsDir)
+			expectRepairs:  9, // All validation errors should be repaired (including pluginsDir and stateDir)
 		},
 		{
 			name:           "valid config",
@@ -1179,4 +1185,40 @@ func TestConfigManagerConcurrency(t *testing.T) {
 	if !result.Valid {
 		t.Errorf("Configuration became invalid after concurrent operations: %v", result.Errors)
 	}
+}
+
+func TestGetStateDirPrecedence(t *testing.T) {
+	t.Run("environment override wins", func(t *testing.T) {
+		configDir := t.TempDir()
+		stateDir := t.TempDir()
+		t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
+		t.Setenv("OPENCENTER_STATE_DIR", stateDir)
+
+		if actual := GetStateDir(); actual != stateDir {
+			t.Fatalf("GetStateDir() = %s, want %s", actual, stateDir)
+		}
+	})
+
+	t.Run("cli config path used when env unset", func(t *testing.T) {
+		configDir := t.TempDir()
+		t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
+		t.Setenv("OPENCENTER_STATE_DIR", "")
+
+		cm, err := NewConfigManager("")
+		if err != nil {
+			t.Fatalf("Failed to create config manager: %v", err)
+		}
+
+		stateDir := filepath.Join(t.TempDir(), "state-root")
+		if err := cm.SetValue("paths.stateDir", stateDir); err != nil {
+			t.Fatalf("SetValue(paths.stateDir) error = %v", err)
+		}
+		if err := cm.Save(); err != nil {
+			t.Fatalf("Save() error = %v", err)
+		}
+
+		if actual := GetStateDir(); actual != stateDir {
+			t.Fatalf("GetStateDir() = %s, want %s", actual, stateDir)
+		}
+	})
 }

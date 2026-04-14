@@ -101,6 +101,9 @@ case "$subcommand" in
         ;;
     esac
     ;;
+  config)
+    # Accept any git config command (get or set)
+    ;;
   add)
     ;;
   status)

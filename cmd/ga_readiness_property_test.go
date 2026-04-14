@@ -285,6 +285,11 @@ func initTestClusterForProperty3(t *testing.T, dir, clusterName, organization st
 // broken: full-suite run fails on generated GitOps source contracts (repo casing, ref strategy,
 // sync interval, and cert-manager kustomization indentation); see docs/test-results.md.
 func TestProperty_SetupProducesRequiredDirectoryStructure(t *testing.T) {
+	// Install fake git binary so tests work in environments without global git config
+	binDir := t.TempDir()
+	installFakeGitBinary(t, binDir)
+	prependTestPath(t, binDir)
+
 	// Test fixture cluster names — valid names per the cluster name validator pattern
 	// (lowercase alphanumeric start/end, hyphens allowed in middle)
 	clusterFixtures := []string{

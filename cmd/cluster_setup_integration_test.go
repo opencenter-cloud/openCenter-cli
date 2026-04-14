@@ -44,6 +44,11 @@ func TestClusterSetupIntegration(t *testing.T) {
 		}
 	}()
 
+	// Install fake git binary so tests work in environments without global git config
+	binDir := t.TempDir()
+	installFakeGitBinary(t, binDir)
+	prependTestPath(t, binDir)
+
 	// Initialize test cluster
 	clusterName := "test-setup-cluster"
 	organization := "test-org"
@@ -226,6 +231,11 @@ func TestClusterSetupServiceIntegration(t *testing.T) {
 		}
 	}()
 
+	// Install fake git binary so tests work in environments without global git config
+	binDir := t.TempDir()
+	installFakeGitBinary(t, binDir)
+	prependTestPath(t, binDir)
+
 	// Initialize test cluster
 	clusterName := "test-service-cluster"
 	organization := "test-org"
@@ -284,6 +294,11 @@ func TestClusterSetupForceOverwrite(t *testing.T) {
 			os.Unsetenv("OPENCENTER_CONFIG_DIR")
 		}
 	}()
+
+	// Install fake git binary so tests work in environments without global git config
+	binDir := t.TempDir()
+	installFakeGitBinary(t, binDir)
+	prependTestPath(t, binDir)
 
 	// Initialize test cluster
 	clusterName := "test-force-cluster"
@@ -402,6 +417,11 @@ func TestClusterSetupSkipValidation(t *testing.T) {
 			os.Unsetenv("OPENCENTER_CONFIG_DIR")
 		}
 	}()
+
+	// Install fake git binary so tests work in environments without global git config
+	binDir := t.TempDir()
+	installFakeGitBinary(t, binDir)
+	prependTestPath(t, binDir)
 
 	// Initialize test cluster
 	clusterName := "test-skipval-cluster"

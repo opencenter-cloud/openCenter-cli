@@ -270,6 +270,22 @@ func (s *SetupService) commitChanges(ctx context.Context, clusterPaths *paths.Cl
 		if err := cmd.Run(); err != nil {
 			return "", fmt.Errorf("initializing git repository: %w", err)
 		}
+
+		// Configure local git identity so commits work in environments
+		// without a global git config (CI, containers, fresh installs).
+		for _, kv := range [][2]string{
+			{"user.name", "opencenter"},
+			{"user.email", "opencenter@localhost"},
+		} {
+			cfgCmd, err := s.commandRunner.PrepareCommandContext(ctx, "git", "config", kv[0], kv[1])
+			if err != nil {
+				return "", fmt.Errorf("preparing git config %s: %w", kv[0], err)
+			}
+			cfgCmd.Dir = gitDir
+			if err := cfgCmd.Run(); err != nil {
+				return "", fmt.Errorf("setting git config %s: %w", kv[0], err)
+			}
+		}
 	}
 
 	// Stage all files

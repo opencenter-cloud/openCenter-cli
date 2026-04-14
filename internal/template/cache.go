@@ -71,8 +71,8 @@ func NewInMemoryTemplateCache(ttl time.Duration, maxSize int) *InMemoryTemplateC
 // Get retrieves a template from the cache.
 // Returns the template and true if found and not expired, nil and false otherwise.
 func (c *InMemoryTemplateCache) Get(key string) (*template.Template, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	entry, ok := c.entries[key]
 	if !ok {

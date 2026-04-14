@@ -27,6 +27,7 @@ import (
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/crypto"
+	"github.com/zalando/go-keyring"
 )
 
 // Feature: security-and-operational-remediation, Property 7: OS Keyring Storage for Age Keys
@@ -35,6 +36,11 @@ func TestProperty_OSKeyringStorageForAgeKeys(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping property test in short mode")
 	}
+
+	// Use in-memory mock keyring to avoid OS keyring dependencies
+	// (macOS Keychain prompts, Linux D-Bus hangs in CI).
+	keyring.MockInit()
+
 	parameters := gopter.DefaultTestParameters()
 	parameters.MinSuccessfulTests = 20 // Reduced: each iteration hits OS keyring (macOS Keychain subprocess)
 	properties := gopter.NewProperties(parameters)

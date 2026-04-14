@@ -75,7 +75,7 @@ applications/overlays
 /vendor/
 godoc.log
 .env
-gitea/
+/gitea/
 .gitea_admin_token
 .gitea_newuser_token
 testdata/*

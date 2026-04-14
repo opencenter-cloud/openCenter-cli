@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	corePaths "github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
@@ -75,6 +76,7 @@ type DefaultsConfig struct {
 
 // ConfigManager handles CLI configuration loading, validation, and merging.
 type ConfigManager struct {
+	mu         sync.RWMutex
 	configPath string
 	config     *CLIConfig
 	defaults   *CLIConfig
@@ -410,6 +412,9 @@ func (cm *ConfigManager) expandConfigPaths() {
 
 // Save saves the current configuration to the file system.
 func (cm *ConfigManager) Save() error {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
 	data, err := yaml.Marshal(cm.config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
@@ -428,13 +433,39 @@ func (cm *ConfigManager) Save() error {
 	return nil
 }
 
+// saveLocked persists the current configuration without acquiring the mutex.
+// The caller must already hold cm.mu (write lock).
+func (cm *ConfigManager) saveLocked() error {
+	data, err := yaml.Marshal(cm.config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal configuration: %w", err)
+	}
+
+	if err := cm.fileSystem.WriteFileAtomic(cm.configPath, data, 0600); err != nil {
+		return &ConfigError{
+			Type:    "permission",
+			Field:   "configFile",
+			Value:   cm.configPath,
+			Message: fmt.Sprintf("failed to write configuration: %v", err),
+		}
+	}
+
+	return nil
+}
+
 // GetConfig returns the current configuration.
 func (cm *ConfigManager) GetConfig() *CLIConfig {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
 	return cm.config
 }
 
 // SetValue sets a configuration value using dot notation.
 func (cm *ConfigManager) SetValue(key string, value interface{}) error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	if err := cm.setValueByPath(cm.config, key, value); err != nil {
 		return err
 	}
@@ -450,13 +481,19 @@ func (cm *ConfigManager) SetValue(key string, value interface{}) error {
 
 // GetValue gets a configuration value using dot notation.
 func (cm *ConfigManager) GetValue(key string) (interface{}, error) {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
 	return cm.getValueByPath(cm.config, key)
 }
 
 // Reset resets the configuration to default values.
 func (cm *ConfigManager) Reset() error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	cm.config = DefaultCLIConfig()
-	return cm.Save()
+	return cm.saveLocked()
 }
 
 // GetConfigPath returns the path to the configuration file.
@@ -466,11 +503,17 @@ func (cm *ConfigManager) GetConfigPath() string {
 
 // ValidateConfig performs comprehensive validation and returns detailed results.
 func (cm *ConfigManager) ValidateConfig() *ValidationResult {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
 	return cm.validator.ValidateWithResult(cm.config)
 }
 
 // RepairConfig attempts to repair configuration issues and returns the results.
 func (cm *ConfigManager) RepairConfig() (*ValidationResult, error) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	// Create a validator with auto-repair enabled
 	repairValidator := &ConfigValidator{autoRepair: true}
 
@@ -479,7 +522,7 @@ func (cm *ConfigManager) RepairConfig() (*ValidationResult, error) {
 
 	// If repairs were made, save the configuration
 	if len(result.Repaired) > 0 {
-		if err := cm.Save(); err != nil {
+		if err := cm.saveLocked(); err != nil {
 			return result, fmt.Errorf("failed to save repaired configuration: %w", err)
 		}
 	}
@@ -489,7 +532,10 @@ func (cm *ConfigManager) RepairConfig() (*ValidationResult, error) {
 
 // GetValidationSummary returns a human-readable summary of validation results.
 func (cm *ConfigManager) GetValidationSummary() string {
-	result := cm.ValidateConfig()
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+
+	result := cm.validator.ValidateWithResult(cm.config)
 
 	var summary strings.Builder
 
@@ -526,6 +572,9 @@ func (cm *ConfigManager) GetValidationSummary() string {
 // LoadWithConfig loads the configuration manager with an existing configuration.
 // This is useful for applying runtime overrides without modifying the file.
 func (cm *ConfigManager) LoadWithConfig(config *CLIConfig) error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	cm.config = config
 	cm.validator = &ConfigValidator{autoRepair: false} // Don't auto-repair when loading existing config
 

@@ -314,7 +314,12 @@ func genAgeKeyPair() gopter.Gen {
 // Feature: security-and-operational-remediation, Property 8: Key Backup Round-Trip
 // **Validates: Requirements 5.2, 5.3, 5.4**
 func TestProperty_KeyBackupRoundTrip(t *testing.T) {
-	properties := gopter.NewProperties(nil)
+	if testing.Short() {
+		t.Skip("skipping property test in short mode")
+	}
+	parameters := gopter.DefaultTestParameters()
+	parameters.MinSuccessfulTests = 20 // Reduced: each iteration runs Argon2 key derivation (CPU + 64MB RAM)
+	properties := gopter.NewProperties(parameters)
 
 	properties.Property("backup and restore produces equivalent key", prop.ForAll(
 		func(clusterName string, passphrase string) bool {

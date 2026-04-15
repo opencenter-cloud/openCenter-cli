@@ -36,6 +36,11 @@ var serviceDependencyGraph = []ServiceDependency{
 		Dependencies: []string{"keycloak"},
 		Reason:       "Headlamp requires Keycloak for OIDC authentication when OIDC is configured",
 	},
+	{
+		Service:      "keycloak",
+		Dependencies: []string{"olm", "postgres-operator"},
+		Reason:       "Keycloak requires OLM for operator lifecycle management and postgres-operator for database backend",
+	},
 }
 
 // DependencyValidator validates service dependencies

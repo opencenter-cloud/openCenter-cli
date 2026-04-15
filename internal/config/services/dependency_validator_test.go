@@ -85,6 +85,12 @@ func TestDependencyValidator_ValidateDependencies(t *testing.T) {
 				"keycloak": &KeycloakConfig{
 					BaseConfig: BaseConfig{Enabled: true},
 				},
+				"olm": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+				"postgres-operator": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
 			},
 			wantErrs: []string{},
 		},
@@ -108,6 +114,73 @@ func TestDependencyValidator_ValidateDependencies(t *testing.T) {
 				"service 'weave-gitops' requires 'fluxcd' to be enabled",
 				"service 'headlamp' requires 'keycloak' to be enabled",
 			},
+		},
+		{
+			name: "keycloak enabled without olm",
+			services: map[string]any{
+				"keycloak": &KeycloakConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+				"olm": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: false},
+				},
+				"postgres-operator": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+			},
+			wantErrs: []string{
+				"service 'keycloak' requires 'olm' to be enabled",
+			},
+		},
+		{
+			name: "keycloak enabled without postgres-operator",
+			services: map[string]any{
+				"keycloak": &KeycloakConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+				"olm": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+				"postgres-operator": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: false},
+				},
+			},
+			wantErrs: []string{
+				"service 'keycloak' requires 'postgres-operator' to be enabled",
+			},
+		},
+		{
+			name: "keycloak enabled without olm and postgres-operator",
+			services: map[string]any{
+				"keycloak": &KeycloakConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+				"olm": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: false},
+				},
+				"postgres-operator": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: false},
+				},
+			},
+			wantErrs: []string{
+				"service 'keycloak' requires 'olm' to be enabled",
+				"service 'keycloak' requires 'postgres-operator' to be enabled",
+			},
+		},
+		{
+			name: "keycloak enabled with olm and postgres-operator",
+			services: map[string]any{
+				"keycloak": &KeycloakConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+				"olm": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+				"postgres-operator": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: true},
+				},
+			},
+			wantErrs: []string{},
 		},
 		{
 			name: "all services disabled",
@@ -271,6 +344,7 @@ func TestDependencyValidator_GetDependencyGraph(t *testing.T) {
 	// Check that expected dependencies are present
 	foundWeaveGitOps := false
 	foundHeadlamp := false
+	foundKeycloak := false
 
 	for _, dep := range graph {
 		if dep.Service == "weave-gitops" {
@@ -291,6 +365,31 @@ func TestDependencyValidator_GetDependencyGraph(t *testing.T) {
 				t.Error("headlamp dependency should have a reason")
 			}
 		}
+		if dep.Service == "keycloak" {
+			foundKeycloak = true
+			if len(dep.Dependencies) != 2 {
+				t.Errorf("keycloak should have 2 dependencies, got %d", len(dep.Dependencies))
+			}
+			hasOLM := false
+			hasPostgres := false
+			for _, d := range dep.Dependencies {
+				if d == "olm" {
+					hasOLM = true
+				}
+				if d == "postgres-operator" {
+					hasPostgres = true
+				}
+			}
+			if !hasOLM {
+				t.Error("keycloak should depend on olm")
+			}
+			if !hasPostgres {
+				t.Error("keycloak should depend on postgres-operator")
+			}
+			if dep.Reason == "" {
+				t.Error("keycloak dependency should have a reason")
+			}
+		}
 	}
 
 	if !foundWeaveGitOps {
@@ -298,6 +397,9 @@ func TestDependencyValidator_GetDependencyGraph(t *testing.T) {
 	}
 	if !foundHeadlamp {
 		t.Error("headlamp dependency not found in graph")
+	}
+	if !foundKeycloak {
+		t.Error("keycloak dependency not found in graph")
 	}
 }
 

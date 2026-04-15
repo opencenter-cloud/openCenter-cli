@@ -25,14 +25,15 @@ import (
 // **Validates: Requirements 17.5**
 //
 // For any configuration with service dependencies (weave-gitops requires fluxcd,
-// headlamp requires keycloak when OIDC is configured), the system must detect
-// and report missing dependencies with clear error messages.
+// headlamp requires keycloak when OIDC is configured, keycloak requires olm and
+// postgres-operator), the system must detect and report missing dependencies
+// with clear error messages.
 func TestProperty_ServiceDependencyValidation(t *testing.T) {
 	properties := gopter.NewProperties(nil)
 
 	// Property 1: Enabled services with missing dependencies are detected
 	properties.Property("enabled services with missing dependencies are detected", prop.ForAll(
-		func(enableWeaveGitOps, enableFluxCD, enableHeadlamp, enableKeycloak bool) bool {
+		func(enableWeaveGitOps, enableFluxCD, enableHeadlamp, enableKeycloak, enableOLM, enablePostgres bool) bool {
 			validator := NewDependencyValidator()
 
 			// Build service map
@@ -49,6 +50,12 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 				"keycloak": &KeycloakConfig{
 					BaseConfig: BaseConfig{Enabled: enableKeycloak},
 				},
+				"olm": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: enableOLM},
+				},
+				"postgres-operator": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: enablePostgres},
+				},
 			}
 
 			errors := validator.ValidateDependencies(services)
@@ -61,9 +68,17 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 			if enableHeadlamp && !enableKeycloak {
 				expectedErrors++
 			}
+			if enableKeycloak && !enableOLM {
+				expectedErrors++
+			}
+			if enableKeycloak && !enablePostgres {
+				expectedErrors++
+			}
 
 			return len(errors) == expectedErrors
 		},
+		gen.Bool(),
+		gen.Bool(),
 		gen.Bool(),
 		gen.Bool(),
 		gen.Bool(),
@@ -72,7 +87,7 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 
 	// Property 2: Disabled services never produce dependency errors
 	properties.Property("disabled services never produce dependency errors", prop.ForAll(
-		func(enableFluxCD, enableKeycloak bool) bool {
+		func(enableFluxCD, enableKeycloak, enableOLM, enablePostgres bool) bool {
 			validator := NewDependencyValidator()
 
 			// Build service map with dependent services disabled
@@ -87,7 +102,13 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 					BaseConfig: BaseConfig{Enabled: false},
 				},
 				"keycloak": &KeycloakConfig{
-					BaseConfig: BaseConfig{Enabled: enableKeycloak},
+					BaseConfig: BaseConfig{Enabled: false},
+				},
+				"olm": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: enableOLM},
+				},
+				"postgres-operator": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: enablePostgres},
 				},
 			}
 
@@ -96,6 +117,8 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 			// Should have no errors since dependent services are disabled
 			return len(errors) == 0
 		},
+		gen.Bool(),
+		gen.Bool(),
 		gen.Bool(),
 		gen.Bool(),
 	))
@@ -117,6 +140,12 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 					BaseConfig: BaseConfig{Enabled: enableAll},
 				},
 				"keycloak": &KeycloakConfig{
+					BaseConfig: BaseConfig{Enabled: enableAll},
+				},
+				"olm": &DefaultServiceConfig{
+					BaseConfig: BaseConfig{Enabled: enableAll},
+				},
+				"postgres-operator": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: enableAll},
 				},
 			}
@@ -297,6 +326,7 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 			// Should have at least the known dependencies
 			foundWeaveGitOps := false
 			foundHeadlamp := false
+			foundKeycloak := false
 
 			for _, dep := range graph {
 				if dep.Service == "weave-gitops" {
@@ -327,9 +357,26 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 						return false
 					}
 				}
+				if dep.Service == "keycloak" {
+					foundKeycloak = true
+					// Should have olm and postgres-operator as dependencies
+					hasOLM := false
+					hasPostgres := false
+					for _, d := range dep.Dependencies {
+						if d == "olm" {
+							hasOLM = true
+						}
+						if d == "postgres-operator" {
+							hasPostgres = true
+						}
+					}
+					if !hasOLM || !hasPostgres {
+						return false
+					}
+				}
 			}
 
-			return foundWeaveGitOps && foundHeadlamp
+			return foundWeaveGitOps && foundHeadlamp && foundKeycloak
 		},
 	))
 

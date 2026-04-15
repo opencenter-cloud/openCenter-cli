@@ -516,6 +516,19 @@ func applyProviderBehaviorDefaults(cfg *Config) {
 		cfg.OpenCenter.GitOps.GitOpsBaseRepo = "https://github.com/opencenter-cloud/openCenter-gitops-base.git"
 		cfg.OpenCenter.GitOps.BaseRepoURL = cfg.OpenCenter.GitOps.GitOpsBaseRepo
 		cfg.OpenCenter.GitOps.URI = cfg.OpenCenter.GitOps.GitOpsBaseRepo
+
+		// Kind-specific service defaults: enable OLM and postgres-operator
+		// which are required dependencies for keycloak.
+		if svc, ok := cfg.OpenCenter.Services["olm"]; ok {
+			if defaultSvc, ok := svc.(*services.DefaultServiceConfig); ok {
+				defaultSvc.Enabled = true
+			}
+		}
+		if svc, ok := cfg.OpenCenter.Services["postgres-operator"]; ok {
+			if defaultSvc, ok := svc.(*services.DefaultServiceConfig); ok {
+				defaultSvc.Enabled = true
+			}
+		}
 	case "baremetal":
 		cfg.OpenCenter.Infrastructure.Bastion.Enabled = false
 	case "vmware":
@@ -557,12 +570,13 @@ func defaultServiceMap(clusterFQDN string) ServiceMap {
 		// The sources FluxCD Kustomization deploys GitRepository objects for all services.
 		"sources": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 		// Present (disabled) so template conditionals can safely index the key.
-		"kube-prometheus-stack":    &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
-		"loki":                     &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
-		"harbor":                   &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
-		"velero":                   &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
-		"metallb":                  &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
-		"olm":                      &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
+		"kube-prometheus-stack": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
+		"loki":                  &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
+		"harbor":                &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
+		"velero":                &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
+		"metallb":               &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
+		// Required by keycloak (keycloak-operator is managed by OLM).
+		"olm":                      &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 		"kafka-cluster":            &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 		"openstack-ccm":            &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 		"openstack-csi":            &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},

@@ -120,6 +120,7 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterInstallHooksCmd())
 	cmd.AddCommand(newClusterKeysCmd())
 	cmd.AddCommand(newClusterSetupCmd())
+	cmd.AddCommand(newClusterSyncStatusCmd())
 	return cmd
 }
 

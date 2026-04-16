@@ -174,15 +174,7 @@ opencenter cluster info my-cluster
 opencenter cluster validate my-cluster
 ```
 
-### 4. Generate the GitOps Tree
-
-```bash
-opencenter cluster setup my-cluster --force
-```
-
-Produces the overlay tree under the cluster's `git_dir`: `applications/overlays/my-cluster/`, `infrastructure/clusters/my-cluster/`, and `secrets/`. The `flux-system/` directory does not exist yet; it is created later during bootstrap by `flux bootstrap git`.
-
-### 5. Set the Git Remote and Token Provider
+### 4. Set the Git Remote and Token Provider
 
 ```bash
 GITEA_REPO_URL=$(opencenter local gitea status 2>/dev/null | grep "Bootstrap repo URL:" | awk '{print $NF}')
@@ -200,6 +192,16 @@ Verify:
 ```bash
 opencenter cluster info my-cluster | grep git_url
 ```
+
+### 5. Generate the GitOps Tree
+
+```bash
+opencenter cluster setup my-cluster --force
+```
+
+Produces the overlay tree under the cluster's `git_dir`: `applications/overlays/my-cluster/`, `infrastructure/clusters/my-cluster/`, and `secrets/`. The `flux-system/` directory does not exist yet; it is created later during bootstrap by `flux bootstrap git`.
+
+The templates use the `git_url` from the configuration, so this step must run after setting the Git remote in step 4.
 
 ### 6. Bootstrap the Cluster
 
@@ -317,6 +319,75 @@ If bootstrap was interrupted:
 ```bash
 rm -f ~/.local/state/opencenter/locks/my-cluster.lock
 opencenter cluster bootstrap my-cluster --container-runtime podman --restart
+```
+
+### Re-rendering Configuration After Changes
+
+If you update the cluster configuration after running `cluster setup` (e.g., changing `git_url`, service settings, or other template variables), you need to re-render the templates and push the changes to Git:
+
+```bash
+# Re-render all templates (creates backups of existing files)
+opencenter cluster render my-cluster --all --force
+
+# Commit the changes
+GITOPS_DIR=$(opencenter cluster info my-cluster | grep git_dir | awk '{print $2}')
+cd "$GITOPS_DIR"
+git add -A && git commit -m "chore: re-render templates after config update"
+
+# Push to Gitea
+opencenter local gitops push --cluster my-cluster
+
+# Trigger Flux to pull the changes immediately (optional - Flux polls every 15m by default)
+flux reconcile source git flux-system -n flux-system
+```
+
+To re-render only specific parts:
+
+```bash
+# Re-render only services (no infrastructure)
+opencenter cluster render my-cluster --services --force
+
+# Re-render only infrastructure
+opencenter cluster render my-cluster --infra --force
+
+# Re-render a specific service
+opencenter cluster render my-cluster cert-manager --force
+```
+
+### Services Stuck in "pending" or "unknown" Status
+
+If `opencenter cluster info` shows services with `status: unknown` or `status: pending`, sync the live cluster state:
+
+```bash
+# Preview what would change
+opencenter cluster sync-status my-cluster --dry-run
+
+# Sync and save to config
+opencenter cluster sync-status my-cluster
+```
+
+### GitRepository Resources Failing With Authentication Errors
+
+If Flux GitRepository resources show errors like `failed to configure authentication options` or reference placeholder URLs (`ssh://git@example.com/...`), the templates were rendered before `git_url` was set correctly.
+
+Fix by re-rendering and pushing:
+
+```bash
+# Verify git_url is correct in config
+opencenter cluster info my-cluster | grep git_url
+
+# Re-render templates
+opencenter cluster render my-cluster --all --force
+
+# Commit and push
+GITOPS_DIR=$(opencenter cluster info my-cluster | grep git_dir | awk '{print $2}')
+cd "$GITOPS_DIR"
+git add -A && git commit -m "fix: update git_url in GitRepository manifests"
+opencenter local gitops push --cluster my-cluster
+
+# Reconcile Flux
+flux reconcile source git flux-system -n flux-system
+flux reconcile kustomization sources -n flux-system
 ```
 
 ## Evidence

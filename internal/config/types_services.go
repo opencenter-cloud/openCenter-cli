@@ -1,19 +1,70 @@
 package config
 
+// AdoptionMode defines how Flux interacts with a service that may already exist in the cluster.
+type AdoptionMode string
+
+const (
+	// AdoptionModeManaged means Flux fully manages the service (default behavior).
+	// Flux will create, update, and delete resources as needed.
+	AdoptionModeManaged AdoptionMode = "managed"
+
+	// AdoptionModeExternal means the service exists outside of Flux management.
+	// No manifests are rendered; the service is completely skipped.
+	AdoptionModeExternal AdoptionMode = "external"
+
+	// AdoptionModeSync means Flux renders manifests but won't force changes on existing resources.
+	// Uses Kustomization spec.force=false to avoid overwriting existing fields.
+	AdoptionModeSync AdoptionMode = "sync"
+
+	// AdoptionModeDeferred means Flux renders manifests but suspends the Kustomization.
+	// User must manually unsuspend via: flux resume kustomization <name>
+	AdoptionModeDeferred AdoptionMode = "deferred"
+
+	// AdoptionModeTakeover means Flux will take over management of an existing service.
+	// Same as managed, but includes pre-adoption validation during bootstrap.
+	AdoptionModeTakeover AdoptionMode = "takeover"
+)
+
+// ValidAdoptionModes contains all valid adoption mode values.
+var ValidAdoptionModes = []AdoptionMode{
+	AdoptionModeManaged,
+	AdoptionModeExternal,
+	AdoptionModeSync,
+	AdoptionModeDeferred,
+	AdoptionModeTakeover,
+}
+
+// IsValid returns true if the adoption mode is a recognized value.
+func (m AdoptionMode) IsValid() bool {
+	for _, valid := range ValidAdoptionModes {
+		if m == valid {
+			return true
+		}
+	}
+	return false
+}
+
+// String returns the string representation of the adoption mode.
+func (m AdoptionMode) String() string {
+	return string(m)
+}
+
 // BaseServiceCfg contains common fields for all services
 type BaseServiceCfg struct {
-	Enabled   bool   `yaml:"enabled" json:"enabled"`
-	Status    string `yaml:"status,omitempty" json:"status,omitempty" jsonschema:"description=Service deployment status (pending/running/success/failed)"`
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`
-	Hostname  string `yaml:"hostname,omitempty" json:"hostname,omitempty" jsonschema:"description=Hostname for HTTPRoute configuration"`
+	Enabled      bool         `yaml:"enabled" json:"enabled"`
+	AdoptionMode AdoptionMode `yaml:"adoption_mode,omitempty" json:"adoption_mode,omitempty" jsonschema:"description=How Flux interacts with this service,enum=managed,enum=external,enum=sync,enum=deferred,enum=takeover,default=managed"`
+	Status       string       `yaml:"status,omitempty" json:"status,omitempty" jsonschema:"description=Service deployment status (pending/running/success/failed)"`
+	Namespace    string       `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`
+	Hostname     string       `yaml:"hostname,omitempty" json:"hostname,omitempty" jsonschema:"description=Hostname for HTTPRoute configuration"`
 }
 
 // ServiceCfg captures the on/off toggle plus optional metadata for a service.
 // For backward compatibility, this still contains all fields but they should be
 // migrated to specific service types over time.
 type ServiceCfg struct {
-	Enabled bool   `yaml:"enabled" json:"enabled"`
-	Status  string `yaml:"status,omitempty" json:"status,omitempty" jsonschema:"description=Service deployment status (pending/running/success/failed)"`
+	Enabled      bool         `yaml:"enabled" json:"enabled"`
+	AdoptionMode AdoptionMode `yaml:"adoption_mode,omitempty" json:"adoption_mode,omitempty" jsonschema:"description=How Flux interacts with this service,enum=managed,enum=external,enum=sync,enum=deferred,enum=takeover,default=managed"`
+	Status       string       `yaml:"status,omitempty" json:"status,omitempty" jsonschema:"description=Service deployment status (pending/running/success/failed)"`
 
 	// Common service fields
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`

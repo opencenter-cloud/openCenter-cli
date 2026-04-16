@@ -169,11 +169,25 @@ func evaluateDescriptorCondition(view map[string]any, condition *descriptorcfg.C
 func isDescriptorEnabled(cfg v2.Config, view map[string]any, descriptor descriptorcfg.Descriptor) (bool, error) {
 	if descriptor.Service != "" {
 		service, exists := cfg.OpenCenter.Services[descriptor.Service]
-		return exists && !IsServiceDisabled(service), nil
+		if !exists || IsServiceDisabled(service) {
+			return false, nil
+		}
+		// Check if service is externally managed (skip rendering)
+		if IsServiceExternal(service) {
+			return false, nil
+		}
+		return true, nil
 	}
 	if descriptor.ManagedService != "" {
 		service, exists := managedServices(cfg)[descriptor.ManagedService]
-		return exists && !IsServiceDisabled(service), nil
+		if !exists || IsServiceDisabled(service) {
+			return false, nil
+		}
+		// Check if managed service is externally managed (skip rendering)
+		if IsServiceExternal(service) {
+			return false, nil
+		}
+		return true, nil
 	}
 	return evaluateDescriptorCondition(view, descriptor.EnabledWhen)
 }
@@ -403,13 +417,13 @@ func descriptorEnableReason(d descriptorcfg.Descriptor, enabled bool) string {
 		if enabled {
 			return fmt.Sprintf("service %q is enabled in config", d.Service)
 		}
-		return fmt.Sprintf("service %q is disabled or absent in config", d.Service)
+		return fmt.Sprintf("service %q is disabled, absent, or externally managed in config", d.Service)
 	}
 	if d.ManagedService != "" {
 		if enabled {
 			return fmt.Sprintf("managed service %q is enabled in config", d.ManagedService)
 		}
-		return fmt.Sprintf("managed service %q is disabled or absent in config", d.ManagedService)
+		return fmt.Sprintf("managed service %q is disabled, absent, or externally managed in config", d.ManagedService)
 	}
 	if d.EnabledWhen != nil {
 		if enabled {

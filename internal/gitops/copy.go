@@ -179,7 +179,53 @@ func renderTemplateAtomic(path, dst string, cfg v2.Config, workspace *GitOpsWork
 		content = strings.ReplaceAll(content, `--template="{{.Version}}"`, `--template="{{"{{"}}.Version{{"}}"}}"`)
 	}
 
-	t, err := template.New(filename).Funcs(sprig.TxtFuncMap()).Parse(content)
+	// Build function map with sprig functions and adoption helpers
+	funcMap := sprig.TxtFuncMap()
+
+	// Add adoption mode helper functions
+	funcMap["adoptionMode"] = func(serviceName string) string {
+		if service, exists := cfg.OpenCenter.Services[serviceName]; exists {
+			return string(GetAdoptionMode(service))
+		}
+		return string(AdoptionModeManaged)
+	}
+
+	funcMap["adoptionForce"] = func(serviceName string) bool {
+		if service, exists := cfg.OpenCenter.Services[serviceName]; exists {
+			return GetServiceAdoptionSettings(service).Force
+		}
+		return true // Default to force=true (managed behavior)
+	}
+
+	funcMap["adoptionSuspend"] = func(serviceName string) bool {
+		if service, exists := cfg.OpenCenter.Services[serviceName]; exists {
+			return GetServiceAdoptionSettings(service).Suspend
+		}
+		return false // Default to suspend=false (managed behavior)
+	}
+
+	funcMap["managedAdoptionMode"] = func(serviceName string) string {
+		if service, exists := managedServices(cfg)[serviceName]; exists {
+			return string(GetAdoptionMode(service))
+		}
+		return string(AdoptionModeManaged)
+	}
+
+	funcMap["managedAdoptionForce"] = func(serviceName string) bool {
+		if service, exists := managedServices(cfg)[serviceName]; exists {
+			return GetServiceAdoptionSettings(service).Force
+		}
+		return true
+	}
+
+	funcMap["managedAdoptionSuspend"] = func(serviceName string) bool {
+		if service, exists := managedServices(cfg)[serviceName]; exists {
+			return GetServiceAdoptionSettings(service).Suspend
+		}
+		return false
+	}
+
+	t, err := template.New(filename).Funcs(funcMap).Parse(content)
 	if err != nil {
 		return fmt.Errorf("failed to parse template %s: %w", path, err)
 	}

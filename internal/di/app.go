@@ -35,6 +35,7 @@ type App struct {
 	CommandRunner    security.CommandRunner
 
 	InitService      *cluster.InitService
+	ConfigureService *cluster.ConfigureService
 	ValidateService  *cluster.ValidateService
 	SetupService     *cluster.SetupService
 	BootstrapService *cluster.BootstrapService
@@ -105,6 +106,11 @@ func NewApp(baseDir string) (*App, error) {
 		return nil, fmt.Errorf("provide ValidateService: %w", err)
 	}
 
+	configureService, err := ProvideConfigureService(pathResolver, validationEngine, configManager)
+	if err != nil {
+		return nil, fmt.Errorf("provide ConfigureService: %w", err)
+	}
+
 	setupService, err := ProvideSetupService(pathResolver, validationEngine)
 	if err != nil {
 		return nil, fmt.Errorf("provide SetupService: %w", err)
@@ -130,6 +136,7 @@ func NewApp(baseDir string) (*App, error) {
 		CommandSanitizer: commandSanitizer,
 		CommandRunner:    commandRunner,
 		InitService:      initService,
+		ConfigureService: configureService,
 		ValidateService:  validateService,
 		SetupService:     setupService,
 		BootstrapService: bootstrapService,

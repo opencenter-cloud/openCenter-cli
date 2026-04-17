@@ -193,6 +193,23 @@ func TestRetryHandler_WithBackoff(t *testing.T) {
 	}
 }
 
+func TestRetryHandler_ExplicitZeroJitterDisablesJitter(t *testing.T) {
+	handler := NewRetryHandler(RetryConfig{
+		MaxAttempts: 3,
+		BaseDelay:   50 * time.Millisecond,
+		MaxDelay:    200 * time.Millisecond,
+		Multiplier:  2.0,
+		Jitter:      0.0,
+	}).(*retryHandler)
+
+	for range 5 {
+		delay := handler.calculateDelay(1)
+		if delay != 100*time.Millisecond {
+			t.Fatalf("expected deterministic 100ms delay with jitter disabled, got %v", delay)
+		}
+	}
+}
+
 func TestRetryHandler_ExponentialBackoff(t *testing.T) {
 	handler := NewRetryHandler(RetryConfig{
 		MaxAttempts: 4,

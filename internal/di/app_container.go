@@ -60,6 +60,8 @@ func (c *appContainer) Resolve(name string) (interface{}, error) {
 		return c.app.CommandRunner, nil
 	case "initservice":
 		return c.app.InitService, nil
+	case "configureservice":
+		return c.app.ConfigureService, nil
 	case "validateservice":
 		return c.app.ValidateService, nil
 	case "setupservice":
@@ -103,6 +105,8 @@ func (c *appContainer) ResolveAs(name string, target interface{}) error {
 		*t = c.app.CommandRunner
 	case **cluster.InitService:
 		*t = c.app.InitService
+	case **cluster.ConfigureService:
+		*t = c.app.ConfigureService
 	case **cluster.ValidateService:
 		*t = c.app.ValidateService
 	case **cluster.SetupService:

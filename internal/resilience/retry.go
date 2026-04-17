@@ -22,7 +22,7 @@ type RetryConfig struct {
 	BaseDelay     time.Duration // Base delay for exponential backoff
 	MaxDelay      time.Duration // Maximum delay between retries
 	Multiplier    float64       // Backoff multiplier (default: 2.0)
-	Jitter        float64       // Jitter factor (default: 0.1 = 10%)
+	Jitter        float64       // Jitter factor; use DefaultConfig/FileOperationConfig for 10% default, or set 0 to disable
 	RetryableErrs []error       // Specific errors that trigger retry
 }
 
@@ -63,9 +63,6 @@ func NewRetryHandler(config RetryConfig) RetryHandler {
 	// Set defaults if not provided
 	if config.Multiplier == 0 {
 		config.Multiplier = 2.0
-	}
-	if config.Jitter == 0 {
-		config.Jitter = 0.1
 	}
 	if config.MaxAttempts == 0 {
 		config.MaxAttempts = 3

@@ -17,7 +17,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestFeatures(t *testing.T) {
 	opts := godog.Options{
 		Output: colors.Colored(os.Stdout),
 		Format: "pretty",
-		Paths:  []string{".."},
+		Paths:  []string{filepath.Join(repoRoot(), "tests", "features")},
 		Tags:   "~@wip",
 	}
 	// Allow overriding via CLI flags passed after 'args' in go test invocation,
@@ -41,8 +40,7 @@ func TestFeatures(t *testing.T) {
 		a := os.Args[i]
 		if a == "--godog.paths" && i+1 < len(os.Args) {
 			p := os.Args[i+1]
-			_, thisFile, _, _ := runtime.Caller(0)
-			repo := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
+			repo := repoRoot()
 			if strings.HasPrefix(p, "tests/") {
 				p = filepath.Join(repo, p)
 			}
@@ -50,8 +48,7 @@ func TestFeatures(t *testing.T) {
 		}
 		if strings.HasPrefix(a, "--godog.paths=") {
 			p := strings.TrimPrefix(a, "--godog.paths=")
-			_, thisFile, _, _ := runtime.Caller(0)
-			repo := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
+			repo := repoRoot()
 			if strings.HasPrefix(p, "tests/") {
 				p = filepath.Join(repo, p)
 			}
@@ -80,11 +77,7 @@ func TestFeatures(t *testing.T) {
 		Name: "opencenter",
 		ScenarioInitializer: func(s *godog.ScenarioContext) {
 			s.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
-				// Create a per-scenario workspace under repo-level testdata
-				// Resolve repo-root testdata directory based on this file's path
-				_, thisFile, _, _ := runtime.Caller(0)
-				base := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "testdata")
-				tmp, err := os.MkdirTemp(base, "opencenter-test-")
+				tmp, err := newScratchDir("opencenter-test-")
 				if err != nil {
 					t.Fatalf("failed to create temp dir: %v", err)
 				}

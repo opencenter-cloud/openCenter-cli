@@ -73,6 +73,42 @@ func (c Config) GetTempoS3Credentials() (accessKey, secretKey string) {
 	return c.GetAWSApplicationCredentials()
 }
 
+// GetLokiSwiftApplicationCredentialSecret returns the Loki Swift application credential secret.
+func (c Config) GetLokiSwiftApplicationCredentialSecret() string {
+	if value := strings.TrimSpace(c.Secrets.Loki.SwiftApplicationCredentialSecret); value != "" {
+		return value
+	}
+	if raw, ok := c.Secrets.ServiceSecrets["loki"]; ok {
+		if mapped, ok := raw.(map[string]any); ok {
+			if value, ok := mapped["swift_application_credential_secret"].(string); ok && strings.TrimSpace(value) != "" {
+				return strings.TrimSpace(value)
+			}
+			if value, ok := mapped["swift_password"].(string); ok && strings.TrimSpace(value) != "" {
+				return strings.TrimSpace(value)
+			}
+		}
+	}
+	return ""
+}
+
+// GetTempoSwiftApplicationCredentialSecret returns the Tempo Swift application credential secret.
+func (c Config) GetTempoSwiftApplicationCredentialSecret() string {
+	if value := strings.TrimSpace(c.Secrets.Tempo.SwiftApplicationCredentialSecret); value != "" {
+		return value
+	}
+	if raw, ok := c.Secrets.ServiceSecrets["tempo"]; ok {
+		if mapped, ok := raw.(map[string]any); ok {
+			if value, ok := mapped["swift_application_credential_secret"].(string); ok && strings.TrimSpace(value) != "" {
+				return strings.TrimSpace(value)
+			}
+			if value, ok := mapped["swift_password"].(string); ok && strings.TrimSpace(value) != "" {
+				return strings.TrimSpace(value)
+			}
+		}
+	}
+	return ""
+}
+
 // GetS3BackendCredentials resolves backend S3 credentials using infrastructure credentials.
 func (c Config) GetS3BackendCredentials() (accessKey, secretKey string) {
 	return c.GetAWSCredentials("", "")
@@ -88,6 +124,21 @@ func (c Config) GetCertManagerAWSAccessKey() string {
 func (c Config) GetCertManagerAWSSecretKey() string {
 	_, secretKey := c.GetCertManagerAWSCredentials()
 	return secretKey
+}
+
+// GetCertManagerCloudflareAPIToken returns the Cloudflare API token for cert-manager.
+func (c Config) GetCertManagerCloudflareAPIToken() string {
+	if strings.TrimSpace(c.Secrets.CertManager.CloudflareAPIToken) != "" {
+		return strings.TrimSpace(c.Secrets.CertManager.CloudflareAPIToken)
+	}
+	if raw, ok := c.Secrets.ServiceSecrets["cert_manager"]; ok {
+		if mapped, ok := raw.(map[string]any); ok {
+			if token, ok := mapped["cloudflare_api_token"].(string); ok {
+				return strings.TrimSpace(token)
+			}
+		}
+	}
+	return ""
 }
 
 // GetLokiS3AccessKey returns the Loki S3 access key for templates.

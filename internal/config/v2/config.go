@@ -145,6 +145,7 @@ type SSHKeyConfig struct {
 type CertManagerSecrets struct {
 	AWSAccessKey       string `yaml:"aws_access_key,omitempty" json:"aws_access_key,omitempty"`
 	AWSSecretAccessKey string `yaml:"aws_secret_access_key,omitempty" json:"aws_secret_access_key,omitempty"`
+	CloudflareAPIToken string `yaml:"cloudflare_api_token,omitempty" json:"cloudflare_api_token,omitempty"`
 }
 
 type LokiSecrets struct {
@@ -173,8 +174,9 @@ type GrafanaSecrets struct {
 }
 
 type TempoSecrets struct {
-	AccessKey string `yaml:"access_key,omitempty" json:"access_key,omitempty"`
-	SecretKey string `yaml:"secret_key,omitempty" json:"secret_key,omitempty"`
+	AccessKey                        string `yaml:"access_key,omitempty" json:"access_key,omitempty"`
+	SecretKey                        string `yaml:"secret_key,omitempty" json:"secret_key,omitempty"`
+	SwiftApplicationCredentialSecret string `yaml:"swift_application_credential_secret,omitempty" json:"swift_application_credential_secret,omitempty"`
 }
 
 type AlertProxySecrets struct {

@@ -121,6 +121,15 @@ func ProvideValidateService(
 	return cluster.NewValidateService(pathResolver, validator, configManager), nil
 }
 
+// ProvideConfigureService creates a new ConfigureService with dependencies.
+func ProvideConfigureService(
+	pathResolver *paths.PathResolver,
+	validator *validation.ValidationEngine,
+	configManager *config.ConfigManager,
+) (*cluster.ConfigureService, error) {
+	return cluster.NewConfigureService(pathResolver, validator, configManager), nil
+}
+
 // ProvideSetupService creates a new SetupService with dependencies.
 // Requirements: 19.2, 2.1.4
 func ProvideSetupService(

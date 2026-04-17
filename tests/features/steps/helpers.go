@@ -80,6 +80,15 @@ func getActiveClusterForTest() (string, error) {
 
 var compiledBinary string
 
+func repoRoot() string {
+	_, thisFile, _, _ := runtime.Caller(0)
+	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", "..", ".."))
+}
+
+func newScratchDir(prefix string) (string, error) {
+	return os.MkdirTemp("", prefix)
+}
+
 // buildBinary builds the opencenter binary once per test suite. The
 // resulting executable is placed in a temporary directory and its
 // path is cached in compiledBinary.
@@ -87,17 +96,14 @@ func buildBinary() (string, error) {
 	if compiledBinary != "" {
 		return compiledBinary, nil
 	}
-	// Place compiled binary under repo testdata for tests
-	_, thisFile, _, _ := runtime.Caller(0)
-	base := filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "testdata")
-	tmp, err := os.MkdirTemp(base, "opencenter-bin-")
+	tmp, err := newScratchDir("opencenter-bin-")
 	if err != nil {
 		return "", err
 	}
 	bin := filepath.Join(tmp, "opencenter")
 	// Build the binary
 	cmd := exec.Command("go", "build", "-o", bin, ".")
-	cmd.Dir = "../../.." // parent of features/steps is project root
+	cmd.Dir = repoRoot()
 	cmd.Env = os.Environ()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -501,14 +507,13 @@ func setNested(m map[string]any, parts []string, value string) {
 // createBareGitRemote initialises a bare Git repository and returns
 // its file:// URL. This is used to satisfy bootstrap tests.
 func (w *world) createBareGitRemote() (string, error) {
-	// Create remote under repo testdata to avoid /tmp usage
-	tmp, err := os.MkdirTemp("testdata", "opencenter-remote-")
+	tmp, err := newScratchDir("opencenter-remote-")
 	if err != nil {
 		return "", err
 	}
 	w.remoteGitDir = tmp
 	// Create a non-bare repo first, add a commit, then convert to bare
-	nonBare, err := os.MkdirTemp("testdata", "opencenter-remote-non-bare-")
+	nonBare, err := newScratchDir("opencenter-remote-non-bare-")
 	if err != nil {
 		return "", err
 	}

@@ -55,7 +55,7 @@ func saveKindConfigForCommandTest(t *testing.T, dir, clusterName, organization s
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Name = clusterName
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.GitDir = clusterPaths.GitOpsDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
 
 	testhelpers.SaveConfigWithPathResolver(t, cfg, resolver)
 	return cfg, clusterPaths

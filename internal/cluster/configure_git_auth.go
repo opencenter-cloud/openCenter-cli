@@ -36,21 +36,27 @@ func (h *gitAuthCapabilityHandler) Prompts(cfg *v2.Config, providerCtx orchestra
 				Group:    configureGroupGit,
 				Kind:     orchestration.PromptKindInput,
 				Label:    "GitOps repository URL",
-				Default:  strings.TrimSpace(cfg.OpenCenter.GitOps.GitURL),
+				Default:  strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.URL),
 				Required: true,
 			},
 		}
 	}
 
 	if isHTTPSGitURL(gitURL) {
-		if strings.TrimSpace(cfg.OpenCenter.GitOps.GitTokenProvider) == "" || strings.TrimSpace(cfg.OpenCenter.GitOps.GitToken) == "" {
+		tokenProvider := ""
+		tokenFile := ""
+		if cfg.OpenCenter.GitOps.Auth.Token != nil {
+			tokenProvider = strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.Provider)
+			tokenFile = strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.TokenFile)
+		}
+		if tokenProvider == "" || tokenFile == "" {
 			return []orchestration.PromptSpec{
 				{
 					ID:       "git.token_provider",
 					Group:    configureGroupGit,
 					Kind:     orchestration.PromptKindSelect,
 					Label:    "HTTPS token provider",
-					Default:  firstNonEmptyString(strings.TrimSpace(cfg.OpenCenter.GitOps.GitTokenProvider), "github"),
+					Default:  firstNonEmptyString(tokenProvider, "github"),
 					Required: true,
 					Options: []orchestration.PromptOption{
 						{Value: "github", Label: "GitHub"},
@@ -73,10 +79,16 @@ func (h *gitAuthCapabilityHandler) Prompts(cfg *v2.Config, providerCtx orchestra
 
 	if isSSHGitURL(gitURL) {
 		defaultMode := "cluster"
-		if strings.TrimSpace(cfg.OpenCenter.GitOps.GitSSHKey) != "" && strings.TrimSpace(cfg.OpenCenter.GitOps.GitSSHKey) != providerCtx.ClusterPaths.SSHKeyPath {
+		sshPrivateKey := ""
+		sshPublicKey := ""
+		if cfg.OpenCenter.GitOps.Auth.SSH != nil {
+			sshPrivateKey = strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.SSH.PrivateKey)
+			sshPublicKey = strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.SSH.PublicKey)
+		}
+		if sshPrivateKey != "" && sshPrivateKey != providerCtx.ClusterPaths.SSHKeyPath {
 			defaultMode = "custom"
 		}
-		if strings.TrimSpace(cfg.OpenCenter.GitOps.GitSSHKey) == "" || strings.TrimSpace(cfg.OpenCenter.GitOps.GitSSHPub) == "" {
+		if sshPrivateKey == "" || sshPublicKey == "" {
 			return []orchestration.PromptSpec{
 				{
 					ID:       "git.ssh_mode",
@@ -103,7 +115,7 @@ func (h *gitAuthCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers orchestr
 	changes := orchestration.ChangeSet{}
 
 	if value := strings.TrimSpace(answers["git.url"]); value != "" {
-		changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.git_url", Label: "Git URL", Value: value})
+		changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.repository.url", Label: "Git URL", Value: value})
 	}
 
 	gitURL := strings.TrimSpace(answers["git.url"])
@@ -111,13 +123,17 @@ func (h *gitAuthCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers orchestr
 		gitURL = strings.TrimSpace(cfg.ConfiguredGitURL())
 	}
 	if gitURL == "" {
-		gitURL = strings.TrimSpace(cfg.OpenCenter.GitOps.GitURL)
+		gitURL = strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.URL)
 	}
 
 	if isHTTPSGitURL(gitURL) {
 		tokenProvider := strings.TrimSpace(answers["git.token_provider"])
 		if tokenProvider == "" {
-			tokenProvider = firstNonEmptyString(strings.TrimSpace(cfg.OpenCenter.GitOps.GitTokenProvider), "github")
+			existingProvider := ""
+			if cfg.OpenCenter.GitOps.Auth.Token != nil {
+				existingProvider = strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.Provider)
+			}
+			tokenProvider = firstNonEmptyString(existingProvider, "github")
 		}
 		tokenValue := strings.TrimSpace(answers["git.token"])
 		if tokenValue != "" {
@@ -131,10 +147,8 @@ func (h *gitAuthCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers orchestr
 				Masked:   true,
 			})
 			changes.Patches = append(changes.Patches,
-				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.git_token_provider", Label: "Git token provider", Value: tokenProvider},
-				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.git_token", Label: "Git token path", Value: tokenPath},
-				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.git_ssh_key", Label: "Git SSH private key", Value: ""},
-				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.git_ssh_pub", Label: "Git SSH public key", Value: ""},
+				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.auth.token.provider", Label: "Git token provider", Value: tokenProvider},
+				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.auth.token.token_file", Label: "Git token path", Value: tokenPath},
 			)
 		}
 		return changes, nil
@@ -153,9 +167,8 @@ func (h *gitAuthCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers orchestr
 		}
 		if privateKey != "" && publicKey != "" {
 			changes.Patches = append(changes.Patches,
-				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.git_ssh_key", Label: "Git SSH private key", Value: privateKey},
-				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.git_ssh_pub", Label: "Git SSH public key", Value: publicKey},
-				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.git_token", Label: "Git token path", Value: ""},
+				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.auth.ssh.private_key", Label: "Git SSH private key", Value: privateKey},
+				orchestration.ConfigPatch{Group: configureGroupGit, Path: "opencenter.gitops.auth.ssh.public_key", Label: "Git SSH public key", Value: publicKey},
 			)
 		}
 	}

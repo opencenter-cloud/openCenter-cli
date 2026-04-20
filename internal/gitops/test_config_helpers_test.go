@@ -21,11 +21,11 @@ func applyProviderDefaults(cfg *v2.Config, provider string) error {
 		return err
 	}
 
-	gitDir := cfg.OpenCenter.GitOps.GitDir
+	gitDir := cfg.OpenCenter.GitOps.Repository.LocalDir
 	organization := cfg.OpenCenter.Meta.Organization
 	*cfg = *next
 	if gitDir != "" {
-		cfg.OpenCenter.GitOps.GitDir = gitDir
+		cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 	}
 	if organization != "" {
 		cfg.OpenCenter.Meta.Organization = organization

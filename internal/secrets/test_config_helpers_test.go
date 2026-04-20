@@ -65,8 +65,8 @@ func normalizeSecretsConfigYAML(t *testing.T, clusterName, raw string) []byte {
 	if partial.OpenCenter.Meta.Organization != "" {
 		cfg.OpenCenter.Meta.Organization = partial.OpenCenter.Meta.Organization
 	}
-	if partial.OpenCenter.GitOps.GitDir != "" {
-		cfg.OpenCenter.GitOps.GitDir = partial.OpenCenter.GitOps.GitDir
+	if partial.OpenCenter.GitOps.Repository.LocalDir != "" {
+		cfg.OpenCenter.GitOps.Repository.LocalDir = partial.OpenCenter.GitOps.Repository.LocalDir
 	}
 	if partial.Secrets.SopsAgeKeyFile != "" {
 		cfg.Secrets.SopsAgeKeyFile = partial.Secrets.SopsAgeKeyFile
@@ -122,8 +122,8 @@ func normalizeSecretsConfigYAMLBytes(clusterName, raw string) ([]byte, error) {
 	if partial.OpenCenter.Meta.Organization != "" {
 		cfg.OpenCenter.Meta.Organization = partial.OpenCenter.Meta.Organization
 	}
-	if partial.OpenCenter.GitOps.GitDir != "" {
-		cfg.OpenCenter.GitOps.GitDir = partial.OpenCenter.GitOps.GitDir
+	if partial.OpenCenter.GitOps.Repository.LocalDir != "" {
+		cfg.OpenCenter.GitOps.Repository.LocalDir = partial.OpenCenter.GitOps.Repository.LocalDir
 	}
 	if partial.Secrets.SopsAgeKeyFile != "" {
 		cfg.Secrets.SopsAgeKeyFile = partial.Secrets.SopsAgeKeyFile

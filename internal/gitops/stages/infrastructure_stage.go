@@ -234,13 +234,14 @@ func (is *InfrastructureStage) DryRun(ctx context.Context, cfg v2.Config) (*gito
 func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, cfg v2.Config) string {
 	// Default path structure: infrastructure/clusters/<cluster-name>/<template-name>
 	clusterName := cfg.ClusterName()
+	gitDir := cfg.GitDir()
 
 	// If template has a custom output path in metadata tags, use the first tag
 	if len(tmpl.Metadata.Tags) > 0 && tmpl.Metadata.Tags[0] != "" {
 		outputPath := tmpl.Metadata.Tags[0]
 
 		// Use PathResolver to get the cluster directory
-		resolver := paths.NewPathResolver(cfg.GitOps().GitDir)
+		resolver := paths.NewPathResolver(gitDir)
 		clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
 		if err != nil {
 			// Fallback to old path construction if resolver fails
@@ -248,7 +249,7 @@ func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, c
 		}
 
 		// Get relative path from git dir
-		relPath, err := filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ClusterDir, outputPath))
+		relPath, err := filepath.Rel(gitDir, filepath.Join(clusterPaths.ClusterDir, outputPath))
 		if err != nil {
 			// Fallback to old path construction if relative path fails
 			return filepath.Join("infrastructure", "clusters", clusterName, outputPath)
@@ -263,7 +264,7 @@ func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, c
 	}
 
 	// Use PathResolver to get the cluster directory
-	resolver := paths.NewPathResolver(cfg.GitOps().GitDir)
+	resolver := paths.NewPathResolver(gitDir)
 	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
 	if err != nil {
 		// Fallback to old path construction if resolver fails
@@ -271,7 +272,7 @@ func (is *InfrastructureStage) getOutputPath(tmpl template.TemplateDefinition, c
 	}
 
 	// Get relative path from git dir
-	relPath, err := filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ClusterDir, filename))
+	relPath, err := filepath.Rel(gitDir, filepath.Join(clusterPaths.ClusterDir, filename))
 	if err != nil {
 		// Fallback to old path construction if relative path fails
 		return filepath.Join("infrastructure", "clusters", clusterName, filename)

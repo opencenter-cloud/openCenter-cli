@@ -55,7 +55,7 @@ func TestSetupService_generateGitOpsManifests_DryRun(t *testing.T) {
 	gitDir := filepath.Join(tmpDir, "gitops")
 
 	cfg := mustNewClusterTestConfig("test-cluster", "openstack")
-	cfg.OpenCenter.GitOps.GitDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 
 	pathResolver := paths.NewPathResolver(tmpDir)
 
@@ -270,7 +270,7 @@ func TestSetupService_OpenStackSetupDoesNotUseLegacyConfigValidator(t *testing.T
 
 	cfg := mustNewClusterTestConfig(clusterName, "openstack")
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.GitDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 
 	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 
@@ -313,7 +313,7 @@ func TestSetupService_Setup(t *testing.T) {
 
 	// Create a minimal config
 	cfg := mustNewClusterTestConfig("test-cluster", "kind")
-	cfg.OpenCenter.GitOps.GitDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 
 	// Save config
 	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
@@ -386,7 +386,7 @@ exit 0
 
 	cfg := mustNewClusterTestConfig("kind-cluster", "openstack")
 	cfg.OpenCenter.Meta.Organization = "opencenter"
-	cfg.OpenCenter.GitOps.GitDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 	if err := applyClusterProviderDefaults(&cfg, "kind"); err != nil {
 		t.Fatalf("apply provider defaults: %v", err)
 	}
@@ -436,7 +436,7 @@ func TestSetupService_Setup_MissingGitDir(t *testing.T) {
 
 	// Create a config without git_dir
 	cfg := mustNewClusterTestConfig("test-cluster", "kind")
-	cfg.OpenCenter.GitOps.GitDir = "" // Empty git_dir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = "" // Empty git_dir
 
 	// Save config
 	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
@@ -471,7 +471,7 @@ func TestSetupService_Setup_ValidationFailure(t *testing.T) {
 
 	// Create an invalid config
 	cfg := mustNewClusterTestConfig("test-cluster", "kind")
-	cfg.OpenCenter.GitOps.GitDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 	cfg.OpenCenter.Infrastructure.Provider = "invalid-provider"
 
 	// Save config
@@ -513,7 +513,7 @@ func TestSetupService_Setup_WithForce(t *testing.T) {
 	}
 
 	cfg := mustNewClusterTestConfig("test-cluster", "kind")
-	cfg.OpenCenter.GitOps.GitDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 
 	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 

@@ -265,7 +265,7 @@ func initTestClusterForProperty3(t *testing.T, dir, clusterName, organization st
 	// In production, git_dir points to the org root which contains
 	// infrastructure/, applications/, and secrets/ as siblings.
 	cfg := initResult.Config
-	cfg.OpenCenter.GitOps.GitDir = initResult.ClusterPaths.OrganizationDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = initResult.ClusterPaths.OrganizationDir
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {

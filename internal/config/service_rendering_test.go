@@ -37,7 +37,7 @@ func TestServiceRendering(t *testing.T) {
 
 	// Create a config with all services enabled
 	cfg := NewDefault("test-render")
-	cfg.OpenCenter.GitOps.GitDir = filepath.Join(dir, "gitops")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(dir, "gitops")
 
 	// Populate required infrastructure fields
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://auth.example.com"
@@ -264,7 +264,7 @@ func TestSpecificServiceRendering(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := NewDefault("test-" + tt.serviceName)
-			cfg.OpenCenter.GitOps.GitDir = "/tmp/test"
+			cfg.OpenCenter.GitOps.Repository.LocalDir = "/tmp/test"
 
 			// Enable the specific service
 			if service, exists := cfg.OpenCenter.Services[tt.serviceName]; exists {
@@ -400,7 +400,7 @@ func TestYAMLLintCompliance(t *testing.T) {
 			name: "minimal config",
 			setupFunc: func() Config {
 				cfg := NewDefault("minimal")
-				cfg.OpenCenter.GitOps.GitDir = "/tmp/gitops"
+				cfg.OpenCenter.GitOps.Repository.LocalDir = "/tmp/gitops"
 				return cfg
 			},
 		},
@@ -408,7 +408,7 @@ func TestYAMLLintCompliance(t *testing.T) {
 			name: "all services enabled",
 			setupFunc: func() Config {
 				cfg := NewDefault("full")
-				cfg.OpenCenter.GitOps.GitDir = "/tmp/gitops"
+				cfg.OpenCenter.GitOps.Repository.LocalDir = "/tmp/gitops"
 				enableAllServices(&cfg)
 				return cfg
 			},
@@ -417,7 +417,7 @@ func TestYAMLLintCompliance(t *testing.T) {
 			name: "openstack provider",
 			setupFunc: func() Config {
 				cfg := NewDefault("openstack")
-				cfg.OpenCenter.GitOps.GitDir = "/tmp/gitops"
+				cfg.OpenCenter.GitOps.Repository.LocalDir = "/tmp/gitops"
 				cfg.OpenCenter.Infrastructure.Provider = "openstack"
 				cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://auth.example.com"
 				cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "test-region"

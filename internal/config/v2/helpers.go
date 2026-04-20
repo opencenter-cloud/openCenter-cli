@@ -179,13 +179,13 @@ func (c Config) GetS3BackendSecretKey() string {
 
 // GitDir returns the configured GitOps working directory.
 func (c Config) GitDir() string {
-	return strings.TrimSpace(c.OpenCenter.GitOps.GitDir)
+	return strings.TrimSpace(c.OpenCenter.GitOps.Repository.LocalDir)
 }
 
 // ConfiguredGitURL returns the Git URL only when it has been explicitly set
 // to something other than the schema default placeholder.
 func (c Config) ConfiguredGitURL() string {
-	value := strings.TrimSpace(c.OpenCenter.GitOps.GitURL)
+	value := strings.TrimSpace(c.OpenCenter.GitOps.Repository.URL)
 	if value == "" || value == defaultGitURLPlaceholder {
 		return ""
 	}
@@ -194,7 +194,7 @@ func (c Config) ConfiguredGitURL() string {
 
 // GitBranchOrDefault returns the configured Git branch, defaulting to main.
 func (c Config) GitBranchOrDefault() string {
-	if branch := strings.TrimSpace(c.OpenCenter.GitOps.GitBranch); branch != "" {
+	if branch := strings.TrimSpace(c.OpenCenter.GitOps.Repository.Branch); branch != "" {
 		return branch
 	}
 	return "main"

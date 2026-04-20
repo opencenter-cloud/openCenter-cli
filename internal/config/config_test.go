@@ -123,14 +123,14 @@ func TestConfigHelperMethods(t *testing.T) {
 
 	// Test GitOps method
 	gitops := cfg.GitOps()
-	if gitops.GitBranch != "main" {
-		t.Errorf("expected git branch 'main', got %s", gitops.GitBranch)
+	if gitops.Repository.Branch != "main" {
+		t.Errorf("expected git branch 'main', got %s", gitops.Repository.Branch)
 	}
 }
 
 func TestConfigToJSON(t *testing.T) {
 	cfg := NewDefault("test-cluster")
-	cfg.OpenCenter.GitOps.GitDir = "test-dir"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = "test-dir"
 
 	jsonData, err := cfg.ToJSON()
 	if err != nil {
@@ -279,16 +279,16 @@ func TestDefaultConfigNewFields(t *testing.T) {
 
 	// Test GitOpsConfig new fields
 	t.Run("GitOpsConfig fields", func(t *testing.T) {
-		if cfg.OpenCenter.GitOps.GitOpsBaseRepo != "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git" {
-			t.Errorf("expected GitOpsBaseRepo 'ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git', got %s", cfg.OpenCenter.GitOps.GitOpsBaseRepo)
+		if cfg.OpenCenter.GitOps.BaseRepo.URL != "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git" {
+			t.Errorf("expected BaseRepo.URL 'ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git', got %s", cfg.OpenCenter.GitOps.BaseRepo.URL)
 		}
 
-		if cfg.OpenCenter.GitOps.GitOpsBaseRelease != "v0.1.0" {
-			t.Errorf("expected GitOpsBaseRelease 'v0.1.0', got %s", cfg.OpenCenter.GitOps.GitOpsBaseRelease)
+		if cfg.OpenCenter.GitOps.BaseRepo.Release != "v0.1.0" {
+			t.Errorf("expected BaseRepo.Release 'v0.1.0', got %s", cfg.OpenCenter.GitOps.BaseRepo.Release)
 		}
 
-		if cfg.OpenCenter.GitOps.GitOpsBranch != "main" {
-			t.Errorf("expected GitOpsBranch 'main', got %s", cfg.OpenCenter.GitOps.GitOpsBranch)
+		if cfg.OpenCenter.GitOps.Repository.Branch != "main" {
+			t.Errorf("expected Repository.Branch 'main', got %s", cfg.OpenCenter.GitOps.Repository.Branch)
 		}
 	})
 
@@ -423,17 +423,17 @@ func TestDefaultConfigMatchesSpecifications(t *testing.T) {
 		},
 		{
 			name:     "GitOpsBaseRepo default",
-			getValue: func(c Config) any { return c.OpenCenter.GitOps.GitOpsBaseRepo },
+			getValue: func(c Config) any { return c.OpenCenter.GitOps.BaseRepo.URL },
 			expected: "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git",
 		},
 		{
 			name:     "GitOpsBaseRelease default",
-			getValue: func(c Config) any { return c.OpenCenter.GitOps.GitOpsBaseRelease },
+			getValue: func(c Config) any { return c.OpenCenter.GitOps.BaseRepo.Release },
 			expected: "v0.1.0",
 		},
 		{
 			name:     "GitOpsBranch default",
-			getValue: func(c Config) any { return c.OpenCenter.GitOps.GitOpsBranch },
+			getValue: func(c Config) any { return c.OpenCenter.GitOps.Repository.Branch },
 			expected: "main",
 		},
 		{
@@ -539,10 +539,10 @@ func TestTemplateRenderingWithNewFields(t *testing.T) {
 		},
 		{
 			name:         "GitOpsBaseRepo rendering",
-			templateText: "repo: {{ .OpenCenter.GitOps.GitOpsBaseRepo }}",
+			templateText: "repo: {{ .OpenCenter.GitOps.BaseRepo.URL }}",
 			setupConfig: func() Config {
 				cfg := NewDefault("test")
-				cfg.OpenCenter.GitOps.GitOpsBaseRepo = "ssh://git@github.com/example/repo.git"
+				cfg.OpenCenter.GitOps.BaseRepo.URL = "ssh://git@github.com/example/repo.git"
 				return cfg
 			},
 			expected: "repo: ssh://git@github.com/example/repo.git",

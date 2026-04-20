@@ -833,9 +833,9 @@ func (w *world) theGitopsDirectoryIsAGitRepository() error {
 	}
 	cfg := *loadedCfg
 
-	dir := w.replaceTmp(cfg.GitOps().GitDir)
+	dir := w.replaceTmp(cfg.GitDir())
 	if dir == "" {
-		return fmt.Errorf("opencenter.gitops.git_dir not set for active cluster")
+		return fmt.Errorf("opencenter.gitops.repository.local_dir not set for active cluster")
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err

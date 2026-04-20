@@ -33,7 +33,7 @@ func writeTestConfig(t *testing.T, dir, name, provider, gitDir string) {
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Organization = "opencenter"
 	if gitDir != "" {
-		cfg.OpenCenter.GitOps.GitDir = gitDir
+		cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 	}
 
 	loader := v2.NewConfigLoader(configdefaults.NewRegistry())

@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 func TestCopyBase(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("test")
-	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 
 	if err := CopyBase(cfg, false); err != nil {
 		t.Fatal(err)
@@ -57,7 +57,7 @@ func TestRenderInfrastructureClusterRendersConfigValues(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("render-test")
 	cfg.OpenCenter.Cluster.ClusterName = "render-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 	cfg.OpenCenter.Cluster.Kubernetes.Version = "9.9.9"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://auth.example.local/v3/"
 
@@ -83,7 +83,7 @@ func TestRenderClusterAppsRendersClusterName(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("cluster-apps")
 	cfg.OpenCenter.Cluster.ClusterName = "cluster-apps"
-	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 
 	if err := RenderClusterApps(cfg); err != nil {
 		t.Fatalf("RenderClusterApps returned error: %v", err)
@@ -103,7 +103,7 @@ func TestRenderClusterAppsSkipsDisabledServices(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("disabled-services-test")
 	cfg.OpenCenter.Cluster.ClusterName = "disabled-services-test"
-	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 
 	// Disable some services
 	cfg.OpenCenter.Services["cert-manager"] = &services.CertManagerConfig{BaseConfig: services.BaseConfig{Enabled: false}}

@@ -510,7 +510,7 @@ func initializeTestCluster(t *testing.T, clusterName, organization string) error
 	// Update the config to set a valid git_dir
 	cfg := result.Config
 	gitopsDir := filepath.Join(result.ClusterPaths.OrganizationDir, "gitops")
-	cfg.OpenCenter.GitOps.GitDir = gitopsDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitopsDir
 
 	// Save the updated config
 	configPath := result.ConfigPath

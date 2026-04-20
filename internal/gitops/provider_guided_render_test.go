@@ -12,7 +12,7 @@ import (
 func TestRenderClusterAppsCertManagerCloudflare(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("cloudflare-guided")
-	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 	cfg.OpenCenter.Cluster.ClusterFQDN = "cloudflare-guided.sjc3.k8s.opencenter.cloud"
 	cfg.Secrets.CertManager.CloudflareAPIToken = "cf-token"
 
@@ -51,7 +51,7 @@ func TestRenderClusterAppsCertManagerCloudflare(t *testing.T) {
 func TestRenderClusterAppsCertManagerDesignate(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("designate-guided")
-	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 	cfg.OpenCenter.Cluster.ClusterFQDN = "designate-guided.sjc3.k8s.opencenter.cloud"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://identity.api.example.com/v3"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "sjc3"
@@ -99,7 +99,7 @@ func TestRenderClusterAppsCertManagerDesignate(t *testing.T) {
 func TestRenderClusterAppsLokiSwift(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("loki-swift-guided")
-	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 	cfg.OpenCenter.Services["loki"] = &configservices.LokiConfig{
 		BaseConfig:                   configservices.BaseConfig{Enabled: true},
 		StorageType:                  "swift",
@@ -136,7 +136,7 @@ func TestRenderClusterAppsLokiSwift(t *testing.T) {
 func TestRenderClusterAppsTempoSwift(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("tempo-swift-guided")
-	cfg.OpenCenter.GitOps.GitDir = dst
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 	cfg.OpenCenter.Services["tempo"] = &configservices.TempoConfig{
 		BaseConfig:                   configservices.BaseConfig{Enabled: true},
 		StorageType:                  "swift",

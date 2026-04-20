@@ -63,6 +63,7 @@ This map helps:
 |----------|----------|---------|---------------|----------|
 | [Validate Configuration](how-to/validate-configuration.md) | All | Pre-deployment validation | Configuration file | `cmd/cluster_validate.go`, `internal/config/validator.go` |
 | [Manage Secrets](how-to/manage-secrets.md) | Operator | SOPS encryption and key rotation | SOPS installed | `internal/sops/`, `cmd/secrets*.go` |
+| [Configure Flux Bootstrap Authentication](how-to/flux-bootstrap-methods.md) | Operator | SSH key or token auth for FluxCD | Git repository | `internal/config/types_gitops.go`, `internal/localdev/flux/service.go` |
 | [Customize Services](how-to/customize-services.md) | Operator | Configure platform services | Deployed cluster | `internal/config/services/` |
 | [Configure Networking](how-to/configure-networking.md) | Operator | CNI and network setup | Network knowledge | `internal/config/types_networking.go` |
 | [Add Worker Pools](how-to/add-worker-pools.md) | Operator | Scale cluster | Running cluster | Configuration schema |

@@ -138,7 +138,7 @@ Global Flags:
 // checkRenderStatus checks if services have already been rendered
 func checkRenderStatus(cfg *v2.Config, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
-	gitOpsDir := cfg.GitOps().GitDir
+	gitOpsDir := cfg.GitDir()
 	kustomizationPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "kustomization.yaml")
 
 	if _, err := os.Stat(kustomizationPath); err == nil {
@@ -162,7 +162,7 @@ func checkRenderStatus(cfg *v2.Config, cmd *cobra.Command) error {
 // renderAllServices renders all cluster services and infrastructure
 func renderAllServices(cfg *v2.Config, force bool, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
-	gitOpsDir := cfg.GitOps().GitDir
+	gitOpsDir := cfg.GitDir()
 	kustomizationPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "kustomization.yaml")
 
 	// Check if already rendered and force not specified
@@ -227,7 +227,7 @@ func renderAllServices(cfg *v2.Config, force bool, dryRun bool, cmd *cobra.Comma
 // renderServicesOnly renders all cluster services without infrastructure
 func renderServicesOnly(cfg *v2.Config, force bool, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
-	gitOpsDir := cfg.GitOps().GitDir
+	gitOpsDir := cfg.GitDir()
 	kustomizationPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "kustomization.yaml")
 
 	// Check if already rendered and force not specified
@@ -285,7 +285,7 @@ func renderSingleService(cfg *v2.Config, serviceName string, force bool, dryRun 
 	}
 
 	// Check if service files already exist
-	gitOpsDir := cfg.GitOps().GitDir
+	gitOpsDir := cfg.GitDir()
 	serviceDir := filepath.Join(gitOpsDir, "applications", "overlays", clusterName, "services", serviceName)
 
 	if _, err := os.Stat(serviceDir); err == nil && !force {
@@ -334,7 +334,7 @@ func renderSingleService(cfg *v2.Config, serviceName string, force bool, dryRun 
 // renderInfrastructureOnly renders infrastructure templates only
 func renderInfrastructureOnly(cfg *v2.Config, dryRun bool, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
-	gitOpsDir := cfg.GitOps().GitDir
+	gitOpsDir := cfg.GitDir()
 	infraPath := filepath.Join(gitOpsDir, "infrastructure", "clusters", clusterName)
 
 	if dryRun {
@@ -374,7 +374,7 @@ func renderInfrastructureOnly(cfg *v2.Config, dryRun bool, cmd *cobra.Command) e
 // backupApplicationsDirectory creates backups of all files in the applications overlay directory
 func backupApplicationsDirectory(cfg *v2.Config, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
-	gitOpsDir := cfg.GitOps().GitDir
+	gitOpsDir := cfg.GitDir()
 	appsPath := filepath.Join(gitOpsDir, "applications", "overlays", clusterName)
 
 	if _, err := os.Stat(appsPath); os.IsNotExist(err) {

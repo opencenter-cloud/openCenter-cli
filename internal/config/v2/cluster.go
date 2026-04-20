@@ -52,6 +52,9 @@ type CalicoConfig struct {
 	IPIPMode      string `yaml:"ipip_mode,omitempty" json:"ipip_mode,omitempty" validate:"omitempty,oneof=Always CrossSubnet Never"`
 	VXLANMode     string `yaml:"vxlan_mode,omitempty" json:"vxlan_mode,omitempty" validate:"omitempty,oneof=Always CrossSubnet Never"`
 	NetworkPolicy bool   `yaml:"network_policy" json:"network_policy"`
+	// InstallMethod specifies how the CNI should be installed.
+	// Valid values: "kubespray" (default, installed during cluster bootstrap) or "helm" (installed via GitOps/Helm after cluster is up)
+	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm"`
 }
 
 // CiliumConfig represents Cilium CNI configuration.
@@ -61,6 +64,9 @@ type CiliumConfig struct {
 	TunnelMode    string `yaml:"tunnel_mode,omitempty" json:"tunnel_mode,omitempty" validate:"omitempty,oneof=vxlan geneve disabled"`
 	Hubble        bool   `yaml:"hubble" json:"hubble"`
 	NetworkPolicy bool   `yaml:"network_policy" json:"network_policy"`
+	// InstallMethod specifies how the CNI should be installed.
+	// Valid values: "kubespray" (default, installed during cluster bootstrap) or "helm" (installed via GitOps/Helm after cluster is up)
+	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm"`
 }
 
 // KubeOVNConfig represents Kube-OVN CNI configuration.
@@ -68,6 +74,9 @@ type KubeOVNConfig struct {
 	Enabled       bool   `yaml:"enabled" json:"enabled"`
 	Version       string `yaml:"version,omitempty" json:"version,omitempty"`
 	NetworkPolicy bool   `yaml:"network_policy" json:"network_policy"`
+	// InstallMethod specifies how the CNI should be installed.
+	// Valid values: "kubespray" (default, installed during cluster bootstrap) or "helm" (installed via GitOps/Helm after cluster is up)
+	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm"`
 }
 
 // StoragePluginConfig represents CSI plugin configuration.

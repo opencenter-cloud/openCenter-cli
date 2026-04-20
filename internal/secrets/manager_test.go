@@ -95,7 +95,7 @@ func writeManagerTestConfig(t *testing.T, clusterName string, configData string)
 // createTestConfig creates a test configuration with secrets
 func createTestConfig(clusterName string) *v2.Config {
 	cfg := newSecretsTestConfig(clusterName, "openstack")
-	cfg.OpenCenter.GitOps.GitDir = "/tmp/test-repo"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = "/tmp/test-repo"
 	cfg.Secrets.SopsAgeKeyFile = "~/.config/sops/age/test-key.txt"
 	cfg.Secrets.CertManager = v2.CertManagerSecrets{
 		AWSAccessKey:       "AKIAIOSFODNN7EXAMPLE",
@@ -314,7 +314,7 @@ func TestGetOverlayPath(t *testing.T) {
 
 	t.Run("constructs overlay path from config", func(t *testing.T) {
 		cfg := createTestConfig("test-cluster")
-		cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "test-repo")
+		cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "test-repo")
 
 		configPath := filepath.Join(tmpDir, ".k8s-test-cluster-config.yaml")
 
@@ -327,7 +327,7 @@ func TestGetOverlayPath(t *testing.T) {
 
 	t.Run("returns error when git_dir not configured", func(t *testing.T) {
 		cfg := createTestConfig("test-cluster")
-		cfg.OpenCenter.GitOps.GitDir = ""
+		cfg.OpenCenter.GitOps.Repository.LocalDir = ""
 
 		configPath := filepath.Join(tmpDir, ".k8s-test-cluster-config.yaml")
 
@@ -648,7 +648,7 @@ func TestSyncSecretsIntegration(t *testing.T) {
 	t.Run("syncs secrets to manifests in dry-run mode", func(t *testing.T) {
 		// Create a test config file
 		cfg := createTestConfig("test-cluster")
-		cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "test-repo")
+		cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "test-repo")
 
 		// Create config directory structure
 		configDir := filepath.Join(tmpDir, ".config", "opencenter", "clusters", "test-org", "test-cluster")

@@ -217,26 +217,27 @@ func NewV2Default(name, provider string) (*Config, error) {
 				},
 			},
 			GitOps: GitOpsConfig{
-				GitDir:            filepath.ToSlash(filepath.Join("clusters", defaultOrganization)),
-				GitURL:            defaultGitURLPlaceholder,
-				GitSSHKey:         sshKeyPath,
-				GitSSHPub:         sshKeyPath + ".pub",
-				GitBranch:         defaultGitBranch,
-				Release:           defaultGitBaseRepoRelease,
-				Branch:            defaultGitBranch,
-				URI:               defaultGitBaseRepoURL,
-				GitPath:           filepath.ToSlash(filepath.Join("clusters", name)),
-				BaseRepoURL:       defaultGitBaseRepoURL,
-				BaseRepoRelease:   defaultGitBaseRepoRelease,
-				GitOpsBaseRepo:    defaultGitBaseRepoURL,
-				GitOpsBaseRelease: defaultGitBaseRepoRelease,
-				GitOpsBranch:      defaultGitBranch,
+				Repository: GitOpsRepository{
+					URL:      defaultGitURLPlaceholder,
+					Branch:   defaultGitBranch,
+					Path:     filepath.ToSlash(filepath.Join("clusters", name)),
+					LocalDir: filepath.ToSlash(filepath.Join("clusters", defaultOrganization)),
+				},
+				BaseRepo: GitOpsBaseRepo{
+					URL:     defaultGitBaseRepoURL,
+					Release: defaultGitBaseRepoRelease,
+					Branch:  defaultGitBranch,
+				},
+				Auth: GitOpsAuth{
+					SSH: &GitOpsSSHAuth{
+						PrivateKey: sshKeyPath,
+						PublicKey:  sshKeyPath + ".pub",
+					},
+				},
 				Flux: GitOpsFluxConfig{
 					Interval: "5m",
 					Prune:    true,
 				},
-				FluxInterval: "5m",
-				FluxPrune:    true,
 			},
 			ManagedServices: ServiceMap{
 				"alert-proxy": &services.AlertProxyConfig{
@@ -369,9 +370,10 @@ func NewV2FullTemplate(name, provider string) (*Config, error) {
 			DeleteOnTermination: false,
 		},
 	}
-	cfg.OpenCenter.GitOps.Release = defaultGitBaseRepoRelease
-	cfg.OpenCenter.GitOps.Branch = defaultGitBranch
-	cfg.OpenCenter.GitOps.URI = defaultGitBaseRepoURL
+	// BaseRepo settings are already set in NewV2Default, but we can override here if needed
+	cfg.OpenCenter.GitOps.BaseRepo.Release = defaultGitBaseRepoRelease
+	cfg.OpenCenter.GitOps.BaseRepo.Branch = defaultGitBranch
+	cfg.OpenCenter.GitOps.BaseRepo.URL = defaultGitBaseRepoURL
 
 	return cfg, nil
 }
@@ -504,18 +506,15 @@ func applyProviderBehaviorDefaults(cfg *Config) {
 
 		// Kind uses token-based HTTPS auth against local Gitea, not SSH.
 		// Clear release fields so FluxCD GitRepository sources use branch only.
-		cfg.OpenCenter.GitOps.GitSSHKey = ""
-		cfg.OpenCenter.GitOps.GitSSHPub = ""
-		cfg.OpenCenter.GitOps.GitTokenProvider = "gitea"
-		cfg.OpenCenter.GitOps.Release = ""
-		cfg.OpenCenter.GitOps.BaseRepoRelease = ""
-		cfg.OpenCenter.GitOps.GitOpsBaseRelease = ""
+		cfg.OpenCenter.GitOps.Auth.SSH = nil
+		cfg.OpenCenter.GitOps.Auth.Token = &GitOpsTokenAuth{
+			Provider: "gitea",
+		}
+		cfg.OpenCenter.GitOps.BaseRepo.Release = ""
 
 		// The upstream gitops-base repo is public; use HTTPS so no deploy key
 		// or opencenter-base secret is needed inside the Kind cluster.
-		cfg.OpenCenter.GitOps.GitOpsBaseRepo = "https://github.com/opencenter-cloud/openCenter-gitops-base.git"
-		cfg.OpenCenter.GitOps.BaseRepoURL = cfg.OpenCenter.GitOps.GitOpsBaseRepo
-		cfg.OpenCenter.GitOps.URI = cfg.OpenCenter.GitOps.GitOpsBaseRepo
+		cfg.OpenCenter.GitOps.BaseRepo.URL = "https://github.com/opencenter-cloud/openCenter-gitops-base.git"
 
 		// Kind-specific service defaults: enable OLM and postgres-operator
 		// which are required dependencies for keycloak.

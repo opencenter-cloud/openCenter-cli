@@ -82,7 +82,7 @@ func createSampleConfig(name string) *v2.Config {
 
 	cfg.OpenCenter.Meta.Organization = "test-org"
 	cfg.OpenCenter.Meta.Region = "us-east-1"
-	cfg.OpenCenter.GitOps.GitDir = "/tmp/gitops"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = "/tmp/gitops"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://identity.example.com:5000/v3"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Region = "us-east-1"
 	cfg.Secrets.SopsAgeKeyFile = "/tmp/age-key.txt"

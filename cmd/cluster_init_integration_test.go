@@ -283,7 +283,7 @@ func TestClusterInitSupportsDottedOverrides(t *testing.T) {
 	cmd.SetArgs([]string{
 		"flag-init",
 		"--opencenter.meta.organization=legacy-org",
-		"--opencenter.gitops.git_dir=/opt/opencenter/flag-init",
+		"--opencenter.gitops.repository.local_dir=/opt/opencenter/flag-init",
 		"--opencenter.infrastructure.compute.master_count=5",
 		"--no-keygen",
 	})
@@ -298,14 +298,14 @@ func TestClusterInitSupportsDottedOverrides(t *testing.T) {
 	if cfg.OpenCenter.Meta.Organization != "legacy-org" {
 		t.Fatalf("expected deprecated organization alias to set legacy-org, got %q", cfg.OpenCenter.Meta.Organization)
 	}
-	if cfg.OpenCenter.GitOps.GitDir != "/opt/opencenter/flag-init" {
-		t.Fatalf("expected explicit git_dir to be preserved, got %q", cfg.OpenCenter.GitOps.GitDir)
+	if cfg.OpenCenter.GitOps.Repository.LocalDir != "/opt/opencenter/flag-init" {
+		t.Fatalf("expected explicit local_dir to be preserved, got %q", cfg.OpenCenter.GitOps.Repository.LocalDir)
 	}
 	if cfg.OpenCenter.Infrastructure.Compute.MasterCount != 5 {
 		t.Fatalf("expected master_count 5, got %d", cfg.OpenCenter.Infrastructure.Compute.MasterCount)
 	}
 	if !strings.Contains(stdout.String(), "/opt/opencenter/flag-init") {
-		t.Fatalf("expected result message to mention explicit git_dir, got %q", stdout.String())
+		t.Fatalf("expected result message to mention explicit local_dir, got %q", stdout.String())
 	}
 }
 

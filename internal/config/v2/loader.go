@@ -155,25 +155,14 @@ func (cl *ConfigLoader) normalize(cfg *Config) error {
 	// Ensure consistent representation
 
 	// Set default values for optional fields if not specified
-	if cfg.OpenCenter.GitOps.GitBranch == "" {
-		cfg.OpenCenter.GitOps.GitBranch = "main"
+	if cfg.OpenCenter.GitOps.Repository.Branch == "" {
+		cfg.OpenCenter.GitOps.Repository.Branch = "main"
 	}
 
-	if cfg.OpenCenter.GitOps.FluxInterval == "" {
-		cfg.OpenCenter.GitOps.FluxInterval = "5m"
+	if cfg.OpenCenter.GitOps.Flux.Interval == "" {
+		cfg.OpenCenter.GitOps.Flux.Interval = "5m"
 	}
-	if cfg.OpenCenter.GitOps.Flux.Interval != "" {
-		cfg.OpenCenter.GitOps.FluxInterval = cfg.OpenCenter.GitOps.Flux.Interval
-	}
-	if cfg.OpenCenter.GitOps.Flux.Prune {
-		cfg.OpenCenter.GitOps.FluxPrune = true
-	}
-	if cfg.OpenCenter.GitOps.BaseRepoURL == "" && cfg.OpenCenter.GitOps.GitOpsBaseRepo != "" {
-		cfg.OpenCenter.GitOps.BaseRepoURL = cfg.OpenCenter.GitOps.GitOpsBaseRepo
-	}
-	if cfg.OpenCenter.GitOps.BaseRepoRelease == "" && cfg.OpenCenter.GitOps.GitOpsBaseRelease != "" {
-		cfg.OpenCenter.GitOps.BaseRepoRelease = cfg.OpenCenter.GitOps.GitOpsBaseRelease
-	}
+
 	if len(cfg.OpenCenter.ManagedServices) == 0 && len(cfg.OpenCenter.LegacyManaged) > 0 {
 		cfg.OpenCenter.ManagedServices = cfg.OpenCenter.LegacyManaged
 	}

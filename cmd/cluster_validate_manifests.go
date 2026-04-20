@@ -65,7 +65,7 @@ func runClusterValidateManifests(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get git directory
-	gitDir := cfg.GitOps().GitDir
+	gitDir := cfg.GitDir()
 	if gitDir == "" {
 		return fmt.Errorf("git_dir not configured")
 	}

@@ -205,7 +205,7 @@ func TestConfigIOHandler_LoadFromBytes(t *testing.T) {
 			name: "config with nested structures",
 			data: func() []byte {
 				cfg := mustLoaderTestConfig(t, "nested-test", "openstack")
-				cfg.OpenCenter.GitOps.GitDir = "/path/to/gitops"
+				cfg.OpenCenter.GitOps.Repository.LocalDir = "/path/to/gitops"
 				data, err := loader.MarshalConfig(cfg)
 				if err != nil {
 					t.Fatalf("marshal nested config: %v", err)
@@ -214,8 +214,8 @@ func TestConfigIOHandler_LoadFromBytes(t *testing.T) {
 			}(),
 			expectError: false,
 			checkFunc: func(t *testing.T, cfg *v2.Config) {
-				if cfg.OpenCenter.GitOps.GitDir != "/path/to/gitops" {
-					t.Errorf("expected git_dir '/path/to/gitops', got %q", cfg.OpenCenter.GitOps.GitDir)
+				if cfg.OpenCenter.GitOps.Repository.LocalDir != "/path/to/gitops" {
+					t.Errorf("expected git_dir '/path/to/gitops', got %q", cfg.OpenCenter.GitOps.Repository.LocalDir)
 				}
 			},
 		},
@@ -223,7 +223,7 @@ func TestConfigIOHandler_LoadFromBytes(t *testing.T) {
 			name: "config does not expand arbitrary environment variables",
 			data: func() []byte {
 				cfg := mustLoaderTestConfig(t, "literal-env", "openstack")
-				cfg.OpenCenter.GitOps.GitDir = "${AWS_SECRET_ACCESS_KEY}"
+				cfg.OpenCenter.GitOps.Repository.LocalDir = "${AWS_SECRET_ACCESS_KEY}"
 				data, err := loader.MarshalConfig(cfg)
 				if err != nil {
 					t.Fatalf("marshal env config: %v", err)
@@ -232,8 +232,8 @@ func TestConfigIOHandler_LoadFromBytes(t *testing.T) {
 			}(),
 			expectError: false,
 			checkFunc: func(t *testing.T, cfg *v2.Config) {
-				if cfg.OpenCenter.GitOps.GitDir != "${AWS_SECRET_ACCESS_KEY}" {
-					t.Errorf("expected literal git_dir, got %q", cfg.OpenCenter.GitOps.GitDir)
+				if cfg.OpenCenter.GitOps.Repository.LocalDir != "${AWS_SECRET_ACCESS_KEY}" {
+					t.Errorf("expected literal git_dir, got %q", cfg.OpenCenter.GitOps.Repository.LocalDir)
 				}
 			},
 		},
@@ -369,7 +369,7 @@ func TestConfigIOHandler_LoadFromFile(t *testing.T) {
 	// Create a valid test config file
 	validConfigPath := filepath.Join(tmpDir, "valid-config.yaml")
 	validCfg := mustLoaderTestConfig(t, "load-test", "openstack")
-	validCfg.OpenCenter.GitOps.GitDir = "/test/path"
+	validCfg.OpenCenter.GitOps.Repository.LocalDir = "/test/path"
 	validConfigData, err := loader.MarshalConfig(validCfg)
 	if err != nil {
 		t.Fatalf("marshal valid config: %v", err)
@@ -399,8 +399,8 @@ func TestConfigIOHandler_LoadFromFile(t *testing.T) {
 				if cfg.OpenCenter.Cluster.ClusterName != "load-test" {
 					t.Errorf("expected cluster name 'load-test', got %q", cfg.OpenCenter.Cluster.ClusterName)
 				}
-				if cfg.OpenCenter.GitOps.GitDir != "/test/path" {
-					t.Errorf("expected git_dir '/test/path', got %q", cfg.OpenCenter.GitOps.GitDir)
+				if cfg.OpenCenter.GitOps.Repository.LocalDir != "/test/path" {
+					t.Errorf("expected git_dir '/test/path', got %q", cfg.OpenCenter.GitOps.Repository.LocalDir)
 				}
 			},
 		},
@@ -450,7 +450,7 @@ func TestConfigIOHandler_RoundTrip(t *testing.T) {
 	loader := NewConfigIOHandler(fileSystem)
 
 	originalConfig := mustLoaderTestConfig(t, "roundtrip-test", "openstack")
-	originalConfig.OpenCenter.GitOps.GitDir = "/test/gitops"
+	originalConfig.OpenCenter.GitOps.Repository.LocalDir = "/test/gitops"
 
 	// Marshal to YAML
 	data, err := loader.MarshalConfig(originalConfig)
@@ -475,9 +475,9 @@ func TestConfigIOHandler_RoundTrip(t *testing.T) {
 			originalConfig.OpenCenter.Cluster.ClusterName, restoredConfig.OpenCenter.Cluster.ClusterName)
 	}
 
-	if restoredConfig.OpenCenter.GitOps.GitDir != originalConfig.OpenCenter.GitOps.GitDir {
+	if restoredConfig.OpenCenter.GitOps.Repository.LocalDir != originalConfig.OpenCenter.GitOps.Repository.LocalDir {
 		t.Errorf("git dir mismatch: expected %q, got %q",
-			originalConfig.OpenCenter.GitOps.GitDir, restoredConfig.OpenCenter.GitOps.GitDir)
+			originalConfig.OpenCenter.GitOps.Repository.LocalDir, restoredConfig.OpenCenter.GitOps.Repository.LocalDir)
 	}
 }
 
@@ -492,7 +492,7 @@ func TestConfigIOHandler_SaveAndLoad(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "cycle-test.yaml")
 
 	originalConfig := mustLoaderTestConfig(t, "cycle-test", "openstack")
-	originalConfig.OpenCenter.GitOps.GitDir = "/cycle/test/path"
+	originalConfig.OpenCenter.GitOps.Repository.LocalDir = "/cycle/test/path"
 
 	// Save config
 	if err := loader.SaveToFile(ctx, configPath, originalConfig); err != nil {
@@ -511,9 +511,9 @@ func TestConfigIOHandler_SaveAndLoad(t *testing.T) {
 			originalConfig.OpenCenter.Cluster.ClusterName, loadedConfig.OpenCenter.Cluster.ClusterName)
 	}
 
-	if loadedConfig.OpenCenter.GitOps.GitDir != originalConfig.OpenCenter.GitOps.GitDir {
+	if loadedConfig.OpenCenter.GitOps.Repository.LocalDir != originalConfig.OpenCenter.GitOps.Repository.LocalDir {
 		t.Errorf("git dir mismatch after save/load cycle: expected %q, got %q",
-			originalConfig.OpenCenter.GitOps.GitDir, loadedConfig.OpenCenter.GitOps.GitDir)
+			originalConfig.OpenCenter.GitOps.Repository.LocalDir, loadedConfig.OpenCenter.GitOps.Repository.LocalDir)
 	}
 }
 
@@ -529,7 +529,7 @@ func TestConfigIOHandler_EnvironmentVariablesRemainLiteral(t *testing.T) {
 	t.Setenv("TEST_CONFIG_VAR", testValue)
 
 	cfg := mustLoaderTestConfig(t, "literal-env", "openstack")
-	cfg.OpenCenter.GitOps.GitDir = "${TEST_CONFIG_VAR}"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = "${TEST_CONFIG_VAR}"
 	configData, err := loader.MarshalConfig(cfg)
 	if err != nil {
 		t.Fatalf("marshal env config: %v", err)
@@ -540,9 +540,9 @@ func TestConfigIOHandler_EnvironmentVariablesRemainLiteral(t *testing.T) {
 		t.Fatalf("failed to load config: %v", err)
 	}
 
-	if config.OpenCenter.GitOps.GitDir != "${TEST_CONFIG_VAR}" {
+	if config.OpenCenter.GitOps.Repository.LocalDir != "${TEST_CONFIG_VAR}" {
 		t.Errorf("expected literal git_dir, got %q",
-			config.OpenCenter.GitOps.GitDir)
+			config.OpenCenter.GitOps.Repository.LocalDir)
 	}
 }
 

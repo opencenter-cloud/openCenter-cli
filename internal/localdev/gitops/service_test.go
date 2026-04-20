@@ -274,12 +274,15 @@ func writeClusterFixtureWithGitOps(t *testing.T, configDir, clusterName, org, gi
 		t.Fatalf("NewV2Default() error = %v", err)
 	}
 	cfg.OpenCenter.Meta.Organization = org
-	cfg.OpenCenter.GitOps.GitDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 	if gitURL != "" {
-		cfg.OpenCenter.GitOps.GitURL = gitURL
+		cfg.OpenCenter.GitOps.Repository.URL = gitURL
 	}
 	if gitToken != "" {
-		cfg.OpenCenter.GitOps.GitToken = gitToken
+		if cfg.OpenCenter.GitOps.Auth.Token == nil {
+			cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{}
+		}
+		cfg.OpenCenter.GitOps.Auth.Token.TokenFile = gitToken
 	}
 	cfg.OpenCenter.Infrastructure.Kind.Runtime = "podman"
 

@@ -173,8 +173,8 @@ The command requires:
 
 // getKubeconfigPathForSync returns the kubeconfig path for the cluster.
 func getKubeconfigPathForSync(cfg *v2.Config, clusterName string) string {
-	if cfg.OpenCenter.GitOps.GitDir != "" {
-		gitDir := corepaths.ExpandPath(cfg.OpenCenter.GitOps.GitDir)
+	if cfg.OpenCenter.GitOps.Repository.LocalDir != "" {
+		gitDir := corepaths.ExpandPath(cfg.OpenCenter.GitOps.Repository.LocalDir)
 		kubeconfigPath := filepath.Join(gitDir, "infrastructure", "clusters", clusterName, "kubeconfig.yaml")
 		if _, err := os.Stat(kubeconfigPath); err == nil {
 			return kubeconfigPath

@@ -159,9 +159,9 @@ func TestClusterUpdateNativeV2GitOpsFieldsValidate(t *testing.T) {
 	updateCmd.SetErr(&updateStderr)
 	updateCmd.SetArgs([]string{
 		"update-kind-gitops",
-		"--opencenter.gitops.git_url=https://172.16.0.146:3001/newuser/test-repo.git",
-		"--opencenter.gitops.git_token=/tmp/gitea-user.token",
-		"--opencenter.gitops.git_token_provider=gitea",
+		"--opencenter.gitops.repository.url=https://172.16.0.146:3001/newuser/test-repo.git",
+		"--opencenter.gitops.auth.token.token_file=/tmp/gitea-user.token",
+		"--opencenter.gitops.auth.token.provider=gitea",
 		"--strict",
 	})
 
@@ -179,13 +179,16 @@ func TestClusterUpdateNativeV2GitOpsFieldsValidate(t *testing.T) {
 	}
 
 	v2Cfg := loadV2ConfigForTest(t, configPath)
-	if got := v2Cfg.OpenCenter.GitOps.GitURL; got != "https://172.16.0.146:3001/newuser/test-repo.git" {
+	if got := v2Cfg.OpenCenter.GitOps.Repository.URL; got != "https://172.16.0.146:3001/newuser/test-repo.git" {
 		t.Fatalf("git_url = %q", got)
 	}
-	if got := v2Cfg.OpenCenter.GitOps.GitToken; got != "/tmp/gitea-user.token" {
+	if v2Cfg.OpenCenter.GitOps.Auth.Token == nil {
+		t.Fatal("expected token auth to be set")
+	}
+	if got := v2Cfg.OpenCenter.GitOps.Auth.Token.TokenFile; got != "/tmp/gitea-user.token" {
 		t.Fatalf("git_token = %q", got)
 	}
-	if got := v2Cfg.OpenCenter.GitOps.GitTokenProvider; got != "gitea" {
+	if got := v2Cfg.OpenCenter.GitOps.Auth.Token.Provider; got != "gitea" {
 		t.Fatalf("git_token_provider = %q", got)
 	}
 }

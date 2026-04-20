@@ -342,13 +342,13 @@ func (b *FluentConfigBuilder) WithGitOpsConfig(config GitOpsConfig) ConfigBuilde
 
 // WithGitURL sets the Git repository URL.
 func (b *FluentConfigBuilder) WithGitURL(url string) ConfigBuilder {
-	b.config.OpenCenter.GitOps.GitURL = url
+	b.config.OpenCenter.GitOps.Repository.URL = url
 	return b
 }
 
 // WithGitBranch sets the Git branch.
 func (b *FluentConfigBuilder) WithGitBranch(branch string) ConfigBuilder {
-	b.config.OpenCenter.GitOps.GitBranch = branch
+	b.config.OpenCenter.GitOps.Repository.Branch = branch
 	return b
 }
 

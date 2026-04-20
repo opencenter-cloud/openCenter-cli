@@ -32,7 +32,7 @@ func minimalTestConfig(name string) v2.Config {
 	result.OpenCenter.Cluster.ClusterName = name
 	result.OpenCenter.Cluster.BaseDomain = "example.com"
 	result.OpenCenter.Cluster.ClusterFQDN = fmt.Sprintf("%s.example.com", name)
-	result.OpenCenter.GitOps.GitDir = "./testdata/test-git-repo-" + name
+	result.OpenCenter.GitOps.Repository.LocalDir = "./testdata/test-git-repo-" + name
 	result.OpenTofu.Enabled = true
 	result.Secrets.SSHKey = v2.SSHKeyConfig{
 		Private: "./testdata/test-git-repo-" + name + "/" + name + "/secrets/ssh/" + name,

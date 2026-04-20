@@ -295,12 +295,13 @@ func (cs *ConfigStage) DryRun(ctx context.Context, cfg v2.Config) (*gitops.Stage
 
 	// Try to use PathResolver to get cluster paths
 	var clusterInfraPath, clusterAppsPath string
-	resolver := paths.NewPathResolver(cfg.GitOps().GitDir)
+	gitDir := cfg.GitDir()
+	resolver := paths.NewPathResolver(gitDir)
 	clusterPaths, err := resolver.ResolveWithFallback(ctx, clusterName)
 	if err == nil {
 		// Successfully resolved paths - get relative paths from git dir
-		clusterInfraPath, _ = filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ClusterDir, "kustomization.yaml"))
-		clusterAppsPath, _ = filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ApplicationsDir, "kustomization.yaml"))
+		clusterInfraPath, _ = filepath.Rel(gitDir, filepath.Join(clusterPaths.ClusterDir, "kustomization.yaml"))
+		clusterAppsPath, _ = filepath.Rel(gitDir, filepath.Join(clusterPaths.ApplicationsDir, "kustomization.yaml"))
 	} else {
 		// Fallback to standard paths for test environments
 		clusterInfraPath = filepath.Join("infrastructure", "clusters", clusterName, "kustomization.yaml")
@@ -386,7 +387,8 @@ func (cs *ConfigStage) getOutputPath(tmpl template.TemplateDefinition, cfg v2.Co
 	}
 
 	// Use PathResolver to get the cluster directory
-	resolver := paths.NewPathResolver(cfg.GitOps().GitDir)
+	gitDir := cfg.GitDir()
+	resolver := paths.NewPathResolver(gitDir)
 	clusterPaths, err := resolver.ResolveWithFallback(context.Background(), clusterName)
 	if err != nil {
 		// Fallback to old path construction if resolver fails
@@ -394,7 +396,7 @@ func (cs *ConfigStage) getOutputPath(tmpl template.TemplateDefinition, cfg v2.Co
 	}
 
 	// Get relative path from git dir
-	relPath, err := filepath.Rel(cfg.GitOps().GitDir, filepath.Join(clusterPaths.ClusterDir, filename))
+	relPath, err := filepath.Rel(gitDir, filepath.Join(clusterPaths.ClusterDir, filename))
 	if err != nil {
 		// Fallback to old path construction if relative path fails
 		return filepath.Join("infrastructure", "clusters", clusterName, filename)

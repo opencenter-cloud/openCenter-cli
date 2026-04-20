@@ -48,7 +48,9 @@ func minimalConfig(name string) Config {
 				ClusterName: name,
 			},
 			GitOps: GitOpsConfig{
-				GitDir: "./testdata/test-git-repo-" + name,
+				Repository: GitOpsRepository{
+					LocalDir: "./testdata/test-git-repo-" + name,
+				},
 			},
 		},
 		OpenTofu: SimplifiedOpenTofu{

@@ -31,7 +31,7 @@ func TestKubeletRotateServerCertsRendering(t *testing.T) {
 
 	cfg := newDefault("test-cluster")
 	cfg.OpenCenter.Meta.Organization = "test-org"
-	cfg.OpenCenter.GitOps.GitDir = tmpDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = tmpDir
 
 	// Render the infrastructure cluster template
 	err = RenderInfrastructureCluster(cfg)
@@ -64,7 +64,7 @@ func TestKubeletRotateServerCertsDefaultValue(t *testing.T) {
 
 	cfg := newDefault("test-cluster-default")
 	cfg.OpenCenter.Meta.Organization = "test-org"
-	cfg.OpenCenter.GitOps.GitDir = tmpDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = tmpDir
 
 	// Render the infrastructure cluster template
 	err = RenderInfrastructureCluster(cfg)

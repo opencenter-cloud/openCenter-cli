@@ -77,13 +77,13 @@ func TestValidateOverlayUnitConfigRejectsInvalidSOPSRules(t *testing.T) {
 func TestRenderSingleServiceRewritesOnlyTargetAndAggregates(t *testing.T) {
 	cfg := newDefault("single-service")
 	cfg.OpenCenter.Cluster.ClusterName = "single-service"
-	cfg.OpenCenter.GitOps.GitDir = t.TempDir()
+	cfg.OpenCenter.GitOps.Repository.LocalDir = t.TempDir()
 
 	if err := RenderClusterApps(cfg); err != nil {
 		t.Fatalf("RenderClusterApps: %v", err)
 	}
 
-	clusterRoot := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "applications", "overlays", cfg.ClusterName())
+	clusterRoot := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "applications", "overlays", cfg.ClusterName())
 	targetFile := filepath.Join(clusterRoot, "services", "cert-manager", "kustomization.yaml")
 	aggregateFlux := filepath.Join(clusterRoot, "services", "fluxcd", "kustomization.yaml")
 	aggregateSources := filepath.Join(clusterRoot, "services", "sources", "kustomization.yaml")

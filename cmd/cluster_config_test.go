@@ -137,12 +137,14 @@ opencenter:
         external_network_name: public
         image_name: ubuntu-22.04
   gitops:
-    git_url: https://github.com/test/test-repo.git
-    git_branch: main
-    git_dir: ./gitops
-    gitops_base_repo: https://github.com/opencenter-cloud/openCenter-gitops-base.git
-    gitops_base_release: v0.1.0
-    gitops_branch: main
+    repository:
+      url: https://github.com/test/test-repo.git
+      branch: main
+      local_dir: ./gitops
+    base_repo:
+      url: https://github.com/opencenter-cloud/openCenter-gitops-base.git
+      release: v0.1.0
+      branch: main
     flux:
       interval: 15m
       prune: true
@@ -304,12 +306,14 @@ opencenter:
         external_network_name: public
         image_name: ubuntu-22.04
   gitops:
-    git_url: https://github.com/test/test-repo.git
-    git_branch: main
-    git_dir: ./gitops
-    gitops_base_repo: https://github.com/opencenter-cloud/openCenter-gitops-base.git
-    gitops_base_release: v0.1.0
-    gitops_branch: main
+    repository:
+      url: https://github.com/test/test-repo.git
+      branch: main
+      local_dir: ./gitops
+    base_repo:
+      url: https://github.com/opencenter-cloud/openCenter-gitops-base.git
+      release: v0.1.0
+      branch: main
     flux:
       interval: 15m
       prune: true

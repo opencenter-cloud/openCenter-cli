@@ -102,10 +102,13 @@ func applyKindDefaults(cfg *Config) error {
 
 	// Set Gitea-based Git defaults for local Kind clusters.
 	if defaults.Locals.GitURL != "" {
-		cfg.OpenCenter.GitOps.GitURL = defaults.Locals.GitURL
+		cfg.OpenCenter.GitOps.Repository.URL = defaults.Locals.GitURL
 	}
 	if defaults.Locals.GitTokenProvider != "" {
-		cfg.OpenCenter.GitOps.GitTokenProvider = defaults.Locals.GitTokenProvider
+		if cfg.OpenCenter.GitOps.Auth.Token == nil {
+			cfg.OpenCenter.GitOps.Auth.Token = &GitOpsTokenAuth{}
+		}
+		cfg.OpenCenter.GitOps.Auth.Token.Provider = defaults.Locals.GitTokenProvider
 	}
 
 	// Kind-specific service defaults for local development.

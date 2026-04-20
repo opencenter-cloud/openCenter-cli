@@ -35,7 +35,7 @@ func TestRenderClusterTemplatesIntegration(t *testing.T) {
 		t.Fatalf("NewV2Default() error = %v", err)
 	}
 	cfg := *cfgPtr
-	cfg.OpenCenter.GitOps.GitDir = tempDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = tempDir
 
 	// Create a mock cobra command for output
 	cmd := newClusterRenderCmd()

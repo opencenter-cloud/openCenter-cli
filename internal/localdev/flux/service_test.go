@@ -166,12 +166,15 @@ func writeClusterFixtureWithGitOps(t *testing.T, configDir, clusterName, org, gi
 		t.Fatalf("NewV2Default() error = %v", err)
 	}
 	cfg.OpenCenter.Meta.Organization = org
-	cfg.OpenCenter.GitOps.GitDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
 	if gitURL != "" {
-		cfg.OpenCenter.GitOps.GitURL = gitURL
+		cfg.OpenCenter.GitOps.Repository.URL = gitURL
 	}
 	if gitToken != "" {
-		cfg.OpenCenter.GitOps.GitToken = gitToken
+		if cfg.OpenCenter.GitOps.Auth.Token == nil {
+			cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{}
+		}
+		cfg.OpenCenter.GitOps.Auth.Token.TokenFile = gitToken
 	}
 	cfg.OpenCenter.Infrastructure.Kind.Runtime = "podman"
 
@@ -281,4 +284,187 @@ func resolveTestHostIP(t *testing.T) string {
 	}
 	t.Fatal("no routable IPv4 address found for test")
 	return ""
+}
+
+
+func TestParseGitURL(t *testing.T) {
+	tests := []struct {
+		name      string
+		url       string
+		wantOwner string
+		wantRepo  string
+		wantErr   bool
+	}{
+		{
+			name:      "https github url with .git",
+			url:       "https://github.com/my-org/my-repo.git",
+			wantOwner: "my-org",
+			wantRepo:  "my-repo",
+		},
+		{
+			name:      "https github url without .git",
+			url:       "https://github.com/my-org/my-repo",
+			wantOwner: "my-org",
+			wantRepo:  "my-repo",
+		},
+		{
+			name:      "ssh github url",
+			url:       "git@github.com:my-org/my-repo.git",
+			wantOwner: "my-org",
+			wantRepo:  "my-repo",
+		},
+		{
+			name:      "ssh protocol github url",
+			url:       "ssh://git@github.com/my-org/my-repo.git",
+			wantOwner: "my-org",
+			wantRepo:  "my-repo",
+		},
+		{
+			name:      "gitlab nested group",
+			url:       "https://gitlab.com/group/subgroup/my-repo.git",
+			wantOwner: "group/subgroup",
+			wantRepo:  "my-repo",
+		},
+		{
+			name:      "self-hosted gitlab",
+			url:       "https://gitlab.example.com/team/project.git",
+			wantOwner: "team",
+			wantRepo:  "project",
+		},
+		{
+			name:    "empty url",
+			url:     "",
+			wantErr: true,
+		},
+		{
+			name:    "url without repo path",
+			url:     "https://github.com/",
+			wantErr: true,
+		},
+		{
+			name:    "url with only owner",
+			url:     "https://github.com/owner",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			owner, repo, err := parseGitURL(tt.url)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseGitURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if owner != tt.wantOwner {
+				t.Errorf("parseGitURL() owner = %q, want %q", owner, tt.wantOwner)
+			}
+			if repo != tt.wantRepo {
+				t.Errorf("parseGitURL() repo = %q, want %q", repo, tt.wantRepo)
+			}
+		})
+	}
+}
+
+func TestParseGitHubURL(t *testing.T) {
+	tests := []struct {
+		name          string
+		url           string
+		ownerOverride string
+		wantOwner     string
+		wantRepo      string
+		wantErr       bool
+	}{
+		{
+			name:      "github url extracts owner",
+			url:       "https://github.com/my-org/my-repo.git",
+			wantOwner: "my-org",
+			wantRepo:  "my-repo",
+		},
+		{
+			name:          "owner override takes precedence",
+			url:           "https://github.com/url-org/my-repo.git",
+			ownerOverride: "override-org",
+			wantOwner:     "override-org",
+			wantRepo:      "my-repo",
+		},
+		{
+			name:          "owner override with whitespace is trimmed",
+			url:           "https://github.com/url-org/my-repo.git",
+			ownerOverride: "  trimmed-org  ",
+			wantOwner:     "trimmed-org",
+			wantRepo:      "my-repo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			owner, repo, err := parseGitHubURL(tt.url, tt.ownerOverride)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseGitHubURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if owner != tt.wantOwner {
+				t.Errorf("parseGitHubURL() owner = %q, want %q", owner, tt.wantOwner)
+			}
+			if repo != tt.wantRepo {
+				t.Errorf("parseGitHubURL() repo = %q, want %q", repo, tt.wantRepo)
+			}
+		})
+	}
+}
+
+func TestParseGitLabURL(t *testing.T) {
+	tests := []struct {
+		name          string
+		url           string
+		ownerOverride string
+		wantOwner     string
+		wantRepo      string
+		wantErr       bool
+	}{
+		{
+			name:      "gitlab url extracts owner",
+			url:       "https://gitlab.com/my-group/my-project.git",
+			wantOwner: "my-group",
+			wantRepo:  "my-project",
+		},
+		{
+			name:      "gitlab nested groups",
+			url:       "https://gitlab.com/parent/child/grandchild/my-project.git",
+			wantOwner: "parent/child/grandchild",
+			wantRepo:  "my-project",
+		},
+		{
+			name:          "owner override takes precedence over nested groups",
+			url:           "https://gitlab.com/parent/child/my-project.git",
+			ownerOverride: "flat-owner",
+			wantOwner:     "flat-owner",
+			wantRepo:      "my-project",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			owner, repo, err := parseGitLabURL(tt.url, tt.ownerOverride)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseGitLabURL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if owner != tt.wantOwner {
+				t.Errorf("parseGitLabURL() owner = %q, want %q", owner, tt.wantOwner)
+			}
+			if repo != tt.wantRepo {
+				t.Errorf("parseGitLabURL() repo = %q, want %q", repo, tt.wantRepo)
+			}
+		})
+	}
 }

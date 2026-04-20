@@ -268,16 +268,18 @@ func defaultConfig(name string) Config {
 				},
 			},
 			GitOps: GitOpsConfig{
-				GitDir:            fmt.Sprintf("./testdata/test-git-repo-%s", name),
-				GitURL:            "",
-				GitSSHKey:         "",
-				GitSSHPub:         "",
-				GitBranch:         "main",
-				GitToken:          "",
-				GitTokenProvider:  "",
-				GitOpsBaseRepo:    "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git",
-				GitOpsBaseRelease: "v0.1.0",
-				GitOpsBranch:      "main",
+				Repository: GitOpsRepository{
+					URL:      "",
+					Branch:   "main",
+					Path:     "",
+					LocalDir: fmt.Sprintf("./testdata/test-git-repo-%s", name),
+				},
+				BaseRepo: GitOpsBaseRepo{
+					URL:     "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git",
+					Release: "v0.1.0",
+					Branch:  "main",
+				},
+				Auth: GitOpsAuth{},
 				Flux: GitOpsFlux{
 					Interval: "5m",
 					Prune:    true,

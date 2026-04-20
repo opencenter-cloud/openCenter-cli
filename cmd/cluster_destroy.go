@@ -197,7 +197,7 @@ to automatically break any existing lock without prompting.`,
 			}
 
 			// Remove GitOps directory if specified
-			gitopsDir := cfg.GitOps().GitDir
+			gitopsDir := cfg.GitDir()
 			if gitopsDir != "" {
 				if err := os.RemoveAll(gitopsDir); err != nil && !os.IsNotExist(err) {
 					return fmt.Errorf("failed to remove gitops directory: %w", err)

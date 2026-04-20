@@ -739,7 +739,7 @@ func setupPropertyTestManager(t *testing.T, tmpDir string, clusterName string) (
 
 func createPropertyTestConfig(clusterName string, tmpDir string, certManager CertManagerSecretsGen, loki LokiSecretsGen, keycloak KeycloakSecretsGen) *v2.Config {
 	cfg := newSecretsTestConfig(clusterName, "openstack")
-	cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "test-repo")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "test-repo")
 	cfg.Secrets.SopsAgeKeyFile = filepath.Join(tmpDir, "age-key.txt")
 	cfg.Secrets.CertManager = v2.CertManagerSecrets{
 		AWSAccessKey:       certManager.AWSAccessKey,

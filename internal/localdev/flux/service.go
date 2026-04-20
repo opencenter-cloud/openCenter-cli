@@ -3,9 +3,12 @@ package flux
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"strings"
 
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev/gitea"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev/gitops"
@@ -48,23 +51,25 @@ func NewService(executor localdev.Executor, stateDir string) (*Service, error) {
 	}, nil
 }
 
-// Bootstrap runs `flux bootstrap git --token-auth` against the attached local
-// Gitea repo.
+// Bootstrap runs the appropriate `flux bootstrap` command based on the
+// configured git_token_provider.
 //
-// We use the generic `flux bootstrap git` subcommand rather than
-// `flux bootstrap gitea` because the Gitea provider in go-git-providers
-// panics on non-standard ports (e.g. 172.16.0.146:3001). The generic git
-// subcommand handles arbitrary HTTPS URLs correctly.
+// Provider-specific commands:
+//   - gitea: Uses `flux bootstrap git` (generic) because the Gitea provider
+//     in go-git-providers panics on non-standard ports (e.g. 172.16.0.146:3001).
+//   - github: Uses `flux bootstrap github --owner --repository --token-auth --personal`
+//   - gitlab: Uses `flux bootstrap gitlab --owner --repository --token-auth`
 //
-// The config field git_token_provider: gitea signals that token-based HTTPS
-// auth should be used (not SSH). When git_token is configured, it is treated
-// as the authoritative token file path; otherwise the local Gitea state token
-// is used as a fallback.
+// The config field git_token_provider signals which bootstrap method to use.
+// When git_token is configured, it is treated as the authoritative token file
+// path; otherwise the local Gitea state token is used as a fallback (for gitea
+// provider only).
 //
-// The bootstrap URL uses the host's routable IP (e.g. 172.16.0.146:3001)
-// rather than localhost. Podman binds the Gitea port on 0.0.0.0, so this
-// IP is reachable from both the macOS host (where the flux CLI clones) and
-// from inside the Kind cluster (where the source-controller reconciles).
+// For local Kind clusters with Gitea, the bootstrap URL uses the host's
+// routable IP (e.g. 172.16.0.146:3001) rather than localhost. Podman binds
+// the Gitea port on 0.0.0.0, so this IP is reachable from both the macOS
+// host (where the flux CLI clones) and from inside the Kind cluster (where
+// the source-controller reconciles).
 func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*BootstrapResult, error) {
 	cluster, err := s.resolver.Resolve(ctx, clusterIdentifier)
 	if err != nil {
@@ -89,7 +94,7 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 		return nil, fmt.Errorf("local gitea is not attached to the kind network; run `opencenter local gitea attach-kind --cluster %s` first", cluster.ClusterName)
 	}
 
-	gitDir := strings.TrimSpace(cluster.Config.GitOps().GitDir)
+	gitDir := strings.TrimSpace(cluster.Config.GitDir())
 	if gitDir == "" {
 		gitDir = cluster.Paths.GitOpsDir
 	}
@@ -108,7 +113,12 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 		return nil, fmt.Errorf("cluster %q does not define git_url and no routable host IP was found for local Gitea", clusterIdentifier)
 	}
 
-	tokenPath, err := resolveTokenPath(strings.TrimSpace(cluster.Config.OpenCenter.GitOps.GitToken), status.UserTokenPath, status.UserTokenExists)
+	tokenProvider := resolveGitTokenProvider(cluster.Config)
+	if tokenProvider == "" {
+		tokenProvider = "gitea"
+	}
+
+	tokenPath, err := resolveTokenPath(resolveGitTokenFile(cluster.Config), status.UserTokenPath, status.UserTokenExists)
 	if err != nil {
 		return nil, err
 	}
@@ -127,15 +137,56 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 	bootstrapPath := filepathForFlux(cluster.ClusterName)
 	kubeconfigEnv := map[string]string{"KUBECONFIG": cluster.Paths.KubeconfigPath}
 
-	fluxArgs := []string{
-		"bootstrap", "git",
-		"--url=" + repoURL,
-		"--branch=" + branch,
-		"--path=" + bootstrapPath,
-		"--token-auth",
-		"--username=" + status.Metadata.RepoOwner,
-		"--password=" + token,
-		"--ca-file=" + status.CAPath,
+	// Build provider-specific flux bootstrap arguments
+	var fluxArgs []string
+	switch tokenProvider {
+	case "github":
+		owner, repo, err := parseGitHubURL(repoURL, resolveGitOwner(cluster.Config))
+		if err != nil {
+			return nil, fmt.Errorf("parse github url: %w", err)
+		}
+		fluxArgs = []string{
+			"bootstrap", "github",
+			"--token-auth",
+			"--owner=" + owner,
+			"--repository=" + repo,
+			"--branch=" + branch,
+			"--path=" + bootstrapPath,
+			"--personal",
+		}
+		kubeconfigEnv["GITHUB_TOKEN"] = token
+
+	case "gitlab":
+		owner, repo, err := parseGitLabURL(repoURL, resolveGitOwner(cluster.Config))
+		if err != nil {
+			return nil, fmt.Errorf("parse gitlab url: %w", err)
+		}
+		fluxArgs = []string{
+			"bootstrap", "gitlab",
+			"--token-auth",
+			"--owner=" + owner,
+			"--repository=" + repo,
+			"--branch=" + branch,
+			"--path=" + bootstrapPath,
+		}
+		kubeconfigEnv["GITLAB_TOKEN"] = token
+
+	case "gitea":
+		// Use generic git bootstrap for Gitea because the Gitea provider
+		// in go-git-providers panics on non-standard ports.
+		fluxArgs = []string{
+			"bootstrap", "git",
+			"--url=" + repoURL,
+			"--branch=" + branch,
+			"--path=" + bootstrapPath,
+			"--token-auth",
+			"--username=" + status.Metadata.RepoOwner,
+			"--password=" + token,
+			"--ca-file=" + status.CAPath,
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported git_token_provider: %q (supported: github, gitlab, gitea)", tokenProvider)
 	}
 
 	if _, err := s.executor.Run(ctx, localdev.RunOptions{
@@ -159,6 +210,101 @@ func filepathForFlux(clusterName string) string {
 	return "applications/overlays/" + clusterName
 }
 
+// parseGitHubURL extracts owner and repository from a GitHub URL.
+// If ownerOverride is provided, it takes precedence over the URL-derived owner.
+// Supports formats:
+//   - https://github.com/owner/repo.git
+//   - https://github.com/owner/repo
+//   - git@github.com:owner/repo.git
+//   - ssh://git@github.com/owner/repo.git
+func parseGitHubURL(repoURL, ownerOverride string) (owner, repo string, err error) {
+	owner, repo, err = parseGitURL(repoURL)
+	if err != nil {
+		return "", "", err
+	}
+	if strings.TrimSpace(ownerOverride) != "" {
+		owner = strings.TrimSpace(ownerOverride)
+	}
+	if owner == "" {
+		return "", "", fmt.Errorf("github owner not found in URL %q and git_owner not configured", repoURL)
+	}
+	return owner, repo, nil
+}
+
+// parseGitLabURL extracts owner and repository from a GitLab URL.
+// If ownerOverride is provided, it takes precedence over the URL-derived owner.
+// Supports formats:
+//   - https://gitlab.com/owner/repo.git
+//   - https://gitlab.com/owner/repo
+//   - git@gitlab.com:owner/repo.git
+//   - ssh://git@gitlab.com/owner/repo.git
+//   - https://gitlab.example.com/owner/repo.git (self-hosted)
+func parseGitLabURL(repoURL, ownerOverride string) (owner, repo string, err error) {
+	owner, repo, err = parseGitURL(repoURL)
+	if err != nil {
+		return "", "", err
+	}
+	if strings.TrimSpace(ownerOverride) != "" {
+		owner = strings.TrimSpace(ownerOverride)
+	}
+	if owner == "" {
+		return "", "", fmt.Errorf("gitlab owner not found in URL %q and git_owner not configured", repoURL)
+	}
+	return owner, repo, nil
+}
+
+// parseGitURL extracts owner and repository from various Git URL formats.
+// Returns owner (username or organization) and repository name.
+func parseGitURL(repoURL string) (owner, repo string, err error) {
+	repoURL = strings.TrimSpace(repoURL)
+	if repoURL == "" {
+		return "", "", fmt.Errorf("empty repository URL")
+	}
+
+	// Handle SSH format: git@host:owner/repo.git
+	if strings.HasPrefix(repoURL, "git@") {
+		// git@github.com:owner/repo.git -> owner/repo.git
+		parts := strings.SplitN(repoURL, ":", 2)
+		if len(parts) != 2 {
+			return "", "", fmt.Errorf("invalid SSH URL format: %s", repoURL)
+		}
+		pathPart := strings.TrimSuffix(parts[1], ".git")
+		return splitOwnerRepo(pathPart)
+	}
+
+	// Handle URL formats: https://... or ssh://...
+	parsed, err := url.Parse(repoURL)
+	if err != nil {
+		return "", "", fmt.Errorf("parse URL %s: %w", repoURL, err)
+	}
+
+	// Clean the path: remove leading slash and .git suffix
+	urlPath := strings.TrimPrefix(parsed.Path, "/")
+	urlPath = strings.TrimSuffix(urlPath, ".git")
+
+	return splitOwnerRepo(urlPath)
+}
+
+// splitOwnerRepo splits "owner/repo" or "owner/group/repo" into owner and repo.
+// For nested groups (GitLab), the full path before the last segment is the owner.
+func splitOwnerRepo(pathPart string) (owner, repo string, err error) {
+	pathPart = strings.Trim(pathPart, "/")
+	if pathPart == "" {
+		return "", "", fmt.Errorf("empty path in URL")
+	}
+
+	parts := strings.Split(pathPart, "/")
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("URL path %q does not contain owner/repo", pathPart)
+	}
+
+	// Last part is the repo, everything before is the owner (supports nested groups)
+	repo = parts[len(parts)-1]
+	owner = path.Join(parts[:len(parts)-1]...)
+
+	return owner, repo, nil
+}
+
 func resolveTokenPath(configuredPath, fallbackPath string, fallbackExists bool) (string, error) {
 	if configuredPath != "" {
 		if _, err := os.Stat(configuredPath); err != nil {
@@ -173,4 +319,28 @@ func resolveTokenPath(configuredPath, fallbackPath string, fallbackExists bool) 
 		return "", fmt.Errorf("gitea user token %s: %w", fallbackPath, err)
 	}
 	return fallbackPath, nil
+}
+
+// resolveGitTokenProvider extracts the token provider from the GitOps config.
+func resolveGitTokenProvider(cfg *v2.Config) string {
+	if cfg.OpenCenter.GitOps.Auth.Token != nil {
+		return strings.ToLower(strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.Provider))
+	}
+	return ""
+}
+
+// resolveGitTokenFile extracts the token file path from the GitOps config.
+func resolveGitTokenFile(cfg *v2.Config) string {
+	if cfg.OpenCenter.GitOps.Auth.Token != nil {
+		return strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.TokenFile)
+	}
+	return ""
+}
+
+// resolveGitOwner extracts the owner from the GitOps config.
+func resolveGitOwner(cfg *v2.Config) string {
+	if cfg.OpenCenter.GitOps.Auth.Token != nil {
+		return strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.Owner)
+	}
+	return ""
 }

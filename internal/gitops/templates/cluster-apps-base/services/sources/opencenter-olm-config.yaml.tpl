@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 15m
-  url: {{ .OpenCenter.GitOps.GitURL }}
+  url: {{ .OpenCenter.GitOps.Repository.URL }}
   ref:
     branch: main
   secretRef:

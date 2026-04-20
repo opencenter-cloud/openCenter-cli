@@ -157,7 +157,7 @@ and suggest using 'opencenter cluster select' to set one.`,
 
 			if strings.EqualFold(cfg.OpenCenter.Infrastructure.Provider, "kind") && resolvedClusterPaths != nil {
 				renderedKindConfigPath := filepath.Join(resolvedClusterPaths.ClusterDir, "kind-config.yaml")
-				gitOpsReady := pathExists(cfg.OpenCenter.GitOps.GitDir)
+				gitOpsReady := pathExists(cfg.OpenCenter.GitOps.Repository.LocalDir)
 				kindConfigReady := pathExists(renderedKindConfigPath)
 				kubeconfigReady := pathExists(resolvedClusterPaths.KubeconfigPath)
 				clusterExists, apiReady, endpoint, providerError := kindClusterStatus(ctx, &cfg, resolvedClusterPaths.KubeconfigPath)
@@ -182,8 +182,8 @@ and suggest using 'opencenter cluster select' to set one.`,
 				}
 			}
 			if strings.EqualFold(cfg.OpenCenter.Infrastructure.Provider, "openstack") && resolvedClusterPaths != nil {
-				infraDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "infrastructure", "clusters", cfg.ClusterName())
-				gitOpsReady := pathExists(cfg.OpenCenter.GitOps.GitDir)
+				infraDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", cfg.ClusterName())
+				gitOpsReady := pathExists(cfg.OpenCenter.GitOps.Repository.LocalDir)
 				infraReady := pathExists(infraDir)
 				kubeconfigReady := pathExists(resolvedClusterPaths.KubeconfigPath)
 				apiReady, endpoint, providerError := cloudClusterStatus(ctx, resolvedClusterPaths.KubeconfigPath)

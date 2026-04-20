@@ -58,7 +58,7 @@ func TestConfigurationManager_Integration(t *testing.T) {
 		t.Fatalf("NewV2Default() error = %v", err)
 	}
 	cfg.OpenCenter.Meta.Organization = orgName
-	cfg.OpenCenter.GitOps.GitDir = "/tmp/gitops"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = "/tmp/gitops"
 	if err := loader.SaveToFile(ctx, configPath, cfg); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}

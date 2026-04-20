@@ -66,7 +66,7 @@ func TestRelayPointRenderingParity(t *testing.T) {
 	for _, cluster := range clusters {
 		t.Run(cluster, func(t *testing.T) {
 			cfg := loadParityConfig(t, filepath.Join(fixtureRoot, "."+cluster+"-config.yaml"))
-			cfg.OpenCenter.GitOps.GitDir = t.TempDir()
+			cfg.OpenCenter.GitOps.Repository.LocalDir = t.TempDir()
 
 			actions, err := planClusterAppActions(cfg)
 			if err != nil {
@@ -77,7 +77,7 @@ func TestRelayPointRenderingParity(t *testing.T) {
 				t.Fatalf("RenderClusterApps(%s): %v", cluster, err)
 			}
 
-			actualRoot := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "applications", "overlays", cluster)
+			actualRoot := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "applications", "overlays", cluster)
 			expectedRoot := filepath.Join(fixtureRoot, "applications", "overlays", cluster)
 			rules := inventory.rulesFor(cluster)
 

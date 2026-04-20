@@ -112,14 +112,14 @@ func runClusterBootstrap(cmd *cobra.Command, args []string) error {
 	// Pre-check: ensure the GitOps working tree is clean before bootstrap.
 	// A dirty tree causes git pull --rebase to fail during the gitea-rebase step.
 	if !opts.DryRun {
-		if gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.GitDir); gitDir != "" {
+		if gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.LocalDir); gitDir != "" {
 			confirmCommit, _ := cmd.Flags().GetBool("confirm-commit")
 			if err := ensureCleanWorkingTree(ctx, cmd, gitDir, confirmCommit); err != nil {
 				return err
 			}
 			// Verify the local repo's origin remote points to git_url so the
 			// gitea-rebase and gitops-push steps operate against the expected remote.
-			if gitURL := strings.TrimSpace(cfg.OpenCenter.GitOps.GitURL); gitURL != "" {
+			if gitURL := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.URL); gitURL != "" {
 				if err := verifyOriginMatchesGitURL(ctx, gitDir, gitURL); err != nil {
 					return err
 				}

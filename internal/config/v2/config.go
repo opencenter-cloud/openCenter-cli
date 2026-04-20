@@ -217,29 +217,85 @@ type BarbicanConfig struct {
 	CACert            string `yaml:"ca_cert,omitempty" json:"ca_cert,omitempty"`
 }
 
-// GitOpsConfig represents GitOps repository configuration.
+// GitOpsConfig represents GitOps repository and FluxCD configuration.
 // Requirements: 19.1
 type GitOpsConfig struct {
-	GitDir            string                 `yaml:"git_dir,omitempty" json:"git_dir,omitempty"`
-	GitURL            string                 `yaml:"git_url" json:"git_url" validate:"required"`
-	GitSSHKey         string                 `yaml:"git_ssh_key,omitempty" json:"git_ssh_key,omitempty"`
-	GitSSHPub         string                 `yaml:"git_ssh_pub,omitempty" json:"git_ssh_pub,omitempty"`
-	GitBranch         string                 `yaml:"git_branch,omitempty" json:"git_branch,omitempty"`
-	Release           string                 `yaml:"release,omitempty" json:"release,omitempty"`
-	Branch            string                 `yaml:"branch,omitempty" json:"branch,omitempty"`
-	URI               string                 `yaml:"uri,omitempty" json:"uri,omitempty"`
-	GitPath           string                 `yaml:"git_path,omitempty" json:"git_path,omitempty"`
-	BaseRepoURL       string                 `yaml:"base_repo_url,omitempty" json:"base_repo_url,omitempty"`
-	BaseRepoRelease   string                 `yaml:"base_repo_release,omitempty" json:"base_repo_release,omitempty"`
-	GitOpsBaseRepo    string                 `yaml:"gitops_base_repo,omitempty" json:"gitops_base_repo,omitempty"`
-	GitOpsBaseRelease string                 `yaml:"gitops_base_release,omitempty" json:"gitops_base_release,omitempty"`
-	GitOpsBranch      string                 `yaml:"gitops_branch,omitempty" json:"gitops_branch,omitempty"`
-	GitToken          string                 `yaml:"git_token,omitempty" json:"git_token,omitempty"`
-	GitTokenProvider  string                 `yaml:"git_token_provider,omitempty" json:"git_token_provider,omitempty"`
-	Flux              GitOpsFluxConfig       `yaml:"flux,omitempty" json:"flux,omitempty"`
-	FluxInterval      string                 `yaml:"flux_interval,omitempty" json:"flux_interval,omitempty"`
-	FluxPrune         bool                   `yaml:"flux_prune" json:"flux_prune"`
-	OverlayUnits      overlaycfg.UnitsConfig `yaml:"overlay_units,omitempty" json:"overlay_units,omitempty"`
+	// Repository holds cluster-specific GitOps repository settings.
+	Repository GitOpsRepository `yaml:"repository" json:"repository" validate:"required"`
+
+	// BaseRepo holds upstream template repository settings.
+	BaseRepo GitOpsBaseRepo `yaml:"base_repo,omitempty" json:"base_repo,omitempty"`
+
+	// Auth holds authentication configuration (SSH or Token).
+	Auth GitOpsAuth `yaml:"auth,omitempty" json:"auth,omitempty"`
+
+	// Flux holds FluxCD reconciliation settings.
+	Flux GitOpsFluxConfig `yaml:"flux,omitempty" json:"flux,omitempty"`
+
+	// OverlayUnits holds service overlay customization.
+	OverlayUnits overlaycfg.UnitsConfig `yaml:"overlay_units,omitempty" json:"overlay_units,omitempty"`
+}
+
+// GitOpsRepository holds cluster-specific repository settings.
+type GitOpsRepository struct {
+	// URL is the remote repository URL (SSH or HTTPS).
+	URL string `yaml:"url" json:"url" validate:"required,url"`
+
+	// Branch is the target branch (default: main).
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
+
+	// Path is the directory within the repo for this cluster's manifests.
+	Path string `yaml:"path,omitempty" json:"path,omitempty"`
+
+	// LocalDir is the local checkout directory.
+	LocalDir string `yaml:"local_dir,omitempty" json:"local_dir,omitempty"`
+
+	// SecretName is the K8s secret name for repository access.
+	SecretName string `yaml:"secret_name,omitempty" json:"secret_name,omitempty"`
+}
+
+// GitOpsBaseRepo holds upstream template repository settings.
+type GitOpsBaseRepo struct {
+	// URL is the base GitOps templates repository.
+	URL string `yaml:"url,omitempty" json:"url,omitempty" validate:"omitempty,url"`
+
+	// Release is the version tag to use (e.g., v0.1.0).
+	Release string `yaml:"release,omitempty" json:"release,omitempty"`
+
+	// Branch is the branch to track (alternative to Release).
+	Branch string `yaml:"branch,omitempty" json:"branch,omitempty"`
+}
+
+// GitOpsAuth holds authentication configuration.
+type GitOpsAuth struct {
+	// SSH holds SSH key authentication settings.
+	SSH *GitOpsSSHAuth `yaml:"ssh,omitempty" json:"ssh,omitempty"`
+
+	// Token holds token-based authentication settings.
+	Token *GitOpsTokenAuth `yaml:"token,omitempty" json:"token,omitempty"`
+}
+
+// GitOpsSSHAuth holds SSH key authentication settings.
+type GitOpsSSHAuth struct {
+	// PrivateKey is the path to the SSH private key file.
+	PrivateKey string `yaml:"private_key,omitempty" json:"private_key,omitempty"`
+
+	// PublicKey is the path to the SSH public key file.
+	PublicKey string `yaml:"public_key,omitempty" json:"public_key,omitempty"`
+}
+
+// GitOpsTokenAuth holds token-based authentication settings.
+type GitOpsTokenAuth struct {
+	// Provider is the Git provider: github, gitlab, gitea.
+	Provider string `yaml:"provider" json:"provider" validate:"required,oneof=github gitlab gitea"`
+
+	// TokenFile is the path to the file containing the access token.
+	// Required when using token authentication for bootstrap.
+	TokenFile string `yaml:"token_file,omitempty" json:"token_file,omitempty"`
+
+	// Owner is the repository owner (username or organization).
+	// If empty, extracted from repository URL.
+	Owner string `yaml:"owner,omitempty" json:"owner,omitempty"`
 }
 
 type GitOpsFluxConfig struct {

@@ -89,10 +89,10 @@ The cluster name can be specified in two formats:
 
 			// Check if we're in the git directory to show "Active cluster" prefix
 			isInGitDir := false
-			if cfg.OpenCenter.GitOps.GitDir != "" {
+			if cfg.OpenCenter.GitOps.Repository.LocalDir != "" {
 				cwd, err := os.Getwd()
 				if err == nil {
-					gitDir := corepaths.ExpandPath(cfg.OpenCenter.GitOps.GitDir)
+					gitDir := corepaths.ExpandPath(cfg.OpenCenter.GitOps.Repository.LocalDir)
 
 					if absGitDir, err := filepath.Abs(gitDir); err == nil {
 						if absCwd, err := filepath.Abs(cwd); err == nil {
@@ -112,8 +112,8 @@ The cluster name can be specified in two formats:
 					"organization": cfg.OpenCenter.Meta.Organization,
 					"provider":     cfg.OpenCenter.Infrastructure.Provider,
 					"metadata":     cfg.OpenCenter.Meta,
-					"git_dir":      cfg.OpenCenter.GitOps.GitDir,
-					"git_url":      cfg.OpenCenter.GitOps.GitURL,
+					"git_dir":      cfg.OpenCenter.GitOps.Repository.LocalDir,
+					"git_url":      cfg.OpenCenter.GitOps.Repository.URL,
 				}
 				b, err := json.MarshalIndent(output, "", "  ")
 				if err != nil {
@@ -134,11 +134,11 @@ The cluster name can be specified in two formats:
 			fmt.Fprintf(cmd.OutOrStdout(), "Config Path: %s\n\n", configPath)
 
 			// Print GitOps configuration
-			if cfg.OpenCenter.GitOps.GitDir != "" {
-				fmt.Fprintf(cmd.OutOrStdout(), "git_dir: %s\n", cfg.OpenCenter.GitOps.GitDir)
+			if cfg.OpenCenter.GitOps.Repository.LocalDir != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "git_dir: %s\n", cfg.OpenCenter.GitOps.Repository.LocalDir)
 			}
-			if cfg.OpenCenter.GitOps.GitURL != "" {
-				fmt.Fprintf(cmd.OutOrStdout(), "git_url: %s\n", cfg.OpenCenter.GitOps.GitURL)
+			if cfg.OpenCenter.GitOps.Repository.URL != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "git_url: %s\n", cfg.OpenCenter.GitOps.Repository.URL)
 			}
 			fmt.Fprintln(cmd.OutOrStdout())
 
@@ -379,8 +379,8 @@ func printGitOpsStatus(cmd *cobra.Command, cfg *v2.Config, clusterName string) e
 // getKubeconfigPath returns the path to the kubeconfig file for the cluster
 func getKubeconfigPath(cfg *v2.Config, clusterName string) string {
 	// Try to get from GitOps directory first
-	if cfg.OpenCenter.GitOps.GitDir != "" {
-		gitDir := corepaths.ExpandPath(cfg.OpenCenter.GitOps.GitDir)
+	if cfg.OpenCenter.GitOps.Repository.LocalDir != "" {
+		gitDir := corepaths.ExpandPath(cfg.OpenCenter.GitOps.Repository.LocalDir)
 
 		kubeconfigPath := filepath.Join(gitDir, "infrastructure", "clusters", clusterName, "kubeconfig.yaml")
 		if _, err := os.Stat(kubeconfigPath); err == nil {

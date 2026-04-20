@@ -85,10 +85,12 @@ opencenter:
           - az1
           - az2
   gitops:
-    git_url: "ssh://git@github.com/example/repo.git"
-    git_branch: main
-    flux_interval: "15m"
-    flux_prune: true
+    repository:
+      url: "ssh://git@github.com/example/repo.git"
+      branch: main
+    flux:
+      interval: "15m"
+      prune: true
 deployment:
   auto_deploy: true
   method: kubespray
@@ -296,10 +298,12 @@ opencenter:
         project_id: test-project-id
         network_id: test-network-id
   gitops:
-    git_url: "ssh://git@github.com/example/repo.git"
-    git_branch: main
-    flux_interval: "15m"
-    flux_prune: true
+    repository:
+      url: "ssh://git@github.com/example/repo.git"
+      branch: main
+    flux:
+      interval: "15m"
+      prune: true
 deployment:
   auto_deploy: true
   method: kubespray

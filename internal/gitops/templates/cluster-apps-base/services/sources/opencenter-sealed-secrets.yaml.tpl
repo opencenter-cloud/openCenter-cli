@@ -7,10 +7,10 @@ metadata:
 spec:
   interval: 15m
   {{- $service := index .OpenCenter.Services "sealed-secrets" }}
-  url: {{ $service.Uri | default .OpenCenter.GitOps.GitOpsBaseRepo }}
+  url: {{ $service.Uri | default .OpenCenter.GitOps.BaseRepo.URL }}
   ref:
-    branch: {{ $service.Branch | default .OpenCenter.GitOps.GitOpsBranch | default "main" }}
-{{- if not (hasPrefix "https://" .OpenCenter.GitOps.GitOpsBaseRepo) }}
+    branch: {{ $service.Branch | default .OpenCenter.GitOps.Repository.Branch | default "main" }}
+{{- if not (hasPrefix "https://" .OpenCenter.GitOps.BaseRepo.URL) }}
   secretRef:
     name: opencenter-base
 {{- end }}

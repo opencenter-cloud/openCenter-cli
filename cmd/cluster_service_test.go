@@ -75,7 +75,7 @@ func setupServiceTestEnv(t *testing.T, clusterName string) (string, func()) {
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Name = clusterName
 	cfg.OpenCenter.Meta.Organization = "opencenter"
-	cfg.OpenCenter.GitOps.GitDir = clusterPaths.GitOpsDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
 
 	ctx := context.Background()
 	if err := saveConfig(ctx, cfg); err != nil {
@@ -526,7 +526,7 @@ func TestClusterServiceDisable(t *testing.T) {
 					t.Error("expected cert-manager service to be disabled")
 				}
 
-				clusterRoot := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "applications", "overlays", cfg.ClusterName())
+				clusterRoot := filepath.Join(cfg.GitDir(), "applications", "overlays", cfg.ClusterName())
 				paths := []string{
 					filepath.Join(clusterRoot, "services", "cert-manager"),
 					filepath.Join(clusterRoot, "services", "sources", "opencenter-cert-manager.yaml"),

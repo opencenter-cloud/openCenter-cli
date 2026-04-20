@@ -163,8 +163,10 @@ func templateBaseConfig(provider string) v2.Config {
 					Provider: selectedProvider,
 				},
 				GitOps: v2.GitOpsConfig{
-					GitDir: "clusters/opencenter",
-					GitURL: "https://example.invalid/opencenter/example-cluster.git",
+					Repository: v2.GitOpsRepository{
+						LocalDir: "clusters/opencenter",
+						URL:      "https://example.invalid/opencenter/example-cluster.git",
+					},
 				},
 			},
 			OpenTofu: v2.OpenTofuConfig{
@@ -643,15 +645,43 @@ func addGitOpsComments(key, value *yaml.Node) {
 			break
 		}
 		subKey := value.Content[i]
+		subValue := value.Content[i+1]
 		switch subKey.Value {
-		case "git_dir":
+		case "repository":
+			subKey.LineComment = "Cluster-specific repository settings"
+			addGitOpsRepositoryComments(subValue)
+		case "base_repo":
+			subKey.LineComment = "Upstream template repository settings"
+		case "auth":
+			subKey.LineComment = "Authentication configuration"
+		case "flux":
+			subKey.LineComment = "FluxCD reconciliation settings"
+		}
+	}
+}
+
+// addGitOpsRepositoryComments adds comments for GitOps repository sub-fields
+func addGitOpsRepositoryComments(value *yaml.Node) {
+	if value.Kind != yaml.MappingNode {
+		return
+	}
+
+	for i := 0; i < len(value.Content); i += 2 {
+		if i+1 >= len(value.Content) {
+			break
+		}
+		subKey := value.Content[i]
+		switch subKey.Value {
+		case "local_dir":
 			subKey.LineComment = "Local GitOps repository directory"
-		case "git_url":
+		case "url":
 			subKey.LineComment = "Remote GitOps repository URL"
-		case "git_branch":
+		case "branch":
 			subKey.LineComment = "Git branch for cluster manifests"
-		case "flux_version":
-			subKey.LineComment = "FluxCD version"
+		case "path":
+			subKey.LineComment = "Directory within repo for this cluster"
+		case "secret_name":
+			subKey.LineComment = "K8s secret name for repository access"
 		}
 	}
 }

@@ -32,13 +32,16 @@ func TestUpdateStatusPreservesNativeV2Structure(t *testing.T) {
 		t.Fatalf("NewV2Default() error = %v", err)
 	}
 	cfg.OpenCenter.Meta.Organization = "opencenter"
-	cfg.OpenCenter.GitOps.GitDir = clusterPaths.GitOpsDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
 	cfg.Secrets.SopsAgeKeyFile = clusterPaths.SOPSKeyPath
 	cfg.Secrets.SOPSConfig.AgeKeyFile = clusterPaths.SOPSKeyPath
 	cfg.Secrets.SSHKey.Private = clusterPaths.SSHKeyPath
 	cfg.Secrets.SSHKey.Public = clusterPaths.SSHKeyPath + ".pub"
-	cfg.OpenCenter.GitOps.GitSSHKey = clusterPaths.SSHKeyPath
-	cfg.OpenCenter.GitOps.GitSSHPub = clusterPaths.SSHKeyPath + ".pub"
+	if cfg.OpenCenter.GitOps.Auth.SSH == nil {
+		cfg.OpenCenter.GitOps.Auth.SSH = &v2.GitOpsSSHAuth{}
+	}
+	cfg.OpenCenter.GitOps.Auth.SSH.PrivateKey = clusterPaths.SSHKeyPath
+	cfg.OpenCenter.GitOps.Auth.SSH.PublicKey = clusterPaths.SSHKeyPath + ".pub"
 	cfg.OpenCenter.Infrastructure.SSH.KeyPath = clusterPaths.SSHKeyPath
 
 	loader := v2.NewConfigLoader(defaults.NewRegistry())

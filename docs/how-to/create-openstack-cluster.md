@@ -2,60 +2,223 @@
 id: create-openstack-cluster
 title: "Create an OpenStack Cluster"
 sidebar_label: Create OpenStack Cluster
-description: Deploy a production Kubernetes cluster on OpenStack with openCenter and FluxCD GitOps.
+description: Create an openCenter Kubernetes cluster on OpenStack with generated GitOps content, OpenTofu infrastructure, and Flux-managed workloads.
 doc_type: how-to
 audience: "platform engineers, operators"
-tags: [openstack, cluster, deployment, gitops, production]
+tags: [openstack, cluster, deployment, gitops, opentofu, kubespray]
 ---
 
 # Create an OpenStack Cluster
 
-**Purpose:** For platform engineers and operators, shows how to deploy a production Kubernetes cluster on OpenStack with GitOps delivery via FluxCD.
+**Purpose:** For platform engineers and operators, shows how to generate the GitOps repository, provision OpenStack infrastructure with OpenTofu, and bring up an openCenter cluster that reconciles from Git.
 
 ## Prerequisites
 
-- openCenter CLI installed (`opencenter version`)
-- `git`, `kubectl`, `flux` installed
-- OpenStack CLI installed (`openstack --version`)
-- OpenStack API credentials (auth URL, project ID, username/password or application credentials)
-- Sufficient OpenStack quota: 6 instances, 24 vCPUs, 96 GB RAM, 240 GB block storage
-- A Git repository for the generated GitOps tree (GitHub, GitLab, Gitea, etc.)
+- openCenter CLI installed and on `PATH`
+- `git`, `kubectl`, `openstack`, `opentofu` installed
+- `flux` installed if you want to use the verification commands in the last section
+- OpenStack application credentials with permission to create or manage networking, instances, volumes, security groups, and load balancer resources
+- Existing OpenStack network, subnet, image, and external network IDs for the target region
+- Enough quota for the default footprint: 1 bastion, 3 control planes, and 2 workers
+- A Git remote for the generated GitOps repository
 
-Verify OpenStack access before proceeding:
+The current OpenStack bootstrap path reads **application credentials** from the v2 cluster config. Do not rely on username/password-only examples from older docs.
+
+Verify local tooling and OpenStack access before you start:
 
 ```bash
-openstack server list
-openstack quota show
+opencenter version
+git --version
+kubectl version --client
+openstack --version
+opentofu version
+openstack token issue
 ```
+
+Useful discovery commands:
+
+```bash
+openstack image list --name Ubuntu
+openstack network list
+openstack subnet list
+openstack network list --external
+```
+
+## Two Paths: Guided or Manual
+
+openCenter supports two ways to configure an OpenStack cluster:
+
+- **Guided** (`cluster configure --guided`): An interactive workflow that discovers your OpenStack resources (images, flavors, networks, availability zones) and walks you through each required field with prompts and validation. This is the recommended path for new clusters.
+- **Manual** (`cluster init` + `cluster edit`): Creates a config with placeholder defaults, then you edit the YAML by hand. Useful when you already know all the values or want to script the process.
+
+Both paths produce the same v2 configuration file. You can start with guided mode and refine with `cluster edit` afterward.
+
+## Bootstrap Flow
+
+The sequence diagram below shows the current OpenStack bootstrap path implemented by `opencenter cluster bootstrap`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User (host)
+    participant CLI as opencenter CLI
+    participant BS as BootstrapService
+    participant OSP as OpenStackBootstrapProvider
+    participant Creds as Credentials Extractor
+    participant Tofu as opentofu CLI
+    participant OS as OpenStack API
+    participant K8s as kubectl / cluster API
+
+    User->>CLI: opencenter cluster bootstrap prod-cluster
+    CLI->>BS: Bootstrap(ctx, opts)
+    BS->>BS: load config, resolve paths, open log, load saved state
+    BS->>OSP: BuildSteps(cfg, clusterPaths, opts)
+    OSP->>Creds: ExtractOpenStack()
+    Creds-->>OSP: auth_url, region, app creds, project, network data
+    OSP-->>BS: [openstack-preflight, opentofu-init, opentofu-apply, openstack-normalize-kubeconfig]
+
+    Note over BS: Step execution is resumable via saved state
+
+    rect rgb(230, 245, 255)
+        Note over BS,OSP: Step 1: openstack-preflight
+        BS->>OSP: validateOpenStackBootstrap(creds)
+        OSP-->>BS: auth_url and credentials present
+    end
+
+    rect rgb(232, 245, 233)
+        Note over BS,Tofu: Step 2: opentofu-init
+        BS->>Tofu: opentofu init
+        Tofu-->>BS: backend/plugins initialized
+    end
+
+    rect rgb(232, 245, 233)
+        Note over BS,OS: Step 3: opentofu-apply
+        BS->>Tofu: opentofu apply -auto-approve
+        Tofu->>OS: create/update network, instances, volumes, LB, Kubespray inputs
+        Tofu-->>BS: cluster artifacts rendered in infrastructure/clusters/prod-cluster/
+    end
+
+    rect rgb(255, 243, 224)
+        Note over BS,BS: Step 4: openstack-normalize-kubeconfig
+        BS->>BS: copy discovered kubeconfig to cluster-owned path
+        Note over BS: infrastructure/clusters/prod-cluster/kubeconfig.yaml
+    end
+
+    BS->>K8s: kubectl cluster-info --kubeconfig ...
+    K8s-->>BS: endpoint reachable
+    BS-->>CLI: bootstrap complete + log path
+```
+
+Unlike the Kind flow, the OpenStack bootstrap path does **not** run `flux bootstrap git` from the host. The host-side bootstrap sequence is OpenTofu-driven, and the command returns once the Kubernetes API is reachable. Flux and platform services continue reconciling afterward.
 
 ## Steps
 
-### 1. Initialize the Cluster Configuration
+### 1. Initialize the cluster configuration
+
+You have two options here. Choose one.
+
+#### Option A: Guided configuration (recommended)
+
+The guided workflow creates the cluster config, authenticates to OpenStack, discovers available resources, and walks you through every required field interactively:
 
 ```bash
-opencenter cluster init prod-cluster \
-  --org my-company \
-  --type openstack
+opencenter cluster configure prod-cluster --guided --org my-company --type openstack
 ```
 
-This creates a v2 configuration at `~/.config/opencenter/clusters/my-company/prod-cluster/` with OpenStack defaults (SJC3 region, Ubuntu 24.04 image, Kubespray deployment method). It also generates SOPS Age keys and an SSH key pair.
+The guided flow runs in phases:
 
-Confirm the generated paths:
+1. **Provider authentication** — prompts for auth URL, region, project ID, project name, domain, application credential ID and secret, and optional TLS settings (insecure flag, CA bundle path). Once credentials are accepted, the CLI authenticates to Keystone and discovers available resources.
+2. **Infrastructure selection** — presents discovered images, flavors, networks, subnets, external networks, and availability zones as selectable lists. If discovery fails, falls back to manual text input.
+3. **Compute sizing** — prompts for control plane count (default: 3) and worker count (default: 2).
+4. **Capability flows** — runs additional prompts for:
+   - **Git authentication** — Git remote URL, SSH key paths, and branch.
+   - **DNS** — DNS provider and cert-manager configuration (when cert-manager is enabled).
+   - **Object storage** — Swift or S3 endpoint and credentials for Loki and Tempo backends (when those services are enabled).
+5. **Review** — displays a summary of all changes grouped by category (Provider, Git Auth, DNS, Storage). You confirm or cancel before anything is written.
+
+After confirmation, the CLI generates SSH and SOPS Age keys, writes managed files (such as clouds.yaml), validates the config, and saves it.
+
+If the cluster already exists, guided mode loads the existing config and only prompts for fields that still have placeholder values or are missing.
 
 ```bash
-opencenter cluster info prod-cluster
+# Re-run guided mode on an existing cluster to fill in remaining fields
+opencenter cluster configure my-company/prod-cluster --guided
 ```
 
-### 2. Edit OpenStack Credentials and Provider Settings
+#### Option B: Manual initialization
 
 ```bash
-opencenter cluster edit prod-cluster
+opencenter cluster init prod-cluster --org my-company --type openstack
 ```
 
-Locate the `opencenter.infrastructure.cloud.openstack` section and replace the placeholder values with your environment:
+This creates a v2 config and organization-aware directory structure under:
+
+- `~/.config/opencenter/clusters/my-company/infrastructure/clusters/prod-cluster/`
+- `~/.config/opencenter/clusters/my-company/secrets/`
+
+It also:
+
+- writes the cluster config file to `infrastructure/clusters/prod-cluster/.prod-cluster-config.yaml`
+- generates SSH keys for Git and node access
+- generates SOPS Age keys
+- enables OpenTofu with a local backend by default
+- sets `opencenter.gitops.git_dir` to the organization root (`~/.config/opencenter/clusters/my-company`) unless you override it explicitly
+
+Additional `cluster init` flags:
+
+| Flag | Description |
+|---|---|
+| `--org` | Organization name (defaults to `opencenter`) |
+| `--type` | Cluster type: `openstack`, `baremetal`, `kind`, `vmware` |
+| `--config` | Load configuration from an existing YAML file |
+| `--force` | Overwrite existing config file |
+| `--no-keygen` | Skip automatic SSH and SOPS key generation |
+| `--no-sops-keygen` | Skip only SOPS key generation |
+| `--regenerate-keys` | Regenerate keys even if they already exist |
+| `--full-schema` | Generate config with all available fields (useful as a reference) |
+
+You can also override any config value at init time using dotted flag notation:
+
+```bash
+opencenter cluster init prod-cluster --org my-company --type openstack \
+  --opencenter.infrastructure.compute.master_count=5 \
+  --opencenter.infrastructure.compute.worker_count=3
+```
+
+Confirm the resolved paths:
+
+```bash
+opencenter cluster info my-company/prod-cluster
+```
+
+### 2. Set OpenStack, GitOps, and cluster identity values (manual path only)
+
+Skip this step if you used `cluster configure --guided` — the guided flow already collected these values.
+
+Open the generated config:
+
+```bash
+opencenter cluster edit my-company/prod-cluster
+```
+
+Update the OpenStack and GitOps sections with real values. This fragment matches the fields used by the current v2 loader and render path:
 
 ```yaml
 opencenter:
+  meta:
+    env: production
+    region: sjc3
+
+  cluster:
+    cluster_fqdn: "prod-cluster.sjc3.k8s.example.com"
+    admin_email: "platform@example.com"
+
+  gitops:
+    git_url: "git@github.com:my-company/prod-cluster-gitops.git"
+    git_branch: main
+    # Optional: move the GitOps working tree out of ~/.config/opencenter/clusters/<org>
+    # git_dir: "/Users/you/src/prod-cluster-gitops"
+
   infrastructure:
     cloud:
       openstack:
@@ -63,245 +226,368 @@ opencenter:
         region: sjc3
         project_id: "your-project-id"
         project_name: "your-project-name"
+        tenant_name: "your-project-name"
+        application_credential_id: "your-app-credential-id"
+        application_credential_secret: "your-app-credential-secret"
         user_domain_name: "Default"
         project_domain_name: "Default"
         image_id: "799dcf97-3656-4361-8187-13ab1b295e33"
+        availability_zone: "az1"
         network_id: "your-network-id"
         subnet_id: "your-subnet-id"
         floating_ip_pool: "PUBLICNET"
         router_external_network_id: "your-external-network-id"
-        availability_zone: az1
+        networking:
+          network_id: "your-network-id"
+          subnet_id: "your-subnet-id"
+          floating_ip_pool: "PUBLICNET"
+          router_external_network_id: "your-external-network-id"
+          k8s_api_port_acl:
+            - "203.0.113.0/24"
 ```
 
-Find the correct image ID for your region:
+Notes:
 
-```bash
-openstack image list --name Ubuntu
-```
+- Set **both** `project_name` and `tenant_name` to the same project value. Some generated OpenStack and service templates still read `tenant_name`.
+- Keep the top-level OpenStack network fields and the nested `openstack.networking` block in sync. Current validation reads the top-level fields, while some rendered OpenTofu templates still consume the nested block. The guided flow handles this automatically.
+- Replace the default `git_url` placeholder before `cluster setup` or `cluster bootstrap`.
 
-Find your network and subnet IDs:
+### 3. Tune compute, storage, and networking
 
-```bash
-openstack network list
-openstack subnet list
-```
+The OpenStack defaults are usable, but you should review them before provisioning. The current v2 defaults start with 3 control planes, 2 workers, Kubespray `v2.29.1`, Kubernetes `1.33.5`, and a local OpenTofu state backend.
 
-### 3. Adjust Compute, Storage, and Networking
-
-In the same configuration file, review and adjust these sections as needed.
-
-Compute (under `opencenter.infrastructure.compute`):
+Edit these sections as needed:
 
 ```yaml
-compute:
-  master_count: 3
-  worker_count: 3
-  flavor_master: "gp.0.4.8"    # 4 vCPU, 8 GB RAM
-  flavor_worker: "gp.0.4.16"   # 4 vCPU, 16 GB RAM
-  flavor_bastion: "gp.0.2.2"   # 2 vCPU, 2 GB RAM
+opencenter:
+  infrastructure:
+    compute:
+      master_count: 3
+      worker_count: 3
+      flavor_bastion: "gp.0.2.2"
+      flavor_master: "gp.0.4.8"
+      flavor_worker: "gp.0.4.16"
+
+    storage:
+      default_storage_class: "csi-cinder-sc-delete"
+      worker_volume_size: 40
+      worker_volume_type: "HA-Standard"
+      master_volume_size: 40
+      master_volume_type: "HA-Standard"
+
+    networking:
+      subnet_nodes: "10.2.128.0/22"
+      allocation_pool_start: "10.2.128.10"
+      allocation_pool_end: "10.2.131.250"
+      vrrp_ip: "10.2.128.5"
+      vrrp_enabled: true
+      use_octavia: false
+      loadbalancer_provider: "ovn"
+      dns_zone_name: "prod-cluster.sjc3.k8s.example.com"
+      dns_nameservers:
+        - "8.8.8.8"
+        - "8.8.4.4"
+      ntp_servers:
+        - "time.sjc3.rackspace.com"
+        - "time2.sjc3.rackspace.com"
 ```
 
-Storage (under `opencenter.infrastructure.storage`):
+If you enable `use_octavia`, review `vrrp_enabled` at the same time. The rendered infrastructure templates assume you are not trying to use both HA modes at once.
+
+### 4. Review default services
+
+`cluster init --type openstack` includes a set of platform services in the configuration. Some are enabled by default and others are present but disabled. The tables below reflect the defaults defined in `internal/config/v2/defaults.go` (function `defaultServiceMap`) combined with the OpenStack provider behavior defaults (function `applyProviderBehaviorDefaults`).
+
+**Enabled by default:**
+
+| Service | Category | Description |
+|---|---|---|
+| calico | Networking | CNI plugin for pod networking and network policy |
+| gateway-api | Networking | Gateway API CRDs for modern ingress routing |
+| gateway | Networking | Gateway API implementation (Envoy-based) |
+| cert-manager | Security | Automated TLS certificate management via Let's Encrypt |
+| keycloak | Security | Identity and access management (OIDC provider) |
+| rbac-manager | Security | Declarative RBAC configuration (required by keycloak) |
+| olm | Management | Operator Lifecycle Manager (required by keycloak) |
+| postgres-operator | Management | PostgreSQL cluster management operator (required by keycloak) |
+| headlamp | Management | Kubernetes dashboard with OIDC login |
+| fluxcd | GitOps | GitOps continuous delivery controllers |
+| sources | GitOps | FluxCD GitRepository source definitions |
+
+**Disabled by default (present in config, set `enabled: true` to activate):**
+
+| Service | Why disabled |
+|---|---|
+| kube-prometheus-stack | Observability stack (Prometheus, Grafana, Alertmanager) — enable when you need monitoring |
+| loki | Log aggregation — requires object storage backend configuration |
+| tempo | Distributed tracing — requires object storage backend configuration |
+| harbor | Optional container registry, not needed for every cluster |
+| velero | Cluster backup and disaster recovery — enable when backup strategy is defined |
+| metallb | Bare-metal load balancing — OpenStack clusters use Octavia or OVN |
+| openstack-ccm | OpenStack Cloud Controller Manager — enable for cloud-aware node management |
+| openstack-csi | Cinder CSI driver — the storage plugin (`cinder_csi`) is enabled separately in `kubernetes.storage_plugin` |
+| external-snapshotter | Volume snapshot controller — enable when you need volume snapshots |
+| kyverno | Kubernetes policy enforcement engine |
+| kafka-cluster | Workload-specific, enable when your applications need it |
+| longhorn | Distributed storage — OpenStack clusters use Cinder CSI instead |
+| mimir | Long-term metrics storage — default stack uses Prometheus local storage |
+| opentelemetry-kube-stack | Alternative telemetry pipeline, overlaps with Prometheus + Loki + Tempo |
+| sealed-secrets | Alternative to SOPS for in-cluster secret management |
+| vsphere-csi | VMware-only CSI driver |
+| weave-gitops | Optional FluxCD web UI |
+
+To toggle a service, set `enabled: true` or `enabled: false` under `opencenter.services.<name>` in your cluster config:
 
 ```yaml
-storage:
-  default_storage_class: "csi-cinder-sc-delete"
-  worker_volume_size: 40
-  worker_volume_type: "HA-Standard"
+opencenter:
+  services:
+    harbor:
+      enabled: true
+    loki:
+      enabled: true
 ```
 
-Networking (under `opencenter.infrastructure.networking`):
+Run `opencenter cluster validate` after changing services to catch missing required fields before setup.
 
-```yaml
-networking:
-  subnet_nodes: "10.2.128.0/22"
-  dns_nameservers:
-    - "8.8.8.8"
-    - "8.8.4.4"
-  ntp_servers:
-    - "time.sjc3.rackspace.com"
-    - "time2.sjc3.rackspace.com"
-  loadbalancer_provider: ovn
-  dns_zone_name: "prod-cluster.sjc3.k8s.opencenter.cloud"
-```
+For the full configuration options per service, see the [Platform Services Reference](../reference/platform-services.md).
 
-Set the GitOps repository URL (under `opencenter.gitops`):
-
-```yaml
-gitops:
-  git_url: "git@github.com:my-company/prod-cluster-gitops.git"
-  git_branch: main
-```
-
-List available flavors in your region:
-
-```bash
-openstack flavor list
-```
-
-### 4. Run Preflight Checks
+### 5. Run preflight checks and validate the config
 
 ```bash
 opencenter cluster preflight prod-cluster
-```
-
-Confirms that `git`, `kubectl`, `talosctl`, and the `openstack` CLI are available, and that the auth URL is configured. Fix any `MISSING` items before continuing.
-
-### 5. Validate the Configuration
-
-```bash
 opencenter cluster validate prod-cluster
 ```
 
-Runs schema validation, required-field checks, and cross-field dependency validation. Add `--check-connectivity` to also verify OpenStack API reachability:
+Current behavior is worth knowing:
+
+- `cluster preflight` checks that `git`, `kubectl`, `talosctl`, and `openstack` are on `PATH`, and warns if `auth_url` is empty.
+- `cluster validate` validates the v2 config shape and required provider fields such as `project_id`, `image_id`, and `network_id`. It performs schema validation, required field validation, and cross-field dependency validation.
+
+Additional `cluster validate` flags:
+
+| Flag | Description |
+|---|---|
+| `--check-connectivity` | Check connectivity to the cloud provider |
+| `--check-provider` | Perform provider-specific validation |
+| `--json` | Output validation results as JSON (for CI/CD pipelines) |
+| `-v`, `--verbose` | Verbose output |
+| `--generate-debug-config` | Generate a complete config for debugging |
+
+`cluster preflight` does **not** authenticate to Keystone, so keep using the OpenStack CLI for the real connectivity check:
 
 ```bash
-opencenter cluster validate prod-cluster --check-connectivity
+openstack token issue
 ```
 
-Fix any reported errors with `opencenter cluster edit prod-cluster` and re-validate.
-
-### 6. Generate the GitOps Repository
+### 6. Generate the GitOps repository
 
 ```bash
 opencenter cluster setup prod-cluster
 ```
 
-Produces the full GitOps tree under the configured `git_dir`, including:
+`cluster setup` does more than just render files. It currently:
 
-- `infrastructure/clusters/prod-cluster/` — OpenTofu configuration and Kubespray inventory
-- `applications/overlays/prod-cluster/` — FluxCD Kustomizations and service manifests
-- `secrets/` — SOPS-encrypted credential files
+1. copies the base GitOps skeleton into `git_dir`
+2. renders the application overlay into `applications/overlays/prod-cluster/`
+3. renders the infrastructure templates into `infrastructure/clusters/prod-cluster/`
+4. writes `provider.tf` for the configured OpenTofu backend
+5. initializes a git repository if `.git/` is missing
+6. creates the first commit automatically
 
-Use `--dry-run` to preview without writing files. Use `--force` to overwrite an existing tree.
+Additional `cluster setup` flags:
 
-### 7. Commit and Push the GitOps Repository
+| Flag | Description |
+|---|---|
+| `--force` | Overwrite existing GitOps repository |
+| `--dry-run` | Show what would be generated without writing files |
+| `--skip-validation` | Skip configuration validation before setup |
+
+For iterative development, `cluster render` is an alternative that renders templates with safety checks and timestamped backups, but does not perform Git operations:
+
+```bash
+# Re-render all services and infrastructure
+opencenter cluster render prod-cluster --all --force
+
+# Re-render infrastructure templates only
+opencenter cluster render prod-cluster --infra
+
+# Re-render a single service
+opencenter cluster render prod-cluster cert-manager --force
+```
+
+Verify the generated infrastructure directory:
 
 ```bash
 GITOPS_DIR=$(opencenter cluster info prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
-cd "$GITOPS_DIR"
-
-git init
-git add .
-git commit -m "feat: initial prod-cluster configuration"
-git remote add origin git@github.com:my-company/prod-cluster-gitops.git
-git push -u origin main
+ls "$GITOPS_DIR/infrastructure/clusters/prod-cluster"
+git -C "$GITOPS_DIR" log --oneline -1
 ```
 
-FluxCD reconciles from this repository, so it must be pushed before bootstrap.
+You should see files such as `main.tf`, `variables.tf`, `provider.tf`, and `Makefile`, plus an initial git commit.
 
-### 8. Bootstrap the Cluster
+### 7. Configure the remote and push the initial commit
+
+`cluster setup` creates the commit, but it does not add `origin` for you. Push the generated GitOps tree before bootstrapping:
+
+```bash
+GITOPS_DIR=$(opencenter cluster info prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+
+git -C "$GITOPS_DIR" remote add origin git@github.com:my-company/prod-cluster-gitops.git
+git -C "$GITOPS_DIR" branch -M main
+git -C "$GITOPS_DIR" push -u origin main
+```
+
+If the repository already has an `origin`, update it instead:
+
+```bash
+git -C "$GITOPS_DIR" remote set-url origin git@github.com:my-company/prod-cluster-gitops.git
+```
+
+`cluster bootstrap` checks that the local `origin` matches `opencenter.gitops.git_url`, so keep those values aligned.
+
+### 8. Bootstrap the cluster
 
 ```bash
 opencenter cluster bootstrap prod-cluster
 ```
 
-Bootstrap provisions infrastructure with OpenTofu (network, security groups, instances, volumes, floating IPs), deploys Kubernetes via Kubespray, and installs FluxCD to begin GitOps reconciliation. The process takes 30–45 minutes.
+The OpenStack bootstrap provider runs these step IDs (defined in `internal/cluster/openstack_bootstrap_provider.go`):
 
-The command is resumable. If a step fails, fix the issue and re-run. Use `--restart` to re-run all steps from scratch, or `--from-step <id>` to resume from a specific step.
+1. `openstack-preflight` — validates OpenStack credentials and bootstrap prerequisites
+2. `opentofu-init` — runs `opentofu init` in the cluster infrastructure directory
+3. `opentofu-apply` — runs `opentofu apply -auto-approve` to provision infrastructure
+4. `openstack-normalize-kubeconfig` — copies the discovered kubeconfig to the cluster-owned path
 
-Monitor infrastructure creation in a separate terminal:
+Additional runtime behavior to be aware of:
+
+- Bootstrap acquires a cluster-level lock to prevent concurrent operations. If a lock exists from a previous run, you are prompted to break it.
+- Bootstrap writes a log under the openCenter state directory, by default `~/.local/state/opencenter/logs/bootstrap/<org>/<cluster>/`.
+- Bootstrap keeps resumable state in `~/.local/state/opencenter/bootstrap/<org>/<cluster>/state.json`.
+- If the GitOps working tree has uncommitted changes, bootstrap auto-commits them with `chore: auto-commit before bootstrap`.
+- Use `--confirm-commit` if you want a prompt before that auto-commit happens.
+- If a step fails, re-run with `--from-step <step-id>` or `--restart`.
+
+Bootstrap flags:
+
+| Flag | Description |
+|---|---|
+| `--dry-run` | Show planned actions without executing |
+| `--restart` | Rerun all bootstrap steps and ignore saved state |
+| `--step <id>` | Run a single bootstrap step by ID |
+| `--from-step <id>` | Restart bootstrap from the specified step ID |
+| `--confirm-commit` | Prompt for confirmation before auto-committing uncommitted changes |
+| `--kubeconfig` | Path to kubeconfig (defaults to the cluster-owned kubeconfig path) |
+| `--log` | Log file path (defaults to `<state_dir>/logs/bootstrap/<org>/<name>/bootstrap-<timestamp>.log`) |
+
+Examples:
 
 ```bash
-watch -n 10 'openstack server list | grep prod-cluster'
+# Resume from the OpenTofu apply phase
+opencenter cluster bootstrap prod-cluster --from-step opentofu-apply
+
+# Run only the preflight step
+opencenter cluster bootstrap prod-cluster --step openstack-preflight
+
+# Throw away saved state and rerun the full sequence
+opencenter cluster bootstrap prod-cluster --restart
 ```
 
 ## Verification
 
+Bootstrap returns when `kubectl cluster-info` succeeds against the cluster-owned kubeconfig. Flux controllers and platform services may still be reconciling after that point.
+
 ```bash
-# Export kubeconfig for the cluster
-eval "$(opencenter cluster select prod-cluster --export-only)"
+GITOPS_DIR=$(opencenter cluster info prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+export KUBECONFIG="$GITOPS_DIR/infrastructure/clusters/prod-cluster/kubeconfig.yaml"
 
-# Nodes
-kubectl get nodes
-# Expect: 3 control-plane + 3 worker nodes in Ready state
-
-# FluxCD sources and kustomizations
+kubectl cluster-info
+kubectl get nodes -o wide
+kubectl get pods -n flux-system
 flux get sources git -n flux-system
 flux get kustomizations -n flux-system
-
-# Platform services
-kubectl get helmreleases -A
 ```
 
-All nodes should be `Ready`, Flux sources `READY=True`, and HelmReleases reconciled.
+Expected state:
 
-Get the load balancer IP for DNS configuration:
-
-```bash
-kubectl get svc -n gateway gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-```
-
-Point your DNS records (wildcard or per-service) at this IP to access platform services (Keycloak, Grafana, Headlamp, etc.).
+- `kubectl cluster-info` returns the cluster API endpoint
+- control plane and worker nodes are `Ready`
+- Flux controllers are running in `flux-system`
+- Flux sources and kustomizations converge to `READY=True`
 
 ## Cleanup
 
+Destroy the cluster and local artifacts:
+
 ```bash
 opencenter cluster destroy prod-cluster --force
 ```
 
-This tears down infrastructure (instances, volumes, networks) and removes the local configuration. The GitOps repository in Git is not deleted; remove it manually if no longer needed.
+`cluster destroy` acquires a lock, removes the GitOps directory, the cluster configuration directory, the applications overlay directory, and the config file. It also clears the active cluster marker if the destroyed cluster was active.
+
+The Git remote is not deleted automatically. Remove it manually if you no longer need it.
+
+Confirm the OpenStack resources are gone:
+
+```bash
+openstack server list --name prod-cluster
+openstack volume list --long | grep prod-cluster
+```
 
 ## Troubleshooting
 
-### Preflight: `openstack CLI not found`
+### `cluster validate` passes, but bootstrap fails immediately with OpenStack auth errors
 
-Install the OpenStack client tools:
+`cluster validate` only checks the config shape. The runtime bootstrap path needs working application credentials.
 
-```bash
-pip install python-openstackclient
-```
-
-Then re-run `opencenter cluster preflight prod-cluster`.
-
-### Validation: image ID not found
-
-The default image ID is region-specific. List images in your region and update the config:
+Verify:
 
 ```bash
-openstack image list --name Ubuntu
-opencenter cluster edit prod-cluster
-# Update opencenter.infrastructure.cloud.openstack.image_id
+openstack token issue
 ```
 
-### Validation: insufficient quota
+Then confirm these fields are set in the cluster config:
 
-Reduce `master_count` or `worker_count`, pick smaller flavors, or request a quota increase from your OpenStack administrator.
+- `opencenter.infrastructure.cloud.openstack.auth_url`
+- `opencenter.infrastructure.cloud.openstack.application_credential_id`
+- `opencenter.infrastructure.cloud.openstack.application_credential_secret`
+- `opencenter.infrastructure.cloud.openstack.project_id`
 
-### Bootstrap: OpenTofu quota error
+### The rendered OpenTofu files have the wrong project or network values
+
+Keep these fields synchronized:
+
+- `project_name` and `tenant_name`
+- top-level OpenStack `network_id` / `subnet_id`
+- nested `openstack.networking.network_id` / `openstack.networking.subnet_id`
+
+The guided configure flow (`cluster configure --guided`) keeps these fields in sync automatically. If you edit the config manually, you need to update both locations.
+
+### Bootstrap fails during `opentofu-apply`
+
+Open the bootstrap log printed by the command. By default it is written under:
+
+```text
+~/.local/state/opencenter/logs/bootstrap/<org>/<cluster>/
+```
+
+Then inspect the generated infrastructure directory:
 
 ```bash
-# Check current usage
-openstack quota show
-
-# If resources from a failed run remain, destroy and retry
-opencenter cluster destroy prod-cluster --force
-opencenter cluster init prod-cluster --org my-company --type openstack --force
-# Re-edit, re-validate, re-setup, re-bootstrap
+GITOPS_DIR=$(opencenter cluster info prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+cd "$GITOPS_DIR/infrastructure/clusters/prod-cluster"
+opentofu init
+opentofu plan
 ```
 
-### FluxCD: Kustomization reconciliation failure
+### Bootstrap completes, but Flux is not ready yet
+
+That is expected. OpenStack bootstrap waits only for the Kubernetes API to become reachable. Keep watching the cluster until Flux and platform services finish reconciling:
 
 ```bash
-kubectl logs -n flux-system deployment/kustomize-controller --tail=50
-flux get kustomizations -n flux-system
-flux reconcile kustomization <name> --with-source
+kubectl get pods -A
+flux get kustomizations -A
 ```
 
-### Bootstrap interrupted / stale lock
+### Bootstrap fails with "lock already held"
 
-```bash
-rm -f ~/.local/state/opencenter/locks/prod-cluster.lock
-opencenter cluster bootstrap prod-cluster --restart
-```
-
-## Evidence
-
-- OpenStack cloud defaults: `internal/config/v2/defaults.go:applyProviderCloudDefaults()`
-- Region-specific defaults (SJC3, DFW3, IAD3, ORD1): `internal/config/defaults/openstack.go`
-- OpenStack config struct: `internal/config/v2/infrastructure.go:OpenStackCloudConfig`
-- Preflight checks: `internal/cloud/openstack/preflight.go:PreflightOpenStack()`
-- Bootstrap command: `cmd/cluster_bootstrap.go`
-- Setup command: `cmd/cluster_setup.go`
-- Validate command: `cmd/cluster_validate.go`
-- Provider state and drift: `internal/cloud/openstack/provider.go`
+A previous bootstrap run may have left a stale lock. The CLI prompts you to break it. If running non-interactively, use `--force` or manually remove the lock state file under `~/.local/state/opencenter/`.

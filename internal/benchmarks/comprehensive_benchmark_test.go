@@ -230,7 +230,7 @@ func BenchmarkGitOpsGeneration_Legacy(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		tmpDir := b.TempDir()
-		cfg.OpenCenter.GitOps.GitDir = tmpDir
+		cfg.OpenCenter.GitOps.Repository.LocalDir = tmpDir
 
 		// Legacy: Direct copy with template rendering
 		err := gitops.CopyBase(cfg, true)
@@ -290,7 +290,7 @@ func BenchmarkGitOpsGeneration_MultiCluster(b *testing.B) {
 				cfg.OpenCenter.Meta.Name = fmt.Sprintf("cluster-%d", j)
 
 				tmpDir := b.TempDir()
-				cfg.OpenCenter.GitOps.GitDir = tmpDir
+				cfg.OpenCenter.GitOps.Repository.LocalDir = tmpDir
 
 				err := gitops.CopyBase(cfg, true)
 				if err != nil {

@@ -15,7 +15,7 @@ func TestProvisionProviderFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewV2Default() error = %v", err)
 	}
-	cfg.OpenCenter.GitOps.GitDir = dir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dir
 	cfg.OpenTofu.Enabled = true
 	cfg.OpenTofu.Backend.Type = "local"
 	cfg.OpenTofu.Backend.Local = &v2.LocalBackendConfig{Path: "terraform.tfstate"}
@@ -40,7 +40,7 @@ func TestInfrastructureArtifactsAreCoLocated(t *testing.T) {
 		t.Fatalf("NewV2Default() error = %v", err)
 	}
 
-	cfg.OpenCenter.GitOps.GitDir = dir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dir
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://keystone.example.com/v3"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "app-cred-id"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "app-cred-secret"

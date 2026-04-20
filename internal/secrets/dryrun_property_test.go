@@ -955,7 +955,7 @@ func createDryRunTestConfig(clusterName string, tmpDir string, secrets map[strin
 
 	cfg := newSecretsTestConfig(clusterName, "openstack")
 	cfg.OpenCenter.Meta.Organization = dryRunTestOrg
-	cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "test-repo")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "test-repo")
 	cfg.Secrets.SopsAgeKeyFile = filepath.Join(tmpDir, ".config", "opencenter", "clusters", "test-org", clusterName, "secrets", "age", fmt.Sprintf("%s_keys.txt", clusterName))
 	cfg.Secrets.CertManager = certManagerSecrets
 	cfg.Secrets.Loki = lokiSecrets

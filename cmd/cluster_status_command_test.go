@@ -25,7 +25,7 @@ func saveOpenStackStatusConfig(t *testing.T, dir, clusterName, organization stri
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Name = clusterName
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.GitDir = filepath.Join(dir, "gitops", clusterName)
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(dir, "gitops", clusterName)
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://keystone.example.com/v3"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "app-cred-id"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "app-cred-secret"
@@ -79,7 +79,7 @@ func TestClusterStatusShowsOpenStackInfrastructureDetails(t *testing.T) {
 
 	cfg, kubeconfigPath := saveOpenStackStatusConfig(t, dir, "status-cluster", "opencenter")
 
-	infraDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "infrastructure", "clusters", cfg.ClusterName())
+	infraDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", cfg.ClusterName())
 	if err := os.MkdirAll(infraDir, 0o755); err != nil {
 		t.Fatalf("mkdir infra dir: %v", err)
 	}

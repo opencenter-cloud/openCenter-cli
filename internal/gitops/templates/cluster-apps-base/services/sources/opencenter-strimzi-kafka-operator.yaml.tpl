@@ -6,10 +6,10 @@ metadata:
   namespace: flux-system
 spec:
   interval: 15m
-  url: {{ .OpenCenter.GitOps.GitOpsBaseRepo }}
+  url: {{ .OpenCenter.GitOps.BaseRepo.URL }}
   ref:
-    branch: {{ .OpenCenter.GitOps.GitOpsBranch | default "main" }}
-{{- if not (hasPrefix "https://" .OpenCenter.GitOps.GitOpsBaseRepo) }}
+    branch: {{ .OpenCenter.GitOps.Repository.Branch | default "main" }}
+{{- if not (hasPrefix "https://" .OpenCenter.GitOps.BaseRepo.URL) }}
   secretRef:
     name: opencenter-base
 {{- end }}

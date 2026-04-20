@@ -42,6 +42,7 @@ For accomplishing specific tasks:
 
 **Secrets & Security**
 - [Manage Secrets](how-to/manage-secrets.md)
+- [Configure Flux Bootstrap Authentication](how-to/flux-bootstrap-methods.md)
 
 **Cluster Creation**
 - [Create OpenStack Cluster](how-to/create-openstack-cluster.md)
@@ -156,6 +157,7 @@ For contributors and developers:
 
 ### Secrets Management
 - [Manage Secrets](how-to/manage-secrets.md)
+- [Configure Flux Bootstrap Authentication](how-to/flux-bootstrap-methods.md)
 - [Security Model](explanation/security-model.md)
 
 ### Deployment

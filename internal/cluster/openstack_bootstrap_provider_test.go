@@ -50,12 +50,12 @@ func TestOpenStackBootstrapProviderUsesOpenTofuAndNormalizesKubeconfig(t *testin
 	clusterName := "demo"
 	cfg := mustNewClusterTestConfig(clusterName, "openstack")
 
-	cfg.OpenCenter.GitOps.GitDir = filepath.Join(t.TempDir(), "repo")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(t.TempDir(), "repo")
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://keystone.example.com/v3"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "app-cred-id"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "app-cred-secret"
 
-	clusterDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "infrastructure", "clusters", clusterName)
+	clusterDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", clusterName)
 	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
 		t.Fatalf("mkdir cluster dir: %v", err)
 	}
@@ -140,12 +140,12 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 
 	cfg := mustNewClusterTestConfig(clusterName, "openstack")
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "repo")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "repo")
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://keystone.example.com/v3"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "app-cred-id"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "app-cred-secret"
 
-	clusterDir := filepath.Join(cfg.OpenCenter.GitOps.GitDir, "infrastructure", "clusters", clusterName)
+	clusterDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", clusterName)
 	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
 		t.Fatalf("mkdir cluster dir: %v", err)
 	}

@@ -118,7 +118,7 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			cfg := newDefault("negative-test")
-			cfg.OpenCenter.GitOps.GitDir = t.TempDir()
+			cfg.OpenCenter.GitOps.Repository.LocalDir = t.TempDir()
 			tt.mutate(&cfg)
 
 			_, err := planClusterAppActions(cfg)
@@ -136,7 +136,7 @@ func TestPlanClusterAppActionsRejectsInvalidOverlayConfig(t *testing.T) {
 // populates the lastRenderDiagnostics variable with structured output.
 func TestRenderDiagnosticsPopulated(t *testing.T) {
 	cfg := newDefault("diagnostics-test")
-	cfg.OpenCenter.GitOps.GitDir = t.TempDir()
+	cfg.OpenCenter.GitOps.Repository.LocalDir = t.TempDir()
 
 	actions, err := planClusterAppActions(cfg)
 	if err != nil {

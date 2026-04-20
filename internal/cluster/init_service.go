@@ -194,7 +194,7 @@ func (s *InitService) Initialize(ctx context.Context, opts InitOptions) (*InitRe
 	}
 
 	// Build result message
-	result.Message = s.buildResultMessage(clusterPaths, opts.Organization, cfg.OpenCenter.GitOps.GitDir, result.KeysGenerated)
+	result.Message = s.buildResultMessage(clusterPaths, opts.Organization, cfg.OpenCenter.GitOps.Repository.LocalDir, result.KeysGenerated)
 
 	return result, nil
 }
@@ -377,9 +377,9 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 
 // updateConfigPaths updates configuration with resolved paths
 func (s *InitService) updateConfigPaths(cfg *v2.Config, configMap map[string]any, clusterPaths *paths.ClusterPaths, opts InitOptions) {
-	if !hasExplicitConfigValue(configMap, opts, "opencenter", "gitops", "git_dir") {
-		cfg.OpenCenter.GitOps.GitDir = clusterPaths.GitOpsDir
-		setNestedConfigValue(configMap, clusterPaths.GitOpsDir, "opencenter", "gitops", "git_dir")
+	if !hasExplicitConfigValue(configMap, opts, "opencenter", "gitops", "repository", "local_dir") {
+		cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
+		setNestedConfigValue(configMap, clusterPaths.GitOpsDir, "opencenter", "gitops", "repository", "local_dir")
 	}
 
 	// Update SSH key paths (used by non-Kind providers for Git SSH auth).
@@ -396,20 +396,19 @@ func (s *InitService) updateConfigPaths(cfg *v2.Config, configMap map[string]any
 	if provider == "kind" {
 		// Kind uses token-based HTTPS auth against local Gitea.
 		// SSH key fields are not needed for gitops; clear them.
-		cfg.OpenCenter.GitOps.GitSSHKey = ""
-		cfg.OpenCenter.GitOps.GitSSHPub = ""
-		setNestedConfigValue(configMap, "", "opencenter", "gitops", "git_ssh_key")
-		setNestedConfigValue(configMap, "", "opencenter", "gitops", "git_ssh_pub")
-
-		// Set token provider; the actual token path is resolved at bootstrap
-		// time from the Gitea service state directory.
-		cfg.OpenCenter.GitOps.GitTokenProvider = "gitea"
-		setNestedConfigValue(configMap, "gitea", "opencenter", "gitops", "git_token_provider")
+		cfg.OpenCenter.GitOps.Auth.SSH = nil
+		cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{
+			Provider: "gitea",
+		}
+		setNestedConfigValue(configMap, nil, "opencenter", "gitops", "auth", "ssh")
+		setNestedConfigValue(configMap, "gitea", "opencenter", "gitops", "auth", "token", "provider")
 	} else {
-		cfg.OpenCenter.GitOps.GitSSHKey = sshKeyPath
-		cfg.OpenCenter.GitOps.GitSSHPub = sshKeyPath + ".pub"
-		setNestedConfigValue(configMap, sshKeyPath, "opencenter", "gitops", "git_ssh_key")
-		setNestedConfigValue(configMap, sshKeyPath+".pub", "opencenter", "gitops", "git_ssh_pub")
+		cfg.OpenCenter.GitOps.Auth.SSH = &v2.GitOpsSSHAuth{
+			PrivateKey: sshKeyPath,
+			PublicKey:  sshKeyPath + ".pub",
+		}
+		setNestedConfigValue(configMap, sshKeyPath, "opencenter", "gitops", "auth", "ssh", "private_key")
+		setNestedConfigValue(configMap, sshKeyPath+".pub", "opencenter", "gitops", "auth", "ssh", "public_key")
 	}
 
 	// Update SOPS key path

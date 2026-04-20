@@ -46,8 +46,8 @@ func (g *ConfigGenerator) GenerateConfig(provider string) v2.Config {
 	cfg.OpenCenter.Cluster.Kubernetes.Version = g.randomKubernetesVersion()
 	cfg.OpenCenter.Cluster.Kubernetes.Security = g.generateSecurity()
 	cfg.OpenCenter.Services = g.generateServices()
-	cfg.OpenCenter.GitOps.GitURL = g.randomGitRepository()
-	cfg.OpenCenter.GitOps.GitBranch = g.randomBranch()
+	cfg.OpenCenter.GitOps.Repository.URL = g.randomGitRepository()
+	cfg.OpenCenter.GitOps.Repository.Branch = g.randomBranch()
 	cfg.Deployment = g.generateDeployment()
 	return cfg
 }

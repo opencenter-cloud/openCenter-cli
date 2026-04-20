@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev/gitea"
 )
@@ -51,7 +52,7 @@ func (s *Service) Push(ctx context.Context, clusterIdentifier string) (*PushResu
 		return nil, err
 	}
 
-	gitDir := strings.TrimSpace(cluster.Config.GitOps().GitDir)
+	gitDir := strings.TrimSpace(cluster.Config.GitDir())
 	if gitDir == "" {
 		gitDir = cluster.Paths.GitOpsDir
 	}
@@ -89,7 +90,7 @@ func (s *Service) Push(ctx context.Context, clusterIdentifier string) (*PushResu
 	if err != nil {
 		return nil, err
 	}
-	tokenPath, err := resolveTokenPath(strings.TrimSpace(cluster.Config.OpenCenter.GitOps.GitToken), status.UserTokenPath, status.UserTokenExists)
+	tokenPath, err := resolveTokenPath(resolveGitTokenPathFromConfig(cluster.Config), status.UserTokenPath, status.UserTokenExists)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +145,7 @@ func (s *Service) PullRebase(ctx context.Context, clusterIdentifier, gitDir stri
 	if err != nil {
 		return "", err
 	}
-	tokenPath, err := resolveTokenPath(strings.TrimSpace(cluster.Config.OpenCenter.GitOps.GitToken), status.UserTokenPath, status.UserTokenExists)
+	tokenPath, err := resolveTokenPath(resolveGitTokenPathFromConfig(cluster.Config), status.UserTokenPath, status.UserTokenExists)
 	if err != nil {
 		return "", err
 	}
@@ -294,4 +295,12 @@ func resolveTokenPath(configuredPath, fallbackPath string, fallbackExists bool) 
 		return "", fmt.Errorf("gitea user token %s: %w", fallbackPath, err)
 	}
 	return fallbackPath, nil
+}
+
+// resolveGitTokenPathFromConfig extracts the token file path from the GitOps config.
+func resolveGitTokenPathFromConfig(cfg *v2.Config) string {
+	if cfg.OpenCenter.GitOps.Auth.Token != nil {
+		return strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.TokenFile)
+	}
+	return ""
 }

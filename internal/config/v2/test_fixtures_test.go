@@ -61,11 +61,15 @@ func newValidV2TestConfig(provider string) *Config {
 				},
 			},
 			GitOps: GitOpsConfig{
-				GitURL:       "ssh://git@github.com/example/repo.git",
-				GitBranch:    "main",
-				GitPath:      "clusters/test-cluster",
-				FluxInterval: "15m",
-				FluxPrune:    true,
+				Repository: GitOpsRepository{
+					URL:    "ssh://git@github.com/example/repo.git",
+					Branch: "main",
+					Path:   "clusters/test-cluster",
+				},
+				Flux: GitOpsFluxConfig{
+					Interval: "15m",
+					Prune:    true,
+				},
 			},
 		},
 		Deployment: DeploymentConfig{

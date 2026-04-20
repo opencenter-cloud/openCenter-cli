@@ -74,7 +74,7 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 				// Create minimal config
 				cfg := mustNewClusterTestConfig(clusterName, "kind")
 				cfg.OpenCenter.Meta.Organization = "test-org"
-				cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "gitops")
+				cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "gitops")
 
 				// Save config
 				testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
@@ -110,7 +110,7 @@ func TestBootstrapService_Bootstrap(t *testing.T) {
 				// Create minimal config
 				cfg := mustNewClusterTestConfig(clusterName, "kind")
 				cfg.OpenCenter.Meta.Organization = "test-org"
-				cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "gitops")
+				cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "gitops")
 
 				// Save config
 				testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
@@ -270,7 +270,7 @@ func TestBootstrapService_OpenStackDryRunDoesNotUseLegacyConfigValidator(t *test
 
 	cfg := mustNewClusterTestConfig(clusterName, "openstack")
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.GitDir = filepath.Join(tmpDir, "gitops-repo")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "gitops-repo")
 
 	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
 

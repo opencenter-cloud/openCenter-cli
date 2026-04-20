@@ -157,7 +157,7 @@ func TestClusterSetupDryRunSkipsCommit(t *testing.T) {
 	}
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.GitDir = gitopsDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitopsDir
 
 	configPath := filepath.Join(orgDir, "."+clusterName+"-config.yaml")
 	loader := v2.NewConfigLoader(configdefaults.NewRegistry())

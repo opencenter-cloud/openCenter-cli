@@ -151,7 +151,7 @@ Examples:
 			// Render the service if --render flag is set
 			if render {
 				// Validate git_dir is set before rendering
-				if cfg.OpenCenter.GitOps.GitDir == "" {
+				if cfg.OpenCenter.GitOps.Repository.LocalDir == "" {
 					return fmt.Errorf("git_dir is not configured. Run 'opencenter cluster setup' first or set git_dir in the configuration")
 				}
 
@@ -248,7 +248,7 @@ Examples:
 			fmt.Fprintf(cmd.OutOrStdout(), "Successfully disabled %s '%s' in cluster '%s'.\n", serviceLabel, serviceName, clusterName)
 
 			if render {
-				if cfg.OpenCenter.GitOps.GitDir == "" {
+				if cfg.OpenCenter.GitOps.Repository.LocalDir == "" {
 					return fmt.Errorf("git_dir is not configured. Run 'opencenter cluster setup' first or set git_dir in the configuration")
 				}
 

@@ -7,9 +7,9 @@ metadata:
 spec:
   interval: 10m
   {{- $service := index .OpenCenter.Services "kyverno" }}
-  url: {{ $service.Uri | default .OpenCenter.GitOps.GitURL }}
+  url: {{ $service.Uri | default .OpenCenter.GitOps.Repository.URL }}
   ref:
-    branch: {{ $service.Branch | default .OpenCenter.GitOps.GitBranch | default "main" }}
+    branch: {{ $service.Branch | default .OpenCenter.GitOps.Repository.Branch | default "main" }}
   secretRef:
     name: flux-system
   include:

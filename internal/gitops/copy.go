@@ -118,7 +118,7 @@ func copyWorkspaceToTarget(workspaceDir, targetDir string) error {
 }
 
 // CopyBase copies or renders embedded files from gitops-base-dir into the target directory
-// specified by cfg.GitOps().GitDir.
+// specified by cfg.GitDir().
 //
 // Files ending with .tpl are always rendered with the cluster configuration bound
 // under the dot context and the .tpl suffix stripped from the destination path.
@@ -137,9 +137,9 @@ func copyWorkspaceToTarget(workspaceDir, targetDir string) error {
 // Outputs:
 //   - error: An error if one occurred during the copy or render operation.
 func CopyBase(cfg v2.Config, render bool) error {
-	target := cfg.GitOps().GitDir
+	target := cfg.GitDir()
 	if target == "" {
-		return fmt.Errorf("opencenter.gitops.git_dir must be set")
+		return fmt.Errorf("opencenter.gitops.repository.local_dir must be set")
 	}
 
 	// Use atomic version with temporary workspace
@@ -234,6 +234,12 @@ func renderTemplateAtomic(path, dst string, cfg v2.Config, workspace *GitOpsWork
 	var buf strings.Builder
 	if err := t.Execute(&buf, cfg); err != nil {
 		return fmt.Errorf("failed to execute template %s: %w", path, err)
+	}
+
+	// Skip writing empty output (templates with conditional rendering may produce empty content)
+	output := strings.TrimSpace(buf.String())
+	if output == "" {
+		return nil
 	}
 
 	// Get relative path from workspace root
@@ -350,7 +356,7 @@ func RenderClusterApps(cfg v2.Config) error {
 	if clusterName == "" {
 		return fmt.Errorf("cluster name is empty")
 	}
-	target := filepath.Join(cfg.GitOps().GitDir, "applications", "overlays", clusterName)
+	target := filepath.Join(cfg.GitDir(), "applications", "overlays", clusterName)
 
 	// Create target directory
 	if err := os.MkdirAll(target, 0o755); err != nil {
@@ -456,9 +462,9 @@ func RenderInfrastructureCluster(cfg v2.Config) error {
 		return fmt.Errorf("cluster name is empty")
 	}
 
-	target := cfg.GitOps().GitDir
+	target := cfg.GitDir()
 	if target == "" {
-		return fmt.Errorf("opencenter.gitops.git_dir must be set")
+		return fmt.Errorf("opencenter.gitops.repository.local_dir must be set")
 	}
 	if err := os.MkdirAll(target, 0o755); err != nil {
 		return err
@@ -489,7 +495,7 @@ func RenderSingleService(cfg v2.Config, serviceName string, isManaged bool) erro
 	if clusterName == "" {
 		return fmt.Errorf("cluster name is empty")
 	}
-	target := filepath.Join(cfg.GitOps().GitDir, "applications", "overlays", clusterName)
+	target := filepath.Join(cfg.GitDir(), "applications", "overlays", clusterName)
 
 	// Create target directory
 	if err := os.MkdirAll(target, 0o755); err != nil {

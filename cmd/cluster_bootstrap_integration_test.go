@@ -164,7 +164,7 @@ func TestClusterBootstrapServiceIntegration(t *testing.T) {
 	}
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.GitDir = filepath.Join(dir, "clusters", organization)
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(dir, "clusters", organization)
 
 	loader := v2.NewConfigLoader(configdefaults.NewRegistry())
 	if err := loader.SaveToFile(&cfg, configPath); err != nil {

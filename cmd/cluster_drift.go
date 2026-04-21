@@ -738,6 +738,14 @@ func filterBySeverity(report *cloud.DriftReport, severityStr string) *cloud.Drif
 }
 
 func sendDriftCallback(ctx context.Context, callbackURL string, report *cloud.DriftReport) error {
+	return sendDriftCallbackWithDoer(ctx, callbackURL, report, http.DefaultClient)
+}
+
+type httpDoer interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+func sendDriftCallbackWithDoer(ctx context.Context, callbackURL string, report *cloud.DriftReport, doer httpDoer) error {
 	body, err := json.Marshal(report)
 	if err != nil {
 		return fmt.Errorf("failed to marshal drift report: %w", err)
@@ -752,7 +760,7 @@ func sendDriftCallback(ctx context.Context, callbackURL string, report *cloud.Dr
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := doer.Do(req)
 	if err != nil {
 		return fmt.Errorf("callback POST failed: %w", err)
 	}

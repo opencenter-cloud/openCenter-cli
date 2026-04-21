@@ -1,162 +1,196 @@
-Feature:opencenterclusterbasics
-Background:
-Givenanemptydirectory "<<tmp>>/conf"
-Scenario:Initializeaclusterwithdefaults
-WhenIrun "opencenterclusterinitdemo --config-dir <<tmp>>/conf"
-Thenafile "<<tmp>>/conf/demo.yaml"shouldexist
-Andthefile "<<tmp>>/conf/demo.yaml"shouldcontain "cluster_name:demo"
-Scenario:Selectthecluster
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-  """
-WhenIrun "opencenterclusterselectdemo --config-dir <<tmp>>/conf"
-Thenthefile "<<tmp>>/conf/.active"shouldmatchregex "^demo$"
-Scenario:Showcurrentcluster
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-  """
-AndIrun "opencenterclusterselectdemo --config-dir <<tmp>>/conf"
-WhenIrun "opencenterclustercurrent --config-dir <<tmp>>/conf"
-Thenstdoutshouldcontain "demo"
-Scenario:Listclusters
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-  """
-Andafile "<<tmp>>/conf/blue.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:blue
-  """
-Andafile "<<tmp>>/conf/green.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:green
-  """
-WhenIrun "opencenterclusterlist --config-dir <<tmp>>/conf"
-Thenstdoutshouldcontain:
-  """
-blue
-demo
-green
-  """
-Scenario:ListclustersasJSON
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-  """
-Andafile "<<tmp>>/conf/blue.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:blue
-  """
-Andafile "<<tmp>>/conf/green.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:green
-  """
-WhenIrun "opencenterclusterlist --json --config-dir <<tmp>>/conf"
-Thenstdoutshouldcontain '["blue","demo","green"]'
-Scenario:Infoforacluster
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-  """
-AndIrun "opencenterclusterselectdemo --config-dir <<tmp>>/conf"
-WhenIrun "opencenterclusterinfo --config-dir <<tmp>>/conf"
-Thenstdoutshouldcontain "cluster_name:demo"
-Scenario:Validateconstraints
-WhenIrun "opencenterclusterinitdemo --config-dir <<tmp>>/conf --no-keygen"
-Thentheexitcodeshouldbe0
-WhenIrun "opencenterclusterinfodemo --validate --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Validationsuccessful."
-Scenario:Validateconstraintsfailure
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-gitops:
-git_dir: ""
-  """
-WhenIrun "opencenterclusterinfodemo --validate --config-dir <<tmp>>/conf"
-Thenexitcodeshouldbe1
-Andstderrshouldcontain "Config.OpenCenter.GitOps.GitDir:fieldisrequired"
-Scenario:Preflight
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-  """
-AndIrun "opencenterclusterselectdemo --config-dir <<tmp>>/conf"
-WhenIrun "opencenterclusterpreflight --config-dir <<tmp>>/conf"
-Thenstdoutshouldcontain "Preflightcomplete."
+Feature: opencenter cluster basics
+  Background:
+    Given an empty directory "<<tmp>>/conf"
+
+  Scenario: Initialize a cluster with defaults
+    When I run "opencenter cluster init demo --config-dir <<tmp>>/conf"
+    Then a file "<<tmp>>/conf/demo.yaml" should exist
+    And the file "<<tmp>>/conf/demo.yaml" should contain "cluster_name: demo"
+
+  Scenario: Select the cluster
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+      """
+    When I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
+    Then the file "<<tmp>>/conf/.active" should match regex "^demo$"
+
+  Scenario: Show current cluster
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+      """
+    And I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster current --config-dir <<tmp>>/conf"
+    Then stdout should contain "demo"
+
+  Scenario: List clusters
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+      """
+    And a file "<<tmp>>/conf/blue.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: blue
+      """
+    And a file "<<tmp>>/conf/green.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: green
+      """
+    When I run "opencenter cluster list --config-dir <<tmp>>/conf"
+    Then stdout should contain:
+      """
+      blue
+      demo
+      green
+      """
+
+  Scenario: List clusters as JSON
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+      """
+    And a file "<<tmp>>/conf/blue.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: blue
+      """
+    And a file "<<tmp>>/conf/green.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: green
+      """
+    When I run "opencenter cluster list --json --config-dir <<tmp>>/conf"
+    Then stdout should contain '["blue","demo","green"]'
+
+  Scenario: Info for a cluster
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+      """
+    And I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    Then stdout should contain "cluster_name: demo"
+
+  Scenario: Validate constraints
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+          domain: example.com
+        gitops:
+          git_dir: "<<tmp>>/repo"
+        infrastructure:
+          provider: openstack
+          cloud:
+            openstack:
+              domain: "Default"
+              networking:
+                floating_network_id: "12345678-1234-1234-1234-123456789012"
+              application_credential_id: "12345678-1234-1234-1234-123456789012"
+              application_credential_secret: "test-secret"
+      secrets:
+        global:
+          openstack:
+            application_credential_id: "12345678-1234-1234-1234-123456789012"
+            application_credential_secret: "test-secret"
+      """
+    When I run "opencenter cluster validate demo --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Validation successful"
+
+  Scenario: Validate constraints failure
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+        gitops:
+          git_dir: ""
+      """
+    When I run "opencenter cluster render demo --config-dir <<tmp>>/conf"
+    Then exit code should be 1
+    And stderr should contain "opencenter.gitops.repository.local_dir must be set"
+
+  Scenario: Preflight
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+      """
+    And I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster preflight --config-dir <<tmp>>/conf"
+    Then stdout should contain "Preflight complete."
+
   @hangs @wip
   @wip
-Scenario:Bootstrappushesanewcommittoaremoterepository
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-gitops:
-git_dir: "<<tmp>>/opencenter-demo"
-  """
-Andabaregitrepositoryexistsat "<<tmp>>/remote.git"
-AndIupdatetheYAML "<<tmp>>/conf/demo.yaml"toset:
-  """
-opencenter:
-gitops:
-git_url: "git@localhost:newuser/gitops-repo.git"
-  """
-AndIrun "opencenterclusterrenderdemo --config-dir <<tmp>>/conf"
-WhenIrun "opencenterclusterbootstrapdemo --force --config-dir <<tmp>>/conf"
-Thenthecommandshouldsucceed
-Andtheremotegitrepositoryshouldcontaina "Bootstrapcommit"
+  Scenario: Bootstrap pushes a new commit to a remote repository
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+        gitops:
+          git_dir: "<<tmp>>/opencenter-demo"
+      """
+
+    And a bare git repository exists at "<<tmp>>/remote.git"
+    And I update the YAML "<<tmp>>/conf/demo.yaml" to set:
+      """
+      opencenter:
+        gitops:
+          git_url: "git@localhost:newuser/gitops-repo.git"
+      """
+    And I run "opencenter cluster render demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster bootstrap demo --force --config-dir <<tmp>>/conf"
+    Then the command should succeed
+    And the remote git repository should contain a "Bootstrap commit"
+
   @hangs
-Scenario:Setupwithprovisioning
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-gitops:
-git_dir: "<<tmp>>/opencenter-demo"
-opentofu:
-enabled:true
-  """
-WhenIrun "opencenterclusterrenderdemo --config-dir <<tmp>>/conf"
-Thenafile "<<tmp>>/opencenter-demo/infrastructure/clusters/demo/main.tf"shouldexist
-Andafile "<<tmp>>/opencenter-demo/infrastructure/clusters/demo/provider.tf"shouldexist
+  Scenario: Setup with provisioning
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+        gitops:
+          git_dir: "<<tmp>>/opencenter-demo"
+      opentofu:
+        enabled: true
+      """
+    When I run "opencenter cluster render demo --config-dir <<tmp>>/conf"
+    Then a file "<<tmp>>/opencenter-demo/infrastructure/clusters/demo/main.tf" should exist
+    And a file "<<tmp>>/opencenter-demo/infrastructure/clusters/demo/provider.tf" should exist
+
   @skip @priority7
-Scenario:Destroyacluster
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-gitops:
-git_dir: "<<tmp>>/opencenter-demo"
-  """
-WhenIrun "opencenterclusterdestroydemo --force --config-dir <<tmp>>/conf"
-Thenthecommandshouldsucceed
-Andafile "<<tmp>>/conf/demo.yaml"shouldnotexist
-Andadirectory "<<tmp>>/opencenter-demo"shouldnotexist
+  Scenario: Destroy a cluster
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+        gitops:
+          git_dir: "<<tmp>>/opencenter-demo"
+      """
+    When I run "opencenter cluster destroy demo --force --skip-infrastructure --remove-files --config-dir <<tmp>>/conf"
+    Then the command should succeed
+    And a file "<<tmp>>/conf/demo.yaml" should not exist
+    And a directory "<<tmp>>/opencenter-demo" should not exist

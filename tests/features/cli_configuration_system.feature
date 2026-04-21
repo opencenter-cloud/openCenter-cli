@@ -1,275 +1,366 @@
-#CLIConfigurationSystemIntegrationTests
-#TestsforthecomprehensiveCLIconfigurationmanagementsystemincluding:
-# -CLIconfigurationcommands (view,set,get,reset,path)
-# -Globalflagsandprecedencesystem
-# -Organization-basedpathresolution
-# -Enhancedclustercommandswithconfigurationintegration
-# -Filesystemoperationsanddirectorycreation
-# -Configurationprecedenceacrossalllayers
-Feature:CLIConfigurationSystemIntegration
-Background:
-Givenanemptydirectory "<<tmp>>/conf"
-Andanemptydirectory "<<tmp>>/custom-config"
+# CLI Configuration System Integration Tests
+# Tests for the comprehensive CLI configuration management system including:
+# - CLI configuration commands (view, set, get, reset, path)
+# - Global flags and precedence system
+# - Organization-based path resolution
+# - Enhanced cluster commands with configuration integration
+# - File system operations and directory creation
+# - Configuration precedence across all layers
+
+Feature: CLI Configuration System Integration
+
+  Background:
+    Given an empty directory "<<tmp>>/conf"
+    And an empty directory "<<tmp>>/custom-config"
+
+  # ---------------------------------------------------------------------------
+  # CLI Configuration Commands
+  # ---------------------------------------------------------------------------
   @config @commands
-Scenario:CLIconfigurationcommandsworkwithdefaultconfiguration
-WhenIrun "opencenterconfigpath --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "<<tmp>>/conf/config.yaml"
-WhenIrun "opencenterconfigview --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "logging:"
-Andstdoutshouldcontain "level:warn"
-Andstdoutshouldcontain "format:text"
-Andstdoutshouldcontain "paths:"
-Andstdoutshouldcontain "behavior:"
-Andstdoutshouldcontain "defaults:"
-WhenIrun "opencenterconfiggetlogging.level --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldmatchregex "^warn$"
+  Scenario: CLI configuration commands work with default configuration
+    When I run "opencenter config path --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "<<tmp>>/conf/config.yaml"
+
+    When I run "opencenter config view --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "logging:"
+    And stdout should contain "level: warn"
+    And stdout should contain "format: text"
+    And stdout should contain "paths:"
+    And stdout should contain "behavior:"
+    And stdout should contain "defaults:"
+
+    When I run "opencenter config get logging.level --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should match regex "^warn$"
+
   @config @commands @set_get
-Scenario:CLIconfigurationsetandgetcommandsworkcorrectly
-WhenIrun "opencenterconfigsetlogging.leveldebug --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationupdated:logging.level =debug"
-WhenIrun "opencenterconfiggetlogging.level --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldmatchregex "^debug$"
-WhenIrun "opencenterconfigsetbehavior.autoConfirmtrue --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationupdated:behavior.autoConfirm =true"
-WhenIrun "opencenterconfiggetbehavior.autoConfirm --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldmatchregex "^true$"
-WhenIrun "opencenterconfigsetpaths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationupdated:paths.clustersDir = <<tmp>>/custom-clusters"
-WhenIrun "opencenterconfiggetpaths.clustersDir --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "<<tmp>>/custom-clusters"
+  Scenario: CLI configuration set and get commands work correctly
+    When I run "opencenter config set logging.level debug --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration updated: logging.level = debug"
+
+    When I run "opencenter config get logging.level --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should match regex "^debug$"
+
+    When I run "opencenter config set behavior.autoConfirm true --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration updated: behavior.autoConfirm = true"
+
+    When I run "opencenter config get behavior.autoConfirm --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should match regex "^true$"
+
+    When I run "opencenter config set paths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration updated: paths.clustersDir = <<tmp>>/custom-clusters"
+
+    When I run "opencenter config get paths.clustersDir --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "<<tmp>>/custom-clusters"
+
   @config @commands @reset
-Scenario:CLIconfigurationresetcommandrestoresdefaults
-GivenIrun "opencenterconfigsetlogging.leveldebug --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-AndIrun "opencenterconfigsetbehavior.dryRuntrue --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterconfigreset --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationresettodefaultvalues"
-WhenIrun "opencenterconfiggetlogging.level --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldmatchregex "^warn$"
-WhenIrun "opencenterconfiggetbehavior.dryRun --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldmatchregex "^false$"
+  Scenario: CLI configuration reset command restores defaults
+    Given I run "opencenter config set logging.level debug --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    And I run "opencenter config set behavior.dryRun true --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter config reset --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration reset to default values"
+
+    When I run "opencenter config get logging.level --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should match regex "^warn$"
+
+    When I run "opencenter config get behavior.dryRun --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should match regex "^false$"
+
   @config @commands @validation
-Scenario:CLIconfigurationcommandsvalidateinputvalues
-WhenIrun "opencenterconfigsetlogging.levelinvalid --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "invalidvalue"
-WhenIrun "opencenterconfigsetbehavior.autoConfirmmaybe --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "expectedbooleanvalue"
-WhenIrun "opencenterconfigsetlogging.file.maxSizeabc --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "expectedintegervalue"
-WhenIrun "opencenterconfiggetnonexistent.key --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "failedtogetconfigurationvalue"
+  Scenario: CLI configuration commands validate input values
+    When I run "opencenter config set logging.level invalid --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+    And stderr should contain "invalid value"
+
+    When I run "opencenter config set behavior.autoConfirm maybe --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+    And stderr should contain "expected boolean value"
+
+    When I run "opencenter config set logging.file.maxSize abc --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+    And stderr should contain "expected integer value"
+
+    When I run "opencenter config get nonexistent.key --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+    And stderr should contain "failed to get configuration value"
+
+  # ---------------------------------------------------------------------------
+  # Global Flags and Precedence System
+  # ---------------------------------------------------------------------------
   @config @global_flags
-Scenario:Globalflagsoverrideconfigurationvalues
-GivenIrun "opencenterconfigsetlogging.levelinfo --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterlist --log-leveldebug --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-WhenIrun "opencenterclusterlist --dry-run --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
+  Scenario: Global flags override configuration values
+    Given I run "opencenter config set logging.level info --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster list --log-level debug --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # The command should run with debug logging (overriding the config file's info level)
+
+    When I run "opencenter cluster list --dry-run --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # The command should run in dry-run mode
+
   @config @global_flags @set_flag
-Scenario:Global --setflagoverridesconfigurationvalues
-GivenIrun "opencenterconfigsetbehavior.autoConfirmfalse --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterconfiggetbehavior.autoConfirm --setbehavior.autoConfirm=true --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-WhenIrun "opencenterclusterlist --setlogging.level=debug --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
+  Scenario: Global --set flag overrides configuration values
+    Given I run "opencenter config set behavior.autoConfirm false --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter config get behavior.autoConfirm --set behavior.autoConfirm=true --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # The --set flag should override the config file value at runtime
+
+    When I run "opencenter cluster list --set logging.level=debug --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # The command should run with debug logging via --set override
+
+  # ---------------------------------------------------------------------------
+  # Organization-Based Path Resolution
+  # ---------------------------------------------------------------------------
   @config @organization @paths
-Scenario:Organization-baseddirectorystructureiscreatedcorrectly
-WhenIrun "opencenterclusterinitorg-test --opencenter.meta.organization=test-org --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andadirectory "<<tmp>>/conf/clusters/test-org"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/test-org/applications"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/test-org/applications/overlays"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/test-org/infrastructure"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/test-org/infrastructure/clusters"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/test-org/infrastructure/clusters/org-test"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/test-org/secrets"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/test-org/secrets/age"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/test-org/secrets/age/keys"shouldexist
-Andafile "<<tmp>>/conf/clusters/test-org/.org-test-config.yaml"shouldexist
-Andafile "<<tmp>>/conf/clusters/test-org/secrets/age/keys/org-test-key.txt"shouldexist
-Andafile "<<tmp>>/conf/clusters/test-org/.sops.yaml"shouldexist
+  Scenario: Organization-based directory structure is created correctly
+    When I run "opencenter cluster init org-test --opencenter.meta.organization=test-org --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And a directory "<<tmp>>/conf/clusters/test-org" should exist
+    And a directory "<<tmp>>/conf/clusters/test-org/applications" should exist
+    And a directory "<<tmp>>/conf/clusters/test-org/applications/overlays" should exist
+    And a directory "<<tmp>>/conf/clusters/test-org/infrastructure" should exist
+    And a directory "<<tmp>>/conf/clusters/test-org/infrastructure/clusters" should exist
+    And a directory "<<tmp>>/conf/clusters/test-org/infrastructure/clusters/org-test" should exist
+    And a directory "<<tmp>>/conf/clusters/test-org/secrets" should exist
+    And a directory "<<tmp>>/conf/clusters/test-org/secrets/age" should exist
+    And a directory "<<tmp>>/conf/clusters/test-org/secrets/age/keys" should exist
+    And a file "<<tmp>>/conf/clusters/test-org/.org-test-config.yaml" should exist
+    And a file "<<tmp>>/conf/clusters/test-org/secrets/age/keys/org-test-key.txt" should exist
+    And a file "<<tmp>>/conf/clusters/test-org/.sops.yaml" should exist
+
   @config @organization @opencenter
-Scenario:Clusternameisusedasorganizationwhennonespecified
-WhenIrun "opencenterclusterinitdefault-test"
-Thentheexitcodeshouldbe0
-Andadirectory "~/.config/opencenter/clusters/opencenter"shouldexist
-Andadirectory "~/.config/opencenter/clusters/opencenter/infrastructure/clusters/default-test"shouldexist
-Andafile "~/.config/opencenter/clusters/opencenter/.default-test-config.yaml"shouldexist
-Andtheclusterconfiguration "default-test"shouldhave "opencenter.meta.organization"setto "opencenter"
+  Scenario: Cluster name is used as organization when none specified
+    When I run "opencenter cluster init default-test"
+    Then the exit code should be 0
+    And a directory "~/.config/opencenter/clusters/opencenter" should exist
+    And a directory "~/.config/opencenter/clusters/opencenter/infrastructure/clusters/default-test" should exist
+    And a file "~/.config/opencenter/clusters/opencenter/.default-test-config.yaml" should exist
+    And the cluster configuration "default-test" should have "opencenter.meta.organization" set to "opencenter"
+
   @config @organization @multiple_clusters
-Scenario:MultipleclustersinsameorganizationshareGitOpsstructure
-WhenIrun "opencenterclusterinitcluster-a --opencenter.meta.organization=shared-org --config-dir <<tmp>>/conf"
-AndIrun "opencenterclusterinitcluster-b --opencenter.meta.organization=shared-org --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andadirectory "<<tmp>>/conf/clusters/shared-org/infrastructure/clusters/cluster-a"shouldexist
-Andadirectory "<<tmp>>/conf/clusters/shared-org/infrastructure/clusters/cluster-b"shouldexist
-Andafile "<<tmp>>/conf/clusters/shared-org/.sops.yaml"shouldexist
-Andafile "<<tmp>>/conf/clusters/shared-org/secrets/age/keys/cluster-a-key.txt"shouldexist
-Andafile "<<tmp>>/conf/clusters/shared-org/secrets/age/keys/cluster-b-key.txt"shouldexist
+  Scenario: Multiple clusters in same organization share GitOps structure
+    When I run "opencenter cluster init cluster-a --opencenter.meta.organization=shared-org --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster init cluster-b --opencenter.meta.organization=shared-org --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And a directory "<<tmp>>/conf/clusters/shared-org/infrastructure/clusters/cluster-a" should exist
+    And a directory "<<tmp>>/conf/clusters/shared-org/infrastructure/clusters/cluster-b" should exist
+    And a file "<<tmp>>/conf/clusters/shared-org/.sops.yaml" should exist
+    # Both clusters should share the same organization-level secrets directory
+    And a file "<<tmp>>/conf/clusters/shared-org/secrets/age/keys/cluster-a-key.txt" should exist
+    And a file "<<tmp>>/conf/clusters/shared-org/secrets/age/keys/cluster-b-key.txt" should exist
+
+  # ---------------------------------------------------------------------------
+  # Enhanced Cluster Commands with Configuration Integration
+  # ---------------------------------------------------------------------------
   @config @cluster_commands @select
-Scenario:Enhancedclusterselectcommandshowsorganizationmetadata
-GivenIrun "opencenterclusterinitenhanced-test --opencenter.meta.organization=enhanced-org --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterselectenhanced-test --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Activeclustersettoenhanced-test"
-WhenIrun "opencenterclusterinfo --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Activecluster:enhanced-test"
-Andstdoutshouldcontain "organization:enhanced-org"
+  Scenario: Enhanced cluster select command shows organization metadata
+    Given I run "opencenter cluster init enhanced-test --opencenter.meta.organization=enhanced-org --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster select enhanced-test --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Active cluster set to enhanced-test"
+
+    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Active cluster: enhanced-test"
+    And stdout should contain "organization: enhanced-org"
+
   @config @cluster_commands @list @priority3
-Scenario:Clusterlistworkswithorganization-basedstructure
-GivenIrun "opencenterclusterinitlist-test-a --opencenter.meta.organization=list-org --config-dir <<tmp>>/conf"
-AndIrun "opencenterclusterinitlist-test-b --opencenter.meta.organization=list-org --config-dir <<tmp>>/conf"
-AndIrun "opencenterclusterinitlist-test-c --opencenter.meta.organization=other-org --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterlist --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "list-org/list-test-a"
-Andstdoutshouldcontain "list-org/list-test-b"
-Andstdoutshouldcontain "other-org/list-test-c"
+  Scenario: Cluster list works with organization-based structure
+    Given I run "opencenter cluster init list-test-a --opencenter.meta.organization=list-org --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster init list-test-b --opencenter.meta.organization=list-org --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster init list-test-c --opencenter.meta.organization=other-org --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster list --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "list-org/list-test-a"
+    And stdout should contain "list-org/list-test-b"
+    And stdout should contain "other-org/list-test-c"
+
   @config @cluster_commands @info @priority6
-Scenario:Clusterinfoshowsorganization-basedpaths
-GivenIrun "opencenterclusterinitinfo-test --opencenter.meta.organization=info-org --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterinfoinfo-test --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "cluster_name:info-test"
-Andstdoutshouldcontain "organization:info-org"
-Andstdoutshouldcontain "git_dir:"
-Andstdoutshouldcontain "clusters/info-org"
+  Scenario: Cluster info shows organization-based paths
+    Given I run "opencenter cluster init info-test --opencenter.meta.organization=info-org --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster info info-test --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "cluster_name: info-test"
+    And stdout should contain "organization: info-org"
+    And stdout should contain "git_dir:"
+    And stdout should contain "clusters/info-org"
+
+  # ---------------------------------------------------------------------------
+  # File System Operations and Directory Creation
+  # ---------------------------------------------------------------------------
   @config @filesystem @auto_creation
-Scenario:Configurationsystemautomaticallycreatesrequireddirectories
-Giventhedirectory "<<tmp>>/fresh-config"doesnotexist
-WhenIrun "opencenterconfigview --config-dir <<tmp>>/fresh-config"
-Thentheexitcodeshouldbe0
-Andthedirectory "<<tmp>>/fresh-config"shouldexist
-Andafile "<<tmp>>/fresh-config/config.yaml"shouldexist
+  Scenario: Configuration system automatically creates required directories
+    Given the directory "<<tmp>>/fresh-config" does not exist
+    When I run "opencenter config view --config-dir <<tmp>>/fresh-config"
+    Then the exit code should be 0
+    And the directory "<<tmp>>/fresh-config" should exist
+    And a file "<<tmp>>/fresh-config/config.yaml" should exist
+
   @config @filesystem @custom_paths
-Scenario:Customconfigurationpathsworkcorrectly
-GivenIrun "opencenterconfigsetpaths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterinitcustom-path-test --opencenter.meta.organization=custom-org"
-Thentheexitcodeshouldbe0
-Andadirectory "<<tmp>>/custom-clusters/custom-org/infrastructure/clusters/custom-path-test"shouldexist
-Andafile "<<tmp>>/custom-clusters/custom-org/.custom-path-test-config.yaml"shouldexist
+  Scenario: Custom configuration paths work correctly
+    Given I run "opencenter config set paths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster init custom-path-test --opencenter.meta.organization=custom-org"
+    Then the exit code should be 0
+    And a directory "<<tmp>>/custom-clusters/custom-org/infrastructure/clusters/custom-path-test" should exist
+    And a file "<<tmp>>/custom-clusters/custom-org/.custom-path-test-config.yaml" should exist
+
   @config @filesystem @permissions
-Scenario:Configurationfilesarecreatedwithproperpermissions
-WhenIrun "opencenterconfigview --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andthefile "<<tmp>>/conf/config.yaml"shouldexist
+  Scenario: Configuration files are created with proper permissions
+    When I run "opencenter config view --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And the file "<<tmp>>/conf/config.yaml" should exist
+    # Note: Permission checking would be platform-specific and handled in step definitions
+
+  # ---------------------------------------------------------------------------
+  # Configuration Precedence Across All Layers
+  # ---------------------------------------------------------------------------
   @config @precedence @environment
-Scenario:Environmentvariablesoverrideconfigurationfilevalues
-GivenIrun "opencenterconfigsetpaths.clustersDir <<tmp>>/config-clusters --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-AndIsetenvironmentvariable "OPENCENTER_CONFIG_DIR"to "<<tmp>>/env-config"
-WhenIrun "opencenterconfigpath"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "<<tmp>>/env-config/config.yaml"
+  Scenario: Environment variables override configuration file values
+    Given I run "opencenter config set paths.clustersDir <<tmp>>/config-clusters --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    And I set environment variable "OPENCENTER_CONFIG_DIR" to "<<tmp>>/env-config"
+    When I run "opencenter config path"
+    Then the exit code should be 0
+    And stdout should contain "<<tmp>>/env-config/config.yaml"
+    # Environment variable should override the config file setting
+
   @config @precedence @flags_over_config
-Scenario:Command-lineflagsoverrideconfigurationfilevalues
-GivenIrun "opencenterconfigsetlogging.levelinfo --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterlist --log-leveldebug --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
+  Scenario: Command-line flags override configuration file values
+    Given I run "opencenter config set logging.level info --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster list --log-level debug --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # The --log-level flag should override the config file's info level
+
   @config @precedence @set_flag_highest
-Scenario: --setflaghashighestprecedenceforconfigurationvalues
-GivenIrun "opencenterconfigsetbehavior.dryRunfalse --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterlist --setbehavior.dryRun=true --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
+  Scenario: --set flag has highest precedence for configuration values
+    Given I run "opencenter config set behavior.dryRun false --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster list --set behavior.dryRun=true --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # The --set flag should override the config file value
+
   @config @precedence @complete_hierarchy
-Scenario:Completeprecedencehierarchyworkscorrectly
-GivenIrun "opencenterconfigsetlogging.levelwarn --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterlist --log-levelinfo --setlogging.level=debug --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
+  Scenario: Complete precedence hierarchy works correctly
+    Given I run "opencenter config set logging.level warn --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    # Test that --set overrides --log-level which overrides config file
+    When I run "opencenter cluster list --log-level info --set logging.level=debug --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # Should use debug level from --set flag (highest precedence)
+
+  # ---------------------------------------------------------------------------
+  # Cross-Platform Compatibility
+  # ---------------------------------------------------------------------------
   @config @cross_platform @path_expansion
-Scenario:Pathexpansionworkscorrectlyacrossplatforms
-WhenIrun "opencenterconfigsetpaths.clustersDir ~/test-clusters --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationupdated"
-WhenIrun "opencenterconfiggetpaths.clustersDir --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldnotcontain "~"
+  Scenario: Path expansion works correctly across platforms
+    When I run "opencenter config set paths.clustersDir ~/test-clusters --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration updated"
+
+    When I run "opencenter config get paths.clustersDir --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # The tilde should be expanded to the actual home directory path
+    And stdout should not contain "~"
+
   @config @cross_platform @environment_expansion
-Scenario:Environmentvariableexpansionworksinconfiguration
-GivenIsetenvironmentvariable "TEST_CLUSTER_DIR"to "<<tmp>>/env-clusters"
-WhenIrun "opencenterconfigsetpaths.clustersDir ${TEST_CLUSTER_DIR} --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-WhenIrun "opencenterconfiggetpaths.clustersDir --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "<<tmp>>/env-clusters"
+  Scenario: Environment variable expansion works in configuration
+    Given I set environment variable "TEST_CLUSTER_DIR" to "<<tmp>>/env-clusters"
+    When I run "opencenter config set paths.clustersDir ${TEST_CLUSTER_DIR} --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+
+    When I run "opencenter config get paths.clustersDir --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "<<tmp>>/env-clusters"
+    # Environment variable should be expanded
+
+  # ---------------------------------------------------------------------------
+  # Error Handling and Validation
+  # ---------------------------------------------------------------------------
   @config @error_handling @invalid_config
-Scenario:Systemhandlesinvalidconfigurationgracefully
-Givenafile "<<tmp>>/conf/config.yaml"withcontent:
-  """
-invalid:yaml:content:
-  """
-WhenIrun "opencenterconfigview --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "failedtoloadconfiguration"
+  Scenario: System handles invalid configuration gracefully
+    Given a file "<<tmp>>/conf/config.yaml" with content:
+      """
+      invalid: yaml: content:
+      """
+    When I run "opencenter config view --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+    And stderr should contain "failed to load configuration"
+
   @config @error_handling @missing_permissions
-Scenario:Systemhandlespermissionerrorsgracefully
-WhenIrun "opencenterconfigview --config-dir /root/no-permission"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "failed"
+  Scenario: System handles permission errors gracefully
+    # This would test permission handling - implementation depends on platform
+    When I run "opencenter config view --config-dir /root/no-permission"
+    Then the exit code should not be 0
+    And stderr should contain "failed"
+
   @config @error_handling @recovery
-Scenario:Systemcanrecoverfromconfigurationerrors
-Givenafile "<<tmp>>/conf/config.yaml"withcontent:
-  """
-logging:
-level:invalid-level
-  """
-WhenIrun "opencenterconfigreset --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationresettodefaultvalues"
-WhenIrun "opencenterconfiggetlogging.level --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldmatchregex "^warn$"
+  Scenario: System can recover from configuration errors
+    Given a file "<<tmp>>/conf/config.yaml" with content:
+      """
+      logging:
+        level: invalid-level
+      """
+    When I run "opencenter config reset --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration reset to default values"
+
+    When I run "opencenter config get logging.level --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should match regex "^warn$"
+
+  # ---------------------------------------------------------------------------
+  # Integration with Existing Commands
+  # ---------------------------------------------------------------------------
   @config @integration @cluster_lifecycle
-Scenario:Configurationsystemintegrateswithcompleteclusterlifecycle
-GivenIrun "opencenterconfigsetdefaults.provideropenstack --config-dir <<tmp>>/conf"
-AndIrun "opencenterconfigsetdefaults.region {{ .OpenCenter.Cluster.ClusterRegion }} --config-dir <<tmp>>/conf"
-AndIrun "opencenterconfigsetbehavior.autoConfirmtrue --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterinitlifecycle-test --opencenter.meta.organization=lifecycle-org --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andadirectory "<<tmp>>/conf/clusters/lifecycle-org/infrastructure/clusters/lifecycle-test"shouldexist
-Andtheclusterconfiguration "lifecycle-test"shouldhave "opencenter.infrastructure.provider"setto "openstack"
-WhenIrun "opencenterclusterselectlifecycle-test --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Activeclustersettolifecycle-test"
-WhenIrun "opencenterclusterinfo --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Activecluster:lifecycle-test"
-Andstdoutshouldcontain "organization:lifecycle-org"
-Andstdoutshouldcontain "provider:openstack"
+  Scenario: Configuration system integrates with complete cluster lifecycle
+    Given I run "opencenter config set defaults.provider openstack --config-dir <<tmp>>/conf"
+    And I run "opencenter config set defaults.region {{ .OpenCenter.Cluster.ClusterRegion }} --config-dir <<tmp>>/conf"
+    And I run "opencenter config set behavior.autoConfirm true --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    
+    When I run "opencenter cluster init lifecycle-test --opencenter.meta.organization=lifecycle-org --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And a directory "<<tmp>>/conf/clusters/lifecycle-org/infrastructure/clusters/lifecycle-test" should exist
+    And the cluster configuration "lifecycle-test" should have "opencenter.infrastructure.provider" set to "openstack"
+
+    When I run "opencenter cluster select lifecycle-test --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Active cluster set to lifecycle-test"
+
+    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Active cluster: lifecycle-test"
+    And stdout should contain "organization: lifecycle-org"
+    And stdout should contain "provider: openstack"
+
   @config @integration @gitops_setup
-Scenario:ConfigurationsystemworkswithGitOpssetup
-GivenIrun "opencenterclusterinitgitops-test --opencenter.meta.organization=gitops-org --opencenter.gitops.git_dir=<<tmp>>/gitops-repo --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterrendergitops-test --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andadirectory "<<tmp>>/gitops-repo"shouldexist
-Andadirectory "<<tmp>>/gitops-repo/applications"shouldexist
-Andadirectory "<<tmp>>/gitops-repo/infrastructure"shouldexist
+  Scenario: Configuration system works with GitOps setup
+    Given I run "opencenter cluster init gitops-test --opencenter.meta.organization=gitops-org --opencenter.gitops.repository.local_dir=<<tmp>>/gitops-repo --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    
+    When I run "opencenter cluster render gitops-test --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And a directory "<<tmp>>/gitops-repo" should exist
+    And a directory "<<tmp>>/gitops-repo/applications" should exist
+    And a directory "<<tmp>>/gitops-repo/infrastructure" should exist

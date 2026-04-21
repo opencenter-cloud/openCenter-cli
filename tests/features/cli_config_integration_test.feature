@@ -1,65 +1,82 @@
-#CLIConfigurationSystemIntegrationTests
-#AdditionalintegrationteststoverifyCLIconfigurationsystemworkswithclustercommands
-Feature:CLIConfigurationSystemIntegrationTests
-Background:
-Givenanemptydirectory "<<tmp>>/conf"
+# CLI Configuration System Integration Tests
+# Additional integration tests to verify CLI configuration system works with cluster commands
+
+Feature: CLI Configuration System Integration Tests
+
+  Background:
+    Given an empty directory "<<tmp>>/conf"
+
   @integration @config_commands
-Scenario:CLIconfigurationcommandsworkend-to-end
-WhenIrun "opencenterconfigpath --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "<<tmp>>/conf/config.yaml"
-WhenIrun "opencenterconfigview --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "logging:"
-Andstdoutshouldcontain "level:warn"
-WhenIrun "opencenterconfigsetlogging.leveldebug --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationupdated:logging.level =debug"
-WhenIrun "opencenterconfiggetlogging.level --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "debug"
+  Scenario: CLI configuration commands work end-to-end
+    When I run "opencenter config path --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "<<tmp>>/conf/config.yaml"
+
+    When I run "opencenter config view --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "logging:"
+    And stdout should contain "level: warn"
+
+    When I run "opencenter config set logging.level debug --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration updated: logging.level = debug"
+
+    When I run "opencenter config get logging.level --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "debug"
+
   @integration @global_flags
-Scenario:Globalflagsworkwithclustercommands
-WhenIrun "opencenterclusterlist --log-leveldebug --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-WhenIrun "opencenterclusterlist --dry-run --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
+  Scenario: Global flags work with cluster commands
+    When I run "opencenter cluster list --log-level debug --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+
+    When I run "opencenter cluster list --dry-run --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+
   @integration @file_operations
-Scenario:Configurationsystemcreatesdirectoriesautomatically
-Giventhedirectory "<<tmp>>/fresh-config"doesnotexist
-WhenIrun "opencenterconfigview --config-dir <<tmp>>/fresh-config"
-Thentheexitcodeshouldbe0
-Andthedirectory "<<tmp>>/fresh-config"shouldexist
-Andafile "<<tmp>>/fresh-config/config.yaml"shouldexist
+  Scenario: Configuration system creates directories automatically
+    Given the directory "<<tmp>>/fresh-config" does not exist
+    When I run "opencenter config view --config-dir <<tmp>>/fresh-config"
+    Then the exit code should be 0
+    And the directory "<<tmp>>/fresh-config" should exist
+    And a file "<<tmp>>/fresh-config/config.yaml" should exist
+
   @integration @precedence
-Scenario:Configurationprecedenceworkscorrectly
-GivenIrun "opencenterconfigsetlogging.levelinfo --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterconfiggetlogging.level --log-leveldebug --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
+  Scenario: Configuration precedence works correctly
+    Given I run "opencenter config set logging.level info --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter config get logging.level --log-level debug --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    # The command should run with debug logging (overriding the config file's info level)
+
   @integration @cross_platform
-Scenario:Pathhandlingworksacrossplatforms
-WhenIrun "opencenterconfigsetpaths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationupdated"
-WhenIrun "opencenterconfiggetpaths.clustersDir --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "<<tmp>>/custom-clusters"
+  Scenario: Path handling works across platforms
+    When I run "opencenter config set paths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration updated"
+
+    When I run "opencenter config get paths.clustersDir --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "<<tmp>>/custom-clusters"
+
   @integration @error_handling
-Scenario:Configurationvalidationworksproperly
-WhenIrun "opencenterconfigsetlogging.levelinvalid --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "invalidvalue"
-WhenIrun "opencenterconfigsetbehavior.autoConfirmmaybe --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "expectedbooleanvalue"
+  Scenario: Configuration validation works properly
+    When I run "opencenter config set logging.level invalid --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+    And stderr should contain "invalid value"
+
+    When I run "opencenter config set behavior.autoConfirm maybe --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+    And stderr should contain "expected boolean value"
+
   @integration @reset
-Scenario:Configurationresetworksproperly
-GivenIrun "opencenterconfigsetlogging.leveldebug --config-dir <<tmp>>/conf"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterconfigreset --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Configurationresettodefaultvalues"
-WhenIrun "opencenterconfiggetlogging.level --config-dir <<tmp>>/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "warn"
+  Scenario: Configuration reset works properly
+    Given I run "opencenter config set logging.level debug --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter config reset --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Configuration reset to default values"
+
+    When I run "opencenter config get logging.level --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "warn"

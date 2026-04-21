@@ -1,17 +1,49 @@
 package api
 
 import (
+	"bytes"
 	"context"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
+	"io"
 	"net/http"
-	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return fn(req)
+}
+
+func jsonResponse(t *testing.T, req *http.Request, status int, body any) *http.Response {
+	t.Helper()
+
+	data, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("marshal response: %v", err)
+	}
+
+	return &http.Response{
+		StatusCode: status,
+		Header: http.Header{
+			"Content-Type": []string{"application/json"},
+		},
+		Body:    io.NopCloser(bytes.NewReader(data)),
+		Request: req,
+	}
+}
+
+func rawJSONResponse(req *http.Request, status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Header: http.Header{
+			"Content-Type": []string{"application/json"},
+		},
+		Body:    io.NopCloser(strings.NewReader(body)),
+		Request: req,
+	}
+}
 
 func TestClientVersionAndProvisioningFlow(t *testing.T) {
 	type state struct {
@@ -20,54 +52,58 @@ func TestClientVersionAndProvisioningFlow(t *testing.T) {
 	}
 	current := &state{}
 
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/version":
-			_ = json.NewEncoder(w).Encode(map[string]any{"version": "1.24.5"})
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/users/admin/tokens":
-			_ = json.NewEncoder(w).Encode(map[string]any{"sha1": "admin-token"})
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/user":
-			if got := r.Header.Get("Authorization"); got != "token admin-token" && got != "token user-token" {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			switch {
+			case req.Method == http.MethodGet && req.URL.Path == "/api/v1/version":
+				return jsonResponse(t, req, http.StatusOK, map[string]any{"version": "1.24.5"}), nil
+			case req.Method == http.MethodPost && req.URL.Path == "/api/v1/users/admin/tokens":
+				username, password, ok := req.BasicAuth()
+				if !ok || username != "admin" || password != "gitea" {
+					t.Fatalf("unexpected admin basic auth: ok=%v user=%q", ok, username)
+				}
+				return jsonResponse(t, req, http.StatusCreated, map[string]any{"sha1": "admin-token"}), nil
+			case req.Method == http.MethodGet && req.URL.Path == "/api/v1/user":
+				if got := req.Header.Get("Authorization"); got != "token admin-token" && got != "token user-token" {
+					return rawJSONResponse(req, http.StatusUnauthorized, `{"message":"unauthorized"}`), nil
+				}
+				login := "admin"
+				if req.Header.Get("Authorization") == "token user-token" {
+					login = "newuser"
+				}
+				return jsonResponse(t, req, http.StatusOK, map[string]any{"login": login}), nil
+			case req.Method == http.MethodGet && req.URL.Path == "/api/v1/users/newuser":
+				if !current.userExists {
+					return rawJSONResponse(req, http.StatusNotFound, `{"message":"not found"}`), nil
+				}
+				return jsonResponse(t, req, http.StatusOK, map[string]any{"login": "newuser", "id": 42}), nil
+			case req.Method == http.MethodPost && req.URL.Path == "/api/v1/admin/users":
+				current.userExists = true
+				return jsonResponse(t, req, http.StatusCreated, map[string]any{"login": "newuser", "id": 42}), nil
+			case req.Method == http.MethodPost && req.URL.Path == "/api/v1/users/newuser/tokens":
+				username, password, ok := req.BasicAuth()
+				if !ok || username != "newuser" || password != "newuserpassword" {
+					t.Fatalf("unexpected user basic auth: ok=%v user=%q", ok, username)
+				}
+				return jsonResponse(t, req, http.StatusCreated, map[string]any{"sha1": "user-token"}), nil
+			case req.Method == http.MethodGet && req.URL.Path == "/api/v1/repos/newuser/test-repo":
+				if !current.repoExists {
+					return rawJSONResponse(req, http.StatusNotFound, `{"message":"not found"}`), nil
+				}
+				return jsonResponse(t, req, http.StatusOK, map[string]any{"name": "test-repo"}), nil
+			case req.Method == http.MethodPost && req.URL.Path == "/api/v1/user/repos":
+				current.repoExists = true
+				return jsonResponse(t, req, http.StatusCreated, map[string]any{"name": "test-repo"}), nil
+			default:
+				t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+				return nil, nil
 			}
-			login := "admin"
-			if r.Header.Get("Authorization") == "token user-token" {
-				login = "newuser"
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"login": login})
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/users/newuser":
-			if !current.userExists {
-				http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
-				return
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"login": "newuser", "id": 42})
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/admin/users":
-			current.userExists = true
-			w.WriteHeader(http.StatusCreated)
-			_ = json.NewEncoder(w).Encode(map[string]any{"login": "newuser", "id": 42})
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/users/newuser/tokens":
-			_ = json.NewEncoder(w).Encode(map[string]any{"sha1": "user-token"})
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/repos/newuser/test-repo":
-			if !current.repoExists {
-				http.Error(w, `{"message":"not found"}`, http.StatusNotFound)
-				return
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"name": "test-repo"})
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/user/repos":
-			current.repoExists = true
-			w.WriteHeader(http.StatusCreated)
-			_ = json.NewEncoder(w).Encode(map[string]any{"name": "test-repo"})
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-	}))
-	defer server.Close()
+		}),
+	}
 
-	caPath := writeServerCA(t, server)
-	client, err := NewClient(server.URL, caPath)
+	client, err := newClientWithHTTPClient("https://gitea.local", httpClient)
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("newClientWithHTTPClient() error = %v", err)
 	}
 
 	version, err := client.Version(context.Background())
@@ -126,26 +162,4 @@ func TestClientVersionAndProvisioningFlow(t *testing.T) {
 	if !repoExists {
 		t.Fatal("expected repository to exist")
 	}
-}
-
-func writeServerCA(t *testing.T, server *httptest.Server) string {
-	t.Helper()
-
-	cert := server.Certificate()
-	if cert == nil {
-		t.Fatal("server certificate is nil")
-	}
-	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
-	if _, err := x509.ParseCertificate(cert.Raw); err != nil {
-		t.Fatalf("ParseCertificate() error = %v", err)
-	}
-
-	path := filepath.Join(t.TempDir(), "ca.pem")
-	if err := os.WriteFile(path, pemBytes, 0o644); err != nil {
-		t.Fatalf("write CA: %v", err)
-	}
-	if data, err := os.ReadFile(path); err != nil || !strings.Contains(string(data), "BEGIN CERTIFICATE") {
-		t.Fatalf("expected PEM certificate, err=%v", err)
-	}
-	return path
 }

@@ -28,9 +28,12 @@ import (
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/cloud"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/testenv"
 )
 
 func TestProvider_GetCurrentState(t *testing.T) {
+	testenv.RequireLoopbackBind(t)
+
 	ctx := context.Background()
 	model := simulator.VPX()
 	model.Machine = 2

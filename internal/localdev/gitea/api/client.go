@@ -59,13 +59,23 @@ type repositoryResponse struct {
 	Name string `json:"name"`
 }
 
-// NewClient returns a Gitea API client rooted at baseURL and trusted by caPath.
-func NewClient(baseURL, caPath string) (*Client, error) {
+func newClientWithHTTPClient(baseURL string, httpClient *http.Client) (*Client, error) {
 	parsed, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil {
 		return nil, fmt.Errorf("parse gitea URL %q: %w", baseURL, err)
 	}
+	if httpClient == nil {
+		return nil, fmt.Errorf("http client is required")
+	}
 
+	return &Client{
+		baseURL:    parsed,
+		httpClient: httpClient,
+	}, nil
+}
+
+// NewClient returns a Gitea API client rooted at baseURL and trusted by caPath.
+func NewClient(baseURL, caPath string) (*Client, error) {
 	caPEM, err := os.ReadFile(caPath)
 	if err != nil {
 		return nil, fmt.Errorf("read CA cert %s: %w", caPath, err)
@@ -76,15 +86,12 @@ func NewClient(baseURL, caPath string) (*Client, error) {
 		return nil, fmt.Errorf("parse CA cert %s", caPath)
 	}
 
-	return &Client{
-		baseURL: parsed,
-		httpClient: &http.Client{
-			Timeout: 15 * time.Second,
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12},
-			},
+	return newClientWithHTTPClient(baseURL, &http.Client{
+		Timeout: 15 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12},
 		},
-	}, nil
+	})
 }
 
 func (c *Client) request(ctx context.Context, method, requestPath string, auth Auth, payload any, out any, expectedStatus ...int) error {

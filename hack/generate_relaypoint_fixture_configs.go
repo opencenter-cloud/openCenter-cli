@@ -234,12 +234,12 @@ func buildRelayPointConfig(spec clusterSpec) v2.Config {
 	cfg.OpenCenter.Cluster.BaseDomain = baseDomain
 	cfg.OpenCenter.Infrastructure.SSH.AuthorizedKeys = []string{"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExamplePublicKeyDataHere user@example.com"}
 
-	cfg.OpenCenter.GitOps.GitDir = "./testdata/relaypoint-logistics-shared"
-	cfg.OpenCenter.GitOps.GitURL = "ssh://git@github.com/rpc-environments/7742901-RelayPoint-Logistics.git"
-	cfg.OpenCenter.GitOps.GitOpsBaseRepo = "ssh://git@github.com/rackerlabs/openCenter-gitops-base.git"
-	cfg.OpenCenter.GitOps.GitOpsBaseRelease = ""
-	cfg.OpenCenter.GitOps.GitOpsBranch = "main"
-	cfg.OpenCenter.GitOps.GitBranch = "main"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = "./testdata/relaypoint-logistics-shared"
+	cfg.OpenCenter.GitOps.Repository.URL = "ssh://git@github.com/rpc-environments/7742901-RelayPoint-Logistics.git"
+	cfg.OpenCenter.GitOps.Repository.Branch = "main"
+	cfg.OpenCenter.GitOps.BaseRepo.URL = "ssh://git@github.com/rackerlabs/openCenter-gitops-base.git"
+	cfg.OpenCenter.GitOps.BaseRepo.Release = ""
+	cfg.OpenCenter.GitOps.BaseRepo.Branch = "main"
 
 	for name, service := range cfg.OpenCenter.Services {
 		setEnabled(service, false)

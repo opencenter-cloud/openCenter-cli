@@ -1,69 +1,87 @@
-#tests/features/organization_workflow.feature
-#Mapstoorganization-basedworkflow:
-#  ./opencenterclusterinitdemo --orgmy-org
-#  ./opencenterclusterselectmy-org/demo
-#  #minimalnetworkchoice:use_octavia=false ->mustsetvrrp_ip
-#  ./opencenterclustervalidate
-#  ./opencenterclustersetup --render
-#  ./opencenterclusterbootstrap
-Feature:Organization-basedminimalnetworkworkflow (VRRP)frominittobootstrap
-Background:
-Givenanemptydirectory "tmp/conf"
-Andanemptydirectory "tmp/repo-demo"
+# tests/features/organization_workflow.feature
+# Maps to organization-based workflow:
+#   ./opencenter cluster init demo --org my-org
+#   ./opencenter cluster select my-org/demo
+#   # minimal network choice: use_octavia=false -> must set vrrp_ip
+#   ./opencenter cluster validate
+#   ./opencenter cluster setup --render
+#   ./opencenter cluster bootstrap
+
+Feature: Organization-based minimal network workflow (VRRP) from init to bootstrap
+
+  Background:
+    Given an empty directory "tmp/conf"
+    And an empty directory "tmp/repo-demo"
+
   @workflow @init @select @validate @setup @bootstrap @wip
-Scenario:Initializewithorg,select,validateVRRPrequirement,rendersetup,andbootstrap
-WhenIrun "opencenterclusterinitdemo --orgmy-org --config-dirtmp/conf --force"
-Thentheexitcodeshouldbe0
-Andthefile "tmp/conf/clusters/my-org/.demo-config.yaml"shouldexist
-WhenIrun "opencenterclusterselectmy-org/demo --config-dirtmp/conf"
-Thentheexitcodeshouldbe0
-Andthefile "tmp/conf/active"shouldmatchregex "^my-org/demo\\s*$"
-GivenIupdatetheYAML "tmp/conf/clusters/my-org/.demo-config.yaml"toset:
-  """
+  Scenario: Initialize with org, select, validate VRRP requirement, render setup, and bootstrap
+    # ./opencenter cluster init demo --org my-org
+    When I run "opencenter cluster init demo --org my-org --config-dir tmp/conf --force"
+    Then the exit code should be 0
+    And the file "tmp/conf/clusters/my-org/.demo-config.yaml" should exist
+
+    # ./opencenter cluster select my-org/demo
+    When I run "opencenter cluster select my-org/demo --config-dir tmp/conf"
+    Then the exit code should be 0
+    And the file "tmp/conf/active" should match regex "^my-org/demo\\s*$"
+
+    # minimal network choice: use_octavia=false -> must set vrrp_ip (first show the failure)
+    # Configure minimal fields with missing vrrp_ip to ensure validator catches it.
+    Given I update the YAML "tmp/conf/clusters/my-org/.demo-config.yaml" to set:
+      """
 opencenter:
-cluster:
-domain:example.com
-gitops:
-git_dir:tmp/repo-demo
-git_url:tmp/remote.git
-infrastructure:
-provider:openstack
-cloud:
-openstack:
-domain: "Default"
-application_credential_id: "12345678-1234-1234-1234-123456789012"
-application_credential_secret: "test-app-cred-secret"
-floating_network_id: "12345678-1234-1234-1234-123456789012"
+  cluster:
+    domain: example.com
+  gitops:
+    git_dir: tmp/repo-demo
+    git_url: tmp/remote.git
+  infrastructure:
+    provider: openstack
+    cloud:
+      openstack:
+        domain: "Default"
+        application_credential_id: "12345678-1234-1234-1234-123456789012"
+        application_credential_secret: "test-app-cred-secret"
+        floating_network_id: "12345678-1234-1234-1234-123456789012"
 secrets:
-global:
-openstack:
-application_credential_id: "12345678-1234-1234-1234-123456789012"
-application_credential_secret: "test-app-cred-secret"
+  global:
+    openstack:
+      application_credential_id: "12345678-1234-1234-1234-123456789012"
+      application_credential_secret: "test-app-cred-secret"
 networking:
-use_octavia:false
-vrrp_enabled:true
-vrrp_ip: ""
+  use_octavia: false
+  vrrp_enabled: true
+  vrrp_ip: ""
 """
-WhenIrun "opencenterclustervalidate --config-dirtmp/conf"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "vrrp_ip"
-Andstderrshouldcontain "mustbeset"
-GivenIupdatetheYAML "tmp/conf/clusters/my-org/.demo-config.yaml"toset:
-  """
+    # ./opencenter cluster validate  (expect failure due to missing vrrp_ip)
+    When I run "opencenter cluster validate --config-dir tmp/conf"
+    Then the exit code should not be 0
+    And stderr should contain "vrrp_ip"
+    And stderr should contain "must be set"
+
+    # Fix the config: set a proper vrrp_ip and validate again
+    Given I update the YAML "tmp/conf/clusters/my-org/.demo-config.yaml" to set:
+      """
 networking:
-vrrp_ip:10.0.0.10
+  vrrp_ip: 10.0.0.10
 """
-WhenIrun "opencenterclustervalidate --config-dirtmp/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "validation"
-Andstdoutshouldnotcontain "ERROR"
-WhenIrun "opencenterclustersetup --render --config-dirtmp/conf"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Setupcomplete"
-Andthedirectory "tmp/repo-demo"shouldexist
-Andthedirectory "tmp/repo-demo"shouldcontainafilematching "gitignore"
-Andthedirectory "tmp/repo-demo"shouldcontainadirectory "applications"
-Givenabaregitrepositoryexistsat "tmp/remote.git"
-WhenIrun "opencenterclusterbootstrap --config-dirtmp/conf"
-Thentheexitcodeshouldbe0
-Andthebarerepo "tmp/remote.git"shouldhavebranch "main"
+    When I run "opencenter cluster validate --config-dir tmp/conf"
+    Then the exit code should be 0
+    And stdout should contain "validation"
+    And stdout should not contain "ERROR"
+
+    # ./opencenter cluster setup --render (renders and materializes the repo)
+    When I run "opencenter cluster setup --render --config-dir tmp/conf"
+    Then the exit code should be 0
+    And stdout should contain "Setup complete"
+    And the directory "tmp/repo-demo" should exist
+    And the directory "tmp/repo-demo" should contain a file matching "gitignore"
+    And the directory "tmp/repo-demo" should contain a directory "applications"
+
+    # Prepare the remote for bootstrap
+    Given a bare git repository exists at "tmp/remote.git"
+
+    # ./opencenter cluster bootstrap (pushes to remote)
+    When I run "opencenter cluster bootstrap --config-dir tmp/conf"
+    Then the exit code should be 0
+    And the bare repo "tmp/remote.git" should have branch "main"

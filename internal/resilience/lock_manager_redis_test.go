@@ -6,13 +6,23 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/testenv"
 )
 
-func TestRedisLockBackendAcquireRelease(t *testing.T) {
+func startMiniredis(t *testing.T) *miniredis.Miniredis {
+	t.Helper()
+
+	testenv.RequireLoopbackBind(t)
+
 	redisServer, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("failed to start miniredis: %v", err)
+		t.Skipf("loopback redis unavailable in this environment: %v", err)
 	}
+	return redisServer
+}
+
+func TestRedisLockBackendAcquireRelease(t *testing.T) {
+	redisServer := startMiniredis(t)
 	defer redisServer.Close()
 
 	manager, err := NewLockManager(LockConfig{
@@ -55,10 +65,7 @@ func TestRedisLockBackendAcquireRelease(t *testing.T) {
 }
 
 func TestRedisLockBackendRefreshAndForceBreak(t *testing.T) {
-	redisServer, err := miniredis.Run()
-	if err != nil {
-		t.Fatalf("failed to start miniredis: %v", err)
-	}
+	redisServer := startMiniredis(t)
 	defer redisServer.Close()
 
 	manager, err := NewLockManager(LockConfig{
@@ -103,10 +110,7 @@ func TestRedisLockBackendRefreshAndForceBreak(t *testing.T) {
 }
 
 func TestRedisLockBackendAcquireTimeout(t *testing.T) {
-	redisServer, err := miniredis.Run()
-	if err != nil {
-		t.Fatalf("failed to start miniredis: %v", err)
-	}
+	redisServer := startMiniredis(t)
 	defer redisServer.Close()
 
 	manager, err := NewLockManager(LockConfig{

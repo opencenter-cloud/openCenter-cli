@@ -1,68 +1,74 @@
-#tests/features/active_cluster.feature
-#Verifiesactiveclusterbehavior:
-#1) `select`writestheselectednametotheactivepointerfile.
-#2)Commandsthatrelyontheactiveclusterreadthepointer;errorifunset.
-#3)WhenCWD ==selectedcluster'sopencenter.gitops.git_dir,theCLIprefixesoutputwith "Activecluster: <name>".
-Feature:Activeclusterrules
-Background:
-Givenanemptydirectory "<<tmp>>/conf"
-Andanemptydirectory "<<tmp>>/repo-demo"
+# tests/features/active_cluster.feature
+# Verifies active cluster behavior:
+# 1) `select` writes the selected name to the active pointer file.
+# 2) Commands that rely on the active cluster read the pointer; error if unset.
+# 3) When CWD == selected cluster's opencenter.gitops.git_dir, the CLI prefixes output with "Active cluster: <name>".
+
+Feature: Active cluster rules
+
+  Background:
+    Given an empty directory "<<tmp>>/conf"
+    And an empty directory "<<tmp>>/repo-demo"
+
   @active_pointer @select
-Scenario:Selectingaclusterwritesitsnametotheactivepointer
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-gitops:
-git_dir: <<tmp>>/repo-demo
-  """
-WhenIrun "opencenterclusterselectdemo"
-Thentheexitcodeshouldbe0
-Andthefile "<<tmp>>/conf/.active"shouldmatchregex "^demo$"
+  Scenario: Selecting a cluster writes its name to the active pointer
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+        gitops:
+          git_dir: <<tmp>>/repo-demo
+      """
+    When I run "opencenter cluster select demo"
+    Then the exit code should be 0
+    And the file "<<tmp>>/conf/.active" should match regex "^demo$"
+
   @active_pointer @unset @error
-Scenario:Commandsthatneedtheactiveclusterfailwhennoneisset
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-gitops:
-git_dir: <<tmp>>/repo-demo
-  """
-Andthefile "<<tmp>>/conf/active"doesnotexist
-WhenIrun "opencenterclusterinfo"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "noactivecluster"
+  Scenario: Commands that need the active cluster fail when none is set
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+        gitops:
+          git_dir: <<tmp>>/repo-demo
+      """
+    And the file "<<tmp>>/conf/active" does not exist
+    When I run "opencenter cluster info"
+    Then the exit code should not be 0
+    And stderr should contain "no active cluster"
+
   @active_pointer @context_header
-Scenario:Wheninthecluster'sgitdirectory,outputstartswithanactive-clusterheader
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-gitops:
-git_dir: <<tmp>>/repo-demo
-  """
-Andthedirectory "<<tmp>>/repo-demo"exists
-AndIrun "opencenterclusterselectdemo"
-Andtheexitcodeshouldbe0
-AndIcdto "<<tmp>>/repo-demo"
-WhenIrun "opencenterclusterinfo"
-Thentheexitcodeshouldbe0
-Andthefirstlineofstdoutshouldstartwith "Activecluster:demo"
+  Scenario: When in the cluster's git directory, output starts with an active-cluster header
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+        gitops:
+          git_dir: <<tmp>>/repo-demo
+      """
+    And the directory "<<tmp>>/repo-demo" exists
+    And I run "opencenter cluster select demo"
+    And the exit code should be 0
+    And I cd to "<<tmp>>/repo-demo"
+    When I run "opencenter cluster info"
+    Then the exit code should be 0
+    And the first line of stdout should start with "Active cluster: demo"
+
   @active_pointer @read
-Scenario:Commandsreadtheactivepointerwhennoclusternameisprovided
-Givenafile "<<tmp>>/conf/demo.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:demo
-gitops:
-git_dir: <<tmp>>/repo-demo
-  """
-AndIrun "opencenterclusterselectdemo"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterinfo"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "demo"
+  Scenario: Commands read the active pointer when no cluster name is provided
+    Given a file "<<tmp>>/conf/demo.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: demo
+        gitops:
+          git_dir: <<tmp>>/repo-demo
+      """
+    And I run "opencenter cluster select demo"
+    And the exit code should be 0
+    When I run "opencenter cluster info"
+    Then the exit code should be 0
+    And stdout should contain "demo"

@@ -22,11 +22,14 @@ import (
 	"time"
 
 	corePaths "github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
+	"github.com/opencenter-cloud/opencenter-cli/internal/testenv"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
 func TestDefaultCLIConfig(t *testing.T) {
+	testenv.SetIsolatedCLIDirs(t)
+
 	config := DefaultCLIConfig()
 
 	// Test default values
@@ -56,6 +59,8 @@ func TestDefaultCLIConfig(t *testing.T) {
 }
 
 func TestConfigValidator(t *testing.T) {
+	testenv.SetIsolatedCLIDirs(t)
+
 	validator := &ConfigValidator{autoRepair: false}
 
 	// Test valid configuration
@@ -80,6 +85,8 @@ func TestConfigValidator(t *testing.T) {
 }
 
 func TestConfigValidatorWithResult(t *testing.T) {
+	testenv.SetIsolatedCLIDirs(t)
+
 	// Test without auto-repair
 	validator := &ConfigValidator{autoRepair: false}
 
@@ -104,6 +111,8 @@ func TestConfigValidatorWithResult(t *testing.T) {
 }
 
 func TestConfigValidatorAutoRepair(t *testing.T) {
+	testenv.SetIsolatedCLIDirs(t)
+
 	// Test with auto-repair
 	validator := &ConfigValidator{autoRepair: true}
 
@@ -142,6 +151,8 @@ func TestConfigValidatorAutoRepair(t *testing.T) {
 }
 
 func TestConfigValidatorPathValidation(t *testing.T) {
+	testenv.SetIsolatedCLIDirs(t)
+
 	validator := &ConfigValidator{autoRepair: false}
 
 	// Test empty paths
@@ -162,6 +173,8 @@ func TestConfigValidatorPathValidation(t *testing.T) {
 }
 
 func TestConfigValidatorWarnings(t *testing.T) {
+	testenv.SetIsolatedCLIDirs(t)
+
 	validator := &ConfigValidator{autoRepair: false}
 
 	// Test configuration that should generate warnings
@@ -940,6 +953,8 @@ func TestConfigManagerDotNotationEdgeCases(t *testing.T) {
 }
 
 func TestConfigValidatorComprehensive(t *testing.T) {
+	testenv.SetIsolatedCLIDirs(t)
+
 	tests := []struct {
 		name           string
 		config         *CLIConfig

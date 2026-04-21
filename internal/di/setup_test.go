@@ -20,13 +20,16 @@ import (
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
+	"github.com/opencenter-cloud/opencenter-cli/internal/testenv"
 	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
 )
 
 func TestSetupContainer(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -36,7 +39,9 @@ func TestSetupContainer(t *testing.T) {
 }
 
 func TestSetupContainer_ErrorHandler(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -52,7 +57,9 @@ func TestSetupContainer_ErrorHandler(t *testing.T) {
 }
 
 func TestSetupContainer_FileSystem(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -68,7 +75,9 @@ func TestSetupContainer_FileSystem(t *testing.T) {
 }
 
 func TestSetupContainer_PathResolver(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -84,7 +93,9 @@ func TestSetupContainer_PathResolver(t *testing.T) {
 }
 
 func TestSetupContainer_Logger(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -100,7 +111,9 @@ func TestSetupContainer_Logger(t *testing.T) {
 }
 
 func TestSetupContainer_ConfigManager(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -116,7 +129,9 @@ func TestSetupContainer_ConfigManager(t *testing.T) {
 }
 
 func TestSetupContainer_ErrorFormatter(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -132,7 +147,9 @@ func TestSetupContainer_ErrorFormatter(t *testing.T) {
 }
 
 func TestSetupContainer_Singletons(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}
@@ -155,7 +172,9 @@ func TestSetupContainer_Singletons(t *testing.T) {
 }
 
 func TestSetupContainer_DependencyResolution(t *testing.T) {
-	container, err := SetupContainer("/tmp/test-clusters")
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}

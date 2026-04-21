@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/cluster"
+	"github.com/opencenter-cloud/opencenter-cli/internal/testenv"
 )
 
 func TestNewApp(t *testing.T) {
-	app, err := NewApp(t.TempDir())
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	app, err := NewApp(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("NewApp() failed: %v", err)
 	}
@@ -26,7 +29,9 @@ func TestNewApp(t *testing.T) {
 }
 
 func TestNewAppContainerResolveAs(t *testing.T) {
-	app, err := NewApp(t.TempDir())
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	app, err := NewApp(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("NewApp() failed: %v", err)
 	}

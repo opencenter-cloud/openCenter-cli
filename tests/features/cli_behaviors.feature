@@ -1,165 +1,203 @@
-#tests/features/cli_behaviors.feature
-#End-to-endCLIbehaviors:
-# -listingclusters
-# -selecting (byname &interactive)
-# -info (active &named)with --jsonand --validate
-# -init (non-interactive)incl. --strictfailures
-# -setup (materialization,idempotency,forcedoverwrite)
-# -bootstrap (gitinit/commit/remote/push)
-# -validationrules (Octavia/VRRP/Designate/counts/flavors/git_dir)
-Feature:CLIcoreflowsandvalidations
-Background:
-Givenanemptydirectory "<<tmp>>/conf"
-Andanemptydirectory "<<tmp>>/repo-dev"
-Andanemptydirectory "<<tmp>>/repo-prod"
-Andafile "<<tmp>>/conf/dev.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:dev
-kubernetes:
-master_count:1
-worker_count:1
-subnet_pods: "10.42.0.0/16"
-subnet_services: "10.43.0.0/16"
-loadbalancer_provider:octavia
-gitops:
-git_dir: "<<tmp>>/repo-dev"
-git_url: ""
-infrastructure:
-provider:openstack
-cloud:
-openstack:
-region: "regionOne"
-  """
-Andafile "<<tmp>>/conf/prod.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:prod
-kubernetes:
-master_count:3
-worker_count:6
-subnet_pods: "10.42.0.0/16"
-subnet_services: "10.43.0.0/16"
-loadbalancer_provider:octavia
-gitops:
-git_dir: "<<tmp>>/repo-prod"
-git_url: ""
-infrastructure:
-provider:openstack
-cloud:
-openstack:
-region: "regionOne"
-  """
+# tests/features/cli_behaviors.feature
+# End-to-end CLI behaviors:
+# - listing clusters
+# - selecting (by name & interactive)
+# - info (active & named) with --json and --validate
+# - init (non-interactive) incl. --strict failures
+# - setup (materialization, idempotency, forced overwrite)
+# - bootstrap (git init/commit/remote/push)
+# - validation rules (Octavia/VRRP/Designate/counts/flavors/git_dir)
+
+Feature: CLI core flows and validations
+
+  Background:
+    Given an empty directory "<<tmp>>/conf"
+    And an empty directory "<<tmp>>/repo-dev"
+    And an empty directory "<<tmp>>/repo-prod"
+    And a file "<<tmp>>/conf/dev.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: dev
+          kubernetes:
+            master_count: 1
+            worker_count: 1
+            subnet_pods: "10.42.0.0/16"
+            subnet_services: "10.43.0.0/16"
+            loadbalancer_provider: octavia
+        gitops:
+          git_dir: "<<tmp>>/repo-dev"
+          git_url: ""
+        infrastructure:
+          provider: openstack
+          cloud:
+            openstack:
+              region: "regionOne"
+      """
+    And a file "<<tmp>>/conf/prod.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: prod
+          kubernetes:
+            master_count: 3
+            worker_count: 6
+            subnet_pods: "10.42.0.0/16"
+            subnet_services: "10.43.0.0/16"
+            loadbalancer_provider: octavia
+        gitops:
+          git_dir: "<<tmp>>/repo-prod"
+          git_url: ""
+        infrastructure:
+          provider: openstack
+          cloud:
+            openstack:
+              region: "regionOne"
+      """
+
+  # ---------------------------------------------------------------------------
+  # LIST
+  # ---------------------------------------------------------------------------
   @list
-Scenario:Listingclustersshowsnameswithout .yaml
-WhenIrun "opencenterclusterlist"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "dev"
-Andstdoutshouldcontain "prod"
-Andstdoutshouldnotcontain ".yaml"
+  Scenario: Listing clusters shows names without .yaml
+    When I run "opencenter cluster list"
+    Then the exit code should be 0
+    And stdout should contain "dev"
+    And stdout should contain "prod"
+    And stdout should not contain ".yaml"
+
   @list @json
-Scenario:ListingclustersasJSON
-WhenIrun "opencenterclusterls --json"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain '["dev","prod"]'
+  Scenario: Listing clusters as JSON
+    When I run "opencenter cluster ls --json"
+    Then the exit code should be 0
+    And stdout should contain '["dev","prod"]'
+
+  # ---------------------------------------------------------------------------
+  # SELECT (by name & interactive)
+  # ---------------------------------------------------------------------------
   @select @by_name
-Scenario:Selectingaclusterbyname
-WhenIrun "opencenterclusterselectdev"
-Thentheexitcodeshouldbe0
-Andthefile "<<tmp>>/conf/.active"shouldmatchregex "^dev$"
+  Scenario: Selecting a cluster by name
+    When I run "opencenter cluster select dev"
+    Then the exit code should be 0
+    And the file "<<tmp>>/conf/.active" should match regex "^dev$"
+
   @select @interactive
-Scenario:Selectingaclusterinteractively
-WhenIruninteractively "opencenterclusterselect"
-AndIchoose "prod"fromtheprompt
-Thentheexitcodeshouldbe0
-Andthefile "<<tmp>>/conf/.active"shouldmatchregex "^prod$"
+  Scenario: Selecting a cluster interactively
+    When I run interactively "opencenter cluster select"
+    And I choose "prod" from the prompt
+    Then the exit code should be 0
+    And the file "<<tmp>>/conf/.active" should match regex "^prod$"
+
+  # ---------------------------------------------------------------------------
+  # INFO (active & named) with --json and --validate
+  # ---------------------------------------------------------------------------
   @info @active
-Scenario:Showinginfofortheactivecluster
-GivenIrun "opencenterclusterselectdev"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterinfo"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "dev"
-Andstdoutshouldcontain "git_dir: <<tmp>>/repo-dev"
+  Scenario: Showing info for the active cluster
+    Given I run "opencenter cluster select dev"
+    And the exit code should be 0
+    When I run "opencenter cluster info"
+    Then the exit code should be 0
+    And stdout should contain "dev"
+    And stdout should contain "git_dir: <<tmp>>/repo-dev"
+
   @info @json
-Scenario:ShowinginfoforanamedclusterwithJSONoutput
-WhenIrun "opencenterclusterinfoprod --json"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain '"cluster_name": "prod"'
-Andstdoutshouldcontain '"git_dir": "<<tmp>>/repo-prod"'
+  Scenario: Showing info for a named cluster with JSON output
+    When I run "opencenter cluster info prod --json"
+    Then the exit code should be 0
+    And stdout should contain '"cluster_name": "prod"'
+    And stdout should contain '"git_dir": "<<tmp>>/repo-prod"'
+
   @info @validate
-Scenario:Validatingconfigurationwith --validate
-WhenIrun "opencenterclusterinfodev --validate"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Validationsuccessful."
-Andstdoutshouldnotcontain "ERROR"
+  Scenario: Validating configuration with --validate
+    When I run "opencenter cluster info dev --validate"
+    Then the exit code should be 0
+    And stdout should contain "Validation successful"
+    And stdout should not contain "ERROR"
+
+  # ---------------------------------------------------------------------------
+  # INIT (non-interactive), STRICT validation
+  # ---------------------------------------------------------------------------
   @init @non_interactive
-Scenario:Non-interactiveinitcreatesaminimalskeleton
-WhenIrun "opencenterclusterinittest-nonint --force"
-Thentheexitcodeshouldbe0
-Andafile "<<tmp>>/conf/test-nonint.yaml"shouldexist
+  Scenario: Non-interactive init creates a minimal skeleton
+    When I run "opencenter cluster init test-nonint --force"
+    Then the exit code should be 0
+    And a file "<<tmp>>/conf/test-nonint.yaml" should exist
+
   @init @strict @wip
-Scenario: Non-interactive init fails with --strict when required values missing
-When I run "opencenter cluster init bad --strict"
-Then the exit code should not be 0
-And stderr should contain "validation failed"
+  Scenario: Non-interactive init fails with --strict when required values missing
+    # Note: init --strict currently does not validate required fields
+    # This test is skipped until validation is implemented
+    When I run "opencenter cluster init bad --strict"
+    Then the exit code should not be 0
+    And stderr should contain "validation failed"
+
+  # ---------------------------------------------------------------------------
+  # SETUP (materialization, idempotency, forced overwrite)
+  # ---------------------------------------------------------------------------
   @setup @materialize
-Scenario:SetupmaterializesGitOpstemplateintogit_dir
-GivenIrun "opencenterclusterselectdev"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterrender"
-Thentheexitcodeshouldbe0
-Andthedirectory "<<tmp>>/repo-dev"shouldcontainafilematching "README.md"
-Andthedirectory "<<tmp>>/repo-dev"shouldcontainadirectory "applications"
+  Scenario: Setup materializes GitOps template into git_dir
+    Given I run "opencenter cluster select dev"
+    And the exit code should be 0
+    When I run "opencenter cluster render"
+    Then the exit code should be 0
+    And the directory "<<tmp>>/repo-dev" should contain a file matching "README.md"
+    And the directory "<<tmp>>/repo-dev" should contain a directory "applications"
+
   @setup @idempotent
-Scenario:Runningsetupagainisidempotent
-GivenIrun "opencenterclusterselectdev"
-Andtheexitcodeshouldbe0
-AndIrun "opencenterclusterrender"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterrender"
-Thentheexitcodeshouldbe0
-Andstdoutshouldcontain "Rendercomplete"
+  Scenario: Running setup again is idempotent
+    Given I run "opencenter cluster select dev"
+    And the exit code should be 0
+    And I run "opencenter cluster render"
+    And the exit code should be 0
+    When I run "opencenter cluster render"
+    Then the exit code should be 0
+    And stdout should contain "Render complete"
+
   @setup @force
-Scenario:Forcedsetupoverwritesexistingfiles
-GivenIrun "opencenterclusterselectdev"
-Andtheexitcodeshouldbe0
-Andafile "<<tmp>>/repo-dev/README.md"withcontent:
-  """
-manualeditthatshouldbereplaced
-  """
-WhenIrun "opencenterclusterrender"
-Thentheexitcodeshouldbe0
-Andthefile "<<tmp>>/repo-dev/README.md"shouldnotcontain "manualeditthatshouldbereplaced"
+  Scenario: Forced setup overwrites existing files
+    Given I run "opencenter cluster select dev"
+    And the exit code should be 0
+    And a file "<<tmp>>/repo-dev/README.md" with content:
+      """
+      manual edit that should be replaced
+      """
+    When I run "opencenter cluster render"
+    Then the exit code should be 0
+    And the file "<<tmp>>/repo-dev/README.md" should not contain "manual edit that should be replaced"
+
+  # ---------------------------------------------------------------------------
+  # BOOTSTRAP (git init/commit/remote/push)
+  # ---------------------------------------------------------------------------
   @bootstrap @priority5 @wip
-Scenario:Bootstrappushesthelocalrepotoaremote
-Givenabaregitrepositoryexistsat "<<tmp>>/remote.git"
-AndIupdatetheYAML "<<tmp>>/conf/dev.yaml"toset:
-  """
-opencenter:
-gitops:
-git_dir: "<<tmp>>/repo-dev"
-git_url: "<<tmp>>/remote.git"
-  """
-AndIrun "opencenterclusterselectdev"
-Andtheexitcodeshouldbe0
-AndIrun "opencenterclusterrender"
-Andtheexitcodeshouldbe0
-WhenIrun "opencenterclusterbootstrap"
-Thentheexitcodeshouldbe0
-Andthebarerepo "<<tmp>>/remote.git"shouldhavebranch "main"
+  Scenario: Bootstrap pushes the local repo to a remote
+    Given a bare git repository exists at "<<tmp>>/remote.git"
+    And I update the YAML "<<tmp>>/conf/dev.yaml" to set:
+      """
+      opencenter:
+        gitops:
+          git_dir: "<<tmp>>/repo-dev"
+          git_url: "<<tmp>>/remote.git"
+      """
+    And I run "opencenter cluster select dev"
+    And the exit code should be 0
+    And I run "opencenter cluster render"
+    And the exit code should be 0
+    When I run "opencenter cluster bootstrap"
+    Then the exit code should be 0
+    And the bare repo "<<tmp>>/remote.git" should have branch "main"
+
+  # (validation scenarios moved to validation.feature)
+
   @validate @git_dir_missing @priority2
-Scenario:opencenter.gitops.git_dirmissing ->erroronsetup
-Givenafile "<<tmp>>/conf/no-gitdir.yaml"withcontent:
-  """
-opencenter:
-cluster:
-cluster_name:no-gitdir
-gitops:
-git_dir: ""
-  """
-WhenIrun "opencenterclusterrenderno-gitdir"
-Thentheexitcodeshouldnotbe0
-Andstderrshouldcontain "opencenter.gitops.git_dirmustbeset"
+  Scenario: opencenter.gitops.git_dir missing -> error on setup
+    Given a file "<<tmp>>/conf/no-gitdir.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: no-gitdir
+        gitops:
+          git_dir: ""
+      """
+    When I run "opencenter cluster render no-gitdir"
+    Then the exit code should not be 0
+    And stderr should contain "opencenter.gitops.repository.local_dir must be set"

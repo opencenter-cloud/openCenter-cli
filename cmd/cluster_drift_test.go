@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,6 +12,12 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/cloud"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
+
+type driftCallbackDoerFunc func(*http.Request) (*http.Response, error)
+
+func (fn driftCallbackDoerFunc) Do(req *http.Request) (*http.Response, error) {
+	return fn(req)
+}
 
 func TestBuildDesiredStateOpenStackCoversManagedResources(t *testing.T) {
 	cfgPtr, err := v2.NewV2Default("prod-cluster", "openstack")
@@ -148,26 +153,34 @@ func TestSendDriftCallbackPostsJSON(t *testing.T) {
 	}
 
 	var received cloud.DriftReport
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Fatalf("expected POST request, got %s", r.Method)
+	doer := driftCallbackDoerFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodPost {
+			t.Fatalf("expected POST request, got %s", req.Method)
 		}
-		if got := r.Header.Get("Content-Type"); got != "application/json" {
+		if req.URL.String() != "https://callback.example.com/drift" {
+			t.Fatalf("expected callback URL to be preserved, got %s", req.URL.String())
+		}
+		if got := req.Header.Get("Content-Type"); got != "application/json" {
 			t.Fatalf("expected application/json content type, got %s", got)
 		}
 
-		body, err := io.ReadAll(r.Body)
+		body, err := io.ReadAll(req.Body)
 		if err != nil {
 			t.Fatalf("read callback body: %v", err)
 		}
 		if err := json.Unmarshal(body, &received); err != nil {
 			t.Fatalf("unmarshal callback body: %v", err)
 		}
-		w.WriteHeader(http.StatusAccepted)
-	}))
-	defer server.Close()
 
-	if err := sendDriftCallback(context.Background(), server.URL, report); err != nil {
+		return &http.Response{
+			StatusCode: http.StatusAccepted,
+			Body:       http.NoBody,
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
+
+	if err := sendDriftCallbackWithDoer(context.Background(), "https://callback.example.com/drift", report, doer); err != nil {
 		t.Fatalf("sendDriftCallback returned error: %v", err)
 	}
 

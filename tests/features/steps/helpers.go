@@ -42,6 +42,8 @@ import (
 type world struct {
 	bin           string
 	configDir     string
+	stateDir      string
+	homeDir       string
 	lastOut       string
 	lastErr       string
 	lastExit      int
@@ -52,6 +54,8 @@ type world struct {
 	answers       map[string]string
 	pendingChoice string
 	cwd           string
+	oldConfigEnv  string
+	oldStateEnv   string
 	oldClusterEnv string
 	oldSessionEnv string
 	oldSessionID  string
@@ -132,9 +136,20 @@ func (w *world) isolateConfigDir() error {
 		return err
 	}
 	w.configDir = dir
+	w.stateDir = filepath.Join(w.tmpDir, "state")
+	if err := os.MkdirAll(w.stateDir, 0o755); err != nil {
+		return err
+	}
+	w.homeDir = filepath.Join(w.tmpDir, "home")
+	if err := os.MkdirAll(w.homeDir, 0o755); err != nil {
+		return err
+	}
 
-	// Set the environment variable for the CLI to use
+	// Set the environment variables for the CLI to use.
+	w.oldConfigEnv = os.Getenv("OPENCENTER_CONFIG_DIR")
+	w.oldStateEnv = os.Getenv("OPENCENTER_STATE_DIR")
 	os.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	os.Setenv("OPENCENTER_STATE_DIR", w.stateDir)
 	w.oldClusterEnv = os.Getenv("OPENCENTER_CLUSTER")
 	w.oldSessionEnv = os.Getenv("OPENCENTER_SESSION_FILE")
 	w.oldSessionID = os.Getenv("OPENCENTER_SESSION_ID")
@@ -160,8 +175,14 @@ func (w *world) runOpenCenter(args []string) error {
 	}
 	// set environment: ensure OPENCENTER_CONFIG_DIR is set
 	env := filteredScenarioEnv(os.Environ())
-	// propagate config dir
+	// propagate isolated config and state roots
 	env = append(env, fmt.Sprintf("OPENCENTER_CONFIG_DIR=%s", w.configDir))
+	env = append(env, fmt.Sprintf("OPENCENTER_STATE_DIR=%s", w.stateDir))
+	env = append(env, "OPENCENTER_TEST_MODE=1")
+	if w.homeDir != "" {
+		env = append(env, fmt.Sprintf("HOME=%s", w.homeDir))
+		env = append(env, fmt.Sprintf("USERPROFILE=%s", w.homeDir))
+	}
 	if w.tmpDir != "" {
 		env = append(env, fmt.Sprintf("OPENCENTER_TEST_TMP=%s", w.tmpDir))
 	}
@@ -202,7 +223,12 @@ func (w *world) pathFromFeature(p string) string {
 func filteredScenarioEnv(env []string) []string {
 	filtered := make([]string, 0, len(env))
 	for _, entry := range env {
-		if strings.HasPrefix(entry, "OPENCENTER_CLUSTER=") ||
+		if strings.HasPrefix(entry, "OPENCENTER_CONFIG_DIR=") ||
+			strings.HasPrefix(entry, "OPENCENTER_STATE_DIR=") ||
+			strings.HasPrefix(entry, "OPENCENTER_TEST_MODE=") ||
+			strings.HasPrefix(entry, "HOME=") ||
+			strings.HasPrefix(entry, "USERPROFILE=") ||
+			strings.HasPrefix(entry, "OPENCENTER_CLUSTER=") ||
 			strings.HasPrefix(entry, "OPENCENTER_SESSION_FILE=") ||
 			strings.HasPrefix(entry, "OPENCENTER_SESSION_ID=") {
 			continue
@@ -281,20 +307,30 @@ func normalizeConfigYAML(raw string) string {
 	if version, ok := data["schema_version"].(string); ok && strings.TrimSpace(version) != "" {
 		return raw
 	}
-	if opencenter, ok := data["opencenter"].(map[string]any); ok {
-		if _, hasMeta := opencenter["meta"]; hasMeta {
-			return raw
-		}
-	}
 
-	updated, _ := normalizeLegacyConfigMap(data)
+	updated := data
+	if _, ok := data["opencenter"]; !ok {
+		updated, _ = normalizeLegacyConfigMap(data)
+	}
+	normalizeGitOpsAliasesInMap(updated)
+	normalizeClusterAliasesInMap(updated)
+	normalizeOpenCenterAliasesInMap(updated)
+	normalizeTopLevelAliasesInMap(updated)
+	normalizeSecretsAliasesInMap(updated)
 	clusterName := nestedStringValue(updated, "opencenter", "cluster", "cluster_name")
 	if clusterName == "" {
-		return raw
+		out, err := yaml.Marshal(updated)
+		if err != nil {
+			return raw
+		}
+		return string(out)
 	}
 
 	provider := nestedStringValue(updated, "opencenter", "infrastructure", "provider")
-	baseCfg, err := config.NewProviderDefault(clusterName, provider)
+	if provider == "" {
+		provider = "openstack"
+	}
+	baseCfg, err := v2.NewV2Default(clusterName, provider)
 	if err != nil {
 		return raw
 	}
@@ -319,6 +355,195 @@ func normalizeConfigYAML(raw string) string {
 		return raw
 	}
 	return string(out)
+}
+
+func normalizeGitOpsAliasesInMap(data map[string]any) {
+	opencenter, ok := data["opencenter"].(map[string]any)
+	if !ok {
+		return
+	}
+	gitops, ok := opencenter["gitops"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	moveGitOpsAlias := func(from, parentKey, to string) {
+		value, exists := gitops[from]
+		if !exists {
+			return
+		}
+		if str, ok := value.(string); ok && strings.TrimSpace(str) == "" && from != "git_dir" {
+			delete(gitops, from)
+			return
+		}
+		parent := ensureNestedMap(gitops, parentKey)
+		parent[to] = value
+		delete(gitops, from)
+	}
+
+	moveGitOpsAlias("git_dir", "repository", "local_dir")
+	moveGitOpsAlias("git_url", "repository", "url")
+	moveGitOpsAlias("git_branch", "repository", "branch")
+	moveGitOpsAlias("gitops_base_repo", "base_repo", "url")
+	moveGitOpsAlias("gitops_base_release", "base_repo", "release")
+	moveGitOpsAlias("gitops_branch", "base_repo", "branch")
+}
+
+func normalizeClusterAliasesInMap(data map[string]any) {
+	opencenter, ok := data["opencenter"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	cluster, ok := opencenter["cluster"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	moveClusterAlias := func(from string, target map[string]any, to string) {
+		value, exists := cluster[from]
+		if !exists {
+			return
+		}
+		target[to] = value
+		delete(cluster, from)
+	}
+
+	compute := ensureNestedMap(ensureNestedMap(opencenter, "infrastructure"), "compute")
+	networking := ensureNestedMap(ensureNestedMap(opencenter, "infrastructure"), "networking")
+	secretsGlobal := ensureNestedMap(ensureNestedMap(data, "secrets"), "global")
+	ssh := ensureNestedMap(ensureNestedMap(opencenter, "infrastructure"), "ssh")
+
+	moveClusterAlias("aws_access_key", secretsGlobal, "aws_access_key")
+	moveClusterAlias("aws_secret_access_key", secretsGlobal, "aws_secret_key")
+	moveClusterAlias("ssh_authorized_keys", ssh, "authorized_keys")
+	moveClusterAlias(
+		"k8s_api_port_acl",
+		ensureNestedMap(
+			ensureNestedMap(
+				ensureNestedMap(ensureNestedMap(opencenter, "infrastructure"), "cloud"),
+				"openstack",
+			),
+			"networking",
+		),
+		"k8s_api_port_acl",
+	)
+
+	kubernetes, ok := cluster["kubernetes"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	moveKubernetesAlias := func(from string, target map[string]any, to string) {
+		value, exists := kubernetes[from]
+		if !exists {
+			return
+		}
+		target[to] = value
+		delete(kubernetes, from)
+	}
+
+	moveKubernetesAlias("master_count", compute, "master_count")
+	moveKubernetesAlias("worker_count", compute, "worker_count")
+	moveKubernetesAlias("worker_count_windows", compute, "worker_count_windows")
+	moveKubernetesAlias("loadbalancer_provider", networking, "loadbalancer_provider")
+}
+
+func normalizeOpenCenterAliasesInMap(data map[string]any) {
+	opencenter, ok := data["opencenter"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	infrastructure := ensureNestedMap(opencenter, "infrastructure")
+	if storage, ok := opencenter["storage"].(map[string]any); ok {
+		deepMerge(ensureNestedMap(infrastructure, "storage"), storage)
+		delete(opencenter, "storage")
+	}
+
+	cluster, ok := opencenter["cluster"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	domain, ok := cluster["domain"].(string)
+	if !ok || strings.TrimSpace(domain) == "" {
+		return
+	}
+
+	if _, exists := cluster["base_domain"]; !exists {
+		cluster["base_domain"] = domain
+	}
+	if _, exists := cluster["cluster_fqdn"]; !exists {
+		if clusterName, ok := cluster["cluster_name"].(string); ok && strings.TrimSpace(clusterName) != "" {
+			if strings.Contains(clusterName, ".") {
+				cluster["cluster_fqdn"] = clusterName
+			} else {
+				cluster["cluster_fqdn"] = fmt.Sprintf("%s.%s", clusterName, domain)
+			}
+		}
+	}
+	delete(cluster, "domain")
+}
+
+func normalizeTopLevelAliasesInMap(data map[string]any) {
+	networking, ok := data["networking"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	opencenter := ensureNestedMap(data, "opencenter")
+	infrastructure := ensureNestedMap(opencenter, "infrastructure")
+	deepMerge(ensureNestedMap(infrastructure, "networking"), networking)
+	delete(data, "networking")
+}
+
+func normalizeSecretsAliasesInMap(data map[string]any) {
+	secrets, ok := data["secrets"].(map[string]any)
+	if !ok {
+		return
+	}
+	global, ok := secrets["global"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	openstack, ok := global["openstack"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	opencenter := ensureNestedMap(data, "opencenter")
+	infrastructure := ensureNestedMap(opencenter, "infrastructure")
+	cloud := ensureNestedMap(infrastructure, "cloud")
+	openstackTarget := ensureNestedMap(cloud, "openstack")
+
+	copyIfMissing := func(from, to string) {
+		if _, exists := openstackTarget[to]; exists {
+			return
+		}
+		if value, exists := openstack[from]; exists {
+			openstackTarget[to] = value
+		}
+	}
+
+	copyIfMissing("application_credential_id", "application_credential_id")
+	copyIfMissing("application_credential_secret", "application_credential_secret")
+	copyIfMissing("auth_url", "auth_url")
+	copyIfMissing("region", "region")
+	copyIfMissing("domain", "domain")
+
+	delete(global, "openstack")
+}
+
+func ensureNestedMap(parent map[string]any, key string) map[string]any {
+	if existing, ok := parent[key].(map[string]any); ok {
+		return existing
+	}
+
+	nested := map[string]any{}
+	parent[key] = nested
+	return nested
 }
 
 func normalizeLegacyConfigMap(src map[string]any) (map[string]any, bool) {
@@ -442,6 +667,8 @@ func (w *world) setActiveCluster(name string) error {
 // back the configuration. Only simple string and bool assignments are
 // supported in the tests.
 func (w *world) setConfigValue(path, value string) error {
+	path = normalizeConfigPathAlias(path)
+
 	// Determine cluster name from active cluster
 	orig := os.Getenv("OPENCENTER_CONFIG_DIR")
 	os.Setenv("OPENCENTER_CONFIG_DIR", w.configDir)
@@ -567,20 +794,50 @@ func (w *world) replaceTmp(path string) string {
 	return path
 }
 
-// Godog steps
+func (w *world) expandCommandToken(token string) string {
+	token = w.replaceTmp(token)
+	token = os.ExpandEnv(token)
 
-func (w *world) iRunCommand(arg string) error {
-	// Split into words; drop leading command name if present
+	switch {
+	case token == "~":
+		if w.homeDir != "" {
+			return w.homeDir
+		}
+		if home, err := os.UserHomeDir(); err == nil {
+			return home
+		}
+	case strings.HasPrefix(token, "~/"):
+		if w.homeDir != "" {
+			return filepath.Join(w.homeDir, strings.TrimPrefix(token, "~/"))
+		}
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, strings.TrimPrefix(token, "~/"))
+		}
+	}
+
+	return token
+}
+
+func (w *world) parseCommandFields(arg string) ([]string, error) {
 	fields := strings.Fields(arg)
 	if len(fields) == 0 {
-		return fmt.Errorf("no command")
+		return nil, fmt.Errorf("no command")
 	}
 	if fields[0] == "opencenter" {
 		fields = fields[1:]
 	}
-	// Replace <<tmp>> token
 	for i, field := range fields {
-		fields[i] = w.replaceTmp(field)
+		fields[i] = w.expandCommandToken(field)
+	}
+	return fields, nil
+}
+
+// Godog steps
+
+func (w *world) iRunCommand(arg string) error {
+	fields, err := w.parseCommandFields(arg)
+	if err != nil {
+		return err
 	}
 
 	for i, field := range fields {
@@ -1079,10 +1336,13 @@ func (w *world) iChooseFromThePrompt(choice string) error {
 		// Extract config-dir from the pending command
 		configDir := w.configDir
 		if strings.Contains(w.pendingCmd, "--config-dir") {
-			parts := strings.Fields(w.pendingCmd)
+			parts, err := w.parseCommandFields(w.pendingCmd)
+			if err != nil {
+				return err
+			}
 			for i, part := range parts {
 				if part == "--config-dir" && i+1 < len(parts) {
-					configDir = w.replaceTmp(parts[i+1])
+					configDir = parts[i+1]
 					break
 				}
 			}
@@ -1377,6 +1637,8 @@ func (w *world) assertClusterConfigValueContains(clusterName, path, expectedSubs
 }
 
 func getField(obj interface{}, path string) (interface{}, error) {
+	path = normalizeConfigPathAlias(path)
+
 	v := reflect.ValueOf(obj)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -1413,6 +1675,25 @@ func getField(obj interface{}, path string) (interface{}, error) {
 	}
 
 	return v.Interface(), nil
+}
+
+func normalizeConfigPathAlias(path string) string {
+	switch path {
+	case "opencenter.gitops.git_dir":
+		return "opencenter.gitops.repository.local_dir"
+	case "opencenter.gitops.git_url":
+		return "opencenter.gitops.repository.url"
+	case "opencenter.gitops.git_branch":
+		return "opencenter.gitops.repository.branch"
+	case "opencenter.gitops.gitops_base_repo":
+		return "opencenter.gitops.base_repo.url"
+	case "opencenter.gitops.gitops_base_release":
+		return "opencenter.gitops.base_repo.release"
+	case "opencenter.gitops.gitops_branch":
+		return "opencenter.gitops.base_repo.branch"
+	default:
+		return path
+	}
 }
 
 // setEnvironmentVariable sets an environment variable for the test scenario

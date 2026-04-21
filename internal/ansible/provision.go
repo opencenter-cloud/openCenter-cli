@@ -54,7 +54,7 @@ func Provision(cfg v2.Config) error {
 		return nil
 	}
 
-	gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.GitDir)
+	gitDir := strings.TrimSpace(cfg.GitDir())
 	if gitDir == "" {
 		return fmt.Errorf("opencenter.gitops.git_dir must be set to render ansible assets")
 	}

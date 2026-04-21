@@ -26,7 +26,22 @@ type partialSecretsTestConfig struct {
 			ClusterName string `yaml:"cluster_name"`
 		} `yaml:"cluster"`
 		GitOps struct {
-			GitDir string `yaml:"git_dir"`
+			GitDir            string `yaml:"git_dir"`
+			GitURL            string `yaml:"git_url"`
+			GitBranch         string `yaml:"git_branch"`
+			GitOpsBaseRepo    string `yaml:"gitops_base_repo"`
+			GitOpsBaseRelease string `yaml:"gitops_base_release"`
+			GitOpsBranch      string `yaml:"gitops_branch"`
+			Repository        struct {
+				LocalDir string `yaml:"local_dir"`
+				URL      string `yaml:"url"`
+				Branch   string `yaml:"branch"`
+			} `yaml:"repository"`
+			BaseRepo struct {
+				URL     string `yaml:"url"`
+				Release string `yaml:"release"`
+				Branch  string `yaml:"branch"`
+			} `yaml:"base_repo"`
 		} `yaml:"gitops"`
 		Infrastructure struct {
 			Provider string `yaml:"provider"`
@@ -65,8 +80,41 @@ func normalizeSecretsConfigYAML(t *testing.T, clusterName, raw string) []byte {
 	if partial.OpenCenter.Meta.Organization != "" {
 		cfg.OpenCenter.Meta.Organization = partial.OpenCenter.Meta.Organization
 	}
+	if partial.OpenCenter.GitOps.GitDir != "" {
+		cfg.OpenCenter.GitOps.Repository.LocalDir = partial.OpenCenter.GitOps.GitDir
+	}
 	if partial.OpenCenter.GitOps.Repository.LocalDir != "" {
 		cfg.OpenCenter.GitOps.Repository.LocalDir = partial.OpenCenter.GitOps.Repository.LocalDir
+	}
+	if partial.OpenCenter.GitOps.GitURL != "" {
+		cfg.OpenCenter.GitOps.Repository.URL = partial.OpenCenter.GitOps.GitURL
+	}
+	if partial.OpenCenter.GitOps.Repository.URL != "" {
+		cfg.OpenCenter.GitOps.Repository.URL = partial.OpenCenter.GitOps.Repository.URL
+	}
+	if partial.OpenCenter.GitOps.GitBranch != "" {
+		cfg.OpenCenter.GitOps.Repository.Branch = partial.OpenCenter.GitOps.GitBranch
+	}
+	if partial.OpenCenter.GitOps.Repository.Branch != "" {
+		cfg.OpenCenter.GitOps.Repository.Branch = partial.OpenCenter.GitOps.Repository.Branch
+	}
+	if partial.OpenCenter.GitOps.GitOpsBaseRepo != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.URL = partial.OpenCenter.GitOps.GitOpsBaseRepo
+	}
+	if partial.OpenCenter.GitOps.BaseRepo.URL != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.URL = partial.OpenCenter.GitOps.BaseRepo.URL
+	}
+	if partial.OpenCenter.GitOps.GitOpsBaseRelease != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.Release = partial.OpenCenter.GitOps.GitOpsBaseRelease
+	}
+	if partial.OpenCenter.GitOps.BaseRepo.Release != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.Release = partial.OpenCenter.GitOps.BaseRepo.Release
+	}
+	if partial.OpenCenter.GitOps.GitOpsBranch != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.Branch = partial.OpenCenter.GitOps.GitOpsBranch
+	}
+	if partial.OpenCenter.GitOps.BaseRepo.Branch != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.Branch = partial.OpenCenter.GitOps.BaseRepo.Branch
 	}
 	if partial.Secrets.SopsAgeKeyFile != "" {
 		cfg.Secrets.SopsAgeKeyFile = partial.Secrets.SopsAgeKeyFile
@@ -122,8 +170,41 @@ func normalizeSecretsConfigYAMLBytes(clusterName, raw string) ([]byte, error) {
 	if partial.OpenCenter.Meta.Organization != "" {
 		cfg.OpenCenter.Meta.Organization = partial.OpenCenter.Meta.Organization
 	}
+	if partial.OpenCenter.GitOps.GitDir != "" {
+		cfg.OpenCenter.GitOps.Repository.LocalDir = partial.OpenCenter.GitOps.GitDir
+	}
 	if partial.OpenCenter.GitOps.Repository.LocalDir != "" {
 		cfg.OpenCenter.GitOps.Repository.LocalDir = partial.OpenCenter.GitOps.Repository.LocalDir
+	}
+	if partial.OpenCenter.GitOps.GitURL != "" {
+		cfg.OpenCenter.GitOps.Repository.URL = partial.OpenCenter.GitOps.GitURL
+	}
+	if partial.OpenCenter.GitOps.Repository.URL != "" {
+		cfg.OpenCenter.GitOps.Repository.URL = partial.OpenCenter.GitOps.Repository.URL
+	}
+	if partial.OpenCenter.GitOps.GitBranch != "" {
+		cfg.OpenCenter.GitOps.Repository.Branch = partial.OpenCenter.GitOps.GitBranch
+	}
+	if partial.OpenCenter.GitOps.Repository.Branch != "" {
+		cfg.OpenCenter.GitOps.Repository.Branch = partial.OpenCenter.GitOps.Repository.Branch
+	}
+	if partial.OpenCenter.GitOps.GitOpsBaseRepo != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.URL = partial.OpenCenter.GitOps.GitOpsBaseRepo
+	}
+	if partial.OpenCenter.GitOps.BaseRepo.URL != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.URL = partial.OpenCenter.GitOps.BaseRepo.URL
+	}
+	if partial.OpenCenter.GitOps.GitOpsBaseRelease != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.Release = partial.OpenCenter.GitOps.GitOpsBaseRelease
+	}
+	if partial.OpenCenter.GitOps.BaseRepo.Release != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.Release = partial.OpenCenter.GitOps.BaseRepo.Release
+	}
+	if partial.OpenCenter.GitOps.GitOpsBranch != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.Branch = partial.OpenCenter.GitOps.GitOpsBranch
+	}
+	if partial.OpenCenter.GitOps.BaseRepo.Branch != "" {
+		cfg.OpenCenter.GitOps.BaseRepo.Branch = partial.OpenCenter.GitOps.BaseRepo.Branch
 	}
 	if partial.Secrets.SopsAgeKeyFile != "" {
 		cfg.Secrets.SopsAgeKeyFile = partial.Secrets.SopsAgeKeyFile

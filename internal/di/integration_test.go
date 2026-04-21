@@ -23,6 +23,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
+	"github.com/opencenter-cloud/opencenter-cli/internal/testenv"
 )
 
 // TestFullDependencyChain tests a complete dependency chain resolution.
@@ -148,8 +149,9 @@ func TestMultipleServicesWithSharedDependencies(t *testing.T) {
 
 // TestSetupContainerIntegration tests the SetupContainer function.
 func TestSetupContainerIntegration(t *testing.T) {
-	tmpDir := t.TempDir()
-	container, err := SetupContainer(tmpDir)
+	dirs := testenv.SetIsolatedCLIDirs(t)
+
+	container, err := SetupContainer(dirs.ClustersDir)
 	if err != nil {
 		t.Fatalf("SetupContainer() failed: %v", err)
 	}

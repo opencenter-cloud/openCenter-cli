@@ -18,15 +18,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/testenv"
 )
 
-var server *httptest.Server
+func TestSecrets(t *testing.T) {
+	testenv.RequireLoopbackBind(t)
+	t.Setenv("OS_USERNAME", "testuser")
+	t.Setenv("OS_PASSWORD", "testpass")
 
-func TestMain(m *testing.M) {
+	var server *httptest.Server
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Subject-Token", "a-fake-token")
@@ -49,12 +52,7 @@ func TestMain(m *testing.M) {
 		}
 	}))
 	defer server.Close()
-	m.Run()
-}
 
-func TestSecrets(t *testing.T) {
-	os.Setenv("OS_USERNAME", "testuser")
-	os.Setenv("OS_PASSWORD", "testpass")
 	cfg := &v2.BarbicanConfig{
 		AuthURL: server.URL + "/v3",
 	}

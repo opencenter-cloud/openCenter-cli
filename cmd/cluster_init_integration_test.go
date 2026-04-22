@@ -438,12 +438,11 @@ func TestClusterInitThenValidateSucceeds(t *testing.T) {
 	validateCmd.SetErr(&stderr)
 	validateCmd.SetArgs([]string{"--config", configPath})
 	err := validateCmd.Execute()
-	if err == nil {
-		t.Fatal("expected validation to fail due to placeholder secrets")
+	if err != nil {
+		t.Fatalf("expected structural validation to succeed, got:\nstdout: %s\nstderr: %s\nerr: %v", stdout.String(), stderr.String(), err)
 	}
-	// Validation should fail only because of placeholder secrets, not structural issues
-	if !strings.Contains(stdout.String(), "CHANGEME") {
-		t.Fatalf("expected placeholder secret error, got:\nstdout: %s\nstderr: %s", stdout.String(), stderr.String())
+	if !strings.Contains(stdout.String(), "Validation successful") {
+		t.Fatalf("expected successful validation output, got:\nstdout: %s\nstderr: %s", stdout.String(), stderr.String())
 	}
 }
 

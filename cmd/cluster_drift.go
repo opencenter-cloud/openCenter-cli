@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -30,6 +31,8 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/cloud/openstack"
 	"github.com/opencenter-cloud/opencenter-cli/internal/cloud/vmware"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/importer"
+	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 )
 
 // newClusterDriftCmd creates the parent drift command
@@ -145,8 +148,10 @@ If no cluster name is provided, uses the currently active cluster.`,
 				report = filterBySeverity(report, severityFilter)
 			}
 
+			configPromotion, _ := buildConfigPromotionPreview(cmd.Context(), clusterName)
+
 			// Output report
-			return outputDriftReport(cmd, report, outputFormat)
+			return outputDriftReport(cmd, report, outputFormat, configPromotion)
 		},
 	}
 
@@ -192,6 +197,11 @@ If no cluster name is provided, uses the currently active cluster.`,
 
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			confirm, _ := cmd.Flags().GetBool("confirm")
+			toConfig, _ := cmd.Flags().GetBool("to-config")
+
+			if toConfig {
+				return reconcileDriftToConfig(cmd, clusterName, dryRun)
+			}
 
 			// Load configuration
 			cfg, err := loadCanonicalConfig(clusterName)
@@ -267,8 +277,95 @@ If no cluster name is provided, uses the currently active cluster.`,
 
 	cmd.Flags().Bool("dry-run", false, "Show what would be changed without applying")
 	cmd.Flags().Bool("confirm", false, "Prompt for confirmation before applying changes")
+	cmd.Flags().Bool("to-config", false, "Promote approved live cluster state back into config")
+	cmd.Flags().Bool("to-cluster", false, "Reconcile infrastructure to match the current config (default)")
+	cmd.MarkFlagsMutuallyExclusive("to-config", "to-cluster")
 
 	return cmd
+}
+
+func reconcileDriftToConfig(cmd *cobra.Command, clusterIdentifier string, dryRun bool) error {
+	cfg, _, _, clusterPaths, err := loadNativeV2ConfigWithIdentifier(cmd.Context(), clusterIdentifier)
+	if err != nil {
+		return fmt.Errorf("failed to load cluster configuration: %w", err)
+	}
+
+	liveResult, err := importer.BuildLiveImportResult(cmd.Context(), cfg, clusterPaths.KubeconfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to inspect live cluster state: %w", err)
+	}
+
+	plan, err := importer.PrepareClusterWritePlan(cmd.Context(), liveResult)
+	if err != nil {
+		return fmt.Errorf("failed to prepare config promotion plan: %w", err)
+	}
+
+	if strings.TrimSpace(plan.Diff) == "" {
+		fmt.Fprintln(cmd.OutOrStdout(), "No promotable live-to-config drift detected")
+		return nil
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "Live-to-config patch for cluster %s:\n\n", plan.ClusterName)
+	fmt.Fprintln(cmd.OutOrStdout(), plan.Diff)
+
+	if dryRun {
+		return nil
+	}
+
+	testMode := os.Getenv("OPENCENTER_TEST_MODE") == "1"
+	prompter := ui.GetPrompter(os.Stdin, cmd.OutOrStdout(), testMode)
+	confirmed, err := prompter.Confirm(cmd.Context(), fmt.Sprintf("Apply live-to-config patch for %s?", plan.ClusterName))
+	if err != nil {
+		return fmt.Errorf("confirmation prompt failed: %w", err)
+	}
+	if !confirmed {
+		return fmt.Errorf("live-to-config reconciliation cancelled")
+	}
+
+	if err := importer.ApplyClusterWritePlan(plan); err != nil {
+		return fmt.Errorf("failed to apply config patch: %w", err)
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "Updated config for %s at %s\n", plan.ClusterName, plan.ConfigPath)
+	return nil
+}
+
+type configPromotionPreview struct {
+	ClusterName string                          `json:"cluster_name" yaml:"cluster_name"`
+	FieldCount  int                             `json:"field_count" yaml:"field_count"`
+	Fields      []importer.FieldInferenceResult `json:"fields,omitempty" yaml:"fields,omitempty"`
+	Skipped     []importer.SkippedField         `json:"skipped,omitempty" yaml:"skipped,omitempty"`
+	Diff        string                          `json:"diff,omitempty" yaml:"diff,omitempty"`
+}
+
+func buildConfigPromotionPreview(ctx context.Context, clusterIdentifier string) (*configPromotionPreview, error) {
+	cfg, _, _, clusterPaths, err := loadNativeV2ConfigWithIdentifier(ctx, clusterIdentifier)
+	if err != nil {
+		return nil, err
+	}
+
+	liveResult, err := importer.BuildLiveImportResult(ctx, cfg, clusterPaths.KubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	approved, skipped := importer.SelectApprovedFields(liveResult)
+	plan, err := importer.PrepareClusterWritePlan(ctx, liveResult)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(approved) == 0 && strings.TrimSpace(plan.Diff) == "" {
+		return nil, nil
+	}
+
+	return &configPromotionPreview{
+		ClusterName: liveResult.ClusterName,
+		FieldCount:  len(approved),
+		Fields:      approved,
+		Skipped:     skipped,
+		Diff:        plan.Diff,
+	}, nil
 }
 
 // newClusterDriftScheduleCmd creates the drift schedule subcommand
@@ -629,17 +726,31 @@ func canonicalDriftProvider(provider string) string {
 }
 
 // outputDriftReport outputs a drift report in the specified format
-func outputDriftReport(cmd *cobra.Command, report *cloud.DriftReport, format string) error {
+func outputDriftReport(cmd *cobra.Command, report *cloud.DriftReport, format string, promotion *configPromotionPreview) error {
 	switch format {
 	case "json":
-		data, err := json.MarshalIndent(report, "", "  ")
+		payload := struct {
+			*cloud.DriftReport
+			ConfigPromotion *configPromotionPreview `json:"config_promotion,omitempty"`
+		}{
+			DriftReport:     report,
+			ConfigPromotion: promotion,
+		}
+		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal report to JSON: %w", err)
 		}
 		fmt.Fprintln(cmd.OutOrStdout(), string(data))
 
 	case "yaml":
-		data, err := yaml.Marshal(report)
+		payload := struct {
+			*cloud.DriftReport
+			ConfigPromotion *configPromotionPreview `yaml:"config_promotion,omitempty"`
+		}{
+			DriftReport:     report,
+			ConfigPromotion: promotion,
+		}
+		data, err := yaml.Marshal(payload)
 		if err != nil {
 			return fmt.Errorf("failed to marshal report to YAML: %w", err)
 		}
@@ -675,6 +786,15 @@ func outputDriftReport(cmd *cobra.Command, report *cloud.DriftReport, format str
 					fmt.Fprintf(cmd.OutOrStdout(), "     Message: %s\n", drift.Message)
 				}
 				fmt.Fprintln(cmd.OutOrStdout())
+			}
+		}
+
+		if promotion != nil && promotion.FieldCount > 0 {
+			fmt.Fprintf(cmd.OutOrStdout(), "Config Promotion Candidates:\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "  Fields: %d\n", promotion.FieldCount)
+			if strings.TrimSpace(promotion.Diff) != "" {
+				fmt.Fprintln(cmd.OutOrStdout())
+				fmt.Fprintln(cmd.OutOrStdout(), promotion.Diff)
 			}
 		}
 	}

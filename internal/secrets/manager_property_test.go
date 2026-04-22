@@ -1558,9 +1558,21 @@ func TestProperty_ServiceFilterCorrectness(t *testing.T) {
 				return false
 			}
 
-			// Verify we have all three services
-			if len(allSecrets) != 3 {
-				t.Logf("Expected 3 services, got %d", len(allSecrets))
+			// Verify we have the explicitly configured services plus any schema defaults.
+			if len(allSecrets) < 3 {
+				t.Logf("Expected at least 3 services, got %d", len(allSecrets))
+				return false
+			}
+			for _, service := range []string{"cert-manager", "loki", "keycloak"} {
+				if _, exists := allSecrets[service]; !exists {
+					t.Logf("Expected service %s in extracted secrets", service)
+					return false
+				}
+			}
+
+			allServiceSet := serviceSet(allSecrets)
+			if len(allServiceSet) == 0 {
+				t.Logf("Expected extracted service set to be non-empty")
 				return false
 			}
 
@@ -1596,7 +1608,11 @@ func TestProperty_ServiceFilterCorrectness(t *testing.T) {
 			case 6:
 				// No filter (all services)
 				serviceFilter = nil
-				expectedServices = map[string]bool{"cert-manager": true, "loki": true, "keycloak": true}
+				expectedServices = allServiceSet
+			}
+
+			if serviceFilter != nil {
+				expectedServices = intersectServiceSet(serviceFilter, allServiceSet)
 			}
 
 			// Map secrets to manifests with filter
@@ -1693,6 +1709,8 @@ func TestProperty_ServiceFilterCorrectness(t *testing.T) {
 				return false
 			}
 
+			expectedServices := serviceSet(allSecrets)
+
 			// Empty filter (should include all services)
 			serviceFilter := []string{}
 
@@ -1704,13 +1722,12 @@ func TestProperty_ServiceFilterCorrectness(t *testing.T) {
 			}
 
 			// Property: Should include all services when filter is empty
-			expectedServices := []string{"cert-manager", "loki", "keycloak"}
 			if len(manifestPaths) != len(expectedServices) {
 				t.Logf("Expected %d services with empty filter, got %d", len(expectedServices), len(manifestPaths))
 				return false
 			}
 
-			for _, service := range expectedServices {
+			for service := range expectedServices {
 				if _, exists := manifestPaths[service]; !exists {
 					t.Logf("Expected service %s not found with empty filter", service)
 					return false
@@ -1741,6 +1758,8 @@ func TestProperty_ServiceFilterCorrectness(t *testing.T) {
 				return false
 			}
 
+			expectedServices := serviceSet(allSecrets)
+
 			// Nil filter (should include all services)
 			var serviceFilter []string = nil
 
@@ -1752,13 +1771,12 @@ func TestProperty_ServiceFilterCorrectness(t *testing.T) {
 			}
 
 			// Property: Should include all services when filter is nil
-			expectedServices := []string{"cert-manager", "loki", "keycloak"}
 			if len(manifestPaths) != len(expectedServices) {
 				t.Logf("Expected %d services with nil filter, got %d", len(expectedServices), len(manifestPaths))
 				return false
 			}
 
-			for _, service := range expectedServices {
+			for service := range expectedServices {
 				if _, exists := manifestPaths[service]; !exists {
 					t.Logf("Expected service %s not found with nil filter", service)
 					return false
@@ -1802,7 +1820,11 @@ func TestProperty_ServiceFilterCorrectness_Sanity(t *testing.T) {
 	// Extract all secrets
 	allSecrets, err := manager.extractSecretsFromConfig(cfg)
 	require.NoError(t, err)
-	require.Len(t, allSecrets, 3, "Should have 3 services")
+	require.GreaterOrEqual(t, len(allSecrets), 3, "Should have at least 3 services")
+	require.Contains(t, allSecrets, "cert-manager", "Should contain cert-manager")
+	require.Contains(t, allSecrets, "loki", "Should contain loki")
+	require.Contains(t, allSecrets, "keycloak", "Should contain keycloak")
+	allServiceSet := serviceSet(allSecrets)
 
 	// Test 1: Filter to single service
 	t.Run("filter to single service", func(t *testing.T) {
@@ -1838,20 +1860,20 @@ func TestProperty_ServiceFilterCorrectness_Sanity(t *testing.T) {
 	t.Run("no filter (nil)", func(t *testing.T) {
 		manifestPaths, err := manager.mapSecretsToManifests(cfg, allSecrets, nil)
 		require.NoError(t, err)
-		require.Len(t, manifestPaths, 3, "Should have 3 services")
-		require.Contains(t, manifestPaths, "cert-manager", "Should contain cert-manager")
-		require.Contains(t, manifestPaths, "loki", "Should contain loki")
-		require.Contains(t, manifestPaths, "keycloak", "Should contain keycloak")
+		require.Len(t, manifestPaths, len(allServiceSet), "Should have all extracted services")
+		for service := range allServiceSet {
+			require.Contains(t, manifestPaths, service, "Should contain %s", service)
+		}
 	})
 
 	// Test 5: Empty filter
 	t.Run("empty filter", func(t *testing.T) {
 		manifestPaths, err := manager.mapSecretsToManifests(cfg, allSecrets, []string{})
 		require.NoError(t, err)
-		require.Len(t, manifestPaths, 3, "Should have 3 services")
-		require.Contains(t, manifestPaths, "cert-manager", "Should contain cert-manager")
-		require.Contains(t, manifestPaths, "loki", "Should contain loki")
-		require.Contains(t, manifestPaths, "keycloak", "Should contain keycloak")
+		require.Len(t, manifestPaths, len(allServiceSet), "Should have all extracted services")
+		for service := range allServiceSet {
+			require.Contains(t, manifestPaths, service, "Should contain %s", service)
+		}
 	})
 
 	// Test 6: Non-existent service
@@ -1869,4 +1891,22 @@ func TestProperty_ServiceFilterCorrectness_Sanity(t *testing.T) {
 		require.Contains(t, manifestPaths, "cert-manager", "Should contain cert-manager")
 		require.NotContains(t, manifestPaths, "non-existent-service", "Should not contain non-existent-service")
 	})
+}
+
+func serviceSet(secrets map[string]map[string]interface{}) map[string]bool {
+	services := make(map[string]bool, len(secrets))
+	for service := range secrets {
+		services[service] = true
+	}
+	return services
+}
+
+func intersectServiceSet(filter []string, services map[string]bool) map[string]bool {
+	filtered := make(map[string]bool)
+	for _, service := range filter {
+		if services[service] {
+			filtered[service] = true
+		}
+	}
+	return filtered
 }

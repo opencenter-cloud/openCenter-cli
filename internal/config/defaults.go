@@ -28,7 +28,7 @@ const (
 )
 
 // getDefaultSSHKeys returns SSH keys from CLI defaults or an empty string array as fallback.
-func getDefaultSSHKeys(cliDefaults *DefaultsConfig) []string {
+func getDefaultSSHKeys(cliDefaults *ClusterDefaultsConfig) []string {
 	if cliDefaults != nil && len(cliDefaults.SSHAuthorizedKeys) > 0 {
 		return cliDefaults.SSHAuthorizedKeys
 	}
@@ -36,7 +36,7 @@ func getDefaultSSHKeys(cliDefaults *DefaultsConfig) []string {
 }
 
 // getDefaultProvider returns provider from CLI defaults or "openstack" as fallback.
-func getDefaultProvider(cliDefaults *DefaultsConfig) string {
+func getDefaultProvider(cliDefaults *ClusterDefaultsConfig) string {
 	if cliDefaults != nil && cliDefaults.Provider != "" {
 		return cliDefaults.Provider
 	}
@@ -44,7 +44,7 @@ func getDefaultProvider(cliDefaults *DefaultsConfig) string {
 }
 
 // getDefaultEnvironment returns environment from CLI defaults or empty string as fallback.
-func getDefaultEnvironment(cliDefaults *DefaultsConfig) string {
+func getDefaultEnvironment(cliDefaults *ClusterDefaultsConfig) string {
 	if cliDefaults != nil && cliDefaults.Environment != "" {
 		return cliDefaults.Environment
 	}
@@ -60,10 +60,10 @@ func defaultConfig(name string) Config {
 	barbicanAuthURL := ""
 
 	// Load CLI defaults if available
-	var cliDefaults *DefaultsConfig
+	var cliDefaults *ClusterDefaultsConfig
 	if cm, err := NewConfigManager(""); err == nil {
 		if cliConfig := cm.GetConfig(); cliConfig != nil {
-			cliDefaults = &cliConfig.Defaults
+			cliDefaults = &cliConfig.ClusterDefaults
 		}
 	}
 
@@ -614,39 +614,58 @@ func applyOrganizationDefaults(cfg *Config) {
 	}
 }
 
+// DefaultApplied records a single default value that was injected into a cluster config.
+type DefaultApplied struct {
+	Field  string // dot-notation path in the cluster config
+	Value  string // the value that was applied
+	Source string // always "config.yaml cluster_defaults.<field>"
+}
+
 // applyCLIDefaults applies CLI configuration defaults to the cluster configuration.
-// This allows users to set default values in their CLI config that will be applied
-// to cluster configurations when they are loaded.
-func applyCLIDefaults(cfg *Config) {
+// It returns a list of defaults that were actually applied (for provenance logging).
+func applyCLIDefaults(cfg *Config) []DefaultApplied {
 	// Try to load CLI config manager
 	cm, err := NewConfigManager("")
 	if err != nil {
-		// If CLI config can't be loaded, skip applying defaults
-		return
+		return nil
 	}
 
 	cliConfig := cm.GetConfig()
 	if cliConfig == nil {
-		return
+		return nil
 	}
+
+	cd := &cliConfig.ClusterDefaults
+	var applied []DefaultApplied
 
 	// Apply provider default if not set in cluster config (skip template strings)
-	if cfg.OpenCenter.Infrastructure.Provider == "" && cliConfig.Defaults.Provider != "" && !strings.Contains(cliConfig.Defaults.Provider, "{{") {
-		cfg.OpenCenter.Infrastructure.Provider = cliConfig.Defaults.Provider
+	if cfg.OpenCenter.Infrastructure.Provider == "" && cd.Provider != "" && !strings.Contains(cd.Provider, "{{") {
+		cfg.OpenCenter.Infrastructure.Provider = cd.Provider
+		applied = append(applied, DefaultApplied{
+			Field: "opencenter.infrastructure.provider", Value: cd.Provider,
+			Source: "config.yaml cluster_defaults.provider",
+		})
 	}
 
-	// Apply region default if not set in cluster config (skip template strings)
-	if cfg.OpenCenter.Meta.Region == "" && cliConfig.Defaults.Region != "" && !strings.Contains(cliConfig.Defaults.Region, "{{") {
-		cfg.OpenCenter.Meta.Region = cliConfig.Defaults.Region
+	// Apply region default
+	if cfg.OpenCenter.Meta.Region == "" && cd.Region != "" && !strings.Contains(cd.Region, "{{") {
+		cfg.OpenCenter.Meta.Region = cd.Region
+		applied = append(applied, DefaultApplied{
+			Field: "opencenter.meta.region", Value: cd.Region,
+			Source: "config.yaml cluster_defaults.region",
+		})
 	}
 
-	// Apply environment default if not set in cluster config (skip template strings)
-	if cfg.OpenCenter.Meta.Env == "" && cliConfig.Defaults.Environment != "" && !strings.Contains(cliConfig.Defaults.Environment, "{{") {
-		cfg.OpenCenter.Meta.Env = cliConfig.Defaults.Environment
+	// Apply environment default
+	if cfg.OpenCenter.Meta.Env == "" && cd.Environment != "" && !strings.Contains(cd.Environment, "{{") {
+		cfg.OpenCenter.Meta.Env = cd.Environment
+		applied = append(applied, DefaultApplied{
+			Field: "opencenter.meta.env", Value: cd.Environment,
+			Source: "config.yaml cluster_defaults.environment",
+		})
 	}
 
-	// Apply SSH authorized keys default if not set in cluster config
-	// Check if SSH keys are empty or contain only empty strings
+	// Apply SSH authorized keys default
 	hasValidKeys := false
 	for _, key := range cfg.OpenCenter.Cluster.SSHAuthorizedKeys {
 		if key != "" {
@@ -654,17 +673,93 @@ func applyCLIDefaults(cfg *Config) {
 			break
 		}
 	}
-	if !hasValidKeys && len(cliConfig.Defaults.SSHAuthorizedKeys) > 0 {
-		cfg.OpenCenter.Cluster.SSHAuthorizedKeys = cliConfig.Defaults.SSHAuthorizedKeys
+	if !hasValidKeys && len(cd.SSHAuthorizedKeys) > 0 {
+		cfg.OpenCenter.Cluster.SSHAuthorizedKeys = cd.SSHAuthorizedKeys
+		applied = append(applied, DefaultApplied{
+			Field: "opencenter.cluster.ssh_authorized_keys", Value: fmt.Sprintf("%d key(s)", len(cd.SSHAuthorizedKeys)),
+			Source: "config.yaml cluster_defaults.ssh_authorized_keys",
+		})
 	}
+
+	// Apply base_domain default
+	if (cfg.OpenCenter.Cluster.BaseDomain == "" || cfg.OpenCenter.Cluster.BaseDomain == "k8s.opencenter.cloud") && cd.BaseDomain != "" {
+		cfg.OpenCenter.Cluster.BaseDomain = cd.BaseDomain
+		applied = append(applied, DefaultApplied{
+			Field: "opencenter.cluster.base_domain", Value: cd.BaseDomain,
+			Source: "config.yaml cluster_defaults.base_domain",
+		})
+	}
+
+	// Apply admin_email default
+	if (cfg.OpenCenter.Cluster.AdminEmail == "" || cfg.OpenCenter.Cluster.AdminEmail == "admin@example.com") && cd.AdminEmail != "" {
+		cfg.OpenCenter.Cluster.AdminEmail = cd.AdminEmail
+		applied = append(applied, DefaultApplied{
+			Field: "opencenter.cluster.admin_email", Value: cd.AdminEmail,
+			Source: "config.yaml cluster_defaults.admin_email",
+		})
+	}
+
+	// Apply kubernetes_version default
+	if cd.KubernetesVersion != "" && cfg.OpenCenter.Cluster.Kubernetes.Version != cd.KubernetesVersion {
+		cfg.OpenCenter.Cluster.Kubernetes.Version = cd.KubernetesVersion
+		applied = append(applied, DefaultApplied{
+			Field: "opencenter.cluster.kubernetes.version", Value: cd.KubernetesVersion,
+			Source: "config.yaml cluster_defaults.kubernetes_version",
+		})
+	}
+
+	// Apply CNI default
+	if cd.CNI != "" {
+		switch strings.ToLower(cd.CNI) {
+		case "calico":
+			if !cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled {
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = true
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled = false
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled = false
+				applied = append(applied, DefaultApplied{
+					Field: "opencenter.cluster.kubernetes.network_plugin", Value: cd.CNI,
+					Source: "config.yaml cluster_defaults.cni",
+				})
+			}
+		case "cilium":
+			if !cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled {
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled = true
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled = false
+				applied = append(applied, DefaultApplied{
+					Field: "opencenter.cluster.kubernetes.network_plugin", Value: cd.CNI,
+					Source: "config.yaml cluster_defaults.cni",
+				})
+			}
+		case "kube-ovn":
+			if !cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled {
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled = true
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
+				cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled = false
+				applied = append(applied, DefaultApplied{
+					Field: "opencenter.cluster.kubernetes.network_plugin", Value: cd.CNI,
+					Source: "config.yaml cluster_defaults.cni",
+				})
+			}
+		}
+	}
+
+	// Apply ssh_user default
+	if cd.SSHUser != "" && (cfg.OpenCenter.Infrastructure.SSHUser == "" || cfg.OpenCenter.Infrastructure.SSHUser == "ubuntu") {
+		cfg.OpenCenter.Infrastructure.SSHUser = cd.SSHUser
+		applied = append(applied, DefaultApplied{
+			Field: "opencenter.infrastructure.ssh_user", Value: cd.SSHUser,
+			Source: "config.yaml cluster_defaults.ssh_user",
+		})
+	}
+
+	return applied
 }
 
 // ApplyDefaults applies default values to a configuration.
 // This includes CLI defaults, organization defaults, and provider defaults.
-//
-// Inputs:
-//   - cfg: The configuration to apply defaults to
-func ApplyDefaults(cfg *Config) {
+// Returns the list of CLI defaults that were applied for provenance logging.
+func ApplyDefaults(cfg *Config) []DefaultApplied {
 	applyOrganizationDefaults(cfg)
-	applyCLIDefaults(cfg)
+	return applyCLIDefaults(cfg)
 }

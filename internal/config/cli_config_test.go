@@ -49,8 +49,8 @@ func TestDefaultCLIConfig(t *testing.T) {
 		t.Errorf("Expected default autoConfirm false, got %v", config.Behavior.AutoConfirm)
 	}
 
-	if config.Defaults.Provider != "openstack" {
-		t.Errorf("Expected default provider 'openstack', got '%s'", config.Defaults.Provider)
+	if config.ClusterDefaults.Provider != "openstack" {
+		t.Errorf("Expected default provider 'openstack', got '%s'", config.ClusterDefaults.Provider)
 	}
 
 	if config.Paths.StateDir == "" {
@@ -181,8 +181,8 @@ func TestConfigValidatorWarnings(t *testing.T) {
 	config := DefaultCLIConfig()
 	config.Behavior.AutoConfirm = true
 	config.Behavior.DryRun = false
-	config.Defaults.Provider = "unknown-provider"
-	config.Defaults.Environment = "unknown-env"
+	config.ClusterDefaults.Provider = "unknown-provider"
+	config.ClusterDefaults.Environment = "unknown-env"
 
 	result := validator.ValidateWithResult(config)
 
@@ -209,7 +209,7 @@ func TestConfigManagerSetGetValue(t *testing.T) {
 		{"logging.level", "debug"},
 		{"logging.format", "json"},
 		{"behavior.dryRun", true},
-		{"defaults.provider", "aws"},
+		{"cluster_defaults.provider", "aws"},
 		{"logging.file.maxSize", 200},
 		{"paths.stateDir", filepath.Join(tmpDir, "state")},
 	}
@@ -308,8 +308,8 @@ func TestConfigManagerMergeWithDefaults(t *testing.T) {
 		t.Errorf("Expected default log format 'text', got '%s'", merged.Logging.Format)
 	}
 
-	if merged.Defaults.Provider != "openstack" {
-		t.Errorf("Expected default provider 'openstack', got '%s'", merged.Defaults.Provider)
+	if merged.ClusterDefaults.Provider != "openstack" {
+		t.Errorf("Expected default provider 'openstack', got '%s'", merged.ClusterDefaults.Provider)
 	}
 }
 
@@ -732,7 +732,7 @@ paths:
 behavior:
   autoConfirm: false
   dryRun: false
-defaults:
+cluster_defaults:
   provider: openstack
   region: "sjc3"
   environment: dev
@@ -805,7 +805,7 @@ paths:
 behavior:
   autoConfirm: false
   dryRun: false
-defaults:
+cluster_defaults:
   provider: openstack
   region: "sjc3"
   environment: dev
@@ -985,7 +985,7 @@ func TestConfigValidatorComprehensive(t *testing.T) {
 					AutoConfirm: true,
 					DryRun:      false, // This should generate a warning
 				},
-				Defaults: DefaultsConfig{
+				ClusterDefaults: ClusterDefaultsConfig{
 					Provider:    "unknown-provider",
 					Region:      "x",
 					Environment: "unknown-env",
@@ -1018,7 +1018,7 @@ func TestConfigValidatorComprehensive(t *testing.T) {
 					AutoConfirm: true,
 					DryRun:      false,
 				},
-				Defaults: DefaultsConfig{
+				ClusterDefaults: ClusterDefaultsConfig{
 					Provider:    "unknown-provider",
 					Region:      "x",
 					Environment: "unknown-env",

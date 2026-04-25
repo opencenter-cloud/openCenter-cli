@@ -59,10 +59,15 @@ type cliDefaults struct {
 	Region            string   `yaml:"region"`
 	Environment       string   `yaml:"environment"`
 	SSHAuthorizedKeys []string `yaml:"ssh_authorized_keys"`
+	BaseDomain        string   `yaml:"base_domain"`
+	AdminEmail        string   `yaml:"admin_email"`
+	KubernetesVersion string   `yaml:"kubernetes_version"`
+	CNI               string   `yaml:"cni"`
+	SSHUser           string   `yaml:"ssh_user"`
 }
 
 type cliConfig struct {
-	Defaults cliDefaults `yaml:"defaults"`
+	ClusterDefaults cliDefaults `yaml:"cluster_defaults"`
 }
 
 // NewV2Default creates a schema-valid v2 configuration with init defaults.
@@ -695,17 +700,32 @@ func loadCLIDefaults() cliDefaults {
 		return defaults
 	}
 
-	if strings.TrimSpace(cfg.Defaults.Provider) != "" {
-		defaults.Provider = cfg.Defaults.Provider
+	if strings.TrimSpace(cfg.ClusterDefaults.Provider) != "" {
+		defaults.Provider = cfg.ClusterDefaults.Provider
 	}
-	if strings.TrimSpace(cfg.Defaults.Region) != "" {
-		defaults.Region = cfg.Defaults.Region
+	if strings.TrimSpace(cfg.ClusterDefaults.Region) != "" {
+		defaults.Region = cfg.ClusterDefaults.Region
 	}
-	if strings.TrimSpace(cfg.Defaults.Environment) != "" {
-		defaults.Environment = cfg.Defaults.Environment
+	if strings.TrimSpace(cfg.ClusterDefaults.Environment) != "" {
+		defaults.Environment = cfg.ClusterDefaults.Environment
 	}
-	if len(cfg.Defaults.SSHAuthorizedKeys) > 0 {
-		defaults.SSHAuthorizedKeys = cfg.Defaults.SSHAuthorizedKeys
+	if len(cfg.ClusterDefaults.SSHAuthorizedKeys) > 0 {
+		defaults.SSHAuthorizedKeys = cfg.ClusterDefaults.SSHAuthorizedKeys
+	}
+	if strings.TrimSpace(cfg.ClusterDefaults.BaseDomain) != "" {
+		defaults.BaseDomain = cfg.ClusterDefaults.BaseDomain
+	}
+	if strings.TrimSpace(cfg.ClusterDefaults.AdminEmail) != "" {
+		defaults.AdminEmail = cfg.ClusterDefaults.AdminEmail
+	}
+	if strings.TrimSpace(cfg.ClusterDefaults.KubernetesVersion) != "" {
+		defaults.KubernetesVersion = cfg.ClusterDefaults.KubernetesVersion
+	}
+	if strings.TrimSpace(cfg.ClusterDefaults.CNI) != "" {
+		defaults.CNI = cfg.ClusterDefaults.CNI
+	}
+	if strings.TrimSpace(cfg.ClusterDefaults.SSHUser) != "" {
+		defaults.SSHUser = cfg.ClusterDefaults.SSHUser
 	}
 
 	return defaults

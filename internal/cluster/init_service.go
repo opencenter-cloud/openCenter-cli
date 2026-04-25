@@ -339,15 +339,15 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 	// Apply CLI config defaults
 	cliConfig := s.configManager.GetConfig()
 	if cfg.OpenCenter.Meta.Region == "" || cfg.OpenCenter.Meta.Region == "sjc3" {
-		if cliConfig.Defaults.Region != "" {
-			cfg.OpenCenter.Meta.Region = cliConfig.Defaults.Region
-			setNestedConfigValue(configMap, cliConfig.Defaults.Region, "opencenter", "meta", "region")
+		if cliConfig.ClusterDefaults.Region != "" {
+			cfg.OpenCenter.Meta.Region = cliConfig.ClusterDefaults.Region
+			setNestedConfigValue(configMap, cliConfig.ClusterDefaults.Region, "opencenter", "meta", "region")
 		}
 	}
 	if cfg.OpenCenter.Meta.Env == "" || cfg.OpenCenter.Meta.Env == "dev" {
-		if cliConfig.Defaults.Environment != "" {
-			cfg.OpenCenter.Meta.Env = cliConfig.Defaults.Environment
-			setNestedConfigValue(configMap, cliConfig.Defaults.Environment, "opencenter", "meta", "env")
+		if cliConfig.ClusterDefaults.Environment != "" {
+			cfg.OpenCenter.Meta.Env = cliConfig.ClusterDefaults.Environment
+			setNestedConfigValue(configMap, cliConfig.ClusterDefaults.Environment, "opencenter", "meta", "env")
 		}
 	}
 
@@ -493,6 +493,46 @@ func (s *InitService) buildResultMessage(clusterPaths *paths.ClusterPaths, organ
 	if keysGenerated {
 		msg.WriteString(fmt.Sprintf("SOPS key location: %s\n", clusterPaths.SOPSKeyPath))
 	}
+
+	// Surface which cluster_defaults were used from config.yaml
+	if cm, err := config.NewConfigManager(""); err == nil {
+		cd := cm.GetConfig().ClusterDefaults
+		var defaults []string
+		if cd.Provider != "" {
+			defaults = append(defaults, fmt.Sprintf("  provider:            %s", cd.Provider))
+		}
+		if cd.Region != "" {
+			defaults = append(defaults, fmt.Sprintf("  region:              %s", cd.Region))
+		}
+		if cd.Environment != "" {
+			defaults = append(defaults, fmt.Sprintf("  environment:         %s", cd.Environment))
+		}
+		if len(cd.SSHAuthorizedKeys) > 0 {
+			defaults = append(defaults, fmt.Sprintf("  ssh_authorized_keys: %d key(s)", len(cd.SSHAuthorizedKeys)))
+		}
+		if cd.BaseDomain != "" {
+			defaults = append(defaults, fmt.Sprintf("  base_domain:         %s", cd.BaseDomain))
+		}
+		if cd.AdminEmail != "" {
+			defaults = append(defaults, fmt.Sprintf("  admin_email:         %s", cd.AdminEmail))
+		}
+		if cd.KubernetesVersion != "" {
+			defaults = append(defaults, fmt.Sprintf("  kubernetes_version:  %s", cd.KubernetesVersion))
+		}
+		if cd.CNI != "" {
+			defaults = append(defaults, fmt.Sprintf("  cni:                 %s", cd.CNI))
+		}
+		if cd.SSHUser != "" {
+			defaults = append(defaults, fmt.Sprintf("  ssh_user:            %s", cd.SSHUser))
+		}
+		if len(defaults) > 0 {
+			msg.WriteString("\nUsing cluster_defaults from config.yaml:\n")
+			for _, d := range defaults {
+				msg.WriteString(d + "\n")
+			}
+		}
+	}
+
 	return msg.String()
 }
 

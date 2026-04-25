@@ -30,10 +30,10 @@ import (
 // CLIConfig represents the global CLI configuration system that controls
 // CLI behavior, logging, and default paths.
 type CLIConfig struct {
-	Logging  LoggingConfig  `yaml:"logging"`
-	Paths    PathsConfig    `yaml:"paths"`
-	Behavior BehaviorConfig `yaml:"behavior"`
-	Defaults DefaultsConfig `yaml:"defaults"`
+	Logging         LoggingConfig         `yaml:"logging"`
+	Paths           PathsConfig           `yaml:"paths"`
+	Behavior        BehaviorConfig        `yaml:"behavior"`
+	ClusterDefaults ClusterDefaultsConfig `yaml:"cluster_defaults"`
 }
 
 // LoggingConfig controls logging behavior including level, format, output, and file rotation.
@@ -66,12 +66,19 @@ type BehaviorConfig struct {
 	DryRun      bool `yaml:"dryRun"`
 }
 
-// DefaultsConfig contains default values for cluster operations.
-type DefaultsConfig struct {
+// ClusterDefaultsConfig contains default values applied when generating new cluster
+// configurations via "opencenter cluster init". These values are injected into the
+// cluster config YAML when the corresponding field is not already set.
+type ClusterDefaultsConfig struct {
 	Provider          string   `yaml:"provider"`
 	Region            string   `yaml:"region"`
 	Environment       string   `yaml:"environment"`
 	SSHAuthorizedKeys []string `yaml:"ssh_authorized_keys,omitempty"`
+	BaseDomain        string   `yaml:"base_domain,omitempty"`
+	AdminEmail        string   `yaml:"admin_email,omitempty"`
+	KubernetesVersion string   `yaml:"kubernetes_version,omitempty"`
+	CNI               string   `yaml:"cni,omitempty"`
+	SSHUser           string   `yaml:"ssh_user,omitempty"`
 }
 
 // ConfigManager handles CLI configuration loading, validation, and merging.
@@ -230,7 +237,7 @@ func DefaultCLIConfig() *CLIConfig {
 			AutoConfirm: false,
 			DryRun:      false,
 		},
-		Defaults: DefaultsConfig{
+		ClusterDefaults: ClusterDefaultsConfig{
 			Provider:    "openstack",
 			Region:      "dfw3",
 			Environment: "dev",
@@ -385,18 +392,33 @@ func (cm *ConfigManager) mergeWithDefaults(config *CLIConfig) *CLIConfig {
 	merged.Behavior.AutoConfirm = config.Behavior.AutoConfirm
 	merged.Behavior.DryRun = config.Behavior.DryRun
 
-	// Merge defaults configuration
-	if config.Defaults.Provider != "" {
-		merged.Defaults.Provider = config.Defaults.Provider
+	// Merge cluster defaults configuration
+	if config.ClusterDefaults.Provider != "" {
+		merged.ClusterDefaults.Provider = config.ClusterDefaults.Provider
 	}
-	if config.Defaults.Region != "" {
-		merged.Defaults.Region = config.Defaults.Region
+	if config.ClusterDefaults.Region != "" {
+		merged.ClusterDefaults.Region = config.ClusterDefaults.Region
 	}
-	if config.Defaults.Environment != "" {
-		merged.Defaults.Environment = config.Defaults.Environment
+	if config.ClusterDefaults.Environment != "" {
+		merged.ClusterDefaults.Environment = config.ClusterDefaults.Environment
 	}
-	if len(config.Defaults.SSHAuthorizedKeys) > 0 {
-		merged.Defaults.SSHAuthorizedKeys = config.Defaults.SSHAuthorizedKeys
+	if len(config.ClusterDefaults.SSHAuthorizedKeys) > 0 {
+		merged.ClusterDefaults.SSHAuthorizedKeys = config.ClusterDefaults.SSHAuthorizedKeys
+	}
+	if config.ClusterDefaults.BaseDomain != "" {
+		merged.ClusterDefaults.BaseDomain = config.ClusterDefaults.BaseDomain
+	}
+	if config.ClusterDefaults.AdminEmail != "" {
+		merged.ClusterDefaults.AdminEmail = config.ClusterDefaults.AdminEmail
+	}
+	if config.ClusterDefaults.KubernetesVersion != "" {
+		merged.ClusterDefaults.KubernetesVersion = config.ClusterDefaults.KubernetesVersion
+	}
+	if config.ClusterDefaults.CNI != "" {
+		merged.ClusterDefaults.CNI = config.ClusterDefaults.CNI
+	}
+	if config.ClusterDefaults.SSHUser != "" {
+		merged.ClusterDefaults.SSHUser = config.ClusterDefaults.SSHUser
 	}
 
 	return &merged
@@ -640,8 +662,8 @@ func (cm *ConfigManager) setValueByPath(config *CLIConfig, path string, value in
 		return cm.setPathsValue(&config.Paths, parts[1:], value)
 	case "behavior":
 		return cm.setBehaviorValue(&config.Behavior, parts[1:], value)
-	case "defaults":
-		return cm.setDefaultsValue(&config.Defaults, parts[1:], value)
+	case "cluster_defaults":
+		return cm.setClusterDefaultsValue(&config.ClusterDefaults, parts[1:], value)
 	default:
 		return &ConfigError{
 			Type:    "validation",
@@ -670,8 +692,8 @@ func (cm *ConfigManager) getValueByPath(config *CLIConfig, path string) (interfa
 		return cm.getPathsValue(&config.Paths, parts[1:])
 	case "behavior":
 		return cm.getBehaviorValue(&config.Behavior, parts[1:])
-	case "defaults":
-		return cm.getDefaultsValue(&config.Defaults, parts[1:])
+	case "cluster_defaults":
+		return cm.getClusterDefaultsValue(&config.ClusterDefaults, parts[1:])
 	default:
 		return nil, &ConfigError{
 			Type:    "validation",
@@ -926,14 +948,14 @@ func (cm *ConfigManager) setBehaviorValue(behavior *BehaviorConfig, parts []stri
 	return nil
 }
 
-// setDefaultsValue sets a defaults configuration value.
-func (cm *ConfigManager) setDefaultsValue(defaults *DefaultsConfig, parts []string, value interface{}) error {
+// setClusterDefaultsValue sets a cluster defaults configuration value.
+func (cm *ConfigManager) setClusterDefaultsValue(defaults *ClusterDefaultsConfig, parts []string, value interface{}) error {
 	if len(parts) == 0 {
 		return &ConfigError{
 			Type:    "validation",
-			Field:   "defaults",
+			Field:   "cluster_defaults",
 			Value:   value,
-			Message: "missing field name in defaults section",
+			Message: "missing field name in cluster_defaults section",
 		}
 	}
 
@@ -944,7 +966,7 @@ func (cm *ConfigManager) setDefaultsValue(defaults *DefaultsConfig, parts []stri
 		} else {
 			return &ConfigError{
 				Type:    "validation",
-				Field:   "defaults.provider",
+				Field:   "cluster_defaults.provider",
 				Value:   value,
 				Message: "provider must be a string",
 			}
@@ -955,7 +977,7 @@ func (cm *ConfigManager) setDefaultsValue(defaults *DefaultsConfig, parts []stri
 		} else {
 			return &ConfigError{
 				Type:    "validation",
-				Field:   "defaults.region",
+				Field:   "cluster_defaults.region",
 				Value:   value,
 				Message: "region must be a string",
 			}
@@ -966,9 +988,64 @@ func (cm *ConfigManager) setDefaultsValue(defaults *DefaultsConfig, parts []stri
 		} else {
 			return &ConfigError{
 				Type:    "validation",
-				Field:   "defaults.environment",
+				Field:   "cluster_defaults.environment",
 				Value:   value,
 				Message: "environment must be a string",
+			}
+		}
+	case "base_domain":
+		if str, ok := value.(string); ok {
+			defaults.BaseDomain = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "cluster_defaults.base_domain",
+				Value:   value,
+				Message: "base_domain must be a string",
+			}
+		}
+	case "admin_email":
+		if str, ok := value.(string); ok {
+			defaults.AdminEmail = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "cluster_defaults.admin_email",
+				Value:   value,
+				Message: "admin_email must be a string",
+			}
+		}
+	case "kubernetes_version":
+		if str, ok := value.(string); ok {
+			defaults.KubernetesVersion = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "cluster_defaults.kubernetes_version",
+				Value:   value,
+				Message: "kubernetes_version must be a string",
+			}
+		}
+	case "cni":
+		if str, ok := value.(string); ok {
+			defaults.CNI = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "cluster_defaults.cni",
+				Value:   value,
+				Message: "cni must be a string",
+			}
+		}
+	case "ssh_user":
+		if str, ok := value.(string); ok {
+			defaults.SSHUser = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "cluster_defaults.ssh_user",
+				Value:   value,
+				Message: "ssh_user must be a string",
 			}
 		}
 	case "ssh_authorized_keys":
@@ -987,7 +1064,7 @@ func (cm *ConfigManager) setDefaultsValue(defaults *DefaultsConfig, parts []stri
 				} else {
 					return &ConfigError{
 						Type:    "validation",
-						Field:   "defaults.ssh_authorized_keys",
+						Field:   "cluster_defaults.ssh_authorized_keys",
 						Value:   value,
 						Message: "ssh_authorized_keys must be a string or array of strings",
 					}
@@ -997,7 +1074,7 @@ func (cm *ConfigManager) setDefaultsValue(defaults *DefaultsConfig, parts []stri
 		default:
 			return &ConfigError{
 				Type:    "validation",
-				Field:   "defaults.ssh_authorized_keys",
+				Field:   "cluster_defaults.ssh_authorized_keys",
 				Value:   value,
 				Message: "ssh_authorized_keys must be a string or array of strings",
 			}
@@ -1005,9 +1082,9 @@ func (cm *ConfigManager) setDefaultsValue(defaults *DefaultsConfig, parts []stri
 	default:
 		return &ConfigError{
 			Type:    "validation",
-			Field:   fmt.Sprintf("defaults.%s", parts[0]),
+			Field:   fmt.Sprintf("cluster_defaults.%s", parts[0]),
 			Value:   value,
-			Message: fmt.Sprintf("unknown defaults field: %s", parts[0]),
+			Message: fmt.Sprintf("unknown cluster_defaults field: %s", parts[0]),
 		}
 	}
 	return nil
@@ -1109,7 +1186,7 @@ func (cm *ConfigManager) getBehaviorValue(behavior *BehaviorConfig, parts []stri
 }
 
 // getDefaultsValue gets a defaults configuration value.
-func (cm *ConfigManager) getDefaultsValue(defaults *DefaultsConfig, parts []string) (interface{}, error) {
+func (cm *ConfigManager) getClusterDefaultsValue(defaults *ClusterDefaultsConfig, parts []string) (interface{}, error) {
 	if len(parts) == 0 {
 		return defaults, nil
 	}
@@ -1123,11 +1200,21 @@ func (cm *ConfigManager) getDefaultsValue(defaults *DefaultsConfig, parts []stri
 		return defaults.Environment, nil
 	case "ssh_authorized_keys":
 		return defaults.SSHAuthorizedKeys, nil
+	case "base_domain":
+		return defaults.BaseDomain, nil
+	case "admin_email":
+		return defaults.AdminEmail, nil
+	case "kubernetes_version":
+		return defaults.KubernetesVersion, nil
+	case "cni":
+		return defaults.CNI, nil
+	case "ssh_user":
+		return defaults.SSHUser, nil
 	default:
 		return nil, &ConfigError{
 			Type:    "validation",
-			Field:   fmt.Sprintf("defaults.%s", parts[0]),
-			Message: fmt.Sprintf("unknown defaults field: %s", parts[0]),
+			Field:   fmt.Sprintf("cluster_defaults.%s", parts[0]),
+			Message: fmt.Sprintf("unknown cluster_defaults field: %s", parts[0]),
 		}
 	}
 }
@@ -1159,8 +1246,8 @@ func (cv *ConfigValidator) ValidateWithResult(config *CLIConfig) *ValidationResu
 	// Validate behavior configuration
 	cv.validateBehaviorWithResult(&config.Behavior, result)
 
-	// Validate defaults configuration
-	cv.validateDefaultsWithResult(&config.Defaults, result)
+	// Validate cluster defaults configuration
+	cv.validateClusterDefaultsWithResult(&config.ClusterDefaults, result)
 
 	// Validate dependencies
 	cv.validateDependenciesWithResult(config, result)
@@ -1535,13 +1622,13 @@ func (cv *ConfigValidator) validateBehaviorWithResult(behavior *BehaviorConfig, 
 }
 
 // validateDefaultsWithResult validates the defaults configuration.
-func (cv *ConfigValidator) validateDefaultsWithResult(defaults *DefaultsConfig, result *ValidationResult) {
+func (cv *ConfigValidator) validateClusterDefaultsWithResult(defaults *ClusterDefaultsConfig, result *ValidationResult) {
 	// Validate provider
 	validProviders := []string{"openstack", "aws", "azure", "gcp", "kind", "vmware", "baremetal"}
 	if defaults.Provider != "" && !contains(validProviders, defaults.Provider) {
 		result.Warnings = append(result.Warnings, &ConfigError{
 			Type:    "validation",
-			Field:   "defaults.provider",
+			Field:   "cluster_defaults.provider",
 			Value:   defaults.Provider,
 			Message: fmt.Sprintf("unknown provider '%s', supported providers: %s", defaults.Provider, strings.Join(validProviders, ", ")),
 		})
@@ -1551,7 +1638,7 @@ func (cv *ConfigValidator) validateDefaultsWithResult(defaults *DefaultsConfig, 
 	if defaults.Region != "" && len(defaults.Region) < 2 {
 		result.Warnings = append(result.Warnings, &ConfigError{
 			Type:    "validation",
-			Field:   "defaults.region",
+			Field:   "cluster_defaults.region",
 			Value:   defaults.Region,
 			Message: "region appears to be too short, verify it's a valid region identifier",
 		})
@@ -1562,9 +1649,20 @@ func (cv *ConfigValidator) validateDefaultsWithResult(defaults *DefaultsConfig, 
 	if defaults.Environment != "" && !contains(commonEnvs, defaults.Environment) {
 		result.Warnings = append(result.Warnings, &ConfigError{
 			Type:    "validation",
-			Field:   "defaults.environment",
+			Field:   "cluster_defaults.environment",
 			Value:   defaults.Environment,
 			Message: fmt.Sprintf("uncommon environment '%s', common environments: %s", defaults.Environment, strings.Join(commonEnvs, ", ")),
+		})
+	}
+
+	// Validate CNI
+	validCNIs := []string{"calico", "cilium", "kube-ovn"}
+	if defaults.CNI != "" && !contains(validCNIs, defaults.CNI) {
+		result.Warnings = append(result.Warnings, &ConfigError{
+			Type:    "validation",
+			Field:   "cluster_defaults.cni",
+			Value:   defaults.CNI,
+			Message: fmt.Sprintf("unknown CNI '%s', supported CNIs: %s", defaults.CNI, strings.Join(validCNIs, ", ")),
 		})
 	}
 }

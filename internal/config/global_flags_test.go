@@ -121,10 +121,10 @@ func TestSetFlagParsing(t *testing.T) {
 	}{
 		{
 			name:     "set string value",
-			setFlags: []string{"defaults.provider=aws"},
+			setFlags: []string{"cluster_defaults.provider=aws"},
 			verifyFunc: func(config *CLIConfig) error {
-				if config.Defaults.Provider != "aws" {
-					t.Errorf("Expected provider 'aws', got '%s'", config.Defaults.Provider)
+				if config.ClusterDefaults.Provider != "aws" {
+					t.Errorf("Expected provider 'aws', got '%s'", config.ClusterDefaults.Provider)
 				}
 				return nil
 			},
@@ -163,15 +163,15 @@ func TestSetFlagParsing(t *testing.T) {
 			name: "set multiple values",
 			setFlags: []string{
 				"logging.level=debug",
-				"defaults.region=us-west-2",
+				"cluster_defaults.region=us-west-2",
 				"behavior.dryRun=true",
 			},
 			verifyFunc: func(config *CLIConfig) error {
 				if config.Logging.Level != "debug" {
 					t.Errorf("Expected log level 'debug', got '%s'", config.Logging.Level)
 				}
-				if config.Defaults.Region != "us-west-2" {
-					t.Errorf("Expected region 'us-west-2', got '%s'", config.Defaults.Region)
+				if config.ClusterDefaults.Region != "us-west-2" {
+					t.Errorf("Expected region 'us-west-2', got '%s'", config.ClusterDefaults.Region)
 				}
 				if !config.Behavior.DryRun {
 					t.Errorf("Expected dryRun true, got %v", config.Behavior.DryRun)
@@ -398,8 +398,8 @@ func TestEnvironmentVariableExpansionInSetFlags(t *testing.T) {
 
 	// Test --set flags with environment variable values
 	setFlags := []string{
-		"defaults.provider=${TEST_PROVIDER}",
-		"defaults.region=${TEST_REGION}",
+		"cluster_defaults.provider=${TEST_PROVIDER}",
+		"cluster_defaults.region=${TEST_REGION}",
 	}
 
 	// Expand environment variables in set flags before applying
@@ -412,12 +412,12 @@ func TestEnvironmentVariableExpansionInSetFlags(t *testing.T) {
 		t.Fatalf("Failed to apply --set overrides: %v", err)
 	}
 
-	if config.Defaults.Provider != "aws" {
-		t.Errorf("Expected provider 'aws' from environment variable, got '%s'", config.Defaults.Provider)
+	if config.ClusterDefaults.Provider != "aws" {
+		t.Errorf("Expected provider 'aws' from environment variable, got '%s'", config.ClusterDefaults.Provider)
 	}
 
-	if config.Defaults.Region != "us-east-1" {
-		t.Errorf("Expected region 'us-east-1' from environment variable, got '%s'", config.Defaults.Region)
+	if config.ClusterDefaults.Region != "us-east-1" {
+		t.Errorf("Expected region 'us-east-1' from environment variable, got '%s'", config.ClusterDefaults.Region)
 	}
 }
 

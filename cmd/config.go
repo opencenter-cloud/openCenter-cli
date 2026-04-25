@@ -30,12 +30,14 @@ func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage CLI configuration settings",
-		Long: `Manage CLI configuration settings including logging, paths, behavior, and defaults.
+		Long: `Manage CLI configuration settings including logging, paths, behavior, and cluster defaults.
 
 The configuration file is stored at ~/.config/opencenter/config.yaml by default,
 or at the location specified by the OPENCENTER_CONFIG_DIR environment variable.
 
-Configuration values can be accessed and modified using dot notation (e.g., logging.level).`,
+Configuration values can be accessed and modified using dot notation (e.g., logging.level).
+The cluster_defaults section controls values injected into new cluster configs during
+"opencenter cluster init".`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -49,6 +51,7 @@ Configuration values can be accessed and modified using dot notation (e.g., logg
 	cmd.AddCommand(newConfigPathCmd())
 	cmd.AddCommand(newConfigEditCmd())
 	cmd.AddCommand(newConfigIDECmd())
+	cmd.AddCommand(newConfigExplainCmd())
 
 	return cmd
 }
@@ -100,7 +103,9 @@ Examples:
   opencenter config set paths.pluginsDir ~/my-plugins
   opencenter config set paths.stateDir ~/.local/state/opencenter
   opencenter config set behavior.autoConfirm true
-  opencenter config set defaults.provider openstack
+  opencenter config set cluster_defaults.provider openstack
+  opencenter config set cluster_defaults.base_domain k8s.example.com
+  opencenter config set cluster_defaults.kubernetes_version 1.34.3
 
 Supported configuration sections:
   - logging.level (debug, info, warn, error)
@@ -116,9 +121,14 @@ Supported configuration sections:
   - paths.stateDir (string)
   - behavior.autoConfirm (boolean)
   - behavior.dryRun (boolean)
-  - defaults.provider (string)
-  - defaults.region (string)
-  - defaults.environment (string)`,
+  - cluster_defaults.provider (string)
+  - cluster_defaults.region (string)
+  - cluster_defaults.environment (string)
+  - cluster_defaults.base_domain (string)
+  - cluster_defaults.admin_email (string)
+  - cluster_defaults.kubernetes_version (string)
+  - cluster_defaults.cni (string: calico, cilium, kube-ovn)
+  - cluster_defaults.ssh_user (string)`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
@@ -226,9 +236,9 @@ Default values:
   - paths.stateDir: ~/.local/state/opencenter
   - behavior.autoConfirm: false
   - behavior.dryRun: false
-  - defaults.provider: openstack
-  - defaults.region: sjc3
-  - defaults.environment: dev`,
+  - cluster_defaults.provider: openstack
+  - cluster_defaults.region: dfw3
+  - cluster_defaults.environment: dev`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Create config manager
 			cm, err := config.NewConfigManager("")

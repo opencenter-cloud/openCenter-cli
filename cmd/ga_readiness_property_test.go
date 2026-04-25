@@ -38,47 +38,10 @@ import (
 // Feature: ga-readiness, Property 1: All declared providers pass validation
 //
 // For any provider string that appears in the oneof validation tag (including kind),
-// creating an Infrastructure or InfrastructureConfig struct with that provider value
+// creating an InfrastructureConfig struct with that provider value
 // and running the Go validator should produce zero validation errors on the Provider field.
 //
 // **Validates: Requirements 1.1, 1.2, 1.3**
-
-// TestProperty_V1AllDeclaredProvidersPassValidation verifies that every provider
-// in the v1 Infrastructure oneof tag passes validation on the Provider field.
-func TestProperty_V1AllDeclaredProvidersPassValidation(t *testing.T) {
-	// Providers declared in the v1 oneof tag on Infrastructure.Provider
-	v1Providers := []string{"openstack", "aws", "gcp", "azure", "baremetal", "vsphere", "vmware", "kind"}
-
-	validate := validator.New()
-
-	f := func(index uint8) bool {
-		provider := v1Providers[int(index)%len(v1Providers)]
-
-		infra := config.Infrastructure{
-			Provider: provider,
-		}
-
-		err := validate.StructPartial(infra, "Provider")
-		if err != nil {
-			validationErrors := err.(validator.ValidationErrors)
-			for _, ve := range validationErrors {
-				if ve.Field() == "Provider" {
-					t.Logf("v1 provider %q failed validation: %s", provider, ve.Error())
-					return false
-				}
-			}
-		}
-		return true
-	}
-
-	quickConfig := &quick.Config{
-		MaxCount: 20,
-	}
-
-	if err := quick.Check(f, quickConfig); err != nil {
-		t.Errorf("Property violation (v1): %v", err)
-	}
-}
 
 // TestProperty_V2AllDeclaredProvidersPassValidation verifies that every provider
 // in the v2 InfrastructureConfig oneof tag passes validation on the Provider field.
@@ -117,50 +80,7 @@ func TestProperty_V2AllDeclaredProvidersPassValidation(t *testing.T) {
 	}
 }
 
-// TestProperty_KindProviderIncludedInBothSchemas is a cross-schema check ensuring
-// that "kind" appears in both v1 and v2 provider validation tags.
-func TestProperty_KindProviderIncludedInBothSchemas(t *testing.T) {
-	validate := validator.New()
-
-	f := func(seed uint8) bool {
-		// v1: kind must pass
-		v1Infra := config.Infrastructure{Provider: "kind"}
-		if err := validate.StructPartial(v1Infra, "Provider"); err != nil {
-			for _, ve := range err.(validator.ValidationErrors) {
-				if ve.Field() == "Provider" {
-					t.Logf("v1 'kind' failed validation: %s", ve.Error())
-					return false
-				}
-			}
-		}
-
-		// v2: kind must pass
-		v2Infra := v2.InfrastructureConfig{Provider: "kind"}
-		if err := validate.StructPartial(v2Infra, "Provider"); err != nil {
-			for _, ve := range err.(validator.ValidationErrors) {
-				if ve.Field() == "Provider" {
-					t.Logf("v2 'kind' failed validation: %s", ve.Error())
-					return false
-				}
-			}
-		}
-
-		return true
-	}
-
-	quickConfig := &quick.Config{
-		MaxCount: 20,
-	}
-
-	if err := quick.Check(f, quickConfig); err != nil {
-		t.Errorf("Property violation (kind cross-schema): %v", err)
-	}
-}
-
-// TestProperty_InvalidProviderRejectedByBothSchemas verifies that a provider string
-// NOT in the oneof tag is rejected by the validator for both v1 and v2 schemas.
-// This is the inverse property: only declared providers pass.
-func TestProperty_InvalidProviderRejectedByBothSchemas(t *testing.T) {
+func TestProperty_InvalidProviderRejectedByV2Schema(t *testing.T) {
 	invalidProviders := []string{
 		"docker", "vagrant", "libvirt", "digitalocean",
 	}
@@ -170,38 +90,20 @@ func TestProperty_InvalidProviderRejectedByBothSchemas(t *testing.T) {
 	f := func(index uint8) bool {
 		provider := invalidProviders[int(index)%len(invalidProviders)]
 
-		// v1: must be rejected
-		v1Infra := config.Infrastructure{Provider: provider}
-		v1Err := validate.StructPartial(v1Infra, "Provider")
-		if v1Err == nil {
-			t.Logf("v1 should reject provider %q but accepted it", provider)
-			return false
-		}
-		v1HasProviderError := false
-		for _, ve := range v1Err.(validator.ValidationErrors) {
-			if ve.Field() == "Provider" && strings.Contains(ve.Tag(), "oneof") {
-				v1HasProviderError = true
-			}
-		}
-		if !v1HasProviderError {
-			t.Logf("v1 error for %q should be a 'oneof' validation failure", provider)
-			return false
-		}
-
-		// v2: must be rejected
-		v2Infra := v2.InfrastructureConfig{Provider: provider}
-		v2Err := validate.StructPartial(v2Infra, "Provider")
-		if v2Err == nil {
+		infra := v2.InfrastructureConfig{Provider: provider}
+		err := validate.StructPartial(infra, "Provider")
+		if err == nil {
 			t.Logf("v2 should reject provider %q but accepted it", provider)
 			return false
 		}
-		v2HasProviderError := false
-		for _, ve := range v2Err.(validator.ValidationErrors) {
+
+		hasProviderError := false
+		for _, ve := range err.(validator.ValidationErrors) {
 			if ve.Field() == "Provider" && strings.Contains(ve.Tag(), "oneof") {
-				v2HasProviderError = true
+				hasProviderError = true
 			}
 		}
-		if !v2HasProviderError {
+		if !hasProviderError {
 			t.Logf("v2 error for %q should be a 'oneof' validation failure", provider)
 			return false
 		}
@@ -209,10 +111,7 @@ func TestProperty_InvalidProviderRejectedByBothSchemas(t *testing.T) {
 		return true
 	}
 
-	quickConfig := &quick.Config{
-		MaxCount: 20,
-	}
-
+	quickConfig := &quick.Config{MaxCount: 20}
 	if err := quick.Check(f, quickConfig); err != nil {
 		t.Errorf("Property violation (invalid provider rejection): %v", err)
 	}

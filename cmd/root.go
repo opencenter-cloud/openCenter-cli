@@ -125,8 +125,10 @@ type GlobalFlags struct {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "opencenter",
-	Short: "opencenter CLI manages cluster configurations and GitOps scaffolding",
+	Use:           "opencenter",
+	Short:         "opencenter CLI manages cluster configurations and GitOps scaffolding",
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	Long: `opencenter is a command-line tool for managing Kubernetes cluster configurations
 and GitOps repositories. It provides a declarative approach to cluster lifecycle
 management with built-in validation, secrets management, and multi-provider support.

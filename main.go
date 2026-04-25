@@ -77,6 +77,8 @@ func main() {
 			os.Exit(3)
 		}
 
+		// Print the error since SilenceErrors is set on the root command
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
 

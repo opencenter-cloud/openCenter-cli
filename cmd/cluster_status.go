@@ -34,6 +34,8 @@ import (
 func newClusterStatusCmd() *cobra.Command {
 	var showPaths bool
 	var quiet bool
+	var syncStatus bool
+	var syncTimeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "status [name]",
@@ -57,10 +59,17 @@ and suggest using 'opencenter cluster use' to set one.`,
   # Show active cluster with file paths
   opencenter cluster status --paths
 
+  # Sync service status from the live cluster into configuration
+  opencenter cluster status my-cluster --sync
+
   # Quiet output (just the cluster name)
   opencenter cluster status --quiet`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if syncStatus {
+				return runClusterStatusSync(cmd, args, getGlobalOptions(cmd).DryRun, getGlobalOptions(cmd).Output, syncTimeout)
+			}
+
 			ctx := cmd.Context()
 			requestedCluster := strings.TrimSpace("")
 			if len(args) > 0 {
@@ -217,6 +226,8 @@ and suggest using 'opencenter cluster use' to set one.`,
 
 	cmd.Flags().BoolVar(&showPaths, "paths", false, "show cluster file paths and their status")
 	cmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "quiet output (just the cluster name)")
+	cmd.Flags().BoolVar(&syncStatus, "sync", false, "sync service status from the live cluster into configuration")
+	cmd.Flags().DurationVar(&syncTimeout, "sync-timeout", 30*time.Second, "timeout for live cluster status sync")
 
 	return cmd
 }

@@ -14,11 +14,18 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
+	testhelpers "github.com/opencenter-cloud/opencenter-cli/internal/testing"
 )
 
 func TestParseFluxResourceStatus(t *testing.T) {
@@ -247,23 +254,199 @@ func TestSyncServiceStatus(t *testing.T) {
 	}
 }
 
-func TestNewClusterSyncStatusCmd(t *testing.T) {
-	cmd := newClusterSyncStatusCmd()
+func TestClusterSyncStatusYAMLIsRejectedThroughClusterStatus(t *testing.T) {
+	root := newOutputRootForCommandTest()
+	root.SetArgs([]string{"cluster", "status", "sync-cluster", "--sync", "--output", "yaml"})
 
-	if cmd.Use != "sync-status [name]" {
-		t.Errorf("unexpected Use: %s", cmd.Use)
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected cluster status --sync --output yaml to fail")
+	}
+	want := "cluster status --sync does not support yaml output yet; use --output text or --output json"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestClusterSyncStatusUsesGlobalJSONOutputThroughClusterStatus(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+	saveSyncStatusConfigForCommandTest(t, dir, "sync-cluster", "unknown")
+	installFakeSyncKubectlBinary(t, t.TempDir())
+
+	root := newOutputRootForCommandTest()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetArgs([]string{"cluster", "status", "sync-cluster", "--sync", "--output", "json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("cluster status --sync --output json failed: %v", err)
 	}
 
-	// Check flags exist
-	if cmd.Flags().Lookup("dry-run") == nil {
-		t.Error("expected --dry-run flag")
+	var result SyncStatusResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("expected JSON sync result, got %q: %v", out.String(), err)
+	}
+	if result.ClusterName != "sync-cluster" {
+		t.Fatalf("cluster_name = %q, want sync-cluster", result.ClusterName)
+	}
+	if result.ServicesTotal != 1 || result.Servicessynced != 1 || result.ServicesFailed != 0 {
+		t.Fatalf("unexpected sync counts: total=%d synced=%d failed=%d", result.ServicesTotal, result.Servicessynced, result.ServicesFailed)
 	}
 
-	if cmd.Flags().Lookup("json") == nil {
-		t.Error("expected --json flag")
+	cfg, err := loadConfig(context.Background(), "sync-cluster")
+	if err != nil {
+		t.Fatalf("load saved config: %v", err)
+	}
+	statusGetter, ok := cfg.OpenCenter.Services["fluxcd"].(interface{ GetStatus() string })
+	if !ok {
+		t.Fatalf("fluxcd service does not expose status: %#v", cfg.OpenCenter.Services["fluxcd"])
+	}
+	if statusGetter.GetStatus() != "success" {
+		t.Fatalf("saved fluxcd status = %q, want success", statusGetter.GetStatus())
+	}
+}
+
+func TestClusterSyncStatusJSONWithNoEnabledServicesReturnsEmptyResult(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+	saveSyncStatusConfigForCommandTest(t, dir, "sync-cluster", "unknown", false)
+
+	root := newOutputRootForCommandTest()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetArgs([]string{"cluster", "status", "sync-cluster", "--sync", "--output", "json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("cluster status --sync --output json failed: %v", err)
 	}
 
-	if cmd.Flags().Lookup("timeout") == nil {
-		t.Error("expected --timeout flag")
+	var result SyncStatusResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("expected JSON sync result, got %q: %v", out.String(), err)
 	}
+	if result.ClusterName != "sync-cluster" {
+		t.Fatalf("cluster_name = %q, want sync-cluster", result.ClusterName)
+	}
+	if result.ServicesTotal != 0 || result.Servicessynced != 0 || result.ServicesFailed != 0 {
+		t.Fatalf("unexpected sync counts: total=%d synced=%d failed=%d", result.ServicesTotal, result.Servicessynced, result.ServicesFailed)
+	}
+	if len(result.Results) != 0 {
+		t.Fatalf("expected empty results, got %#v", result.Results)
+	}
+}
+
+func TestClusterSyncStatusUsesGlobalDryRunThroughClusterStatus(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+	saveSyncStatusConfigForCommandTest(t, dir, "sync-cluster", "unknown")
+	installFakeSyncKubectlBinary(t, t.TempDir())
+
+	root := newOutputRootForCommandTest()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetArgs([]string{"cluster", "status", "sync-cluster", "--sync", "--dry-run", "--sync-timeout", "250ms"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("cluster status --sync --dry-run failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Sync Status (dry-run) for cluster: sync-cluster") {
+		t.Fatalf("expected dry-run sync output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "Dry-run mode: no changes saved") {
+		t.Fatalf("expected dry-run save notice, got:\n%s", output)
+	}
+}
+
+func TestClusterSyncStatusJSONDryRunDoesNotPersistThroughClusterStatus(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+	saveSyncStatusConfigForCommandTest(t, dir, "sync-cluster", "unknown")
+	installFakeSyncKubectlBinary(t, t.TempDir())
+
+	root := newOutputRootForCommandTest()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetArgs([]string{"cluster", "status", "sync-cluster", "--sync", "--dry-run", "--output", "json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("cluster status --sync --dry-run --output json failed: %v", err)
+	}
+
+	var result SyncStatusResult
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("expected JSON sync result, got %q: %v", out.String(), err)
+	}
+	if result.ServicesTotal != 1 || result.Servicessynced != 1 || result.ServicesFailed != 0 {
+		t.Fatalf("unexpected sync counts: total=%d synced=%d failed=%d", result.ServicesTotal, result.Servicessynced, result.ServicesFailed)
+	}
+
+	cfg, err := loadConfig(context.Background(), "sync-cluster")
+	if err != nil {
+		t.Fatalf("load saved config: %v", err)
+	}
+	statusGetter, ok := cfg.OpenCenter.Services["fluxcd"].(interface{ GetStatus() string })
+	if !ok {
+		t.Fatalf("fluxcd service does not expose status: %#v", cfg.OpenCenter.Services["fluxcd"])
+	}
+	if statusGetter.GetStatus() != "unknown" {
+		t.Fatalf("saved fluxcd status = %q, want unknown", statusGetter.GetStatus())
+	}
+}
+
+func saveSyncStatusConfigForCommandTest(t *testing.T, dir, clusterName, status string, enabledOverride ...bool) *paths.ClusterPaths {
+	t.Helper()
+
+	resolver, clusterPaths := createClusterDirectoriesForTest(t, dir, clusterName, "opencenter")
+	cfgPtr, err := v2.NewV2Default(clusterName, "kind")
+	if err != nil {
+		t.Fatalf("create native v2 kind config: %v", err)
+	}
+	cfg := *cfgPtr
+	cfg.OpenCenter.Meta.Name = clusterName
+	cfg.OpenCenter.Meta.Organization = "opencenter"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
+	cfg.OpenCenter.Services = make(v2.ServiceMap)
+	enabled := true
+	if len(enabledOverride) > 0 {
+		enabled = enabledOverride[0]
+	}
+	cfg.OpenCenter.Services["fluxcd"] = &services.DefaultServiceConfig{
+		BaseConfig: services.BaseConfig{Enabled: enabled, Status: status},
+	}
+
+	kubeconfigPath := filepath.Join(clusterPaths.GitOpsDir, "infrastructure", "clusters", clusterName, "kubeconfig.yaml")
+	if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0o755); err != nil {
+		t.Fatalf("mkdir kubeconfig dir: %v", err)
+	}
+	if err := os.WriteFile(kubeconfigPath, []byte("apiVersion: v1\n"), 0o600); err != nil {
+		t.Fatalf("write kubeconfig: %v", err)
+	}
+
+	testhelpers.SaveConfigWithPathResolver(t, cfg, resolver)
+	return clusterPaths
+}
+
+func installFakeSyncKubectlBinary(t *testing.T, binDir string) {
+	t.Helper()
+
+	writeFakeExecutable(t, filepath.Join(binDir, "kubectl"), `#!/bin/sh
+set -eu
+if [ "${1:-}" = "--kubeconfig" ]; then
+  shift 2
+fi
+
+if [ "${1:-}" = "get" ] && [ "${2:-}" = "helmrelease" ]; then
+  cat <<'JSON'
+{"status":{"conditions":[{"type":"Ready","status":"True","reason":"ReconciliationSucceeded"}]}}
+JSON
+  exit 0
+fi
+
+echo "unsupported fake kubectl invocation: $*" >&2
+exit 1
+`)
+	prependTestPath(t, binDir)
 }

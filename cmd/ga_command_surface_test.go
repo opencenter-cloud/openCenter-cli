@@ -87,6 +87,13 @@ func TestGAClusterCommandSurface(t *testing.T) {
 	for _, path := range expectedClusterCommands {
 		requireCommandPath(t, root, path...)
 	}
+	statusCmd := requireCommandPath(t, root, "cluster", "status")
+	if statusCmd.Flags().Lookup("sync") == nil {
+		t.Fatal("expected cluster status to expose --sync")
+	}
+	if statusCmd.Flags().Lookup("sync-timeout") == nil {
+		t.Fatal("expected cluster status to expose --sync-timeout")
+	}
 
 	removedClusterCommands := [][]string{
 		{"cluster", "setup"},

@@ -108,18 +108,22 @@ The command requires:
 
 			// Collect enabled services
 			enabledServices := collectEnabledServices(&cfg)
-			if len(enabledServices) == 0 {
-				fmt.Fprintln(cmd.OutOrStdout(), "No enabled services found in configuration")
-				return nil
-			}
 
-			// Query live status for each service
 			result := SyncStatusResult{
 				ClusterName:   clusterName,
 				ServicesTotal: len(enabledServices),
 				Results:       make([]ServiceSyncResult, 0, len(enabledServices)),
 			}
 
+			if len(enabledServices) == 0 {
+				if outputJSON {
+					return outputSyncResultJSON(cmd, &result)
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), "No enabled services found in configuration")
+				return nil
+			}
+
+			// Query live status for each service
 			for serviceName, serviceConfig := range enabledServices {
 				syncResult := syncServiceStatus(ctx, kubeconfigPath, serviceName, serviceConfig)
 				result.Results = append(result.Results, syncResult)
@@ -131,13 +135,9 @@ The command requires:
 				}
 			}
 
-			// Output results
-			if outputJSON {
-				return outputSyncResultJSON(cmd, &result)
+			if !outputJSON {
+				printSyncResults(cmd, &result, dryRun)
 			}
-
-			// Print human-readable output
-			printSyncResults(cmd, &result, dryRun)
 
 			// Save config if not dry-run and there were changes
 			if !dryRun && result.Servicessynced > 0 {
@@ -155,9 +155,17 @@ The command requires:
 					return fmt.Errorf("failed to save configuration: %w", err)
 				}
 
-				fmt.Fprintf(cmd.OutOrStdout(), "\nConfiguration saved with updated service statuses\n")
+				if !outputJSON {
+					fmt.Fprintf(cmd.OutOrStdout(), "\nConfiguration saved with updated service statuses\n")
+				}
 			} else if dryRun && result.Servicessynced > 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "\nDry-run mode: no changes saved\n")
+				if !outputJSON {
+					fmt.Fprintf(cmd.OutOrStdout(), "\nDry-run mode: no changes saved\n")
+				}
+			}
+
+			if outputJSON {
+				return outputSyncResultJSON(cmd, &result)
 			}
 
 			return nil
@@ -169,6 +177,30 @@ The command requires:
 	cmd.Flags().DurationVar(&timeout, "timeout", 30*time.Second, "timeout for cluster queries")
 
 	return cmd
+}
+
+func runClusterStatusSync(cmd *cobra.Command, args []string, dryRun bool, outputFormat OutputFormat, timeout time.Duration) error {
+	if outputFormat == OutputYAML {
+		return fmt.Errorf("cluster status --sync does not support yaml output yet; use --output text or --output json")
+	}
+
+	syncArgs := append([]string{}, args...)
+	if dryRun {
+		syncArgs = append(syncArgs, "--dry-run")
+	}
+	if outputFormat == OutputJSON {
+		syncArgs = append(syncArgs, "--json")
+	}
+	if timeout > 0 {
+		syncArgs = append(syncArgs, "--timeout", timeout.String())
+	}
+
+	syncCmd := newClusterSyncStatusCmd()
+	syncCmd.SetContext(cmd.Context())
+	syncCmd.SetOut(cmd.OutOrStdout())
+	syncCmd.SetErr(cmd.ErrOrStderr())
+	syncCmd.SetArgs(syncArgs)
+	return syncCmd.Execute()
 }
 
 // getKubeconfigPathForSync returns the kubeconfig path for the cluster.

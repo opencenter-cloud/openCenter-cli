@@ -14,6 +14,9 @@
 package defaults
 
 import (
+	"bytes"
+	"log"
+	"strings"
 	"testing"
 )
 
@@ -106,5 +109,40 @@ func TestHydrator_InvalidProviderRegion(t *testing.T) {
 	// Verify config fields remain empty
 	if cfg.ImageID != "" || cfg.DefaultStorageClass != "" || len(cfg.AvailabilityZones) > 0 {
 		t.Error("Expected config fields to remain empty for invalid provider-region")
+	}
+}
+
+func TestHydrator_KindSJC3SkipsRegistryWarning(t *testing.T) {
+	registry := NewRegistry()
+	hydrator := NewHydrator(registry)
+
+	var logs bytes.Buffer
+	previousWriter := log.Writer()
+	previousFlags := log.Flags()
+	previousPrefix := log.Prefix()
+	log.SetOutput(&logs)
+	log.SetFlags(0)
+	log.SetPrefix("")
+	t.Cleanup(func() {
+		log.SetOutput(previousWriter)
+		log.SetFlags(previousFlags)
+		log.SetPrefix(previousPrefix)
+	})
+
+	cfg := &TestConfig{}
+	if err := hydrator.Hydrate(cfg, "kind", "sjc3"); err != nil {
+		t.Fatalf("Hydrate failed: %v", err)
+	}
+
+	output := logs.String()
+	if strings.Contains(output, "provider 'kind' not found in registry") ||
+		strings.Contains(output, "No defaults found for provider 'kind' region 'sjc3'") {
+		t.Fatalf("expected kind/sjc3 to skip registry warning, got logs:\n%s", output)
+	}
+	if cfg.ImageID != "" || cfg.DefaultStorageClass != "" || len(cfg.AvailabilityZones) > 0 {
+		t.Fatal("expected kind/sjc3 to leave provider-region fields unset")
+	}
+	if len(hydrator.GetAppliedDefaults()) != 0 {
+		t.Fatalf("expected no provider-region defaults for kind/sjc3, got %d", len(hydrator.GetAppliedDefaults()))
 	}
 }

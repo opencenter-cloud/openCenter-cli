@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 )
 
 // DefaultSource indicates where a default value came from.
@@ -60,6 +61,10 @@ func (h *defaultHydrator) Hydrate(cfg interface{}, provider, region string) erro
 	// Get provider-region defaults from registry
 	providerDefaults, err := h.registry.GetDefaults(provider, region)
 	if err != nil {
+		if skipsProviderRegionDefaults(provider) {
+			return nil
+		}
+
 		// If region not found, log warning and continue without applying defaults
 		log.Printf("[WARN] No defaults found for provider '%s' region '%s': %v", provider, region, err)
 		log.Printf("[WARN] Continuing without applying provider-region defaults")
@@ -72,6 +77,10 @@ func (h *defaultHydrator) Hydrate(cfg interface{}, provider, region string) erro
 	}
 
 	return nil
+}
+
+func skipsProviderRegionDefaults(provider string) bool {
+	return strings.EqualFold(strings.TrimSpace(provider), "kind")
 }
 
 // GetAppliedDefaults returns a map of field paths to their default sources.

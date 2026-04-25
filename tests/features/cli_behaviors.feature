@@ -1,11 +1,11 @@
 # tests/features/cli_behaviors.feature
 # End-to-end CLI behaviors:
 # - listing clusters
-# - selecting (by name & interactive)
-# - info (active & named) with --output json and --validate
+# - setting the active cluster (by name & interactive)
+# - describe (active & named) with --output json and --validate
 # - init (non-interactive) incl. --strict failures
-# - setup (materialization, idempotency, forced overwrite)
-# - bootstrap (git init/commit/remote/push)
+# - generate (materialization and forced overwrite)
+# - deploy (git init/commit/remote/push)
 # - validation rules (Octavia/VRRP/Designate/counts/flavors/git_dir)
 
 Feature: CLI core flows and validations
@@ -144,14 +144,14 @@ Feature: CLI core flows and validations
     And the directory "<<tmp>>/repo-dev" should contain a directory "applications"
 
   @setup @idempotent
-  Scenario: Running setup again is idempotent
+  Scenario: Running generate again requires force
     Given I run "opencenter cluster use dev"
     And the exit code should be 0
     And I run "opencenter cluster generate --render-only"
     And the exit code should be 0
     When I run "opencenter cluster generate --render-only"
-    Then the exit code should be 0
-    And stdout should contain "Render complete"
+    Then the exit code should not be 0
+    And stderr should contain "use --force to overwrite"
 
   @setup @force
   Scenario: Forced setup overwrites existing files

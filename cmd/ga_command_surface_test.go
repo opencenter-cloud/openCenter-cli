@@ -119,6 +119,44 @@ func TestGAClusterCommandSurface(t *testing.T) {
 	}
 }
 
+func TestRemovedClusterCommandsAreRejectedAtRuntime(t *testing.T) {
+	removedClusterCommands := [][]string{
+		{"cluster", "setup"},
+		{"cluster", "render"},
+		{"cluster", "bootstrap"},
+		{"cluster", "preflight"},
+		{"cluster", "info"},
+		{"cluster", "select"},
+		{"cluster", "current"},
+		{"cluster", "update"},
+		{"cluster", "config"},
+		{"cluster", "sync-status"},
+		{"cluster", "validate-manifests"},
+		{"cluster", "check-keys"},
+		{"cluster", "rotate-keys"},
+		{"cluster", "revoke-key"},
+		{"cluster", "install-hooks"},
+		{"cluster", "credentials"},
+	}
+
+	for _, args := range removedClusterCommands {
+		root := newGARootForCommandSurfaceTest()
+		var out bytes.Buffer
+		var errOut bytes.Buffer
+		root.SetOut(&out)
+		root.SetErr(&errOut)
+		root.SetArgs(args)
+
+		err := root.Execute()
+		if err == nil {
+			t.Fatalf("expected removed command %q to be rejected, got success with stdout:\n%s", strings.Join(args, " "), out.String())
+		}
+		if !strings.Contains(err.Error(), "unknown command") {
+			t.Fatalf("expected removed command %q to report unknown command, got: %v", strings.Join(args, " "), err)
+		}
+	}
+}
+
 func TestGAClusterParentHelpShowsWorkflowAndGAExamples(t *testing.T) {
 	root := newGARootForCommandSurfaceTest()
 	var out bytes.Buffer

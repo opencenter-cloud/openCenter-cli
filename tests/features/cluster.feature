@@ -138,7 +138,7 @@ Feature: opencenter cluster basics
       """
     And I run "opencenter cluster use demo --config-dir <<tmp>>/conf"
     When I run "opencenter cluster doctor --config-dir <<tmp>>/conf"
-    Then stdout should contain "Preflight complete."
+    Then stdout should contain "Doctor checks complete."
 
   @hangs @wip
   @wip

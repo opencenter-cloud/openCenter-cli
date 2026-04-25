@@ -71,6 +71,7 @@ Configuration files are stored in organization-based directories:
 
   # Describe configuration and state
   opencenter cluster describe acme/prod`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

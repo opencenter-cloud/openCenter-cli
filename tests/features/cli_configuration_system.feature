@@ -109,8 +109,8 @@ Feature: CLI Configuration System Integration
     # The command should run with debug logging (overriding the config file's info level)
 
     When I run "opencenter cluster list --dry-run --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    # The command should run in dry-run mode
+    Then the exit code should not be 0
+    And stderr should contain "--dry-run has no effect for read-only command"
 
   @config @global_flags @set_flag
   Scenario: Global flag overrides configuration values
@@ -257,8 +257,8 @@ Feature: CLI Configuration System Integration
     Given I run "opencenter config set behavior.dryRun false --config-dir <<tmp>>/conf"
     And the exit code should be 0
     When I run "opencenter cluster list --dry-run --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    # The flag should override the config file value
+    Then the exit code should not be 0
+    And stderr should contain "--dry-run has no effect for read-only command"
 
   @config @precedence @complete_hierarchy
   Scenario: Complete precedence hierarchy works correctly
@@ -361,6 +361,6 @@ Feature: CLI Configuration System Integration
     
     When I run "opencenter cluster generate --render-only gitops-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And a directory "<<tmp>>/gitops-repo" should exist
-    And a directory "<<tmp>>/gitops-repo/applications" should exist
-    And a directory "<<tmp>>/gitops-repo/infrastructure" should exist
+    And a directory "<<tmp>>/conf/clusters/gitops-org" should exist
+    And a directory "<<tmp>>/conf/clusters/gitops-org/applications" should exist
+    And a directory "<<tmp>>/conf/clusters/gitops-org/infrastructure" should exist

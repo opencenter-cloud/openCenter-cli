@@ -23,14 +23,14 @@ Feature: GitOps repository setup behaviors
     And stdout should contain "Render complete"
 
   @gitops @setup @idempotent @priority2
-  Scenario: setup is idempotent when run repeatedly
+  Scenario: repeated setup requires force
     Given I run "opencenter cluster use dev --config-dir tmp/conf"
     And the exit code should be 0
     And I run "opencenter cluster generate --render-only --config-dir tmp/conf"
     And the exit code should be 0
     When I run "opencenter cluster generate --render-only --config-dir tmp/conf"
-    Then the exit code should be 0
-    And stdout should contain "Render complete"
+    Then the exit code should not be 0
+    And stderr should contain "use --force to overwrite"
 
   @gitops @setup @force
   Scenario: setup --force overwrites existing files

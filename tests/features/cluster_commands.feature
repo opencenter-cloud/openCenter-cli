@@ -2,11 +2,11 @@
 # Expected behavior for the "opencenter cluster" command group:
 # - Parent "cluster" prints help & subcommands
 # - list/ls scans config_dir for *.yaml and prints names (no .yaml); --output json outputs JSON
-# - select (by name & interactive), writes active_pointer; header when CWD == git_dir
+# - use (by name & interactive), writes active_pointer; header when CWD == git_dir
 # - describe (active & named), human summary; --output json prints full JSON; helpful errors
 # - init (non-interactive), does not overwrite unless --force; prints next steps
-# - setup (materialize embedded templates into git_dir), idempotent, --force overwrites
-# - bootstrap (git init/commit/remote/push) with actionable errors on missing prereqs
+# - generate (materialize embedded templates into git_dir), --force overwrites
+# - deploy (git init/commit/remote/push) with actionable errors on missing prereqs
 
 Feature: Cluster command group
 
@@ -41,11 +41,11 @@ Feature: Cluster command group
     When I run "opencenter cluster --config-dir tmp/conf"
     Then the exit code should be 0
     And stdout should contain "list"
-    And stdout should contain "select"
-    And stdout should contain "info"
+    And stdout should contain "use"
+    And stdout should contain "describe"
     And stdout should contain "init"
-    And stdout should contain "render"
-    And stdout should contain "bootstrap"
+    And stdout should contain "generate"
+    And stdout should contain "deploy"
 
   # ---------------------------------------------------------------------------
   # list / ls (moved to config_select_list_info.feature)

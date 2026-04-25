@@ -9,11 +9,11 @@ Feature: Cluster initialisation
     And the cluster configuration "test-cluster" should have "opencenter.cluster.cluster_name" set to "test-cluster"
     And the file should not contain "local."
 
-  Scenario: Initialise a cluster and override string settings from flags
+  Scenario: Initialise a cluster with default GitOps and compute settings
     When I run "opencenter cluster init test-cluster"
     Then a cluster configuration "test-cluster" should exist
-    And the cluster configuration "test-cluster" should have "opencenter.gitops.git_dir" set to "/opt/opencenter/test-cluster"
-    And the cluster configuration "test-cluster" should have "opencenter.infrastructure.compute.master_count" set to "5"
+    And the cluster configuration "test-cluster" should have "opencenter.gitops.git_dir" containing "clusters/opencenter"
+    And the cluster configuration "test-cluster" should have "opencenter.infrastructure.compute.master_count" set to "3"
 
   # iac.* internals are not settable via flags in the new model (only iac.main_tf).
 

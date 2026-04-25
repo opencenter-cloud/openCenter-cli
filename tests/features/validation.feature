@@ -69,124 +69,28 @@ Feature: Configuration validation rules
   # All other legacy iac.* validations removed in the new model.
 
   @validation @prosys_cluster_validation
-  Scenario: prosys.dev.dfw3 cluster configuration validation
-    Given a file "<<tmp>>/conf/prosys.dev.dfw3.yaml" with content:
-      """
-      opencenter:
-          cluster:
-              cluster_name: prosys.dev.dfw3
-              domain: dev.attcontroller.com
-          gitops:
-              git_dir: <<tmp>>/prosys-gitops-repo
-          infrastructure:
-              cloud:
-                  openstack:
-                      application_credential_id: "12345678-1234-1234-1234-123456789012"
-                      application_credential_secret: "test-app-cred-secret"
-                      auth_url: "https://keystone.api.dfw3.rackspacecloud.com/v3/"
-                      region: "DFW3"
-                      domain: "Default"
-                      networking:
-                          floating_network_id: "12345678-1234-1234-1234-123456789012"
-              provider: openstack
-      opentofu:
-          enabled: true
-          backend:
-              type: local
-              local:
-                  path: terraform.tfstate
-      secrets:
-          sops_age_key_file: <<tmp>>/sops/age/keys/prosys-dev-dfw3-key.txt
-          global:
-              openstack:
-                  application_credential_id: "12345678-1234-1234-1234-123456789012"
-                  application_credential_secret: "test-app-cred-secret"
-      networking:
-          use_octavia: false
-          vrrp_enabled: true
-          vrrp_ip: "10.0.4.10"
-      """
-    When I run "opencenter cluster validate my-cluster"
+  Scenario: generated cluster configuration validation
+    Given I run "opencenter cluster init prosys-dev-dfw3 --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster validate prosys-dev-dfw3 --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Validation successful"
 
   @validation @prosys_cluster_debug_config
-  Scenario: prosys.dev.dfw3 cluster debug config generation
-    Given a file "<<tmp>>/conf/prosys.dev.dfw3.yaml" with content:
-      """
-      opencenter:
-          cluster:
-              cluster_name: prosys.dev.dfw3
-              domain: dev.attcontroller.com
-          gitops:
-              git_dir: <<tmp>>/prosys-gitops-repo
-          infrastructure:
-              cloud:
-                  openstack:
-                      application_credential_id: "12345678-1234-1234-1234-123456789012"
-                      application_credential_secret: "test-app-cred-secret"
-                      domain: "Default"
-                      networking:
-                          floating_network_id: "12345678-1234-1234-1234-123456789012"
-              provider: openstack
-      opentofu:
-          enabled: true
-          backend:
-              type: local
-              local:
-                  path: terraform.tfstate
-      secrets:
-          sops_age_key_file: <<tmp>>/sops/age/keys/prosys-dev-dfw3-key.txt
-          global:
-              openstack:
-                  application_credential_id: "12345678-1234-1234-1234-123456789012"
-                  application_credential_secret: "test-app-cred-secret"
-      """
-    When I run "opencenter cluster validate my-cluster --generate-debug-config --output-dir <<tmp>>"
+  Scenario: generated cluster debug config generation
+    Given I run "opencenter cluster init prosys-dev-dfw3 --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster validate prosys-dev-dfw3 --generate-debug-config --output-dir <<tmp>> --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Debug config saved to"
     And stdout should contain "Validation successful"
     And a file "<<tmp>>/.opencenter-v2.yaml" should exist
 
   @validation @prosys_cluster_vrrp_validation
-  Scenario: prosys.dev.dfw3 cluster VRRP validation with networking section
-    Given a file "<<tmp>>/conf/prosys.dev.dfw3.yaml" with content:
-      """
-      opencenter:
-          cluster:
-              cluster_name: prosys.dev.dfw3
-              domain: dev.attcontroller.com
-          gitops:
-              git_dir: <<tmp>>/prosys-gitops-repo
-          infrastructure:
-              cloud:
-                  openstack:
-                      application_credential_id: "12345678-1234-1234-1234-123456789012"
-                      application_credential_secret: "test-app-cred-secret"
-                      auth_url: "https://keystone.api.dfw3.rackspacecloud.com/v3/"
-                      region: "DFW3"
-                      domain: "Default"
-                      networking:
-                          floating_network_id: "12345678-1234-1234-1234-123456789012"
-              provider: openstack
-      opentofu:
-          enabled: true
-          backend:
-              type: local
-              local:
-                  path: terraform.tfstate
-      secrets:
-          sops_age_key_file: <<tmp>>/sops/age/keys/prosys-dev-dfw3-key.txt
-          global:
-              openstack:
-                  application_credential_id: "12345678-1234-1234-1234-123456789012"
-                  application_credential_secret: "test-app-cred-secret"
-      networking:
-          use_octavia: false
-          vrrp_enabled: true
-          vrrp_ip: "10.0.4.10"
-      """
-    When I run "opencenter cluster validate my-cluster"
+  Scenario: generated cluster validation with networking defaults
+    Given I run "opencenter cluster init prosys-dev-dfw3 --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    When I run "opencenter cluster validate prosys-dev-dfw3 --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Validation successful"
 

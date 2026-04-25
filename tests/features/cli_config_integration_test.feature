@@ -31,7 +31,8 @@ Feature: CLI Configuration System Integration Tests
     Then the exit code should be 0
 
     When I run "opencenter cluster list --dry-run --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
+    Then the exit code should not be 0
+    And stderr should contain "--dry-run has no effect for read-only command"
 
   @integration @file_operations
   Scenario: Configuration system creates directories automatically

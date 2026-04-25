@@ -102,45 +102,49 @@ func TestExecuteWithContext(t *testing.T) {
 	}
 }
 
-// TestParseGlobalFlags tests parsing of global flags
-func TestParseGlobalFlags(t *testing.T) {
+// TestParseGlobalOptionsFromFlags tests parsing of global flags.
+func TestParseGlobalOptionsFromFlags(t *testing.T) {
 	tests := []struct {
 		name     string
 		flags    map[string]interface{}
-		expected *GlobalFlags
+		expected GlobalOptions
 	}{
 		{
 			name: "default flags",
 			flags: map[string]interface{}{
-				"config":      "",
-				"dry-run":     false,
-				"log-level":   "warn",
-				"set":         []string{},
-				"show-active": false,
+				"config-dir": "",
+				"dry-run":    false,
+				"log-level":  "warn",
+				"output":     "text",
+				"quiet":      false,
+				"yes":        false,
 			},
-			expected: &GlobalFlags{
-				Config:     "",
-				DryRun:     false,
-				LogLevel:   "warn",
-				Set:        []string{},
-				ShowActive: false,
+			expected: GlobalOptions{
+				ConfigDir: "",
+				DryRun:    false,
+				LogLevel:  "warn",
+				Output:    OutputText,
+				Quiet:     false,
+				Yes:       false,
 			},
 		},
 		{
 			name: "debug log level",
 			flags: map[string]interface{}{
-				"config":      "",
-				"dry-run":     false,
-				"log-level":   "debug",
-				"set":         []string{},
-				"show-active": false,
+				"config-dir": "/tmp/opencenter",
+				"dry-run":    true,
+				"log-level":  "debug",
+				"output":     "json",
+				"quiet":      true,
+				"yes":        true,
 			},
-			expected: &GlobalFlags{
-				Config:     "",
-				DryRun:     false,
-				LogLevel:   "debug",
-				Set:        []string{},
-				ShowActive: false,
+			expected: GlobalOptions{
+				ConfigDir: "/tmp/opencenter",
+				DryRun:    true,
+				LogLevel:  "debug",
+				Output:    OutputJSON,
+				Quiet:     true,
+				Yes:       true,
 			},
 		},
 	}
@@ -149,37 +153,38 @@ func TestParseGlobalFlags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a test command
 			cmd := &cobra.Command{}
-			cmd.Flags().String("config", "", "")
-			cmd.Flags().Bool("dry-run", false, "")
-			cmd.Flags().String("log-level", "warn", "")
-			cmd.Flags().StringArray("set", []string{}, "")
-			cmd.Flags().Bool("show-active", false, "")
+			addGlobalFlags(cmd)
 
 			// Set flag values
 			for name, value := range tt.flags {
 				switch v := value.(type) {
 				case string:
-					cmd.Flags().Set(name, v)
+					if err := cmd.PersistentFlags().Set(name, v); err != nil {
+						t.Fatalf("Set(%q) failed: %v", name, err)
+					}
 				case bool:
 					if v {
-						cmd.Flags().Set(name, "true")
+						if err := cmd.PersistentFlags().Set(name, "true"); err != nil {
+							t.Fatalf("Set(%q) failed: %v", name, err)
+						}
 					}
 				case []string:
 					for _, s := range v {
-						cmd.Flags().Set(name, s)
+						if err := cmd.PersistentFlags().Set(name, s); err != nil {
+							t.Fatalf("Set(%q) failed: %v", name, err)
+						}
 					}
 				}
 			}
 
 			// Parse flags
-			result, err := parseGlobalFlags(cmd)
+			result, err := parseGlobalOptions(cmd)
 			if err != nil {
-				t.Errorf("parseGlobalFlags() failed: %v", err)
+				t.Errorf("parseGlobalOptions() failed: %v", err)
 			}
 
-			// Check results
-			if result.Config != tt.expected.Config {
-				t.Errorf("Config = %v, want %v", result.Config, tt.expected.Config)
+			if result.ConfigDir != tt.expected.ConfigDir {
+				t.Errorf("ConfigDir = %v, want %v", result.ConfigDir, tt.expected.ConfigDir)
 			}
 			if result.DryRun != tt.expected.DryRun {
 				t.Errorf("DryRun = %v, want %v", result.DryRun, tt.expected.DryRun)
@@ -187,8 +192,14 @@ func TestParseGlobalFlags(t *testing.T) {
 			if result.LogLevel != tt.expected.LogLevel {
 				t.Errorf("LogLevel = %v, want %v", result.LogLevel, tt.expected.LogLevel)
 			}
-			if result.ShowActive != tt.expected.ShowActive {
-				t.Errorf("ShowActive = %v, want %v", result.ShowActive, tt.expected.ShowActive)
+			if result.Output != tt.expected.Output {
+				t.Errorf("Output = %v, want %v", result.Output, tt.expected.Output)
+			}
+			if result.Quiet != tt.expected.Quiet {
+				t.Errorf("Quiet = %v, want %v", result.Quiet, tt.expected.Quiet)
+			}
+			if result.Yes != tt.expected.Yes {
+				t.Errorf("Yes = %v, want %v", result.Yes, tt.expected.Yes)
 			}
 		})
 	}

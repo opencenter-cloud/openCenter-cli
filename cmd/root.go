@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -158,74 +157,7 @@ Support: https://github.com/opencenter-cloud/opencenter-cli/issues`,
   # Bootstrap a cluster with GitOps
   opencenter cluster bootstrap my-cluster`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Parse and apply global flags for all commands
-		globalFlags, err := parseGlobalFlags(cmd)
-		if err != nil {
-			return fmt.Errorf("failed to parse global flags: %w", err)
-		}
-
-		// OPENCENTER_LOG_LEVEL env var: used when --log-level flag is at its default.
-		// Precedence: flag > env var > default ("warn").
-		if globalFlags.LogLevel == "warn" {
-			if envLevel := os.Getenv("OPENCENTER_LOG_LEVEL"); envLevel != "" {
-				globalFlags.LogLevel = envLevel
-			}
-		}
-
-		// Apply log level if specified
-		if globalFlags.LogLevel != "" {
-			if err := config.SetLogLevel(globalFlags.LogLevel); err != nil {
-				return fmt.Errorf("failed to set log level: %w", err)
-			}
-		}
-
-		// Log environment and configuration paths for debugging
-		config.Debug("=== OpenCenter CLI Debug Information ===")
-		config.Debugf("Command: %s", cmd.CommandPath())
-		config.Debugf("Arguments: %v", args)
-
-		// Log environment variables
-		config.Debug("Environment Variables:")
-		if configDir := os.Getenv("OPENCENTER_CONFIG_DIR"); configDir != "" {
-			config.Debugf("  OPENCENTER_CONFIG_DIR: %s", configDir)
-		} else {
-			config.Debug("  OPENCENTER_CONFIG_DIR: (not set)")
-		}
-		if logLevelEnv := os.Getenv("OPENCENTER_LOG_LEVEL"); logLevelEnv != "" {
-			config.Debugf("  OPENCENTER_LOG_LEVEL: %s", logLevelEnv)
-		} else {
-			config.Debug("  OPENCENTER_LOG_LEVEL: (not set)")
-		}
-		if home, err := os.UserHomeDir(); err == nil {
-			config.Debugf("  HOME: %s", home)
-		}
-
-		// Log configuration paths
-		config.Debug("Configuration Paths:")
-		if runtime.GOOS == "windows" {
-			if appData := os.Getenv("APPDATA"); appData != "" {
-				config.Debugf("  APPDATA: %s", appData)
-			}
-			if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
-				config.Debugf("  LOCALAPPDATA: %s", localAppData)
-			}
-		}
-
-		// Log computed base directory
-		baseDir := config.ResolveClustersDir()
-		config.Debugf("  Clusters Directory: %s", baseDir)
-
-		// Log global flags
-		config.Debug("Global Flags:")
-		config.Debugf("  --log-level: %s", globalFlags.LogLevel)
-		config.Debugf("  --dry-run: %v", globalFlags.DryRun)
-		config.Debugf("  --config: %s", globalFlags.Config)
-		if len(globalFlags.Set) > 0 {
-			config.Debugf("  --set: %v", globalFlags.Set)
-		}
-		config.Debug("========================================")
-
-		return nil
+		return applyGlobalOptions(cmd, args)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
@@ -289,16 +221,12 @@ func ExecuteWithContext(ctx context.Context, version string) error {
 
 // addGlobalFlags adds global persistent flags to the root command.
 func addGlobalFlags(cmd *cobra.Command) {
-	// Legacy config-dir flag (kept for backward compatibility)
 	cmd.PersistentFlags().String("config-dir", "", "configuration directory (defaults to ~/.config/opencenter on Linux/macOS)")
-
-	// New global flags
-	cmd.PersistentFlags().String("config", "", "alternative cluster configuration file path")
-	cmd.PersistentFlags().Bool("dry-run", false, "enable dry-run mode to print planned actions without executing them")
 	cmd.PersistentFlags().String("log-level", "warn", "set log level explicitly (debug, info, warn, error)")
-	cmd.PersistentFlags().StringArray("set", []string{}, "override configuration values using dot notation (e.g., --set spec.provider=openstack)")
-	cmd.PersistentFlags().Bool("show-active", false, "display the current active cluster")
-	cmd.PersistentFlags().Bool("break-lock", false, "force removal of existing lock before operation (use with caution)")
+	cmd.PersistentFlags().String("output", string(OutputText), "output format for supported commands: text, json, yaml")
+	cmd.PersistentFlags().Bool("quiet", false, "suppress nonessential human output")
+	cmd.PersistentFlags().Bool("yes", false, "answer yes to confirmation prompts")
+	cmd.PersistentFlags().Bool("dry-run", false, "preview mutating operations without writing or acting")
 }
 
 // parseGlobalFlags extracts global flags from the command.

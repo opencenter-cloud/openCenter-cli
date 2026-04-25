@@ -240,7 +240,7 @@ type OpenStackCloudConfig struct {
 	ImageIDWindows              string                     `yaml:"image_id_windows,omitempty" json:"image_id_windows,omitempty"`
 	ImageName                   string                     `yaml:"image_name,omitempty" json:"image_name,omitempty"`
 	AvailabilityZone            string                     `yaml:"availability_zone,omitempty" json:"availability_zone,omitempty"`
-	NetworkID                   string                     `yaml:"network_id" json:"network_id" validate:"required"`
+	NetworkID                   string                     `yaml:"network_id,omitempty" json:"network_id,omitempty"`
 	NetworkName                 string                     `yaml:"network_name,omitempty" json:"network_name,omitempty"`
 	SubnetID                    string                     `yaml:"subnet_id,omitempty" json:"subnet_id,omitempty"`
 	FloatingIPPool              string                     `yaml:"floating_ip_pool,omitempty" json:"floating_ip_pool,omitempty"`

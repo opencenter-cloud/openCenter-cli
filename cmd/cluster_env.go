@@ -65,7 +65,7 @@ This is useful for:
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name
-			clusterName, err := resolveClusterName(args, true)
+			clusterName, err := resolveClusterNameForCommand(cmd, args, true)
 			if err != nil {
 				return err
 			}

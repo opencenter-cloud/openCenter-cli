@@ -85,7 +85,7 @@ func runClusterRotateKeys(cmd *cobra.Command, args []string) error {
 	}
 
 	// Resolve cluster name
-	clusterName, err := resolveClusterName(args, true)
+	clusterName, err := resolveClusterNameForCommand(cmd, args, true)
 	if err != nil {
 		return err
 	}

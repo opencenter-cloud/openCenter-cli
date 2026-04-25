@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	testhelpers "github.com/opencenter-cloud/opencenter-cli/internal/testing"
+	"github.com/spf13/cobra"
 )
 
 func saveOpenStackStatusConfig(t *testing.T, dir, clusterName, organization string) (v2.Config, string) {
@@ -134,5 +136,57 @@ func TestClusterStatusShowsOpenStackInfrastructureDetails(t *testing.T) {
 		if !strings.Contains(output, snippet) {
 			t.Fatalf("expected output to contain %q, got:\n%s", snippet, output)
 		}
+	}
+}
+
+func TestClusterStatusHonorsJSONOutput(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+	saveOpenStackStatusConfig(t, dir, "status-json", "opencenter")
+
+	root := &cobra.Command{
+		Use:           "opencenter",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return applyGlobalOptions(cmd, args)
+		},
+	}
+	addGlobalFlags(root)
+	root.AddCommand(NewClusterCmd())
+
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	root.SetOut(out)
+	root.SetErr(errOut)
+	root.SetArgs([]string{"cluster", "status", "status-json", "--output", "json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("cluster status --output json failed: %v\nstderr: %s", err, errOut.String())
+	}
+
+	if strings.Contains(out.String(), "Cluster: status-json") {
+		t.Fatalf("expected structured JSON output, got text:\n%s", out.String())
+	}
+
+	var payload struct {
+		Cluster      string   `json:"cluster"`
+		Name         string   `json:"name"`
+		Environment  string   `json:"environment"`
+		Organization string   `json:"organization"`
+		Provider     string   `json:"provider"`
+		NextSteps    []string `json:"next_steps"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+		t.Fatalf("expected valid json output, got error %v and output:\n%s", err, out.String())
+	}
+	if payload.Cluster != "status-json" {
+		t.Fatalf("expected cluster status-json, got %#v", payload)
+	}
+	if payload.Provider != "openstack" {
+		t.Fatalf("expected provider openstack, got %#v", payload)
+	}
+	if len(payload.NextSteps) == 0 {
+		t.Fatalf("expected next steps in json payload, got %#v", payload)
 	}
 }

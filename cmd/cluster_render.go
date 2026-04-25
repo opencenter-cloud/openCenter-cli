@@ -30,7 +30,7 @@ func runClusterGenerateRenderOnly(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun := getGlobalOptions(cmd).DryRun
 
-	name, err := resolveClusterName(args, true)
+	name, err := resolveClusterNameForCommand(cmd, args, true)
 	if err != nil {
 		return err
 	}

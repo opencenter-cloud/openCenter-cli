@@ -12,6 +12,10 @@ func TestDocsDoNotUseRemovedGACommands(t *testing.T) {
 	forbiddenTexts := removedGAForbiddenTexts()
 	forbiddenTokens := []string{
 		"--config",
+		"--git-ssh-key",
+		"--git-token",
+		"--git-token-provider",
+		"--git-url",
 		"--organization",
 		"--provider",
 	}

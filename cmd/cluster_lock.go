@@ -49,7 +49,7 @@ Examples:
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
-			clusterName, err := resolveClusterName(args, true)
+			clusterName, err := resolveClusterNameForCommand(cmd, args, true)
 			if err != nil {
 				return err
 			}
@@ -122,7 +122,7 @@ Examples:
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
-			clusterName, err := resolveClusterName(args, true)
+			clusterName, err := resolveClusterNameForCommand(cmd, args, true)
 			if err != nil {
 				return err
 			}

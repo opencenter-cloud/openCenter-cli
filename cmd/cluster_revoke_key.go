@@ -112,7 +112,7 @@ func runClusterRevokeKey(cmd *cobra.Command, args []string) error {
 	if clusterFlag != "" {
 		nameArgs = []string{clusterFlag}
 	}
-	clusterName, err := resolveClusterName(nameArgs, true)
+	clusterName, err := resolveClusterNameForCommand(cmd, nameArgs, true)
 	if err != nil {
 		return err
 	}

@@ -94,7 +94,7 @@ by removing the old key.
 If any step fails, the old key is restored automatically.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if clusterName != "" || keyType != "" || complete {
-				name, err := resolveClusterNameFromFlag(clusterName, true)
+				name, err := resolveClusterNameFromFlagForCommand(cmd, clusterName, true)
 				if err != nil {
 					return err
 				}

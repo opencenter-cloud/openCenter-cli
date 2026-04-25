@@ -27,6 +27,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation/validators"
+	"github.com/spf13/cobra"
 )
 
 // TestClusterGenerateCommandRegistration verifies that NewClusterCmd() includes the "generate" subcommand.
@@ -154,6 +155,34 @@ Or pass a cluster explicitly:
 				t.Fatalf("unexpected missing-active error:\n%s", err.Error())
 			}
 		})
+	}
+}
+
+func TestMissingActiveClusterHintUsesInvokedCommand(t *testing.T) {
+	cfgDir := t.TempDir()
+	prepareCommandTestEnv(t, cfgDir)
+
+	root := &cobra.Command{
+		Use:           "opencenter",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return applyGlobalOptions(cmd, args)
+		},
+	}
+	addGlobalFlags(root)
+	root.AddCommand(NewClusterCmd())
+	root.SetArgs([]string{"cluster", "export"})
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected missing active cluster error")
+	}
+	if !strings.Contains(err.Error(), "opencenter cluster export <org/name>") {
+		t.Fatalf("expected export-specific missing-active hint, got:\n%s", err.Error())
+	}
+	if strings.Contains(err.Error(), "opencenter cluster validate <org/name>") {
+		t.Fatalf("missing-active hint should not point at validate for export:\n%s", err.Error())
 	}
 }
 

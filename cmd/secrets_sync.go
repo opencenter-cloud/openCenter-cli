@@ -126,7 +126,7 @@ func runClusterSyncSecrets(cmd *cobra.Command, args []string) error {
 	} else if len(args) > 0 {
 		clusterName = args[0]
 	} else {
-		clusterName, err = resolveClusterName(args, true)
+		clusterName, err = resolveClusterNameForCommand(cmd, args, true)
 		if err != nil {
 			return err
 		}

@@ -66,8 +66,11 @@ and suggest using 'opencenter cluster use' to set one.`,
   opencenter cluster status --quiet`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			opts := getGlobalOptions(cmd)
+			structuredOutput := opts.Output == OutputJSON || opts.Output == OutputYAML
+
 			if syncStatus {
-				return runClusterStatusSync(cmd, args, getGlobalOptions(cmd).DryRun, getGlobalOptions(cmd).Output, syncTimeout)
+				return runClusterStatusSync(cmd, args, opts.DryRun, opts.Output, syncTimeout)
 			}
 
 			ctx := cmd.Context()
@@ -95,9 +98,22 @@ and suggest using 'opencenter cluster use' to set one.`,
 					return nil
 				}
 
+				clusters, listErr := listClusters(ctx)
+				if structuredOutput {
+					payload := clusterStatusOutput{
+						Cluster:           "",
+						ConfigValid:       false,
+						Message:           "no active cluster set",
+						AvailableClusters: clusters,
+					}
+					if listErr != nil {
+						payload.Message = fmt.Sprintf("no active cluster set; failed to list clusters: %v", listErr)
+					}
+					return writeStructuredOutput(cmd, opts.Output, payload)
+				}
+
 				fmt.Fprintf(cmd.OutOrStdout(), "No active cluster set\n\n")
 
-				clusters, listErr := listClusters(ctx)
 				if listErr == nil && len(clusters) > 0 {
 					fmt.Fprintf(cmd.OutOrStdout(), "Available clusters:\n")
 					for _, cluster := range clusters {
@@ -117,9 +133,24 @@ and suggest using 'opencenter cluster use' to set one.`,
 
 			cfg, err := loadConfig(ctx, clusterName)
 			if err != nil {
+				if structuredOutput {
+					return writeStructuredOutput(cmd, opts.Output, clusterStatusOutput{
+						Cluster:     clusterName,
+						ConfigValid: false,
+						Message:     "configuration not found or invalid",
+					})
+				}
 				fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", clusterName)
 				fmt.Fprintf(cmd.OutOrStdout(), "Status: Configuration not found or invalid\n")
 				return nil
+			}
+
+			pathResolver := paths.NewPathResolver(config.ResolveClustersDir())
+			resolvedClusterPaths, _ := pathResolver.Resolve(ctx, cfg.ClusterName(), cfg.OpenCenter.Meta.Organization)
+
+			if structuredOutput {
+				payload := buildClusterStatusOutput(ctx, clusterName, activeCluster, &cfg, resolvedClusterPaths, showPaths)
+				return writeStructuredOutput(cmd, opts.Output, payload)
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Cluster: %s\n", clusterName)
@@ -135,9 +166,6 @@ and suggest using 'opencenter cluster use' to set one.`,
 			fmt.Fprintf(cmd.OutOrStdout(), "  Status:       %s\n", cfg.OpenCenter.Meta.Status)
 			fmt.Fprintf(cmd.OutOrStdout(), "  Organization: %s\n", cfg.OpenCenter.Meta.Organization)
 			fmt.Fprintf(cmd.OutOrStdout(), "  Provider:     %s\n", cfg.OpenCenter.Infrastructure.Provider)
-
-			pathResolver := paths.NewPathResolver(config.ResolveClustersDir())
-			resolvedClusterPaths, _ := pathResolver.Resolve(ctx, cfg.ClusterName(), cfg.OpenCenter.Meta.Organization)
 
 			if showPaths && resolvedClusterPaths != nil {
 				fmt.Fprintf(cmd.OutOrStdout(), "\nCluster Paths:\n")
@@ -230,6 +258,103 @@ and suggest using 'opencenter cluster use' to set one.`,
 	cmd.Flags().DurationVar(&syncTimeout, "sync-timeout", 30*time.Second, "timeout for live cluster status sync")
 
 	return cmd
+}
+
+type clusterStatusOutput struct {
+	Cluster           string         `json:"cluster" yaml:"cluster"`
+	Active            bool           `json:"active" yaml:"active"`
+	ActiveCluster     string         `json:"active_cluster,omitempty" yaml:"active_cluster,omitempty"`
+	Name              string         `json:"name,omitempty" yaml:"name,omitempty"`
+	Environment       string         `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Region            string         `json:"region,omitempty" yaml:"region,omitempty"`
+	Stage             string         `json:"stage,omitempty" yaml:"stage,omitempty"`
+	Status            string         `json:"status,omitempty" yaml:"status,omitempty"`
+	Organization      string         `json:"organization,omitempty" yaml:"organization,omitempty"`
+	Provider          string         `json:"provider,omitempty" yaml:"provider,omitempty"`
+	ConfigValid       bool           `json:"config_valid" yaml:"config_valid"`
+	Message           string         `json:"message,omitempty" yaml:"message,omitempty"`
+	AvailableClusters []string       `json:"available_clusters,omitempty" yaml:"available_clusters,omitempty"`
+	Paths             map[string]any `json:"paths,omitempty" yaml:"paths,omitempty"`
+	ProviderStatus    map[string]any `json:"provider_status,omitempty" yaml:"provider_status,omitempty"`
+	NextSteps         []string       `json:"next_steps,omitempty" yaml:"next_steps,omitempty"`
+}
+
+func buildClusterStatusOutput(ctx context.Context, clusterName, activeCluster string, cfg *v2.Config, resolvedClusterPaths *paths.ClusterPaths, showPaths bool) clusterStatusOutput {
+	stage := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Stage))
+	status := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Status))
+	output := clusterStatusOutput{
+		Cluster:       clusterName,
+		Active:        activeCluster != "" && activeCluster == clusterName,
+		ActiveCluster: activeCluster,
+		Name:          cfg.OpenCenter.Meta.Name,
+		Environment:   cfg.OpenCenter.Meta.Env,
+		Region:        cfg.OpenCenter.Meta.Region,
+		Stage:         displayLifecycleValue(cfg.OpenCenter.Meta.Stage),
+		Status:        cfg.OpenCenter.Meta.Status,
+		Organization:  cfg.OpenCenter.Meta.Organization,
+		Provider:      cfg.OpenCenter.Infrastructure.Provider,
+		ConfigValid:   true,
+		NextSteps:     nextStepsForCluster(clusterName, stage, status),
+	}
+
+	if showPaths && resolvedClusterPaths != nil {
+		output.Paths = map[string]any{
+			"config_directory":   resolvedClusterPaths.ClusterDir,
+			"sops_key":           resolvedClusterPaths.SOPSKeyPath,
+			"gitops_directory":   resolvedClusterPaths.GitOpsDir,
+			"sops_key_present":   pathExists(resolvedClusterPaths.SOPSKeyPath),
+			"gitops_initialized": pathExists(resolvedClusterPaths.GitOpsDir),
+			"kubeconfig_present": pathExists(resolvedClusterPaths.KubeconfigPath),
+		}
+	}
+
+	if resolvedClusterPaths == nil {
+		return output
+	}
+
+	switch strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) {
+	case "kind":
+		renderedKindConfigPath := filepath.Join(resolvedClusterPaths.ClusterDir, "kind-config.yaml")
+		gitOpsReady := pathExists(cfg.OpenCenter.GitOps.Repository.LocalDir)
+		kindConfigReady := pathExists(renderedKindConfigPath)
+		kubeconfigReady := pathExists(resolvedClusterPaths.KubeconfigPath)
+		clusterExists, apiReady, endpoint, providerError := kindClusterStatus(ctx, cfg, resolvedClusterPaths.KubeconfigPath)
+		defaultCNIStatus := "enabled"
+		if cfg.OpenCenter.Infrastructure.Kind != nil && cfg.OpenCenter.Infrastructure.Kind.DisableDefaultCNI {
+			defaultCNIStatus = "disabled"
+		}
+		output.ProviderStatus = map[string]any{
+			"provider":            "kind",
+			"config_present":      true,
+			"default_cni":         defaultCNIStatus,
+			"gitops_setup_ready":  gitOpsReady,
+			"kind_config_present": kindConfigReady,
+			"kubeconfig_present":  kubeconfigReady,
+			"cluster_exists":      clusterExists,
+			"api_ready":           apiReady,
+			"api_endpoint":        endpoint,
+			"provider_check":      providerError,
+		}
+	case "openstack":
+		infraDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", cfg.ClusterName())
+		gitOpsReady := pathExists(cfg.OpenCenter.GitOps.Repository.LocalDir)
+		infraReady := pathExists(infraDir)
+		kubeconfigReady := pathExists(resolvedClusterPaths.KubeconfigPath)
+		apiReady, endpoint, providerError := cloudClusterStatus(ctx, resolvedClusterPaths.KubeconfigPath)
+		output.ProviderStatus = map[string]any{
+			"provider":             "openstack",
+			"config_present":       true,
+			"gitops_repo_ready":    gitOpsReady,
+			"infrastructure_ready": infraReady,
+			"opentofu_state":       openTofuStateStatus(cfg, infraDir),
+			"kubeconfig_present":   kubeconfigReady,
+			"api_ready":            apiReady,
+			"api_endpoint":         endpoint,
+			"provider_check":       providerError,
+		}
+	}
+
+	return output
 }
 
 func displayLifecycleValue(value string) string {

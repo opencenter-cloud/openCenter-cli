@@ -30,7 +30,7 @@ func newClusterDoctorCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			// Resolve cluster name from args or active cluster
-			name, err := resolveClusterName(args, true)
+			name, err := resolveClusterNameForCommand(cmd, args, true)
 			if err != nil {
 				return err
 			}

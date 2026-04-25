@@ -109,6 +109,29 @@ func missingActiveClusterError(command string) error {
 	return fmt.Errorf("no active cluster is set\n\nFix:\n  opencenter cluster list\n  opencenter cluster use <org/name>\n\nOr pass a cluster explicitly:\n  %s <org/name>", command)
 }
 
+func clusterCommandPath(cmd *cobra.Command, fallback string) string {
+	if cmd == nil {
+		return fallback
+	}
+	commandPath := strings.TrimSpace(cmd.CommandPath())
+	if commandPath == "" {
+		return fallback
+	}
+	if !strings.HasPrefix(commandPath, "opencenter ") {
+		return fallback
+	}
+	return commandPath
+}
+
+func resolveClusterNameForCommand(cmd *cobra.Command, args []string, requireActive bool) (string, error) {
+	return resolveClusterNameWithExplicitExample(args, requireActive, clusterCommandPath(cmd, "opencenter cluster validate"))
+}
+
+func resolveClusterNameFromFlagForCommand(cmd *cobra.Command, flagValue string, requireActive bool) (string, error) {
+	commandPath := clusterCommandPath(cmd, "opencenter cluster validate")
+	return resolveClusterNameFromFlagWithExplicitExample(flagValue, requireActive, commandPath+" --cluster")
+}
+
 // resolveClusterName resolves the cluster name from command arguments or active cluster.
 // It supports both "cluster" and "organization/cluster" formats.
 //
@@ -120,6 +143,10 @@ func missingActiveClusterError(command string) error {
 //   - clusterName: The resolved cluster name (may include organization prefix)
 //   - error: An error if resolution fails
 func resolveClusterName(args []string, requireActive bool) (string, error) {
+	return resolveClusterNameWithExplicitExample(args, requireActive, "opencenter cluster validate")
+}
+
+func resolveClusterNameWithExplicitExample(args []string, requireActive bool, explicitCommand string) (string, error) {
 	ctx := context.Background()
 	validator := validators.NewClusterNameValidator()
 
@@ -158,7 +185,7 @@ func resolveClusterName(args []string, requireActive bool) (string, error) {
 
 	if activeName == "" {
 		if requireActive {
-			return "", missingActiveClusterError("opencenter cluster validate")
+			return "", missingActiveClusterError(explicitCommand)
 		}
 		return "", nil
 	}
@@ -177,6 +204,10 @@ func resolveClusterName(args []string, requireActive bool) (string, error) {
 //   - clusterName: The resolved cluster name (may include organization prefix)
 //   - error: An error if resolution fails
 func resolveClusterNameFromFlag(flagValue string, requireActive bool) (string, error) {
+	return resolveClusterNameFromFlagWithExplicitExample(flagValue, requireActive, "opencenter cluster validate")
+}
+
+func resolveClusterNameFromFlagWithExplicitExample(flagValue string, requireActive bool, explicitCommand string) (string, error) {
 	ctx := context.Background()
 	validator := validators.NewClusterNameValidator()
 
@@ -215,7 +246,7 @@ func resolveClusterNameFromFlag(flagValue string, requireActive bool) (string, e
 
 	if activeName == "" {
 		if requireActive {
-			return "", missingActiveClusterError("opencenter cluster validate")
+			return "", missingActiveClusterError(explicitCommand)
 		}
 		return "", nil
 	}

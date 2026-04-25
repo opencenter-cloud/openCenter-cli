@@ -40,7 +40,7 @@ Fields use native v2 dot notation, for example:
 			if clusterArg != "" {
 				nameArgs = []string{clusterArg}
 			}
-			name, err := resolveClusterName(nameArgs, true)
+			name, err := resolveClusterNameForCommand(cmd, nameArgs, true)
 			if err != nil {
 				return err
 			}

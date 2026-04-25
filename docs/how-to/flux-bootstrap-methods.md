@@ -95,19 +95,21 @@ ssh-keygen -t ed25519 -C "flux-my-cluster" -f ~/.config/opencenter/clusters/my-o
 Update your cluster configuration to use SSH:
 
 ```yaml
-gitops:
-  git_url: "ssh://git@github.com/my-org/my-cluster-gitops.git"
-  git_ssh_key: "~/.config/opencenter/clusters/my-org/secrets/ssh/my-cluster-key"
-  git_ssh_pub: "~/.config/opencenter/clusters/my-org/secrets/ssh/my-cluster-key.pub"
-  git_branch: "main"
+opencenter:
+  gitops:
+    repository:
+      url: "ssh://git@github.com/my-org/my-cluster-gitops.git"
+      branch: "main"
+    auth:
+      ssh:
+        private_key: "~/.config/opencenter/clusters/my-org/secrets/ssh/my-cluster-key"
+        public_key: "~/.config/opencenter/clusters/my-org/secrets/ssh/my-cluster-key.pub"
 ```
 
-Or use the configure command:
+To open the guided configuration workflow:
 
 ```bash
-opencenter cluster configure my-cluster \
-  --git-url "ssh://git@github.com/my-org/my-cluster-gitops.git" \
-  --git-ssh-key "~/.config/opencenter/clusters/my-org/secrets/ssh/my-cluster-key"
+opencenter cluster configure my-org/my-cluster --guided
 ```
 
 ### Step 4: Bootstrap with SSH
@@ -195,25 +197,26 @@ chmod 600 ~/.config/opencenter/clusters/my-org/secrets/git-token.txt
 Update your cluster configuration to use token authentication:
 
 ```yaml
-gitops:
-  git_url: "https://github.com/my-org/my-cluster-gitops.git"
-  git_token: "~/.config/opencenter/clusters/my-org/secrets/git-token.txt"
-  git_token_provider: "github"  # or "gitlab", "gitea"
-  git_owner: "my-org"           # optional: overrides owner extracted from URL
-  git_branch: "main"
+opencenter:
+  gitops:
+    repository:
+      url: "https://github.com/my-org/my-cluster-gitops.git"
+      branch: "main"
+    auth:
+      token:
+        token_file: "~/.config/opencenter/clusters/my-org/secrets/git-token.txt"
+        provider: "github"  # or "gitlab", "gitea"
+        owner: "my-org"     # optional: overrides owner extracted from URL
 ```
 
-The `git_owner` field is optional. If not specified, openCenter extracts the owner from the `git_url`. Use `git_owner` when:
+The token `owner` field is optional. If not specified, openCenter extracts the owner from the repository URL. Use `owner` when:
 - The URL owner differs from the token owner (e.g., organization vs personal account)
 - Using a personal token with `--personal` flag for GitHub
 
-Or use the configure command:
+To open the guided configuration workflow:
 
 ```bash
-opencenter cluster configure my-cluster \
-  --git-url "https://github.com/my-org/my-cluster-gitops.git" \
-  --git-token "~/.config/opencenter/clusters/my-org/secrets/git-token.txt" \
-  --git-token-provider "github"
+opencenter cluster configure my-org/my-cluster --guided
 ```
 
 ### Step 4: Bootstrap with Token

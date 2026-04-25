@@ -80,7 +80,7 @@ Examples:
 			serviceName := args[0]
 
 			// Resolve cluster name from flag or active cluster
-			clusterName, err := resolveClusterNameFromFlag(cluster, true)
+			clusterName, err := resolveClusterNameFromFlagForCommand(cmd, cluster, true)
 			if err != nil {
 				return err
 			}
@@ -201,7 +201,7 @@ Examples:
 			serviceName := args[0]
 
 			// Resolve cluster name from flag or active cluster
-			clusterName, err := resolveClusterNameFromFlag(cluster, true)
+			clusterName, err := resolveClusterNameFromFlagForCommand(cmd, cluster, true)
 			if err != nil {
 				return err
 			}
@@ -485,7 +485,7 @@ Examples:
   opencenter cluster service status --cluster my-cluster`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from flag or active cluster
-			clusterName, err := resolveClusterNameFromFlag(cluster, true)
+			clusterName, err := resolveClusterNameFromFlagForCommand(cmd, cluster, true)
 			if err != nil {
 				return err
 			}

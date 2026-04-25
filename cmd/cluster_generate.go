@@ -66,7 +66,7 @@ func runClusterGenerate(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Resolve cluster name from args or active cluster
-	name, err := resolveClusterName(args, true)
+	name, err := resolveClusterNameForCommand(cmd, args, true)
 	if err != nil {
 		return err
 	}

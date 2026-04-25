@@ -62,7 +62,7 @@ If no cluster name is provided, exports the currently active cluster.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
-			name, err := resolveClusterName(args, true)
+			name, err := resolveClusterNameForCommand(cmd, args, true)
 			if err != nil {
 				return err
 			}

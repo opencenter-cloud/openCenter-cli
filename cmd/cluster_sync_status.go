@@ -83,7 +83,7 @@ The command requires:
   opencenter cluster status my-cluster --sync --output json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			identifier, err := resolveClusterName(args, true)
+			identifier, err := resolveClusterNameForCommand(cmd, args, true)
 			if err != nil {
 				return err
 			}

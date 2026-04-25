@@ -25,7 +25,7 @@ func newClusterConfigureCmd() *cobra.Command {
 				return fmt.Errorf("--guided is required; non-guided cluster configure is not implemented")
 			}
 
-			name, err := resolveClusterName(args, false)
+			name, err := resolveClusterNameForCommand(cmd, args, false)
 			if err != nil {
 				return err
 			}

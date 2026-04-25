@@ -1,0 +1,19 @@
+opencenter:
+  meta:
+    name: k8s-dev
+    organization: 1643323-Federal-Farm-Credit
+    env: dev
+    region: iad3
+  cluster:
+    cluster_name: k8s-dev
+    kubernetes:
+      version: 1.32.8
+      master_count: 3
+      worker_count: 2
+  infrastructure:
+    provider: vmware
+  services:
+    cert-manager:
+      enabled: true
+    keycloak:
+      enabled: true

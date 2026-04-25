@@ -80,6 +80,8 @@ godoc.log
 .gitea_newuser_token
 testdata/*
 !testdata/.gitkeep
+!testdata/100000-example-inc/
+!testdata/100000-example-inc/**
 tests/features/steps/tmp/
 .mygitignore
 .vscode/

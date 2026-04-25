@@ -3,6 +3,106 @@ Feature: Configuration validation rules
   Background:
     Given an empty directory "<<tmp>>/conf"
     And an empty directory "<<tmp>>/repo-bad"
+    And a file "<<tmp>>/hand-authored-openstack.yaml" with content:
+      """
+      schema_version: "2.0"
+      opencenter:
+        meta:
+          name: hand-authored
+          organization: example-platform
+          env: dev
+          region: dfw3
+        cluster:
+          cluster_name: hand-authored
+          base_domain: k8s.example.test
+          cluster_fqdn: hand-authored.dfw3.k8s.example.test
+          admin_email: admin@example.test
+          kubernetes:
+            version: 1.33.5
+            api_port: 443
+            kube_vip_enabled: true
+            subnet_pods: 10.42.0.0/16
+            subnet_services: 10.43.0.0/16
+            network_plugin:
+              calico:
+                enabled: true
+                version: 3.29.2
+                vxlan_mode: Always
+                network_policy: true
+                install_method: helm
+        infrastructure:
+          provider: openstack
+          ssh:
+            authorized_keys:
+              - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEzYf7ZEXAMPLE0000000000000000000000000000 test@example
+            username: ubuntu
+            user: ubuntu
+            key_path: <<tmp>>/keys/hand-authored
+          os_version: "24"
+          networking:
+            subnet_nodes: 10.2.128.0/22
+            allocation_pool_start: 10.2.128.10
+            allocation_pool_end: 10.2.131.250
+            gateway: 10.2.128.1
+            vrrp_ip: 10.2.128.5
+            vrrp_enabled: true
+            loadbalancer_provider: ovn
+            use_designate: false
+            dns_zone_name: hand-authored.dfw3.k8s.example.test
+            dns_nameservers:
+              - 8.8.8.8
+            ntp_servers:
+              - time.example.test
+          compute:
+            master_count: 3
+            worker_count: 2
+            worker_count_windows: 0
+          storage:
+            default_storage_class: csi-cinder-sc-delete
+            worker_volume_size: 40
+            worker_volume_destination_type: volume
+            worker_volume_source_type: image
+            worker_volume_type: local
+            worker_volume_delete_on_termination: true
+            master_volume_size: 40
+            master_volume_destination_type: volume
+            master_volume_source_type: image
+            master_volume_type: local
+            master_volume_delete_on_termination: true
+          cloud:
+            openstack:
+              auth_url: https://identity.example.test/v3/
+              region: DFW3
+              project_id: 00000000-0000-0000-0000-000000000000
+              project_name: example-project
+              application_credential_id: 11111111-1111-1111-1111-111111111111
+              application_credential_secret: example-secret
+              domain: Default
+              image_id: 22222222-2222-2222-2222-222222222222
+        gitops:
+          repository:
+            url: https://git.example.test/platform/hand-authored.git
+            local_dir: <<tmp>>/hand-authored-gitops
+            path: applications/overlays/hand-authored
+            branch: main
+          flux:
+            interval: 15m
+            prune: true
+      deployment:
+        method: kubespray
+        kubespray:
+          version: 2.27.0
+      opentofu:
+        enabled: true
+        backend:
+          type: local
+          local:
+            path: terraform.tfstate
+      secrets:
+        sops_age_key_file: <<tmp>>/keys/age.txt
+        global:
+          openstack_auth_url: https://identity.example.test/v3/
+      """
 
   @validation @missing_git_dir
   Scenario: missing opencenter.gitops.git_dir -> error
@@ -68,75 +168,33 @@ Feature: Configuration validation rules
 
   # All other legacy iac.* validations removed in the new model.
 
-  @validation @prosys_cluster_validation
-  Scenario: generated cluster configuration validation
-    Given I run "opencenter cluster init prosys-dev-dfw3 --config-dir <<tmp>>/conf"
-    And the exit code should be 0
-    When I run "opencenter cluster validate prosys-dev-dfw3 --config-dir <<tmp>>/conf"
+  @validation @hand_authored_v2_validation
+  Scenario: hand-authored v2 cluster configuration validation
+    When I run "opencenter cluster validate --config-file <<tmp>>/hand-authored-openstack.yaml"
     Then the exit code should be 0
     And stdout should contain "Validation successful"
+    And stdout should contain "Configuration:"
+    And stdout should contain "Provider:"
 
-  @validation @prosys_cluster_debug_config
-  Scenario: generated cluster debug config generation
-    Given I run "opencenter cluster init prosys-dev-dfw3 --config-dir <<tmp>>/conf"
-    And the exit code should be 0
-    When I run "opencenter cluster validate prosys-dev-dfw3 --generate-debug-config --output-dir <<tmp>> --config-dir <<tmp>>/conf"
+  @validation @hand_authored_v2_debug_config
+  Scenario: hand-authored v2 debug config generation
+    When I run "opencenter cluster validate --config-file <<tmp>>/hand-authored-openstack.yaml --generate-debug-config --output-dir <<tmp>>"
     Then the exit code should be 0
     And stdout should contain "Debug config saved to"
     And stdout should contain "Validation successful"
     And a file "<<tmp>>/.opencenter-v2.yaml" should exist
 
-  @validation @prosys_cluster_vrrp_validation
-  Scenario: generated cluster validation with networking defaults
-    Given I run "opencenter cluster init prosys-dev-dfw3 --config-dir <<tmp>>/conf"
-    And the exit code should be 0
-    When I run "opencenter cluster validate prosys-dev-dfw3 --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    And stdout should contain "Validation successful"
-
-  @validation @prosys_cluster_vrrp_missing_ip @priority4 @wip
-  Scenario: prosys.dev.dfw3 cluster VRRP validation fails when IP missing
-    # Note: This test expects VRRP validation error but other validation errors occur first
-    # Validation error ordering makes this test unreliable
-    # This test is skipped until validation can be fixed to show all errors
-    Given a file "<<tmp>>/conf/prosys.dev.dfw3.yaml" with content:
+  @validation @hand_authored_v2_vrrp_missing_ip
+  Scenario: hand-authored v2 networking validation reports missing VRRP IP
+    Given I update the YAML "<<tmp>>/hand-authored-openstack.yaml" to set:
       """
       opencenter:
-          cluster:
-              cluster_name: prosys.dev.dfw3
-              domain: dev.attcontroller.com
-          gitops:
-              git_dir: <<tmp>>/prosys-gitops-repo
-          infrastructure:
-              cloud:
-                  openstack:
-                      application_credential_id: "12345678-1234-1234-1234-123456789012"
-                      application_credential_secret: "test-app-cred-secret"
-                      auth_url: "https://keystone.api.dfw3.rackspacecloud.com/v3/"
-                      region: "DFW3"
-                      domain: "Default"
-                      networking:
-                          floating_network_id: "12345678-1234-1234-1234-123456789012"
-              provider: openstack
-      opentofu:
-          enabled: true
-          backend:
-              type: local
-              local:
-                  path: terraform.tfstate
-      secrets:
-          sops_age_key_file: <<tmp>>/sops/age/keys/prosys-dev-dfw3-key.txt
-          global:
-              openstack:
-                  application_credential_id: "12345678-1234-1234-1234-123456789012"
-                  application_credential_secret: "test-app-cred-secret"
-      networking:
-          use_octavia: false
-          vrrp_enabled: true
-          vrrp_ip: ""
+        infrastructure:
+          networking:
+            vrrp_ip: ""
       """
-    When I run "opencenter cluster validate prosys.dev.dfw3"
+    When I run "opencenter cluster validate --config-file <<tmp>>/hand-authored-openstack.yaml"
     Then the exit code should not be 0
-    And stderr should contain "vrrp_ip must be set when use_octavia is false"
-    And stderr should contain "opencenter.infrastructure.cloud.openstack.region must be set when provider is openstack"
-    And stderr should contain "opencenter.secrets.barbican.auth_url must be set when secrets backend is barbican"
+    And stdout should contain "Infrastructure > Networking"
+    And stdout should contain "opencenter.infrastructure.networking.vrrpip"
+    And stdout should contain "conditionally required based on related field"

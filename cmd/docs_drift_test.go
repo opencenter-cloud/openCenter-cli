@@ -148,6 +148,7 @@ func removedGAForbiddenTexts() []string {
 		cluster + " install-hooks",
 		opencenterCluster + " keys",
 		opencenterCluster + " credentials",
+		opencenterCluster + " template",
 		"secrets hooks install",
 		"opencenter " + "sops",
 		"--set",

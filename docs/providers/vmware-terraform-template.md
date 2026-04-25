@@ -24,9 +24,9 @@ Documentation for the VMware-specific Terraform template (`main-vmware.tf.tpl`).
 - [Configuration Mapping](#configuration-mapping)
   - [Input Configuration](#input-configuration)
   - [Generated Terraform](#generated-terraform)
-- [Real-World Examples](#real-world-examples)
-  - [Federal Farm Credit k8s-qa](#federal-farm-credit-k8s-qa)
-  - [Metro Bank k8s-sandbox](#metro-bank-k8s-sandbox)
+- [Example Configurations](#example-configurations)
+  - [Example Platform k8s-qa](#example-platform-k8s-qa)
+  - [Example Sandbox k8s-sandbox](#example-sandbox-k8s-sandbox)
 - [VMware-Specific Features](#vmware-specific-features)
   - [Network Interface Detection](#network-interface-detection)
   - [VRRP Configuration](#vrrp-configuration)
@@ -176,9 +176,9 @@ locals {
 }
 ```
 
-## Real-World Examples
+## Example Configurations
 
-### Federal Farm Credit k8s-qa
+### Example Platform k8s-qa
 
 Configuration:
 ```yaml
@@ -196,9 +196,9 @@ Generated:
 - 3 master nodes (172.26.0.11-13)
 - 3 worker nodes (172.26.0.14-16)
 - VRRP IP: 172.26.0.5
-- Public API: 108.166.24.164
+- Public API: 198.51.100.164
 
-### Metro Bank k8s-sandbox
+### Example Sandbox k8s-sandbox
 
 Configuration:
 ```yaml
@@ -250,7 +250,7 @@ k8s_api_ip   = "108.166.24.164"  # External/public IP
 
 VMware deployments use absolute SSH key paths:
 ```hcl
-ssh_key_path = "/etc/openCenter/1643323-Federal-Farm-Credit/secrets/ssh/k8s-qa-svc01m-ord1"
+ssh_key_path = "/etc/openCenter/example-platform/secrets/ssh/k8s-qa-svc01m-ord1"
 ```
 
 ## Template Variables
@@ -283,20 +283,20 @@ Validation happens in `internal/core/validation/validators/provider.go`.
 
 ## Testing
 
-Test template generation:
+Test VMware configuration and generation:
 
 ```bash
-# Generate VMware configuration
-opencenter cluster template --out test-vmware.yaml
-
 # Initialize cluster
-opencenter cluster init test-vmware --type vmware
+opencenter cluster init test-vmware --type vmware --org myorg
+
+# Fill in the VMware provider settings
+opencenter cluster configure myorg/test-vmware
 
 # Setup (generates main.tf)
-opencenter cluster generate test-vmware
+opencenter cluster generate myorg/test-vmware
 
 # Verify generated main.tf
-cat ~/.config/opencenter/clusters/opencenter/test-vmware/gitops/infrastructure/clusters/test-vmware/main.tf
+cat ~/.config/opencenter/clusters/myorg/test-vmware/gitops/infrastructure/clusters/test-vmware/main.tf
 ```
 
 Expected main.tf structure:

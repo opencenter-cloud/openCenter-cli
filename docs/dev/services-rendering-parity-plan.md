@@ -870,7 +870,7 @@ The following items listed as "not started" or "blocking" in the original plan h
 
 ### Still open: parity validation and cutover
 
-21. **RelayPoint fixture has not been compared against other customer repositories.** The plan requires comparison against at least two other customer repositories before Phase 5 is complete. Customer repositories in `customers/` (Metro Bank, Federal Farm Credit, Computacenter) are available as comparison targets. This remains a manual analysis task.
+21. **RelayPoint fixture has not been compared against other representative repositories.** The plan requires comparison against at least two representative repositories before Phase 5 is complete. This remains a manual analysis task.
 
 22. **Parity test uses `path_only` comparison for many files.** The canonicalization inventory now includes global rationale explaining why `path_only` is used (cluster-specific field values in Flux manifests). Progressively reducing `path_only` usage is tracked as ongoing work. Each `path_only` entry should eventually be converted to content comparison or documented with a specific rationale.
 

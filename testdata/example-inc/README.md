@@ -1,7 +1,8 @@
-# 1643323-Federal-Farm-Credit
+# example-platform
 
-This sanitized fixture models a customer GitOps repository with five imported
-clusters. It intentionally keeps only the fields the importer scanner needs.
+This sanitized fixture models a synthetic GitOps repository with five imported
+clusters. It intentionally keeps only the fields the importer scanner needs and
+does not include customer names, account numbers, or production hostnames.
 
 ### DEV (k8s-dev)
 

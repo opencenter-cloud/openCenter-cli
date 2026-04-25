@@ -122,7 +122,7 @@ Each field is inferred using ordered sources:
 2. Live cluster resources through `kubeconfig`
 3. openCenter defaults
 
-GitOps is preferred because it reflects committed intent and aligns with the repo layout already used by customer environments such as [testdata/100000-example-inc](/Users/victor.palma/projects/openCenter-cloud/openCenter-cli/testdata/100000-example-inc).
+GitOps is preferred because it reflects committed intent and aligns with the repo layout exercised by sanitized fixtures such as [testdata/example-inc](/Users/victor.palma/projects/openCenter-cloud/openCenter-cli/testdata/example-inc).
 
 ## Import Pipeline
 
@@ -495,7 +495,7 @@ Optional later flags may add stricter behavior:
 
 ### Fixture-Based Integration Tests
 
-Use [testdata/100000-example-inc](/Users/victor.palma/projects/openCenter-cloud/openCenter-cli/testdata/100000-example-inc) to verify:
+Use [testdata/example-inc](/Users/victor.palma/projects/openCenter-cloud/openCenter-cli/testdata/example-inc) to verify:
 
 - import-all scan across all discovered clusters
 - inferred cluster values

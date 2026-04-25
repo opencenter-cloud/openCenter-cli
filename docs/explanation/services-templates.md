@@ -87,12 +87,12 @@ Each cluster has a configuration file (`.k8s-<env>-config.yaml`) that drives tem
 For cert-manager, the relevant config block looks like this:
 
 ```yaml
-# From customers/1643323-Federal-Farm-Credit/.k8s-dev-config.yaml
+# From customers/example-platform/.k8s-dev-config.yaml
 opencenter:
   services:
     cert-manager:
       enabled: true
-      email: mpk-support@rackspace.com
+      email: platform-support@example.test
       region: us-east-1
 ```
 
@@ -156,7 +156,7 @@ spec:
     branch: main
 ```
 
-Note: Some customers use SSH URLs with `secretRef` for private repo access (Federal Farm Credit), while others use HTTPS (Uniphore). The template handles both via the config.
+Note: Some environments use SSH URLs with `secretRef` for private repo access, while others use HTTPS. The template handles both via the config.
 
 #### Category 2: FluxCD Kustomizations (The Wiring)
 
@@ -284,7 +284,7 @@ spec:
 The overlay `kustomization.yaml.tpl` ties all overlay resources together and creates a Kubernetes Secret from the Helm override values:
 
 ```yaml
-# Rendered output for Federal Farm Credit k8s-dev
+# Rendered output for Example Platform k8s-dev
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: cert-manager

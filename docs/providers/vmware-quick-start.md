@@ -21,15 +21,21 @@ Quick reference for deploying openCenter clusters on VMware vSphere.
 
 ## Quick Setup
 
-### 1. Generate Template
+### 1. Initialize Cluster Configuration
 
 ```bash
-opencenter cluster template --out vmware.yaml
+opencenter cluster init my-cluster --type vmware --org myorg
 ```
 
 ### 2. Edit Configuration
 
-Minimal required configuration:
+Open the generated configuration and fill in the VMware provider block:
+
+```bash
+opencenter cluster configure myorg/my-cluster
+```
+
+Minimal required VMware configuration:
 
 ```yaml
 opencenter:
@@ -48,10 +54,10 @@ opencenter:
           - {name: worker-2, ip: 192.168.1.21, role: worker}
 ```
 
-### 3. Initialize Cluster
+### 3. Validate Cluster
 
 ```bash
-opencenter cluster init my-cluster --type vmware
+opencenter cluster validate myorg/my-cluster
 ```
 
 ### 4. Deploy

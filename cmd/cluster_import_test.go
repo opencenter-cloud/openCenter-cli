@@ -17,7 +17,7 @@ func TestClusterImportScanReportAndApply(t *testing.T) {
 	prepareCommandTestEnv(t, dirs.ConfigDir)
 	t.Setenv("OPENCENTER_STATE_DIR", dirs.StateDir)
 
-	repoPath, err := filepath.Abs(filepath.Join("..", "testdata", "100000-example-inc"))
+	repoPath, err := filepath.Abs(filepath.Join("..", "testdata", "example-inc"))
 	if err != nil {
 		t.Fatalf("resolve repo path: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestClusterImportScanReportAndApply(t *testing.T) {
 	}
 
 	resolver := paths.NewPathResolver(filepath.Join(dirs.ConfigDir, "clusters"))
-	clusterPaths, err := resolver.Resolve(context.Background(), "k8s-prod", "1643323-Federal-Farm-Credit")
+	clusterPaths, err := resolver.Resolve(context.Background(), "k8s-prod", "example-platform")
 	if err != nil {
 		t.Fatalf("resolve imported cluster path: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestClusterImportApplyPatchesExistingConfig(t *testing.T) {
 	prepareCommandTestEnv(t, dirs.ConfigDir)
 	t.Setenv("OPENCENTER_STATE_DIR", dirs.StateDir)
 
-	repoPath, err := filepath.Abs(filepath.Join("..", "testdata", "100000-example-inc"))
+	repoPath, err := filepath.Abs(filepath.Join("..", "testdata", "example-inc"))
 	if err != nil {
 		t.Fatalf("resolve repo path: %v", err)
 	}
@@ -94,10 +94,10 @@ func TestClusterImportApplyPatchesExistingConfig(t *testing.T) {
 	}
 
 	resolver := paths.NewPathResolver(filepath.Join(dirs.ConfigDir, "clusters"))
-	if err := resolver.CreateClusterDirectories(context.Background(), "k8s-prod", "1643323-Federal-Farm-Credit"); err != nil {
+	if err := resolver.CreateClusterDirectories(context.Background(), "k8s-prod", "example-platform"); err != nil {
 		t.Fatalf("create cluster directories: %v", err)
 	}
-	clusterPaths, err := resolver.Resolve(context.Background(), "k8s-prod", "1643323-Federal-Farm-Credit")
+	clusterPaths, err := resolver.Resolve(context.Background(), "k8s-prod", "example-platform")
 	if err != nil {
 		t.Fatalf("resolve cluster paths: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestClusterImportApplyPatchesExistingConfig(t *testing.T) {
 opencenter:
   meta:
     name: k8s-prod
-    organization: 1643323-Federal-Farm-Credit
+    organization: example-platform
     env: production
     region: ord1
   cluster:

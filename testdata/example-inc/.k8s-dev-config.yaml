@@ -1,7 +1,7 @@
 opencenter:
   meta:
     name: k8s-dev
-    organization: 1643323-Federal-Farm-Credit
+    organization: example-platform
     env: dev
     region: iad3
   cluster:

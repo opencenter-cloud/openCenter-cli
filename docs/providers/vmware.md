@@ -100,10 +100,11 @@ Worker nodes (minimum):
 
 ### Basic Configuration
 
-Generate a VMware configuration template:
+Create a VMware cluster configuration, then open it for provider-specific values:
 
 ```bash
-opencenter cluster template --out vmware-cluster.yaml
+opencenter cluster init my-vmware-cluster --type vmware --org myorg
+opencenter cluster configure myorg/my-vmware-cluster
 ```
 
 Minimal configuration:

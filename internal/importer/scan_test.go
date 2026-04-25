@@ -9,7 +9,7 @@ import (
 )
 
 func TestScannerScanRepoDiscoversExampleCustomerClusters(t *testing.T) {
-	repoPath := filepath.Join("..", "..", "testdata", "100000-example-inc")
+	repoPath := filepath.Join("..", "..", "testdata", "example-inc")
 
 	scanner := NewScanner()
 	result, err := scanner.ScanRepo(context.Background(), repoPath)
@@ -28,7 +28,7 @@ func TestScannerScanRepoDiscoversExampleCustomerClusters(t *testing.T) {
 	if dev.ProposedConfig == nil {
 		t.Fatal("expected k8s-dev proposed config to be populated")
 	}
-	if dev.ProposedConfig.OpenCenter.Meta.Organization != "1643323-Federal-Farm-Credit" {
+	if dev.ProposedConfig.OpenCenter.Meta.Organization != "example-platform" {
 		t.Fatalf("unexpected organization %q", dev.ProposedConfig.OpenCenter.Meta.Organization)
 	}
 	if dev.ProposedConfig.OpenCenter.Meta.Region != "iad3" {

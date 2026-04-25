@@ -25,7 +25,6 @@ import (
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/cloud"
 	"github.com/opencenter-cloud/opencenter-cli/internal/cloud/openstack"
@@ -139,8 +138,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 			report.ClusterName = clusterName
 			report.DetectedAt = time.Now().Format(time.RFC3339)
 
-			// Get output format
-			outputFormat, _ := cmd.Flags().GetString("output")
+			opts := getGlobalOptions(cmd)
 			severityFilter, _ := cmd.Flags().GetString("severity")
 
 			// Filter by severity if specified
@@ -151,11 +149,10 @@ If no cluster name is provided, uses the currently active cluster.`,
 			configPromotion, _ := buildConfigPromotionPreview(cmd.Context(), clusterName)
 
 			// Output report
-			return outputDriftReport(cmd, report, outputFormat, configPromotion)
+			return outputDriftReport(cmd, report, opts.Output, configPromotion)
 		},
 	}
 
-	cmd.Flags().String("output", "text", "Output format (text, json, yaml)")
 	cmd.Flags().String("severity", "", "Filter by severity (critical, warning, info)")
 
 	return cmd
@@ -726,37 +723,19 @@ func canonicalDriftProvider(provider string) string {
 }
 
 // outputDriftReport outputs a drift report in the specified format
-func outputDriftReport(cmd *cobra.Command, report *cloud.DriftReport, format string, promotion *configPromotionPreview) error {
+func outputDriftReport(cmd *cobra.Command, report *cloud.DriftReport, format OutputFormat, promotion *configPromotionPreview) error {
 	switch format {
-	case "json":
+	case OutputJSON, OutputYAML:
 		payload := struct {
 			*cloud.DriftReport
-			ConfigPromotion *configPromotionPreview `json:"config_promotion,omitempty"`
+			ConfigPromotion *configPromotionPreview `json:"config_promotion,omitempty" yaml:"config_promotion,omitempty"`
 		}{
 			DriftReport:     report,
 			ConfigPromotion: promotion,
 		}
-		data, err := json.MarshalIndent(payload, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal report to JSON: %w", err)
-		}
-		fmt.Fprintln(cmd.OutOrStdout(), string(data))
+		return writeStructuredOutput(cmd, format, payload)
 
-	case "yaml":
-		payload := struct {
-			*cloud.DriftReport
-			ConfigPromotion *configPromotionPreview `yaml:"config_promotion,omitempty"`
-		}{
-			DriftReport:     report,
-			ConfigPromotion: promotion,
-		}
-		data, err := yaml.Marshal(payload)
-		if err != nil {
-			return fmt.Errorf("failed to marshal report to YAML: %w", err)
-		}
-		fmt.Fprint(cmd.OutOrStdout(), string(data))
-
-	case "text":
+	case OutputText:
 		fallthrough
 	default:
 		// Human-readable text format

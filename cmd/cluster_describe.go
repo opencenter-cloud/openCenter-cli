@@ -95,9 +95,8 @@ The cluster name can be specified in two formats:
 				}
 			}
 
-			// Output format
-			if getGlobalOptions(cmd).Output == OutputJSON {
-				// Print full config in JSON format including cluster_name
+			opts := getGlobalOptions(cmd)
+			if opts.Output == OutputJSON || opts.Output == OutputYAML {
 				output := map[string]any{
 					"config_path":  configPath,
 					"cluster_name": cfg.OpenCenter.Cluster.ClusterName,
@@ -107,12 +106,7 @@ The cluster name can be specified in two formats:
 					"git_dir":      cfg.OpenCenter.GitOps.Repository.LocalDir,
 					"git_url":      cfg.OpenCenter.GitOps.Repository.URL,
 				}
-				b, err := json.MarshalIndent(output, "", "  ")
-				if err != nil {
-					return err
-				}
-				fmt.Fprintln(cmd.OutOrStdout(), string(b))
-				return nil
+				return writeStructuredOutput(cmd, opts.Output, output)
 			}
 
 			// Print metadata and config path in human-readable format

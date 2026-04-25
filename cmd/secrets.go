@@ -125,7 +125,6 @@ func newSecretsLoginCmd() *cobra.Command {
 func newSecretsListCmd() *cobra.Command {
 	var (
 		labels []string
-		format string
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -148,25 +147,29 @@ func newSecretsListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			format := string(getGlobalOptions(cmd).Output)
+			if format == string(OutputText) {
+				format = "table"
+			}
+			out := cmd.OutOrStdout()
 
 			switch backend {
 			case "barbican":
-				return listBarbicanSecrets(cmd.Context(), cfg, labels, format)
+				return listBarbicanSecrets(cmd.Context(), out, cfg, labels, format)
 			case "sops":
-				return listSOPSSecrets(cmd.Context(), cfg, format)
+				return listSOPSSecrets(cmd.Context(), out, cfg, format)
 			case "file":
-				return listFileSecrets(cfg, format)
+				return listFileSecrets(out, cfg, format)
 			default:
 				return fmt.Errorf("unsupported secrets backend: %s (supported: barbican, sops, file)", backend)
 			}
 		},
 	}
 	cmd.Flags().StringArrayVar(&labels, "label", []string{}, "Filter secrets by labels in key=value form")
-	cmd.Flags().StringVar(&format, "format", "table", "Output format: table, json, or yaml")
 	return cmd
 }
 
-func listBarbicanSecrets(ctx context.Context, cfg *v2.Config, labels []string, format string) error {
+func listBarbicanSecrets(ctx context.Context, out io.Writer, cfg *v2.Config, labels []string, format string) error {
 	client, err := barbican.NewClient(&cfg.OpenCenter.Secrets.Barbican)
 	if err != nil {
 		return err
@@ -182,32 +185,28 @@ func listBarbicanSecrets(ctx context.Context, cfg *v2.Config, labels []string, f
 
 	switch format {
 	case "json":
-		return json.NewEncoder(os.Stdout).Encode(secrets)
+		return json.NewEncoder(out).Encode(secrets)
 	case "yaml":
-		return yaml.NewEncoder(os.Stdout).Encode(secrets)
+		return yaml.NewEncoder(out).Encode(secrets)
 	default:
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', tabwriter.AlignRight)
+		w := tabwriter.NewWriter(out, 0, 0, 3, ' ', tabwriter.AlignRight)
 		fmt.Fprintln(w, "NAME\tTYPE\tSTATUS\tCREATED")
 		for _, secret := range secrets {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", secret.Name, secret.SecretType, secret.Status, secret.Created)
 		}
-		w.Flush()
-		return nil
+		return w.Flush()
 	}
 }
 
-func listSOPSSecrets(ctx context.Context, cfg *v2.Config, format string) error {
-	return listConfigMappedSecrets(cfg, format)
+func listSOPSSecrets(ctx context.Context, out io.Writer, cfg *v2.Config, format string) error {
+	return listConfigMappedSecrets(out, cfg, format)
 }
 
-func listFileSecrets(cfg *v2.Config, format string) error {
-	return listConfigMappedSecrets(cfg, format)
+func listFileSecrets(out io.Writer, cfg *v2.Config, format string) error {
+	return listConfigMappedSecrets(out, cfg, format)
 }
 
 func newSecretsDescribeCmd() *cobra.Command {
-	var (
-		format string
-	)
 	cmd := &cobra.Command{
 		Use:   "describe <name>",
 		Short: "Show metadata for a single secret",
@@ -231,24 +230,28 @@ func newSecretsDescribeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			format := string(getGlobalOptions(cmd).Output)
+			if format == string(OutputText) {
+				format = "table"
+			}
+			out := cmd.OutOrStdout()
 
 			switch backend {
 			case "barbican":
-				return describeBarbicanSecret(cmd.Context(), cfg, name, format)
+				return describeBarbicanSecret(cmd.Context(), out, cfg, name, format)
 			case "sops":
 				return describeSOPSSecret(cmd.Context(), cfg, name, format)
 			case "file":
-				return describeFileSecret(cfg, name, format)
+				return describeFileSecret(out, cfg, name, format)
 			default:
 				return fmt.Errorf("unsupported secrets backend: %s (supported: barbican, sops, file)", backend)
 			}
 		},
 	}
-	cmd.Flags().StringVar(&format, "format", "table", "Output format: table, json, or yaml")
 	return cmd
 }
 
-func describeBarbicanSecret(ctx context.Context, cfg *v2.Config, name string, format string) error {
+func describeBarbicanSecret(ctx context.Context, out io.Writer, cfg *v2.Config, name string, format string) error {
 	client, err := barbican.NewClient(&cfg.OpenCenter.Secrets.Barbican)
 	if err != nil {
 		return err
@@ -260,17 +263,25 @@ func describeBarbicanSecret(ctx context.Context, cfg *v2.Config, name string, fo
 
 	switch format {
 	case "json":
-		json.NewEncoder(os.Stdout).Encode(secret)
+		return json.NewEncoder(out).Encode(secret)
 	case "yaml":
-		yaml.NewEncoder(os.Stdout).Encode(secret)
+		return yaml.NewEncoder(out).Encode(secret)
 	default:
-		fmt.Printf("Name: %s\n", secret.Name)
-		fmt.Printf("Type: %s\n", secret.SecretType)
-		fmt.Printf("Status: %s\n", secret.Status)
-		fmt.Printf("Created: %s\n", secret.Created)
-		fmt.Printf("Content Types: %v\n", secret.ContentTypes)
+		if _, err := fmt.Fprintf(out, "Name: %s\n", secret.Name); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(out, "Type: %s\n", secret.SecretType); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(out, "Status: %s\n", secret.Status); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(out, "Created: %s\n", secret.Created); err != nil {
+			return err
+		}
+		_, err := fmt.Fprintf(out, "Content Types: %v\n", secret.ContentTypes)
+		return err
 	}
-	return nil
 }
 
 func describeSOPSSecret(ctx context.Context, cfg *v2.Config, name string, format string) error {
@@ -283,8 +294,8 @@ func describeSOPSSecret(ctx context.Context, cfg *v2.Config, name string, format
 		"See: https://docs.opencenter.cloud/secrets/sops-encryption")
 }
 
-func describeFileSecret(cfg *v2.Config, name string, format string) error {
-	return describeConfigSecret(cfg, name, format)
+func describeFileSecret(out io.Writer, cfg *v2.Config, name string, format string) error {
+	return describeConfigSecret(out, cfg, name, format)
 }
 
 func newSecretsGetCmd() *cobra.Command {

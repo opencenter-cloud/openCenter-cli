@@ -20,16 +20,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-import (
-	"encoding/json"
-)
-
 // newClusterListCmd creates the command for listing all configured clusters.
 //
 // This command retrieves the names of all clusters from the configuration
-// directory and prints them to standard output, one per line. It also supports
-// a `--json` flag, which formats the output as a JSON array for easier
-// consumption by scripts and other tools.
+// directory and prints them to standard output, one per line.
 //
 // Returns:
 //   - *cobra.Command: A pointer to the configured `list` command.
@@ -64,18 +58,9 @@ func newClusterListCmd() *cobra.Command {
 				activeCluster = normalizeClusterDisplayName(activeCluster)
 			}
 
-			jsonOutput, _ := cmd.Flags().GetBool("json")
-			config.Debugf("cluster list: json output mode: %v", jsonOutput)
-
-			if jsonOutput {
-				b, err := json.Marshal(names)
-				if err != nil {
-					config.Debugf("cluster list: failed to marshal to JSON: %v", err)
-					return failf("failed to marshal cluster names to JSON: %v", err)
-				}
-				config.Debug("cluster list: outputting JSON format")
-				fmt.Fprintln(cmd.OutOrStdout(), string(b))
-				return nil
+			opts := getGlobalOptions(cmd)
+			if opts.Output == OutputJSON || opts.Output == OutputYAML {
+				return writeStructuredOutput(cmd, opts.Output, names)
 			}
 
 			config.Debug("cluster list: outputting plain text format")
@@ -92,7 +77,7 @@ func newClusterListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Bool("json", false, "Machine-readable JSON output for supported commands")
+	markReadOnlyCommand(cmd)
 
 	return cmd
 }

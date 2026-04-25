@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -315,7 +316,7 @@ func findConfigSecretEntry(name string) (*configSecretEntry, error) {
 	return nil, fmt.Errorf("unknown config-backed secret %q", name)
 }
 
-func listConfigMappedSecrets(cfg *v2.Config, format string) error {
+func listConfigMappedSecrets(out io.Writer, cfg *v2.Config, format string) error {
 	var secretsList []configSecretMetadata
 	for _, entry := range configSecretCatalog() {
 		if !entry.Present(cfg) {
@@ -332,11 +333,11 @@ func listConfigMappedSecrets(cfg *v2.Config, format string) error {
 
 	switch format {
 	case "json":
-		return json.NewEncoder(os.Stdout).Encode(secretsList)
+		return json.NewEncoder(out).Encode(secretsList)
 	case "yaml":
-		return yaml.NewEncoder(os.Stdout).Encode(secretsList)
+		return yaml.NewEncoder(out).Encode(secretsList)
 	default:
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+		w := tabwriter.NewWriter(out, 0, 0, 3, ' ', 0)
 		fmt.Fprintln(w, "NAME\tTYPE\tLOCATION")
 		for _, secret := range secretsList {
 			fmt.Fprintf(w, "%s\t%s\t%s\n", secret.Name, secret.Type, secret.Location)
@@ -345,7 +346,7 @@ func listConfigMappedSecrets(cfg *v2.Config, format string) error {
 	}
 }
 
-func describeConfigSecret(cfg *v2.Config, name string, format string) error {
+func describeConfigSecret(out io.Writer, cfg *v2.Config, name string, format string) error {
 	entry, err := findConfigSecretEntry(name)
 	if err != nil {
 		return err
@@ -364,16 +365,24 @@ func describeConfigSecret(cfg *v2.Config, name string, format string) error {
 
 	switch format {
 	case "json":
-		return json.NewEncoder(os.Stdout).Encode(metadata)
+		return json.NewEncoder(out).Encode(metadata)
 	case "yaml":
-		return yaml.NewEncoder(os.Stdout).Encode(metadata)
+		return yaml.NewEncoder(out).Encode(metadata)
 	default:
-		fmt.Printf("Name: %s\n", metadata.Name)
-		fmt.Printf("Type: %s\n", metadata.Type)
-		fmt.Printf("Location: %s\n", metadata.Location)
-		fmt.Printf("Description: %s\n", metadata.Description)
-		fmt.Printf("Payload: %s\n", metadata.PayloadKind)
-		return nil
+		if _, err := fmt.Fprintf(out, "Name: %s\n", metadata.Name); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(out, "Type: %s\n", metadata.Type); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(out, "Location: %s\n", metadata.Location); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(out, "Description: %s\n", metadata.Description); err != nil {
+			return err
+		}
+		_, err := fmt.Fprintf(out, "Payload: %s\n", metadata.PayloadKind)
+		return err
 	}
 }
 

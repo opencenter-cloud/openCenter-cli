@@ -14,6 +14,9 @@
 package cmd
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -102,6 +105,99 @@ func TestResolveBackend_BackendValidation(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSecretsReadCommandsUseGlobalOutputFlags(t *testing.T) {
+	secretsCmd := NewSecretsCmd()
+
+	for _, path := range [][]string{{"list"}, {"describe"}} {
+		cmd, _, err := secretsCmd.Find(path)
+		if err != nil {
+			t.Fatalf("find secrets %s: %v", strings.Join(path, " "), err)
+		}
+		if cmd.Flags().Lookup("format") != nil {
+			t.Fatalf("secrets %s must use global --output instead of local --format", strings.Join(path, " "))
+		}
+	}
+}
+
+func TestSecretsValidateUsesGlobalOutputFlag(t *testing.T) {
+	cmd := newSecretsValidateCmd()
+
+	if cmd.Flags().Lookup("output") != nil {
+		t.Fatal("secrets validate must use global --output instead of local --output")
+	}
+}
+
+func TestSecretsListUsesGlobalOutputWriter(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+	saveFileBackendSecretsConfig(t, dir)
+
+	root := newOutputRootForCommandTest()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetArgs([]string{"secrets", "list", "--output", "json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("secrets list --output json failed: %v", err)
+	}
+
+	var secrets []configSecretMetadata
+	if err := json.Unmarshal(out.Bytes(), &secrets); err != nil {
+		t.Fatalf("expected JSON secrets list in command output, got %q: %v", out.String(), err)
+	}
+	found := false
+	for _, secret := range secrets {
+		if secret.Name == "grafana-admin-password" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("unexpected secrets list: %#v", secrets)
+	}
+}
+
+func TestSecretsDescribeUsesGlobalOutputWriter(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+	saveFileBackendSecretsConfig(t, dir)
+
+	root := newOutputRootForCommandTest()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetArgs([]string{"secrets", "describe", "grafana-admin-password", "--output", "yaml"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("secrets describe --output yaml failed: %v", err)
+	}
+
+	output := out.String()
+	for _, want := range []string{
+		"name: grafana-admin-password",
+		"type: password",
+		"location: 'config: secrets.grafana.admin_password'",
+		"payload_kind: scalar",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("expected %q in command output, got %q", want, output)
+		}
+	}
+}
+
+func saveFileBackendSecretsConfig(t *testing.T, dir string) {
+	t.Helper()
+
+	cfg, _ := saveKindConfigForCommandTest(t, dir, "alpha", "opencenter")
+	cfg.OpenCenter.Secrets.Backend = "file"
+	cfg.Secrets.Grafana.AdminPassword = "super-secret"
+	if err := saveNativeV2Config(context.Background(), &cfg); err != nil {
+		t.Fatalf("save file-backed secrets config: %v", err)
+	}
+	if err := setActiveCluster("alpha"); err != nil {
+		t.Fatalf("set active cluster: %v", err)
 	}
 }
 

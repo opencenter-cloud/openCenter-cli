@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -58,7 +57,6 @@ If no cluster name is provided, uses the currently active cluster.`,
 	}
 
 	cmd.Flags().Bool("fix", false, "Automatically fix drift by running sync-secrets")
-	cmd.Flags().String("output", "text", "Output format: text or json")
 
 	return cmd
 }
@@ -68,12 +66,7 @@ func runClusterValidateSecrets(cmd *cobra.Command, args []string) error {
 
 	// Get flags
 	fix, _ := cmd.Flags().GetBool("fix")
-	outputFormat, _ := cmd.Flags().GetString("output")
-
-	// Validate output format
-	if outputFormat != "text" && outputFormat != "json" {
-		return fmt.Errorf("invalid output format: %s (must be 'text' or 'json')", outputFormat)
-	}
+	outputFormat := getGlobalOptions(cmd).Output
 
 	// Resolve cluster name
 	clusterName, err := resolveClusterName(args, true)
@@ -91,7 +84,7 @@ func runClusterValidateSecrets(cmd *cobra.Command, args []string) error {
 	opts := secrets.ValidateOptions{
 		Cluster:    clusterName,
 		Fix:        fix,
-		OutputJSON: outputFormat == "json",
+		OutputJSON: outputFormat == OutputJSON,
 	}
 
 	// Execute validation
@@ -101,8 +94,10 @@ func runClusterValidateSecrets(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display results
-	if outputFormat == "json" {
-		displayValidationResultJSON(cmd, result)
+	if outputFormat == OutputJSON || outputFormat == OutputYAML {
+		if err := writeStructuredOutput(cmd, outputFormat, result); err != nil {
+			return err
+		}
 	} else {
 		displayValidationResultText(cmd, clusterName, result)
 	}
@@ -174,14 +169,4 @@ func displayValidationResultText(cmd *cobra.Command, clusterName string, result 
 	if result.ExitCode == 1 {
 		fmt.Fprintln(cmd.OutOrStdout(), "Run 'opencenter secrets sync' to fix drift, or use --fix flag.")
 	}
-}
-
-// displayValidationResultJSON formats and displays the validation result in JSON format
-func displayValidationResultJSON(cmd *cobra.Command, result *secrets.ValidationResult) {
-	output, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "Error marshaling JSON: %v\n", err)
-		return
-	}
-	fmt.Fprintln(cmd.OutOrStdout(), string(output))
 }

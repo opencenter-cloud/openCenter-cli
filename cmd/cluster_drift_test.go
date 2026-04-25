@@ -13,6 +13,14 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
+func TestClusterDriftDetectUsesGlobalOutputFlag(t *testing.T) {
+	cmd := newClusterDriftDetectCmd()
+
+	if cmd.Flags().Lookup("output") != nil {
+		t.Fatal("cluster drift detect must use global --output instead of local --output")
+	}
+}
+
 type driftCallbackDoerFunc func(*http.Request) (*http.Response, error)
 
 func (fn driftCallbackDoerFunc) Do(req *http.Request) (*http.Response, error) {

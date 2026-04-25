@@ -337,6 +337,14 @@ rm -rf ~/.cache/opencenter/
 
 **Purpose:** Default append-only audit log for security-sensitive operations.
 
+### Audit Signing Key
+
+**Location:** `~/.config/opencenter/audit/audit.key`
+
+**Purpose:** 32-byte HMAC-SHA256 key used to sign audit log entries for tamper detection. Generated automatically on first audit write. See [Audit Signing Key](audit-key.md) for details.
+
+**Permissions:** `0600`
+
 ### File Locks
 
 **Location:** `~/.local/state/opencenter/locks/`
@@ -361,7 +369,9 @@ rm -rf ~/.cache/opencenter/
 
 **Discovery:** Plugins must be named `opencenter-<plugin-name>` and be executable.
 
-**Verification:** `checksums.txt`, when present, uses standard `sha256sum` formatting and is matched by plugin basename.
+**Verification:** `checksums.txt`, when present, uses standard `sha256sum` formatting (`<sha256>  <filename>`, two spaces) and is matched by plugin basename. Unverified plugins emit a warning; mismatched checksums block execution.
+
+**See also:** [Create and Install a CLI Plugin](../how-to/create-install-cli-plugin.md)
 
 **Evidence:** `internal/plugins/`, `cmd/plugins.go`
 

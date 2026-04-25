@@ -519,14 +519,16 @@ require (
 **Logged Operations:**
 - Cluster initialization
 - Configuration changes
-- Secret operations
+- Secret operations (generation, rotation, revocation, decryption)
 - Deployment actions
+- Drift detection
+- Input validation failures
 
-**Integrity:** HMAC signatures prevent tampering
+**Integrity:** Each log entry is signed with an HMAC-SHA256 key stored at `~/.config/opencenter/audit/audit.key`. The key is a 32-byte random value generated on first use. Signatures cover timestamp, event type, actor, resource, action, and result fields. See [Audit Signing Key](../reference/audit-key.md) for the full reference.
 
-**Retention:** 30 days (configurable)
+**Retention:** 30 days, 100 MB max file size with automatic rotation.
 
-**Why this design:** Forensic evidence for security incidents. HMAC signatures ensure log integrity.
+**Why this design:** Forensic evidence for security incidents. HMAC signatures ensure log integrity — any post-hoc modification of a log entry invalidates its signature.
 
 **Evidence:** `internal/security/audit_logger.go`, Session 1 A11
 

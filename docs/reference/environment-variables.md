@@ -24,13 +24,13 @@ openCenter CLI uses environment variables for:
 - Runtime state location
 
 **Configuration Precedence (highest to lowest):**
-1. Command-line flags (`--set`)
+1. Command-line flags (`--set`, `--log-level`, etc.)
 2. Environment variables
-3. Configuration file
-4. CLI defaults (`~/.config/opencenter/config.yaml`)
+3. Cluster config file (`.<cluster>-config.yaml`)
+4. CLI config file (`~/.config/opencenter/config.yaml`)
 5. Built-in defaults
 
-**Evidence:** `internal/config/manager.go`, Session 2 B0 section 3
+For the full breakdown including directory resolution and provider credentials, see [Configuration Precedence](configuration-precedence.md).
 
 ## Core Environment Variables
 

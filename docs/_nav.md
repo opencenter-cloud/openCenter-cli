@@ -54,6 +54,9 @@ For accomplishing specific tasks:
 - [Upgrade Kubernetes](how-to/upgrade-kubernetes.md)
 - [Migrate Clusters](how-to/migrate-clusters.md)
 
+**Plugins**
+- [Create and Install a CLI Plugin](how-to/create-install-cli-plugin.md)
+
 **Troubleshooting & Integration**
 - [Troubleshoot Deployment](how-to/troubleshoot-deployment.md)
 - [Integrate CI/CD](how-to/integrate-ci-cd.md)
@@ -65,10 +68,14 @@ For looking up technical details:
 **CLI & Configuration**
 - [CLI Commands](reference/cli-commands.md)
 - [Configuration Schema](reference/configuration-schema.md)
+- [Configuration Precedence](reference/configuration-precedence.md)
 - [Default Values](reference/default-values.md)
 - [Environment Variables](reference/environment-variables.md)
 - [Exit Codes](reference/exit-codes.md)
 - [File Locations](reference/file-locations.md)
+
+**Security**
+- [Audit Signing Key](reference/audit-key.md)
 
 **Platform & Providers**
 - [Platform Services](reference/platform-services.md)

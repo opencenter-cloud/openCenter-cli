@@ -72,6 +72,7 @@ This map helps:
 | [Troubleshoot Deployment](how-to/troubleshoot-deployment.md) | All | Common issues and solutions | Deployment attempt | Error patterns from tests |
 | [Migrate Clusters](how-to/migrate-clusters.md) | Operator | Provider/region migration | Source cluster | Configuration migration |
 | [Integrate CI/CD](how-to/integrate-ci-cd.md) | Developer | Pipeline integration | CI/CD system | CLI automation patterns |
+| [Create and Install a CLI Plugin](how-to/create-install-cli-plugin.md) | Developer | Build, install, and checksum-register an external CLI plugin | Plugin binary, `shasum` | `internal/plugins/loader.go`, `internal/config/cli_config_helpers.go` |
 
 ### Reference (Information-Oriented)
 
@@ -86,6 +87,8 @@ This map helps:
 | [Environment Variables](reference/environment-variables.md) | All | Environment configuration | All env vars | `cmd/root.go`, `internal/config/` |
 | [Exit Codes](reference/exit-codes.md) | Developer | CLI exit codes and meanings | All exit codes | `cmd/*.go` error handling |
 | [File Locations](reference/file-locations.md) | All | Configuration file paths | All file paths | `internal/config/paths.go` |
+| [Configuration Precedence](reference/configuration-precedence.md) | All | Flag/env/config/default resolution order | All config sources | `cmd/root.go`, `internal/config/cli_config_helpers.go` |
+| [Audit Signing Key](reference/audit-key.md) | Operator/Security | HMAC key for audit log integrity | Key lifecycle, verification | `internal/security/audit_logger.go` |
 | [Mise Tasks](reference/mise-tasks.md) | Developer | Development and build tasks | All mise tasks | `.mise.toml` |
 
 ### Explanation (Understanding-Oriented)
@@ -127,7 +130,7 @@ This map helps:
 6. **Reference:** Shell completion setup
 7. **Explanation:** Template engine and customization
 8. **Explanation:** Dependency injection container
-9. **Dev:** Plugin development guide
+9. ~~**Dev:** Plugin development guide~~ → [Create and Install a CLI Plugin](how-to/create-install-cli-plugin.md)
 10. **Dev:** Performance optimization guide
 
 ### Planned Documentation

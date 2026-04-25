@@ -158,6 +158,7 @@ External plugins can be verified with a checksum allowlist:
 
 ## Related Reading
 
+- [Create and Install a CLI Plugin](../how-to/create-install-cli-plugin.md)
 - [Plugin Internal Services](plugin-internal-services.md)
 - [Code Structure](../dev/code-structure.md)
 - [CLI Commands](../reference/cli-commands.md)

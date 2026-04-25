@@ -36,7 +36,7 @@ flux --version
 
 ## Bootstrap Flow
 
-The sequence diagram below shows the internal calls made by `opencenter cluster bootstrap` for a Kind cluster. Podman binds the Gitea container port on `0.0.0.0`, so the host's routable IP (e.g. `172.16.0.146:3001`) is reachable from both the macOS host and from inside the Kind cluster. During `gitea-attach-kind`, the TLS certificate is regenerated with the host IP as a SAN, and all subsequent operations use this single URL.
+The sequence diagram below shows the internal calls made by `opencenter cluster deploy` for a Kind cluster. Podman binds the Gitea container port on `0.0.0.0`, so the host's routable IP (e.g. `172.16.0.146:3001`) is reachable from both the macOS host and from inside the Kind cluster. During `gitea-attach-kind`, the TLS certificate is regenerated with the host IP as a SAN, and all subsequent operations use this single URL.
 
 ```mermaid
 sequenceDiagram
@@ -51,7 +51,7 @@ sequenceDiagram
     participant Flux as flux CLI
     participant K8s as Kind Cluster (K8s API)
 
-    User->>CLI: opencenter cluster bootstrap my-cluster --container-runtime podman
+    User->>CLI: opencenter cluster deploy my-cluster --container-runtime podman
     CLI->>BS: Bootstrap(ctx, opts)
     BS->>BS: loadConfig, resolvePaths, acquireLock
     BS->>KBP: BuildSteps(cfg, clusterPaths, opts)
@@ -61,7 +61,7 @@ sequenceDiagram
 
     rect rgb(230, 245, 255)
         Note over BS,Kind: Step 1: kind-create
-        BS->>Kind: kind create cluster --config kind-config.yaml
+        BS->>Kind: kind create cluster using kind-config.yaml
         Kind->>Kind: Pull kindest/node image, create containers
         Kind-->>BS: cluster ready (control-plane + workers)
     end
@@ -165,7 +165,7 @@ Creates a Kind cluster config under the `local` organization directory. Generate
 Confirm the resolved paths:
 
 ```bash
-opencenter cluster info my-cluster
+opencenter cluster describe my-cluster
 ```
 
 ### 3. Validate the Configuration
@@ -179,10 +179,10 @@ opencenter cluster validate my-cluster
 ```bash
 GITEA_REPO_URL=$(opencenter local gitea status 2>/dev/null | grep "Bootstrap repo URL:" | awk '{print $NF}')
 GITEA_TOKEN_PATH=$(opencenter local gitea status 2>/dev/null | grep "User token present:" | sed 's/.*(\(.*\))/\1/')
-opencenter cluster update my-cluster \
-  --opencenter.gitops.git_url="$GITEA_REPO_URL" \
-  --opencenter.gitops.git_token="$GITEA_TOKEN_PATH" \
-  --opencenter.gitops.git_token_provider=gitea
+opencenter cluster set my-cluster \
+  opencenter.gitops.git_url="$GITEA_REPO_URL" \
+  opencenter.gitops.git_token="$GITEA_TOKEN_PATH" \
+  opencenter.gitops.git_token_provider=gitea
 ```
 
 Points the cluster configuration at the local Gitea repository using the host-routable IP (e.g. `https://172.16.0.146:3001/...`). This IP is reachable from both the macOS host and from inside the Kind cluster because Podman binds on `0.0.0.0`. The `git_token` field is set to the path of the Gitea user token file, and `git_token_provider` tells bootstrap how to read it.
@@ -190,13 +190,13 @@ Points the cluster configuration at the local Gitea repository using the host-ro
 Verify:
 
 ```bash
-opencenter cluster info my-cluster | grep git_url
+opencenter cluster describe my-cluster | grep git_url
 ```
 
 ### 5. Generate the GitOps Tree
 
 ```bash
-opencenter cluster setup my-cluster --force
+opencenter cluster generate my-cluster --force
 ```
 
 Produces the overlay tree under the cluster's `git_dir`: `applications/overlays/my-cluster/`, `infrastructure/clusters/my-cluster/`, and `secrets/`. The `flux-system/` directory does not exist yet; it is created later during bootstrap by `flux bootstrap git`.
@@ -206,7 +206,7 @@ The templates use the `git_url` from the configuration, so this step must run af
 ### 6. Bootstrap the Cluster
 
 ```bash
-opencenter cluster bootstrap my-cluster --container-runtime podman
+opencenter cluster deploy my-cluster --container-runtime podman
 ```
 
 Substitute `docker` if that is your runtime. This command runs the full Kind bootstrap sequence:
@@ -225,7 +225,7 @@ The command is resumable. If a step fails, fix the issue and re-run. Use `--rest
 ## Verification
 
 ```bash
-GITOPS_DIR=$(opencenter cluster info my-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe my-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
 export KUBECONFIG="$GITOPS_DIR/infrastructure/clusters/my-cluster/kubeconfig.yaml"
 
 kubectl get nodes
@@ -274,8 +274,8 @@ The plugin is not installed. Run `mise run local-install`.
 The selected Kubernetes version does not have a published `kindest/node` image. Pick a valid tag, update the config, then rerun:
 
 ```bash
-opencenter cluster setup my-cluster --force
-opencenter cluster bootstrap my-cluster --container-runtime podman --restart
+opencenter cluster generate my-cluster --force
+opencenter cluster deploy my-cluster --container-runtime podman --restart
 ```
 
 ### Bootstrap Fails at `gitea-attach-kind`
@@ -287,7 +287,7 @@ Gitea must be running before bootstrap. Verify with `opencenter local gitea stat
 The remote Gitea repository already contains content from a previous run. Either destroy and recreate Gitea (`opencenter local gitea destroy && opencenter local gitea up`) or restart bootstrap from scratch:
 
 ```bash
-opencenter cluster bootstrap my-cluster --container-runtime podman --restart
+opencenter cluster deploy my-cluster --container-runtime podman --restart
 ```
 
 ### Bootstrap Fails at `flux-bootstrap` With Connection Timeout
@@ -301,7 +301,7 @@ opencenter local gitea status
 Check that `Kind Attached: true`, `Host IP` is set, and `Bootstrap repo URL` shows the host IP (not `localhost`). If not, re-run bootstrap from the attach step:
 
 ```bash
-opencenter cluster bootstrap my-cluster --container-runtime podman --from-step gitea-attach-kind
+opencenter cluster deploy my-cluster --container-runtime podman --from-step gitea-attach-kind
 ```
 
 If the host IP changed (e.g. after switching networks), destroy and recreate Gitea to regenerate the TLS certificate:
@@ -309,7 +309,7 @@ If the host IP changed (e.g. after switching networks), destroy and recreate Git
 ```bash
 opencenter local gitea destroy
 opencenter local gitea up
-opencenter cluster bootstrap my-cluster --container-runtime podman --from-step gitea-attach-kind
+opencenter cluster deploy my-cluster --container-runtime podman --from-step gitea-attach-kind
 ```
 
 ### Stale Bootstrap Lock
@@ -318,19 +318,19 @@ If bootstrap was interrupted:
 
 ```bash
 rm -f ~/.local/state/opencenter/locks/my-cluster.lock
-opencenter cluster bootstrap my-cluster --container-runtime podman --restart
+opencenter cluster deploy my-cluster --container-runtime podman --restart
 ```
 
 ### Re-rendering Configuration After Changes
 
-If you update the cluster configuration after running `cluster setup` (e.g., changing `git_url`, service settings, or other template variables), you need to re-render the templates and push the changes to Git:
+If you update the cluster configuration after running `cluster generate` (e.g., changing `git_url`, service settings, or other template variables), you need to re-render the templates and push the changes to Git:
 
 ```bash
 # Re-render all templates (creates backups of existing files)
-opencenter cluster render my-cluster --all --force
+opencenter cluster generate my-cluster --render-only --force
 
 # Commit the changes
-GITOPS_DIR=$(opencenter cluster info my-cluster | grep git_dir | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe my-cluster | grep git_dir | awk '{print $2}')
 cd "$GITOPS_DIR"
 git add -A && git commit -m "chore: re-render templates after config update"
 
@@ -341,29 +341,22 @@ opencenter local gitops push --cluster my-cluster
 flux reconcile source git flux-system -n flux-system
 ```
 
-To re-render only specific parts:
+Selective service or infrastructure-only rendering is not exposed in the GA CLI. Re-run the render-only flow after changing service or infrastructure settings:
 
 ```bash
-# Re-render only services (no infrastructure)
-opencenter cluster render my-cluster --services --force
-
-# Re-render only infrastructure
-opencenter cluster render my-cluster --infra --force
-
-# Re-render a specific service
-opencenter cluster render my-cluster cert-manager --force
+opencenter cluster generate my-cluster --render-only --force
 ```
 
 ### Services Stuck in "pending" or "unknown" Status
 
-If `opencenter cluster info` shows services with `status: unknown` or `status: pending`, sync the live cluster state:
+If `opencenter cluster describe` shows services with `status: unknown` or `status: pending`, sync the live cluster state:
 
 ```bash
 # Preview what would change
-opencenter cluster sync-status my-cluster --dry-run
+opencenter cluster status --sync my-cluster --dry-run
 
 # Sync and save to config
-opencenter cluster sync-status my-cluster
+opencenter cluster status --sync my-cluster
 ```
 
 ### GitRepository Resources Failing With Authentication Errors
@@ -374,13 +367,13 @@ Fix by re-rendering and pushing:
 
 ```bash
 # Verify git_url is correct in config
-opencenter cluster info my-cluster | grep git_url
+opencenter cluster describe my-cluster | grep git_url
 
 # Re-render templates
-opencenter cluster render my-cluster --all --force
+opencenter cluster generate my-cluster --render-only --force
 
 # Commit and push
-GITOPS_DIR=$(opencenter cluster info my-cluster | grep git_dir | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe my-cluster | grep git_dir | awk '{print $2}')
 cd "$GITOPS_DIR"
 git add -A && git commit -m "fix: update git_url in GitRepository manifests"
 opencenter local gitops push --cluster my-cluster

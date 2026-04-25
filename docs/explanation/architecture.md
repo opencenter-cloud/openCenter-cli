@@ -40,7 +40,7 @@ Production Cluster (Kubernetes + Services)
 
 **Design:** The configuration manager uses a layered approach with precedence rules:
 
-1. Command-line flags (`--set`)
+1. Command-line flags (the set override mechanism)
 2. Configuration file
 3. CLI defaults
 4. Built-in defaults
@@ -320,7 +320,7 @@ CLI: Report validation results
 ### Setup Flow
 
 ```
-User: opencenter cluster setup --render
+User: opencenter cluster generate
     ↓
 Template Engine: Load embedded templates
     ↓
@@ -338,7 +338,7 @@ CLI: Repository ready for commit
 ### Bootstrap Flow
 
 ```
-User: opencenter cluster bootstrap
+User: opencenter cluster deploy
     ↓
 Terraform: Provision infrastructure (VMs, networks, storage)
     ↓
@@ -429,7 +429,7 @@ Extend CLI with external plugins:
 
 ### "Configuration changes require cluster rebuild"
 
-**Reality:** Most configuration changes can be applied by updating the configuration file and running `opencenter cluster setup --render`. Only provider changes (OpenStack → VMware) require rebuild.
+**Reality:** Most configuration changes can be applied by updating the configuration file and running `opencenter cluster generate`. Only provider changes (OpenStack → VMware) require rebuild.
 
 ### "GitOps means no manual changes"
 

@@ -80,7 +80,7 @@ After running this command, restart your IDE to activate the integration.`,
 	cmd.Flags().String("ide", "auto", "Target IDE (auto, vscode, jetbrains, vim, emacs)")
 	cmd.Flags().Bool("schema-only", false, "Only generate JSON schema without IDE configuration")
 	cmd.Flags().Bool("show-instructions", false, "Show setup instructions for the specified IDE")
-	cmd.Flags().Bool("shell-integration", false, "Install shell integration for session-scoped cluster selection")
+	cmd.Flags().Bool("shell-integration", false, "Install shell integration for session-scoped active clusters")
 
 	return cmd
 }
@@ -272,7 +272,7 @@ JetBrains IDEs Setup Instructions
 ==================================
 
 1. Generate the JSON schema:
-   opencenter cluster schema --out schema/cluster.schema.json
+   opencenter config ide --schema-only
 
 2. Open Settings/Preferences → Languages & Frameworks → Schemas and DTDs → JSON Schema Mappings
 
@@ -323,7 +323,7 @@ Option 1: Using coc.nvim
    }
 
 4. Generate the schema:
-   opencenter cluster schema --out schema/cluster.schema.json
+   opencenter config ide --schema-only
 
 Option 2: Using nvim-lspconfig
 -------------------------------
@@ -350,7 +350,7 @@ Option 2: Using nvim-lspconfig
    }
 
 4. Generate the schema:
-   opencenter cluster schema --out schema/cluster.schema.json
+   opencenter config ide --schema-only
 
 For more information, see: docs/ide-integration.md
 `)
@@ -377,7 +377,7 @@ Emacs Setup Instructions
    (add-to-list 'auto-mode-alist '("\\.opencenter\\.yaml\\'" . yaml-mode))
 
 5. Generate the schema:
-   opencenter cluster schema --out schema/cluster.schema.json
+   opencenter config ide --schema-only
 
 6. Restart Emacs
 
@@ -393,9 +393,9 @@ For more information, see: docs/ide-integration.md
 	return nil
 }
 
-// installShellIntegration installs shell integration for session-scoped cluster selection
+// installShellIntegration installs shell integration for session-scoped active clusters
 func installShellIntegration(cmd *cobra.Command) error {
-	fmt.Println("🐚 Installing shell integration for session-scoped cluster selection...")
+	fmt.Println("🐚 Installing shell integration for session-scoped active clusters...")
 
 	// Detect shell
 	shell := detectShellType()

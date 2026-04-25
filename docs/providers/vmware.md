@@ -103,7 +103,7 @@ Worker nodes (minimum):
 Generate a VMware configuration template:
 
 ```bash
-opencenter cluster template --provider vmware --out vmware-cluster.yaml
+opencenter cluster template --out vmware-cluster.yaml
 ```
 
 Minimal configuration:
@@ -208,8 +208,8 @@ secrets:
 
 ```bash
 opencenter cluster init my-vmware-cluster \
-  --provider vmware \
-  --organization myorg
+  --type vmware \
+  --org myorg
 
 # Expected output:
 # ✓ Created cluster configuration
@@ -243,7 +243,7 @@ opencenter cluster validate my-vmware-cluster
 ### Step 4: Setup GitOps Repository
 
 ```bash
-opencenter cluster setup my-vmware-cluster
+opencenter cluster generate my-vmware-cluster
 
 # Expected output:
 # ✓ Created GitOps repository structure
@@ -255,7 +255,7 @@ opencenter cluster setup my-vmware-cluster
 ### Step 5: Bootstrap Cluster
 
 ```bash
-opencenter cluster bootstrap my-vmware-cluster
+opencenter cluster deploy my-vmware-cluster
 
 # This will:
 # 1. Configure SSH access to all nodes

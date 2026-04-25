@@ -32,7 +32,7 @@ limitations under the License.
 //
 //	┌─────────────────────────────────────────────────────────────────┐
 //	│                    CLI Commands (cmd/)                          │
-//	│  sync-secrets, validate-secrets, rotate-keys, check-keys, etc.  │
+//	│  sync, validate, rotate keys, check keys, etc.                  │
 //	└─────────────────────────────────────────────────────────────────┘
 //	                              │
 //	┌─────────────────────────────▼───────────────────────────────────┐

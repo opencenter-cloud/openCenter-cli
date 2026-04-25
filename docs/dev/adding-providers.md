@@ -424,7 +424,7 @@ Feature: MyCloud Provider Support
   So that I can use MyCloud infrastructure
 
   Scenario: Initialize cluster with MyCloud provider
-    When I run "opencenter cluster init test --org my-org --opencenter.provider=mycloud"
+    When I run "opencenter cluster init test --org my-org --type mycloud"
     Then the command should succeed
     And the configuration should have provider "mycloud"
     And the configuration should have mycloud.region "us-east-1"
@@ -432,7 +432,7 @@ Feature: MyCloud Provider Support
   Scenario: Validate MyCloud credentials
     Given I have a cluster configuration with provider "mycloud"
     And I have set mycloud.api_key to "invalid-key"
-    When I run "opencenter cluster preflight test"
+    When I run "opencenter cluster doctor test"
     Then the command should fail
     And the error should contain "authentication failed"
 ```
@@ -495,7 +495,7 @@ This tutorial shows how to deploy a production Kubernetes cluster on MyCloud.
 ## Step 1: Initialize Configuration
 
 ```bash
-opencenter cluster init prod --org my-org --opencenter.provider=mycloud
+opencenter cluster init prod --org my-org --type mycloud
 ```
 
 ## Step 2: Configure MyCloud Settings
@@ -519,22 +519,22 @@ opencenter:
 
 ```bash
 # Set API key (will be encrypted with SOPS)
-opencenter cluster update prod \
-  --opencenter.infrastructure.cloud.mycloud.api_key="your-api-key"
+opencenter cluster set prod \
+  opencenter.infrastructure.cloud.mycloud.api_key="your-api-key"
 ```
 
 ## Step 4: Validate Configuration
 
 ```bash
 opencenter cluster validate prod
-opencenter cluster preflight prod
+opencenter cluster doctor prod
 ```
 
 ## Step 5: Deploy Cluster
 
 ```bash
-opencenter cluster setup prod
-opencenter cluster bootstrap prod
+opencenter cluster generate prod
+opencenter cluster deploy prod
 ```
 ```
 
@@ -547,18 +547,17 @@ Test the complete workflow:
 mise run build
 
 # Initialize cluster
-./bin/opencenter cluster init mycloud-test --org test-org \
-  --opencenter.provider=mycloud
+./bin/opencenter cluster init mycloud-test --org test-org --type mycloud
 
 # Validate
 ./bin/opencenter cluster validate mycloud-test
 
 # Run preflight (requires real credentials)
 export MYCLOUD_API_KEY="your-test-key"
-./bin/opencenter cluster preflight mycloud-test
+./bin/opencenter cluster doctor mycloud-test
 
 # Generate infrastructure
-./bin/opencenter cluster setup mycloud-test --render
+./bin/opencenter cluster generate mycloud-test
 
 # Verify generated files
 ls -la ~/.config/opencenter/clusters/test-org/mycloud-test/gitops/infrastructure/
@@ -628,7 +627,7 @@ func TestPreflight(t *testing.T) {
 **Solution:** Test template rendering:
 ```bash
 mise run build
-./bin/opencenter cluster setup test --render
+./bin/opencenter cluster generate test
 # Check generated files for errors
 ```
 

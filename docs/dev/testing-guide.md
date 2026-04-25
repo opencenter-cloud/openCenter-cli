@@ -209,7 +209,7 @@ Feature: Cluster Initialization
     And the configuration should have provider "openstack"
 
   Scenario: Initialize cluster with custom provider
-    When I run "opencenter cluster init demo --org my-org --opencenter.provider=aws"
+    When I run "opencenter cluster init demo --org my-org --type aws"
     Then the command should succeed
     And the configuration should have provider "aws"
 

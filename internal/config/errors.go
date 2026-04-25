@@ -97,11 +97,11 @@ func NewFileError(operation, path string, cause error) *errors.StructuredError {
 //	// Error: Field 'cluster.name': cluster name cannot be empty
 //	// Suggestions:
 //	//   - Run: opencenter cluster validate to check configuration
-//	//   - View schema with: opencenter cluster schema
+//	//   - Generate schema with: opencenter config ide --schema-only
 func NewValidationError(field, message string, cause error) *errors.StructuredError {
 	suggestions := []string{
 		"Run: opencenter cluster validate to check configuration",
-		"View schema with: opencenter cluster schema",
+		"Generate schema with: opencenter config ide --schema-only",
 		"Check documentation at: https://docs.opencenter.io",
 		"Edit configuration: opencenter cluster edit",
 	}

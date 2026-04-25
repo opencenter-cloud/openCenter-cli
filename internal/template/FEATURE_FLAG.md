@@ -18,21 +18,21 @@ This feature flag enables:
 
 ```bash
 export OPENCENTER_USE_NEW_TEMPLATE_ENGINE=true
-opencenter cluster setup my-cluster
+opencenter cluster generate my-cluster
 ```
 
 ### Disable (Use Legacy System)
 
 ```bash
 export OPENCENTER_USE_NEW_TEMPLATE_ENGINE=false
-opencenter cluster setup my-cluster
+opencenter cluster generate my-cluster
 ```
 
 ### Check Current Status
 
 ```bash
 export OPENCENTER_FEATURE_FLAG_DEBUG=true
-opencenter cluster setup my-cluster
+opencenter cluster generate my-cluster
 ```
 
 This will print feature flag evaluation to stderr, showing which system is active.
@@ -150,11 +150,11 @@ Test with real cluster configurations:
 ```bash
 # With new engine
 export OPENCENTER_USE_NEW_TEMPLATE_ENGINE=true
-opencenter cluster setup test-cluster
+opencenter cluster generate test-cluster
 
 # With legacy engine
 export OPENCENTER_USE_NEW_TEMPLATE_ENGINE=false
-opencenter cluster setup test-cluster
+opencenter cluster generate test-cluster
 
 # Compare outputs
 diff -r gitops-new/ gitops-legacy/

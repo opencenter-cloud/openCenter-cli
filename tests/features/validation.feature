@@ -14,7 +14,7 @@ Feature: Configuration validation rules
         gitops:
           git_dir: ""
       """
-    When I run "opencenter cluster render mgd --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only mgd --config-dir <<tmp>>/conf"
     Then the exit code should not be 0
     And stderr should contain "opencenter.gitops.repository.local_dir must be set"
 
@@ -38,7 +38,7 @@ Feature: Configuration validation rules
             key: k
             region: us-east-1
       """
-    When I run "opencenter cluster info s3 --validate"
+    When I run "opencenter cluster describe s3 --validate"
     Then the exit code should not be 0
     And stderr should contain "opencenter.cluster.aws_access_key"
     And stderr should contain "opencenter.cluster.aws_secret_access_key"
@@ -63,7 +63,7 @@ Feature: Configuration validation rules
             key: k
             region: us-east-1
       """
-    When I run "opencenter cluster info s3ok --validate"
+    When I run "opencenter cluster describe s3ok --validate"
     Then the exit code should be 0
 
   # All other legacy iac.* validations removed in the new model.
@@ -106,7 +106,7 @@ Feature: Configuration validation rules
           vrrp_enabled: true
           vrrp_ip: "10.0.4.10"
       """
-    When I run "opencenter cluster validate --config <<tmp>>/conf/clusters/opencenter/.prosys.dev.dfw3-config.yaml"
+    When I run "opencenter cluster validate my-cluster"
     Then the exit code should be 0
     And stdout should contain "Validation successful"
 
@@ -142,7 +142,7 @@ Feature: Configuration validation rules
                   application_credential_id: "12345678-1234-1234-1234-123456789012"
                   application_credential_secret: "test-app-cred-secret"
       """
-    When I run "opencenter cluster validate --config <<tmp>>/conf/clusters/opencenter/.prosys.dev.dfw3-config.yaml --generate-debug-config --output-dir <<tmp>>"
+    When I run "opencenter cluster validate my-cluster --generate-debug-config --output-dir <<tmp>>"
     Then the exit code should be 0
     And stdout should contain "Debug config saved to"
     And stdout should contain "Validation successful"
@@ -186,7 +186,7 @@ Feature: Configuration validation rules
           vrrp_enabled: true
           vrrp_ip: "10.0.4.10"
       """
-    When I run "opencenter cluster validate --config <<tmp>>/conf/clusters/opencenter/.prosys.dev.dfw3-config.yaml"
+    When I run "opencenter cluster validate my-cluster"
     Then the exit code should be 0
     And stdout should contain "Validation successful"
 

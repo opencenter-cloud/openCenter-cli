@@ -64,7 +64,7 @@ Create a new cluster configuration with OpenStack defaults:
 ```bash
 opencenter cluster init prod-cluster \
   --org my-company \
-  --provider openstack
+  --type openstack
 ```
 
 **What happens:**
@@ -85,7 +85,7 @@ Configuration file: ~/.config/opencenter/clusters/my-company/.prod-cluster-confi
 Next steps:
 1. Edit configuration file to customize cluster
 2. Validate configuration: opencenter cluster validate prod-cluster
-3. Generate GitOps repository: opencenter cluster setup prod-cluster
+3. Generate GitOps repository: opencenter cluster generate prod-cluster
 ```
 
 ## Step 2: Configure OpenStack Credentials
@@ -273,7 +273,7 @@ Configuration is valid and ready for deployment.
 Generate the complete GitOps repository structure:
 
 ```bash
-opencenter cluster setup prod-cluster
+opencenter cluster generate prod-cluster
 ```
 
 **What's generated:**
@@ -313,7 +313,7 @@ Next steps:
 2. Initialize Git repository: cd ~/prod-cluster-gitops && git init
 3. Commit files: git add . && git commit -m "Initial cluster configuration"
 4. Push to Git: git remote add origin <your-repo-url> && git push -u origin main
-5. Bootstrap cluster: opencenter cluster bootstrap prod-cluster
+5. Bootstrap cluster: opencenter cluster deploy prod-cluster
 ```
 
 ## Step 7: Initialize Git Repository
@@ -351,7 +351,7 @@ git push -u origin main
 Deploy the cluster (this takes 30-45 minutes):
 
 ```bash
-opencenter cluster bootstrap prod-cluster
+opencenter cluster deploy prod-cluster
 ```
 
 **What happens:**
@@ -393,7 +393,7 @@ Cluster is ready!
 watch -n 5 'openstack server list | grep prod-cluster'
 
 # After Kubernetes is deployed, watch pods
-eval "$(opencenter cluster select prod-cluster --export-only)"
+eval "$(opencenter cluster use prod-cluster --export-only)"
 watch -n 5 'kubectl get pods -A'
 ```
 
@@ -403,7 +403,7 @@ Verify the cluster is working:
 
 ```bash
 # Set kubeconfig from the cluster-owned path
-eval "$(opencenter cluster select prod-cluster --export-only)"
+eval "$(opencenter cluster use prod-cluster --export-only)"
 
 # Check nodes
 kubectl get nodes
@@ -540,7 +540,7 @@ cd ~/prod-cluster-gitops/infrastructure/clusters/prod-cluster
 opentofu destroy
 
 # Retry bootstrap
-opencenter cluster bootstrap prod-cluster
+opencenter cluster deploy prod-cluster
 ```
 
 ### Services Not Deploying: FluxCD Error
@@ -577,7 +577,7 @@ Now that you have a production cluster, explore these topics:
 - [Upgrade Kubernetes](../how-to/upgrade-kubernetes.md) - Upgrade cluster version
 
 **Multi-Cluster:**
-- [Multi-Cluster Setup](multi-cluster-setup.md) - Manage multiple clusters
+- [Multi-Cluster Management](multi-cluster-setup.md) - Manage multiple clusters
 
 **Understanding:**
 - [GitOps Workflow](../explanation/gitops-workflow.md) - How GitOps works

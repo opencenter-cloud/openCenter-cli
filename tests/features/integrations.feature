@@ -15,7 +15,7 @@ Feature: Integrations scaffolding and error handling
           git_dir: tmp/repo-dev
           git_url: ""
       """
-    And I run "opencenter cluster select dev --config-dir tmp/conf"
+    And I run "opencenter cluster use dev --config-dir tmp/conf"
     And the exit code should be 0
 
   # ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@ Feature: Integrations scaffolding and error handling
   # ---------------------------------------------------------------------------
   @terraform @scaffold @wip
   Scenario: Setup includes Terraform scaffold under gitops.git_dir/terraform with documented tasks
-    When I run "opencenter cluster setup --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should be 0
     And the directory "tmp/repo-dev/terraform" should exist
     And the directory "tmp/repo-dev/terraform" should contain a file matching "README.md|main\\.tf|variables\\.tf"
@@ -38,7 +38,7 @@ Feature: Integrations scaffolding and error handling
   # ---------------------------------------------------------------------------
   @pulumi @scaffold @wip
   Scenario: Setup includes optional Pulumi scaffold and stack configuration docs
-    When I run "opencenter cluster setup --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should be 0
     And the directory "tmp/repo-dev/infra/pulumi" should exist
     And the directory "tmp/repo-dev/infra/pulumi" should contain a file matching "Pulumi\\.yaml"
@@ -53,7 +53,7 @@ Feature: Integrations scaffolding and error handling
   # ---------------------------------------------------------------------------
   @secrets @sops @sealedsecrets @wip
   Scenario: Setup provides SOPS and Sealed Secrets examples and guidance
-    When I run "opencenter cluster setup --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should be 0
     # SOPS (age) examples
     And the directory "tmp/repo-dev/secrets/sops" should exist
@@ -77,7 +77,7 @@ Feature: Integrations scaffolding and error handling
       """
       I am a file, not a directory.
       """
-    When I run "opencenter cluster setup --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should not be 0
     And stderr should contain "infra"
     And stderr should contain "not a directory"
@@ -88,7 +88,7 @@ Feature: Integrations scaffolding and error handling
       """
       I am a file, not a directory.
       """
-    When I run "opencenter cluster setup --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should not be 0
     And stderr should contain "secrets"
     And stderr should contain "not a directory"
@@ -101,7 +101,7 @@ Feature: Integrations scaffolding and error handling
         gitops:
           git_dir: /root/forbidden-path
       """
-    When I run "opencenter cluster setup --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should not be 0
     And stderr should contain "git_dir"
     And stderr should contain "permission"
@@ -114,7 +114,7 @@ Feature: Integrations scaffolding and error handling
       terraform:
         enabled: false
       """
-    When I run "opencenter cluster setup --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should be 0
     And the directory "tmp/repo-dev/infra/terraform" should not exist
 
@@ -125,7 +125,7 @@ Feature: Integrations scaffolding and error handling
       pulumi:
         enabled: false
       """
-    When I run "opencenter cluster setup --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should be 0
     And the directory "tmp/repo-dev/infra/pulumi" should not exist
     When I update the YAML "tmp/conf/dev.yaml" to set:
@@ -133,6 +133,6 @@ Feature: Integrations scaffolding and error handling
       pulumi:
         enabled: true
       """
-    And I run "opencenter cluster setup --force --config-dir tmp/conf"
+    And I run "opencenter cluster generate --force --config-dir tmp/conf"
     Then the exit code should be 0
     And the directory "tmp/repo-dev/infra/pulumi" should exist

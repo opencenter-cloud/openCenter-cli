@@ -24,7 +24,7 @@ openCenter CLI uses environment variables for:
 - Runtime state location
 
 **Configuration Precedence (highest to lowest):**
-1. Command-line flags (`--set`, `--log-level`, etc.)
+1. Command-line flags (the set override mechanism, `--log-level`, etc.)
 2. Environment variables
 3. Cluster config file (`.<cluster>-config.yaml`)
 4. CLI config file (`~/.config/opencenter/config.yaml`)
@@ -60,7 +60,7 @@ Runtime state directory location.
 **Usage:**
 ```bash
 export OPENCENTER_STATE_DIR=/custom/state
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 **What it affects:**
@@ -72,7 +72,7 @@ opencenter cluster bootstrap my-cluster
 **Example:**
 ```bash
 export OPENCENTER_STATE_DIR=/tmp/opencenter-state
-opencenter cluster bootstrap dev-cluster
+opencenter cluster deploy dev-cluster
 
 # Files created under:
 # /tmp/opencenter-state/bootstrap/<org>/<cluster>/state.json
@@ -90,7 +90,7 @@ Base XDG state directory used when `OPENCENTER_STATE_DIR` is unset.
 **Usage:**
 ```bash
 export XDG_STATE_HOME=/srv/state
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 **What it affects:**
@@ -181,7 +181,7 @@ opencenter cluster validate my-cluster
 ```bash
 # Enable debug logging
 export OPENCENTER_LOG_LEVEL=debug
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 
 # Disable most logging
 export OPENCENTER_LOG_LEVEL=error
@@ -197,7 +197,7 @@ Optional runtime selector for Kind when using non-default container engines.
 **Usage:**
 ```bash
 export KIND_EXPERIMENTAL_PROVIDER=podman
-opencenter cluster bootstrap dev-cluster
+opencenter cluster deploy dev-cluster
 ```
 
 **What it affects:**
@@ -219,7 +219,7 @@ OpenStack cloud profile name (from `clouds.yaml`).
 **Usage:**
 ```bash
 export OS_CLOUD=openstack
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 **What it affects:**
@@ -242,7 +242,7 @@ OpenStack authentication URL.
 **Usage:**
 ```bash
 export OS_AUTH_URL=https://identity.api.rackspacecloud.com/v3
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 **What it affects:**
@@ -258,7 +258,7 @@ OpenStack username.
 **Usage:**
 ```bash
 export OS_USERNAME=my-username
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 #### OS_PASSWORD
@@ -270,7 +270,7 @@ OpenStack password.
 **Usage:**
 ```bash
 export OS_PASSWORD=my-password
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 **Security note:** Avoid using this in production. Use `clouds.yaml` or configuration file with SOPS encryption instead.
@@ -284,7 +284,7 @@ OpenStack project name.
 **Usage:**
 ```bash
 export OS_PROJECT_NAME=my-project
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 #### OS_REGION_NAME
@@ -296,7 +296,7 @@ OpenStack region name.
 **Usage:**
 ```bash
 export OS_REGION_NAME=sjc3
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 ### VMware
@@ -310,7 +310,7 @@ vSphere server hostname.
 **Usage:**
 ```bash
 export VSPHERE_SERVER=vcenter.example.com
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 #### VSPHERE_USER
@@ -322,7 +322,7 @@ vSphere username.
 **Usage:**
 ```bash
 export VSPHERE_USER=administrator@vsphere.local
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 #### VSPHERE_PASSWORD
@@ -334,7 +334,7 @@ vSphere password.
 **Usage:**
 ```bash
 export VSPHERE_PASSWORD=my-password
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 **Security note:** Avoid using this in production. Use configuration file with SOPS encryption instead.
@@ -392,7 +392,7 @@ SOPS Age private key for decryption.
 **Usage:**
 ```bash
 export SOPS_AGE_KEY="AGE-SECRET-KEY-1..."
-opencenter sops secrets-decrypt
+opencenter secrets decrypt
 ```
 
 **What it affects:**
@@ -403,7 +403,7 @@ opencenter sops secrets-decrypt
 ```bash
 # Use Age key from environment
 export SOPS_AGE_KEY=$(cat ~/.config/opencenter/clusters/my-org/secrets/age/my-cluster-key.txt)
-opencenter sops secrets-decrypt
+opencenter secrets decrypt
 ```
 
 ### SOPS_AGE_KEY_FILE
@@ -415,7 +415,7 @@ Path to SOPS Age key file.
 **Usage:**
 ```bash
 export SOPS_AGE_KEY_FILE=/path/to/age-key.txt
-opencenter sops secrets-decrypt
+opencenter secrets decrypt
 ```
 
 **What it affects:**
@@ -522,7 +522,7 @@ opencenter:
 export OPENCENTER_WORKER_COUNT=5
 
 # Command-line flag (highest precedence)
-opencenter cluster init my-cluster --set cluster.worker_count=7
+opencenter cluster init my-cluster cluster.worker_count=7
 
 # Result: worker_count = 7 (command-line flag wins)
 ```
@@ -551,7 +551,7 @@ export OS_PASSWORD="env-password"
 # CLI default (~/.config/opencenter/config.yaml): worker_count = 3
 # Configuration file: worker_count = 4
 # Environment variable: OPENCENTER_WORKER_COUNT=5
-# Command-line flag: --set cluster.worker_count=6
+# Command-line flag: cluster.worker_count=6
 
 # Result: worker_count = 6 (command-line flag has highest precedence)
 ```
@@ -588,7 +588,7 @@ source ~/.profile
 OPENCENTER_LOG_LEVEL=debug opencenter cluster validate my-cluster
 
 # Multiple variables
-OS_CLOUD=openstack OPENCENTER_LOG_LEVEL=debug opencenter cluster bootstrap my-cluster
+OS_CLOUD=openstack OPENCENTER_LOG_LEVEL=debug opencenter cluster deploy my-cluster
 ```
 
 ### CI/CD Secrets
@@ -657,8 +657,11 @@ echo $OPENCENTER_CONFIG_DIR
 
 **Diagnosis:**
 ```bash
-# Check all configuration sources
-opencenter cluster config my-cluster --show-precedence
+# Inspect the effective cluster configuration
+opencenter cluster export my-cluster --output yaml
+
+# Explain CLI defaults injected into new clusters
+opencenter config explain cluster-defaults
 
 # Check environment variables
 env | grep -E '(OPENCENTER|OS_|AWS_|VSPHERE_)'
@@ -670,7 +673,7 @@ env | grep -E '(OPENCENTER|OS_|AWS_|VSPHERE_)'
 unset OPENCENTER_WORKER_COUNT
 
 # Or use command-line flag to override
-opencenter cluster init my-cluster --set cluster.worker_count=5
+opencenter cluster init my-cluster cluster.worker_count=5
 ```
 
 ## Related Topics

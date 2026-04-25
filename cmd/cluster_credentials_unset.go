@@ -22,7 +22,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/credentials"
 )
 
-// newClusterCredentialsUnsetCmd creates the "cluster credentials unset" command.
+// newClusterCredentialsUnsetCmd creates the hidden legacy credentials unset command.
 func newClusterCredentialsUnsetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unset",
@@ -53,22 +53,16 @@ OpenStack Variables:
   • OS_APPLICATION_CREDENTIAL_ID
   • OS_APPLICATION_CREDENTIAL_SECRET
 
-Usage with eval:
-  eval $(opencenter cluster credentials unset --provider aws)
+For current GA workflows, start a fresh shell or unset the provider variables
+directly after using opencenter cluster env.
 
 This approach ensures that the unset commands are executed in the current
 shell context, properly removing the environment variables.`,
-		Example: `  # Unset AWS credentials
-  eval $(opencenter cluster credentials unset --provider aws)
+		Example: `  # Export current cluster environment in a new shell
+  eval "$(opencenter cluster env)"
 
-  # Unset OpenStack credentials
-  eval $(opencenter cluster credentials unset --provider openstack)
-
-  # Unset all cloud provider credentials
-  eval $(opencenter cluster credentials unset --provider all)
-
-  # Preview unset commands without executing
-  opencenter cluster credentials unset --provider aws`,
+  # Export a specific cluster environment in a new shell
+  eval "$(opencenter cluster env my-cluster)"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get flags
 			provider, _ := cmd.Flags().GetString("provider")

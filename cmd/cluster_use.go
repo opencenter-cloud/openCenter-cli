@@ -407,8 +407,8 @@ func displayClusterSelectOutput(output ClusterSelectOutput, cmd *cobra.Command) 
 // directly and displays the enhanced information. If no argument is given, it launches
 // an interactive terminal UI where the user can select from a list of available clusters.
 //
-// By default, cluster selection is session-scoped (current terminal only) when shell
-// integration is enabled. Use --persistent to set a global cluster selection that
+// By default, the active cluster is session-scoped (current terminal only) when shell
+// integration is enabled. Use --persistent to set a global active cluster that
 // affects all terminals.
 //
 // The enhanced output includes:
@@ -418,7 +418,7 @@ func displayClusterSelectOutput(output ClusterSelectOutput, cmd *cobra.Command) 
 // - Environment setup commands for deployed clusters
 //
 // The --clear flag can be used to deactivate the current cluster without selecting a new one.
-// The --clear-persistent flag removes the persistent cluster selection.
+// The --clear-persistent flag removes the persistent active cluster.
 // The --activate flag can be used to automatically activate the cluster environment.
 //
 // Returns:
@@ -438,27 +438,27 @@ func newClusterUseCmd() *cobra.Command {
 - Cluster-specific paths (SOPS keys, configuration files)
 - Environment setup commands for shell configuration
 
-By default, cluster selection is session-scoped (current terminal only) when shell
+By default, the active cluster is session-scoped (current terminal only) when shell
 integration is enabled via: eval "$(opencenter shell-init)"
 
-Use --persistent to set a global cluster selection that affects all terminals.
+Use --persistent to set a global active cluster that affects all terminals.
 
 If no cluster name is provided, an interactive selection menu is displayed.
 For deployed clusters, environment setup commands are generated to configure
 KUBECONFIG, ANSIBLE_INVENTORY, virtual environment, and PATH variables.
 
 Use --clear to deactivate the current session cluster.
-Use --clear-persistent to remove the persistent cluster selection.`,
+Use --clear-persistent to remove the persistent active cluster.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			// Handle --clear-persistent flag to remove persistent cluster selection
+			// Handle --clear-persistent flag to remove persistent active cluster
 			if clearPersistent {
 				if err := setActiveCluster(""); err != nil {
 					return fmt.Errorf("failed to clear persistent cluster: %w", err)
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "Persistent cluster selection cleared\n")
+				fmt.Fprintf(cmd.OutOrStdout(), "Persistent active cluster cleared\n")
 				return nil
 			}
 
@@ -563,7 +563,7 @@ Use --clear-persistent to remove the persistent cluster selection.`,
 				sessionFile := os.Getenv("OPENCENTER_SESSION_FILE")
 				if sessionFile == "" {
 					// No shell integration - inform user and fall back to persistent
-					fmt.Fprintf(os.Stderr, "⚠️  Shell integration not detected. Setting persistent cluster selection.\n")
+					fmt.Fprintf(os.Stderr, "⚠️  Shell integration not detected. Setting persistent active cluster.\n")
 					fmt.Fprintf(os.Stderr, "💡 To enable session-scoped selection, run: eval \"$(opencenter shell-init)\"\n")
 					fmt.Fprintf(os.Stderr, "💡 Or use --persistent flag to suppress this warning.\n\n")
 
@@ -613,11 +613,11 @@ Use --clear-persistent to remove the persistent cluster selection.`,
 	// Add flag to clear active cluster (deactivate)
 	cmd.Flags().BoolVar(&clearActive, "clear", false, "Clear the active cluster (deactivate session)")
 
-	// Add flag to clear persistent cluster selection
-	cmd.Flags().BoolVar(&clearPersistent, "clear-persistent", false, "Clear the persistent cluster selection")
+	// Add flag to clear persistent active cluster
+	cmd.Flags().BoolVar(&clearPersistent, "clear-persistent", false, "Clear the persistent active cluster")
 
 	// Add flag for persistent selection (affects all terminals)
-	cmd.Flags().BoolVar(&persistentSelection, "persistent", false, "Set persistent cluster selection (affects all terminals)")
+	cmd.Flags().BoolVar(&persistentSelection, "persistent", false, "Set persistent active cluster (affects all terminals)")
 
 	return cmd
 }

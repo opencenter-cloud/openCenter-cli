@@ -100,7 +100,7 @@ Infrastructure provider error.
 
 **Example:**
 ```bash
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 echo $?  # Output: 3
 ```
 
@@ -122,7 +122,7 @@ Network connectivity error.
 
 **Example:**
 ```bash
-opencenter cluster validate my-cluster --connectivity
+opencenter cluster validate my-cluster --check-connectivity
 echo $?  # Output: 4
 ```
 
@@ -144,7 +144,7 @@ Permission or authentication error.
 
 **Example:**
 ```bash
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 echo $?  # Output: 5
 ```
 
@@ -186,7 +186,7 @@ Missing dependency or tool.
 
 **Example:**
 ```bash
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 echo $?  # Output: 7
 ```
 
@@ -207,7 +207,7 @@ Operation timed out.
 
 **Example:**
 ```bash
-opencenter cluster bootstrap my-cluster --timeout 30m
+opencenter cluster deploy my-cluster --timeout 30m
 echo $?  # Output: 8
 ```
 
@@ -216,7 +216,7 @@ echo $?  # Output: 8
 - Long-running operation failed to complete
 
 **Common causes:**
-- Cluster bootstrap timeout
+- Cluster deploy timeout
 - API request timeout
 - Network timeout
 
@@ -268,8 +268,8 @@ echo $?  # Output: 10
 set -e  # Exit on any error
 
 opencenter cluster validate my-cluster
-opencenter cluster setup my-cluster --render
-opencenter cluster bootstrap my-cluster
+opencenter cluster generate my-cluster
+opencenter cluster deploy my-cluster
 
 echo "Cluster deployed successfully"
 ```
@@ -314,7 +314,7 @@ MAX_RETRIES=3
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    opencenter cluster bootstrap my-cluster
+    opencenter cluster deploy my-cluster
     EXIT_CODE=$?
     
     if [ $EXIT_CODE -eq 0 ]; then
@@ -343,7 +343,7 @@ exit 1
   continue-on-error: false
 
 - name: Deploy cluster
-  run: opencenter cluster bootstrap my-cluster
+  run: opencenter cluster deploy my-cluster
   if: success()
 ```
 
@@ -356,7 +356,7 @@ validate:
 
 deploy:
   script:
-    - opencenter cluster bootstrap my-cluster
+    - opencenter cluster deploy my-cluster
   needs: [validate]
   when: on_success
 ```
@@ -418,7 +418,7 @@ fi
 opencenter cluster validate my-cluster
 VALIDATE_EXIT=$?
 
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 SETUP_EXIT=$?
 
 if [ $VALIDATE_EXIT -eq 0 ] && [ $SETUP_EXIT -eq 0 ]; then

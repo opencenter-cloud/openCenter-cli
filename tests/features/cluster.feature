@@ -14,7 +14,7 @@ Feature: opencenter cluster basics
         cluster:
           cluster_name: demo
       """
-    When I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster use demo --config-dir <<tmp>>/conf"
     Then the file "<<tmp>>/conf/.active" should match regex "^demo$"
 
   Scenario: Show current cluster
@@ -24,8 +24,8 @@ Feature: opencenter cluster basics
         cluster:
           cluster_name: demo
       """
-    And I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
-    When I run "opencenter cluster current --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster use demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster active --config-dir <<tmp>>/conf"
     Then stdout should contain "demo"
 
   Scenario: List clusters
@@ -74,7 +74,7 @@ Feature: opencenter cluster basics
         cluster:
           cluster_name: green
       """
-    When I run "opencenter cluster list --json --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster list --output json --config-dir <<tmp>>/conf"
     Then stdout should contain '["blue","demo","green"]'
 
   Scenario: Info for a cluster
@@ -84,8 +84,8 @@ Feature: opencenter cluster basics
         cluster:
           cluster_name: demo
       """
-    And I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
-    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster use demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe --config-dir <<tmp>>/conf"
     Then stdout should contain "cluster_name: demo"
 
   Scenario: Validate constraints
@@ -125,7 +125,7 @@ Feature: opencenter cluster basics
         gitops:
           git_dir: ""
       """
-    When I run "opencenter cluster render demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only demo --config-dir <<tmp>>/conf"
     Then exit code should be 1
     And stderr should contain "opencenter.gitops.repository.local_dir must be set"
 
@@ -136,8 +136,8 @@ Feature: opencenter cluster basics
         cluster:
           cluster_name: demo
       """
-    And I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
-    When I run "opencenter cluster preflight --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster use demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster doctor --config-dir <<tmp>>/conf"
     Then stdout should contain "Preflight complete."
 
   @hangs @wip
@@ -159,8 +159,8 @@ Feature: opencenter cluster basics
         gitops:
           git_url: "git@localhost:newuser/gitops-repo.git"
       """
-    And I run "opencenter cluster render demo --config-dir <<tmp>>/conf"
-    When I run "opencenter cluster bootstrap demo --force --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster generate --render-only demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster deploy demo --restart --config-dir <<tmp>>/conf"
     Then the command should succeed
     And the remote git repository should contain a "Bootstrap commit"
 
@@ -176,7 +176,7 @@ Feature: opencenter cluster basics
       opentofu:
         enabled: true
       """
-    When I run "opencenter cluster render demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only demo --config-dir <<tmp>>/conf"
     Then a file "<<tmp>>/opencenter-demo/infrastructure/clusters/demo/main.tf" should exist
     And a file "<<tmp>>/opencenter-demo/infrastructure/clusters/demo/provider.tf" should exist
 

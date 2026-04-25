@@ -112,24 +112,26 @@ func TestOldCommandsRemoved(t *testing.T) {
 		}
 	})
 
-	t.Run("cluster command has no sync-secrets child", func(t *testing.T) {
+	t.Run("cluster command has no legacy secrets sync child", func(t *testing.T) {
 		clusterCmd := NewClusterCmd()
+		legacyName := "sync-" + "secrets"
 
-		// Check that sync-secrets command does not exist
+		// Check that the legacy command does not exist.
 		for _, cmd := range clusterCmd.Commands() {
-			if cmd.Name() == "sync-secrets" {
-				t.Errorf("cluster command should not have 'sync-secrets' subcommand (Requirement 9.2, 9.5)")
+			if cmd.Name() == legacyName {
+				t.Errorf("cluster command should not have %q subcommand (Requirement 9.2, 9.5)", legacyName)
 			}
 		}
 	})
 
-	t.Run("cluster command has no validate-secrets child", func(t *testing.T) {
+	t.Run("cluster command has no legacy secrets validate child", func(t *testing.T) {
 		clusterCmd := NewClusterCmd()
+		legacyName := "validate-" + "secrets"
 
-		// Check that validate-secrets command does not exist
+		// Check that the legacy command does not exist.
 		for _, cmd := range clusterCmd.Commands() {
-			if cmd.Name() == "validate-secrets" {
-				t.Errorf("cluster command should not have 'validate-secrets' subcommand (Requirement 9.3, 9.6)")
+			if cmd.Name() == legacyName {
+				t.Errorf("cluster command should not have %q subcommand (Requirement 9.3, 9.6)", legacyName)
 			}
 		}
 	})

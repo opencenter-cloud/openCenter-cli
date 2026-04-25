@@ -43,9 +43,9 @@ Automate cluster deployment, validation, and testing using openCenter CLI in CI/
 
 **Workflow:**
 1. Configuration merged to main branch
-2. CI runs `opencenter cluster setup --render`
+2. CI runs `opencenter cluster generate`
 3. CI commits generated files
-4. CI runs `opencenter cluster bootstrap`
+4. CI runs `opencenter cluster deploy`
 5. Cluster deployed automatically
 
 ### Pattern 3: Ephemeral Test Clusters
@@ -145,8 +145,8 @@ jobs:
       
       - name: Deploy cluster
         run: |
-          opencenter cluster setup dev-cluster --render
-          opencenter cluster bootstrap dev-cluster
+          opencenter cluster generate dev-cluster
+          opencenter cluster deploy dev-cluster
         env:
           OPENCENTER_CONFIG_DIR: ${{ github.workspace }}/clusters
           OS_CLOUD: openstack
@@ -174,8 +174,8 @@ jobs:
       
       - name: Deploy to staging
         run: |
-          opencenter cluster setup staging-cluster --render
-          opencenter cluster bootstrap staging-cluster
+          opencenter cluster generate staging-cluster
+          opencenter cluster deploy staging-cluster
         env:
           OPENCENTER_CONFIG_DIR: ${{ github.workspace }}/clusters
       
@@ -203,8 +203,8 @@ jobs:
       
       - name: Deploy to production
         run: |
-          opencenter cluster setup prod-cluster --render
-          opencenter cluster bootstrap prod-cluster
+          opencenter cluster generate prod-cluster
+          opencenter cluster deploy prod-cluster
         env:
           OPENCENTER_CONFIG_DIR: ${{ github.workspace }}/clusters
       
@@ -283,8 +283,8 @@ deploy-dev:
     - *install_opencenter
     - echo "$OPENSTACK_CLOUDS_YAML" > ~/.config/openstack/clouds.yaml
   script:
-    - opencenter cluster setup dev-cluster --render
-    - opencenter cluster bootstrap dev-cluster
+    - opencenter cluster generate dev-cluster
+    - opencenter cluster deploy dev-cluster
   environment:
     name: development
   only:
@@ -312,8 +312,8 @@ deploy-staging:
     - *install_opencenter
     - echo "$OPENSTACK_CLOUDS_YAML" > ~/.config/openstack/clouds.yaml
   script:
-    - opencenter cluster setup staging-cluster --render
-    - opencenter cluster bootstrap staging-cluster
+    - opencenter cluster generate staging-cluster
+    - opencenter cluster deploy staging-cluster
   environment:
     name: staging
   only:
@@ -338,8 +338,8 @@ deploy-production:
     - *install_opencenter
     - echo "$OPENSTACK_CLOUDS_YAML" > ~/.config/openstack/clouds.yaml
   script:
-    - opencenter cluster setup prod-cluster --render
-    - opencenter cluster bootstrap prod-cluster
+    - opencenter cluster generate prod-cluster
+    - opencenter cluster deploy prod-cluster
   environment:
     name: production
     url: https://my-app.example.com
@@ -408,8 +408,8 @@ pipeline {
                     sh '''
                         mkdir -p ~/.config/openstack
                         cp $CLOUDS_YAML ~/.config/openstack/clouds.yaml
-                        ${OPENCENTER_BIN} cluster setup dev-cluster --render
-                        ${OPENCENTER_BIN} cluster bootstrap dev-cluster
+                        ${OPENCENTER_BIN} cluster generate dev-cluster
+                        ${OPENCENTER_BIN} cluster deploy dev-cluster
                     '''
                 }
             }
@@ -437,8 +437,8 @@ pipeline {
                 withCredentials([file(credentialsId: 'openstack-clouds-yaml', variable: 'CLOUDS_YAML')]) {
                     sh '''
                         cp $CLOUDS_YAML ~/.config/openstack/clouds.yaml
-                        ${OPENCENTER_BIN} cluster setup staging-cluster --render
-                        ${OPENCENTER_BIN} cluster bootstrap staging-cluster
+                        ${OPENCENTER_BIN} cluster generate staging-cluster
+                        ${OPENCENTER_BIN} cluster deploy staging-cluster
                     '''
                 }
             }
@@ -468,8 +468,8 @@ pipeline {
                 withCredentials([file(credentialsId: 'openstack-clouds-yaml', variable: 'CLOUDS_YAML')]) {
                     sh '''
                         cp $CLOUDS_YAML ~/.config/openstack/clouds.yaml
-                        ${OPENCENTER_BIN} cluster setup prod-cluster --render
-                        ${OPENCENTER_BIN} cluster bootstrap prod-cluster
+                        ${OPENCENTER_BIN} cluster generate prod-cluster
+                        ${OPENCENTER_BIN} cluster deploy prod-cluster
                     '''
                 }
             }
@@ -556,8 +556,8 @@ jobs:
             --type kind
           
           # Deploy cluster
-          opencenter cluster setup $CLUSTER_NAME --render
-          opencenter cluster bootstrap $CLUSTER_NAME
+          opencenter cluster generate $CLUSTER_NAME
+          opencenter cluster deploy $CLUSTER_NAME
         env:
           OPENCENTER_CONFIG_DIR: /tmp/opencenter
       
@@ -643,7 +643,7 @@ kubectl get pods -A
 
 ### Pipeline Timeout
 
-**Symptom:** Pipeline times out during cluster bootstrap
+**Symptom:** Pipeline times out during cluster deployment
 
 **Solution:**
 
@@ -686,7 +686,7 @@ opencenter cluster destroy $CLUSTER_NAME || true
 ## Related Topics
 
 - [Validate Configuration](validate-configuration.md) - Configuration validation
-- [Multi-Cluster Setup](../tutorials/multi-cluster-setup.md) - Manage multiple clusters
+- [Multi-Cluster Management](../tutorials/multi-cluster-setup.md) - Manage multiple clusters
 - [Configuration Lifecycle](../explanation/configuration-lifecycle.md) - Configuration management
 - [CLI Commands](../reference/cli-commands.md) - Complete CLI reference
 

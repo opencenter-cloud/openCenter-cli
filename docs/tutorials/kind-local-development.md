@@ -85,7 +85,7 @@ Configuration file: ~/.config/opencenter/clusters/local/.dev-cluster-config.yaml
 Next steps:
 1. Edit configuration file to customize cluster (optional)
 2. Validate configuration: opencenter cluster validate dev-cluster
-3. Generate GitOps repository: opencenter cluster setup dev-cluster
+3. Generate GitOps repository: opencenter cluster generate dev-cluster
 ```
 
 ## Step 2: Customize Cluster Configuration (Optional)
@@ -185,7 +185,7 @@ Configuration is valid and ready for deployment.
 Generate the GitOps repository structure:
 
 ```bash
-opencenter cluster setup dev-cluster
+opencenter cluster generate dev-cluster
 ```
 
 **What's generated:**
@@ -214,7 +214,7 @@ opencenter cluster setup dev-cluster
 ✓ Created Kind configuration
 
 Next steps:
-1. Bootstrap cluster: opencenter cluster bootstrap dev-cluster
+1. Bootstrap cluster: opencenter cluster deploy dev-cluster
 ```
 
 **Note:** For local development, Git repository is optional (but recommended for GitOps workflow).
@@ -224,7 +224,7 @@ Next steps:
 Deploy the cluster (this takes 5-10 minutes):
 
 ```bash
-opencenter cluster bootstrap dev-cluster
+opencenter cluster deploy dev-cluster
 ```
 
 **What happens:**
@@ -498,7 +498,7 @@ docker pull kindest/node:v1.33.5
 # If behind proxy, configure Docker proxy settings
 
 # Retry cluster creation
-opencenter cluster bootstrap dev-cluster
+opencenter cluster deploy dev-cluster
 ```
 
 ### Pods Not Starting
@@ -592,7 +592,7 @@ docker start $(docker ps -aq --filter name=dev-cluster)
 kind delete cluster --name dev-cluster
 
 # Recreate cluster
-opencenter cluster bootstrap dev-cluster
+opencenter cluster deploy dev-cluster
 ```
 
 ### Resource Management

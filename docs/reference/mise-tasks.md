@@ -499,7 +499,7 @@ cat .mise.toml | grep -A 5 "\[tasks\]"
 mise run <task> --verbose
 
 # Check task definition
-mise tasks --json | jq '.[] | select(.name == "<task>")'
+mise tasks --output json | jq '.[] | select(.name == "<task>")'
 
 # Run underlying command directly (for debugging only)
 # Check .mise.toml for actual command

@@ -55,14 +55,6 @@ However, bypassing the hook is NOT RECOMMENDED and should only be done
 with explicit approval and understanding of the security implications.
 
 If no cluster name is provided, uses the currently active cluster.`,
-		Example: `  # Install hooks in current directory
-  opencenter cluster install-hooks my-cluster
-
-  # Install hooks in specific repository path
-  opencenter cluster install-hooks my-cluster --repo-path /path/to/repo
-
-  # Force overwrite existing hooks
-  opencenter cluster install-hooks my-cluster --force`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: runClusterInstallHooks,
 	}

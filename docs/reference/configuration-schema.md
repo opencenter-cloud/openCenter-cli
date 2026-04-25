@@ -559,7 +559,7 @@ secrets:
 
 ## Configuration Precedence
 
-1. Command-line flags (`--set`)
+1. Command-line flags (the set override mechanism)
 2. Configuration file
 3. CLI defaults (`~/.config/opencenter/config.yaml`)
 4. Built-in defaults

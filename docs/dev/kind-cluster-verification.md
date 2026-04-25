@@ -14,7 +14,7 @@ tags: [kind, verification, testing, fluxcd, troubleshooting]
 
 ## Prerequisites
 
-- A running Kind cluster created via `opencenter cluster bootstrap`
+- A running Kind cluster created via `opencenter cluster deploy`
 - `kubectl`, `flux` CLI tools installed
 - Access to the cluster's kubeconfig
 
@@ -22,7 +22,7 @@ Set up your environment:
 
 ```bash
 CLUSTER_NAME="my-cluster"
-GITOPS_DIR=$(opencenter cluster info "$CLUSTER_NAME" 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe "$CLUSTER_NAME" 2>/dev/null | grep "git_dir:" | awk '{print $2}')
 export KUBECONFIG="$GITOPS_DIR/infrastructure/clusters/$CLUSTER_NAME/kubeconfig.yaml"
 ```
 
@@ -346,7 +346,7 @@ opencenter local gitea status
 
 **Fix:**
 ```bash
-opencenter cluster bootstrap my-cluster --container-runtime podman --from-step gitea-attach-kind
+opencenter cluster deploy my-cluster --container-runtime podman --from-step gitea-attach-kind
 ```
 
 ### HelmRelease Stuck Progressing
@@ -438,7 +438,7 @@ echo "openCenter Kind Cluster Verification"
 echo "Cluster: $CLUSTER_NAME"
 echo "=========================================="
 
-GITOPS_DIR=$(opencenter cluster info "$CLUSTER_NAME" 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe "$CLUSTER_NAME" 2>/dev/null | grep "git_dir:" | awk '{print $2}')
 export KUBECONFIG="$GITOPS_DIR/infrastructure/clusters/$CLUSTER_NAME/kubeconfig.yaml"
 
 echo ""

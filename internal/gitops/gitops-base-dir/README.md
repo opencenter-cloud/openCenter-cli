@@ -9,6 +9,6 @@ This repository contains the GitOps configuration for your Kubernetes cluster ma
 
 ## Usage
 
-This repository is managed by opencenter CLI. Changes should be made through the CLI or by editing the configuration files and running `opencenter cluster render` to regenerate the manifests.
+This repository is managed by opencenter CLI. Changes should be made through the CLI or by editing the configuration files and running `opencenter cluster generate --render-only` to regenerate the manifests.
 
 For more information, see the [opencenter documentation](https://github.com/opencenter-cloud/opencenter-cli).

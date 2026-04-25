@@ -137,7 +137,7 @@ func (m *DefaultSOPSManager) EncryptOverlayFiles(ctx context.Context, overlayPat
 			Type:    errors.SOPSError,
 			Message: "No age encryption keys available",
 			Suggestions: []string{
-				"Generate an age key using: opencenter sops generate-key",
+				"Generate an age key using: opencenter secrets keys generate",
 				"Import an existing age key",
 				"Set SOPS_AGE_KEY_FILE environment variable to point to your key file",
 				"Configure secrets.sopsAgeKeyFile in your cluster configuration",
@@ -231,7 +231,7 @@ func (m *DefaultSOPSManager) CreateSOPSConfig(overlayPath string, cfg *v2.Config
 				Message: "SOPS key validation failed",
 				Cause:   err,
 				Suggestions: []string{
-					"Generate a proper age key using 'opencenter sops generate-key'",
+					"Generate a proper age key using 'opencenter secrets keys generate'",
 					"Import an existing age key",
 					"Check the SOPS configuration",
 				},
@@ -242,7 +242,7 @@ func (m *DefaultSOPSManager) CreateSOPSConfig(overlayPath string, cfg *v2.Config
 				Type:    errors.SOPSError,
 				Message: "Invalid SOPS key",
 				Suggestions: []string{
-					"Generate a proper age key using 'opencenter sops generate-key'",
+					"Generate a proper age key using 'opencenter secrets keys generate'",
 					"Import an existing age key",
 					"Check the SOPS configuration",
 				},
@@ -483,7 +483,7 @@ func (m *DefaultSOPSManager) generateSOPSConfig(cfg *v2.Config) (string, error) 
 			Type:    errors.SOPSError,
 			Message: "No age encryption keys available for SOPS configuration",
 			Suggestions: []string{
-				"Generate an age key using: opencenter sops generate-key",
+				"Generate an age key using: opencenter secrets keys generate",
 				"Import an existing age key",
 				"Set SOPS_AGE_KEY_FILE environment variable to point to your key file",
 				"Configure secrets.sopsAgeKeyFile in your cluster configuration",

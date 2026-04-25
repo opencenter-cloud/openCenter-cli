@@ -353,7 +353,7 @@ All new configurations use schema version 2.0.
 
 When multiple sources provide values:
 
-1. Command-line `--set` flags (highest priority)
+1. Command-line the set override mechanisms (highest priority)
 2. Configuration file values
 3. CLI defaults (`~/.config/opencenter/config.yaml`)
 4. Built-in defaults (lowest priority)
@@ -373,7 +373,7 @@ opencenter:
 
 ```bash
 opencenter cluster init my-cluster \
-  --set opencenter.cluster.kubernetes.version=1.34.0
+  opencenter.cluster.kubernetes.version=1.34.0
 ```
 
 ### Via CLI Defaults

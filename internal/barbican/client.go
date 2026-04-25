@@ -50,8 +50,8 @@ func NewClient(cfg *v2.BarbicanConfig) (*Client, error) {
 			"   # Example: https://keystone.example.com:5000/v3\n\n" +
 			"2. If using SOPS backend (recommended for GitOps):\n" +
 			"   # SOPS secrets are managed through GitOps manifests, not via CLI commands\n" +
-			"   # Use: opencenter cluster sync-secrets <cluster-name>\n" +
-			"   # Use: opencenter cluster validate-secrets <cluster-name>\n\n" +
+			"   # Use: opencenter secrets sync <cluster-name>\n" +
+			"   # Use: opencenter secrets validate <cluster-name>\n\n" +
 			"3. If using file-based secrets:\n" +
 			"   # File secrets are stored in the cluster configuration\n" +
 			"   # Edit directly: opencenter cluster edit <cluster-name>")

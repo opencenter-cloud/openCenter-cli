@@ -36,17 +36,15 @@ Flags always win. Two categories:
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `--config` | string | Alternative cluster configuration file path |
 | `--log-level` | string | Log level: `debug`, `info`, `warn`, `error` |
-| `--set` | string[] | Override config values with dot notation |
 | `--dry-run` | bool | Preview without executing |
 | `--yes` | bool | Auto-confirm destructive operations |
 | `--break-lock` | bool | Force removal of existing lock |
 
-**`--set` flag** overrides individual fields using dot-path notation:
+**the set override mechanism** overrides individual fields using dot-path notation:
 
 ```bash
-opencenter cluster init my-cluster --set opencenter.meta.env=staging
+opencenter cluster set my-cluster opencenter.meta.env=staging
 ```
 
 Evidence: `cmd/root.go` — `addGlobalFlags()`, `parseGlobalFlags()`
@@ -191,7 +189,7 @@ Cloud provider credentials follow provider-specific precedence. The CLI does not
 ### OpenStack
 
 ```
-1. --set flags (e.g., --set secrets.global.openstack_username=...)
+1. flags (e.g., secrets.global.openstack_username=...)
 2. Cluster config secrets.global.openstack_* fields
 3. OS_* environment variables (OS_CLOUD, OS_AUTH_URL, OS_USERNAME, etc.)
 4. clouds.yaml (~/.config/openstack/clouds.yaml)
@@ -200,7 +198,7 @@ Cloud provider credentials follow provider-specific precedence. The CLI does not
 ### AWS (for service integrations)
 
 ```
-1. --set flags
+1. flags
 2. Cluster config secrets.global.aws_* fields
 3. AWS_* environment variables
 4. AWS credentials file (~/.aws/credentials)
@@ -210,7 +208,7 @@ Cloud provider credentials follow provider-specific precedence. The CLI does not
 ### VMware
 
 ```
-1. --set flags
+1. flags
 2. Cluster config cloud.vmware.* fields
 3. VSPHERE_* environment variables
 ```
@@ -220,24 +218,21 @@ Cloud provider credentials follow provider-specific precedence. The CLI does not
 Run any command with `--log-level debug` to see which sources the CLI is reading:
 
 ```bash
-opencenter cluster select opencenter-cloud/gizmo --log-level debug
+opencenter cluster use opencenter-cloud/gizmo --log-level debug
 ```
 
 The debug output includes:
 
 ```
 === OpenCenter CLI Debug Information ===
-Command: opencenter cluster select
+Command: opencenter cluster use
 Environment Variables:
   OPENCENTER_CONFIG_DIR: /custom/path  (or "not set")
   OPENCENTER_LOG_LEVEL: debug          (or "not set")
 Configuration Paths:
   Clusters Directory: /Users/you/.config/opencenter/clusters
 Global Flags:
-  --log-level: debug
-  --config: (empty)
-  --set: []
-========================================
+  --log-level: debug========================================
 ```
 
 Evidence: `cmd/root.go` — `PersistentPreRunE`
@@ -248,7 +243,7 @@ Evidence: `cmd/root.go` — `PersistentPreRunE`
 
 **`--log-level` default masking:** The env var `OPENCENTER_LOG_LEVEL` is only read when the flag is at its default value (`warn`). If you pass `--log-level warn` explicitly, the CLI treats it as "flag was set" and the env var is still read (because the value matches the default). This is a Cobra limitation — the CLI checks the value, not whether the flag was explicitly passed.
 
-**`--config` flag scope:** The `--config` flag provides an alternative cluster configuration file path. It does not change the CLI config (`~/.config/opencenter/config.yaml`) or the clusters directory.
+**the config file flag scope:** The the config file flag provides an alternative cluster configuration file path. It does not change the CLI config (`~/.config/opencenter/config.yaml`) or the clusters directory.
 
 ## Related Topics
 

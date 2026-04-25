@@ -135,7 +135,7 @@ type ValidateOptions struct {
 	// Cluster is the target cluster name.
 	Cluster string
 
-	// Fix automatically runs sync-secrets to resolve detected drift.
+	// Fix automatically runs opencenter secrets sync to resolve detected drift.
 	Fix bool
 
 	// OutputJSON outputs the validation result in JSON format.

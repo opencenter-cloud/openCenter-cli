@@ -29,7 +29,7 @@ For learning openCenter through hands-on practice:
 2. [OpenStack First Cluster](tutorials/openstack-first-cluster.md) - Deploy on OpenStack
 3. [Kind Local Development](tutorials/kind-local-development.md) - Local development setup
 4. [VMware Deployment](tutorials/vmware-deployment.md) - Deploy on pre-provisioned VMs
-5. [Multi-Cluster Setup](tutorials/multi-cluster-setup.md) - Manage multiple clusters
+5. [Multi-Cluster Management](tutorials/multi-cluster-setup.md) - Manage multiple clusters
 
 ### How-To Guides (Task-Oriented)
 

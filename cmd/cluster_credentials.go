@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newClusterCredentialsCmd creates the top-level "cluster credentials" command.
+// newClusterCredentialsCmd creates the hidden legacy credentials command.
 // It has subcommands for export and unset operations.
 // Note: This command is now superseded by 'cluster env' but kept for backward compatibility.
 func newClusterCredentialsCmd() *cobra.Command {
@@ -50,20 +50,14 @@ Common workflow:
   1. Export credentials to environment variables
   2. Use with other cloud tools (terraform, ansible, etc.)
   3. Unset credentials when done`,
-		Example: `  # Export AWS credentials for current cluster
-  eval $(opencenter cluster credentials export --provider aws)
+		Example: `  # Export current cluster environment
+  eval "$(opencenter cluster env)"
 
-  # Export OpenStack credentials for specific cluster
-  eval $(opencenter cluster credentials export my-cluster --provider openstack)
+  # Export a specific cluster environment
+  eval "$(opencenter cluster env my-cluster)"
 
-  # Export all credentials in JSON format
-  opencenter cluster credentials export --provider all --format json
-
-  # Clear AWS credentials from environment
-  eval $(opencenter cluster credentials unset --provider aws)
-
-  # Clear all credentials from environment
-  eval $(opencenter cluster credentials unset --provider all)`,
+  # Export with organization
+  eval "$(opencenter cluster env myorg/my-cluster)"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

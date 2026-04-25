@@ -18,7 +18,7 @@ Validation catches configuration errors before you deploy, saving time and preve
 
 - openCenter CLI installed
 - Cluster configuration file created (via `opencenter cluster init`)
-- Active cluster selected (via `opencenter cluster select`)
+- Active cluster useed (via `opencenter cluster use`)
 
 ## Basic Validation
 
@@ -56,7 +56,7 @@ opencenter cluster validate my-cluster
 Or validate a specific configuration file:
 
 ```bash
-opencenter cluster validate --config /path/to/config.yaml
+opencenter cluster validate my-cluster
 ```
 
 ## Validation with Connectivity Checks
@@ -242,7 +242,7 @@ Path: ~/.config/sops/age/my-cluster-key.txt
 
 **Fix:** Generate SOPS key:
 ```bash
-opencenter sops generate-key --cluster my-cluster
+opencenter secrets keys generate
 ```
 
 Or specify existing key:
@@ -266,7 +266,7 @@ Issue: Image ID not found: 799dcf97-3656-4361-8187-13ab1b295e33
 openstack image list
 
 # Update configuration
-opencenter cluster config set opencenter.infrastructure.cloud.openstack.image_id <valid-image-id>
+opencenter cluster set my-cluster opencenter.infrastructure.cloud.openstack.image_id=<valid-image-id>
 ```
 
 ## Validation Workflow
@@ -297,7 +297,7 @@ Recommended validation workflow before deployment:
 
 6. **Proceed to setup:**
    ```bash
-   opencenter cluster setup --render
+   opencenter cluster generate
    ```
 
 ## Validation in CI/CD
@@ -309,15 +309,15 @@ Integrate validation into your CI/CD pipeline:
 set -e
 
 # Validate configuration
-opencenter cluster validate --config cluster-config.yaml
+opencenter cluster validate my-cluster
 
 # Validate connectivity (if credentials available)
 if [ -n "$OPENSTACK_APPLICATION_CREDENTIAL_ID" ]; then
-  opencenter cluster validate --config cluster-config.yaml --check-connectivity
+  opencenter cluster validate my-cluster --check-connectivity
 fi
 
 # Generate debug config for artifacts
-opencenter cluster validate --config cluster-config.yaml \
+opencenter cluster validate my-cluster \
   --generate-debug-config \
   --output-dir ./artifacts
 ```

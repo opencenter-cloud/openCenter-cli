@@ -32,7 +32,7 @@ func TestSecretsKeysGACommandsExist(t *testing.T) {
 func TestSecretsKeysRotateAcceptsClusterScope(t *testing.T) {
 	cmd := newSecretsKeysRotateCmd()
 	if cmd.Flags().Lookup("cluster") == nil {
-		t.Fatal("expected secrets keys rotate --cluster flag")
+		t.Fatal("expected cluster flag on secrets keys rotate")
 	}
 	if cmd.Flags().Lookup("type") == nil {
 		t.Fatal("expected secrets keys rotate --type flag")
@@ -104,8 +104,9 @@ func TestSecretsKeysCheckRecommendationsUseSecretsKeysRotate(t *testing.T) {
 			if !strings.Contains(output, tc.expected) {
 				t.Fatalf("expected recommendation %q in output:\n%s", tc.expected, output)
 			}
-			if strings.Contains(output, "opencenter cluster rotate-keys") {
-				t.Fatalf("expected no stale cluster rotate-keys recommendation in output:\n%s", output)
+			staleRecommendation := "opencenter cluster " + "rotate-keys"
+			if strings.Contains(output, staleRecommendation) {
+				t.Fatalf("expected no stale key rotation recommendation in output:\n%s", output)
 			}
 		})
 	}

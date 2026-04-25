@@ -71,16 +71,16 @@ The command requires:
   - A deployed cluster with accessible kubeconfig
   - FluxCD installed and managing services`,
 		Example: `  # Sync status for active cluster
-  opencenter cluster sync-status
+  opencenter cluster status --sync
 
   # Sync status for a specific cluster
-  opencenter cluster sync-status my-cluster
+  opencenter cluster status my-cluster --sync
 
   # Preview changes without saving (dry-run)
-  opencenter cluster sync-status my-cluster --dry-run
+  opencenter cluster status my-cluster --sync --dry-run
 
   # Output results as JSON
-  opencenter cluster sync-status my-cluster --json`,
+  opencenter cluster status my-cluster --sync --output json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			identifier, err := resolveClusterName(args, true)

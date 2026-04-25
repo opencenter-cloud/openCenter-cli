@@ -219,7 +219,7 @@ Configuration file: ~/.config/opencenter/clusters/my-company/.prod-cluster-confi
 Next steps:
 1. Edit configuration file to add VM IPs and vSphere credentials
 2. Validate configuration: opencenter cluster validate prod-cluster
-3. Generate GitOps repository: opencenter cluster setup prod-cluster
+3. Generate GitOps repository: opencenter cluster generate prod-cluster
 ```
 
 ## Step 3: Configure VM Inventory
@@ -396,7 +396,7 @@ Configuration is valid and ready for deployment.
 Generate the complete GitOps repository structure:
 
 ```bash
-opencenter cluster setup prod-cluster --render
+opencenter cluster generate prod-cluster
 ```
 
 **What's generated:**
@@ -435,7 +435,7 @@ Next steps:
 2. Initialize Git repository: cd ~/prod-cluster-gitops && git init
 3. Commit files: git add . && git commit -m "Initial cluster configuration"
 4. Push to Git: git remote add origin <your-repo-url> && git push -u origin main
-5. Bootstrap cluster: opencenter cluster bootstrap prod-cluster
+5. Bootstrap cluster: opencenter cluster deploy prod-cluster
 ```
 
 ## Step 8: Initialize Git Repository
@@ -467,7 +467,7 @@ git push -u origin main
 Deploy Kubernetes to the VMs (this takes 20-30 minutes):
 
 ```bash
-opencenter cluster bootstrap prod-cluster
+opencenter cluster deploy prod-cluster
 ```
 
 **What happens:**
@@ -661,7 +661,7 @@ tail -100 ~/prod-cluster-gitops/infrastructure/clusters/prod-cluster/ansible.log
 # 3. OS not supported (must be Ubuntu 24.04)
 
 # Retry deployment
-opencenter cluster bootstrap prod-cluster
+opencenter cluster deploy prod-cluster
 ```
 
 ### vSphere CSI Not Working
@@ -703,7 +703,7 @@ Now that you have a VMware cluster, explore these topics:
 - [Upgrade Kubernetes](../how-to/upgrade-kubernetes.md) - Upgrade cluster version
 
 **Multi-Cluster:**
-- [Multi-Cluster Setup](multi-cluster-setup.md) - Manage multiple clusters
+- [Multi-Cluster Management](multi-cluster-setup.md) - Manage multiple clusters
 
 **Understanding:**
 - [GitOps Workflow](../explanation/gitops-workflow.md) - How GitOps works

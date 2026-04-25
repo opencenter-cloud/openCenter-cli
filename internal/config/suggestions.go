@@ -430,7 +430,7 @@ func (se *SuggestionEngine) generateContextAwareSuggestions(field string, value 
 	return []string{
 		fmt.Sprintf("Check the documentation for field '%s'", field),
 		"Verify the value matches the expected format",
-		"Use 'opencenter cluster schema' to see valid fields",
+		"Use 'opencenter config ide --schema-only' to generate the schema for valid fields",
 	}
 }
 

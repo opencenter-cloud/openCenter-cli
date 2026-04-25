@@ -85,8 +85,8 @@ func TestAcquireLockWithPrompt_WithBreakLockFlag(t *testing.T) {
 acquired=2026-04-14T01:00:00Z
 expires=2026-04-14T02:00:00Z
 ttl=1h0m0s
-operation=bootstrap
-command=cluster bootstrap
+operation=deploy
+command=cluster deploy
 `
 	if err := os.WriteFile(lockPath, []byte(lockContent), 0644); err != nil {
 		t.Fatalf("failed to create lock file: %v", err)
@@ -152,8 +152,8 @@ func TestAcquireLockWithPrompt_WithoutBreakLockFlag_Confirmed(t *testing.T) {
 acquired=2026-04-14T01:00:00Z
 expires=2026-04-14T02:00:00Z
 ttl=1h0m0s
-operation=bootstrap
-command=cluster bootstrap
+operation=deploy
+command=cluster deploy
 `
 	if err := os.WriteFile(lockPath, []byte(lockContent), 0644); err != nil {
 		t.Fatalf("failed to create lock file: %v", err)

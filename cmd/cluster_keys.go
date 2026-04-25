@@ -41,18 +41,17 @@ across clusters. Keys are tracked in the key registry with metadata including:
   • Usage information
 
 Use the subcommands to list keys, check expiration status, and manage
-key lifecycle.`,
-		Example: `  # List all keys
-  opencenter cluster keys list
+key lifecycle.
 
-  # List keys for specific cluster
-  opencenter cluster keys list --cluster my-cluster
+This hidden command has been superseded by opencenter secrets keys.`,
+		Example: `  # Check keys for all clusters
+  opencenter secrets keys check --all
 
-  # List only active keys
-  opencenter cluster keys list --status active
+  # Check keys for a specific cluster
+  opencenter secrets keys check --cluster my-cluster
 
-  # Output in JSON format
-  opencenter cluster keys list --output json`,
+  # Rotate a cluster age key
+  opencenter secrets keys rotate --cluster my-cluster --type age`,
 	}
 
 	// Add subcommands
@@ -84,24 +83,17 @@ as human-readable text or JSON for automation.
 Status meanings:
   • active: Currently in use for encryption/decryption
   • archived: Rotated out but kept for historical decryption
-  • revoked: Explicitly revoked, no longer trusted`,
-		Example: `  # List all keys
-  opencenter cluster keys list
+  • revoked: Explicitly revoked, no longer trusted
 
-  # List keys for specific cluster
-  opencenter cluster keys list --cluster my-cluster
+This hidden command has been superseded by opencenter secrets keys check.`,
+		Example: `  # Check keys for all clusters
+  opencenter secrets keys check --all
 
-  # List only active keys
-  opencenter cluster keys list --status active
-
-  # List only revoked keys
-  opencenter cluster keys list --status revoked
+  # Check keys for a specific cluster
+  opencenter secrets keys check --cluster my-cluster
 
   # Output in JSON format
-  opencenter cluster keys list --output json
-
-  # List archived keys for a cluster
-  opencenter cluster keys list --cluster my-cluster --status archived`,
+  opencenter secrets keys check --all --output json`,
 		RunE: runClusterKeysList,
 	}
 

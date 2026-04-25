@@ -52,21 +52,29 @@ If no cluster name is provided, validates the currently active cluster.`,
   # Validate with connectivity checks
   opencenter cluster validate my-cluster --check-connectivity
 
+  # Validate generated GitOps manifests
+  opencenter cluster validate my-cluster --manifests
+
   # Output as JSON (for CI/CD pipelines)
-  opencenter cluster validate my-cluster --json
+  opencenter cluster validate my-cluster --output json
 
   # Validate and generate debug config
   opencenter cluster validate my-cluster --generate-debug-config`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			validateManifests, _ := cmd.Flags().GetBool("manifests")
+			if validateManifests {
+				return runClusterValidateManifests(cmd, args)
+			}
+
 			app, err := GetApp(cmd.Context())
 			if err != nil {
 				return err
 			}
 			validateService := app.ValidateService
 
-			// Check if a configuration file was provided via --config flag
-			configFile, _ := cmd.Flags().GetString("config")
+			// Check if a configuration file was provided via --config-file flag.
+			configFile := getValidateConfigFileFlag(cmd)
 
 			// Resolve cluster name, organization, and provider from args or active cluster
 			var clusterName string
@@ -93,7 +101,7 @@ If no cluster name is provided, validates the currently active cluster.`,
 				}
 				provider = cfg.OpenCenter.Infrastructure.Provider
 			} else {
-				// Get organization from global flag if using --config
+				// Get organization from global flag if using an explicit config file.
 				organization, _ = cmd.Flags().GetString("organization")
 			}
 
@@ -103,12 +111,7 @@ If no cluster name is provided, validates the currently active cluster.`,
 			generateDebug, _ := cmd.Flags().GetBool("generate-debug-config")
 			outputDir, _ := cmd.Flags().GetString("output-dir")
 			verbose, _ := cmd.Flags().GetBool("verbose")
-			jsonOutput, _ := cmd.Flags().GetBool("json")
-
-			outputFormat := "text"
-			if jsonOutput {
-				outputFormat = "json"
-			}
+			outputFormat := string(getGlobalOptions(cmd).Output)
 
 			// Build validation options
 			opts := cluster.ValidateOptions{
@@ -159,10 +162,20 @@ If no cluster name is provided, validates the currently active cluster.`,
 	cmd.Flags().Bool("check-connectivity", false, "check connectivity to cloud provider")
 	cmd.Flags().Bool("check-provider", false, "perform provider-specific validation")
 	cmd.Flags().Bool("generate-debug-config", false, "generate complete config for debugging")
+	cmd.Flags().Bool("manifests", false, "validate generated GitOps manifests")
+	cmd.Flags().String("config-file", "", "path to configuration file to validate")
 	cmd.Flags().String("config", "", "path to configuration file to validate")
+	_ = cmd.Flags().MarkHidden("config")
 	cmd.Flags().String("output-dir", "", "directory to save debug config (defaults to current directory)")
 	cmd.Flags().BoolP("verbose", "v", false, "verbose output")
-	cmd.Flags().Bool("json", false, "output validation results as JSON (for CI/CD pipelines)")
 
 	return cmd
+}
+
+func getValidateConfigFileFlag(cmd *cobra.Command) string {
+	if configFile, _ := cmd.Flags().GetString("config-file"); configFile != "" {
+		return configFile
+	}
+	configFile, _ := cmd.Flags().GetString("config")
+	return configFile
 }

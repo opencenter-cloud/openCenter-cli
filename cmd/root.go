@@ -115,11 +115,11 @@ func GetContainer(ctx context.Context) (di.Container, error) {
 
 // GlobalFlags represents the global flags available across all commands.
 type GlobalFlags struct {
-	Config     string   // --config: alternative cluster configuration file path
+	Config     string   // legacy alternative cluster configuration file path
 	DryRun     bool     // --dry-run: enable dry-run mode
 	LogLevel   string   // --log-level: set log level explicitly
-	Set        []string // --set: override configuration values using dot notation
-	ShowActive bool     // --show-active: display the current active cluster
+	Set        []string // legacy configuration overrides using dot notation
+	ShowActive bool     // legacy active-cluster display toggle
 	BreakLock  bool     // --break-lock: force removal of existing lock before operation
 }
 
@@ -148,8 +148,8 @@ Support: https://github.com/opencenter-cloud/opencenter-cli/issues`,
   # Validate cluster configuration
   opencenter cluster validate my-cluster
 
-  # Generate and view JSON schema
-  opencenter cluster schema --pretty
+  # Generate IDE schema support
+  opencenter config ide --schema-only
 
   # List all clusters
   opencenter cluster list

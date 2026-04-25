@@ -55,7 +55,7 @@ Both paths produce the same v2 configuration file. You can start with guided mod
 
 ## Bootstrap Flow
 
-The sequence diagram below shows the current OpenStack bootstrap path implemented by `opencenter cluster bootstrap`.
+The sequence diagram below shows the current OpenStack bootstrap path implemented by `opencenter cluster deploy`.
 
 ```mermaid
 sequenceDiagram
@@ -69,7 +69,7 @@ sequenceDiagram
     participant OS as OpenStack API
     participant K8s as kubectl / cluster API
 
-    User->>CLI: opencenter cluster bootstrap prod-cluster
+    User->>CLI: opencenter cluster deploy prod-cluster
     CLI->>BS: Bootstrap(ctx, opts)
     BS->>BS: load config, resolve paths, open log, load saved state
     BS->>OSP: BuildSteps(cfg, clusterPaths, opts)
@@ -170,7 +170,6 @@ Additional `cluster init` flags:
 |---|---|
 | `--org` | Organization name (defaults to `opencenter`) |
 | `--type` | Cluster type: `openstack`, `baremetal`, `kind`, `vmware` |
-| `--config` | Load configuration from an existing YAML file |
 | `--force` | Overwrite existing config file |
 | `--no-keygen` | Skip automatic SSH and SOPS key generation |
 | `--no-sops-keygen` | Skip only SOPS key generation |
@@ -183,14 +182,14 @@ You can also override any config value at init time using dotted flag notation:
 
 ```bash
 opencenter cluster init prod-cluster --org my-company --type openstack \
-  --opencenter.infrastructure.compute.master_count=5 \
-  --opencenter.infrastructure.compute.worker_count=3
+  opencenter.infrastructure.compute.master_count=5 \
+  opencenter.infrastructure.compute.worker_count=3
 ```
 
 Confirm the resolved paths:
 
 ```bash
-opencenter cluster info my-company/prod-cluster
+opencenter cluster describe my-company/prod-cluster
 ```
 
 ### 2. Set OpenStack, GitOps, and cluster identity values (manual path only)
@@ -253,7 +252,7 @@ Notes:
 
 - Set **both** `project_name` and `tenant_name` to the same project value. Some generated OpenStack and service templates still read `tenant_name`.
 - Keep the top-level OpenStack network fields and the nested `openstack.networking` block in sync. Current validation reads the top-level fields, while some rendered OpenTofu templates still consume the nested block. The guided flow handles this automatically.
-- Replace the default `repository.url` placeholder before `cluster setup` or `cluster bootstrap`.
+- Replace the default `repository.url` placeholder before `cluster generate` or `cluster deploy`.
 
 ### 3. Tune compute, storage, and networking
 
@@ -357,13 +356,13 @@ For the full configuration options per service, see the [Platform Services Refer
 ### 5. Run preflight checks and validate the config
 
 ```bash
-opencenter cluster preflight prod-cluster
+opencenter cluster doctor prod-cluster
 opencenter cluster validate prod-cluster
 ```
 
 Current behavior is worth knowing:
 
-- `cluster preflight` checks that `git`, `kubectl`, and `talosctl` are on `PATH`. For OpenStack clusters, it also checks for the `openstack` CLI and warns if `auth_url` is empty.
+- `cluster doctor` checks that `git`, `kubectl`, and `talosctl` are on `PATH`. For OpenStack clusters, it also checks for the `openstack` CLI and warns if `auth_url` is empty.
 - `cluster validate` validates the v2 config shape and required provider fields such as `project_id`, `image_id`, and `network_id`. It performs schema validation, required field validation, and cross-field dependency validation.
 
 Additional `cluster validate` flags:
@@ -372,13 +371,12 @@ Additional `cluster validate` flags:
 |---|---|
 | `--check-connectivity` | Check connectivity to the cloud provider |
 | `--check-provider` | Perform provider-specific validation |
-| `--config` | Path to a configuration file to validate (instead of a named cluster) |
-| `--json` | Output validation results as JSON (for CI/CD pipelines) |
+| `--output json` | Output validation results as JSON (for CI/CD pipelines) |
 | `-v`, `--verbose` | Verbose output |
 | `--generate-debug-config` | Generate a complete config for debugging |
 | `--output-dir` | Directory to save debug config (defaults to current directory) |
 
-`cluster preflight` does **not** authenticate to Keystone, so keep using the OpenStack CLI for the real connectivity check:
+`cluster doctor` does **not** authenticate to Keystone, so keep using the OpenStack CLI for the real connectivity check:
 
 ```bash
 openstack token issue
@@ -387,10 +385,10 @@ openstack token issue
 ### 6. Generate the GitOps repository
 
 ```bash
-opencenter cluster setup prod-cluster
+opencenter cluster generate prod-cluster
 ```
 
-`cluster setup` does more than just render files. It currently:
+`cluster generate` does more than just render files. It currently:
 
 1. copies the base GitOps skeleton into `git_dir`
 2. renders the application overlay into `applications/overlays/prod-cluster/`
@@ -399,7 +397,7 @@ opencenter cluster setup prod-cluster
 5. initializes a git repository if `.git/` is missing
 6. creates the first commit automatically
 
-Additional `cluster setup` flags:
+Additional `cluster generate` flags:
 
 | Flag | Description |
 |---|---|
@@ -407,26 +405,17 @@ Additional `cluster setup` flags:
 | `--dry-run` | Show what would be generated without writing files |
 | `--skip-validation` | Skip configuration validation before setup |
 
-For iterative development, `cluster render` is an alternative that renders templates with safety checks and timestamped backups, but does not perform Git operations:
+For iterative development, `cluster generate --render-only` is an alternative that renders templates with safety checks and timestamped backups, but does not perform Git operations:
 
 ```bash
 # Re-render all services and infrastructure
-opencenter cluster render prod-cluster --all --force
-
-# Re-render all services only (no infrastructure)
-opencenter cluster render prod-cluster --services --force
-
-# Re-render infrastructure templates only
-opencenter cluster render prod-cluster --infra
-
-# Re-render a single service
-opencenter cluster render prod-cluster cert-manager --force
+opencenter cluster generate prod-cluster --render-only --force
 ```
 
 Verify the generated infrastructure directory:
 
 ```bash
-GITOPS_DIR=$(opencenter cluster info prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
 ls "$GITOPS_DIR/infrastructure/clusters/prod-cluster"
 git -C "$GITOPS_DIR" log --oneline -1
 ```
@@ -435,10 +424,10 @@ You should see files such as `main.tf`, `variables.tf`, `provider.tf`, and `Make
 
 ### 7. Configure the remote and push the initial commit
 
-`cluster setup` creates the commit, but it does not add `origin` for you. Push the generated GitOps tree before bootstrapping:
+`cluster generate` creates the commit, but it does not add `origin` for you. Push the generated GitOps tree before bootstrapping:
 
 ```bash
-GITOPS_DIR=$(opencenter cluster info prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
 
 git -C "$GITOPS_DIR" remote add origin git@github.com:my-company/prod-cluster-gitops.git
 git -C "$GITOPS_DIR" branch -M main
@@ -451,12 +440,12 @@ If the repository already has an `origin`, update it instead:
 git -C "$GITOPS_DIR" remote set-url origin git@github.com:my-company/prod-cluster-gitops.git
 ```
 
-`cluster bootstrap` checks that the local `origin` matches `opencenter.gitops.repository.url`, so keep those values aligned.
+`cluster deploy` checks that the local `origin` matches `opencenter.gitops.repository.url`, so keep those values aligned.
 
 ### 8. Bootstrap the cluster
 
 ```bash
-opencenter cluster bootstrap prod-cluster
+opencenter cluster deploy prod-cluster
 ```
 
 The OpenStack bootstrap provider runs these step IDs (defined in `internal/cluster/openstack_bootstrap_provider.go`):
@@ -492,13 +481,13 @@ Examples:
 
 ```bash
 # Resume from the OpenTofu apply phase
-opencenter cluster bootstrap prod-cluster --from-step opentofu-apply
+opencenter cluster deploy prod-cluster --from-step opentofu-apply
 
 # Run only the preflight step
-opencenter cluster bootstrap prod-cluster --step openstack-preflight
+opencenter cluster deploy prod-cluster --step openstack-preflight
 
 # Throw away saved state and rerun the full sequence
-opencenter cluster bootstrap prod-cluster --restart
+opencenter cluster deploy prod-cluster --restart
 ```
 
 ## Verification
@@ -506,7 +495,7 @@ opencenter cluster bootstrap prod-cluster --restart
 Bootstrap returns when `kubectl cluster-info` succeeds against the cluster-owned kubeconfig. Flux controllers and platform services may still be reconciling after that point.
 
 ```bash
-GITOPS_DIR=$(opencenter cluster info prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
 export KUBECONFIG="$GITOPS_DIR/infrastructure/clusters/prod-cluster/kubeconfig.yaml"
 
 kubectl cluster-info
@@ -594,7 +583,7 @@ Open the bootstrap log printed by the command. By default it is written under:
 Then inspect the generated infrastructure directory:
 
 ```bash
-GITOPS_DIR=$(opencenter cluster info prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
+GITOPS_DIR=$(opencenter cluster describe prod-cluster 2>/dev/null | grep "git_dir:" | awk '{print $2}')
 cd "$GITOPS_DIR/infrastructure/clusters/prod-cluster"
 opentofu init
 opentofu plan

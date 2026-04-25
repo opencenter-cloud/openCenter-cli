@@ -189,7 +189,7 @@ func (h *DefaultErrorHandler) GetSuggestions(err error) []string {
 	// Validation errors
 	if strings.Contains(errorMsg, "invalid") || strings.Contains(errorMsg, "validation") {
 		suggestions = h.addUnique(suggestions, "Run: opencenter cluster validate to check configuration")
-		suggestions = h.addUnique(suggestions, "View schema with: opencenter cluster schema")
+		suggestions = h.addUnique(suggestions, "Generate schema with: opencenter config ide --schema-only")
 		suggestions = h.addUnique(suggestions, "Check documentation at: https://docs.opencenter.io")
 		if strings.Contains(errorMsg, "yaml") || strings.Contains(errorMsg, "syntax") {
 			suggestions = h.addUnique(suggestions, "Validate YAML syntax with: yamllint <file>")
@@ -241,7 +241,7 @@ func (h *DefaultErrorHandler) GetSuggestions(err error) []string {
 		suggestions = h.addUnique(suggestions, "Edit configuration: opencenter cluster edit")
 		suggestions = h.addUnique(suggestions, "View current config: opencenter cluster describe")
 		suggestions = h.addUnique(suggestions, "Validate configuration: opencenter cluster validate")
-		suggestions = h.addUnique(suggestions, "Check configuration schema: opencenter cluster schema")
+		suggestions = h.addUnique(suggestions, "Generate configuration schema: opencenter config ide --schema-only")
 	}
 
 	// Service errors
@@ -382,7 +382,7 @@ func (h *DefaultErrorHandler) determineErrorType(err error) ErrorType {
 func (h *DefaultErrorHandler) initializeSuggestions() {
 	h.suggestionMap[ValidationError] = []string{
 		"Run: opencenter cluster validate to check configuration",
-		"View schema with: opencenter cluster schema",
+		"Generate schema with: opencenter config ide --schema-only",
 		"Check documentation at: https://docs.opencenter.io",
 	}
 
@@ -597,7 +597,7 @@ func CreateConfigError(field, message string, cause error) *StructuredError {
 	suggestions := []string{
 		"Edit configuration: opencenter cluster edit",
 		"Validate configuration: opencenter cluster validate",
-		"View schema: opencenter cluster schema",
+		"Generate schema: opencenter config ide --schema-only",
 		"Check documentation at: https://docs.opencenter.io",
 	}
 

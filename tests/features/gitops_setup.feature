@@ -15,32 +15,32 @@ Feature: GitOps repository setup behaviors
 
   @gitops @setup @materialize
   Scenario: setup materializes embedded templates into git_dir
-    Given I run "opencenter cluster select dev --config-dir tmp/conf"
+    Given I run "opencenter cluster use dev --config-dir tmp/conf"
     And the exit code should be 0
-    When I run "opencenter cluster render --config-dir tmp/conf"
+    When I run "opencenter cluster generate --render-only --config-dir tmp/conf"
     Then the exit code should be 0
     And the directory "tmp/repo-dev" should contain a file matching "README.md"
     And stdout should contain "Render complete"
 
   @gitops @setup @idempotent @priority2
   Scenario: setup is idempotent when run repeatedly
-    Given I run "opencenter cluster select dev --config-dir tmp/conf"
+    Given I run "opencenter cluster use dev --config-dir tmp/conf"
     And the exit code should be 0
-    And I run "opencenter cluster render --config-dir tmp/conf"
+    And I run "opencenter cluster generate --render-only --config-dir tmp/conf"
     And the exit code should be 0
-    When I run "opencenter cluster render --config-dir tmp/conf"
+    When I run "opencenter cluster generate --render-only --config-dir tmp/conf"
     Then the exit code should be 0
     And stdout should contain "Render complete"
 
   @gitops @setup @force
   Scenario: setup --force overwrites existing files
-    Given I run "opencenter cluster select dev --config-dir tmp/conf"
+    Given I run "opencenter cluster use dev --config-dir tmp/conf"
     And the exit code should be 0
     And a file "tmp/repo-dev/README.md" with content:
       """
       local edits that should be replaced
       """
-    When I run "opencenter cluster render --config-dir tmp/conf"
+    When I run "opencenter cluster generate --render-only --config-dir tmp/conf"
     Then the exit code should be 0
     And the file "tmp/repo-dev/README.md" should not contain "local edits that should be replaced"
 
@@ -49,7 +49,7 @@ Feature: GitOps repository setup behaviors
     # Note: render command uses default git_dir if not specified
     # This test is skipped as the behavior has changed
     Given the file "tmp/conf/active" does not exist
-    When I run "opencenter cluster render --config-dir tmp/conf"
+    When I run "opencenter cluster generate --render-only --config-dir tmp/conf"
     Then the exit code should not be 0
     And stderr should contain "no active cluster"
     Given a file "tmp/conf/nogit.yaml" with content:
@@ -58,6 +58,6 @@ Feature: GitOps repository setup behaviors
         cluster:
           cluster_name: nogit
       """
-    When I run "opencenter cluster render nogit --config-dir tmp/conf"
+    When I run "opencenter cluster generate --render-only nogit --config-dir tmp/conf"
     Then the exit code should not be 0
     And stderr should contain "opencenter.gitops.repository.local_dir must be set"

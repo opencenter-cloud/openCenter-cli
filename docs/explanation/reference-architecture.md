@@ -774,10 +774,10 @@ secrets:
 ### Key Management Commands
 
 ```bash
-opencenter cluster check-keys my-cluster      # Monitor key expiration
-opencenter cluster rotate-keys my-cluster     # Rotate encryption keys
-opencenter cluster validate-secrets my-cluster # Detect configuration drift
-opencenter cluster sync-secrets my-cluster    # Synchronize secrets
+opencenter secrets keys check --cluster my-cluster      # Monitor key expiration
+opencenter secrets keys rotate --cluster my-cluster --type age # Rotate encryption keys
+opencenter secrets validate my-cluster                  # Detect configuration drift
+opencenter secrets sync my-cluster                      # Synchronize secrets
 ```
 
 **Evidence:** `internal/sops/manager.go`, `docs/explanation/security-model.md`
@@ -1035,8 +1035,8 @@ The OpenTelemetry Collector can be enabled to receive, process, and export telem
 | Initialize | `opencenter cluster init` | Creates configuration file with defaults |
 | Edit | `opencenter cluster edit` | Opens configuration in editor |
 | Validate | `opencenter cluster validate` | Schema + business rules + provider checks |
-| Setup | `opencenter cluster setup --render` | Generates GitOps repository |
-| Bootstrap | `opencenter cluster bootstrap` | Deploys FluxCD, starts reconciliation |
+| Setup | `opencenter cluster generate` | Generates GitOps repository |
+| Bootstrap | `opencenter cluster deploy` | Deploys FluxCD, starts reconciliation |
 | Status | `opencenter cluster status` | Shows cluster and service health |
 | Destroy | `opencenter cluster destroy` | Tears down infrastructure |
 
@@ -1064,7 +1064,7 @@ FluxCD handles application-level drift automatically by continuously reconciling
 | Upgrade Kubernetes | Update `version` in config, re-run setup, Kubespray handles rolling upgrade |
 | Add workers | Update `worker_count`, re-run setup |
 | Enable/disable services | Toggle `enabled` flag, commit, FluxCD reconciles |
-| Rotate secrets | `opencenter cluster rotate-keys` |
+| Rotate secrets | `opencenter secrets keys rotate --cluster <cluster> --type age` |
 | Backup | Automated via etcd-backup and Velero schedules |
 | Restore | `velero restore create --from-backup <name>` |
 

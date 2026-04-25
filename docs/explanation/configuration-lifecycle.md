@@ -96,7 +96,7 @@ opencenter:
 
 1. **Direct Editing:** Edit configuration file with text editor
 2. **Interactive Mode:** `opencenter cluster edit my-cluster`
-3. **CLI Flags:** `opencenter cluster set my-cluster --set cluster.worker_count=5`
+3. **CLI Flags:** `opencenter cluster set my-cluster cluster.worker_count=5`
 
 **Common Customizations:**
 
@@ -179,7 +179,7 @@ Severity: error
 **Command:**
 
 ```bash
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 ```
 
 **Process:**
@@ -224,7 +224,7 @@ opencenter cluster setup my-cluster --render
 **Command:**
 
 ```bash
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 **Process:**
@@ -270,7 +270,7 @@ opencenter cluster bootstrap my-cluster
 ```
 1. User: Edit configuration file
 2. User: opencenter cluster validate my-cluster
-3. User: opencenter cluster setup my-cluster --render
+3. User: opencenter cluster generate my-cluster
 4. User: git commit -m "Update configuration"
 5. User: git push
 6. FluxCD: Detects change (within 15m)
@@ -316,7 +316,7 @@ opencenter cluster destroy my-cluster
 
 ### Precedence Order (Highest to Lowest)
 
-1. **Command-line flags:** `--set cluster.worker_count=5`
+1. **Command-line flags:** `opencenter cluster set my-cluster cluster.worker_count=5`
 2. **Configuration file:** `~/.config/opencenter/clusters/my-org/.my-cluster-config.yaml`
 3. **CLI defaults:** `~/.config/opencenter/config.yaml`
 4. **Built-in defaults:** `internal/config/defaults.go`
@@ -327,7 +327,7 @@ opencenter cluster destroy my-cluster
 # Built-in default: worker_count = 2
 # CLI default: worker_count = 3
 # Configuration file: worker_count = 4
-# Command-line flag: --set cluster.worker_count=5
+# Cluster set command: opencenter cluster set my-cluster cluster.worker_count=5
 
 # Result: worker_count = 5 (command-line flag wins)
 ```
@@ -445,7 +445,7 @@ Available images: [list of valid images]
 
 ```bash
 # Enable connectivity validation
-opencenter cluster validate my-cluster --connectivity
+opencenter cluster validate my-cluster --check-connectivity
 ```
 
 **Checks:**
@@ -619,7 +619,7 @@ vim ~/.config/opencenter/clusters/my-org/.my-cluster-config.yaml
 git commit -m "Accept worker_count drift (cost optimization)"
 
 # Option B: Revert drift (re-apply configuration)
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 terraform apply
 # Provisions 2 new workers to reach 5 total
 ```
@@ -645,7 +645,7 @@ git tag v1.1.0
 
 # Rollback to previous version
 git checkout v1.0.0
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 ```
 
 **Why this practice:** Audit trail (Git history). Rollback capability (Git checkout). Collaboration (pull requests).
@@ -685,7 +685,7 @@ vim .my-cluster-config.yaml
 opencenter cluster validate my-cluster
 
 # Only deploy if validation passes
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 ```
 
 **Rationale:** Catch errors early. Prevent deployment failures. Faster feedback loop.
@@ -746,7 +746,7 @@ velero backup create pre-upgrade-backup --include-namespaces app1,app2
 
 # Make changes
 vim .my-cluster-config.yaml
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 
 # If rollback needed
 velero restore create --from-backup pre-upgrade-backup

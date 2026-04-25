@@ -3,7 +3,7 @@ Feature: Cluster commands integration with new directory structure
   Background:
     Given an empty directory "<<tmp>>/conf"
 
-  Scenario: Cluster select, info, and validate work with new directory structure
+  Scenario: Cluster use, describe, and validate work with new directory structure
     When I run "opencenter cluster init integration-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/conf/integration-test.yaml" should exist
@@ -30,17 +30,17 @@ Feature: Cluster commands integration with new directory structure
             application_credential_secret: "test-secret"
       """
 
-    When I run "opencenter cluster select integration-test --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster use integration-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster set to integration-test"
     And the file "<<tmp>>/conf/.active" should match regex "^integration-test$"
 
-    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster: integration-test"
     And stdout should contain "cluster_name: integration-test"
 
-    When I run "opencenter cluster info integration-test --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe integration-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "cluster_name: integration-test"
 
@@ -50,11 +50,11 @@ Feature: Cluster commands integration with new directory structure
 
   @priority3
   Scenario: Cluster commands handle non-existent clusters correctly
-    When I run "opencenter cluster select missing-cluster --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster use missing-cluster --config-dir <<tmp>>/conf"
     Then the exit code should not be 0
     And stderr should contain "opencenter cluster list"
 
-    When I run "opencenter cluster info missing-cluster --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe missing-cluster --config-dir <<tmp>>/conf"
     Then the exit code should not be 0
     And stderr should contain "opencenter cluster list"
 
@@ -73,18 +73,18 @@ Feature: Cluster commands integration with new directory structure
     And stdout should contain "cluster-a"
     And stdout should contain "cluster-b"
 
-    When I run "opencenter cluster select cluster-a --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster use cluster-a --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster set to cluster-a"
 
-    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster: cluster-a"
 
-    When I run "opencenter cluster select cluster-b --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster use cluster-b --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster set to cluster-b"
 
-    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster: cluster-b"

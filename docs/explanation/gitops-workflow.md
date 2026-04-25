@@ -201,7 +201,7 @@ spec:
 ### Initial Bootstrap
 
 ```
-1. User: opencenter cluster bootstrap
+1. User: opencenter cluster deploy
     ↓
 2. FluxCD: Install controllers (source, kustomize, helm, notification)
     ↓
@@ -329,7 +329,7 @@ creation_rules:
 
 ```
 1. User: Edit secret in plaintext
-2. User: opencenter sops secrets-encrypt
+2. User: opencenter secrets encrypt
 3. SOPS: Encrypt with Age key
 4. User: git commit (encrypted secret)
 5. User: git push
@@ -465,7 +465,7 @@ FluxCD: Detects drift, scales back to 3
 
 ```
 1. User: Update configuration file
-2. User: opencenter cluster setup --render
+2. User: opencenter cluster generate
 3. User: git commit -m "Update service configuration"
 4. User: git push
 5. FluxCD: Detects change (within 15m)

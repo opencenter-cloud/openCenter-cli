@@ -113,7 +113,7 @@ opencenter cluster configure my-cluster \
 ### Step 4: Bootstrap with SSH
 
 ```bash
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 Flux uses the SSH key to clone and push to the repository.
@@ -219,7 +219,7 @@ opencenter cluster configure my-cluster \
 ### Step 4: Bootstrap with Token
 
 ```bash
-opencenter cluster bootstrap my-cluster
+opencenter cluster deploy my-cluster
 ```
 
 Flux uses the token for HTTPS authentication.
@@ -253,12 +253,12 @@ kubectl logs -n flux-system deployment/source-controller
 
 ```bash
 # Generate new key pair
-opencenter cluster rotate-keys my-cluster --type ssh
+opencenter secrets keys rotate --cluster my-cluster --type ssh
 
 # Update deploy key in Git provider (follow Step 2 above)
 
 # Re-bootstrap to update cluster secret
-opencenter cluster bootstrap my-cluster --force
+opencenter cluster deploy my-cluster --restart
 ```
 
 ### Rotate Tokens
@@ -273,7 +273,7 @@ opencenter cluster bootstrap my-cluster --force
 3. Re-bootstrap:
 
    ```bash
-   opencenter cluster bootstrap my-cluster --force
+   opencenter cluster deploy my-cluster --restart
    ```
 
 ## Troubleshooting

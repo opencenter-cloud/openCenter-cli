@@ -40,10 +40,10 @@ This command checks for:
 
 Examples:
   # Validate manifests for current cluster
-  opencenter cluster validate-manifests
+  opencenter cluster validate --manifests
 
   # Validate manifests for specific cluster
-  opencenter cluster validate-manifests my-cluster
+  opencenter cluster validate my-cluster --manifests
 `,
 		RunE: runClusterValidateManifests,
 	}

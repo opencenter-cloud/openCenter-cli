@@ -139,6 +139,7 @@ func TestClusterValidateCommandStructure(t *testing.T) {
 		"check-connectivity",
 		"check-provider",
 		"generate-debug-config",
+		"manifests",
 		"output-dir",
 		"verbose",
 	}

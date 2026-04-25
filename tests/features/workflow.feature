@@ -1,11 +1,11 @@
 # tests/features/organization_workflow.feature
 # Maps to organization-based workflow:
 #   ./opencenter cluster init demo --org my-org
-#   ./opencenter cluster select my-org/demo
+#   ./opencenter cluster use my-org/demo
 #   # minimal network choice: use_octavia=false -> must set vrrp_ip
 #   ./opencenter cluster validate
-#   ./opencenter cluster setup --render
-#   ./opencenter cluster bootstrap
+#   ./opencenter cluster generate
+#   ./opencenter cluster deploy
 
 Feature: Organization-based minimal network workflow (VRRP) from init to bootstrap
 
@@ -20,8 +20,8 @@ Feature: Organization-based minimal network workflow (VRRP) from init to bootstr
     Then the exit code should be 0
     And the file "tmp/conf/clusters/my-org/.demo-config.yaml" should exist
 
-    # ./opencenter cluster select my-org/demo
-    When I run "opencenter cluster select my-org/demo --config-dir tmp/conf"
+    # ./opencenter cluster use my-org/demo
+    When I run "opencenter cluster use my-org/demo --config-dir tmp/conf"
     Then the exit code should be 0
     And the file "tmp/conf/active" should match regex "^my-org/demo\\s*$"
 
@@ -70,8 +70,8 @@ networking:
     And stdout should contain "validation"
     And stdout should not contain "ERROR"
 
-    # ./opencenter cluster setup --render (renders and materializes the repo)
-    When I run "opencenter cluster setup --render --config-dir tmp/conf"
+    # ./opencenter cluster generate (renders and materializes the repo)
+    When I run "opencenter cluster generate --config-dir tmp/conf"
     Then the exit code should be 0
     And stdout should contain "Setup complete"
     And the directory "tmp/repo-demo" should exist
@@ -81,7 +81,7 @@ networking:
     # Prepare the remote for bootstrap
     Given a bare git repository exists at "tmp/remote.git"
 
-    # ./opencenter cluster bootstrap (pushes to remote)
-    When I run "opencenter cluster bootstrap --config-dir tmp/conf"
+    # ./opencenter cluster deploy (pushes to remote)
+    When I run "opencenter cluster deploy --config-dir tmp/conf"
     Then the exit code should be 0
     And the bare repo "tmp/remote.git" should have branch "main"

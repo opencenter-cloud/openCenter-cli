@@ -11,6 +11,6 @@ Feature: Provider preflight checks
         cluster:
           cluster_name: demo
       """
-    And I run "opencenter cluster select demo --config-dir <<tmp>>/conf"
-    When I run "opencenter cluster preflight --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster use demo --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster doctor --config-dir <<tmp>>/conf"
     Then stdout should contain "Preflight complete."

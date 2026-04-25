@@ -113,23 +113,23 @@ Feature: CLI Configuration System Integration
     # The command should run in dry-run mode
 
   @config @global_flags @set_flag
-  Scenario: Global --set flag overrides configuration values
+  Scenario: Global flag overrides configuration values
     Given I run "opencenter config set behavior.autoConfirm false --config-dir <<tmp>>/conf"
     And the exit code should be 0
-    When I run "opencenter config get behavior.autoConfirm --set behavior.autoConfirm=true --config-dir <<tmp>>/conf"
+    When I run "opencenter config get behavior.autoConfirm --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    # The --set flag should override the config file value at runtime
+    # The flag should override the config file value at runtime
 
-    When I run "opencenter cluster list --set logging.level=debug --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster list --log-level debug --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    # The command should run with debug logging via --set override
+    # The command should run with debug logging via override
 
   # ---------------------------------------------------------------------------
   # Organization-Based Path Resolution
   # ---------------------------------------------------------------------------
   @config @organization @paths
   Scenario: Organization-based directory structure is created correctly
-    When I run "opencenter cluster init org-test --opencenter.meta.organization=test-org --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster init org-test --org test-org --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a directory "<<tmp>>/conf/clusters/test-org" should exist
     And a directory "<<tmp>>/conf/clusters/test-org/applications" should exist
@@ -155,8 +155,8 @@ Feature: CLI Configuration System Integration
 
   @config @organization @multiple_clusters
   Scenario: Multiple clusters in same organization share GitOps structure
-    When I run "opencenter cluster init cluster-a --opencenter.meta.organization=shared-org --config-dir <<tmp>>/conf"
-    And I run "opencenter cluster init cluster-b --opencenter.meta.organization=shared-org --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster init cluster-a --org shared-org --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster init cluster-b --org shared-org --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a directory "<<tmp>>/conf/clusters/shared-org/infrastructure/clusters/cluster-a" should exist
     And a directory "<<tmp>>/conf/clusters/shared-org/infrastructure/clusters/cluster-b" should exist
@@ -169,23 +169,23 @@ Feature: CLI Configuration System Integration
   # Enhanced Cluster Commands with Configuration Integration
   # ---------------------------------------------------------------------------
   @config @cluster_commands @select
-  Scenario: Enhanced cluster select command shows organization metadata
-    Given I run "opencenter cluster init enhanced-test --opencenter.meta.organization=enhanced-org --config-dir <<tmp>>/conf"
+  Scenario: Enhanced cluster use command shows organization metadata
+    Given I run "opencenter cluster init enhanced-test --org enhanced-org --config-dir <<tmp>>/conf"
     And the exit code should be 0
-    When I run "opencenter cluster select enhanced-test --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster use enhanced-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster set to enhanced-test"
 
-    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster: enhanced-test"
     And stdout should contain "organization: enhanced-org"
 
   @config @cluster_commands @list @priority3
   Scenario: Cluster list works with organization-based structure
-    Given I run "opencenter cluster init list-test-a --opencenter.meta.organization=list-org --config-dir <<tmp>>/conf"
-    And I run "opencenter cluster init list-test-b --opencenter.meta.organization=list-org --config-dir <<tmp>>/conf"
-    And I run "opencenter cluster init list-test-c --opencenter.meta.organization=other-org --config-dir <<tmp>>/conf"
+    Given I run "opencenter cluster init list-test-a --org list-org --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster init list-test-b --org list-org --config-dir <<tmp>>/conf"
+    And I run "opencenter cluster init list-test-c --org other-org --config-dir <<tmp>>/conf"
     And the exit code should be 0
     When I run "opencenter cluster list --config-dir <<tmp>>/conf"
     Then the exit code should be 0
@@ -193,11 +193,11 @@ Feature: CLI Configuration System Integration
     And stdout should contain "list-org/list-test-b"
     And stdout should contain "other-org/list-test-c"
 
-  @config @cluster_commands @info @priority6
-  Scenario: Cluster info shows organization-based paths
-    Given I run "opencenter cluster init info-test --opencenter.meta.organization=info-org --config-dir <<tmp>>/conf"
+  @config @cluster_commands @describe @priority6
+  Scenario: Cluster describe shows organization-based paths
+    Given I run "opencenter cluster init info-test --org info-org --config-dir <<tmp>>/conf"
     And the exit code should be 0
-    When I run "opencenter cluster info info-test --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe info-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "cluster_name: info-test"
     And stdout should contain "organization: info-org"
@@ -219,7 +219,7 @@ Feature: CLI Configuration System Integration
   Scenario: Custom configuration paths work correctly
     Given I run "opencenter config set paths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
     And the exit code should be 0
-    When I run "opencenter cluster init custom-path-test --opencenter.meta.organization=custom-org"
+    When I run "opencenter cluster init custom-path-test --org custom-org"
     Then the exit code should be 0
     And a directory "<<tmp>>/custom-clusters/custom-org/infrastructure/clusters/custom-path-test" should exist
     And a file "<<tmp>>/custom-clusters/custom-org/.custom-path-test-config.yaml" should exist
@@ -253,21 +253,21 @@ Feature: CLI Configuration System Integration
     # The --log-level flag should override the config file's info level
 
   @config @precedence @set_flag_highest
-  Scenario: --set flag has highest precedence for configuration values
+  Scenario: flag has highest precedence for configuration values
     Given I run "opencenter config set behavior.dryRun false --config-dir <<tmp>>/conf"
     And the exit code should be 0
-    When I run "opencenter cluster list --set behavior.dryRun=true --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster list --dry-run --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    # The --set flag should override the config file value
+    # The flag should override the config file value
 
   @config @precedence @complete_hierarchy
   Scenario: Complete precedence hierarchy works correctly
     Given I run "opencenter config set logging.level warn --config-dir <<tmp>>/conf"
     And the exit code should be 0
-    # Test that --set overrides --log-level which overrides config file
-    When I run "opencenter cluster list --log-level info --set logging.level=debug --config-dir <<tmp>>/conf"
+    # Test that overrides --log-level which overrides config file
+    When I run "opencenter cluster list --log-level debug --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    # Should use debug level from --set flag (highest precedence)
+    # Should use debug level from flag (highest precedence)
 
   # ---------------------------------------------------------------------------
   # Cross-Platform Compatibility
@@ -339,16 +339,16 @@ Feature: CLI Configuration System Integration
     And I run "opencenter config set behavior.autoConfirm true --config-dir <<tmp>>/conf"
     And the exit code should be 0
     
-    When I run "opencenter cluster init lifecycle-test --opencenter.meta.organization=lifecycle-org --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster init lifecycle-test --org lifecycle-org --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a directory "<<tmp>>/conf/clusters/lifecycle-org/infrastructure/clusters/lifecycle-test" should exist
     And the cluster configuration "lifecycle-test" should have "opencenter.infrastructure.provider" set to "openstack"
 
-    When I run "opencenter cluster select lifecycle-test --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster use lifecycle-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster set to lifecycle-test"
 
-    When I run "opencenter cluster info --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster describe --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Active cluster: lifecycle-test"
     And stdout should contain "organization: lifecycle-org"
@@ -356,10 +356,10 @@ Feature: CLI Configuration System Integration
 
   @config @integration @gitops_setup
   Scenario: Configuration system works with GitOps setup
-    Given I run "opencenter cluster init gitops-test --opencenter.meta.organization=gitops-org --opencenter.gitops.repository.local_dir=<<tmp>>/gitops-repo --config-dir <<tmp>>/conf"
+    Given I run "opencenter cluster init gitops-test --org gitops-org --config-dir <<tmp>>/conf"
     And the exit code should be 0
     
-    When I run "opencenter cluster render gitops-test --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only gitops-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a directory "<<tmp>>/gitops-repo" should exist
     And a directory "<<tmp>>/gitops-repo/applications" should exist

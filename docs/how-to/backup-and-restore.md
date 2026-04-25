@@ -93,7 +93,7 @@ Render and apply the configuration:
 
 ```bash
 # Render configuration
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 
 # Commit to Git
 cd ~/my-cluster-gitops
@@ -181,7 +181,7 @@ opencenter:
 
 ```bash
 # Render configuration
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 
 # Commit to Git
 cd ~/my-cluster-gitops

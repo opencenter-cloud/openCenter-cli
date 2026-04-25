@@ -2,7 +2,7 @@
 
 **openCenter** is a command-line tool that transforms a single declarative YAML configuration into a production-ready Kubernetes cluster with GitOps management.
 
-It standardizes cluster bootstrapping across OpenStack, VMware, Baremetal, and Kind, providing configuration validation, secrets management, and automated GitOps repository generation.
+It standardizes cluster deployment across OpenStack, VMware, Baremetal, and Kind, providing configuration validation, secrets management, and automated GitOps repository generation.
 
 ## What openCenter Does
 
@@ -32,10 +32,10 @@ $EDITOR ~/.config/opencenter/clusters/my-org/.my-cluster-config.yaml
 ./bin/opencenter cluster validate my-cluster
 
 # Generate GitOps repository
-./bin/opencenter cluster setup my-cluster --render
+./bin/opencenter cluster generate my-cluster
 
 # Deploy
-./bin/opencenter cluster bootstrap my-cluster
+./bin/opencenter cluster deploy my-cluster
 ```
 
 **Time to first cluster:** 10 minutes configuration + 30-50 minutes deployment
@@ -103,7 +103,7 @@ Step-by-step guides for learning openCenter:
 - [OpenStack First Cluster](docs/tutorials/openstack-first-cluster.md) - Deploy on OpenStack
 - [Kind Local Development](docs/tutorials/kind-local-development.md) - Local development setup
 - [VMware Deployment](docs/tutorials/vmware-deployment.md) - Deploy on pre-provisioned VMs
-- [Multi-Cluster Setup](docs/tutorials/multi-cluster-setup.md) - Manage multiple clusters
+- [Multi-Cluster Management](docs/tutorials/multi-cluster-setup.md) - Manage multiple clusters
 
 ### 🔧 [How-To Guides](docs/how-to/) (Task-Oriented)
 Practical guides for specific tasks:
@@ -158,32 +158,32 @@ For contributors and developers:
 # Cluster Management
 opencenter cluster init <name>              # Initialize new cluster
 opencenter cluster list                     # List all clusters
-opencenter cluster select <name>            # Select active cluster
+opencenter cluster use <name>            # Set active cluster
 opencenter cluster validate <name>          # Validate configuration
-opencenter cluster setup <name> --render    # Generate GitOps repository
-opencenter cluster bootstrap <name>         # Deploy cluster
+opencenter cluster generate <name>    # Generate GitOps repository
+opencenter cluster deploy <name>         # Deploy cluster
 
 # Configuration
-opencenter cluster config get <key>         # Get configuration value
-opencenter cluster config set <key> <value> # Set configuration value
+opencenter cluster describe <name>          # View cluster configuration
+opencenter cluster set <name> <path=value>  # Update configuration value
 opencenter cluster edit <name>              # Edit in $EDITOR
 
 # Secrets Management
-opencenter sops generate-key                # Generate Age key pair
-opencenter sops secrets-encrypt             # Encrypt secrets
-opencenter cluster rotate-keys              # Rotate encryption keys
-opencenter cluster check-keys               # Check key expiration
+opencenter secrets keys generate                # Generate Age key pair
+opencenter secrets encrypt             # Encrypt secrets
+opencenter secrets keys rotate --cluster <cluster> --type age   # Rotate encryption keys
+opencenter secrets keys check               # Check key expiration
 
 # Operations
 opencenter cluster status                   # Show cluster status
-opencenter cluster info <name>              # Detailed cluster information
+opencenter cluster describe <name>              # Detailed cluster description
 opencenter cluster drift                    # Detect configuration drift
 opencenter cluster backup                   # Backup configuration
 opencenter cluster destroy <name>           # Destroy cluster
 
 # Utilities
 opencenter version                          # Show version information
-opencenter cluster schema --pretty          # View JSON schema
+opencenter config ide --schema-only         # Generate JSON schema for IDEs
 opencenter --help                           # Show help
 ```
 
@@ -244,8 +244,8 @@ mise run validate-templates
 # Run a named Kind cluster with openCenter-managed CNI
 opencenter cluster init dev-cluster --type kind --kind-disable-default-cni
 opencenter cluster validate dev-cluster
-opencenter cluster setup dev-cluster
-opencenter cluster bootstrap dev-cluster
+opencenter cluster generate dev-cluster
+opencenter cluster deploy dev-cluster
 
 # Setup local Gitea for testing
 mise run gitea-up

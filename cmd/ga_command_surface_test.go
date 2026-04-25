@@ -159,14 +159,15 @@ func TestGAClusterParentHelpShowsWorkflowAndGAExamples(t *testing.T) {
 		}
 	}
 
+	clusterCommand := "opencenter cluster "
 	for _, oldCommand := range []string{
-		"opencenter cluster select",
-		"opencenter cluster current",
-		"opencenter cluster setup",
-		"opencenter cluster bootstrap",
-		"opencenter cluster preflight",
-		"opencenter cluster info",
-		"opencenter cluster render",
+		clusterCommand + "select",
+		clusterCommand + "current",
+		clusterCommand + "setup",
+		clusterCommand + "bootstrap",
+		clusterCommand + "preflight",
+		clusterCommand + "info",
+		clusterCommand + "render",
 	} {
 		if strings.Contains(help, oldCommand) {
 			t.Fatalf("cluster help still references old command %q:\n%s", oldCommand, help)

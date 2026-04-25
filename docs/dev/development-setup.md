@@ -244,10 +244,10 @@ Verify end-to-end functionality with a local Kind cluster:
 ./bin/opencenter cluster validate test-dev
 
 # Generate GitOps output
-./bin/opencenter cluster setup test-dev
+./bin/opencenter cluster generate test-dev
 
 # Create the named Kind cluster (requires Docker or Podman)
-./bin/opencenter cluster bootstrap test-dev
+./bin/opencenter cluster deploy test-dev
 ```
 
 Expected: Kind cluster created for `test-dev` using the rendered `kind-config.yaml`
@@ -352,7 +352,7 @@ docker ps  # or: podman ps
 export KIND_EXPERIMENTAL_PROVIDER=podman
 
 # Retry
-./bin/opencenter cluster bootstrap test-dev
+./bin/opencenter cluster deploy test-dev
 ```
 
 ## Next Steps

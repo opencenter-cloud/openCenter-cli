@@ -290,7 +290,7 @@ func loadSOPSAgeKeys() ([]string, error) {
 	}
 
 	if len(keyNames) == 0 {
-		return nil, fmt.Errorf("no age keys found - run 'opencenter sops generate-key' first")
+		return nil, fmt.Errorf("no age keys found - run 'opencenter secrets keys generate' first")
 	}
 
 	// Use the first available key

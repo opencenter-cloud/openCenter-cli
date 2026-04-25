@@ -334,7 +334,7 @@ securityContext:
 
 **Key Management:**
 
-- **Generation:** `opencenter sops generate-key`
+- **Generation:** `opencenter secrets keys generate`
 - **Storage:** `~/.config/opencenter/clusters/<org>/secrets/age/<cluster>-key.txt`
 - **Rotation:** 90-day lifecycle (recommended)
 - **Backup:** Secure, offline location
@@ -363,19 +363,19 @@ securityContext:
 **Generation:**
 
 ```bash
-opencenter sops generate-key --cluster my-cluster
+opencenter secrets keys generate
 ```
 
 **Rotation (90-day lifecycle):**
 
 ```bash
-opencenter sops rotate-key --cluster my-cluster
+opencenter secrets keys rotate --cluster my-cluster --type age
 ```
 
 **Revocation:**
 
 ```bash
-opencenter cluster revoke-key --key-id abc123
+opencenter secrets keys revoke --cluster my-cluster --key abc123
 ```
 
 **Why 90 days:** Balance between security (frequent rotation) and operational overhead (re-encryption).
@@ -588,8 +588,9 @@ require (
 **Commands:**
 
 ```bash
-# CLI audit log
-opencenter cluster audit-log --tail 100
+# Review cluster status and drift
+opencenter cluster status my-cluster
+opencenter cluster drift detect my-cluster
 
 # Kubernetes audit log
 kubectl logs -n kube-system kube-apiserver-<node>

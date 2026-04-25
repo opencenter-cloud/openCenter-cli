@@ -55,7 +55,7 @@ This map helps:
 | [OpenStack First Cluster](tutorials/openstack-first-cluster.md) | Beginner | Deploy on OpenStack specifically | OpenStack credentials | `internal/cloud/openstack/` |
 | [Kind Local Development](tutorials/kind-local-development.md) | Beginner/Developer | Local development setup | Kind installed | `.mise.toml` kind tasks |
 | [VMware Deployment](tutorials/vmware-deployment.md) | Beginner | Deploy on pre-provisioned VMs | VMware vSphere access | `internal/cloud/vmware/`, `docs/providers/vmware.md` |
-| [Multi-Cluster Setup](tutorials/multi-cluster-setup.md) | Operator | Manage multiple clusters | Completed Getting Started | `cmd/cluster_list.go`, `cmd/cluster_select.go` |
+| [Multi-Cluster Management](tutorials/multi-cluster-setup.md) | Operator | Manage multiple clusters | Completed Getting Started | `cmd/cluster_list.go`, `cmd/cluster_use.go` |
 
 ### How-To Guides (Task-Oriented)
 

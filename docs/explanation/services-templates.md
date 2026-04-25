@@ -34,7 +34,7 @@ Every service deployment involves three distinct layers, each owned by a differe
 
 ### Template Rendering Pipeline
 
-When you run `opencenter cluster setup <cluster-name>`, the CLI executes a multi-stage pipeline. The `ServiceStage` handles service template generation:
+When you run `opencenter cluster generate <cluster-name>`, the CLI executes a multi-stage pipeline. The `ServiceStage` handles service template generation:
 
 ```
 Cluster Config (.k8s-*-config.yaml)
@@ -360,7 +360,7 @@ Validation runs before rendering. If it fails, the pipeline stops and no files a
 
 ## Generated Output Structure
 
-After `opencenter cluster setup`, the customer repository contains this structure for cert-manager:
+After `opencenter cluster generate`, the customer repository contains this structure for cert-manager:
 
 ```
 applications/overlays/<cluster>/
@@ -593,7 +593,7 @@ spec:
 
 ## Troubleshooting
 
-### Template rendering fails during `opencenter cluster setup`
+### Template rendering fails during `opencenter cluster generate`
 
 Check that the cluster config file has the required fields for the service. For cert-manager, `region` is required when using Route53 DNS-01 validation. Run `opencenter cluster validate <cluster>` to catch config issues before setup.
 

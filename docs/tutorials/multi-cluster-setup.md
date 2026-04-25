@@ -1,7 +1,7 @@
 ---
 id: multi-cluster-setup
 title: "Manage Multiple Clusters with Organizations"
-sidebar_label: Multi-Cluster Setup
+sidebar_label: Multi-Cluster Management
 description: How to manage multiple Kubernetes clusters using organization-based structure.
 doc_type: tutorial
 audience: "platform teams, operators"
@@ -18,7 +18,7 @@ By the end of this tutorial, you'll understand how to organize and manage multip
 
 ## What You'll Build
 
-A multi-cluster setup with:
+A multi-cluster deployment with:
 - 1 organization (my-company)
 - 3 clusters (dev, staging, production)
 - Shared configuration (organization-level defaults)
@@ -173,11 +173,14 @@ opencenter:
 # Validate
 opencenter cluster validate dev
 
+# Point this cluster at the shared GitOps checkout
+opencenter cluster set dev opencenter.gitops.repository.local_dir=~/my-company-gitops
+
 # Generate GitOps repository
-opencenter cluster setup dev --render --git-dir ~/my-company-gitops
+opencenter cluster generate dev
 
 # Bootstrap
-opencenter cluster bootstrap dev
+opencenter cluster deploy dev
 ```
 
 ## Step 3: Create Staging Cluster
@@ -237,11 +240,14 @@ opencenter:
 # Validate
 opencenter cluster validate staging
 
+# Point this cluster at the shared GitOps checkout
+opencenter cluster set staging opencenter.gitops.repository.local_dir=~/my-company-gitops
+
 # Generate GitOps repository (same repo, different overlay)
-opencenter cluster setup staging --render --git-dir ~/my-company-gitops
+opencenter cluster generate staging
 
 # Bootstrap
-opencenter cluster bootstrap staging
+opencenter cluster deploy staging
 ```
 
 ## Step 4: Create Production Cluster
@@ -311,11 +317,14 @@ opencenter:
 # Validate
 opencenter cluster validate prod
 
+# Point this cluster at the shared GitOps checkout
+opencenter cluster set prod opencenter.gitops.repository.local_dir=~/my-company-gitops
+
 # Generate GitOps repository (same repo, different overlay)
-opencenter cluster setup prod --render --git-dir ~/my-company-gitops
+opencenter cluster generate prod
 
 # Bootstrap
-opencenter cluster bootstrap prod
+opencenter cluster deploy prod
 ```
 
 ## Step 5: Review GitOps Repository Structure
@@ -373,8 +382,8 @@ Your GitOps repository now contains all three clusters:
 Switch between clusters easily:
 
 ```bash
-# List all clusters in organization
-opencenter cluster list --org my-company
+# List all configured clusters
+opencenter cluster list
 
 # Expected output:
 # CLUSTER    ENVIRONMENT    PROVIDER    STATUS
@@ -382,17 +391,17 @@ opencenter cluster list --org my-company
 # staging    staging        openstack   running
 # prod       production     openstack   running
 
-# Select active cluster
-opencenter cluster select my-company/dev
+# Set active cluster
+opencenter cluster use my-company/dev
 
 # Check cluster status
 opencenter cluster status
 
 # Switch to staging
-opencenter cluster select my-company/staging
+opencenter cluster use my-company/staging
 
 # Switch to production
-opencenter cluster select my-company/prod
+opencenter cluster use my-company/prod
 ```
 
 **Kubeconfig management:**
@@ -423,22 +432,22 @@ kubectx prod
 Manage secrets across all clusters:
 
 ```bash
-# Organization-level secrets (shared across all clusters)
-opencenter sops generate-key --org my-company
+# Shared organization-level key file
+opencenter secrets keys generate --key-file ~/my-company-gitops/secrets/age/my-company-key.txt
 
 # Cluster-specific secrets
-opencenter sops generate-key --cluster my-company/dev
-opencenter sops generate-key --cluster my-company/staging
-opencenter sops generate-key --cluster my-company/prod
+opencenter secrets keys generate --key-file ~/my-company-gitops/secrets/age/dev-key.txt
+opencenter secrets keys generate --key-file ~/my-company-gitops/secrets/age/staging-key.txt
+opencenter secrets keys generate --key-file ~/my-company-gitops/secrets/age/prod-key.txt
 
 # Encrypt secrets for specific cluster
-opencenter sops secrets-encrypt --cluster my-company/prod
+opencenter secrets encrypt --path ~/my-company-gitops/applications/overlays/prod
 
-# Rotate keys for all clusters in organization
-opencenter sops rotate-key --org my-company
+# Rotate a cluster key
+opencenter secrets keys rotate --cluster my-company/prod --type age
 
 # Check key expiration for all clusters
-opencenter sops check-keys --org my-company
+opencenter secrets keys check --org my-company
 ```
 
 **Secrets structure:**
@@ -473,9 +482,9 @@ opencenter:
       version: "1.34.0"  # Updated version
 
 # Regenerate all cluster configurations
-opencenter cluster setup dev --render --git-dir ~/my-company-gitops
-opencenter cluster setup staging --render --git-dir ~/my-company-gitops
-opencenter cluster setup prod --render --git-dir ~/my-company-gitops
+opencenter cluster generate dev --force
+opencenter cluster generate staging --force
+opencenter cluster generate prod --force
 
 # Commit changes
 cd ~/my-company-gitops
@@ -542,7 +551,7 @@ git push origin main
 
 ## Check Your Work
 
-Verify multi-cluster setup:
+Verify multi-cluster deployment:
 
 - [ ] All 3 clusters are running
 - [ ] Can switch between clusters easily
@@ -554,7 +563,7 @@ Verify multi-cluster setup:
 
 ## Troubleshooting
 
-### Cluster Selection Fails
+### Active Cluster Choice Fails
 
 **Error:**
 ```
@@ -574,7 +583,7 @@ ls ~/.config/opencenter/clusters/
 ls ~/.config/opencenter/clusters/my-company/
 
 # Use correct organization/cluster name
-opencenter cluster select my-company/dev
+opencenter cluster use my-company/dev
 ```
 
 ### Organization Defaults Not Applied
@@ -607,7 +616,7 @@ Each cluster has different SOPS keys
 
 ```bash
 # Use organization-level key for shared secrets
-opencenter sops generate-key --org my-company
+opencenter secrets keys generate --key-file ~/my-company-gitops/secrets/age/my-company-key.txt
 
 # Configure .sops.yaml to use organization key
 cat > ~/my-company-gitops/.sops.yaml <<EOF
@@ -738,7 +747,7 @@ jobs:
 
 ## Next Steps
 
-Now that you have a multi-cluster setup, explore these topics:
+Now that you have a multi-cluster deployment, explore these topics:
 
 **Cluster Management:**
 - [Backup and Restore](../how-to/backup-and-restore.md) - Disaster recovery for all clusters
@@ -765,7 +774,7 @@ In this tutorial, you:
 - Promoted changes across environments
 - Learned multi-cluster best practices
 
-You now have a production-ready multi-cluster setup with centralized management!
+You now have a production-ready multi-cluster deployment with centralized management!
 
 ---
 

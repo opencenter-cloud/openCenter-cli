@@ -27,7 +27,7 @@ func newClusterActiveCmd() *cobra.Command {
 		Short: "Show the active cluster",
 		Long: `Show the current active cluster with its selection source.
 
-The cluster selection follows this precedence:
+The active cluster follows this precedence:
   1. OPENCENTER_CLUSTER environment variable (session-scoped)
   2. Session file (if shell integration is active)
   3. Persistent selection from marker file
@@ -52,7 +52,7 @@ Use --quiet to output only the cluster name without source information.`,
 			if q {
 				fmt.Fprint(cmd.OutOrStdout(), strings.TrimSpace(name))
 			} else {
-				// Determine source of cluster selection
+				// Determine source of the active cluster
 				source := "persistent"
 				if os.Getenv("OPENCENTER_CLUSTER") != "" {
 					source = "environment"

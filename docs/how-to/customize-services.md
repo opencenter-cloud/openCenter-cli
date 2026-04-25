@@ -25,7 +25,7 @@ openCenter deploys 20+ platform services by default. This guide shows you how to
 See all available platform services:
 
 ```bash
-opencenter cluster config get opencenter.services
+opencenter cluster describe my-cluster
 ```
 
 This shows services organized by category:
@@ -44,7 +44,7 @@ This shows services organized by category:
 Disable a service that's enabled by default:
 
 ```bash
-opencenter cluster config set opencenter.services.loki.enabled false
+opencenter cluster set my-cluster opencenter.services.loki.enabled=false
 ```
 
 Or edit configuration file:
@@ -61,7 +61,7 @@ opencenter:
 Enable a service that's disabled by default:
 
 ```bash
-opencenter cluster config set opencenter.services.weave-gitops.enabled true
+opencenter cluster set my-cluster opencenter.services.weave-gitops.enabled=true
 ```
 
 Or in configuration:
@@ -478,7 +478,7 @@ Check for:
 Regenerate GitOps repository with new service configuration:
 
 ```bash
-opencenter cluster setup --render
+opencenter cluster generate
 ```
 
 This updates:
@@ -531,7 +531,7 @@ secrets:
 Encrypt secrets:
 
 ```bash
-opencenter sops secrets-encrypt --cluster my-cluster
+opencenter secrets encrypt --path applications/overlays/my-cluster
 ```
 
 ### Resource Limits

@@ -56,7 +56,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 		RunE: runClusterValidateSecrets,
 	}
 
-	cmd.Flags().Bool("fix", false, "Automatically fix drift by running sync-secrets")
+	cmd.Flags().Bool("fix", false, "Automatically fix drift by running opencenter secrets sync")
 
 	return cmd
 }

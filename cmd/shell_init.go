@@ -28,10 +28,10 @@ var shellIntegrationFS embed.FS
 func NewShellInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "shell-init",
-		Short: "Output shell integration script for session-scoped cluster selection",
+		Short: "Output shell integration script for session-scoped active clusters",
 		Long: `Outputs shell integration code to be evaluated in your shell.
 
-This enables session-scoped cluster selection, where each terminal can have
+This enables session-scoped active clusters, where each terminal can have
 its own active cluster context without affecting other terminals.
 
 Add to your shell configuration file:

@@ -67,7 +67,7 @@ Migrate applications and data from source cluster to target cluster, supporting 
 Document source cluster configuration:
 
 ```bash
-# Cluster information
+# Source details
 kubectl cluster-info
 kubectl version
 
@@ -134,8 +134,8 @@ opencenter cluster edit target-cluster
 
 # Deploy target cluster
 opencenter cluster validate target-cluster
-opencenter cluster setup target-cluster --render
-opencenter cluster bootstrap target-cluster
+opencenter cluster generate target-cluster
+opencenter cluster deploy target-cluster
 ```
 
 ## Migration Steps
@@ -405,7 +405,7 @@ kubectl top pods -A
 
 #### 3. Update Documentation
 
-Update documentation with new cluster information:
+Update documentation with new cluster details:
 
 - Cluster endpoints
 - Load balancer IPs
@@ -647,7 +647,7 @@ kubectl set resources deployment my-app \
 ## Related Topics
 
 - [Backup and Restore](backup-and-restore.md) - Backup procedures for migration
-- [Multi-Cluster Setup](../tutorials/multi-cluster-setup.md) - Manage multiple clusters
+- [Multi-Cluster Management](../tutorials/multi-cluster-setup.md) - Manage multiple clusters
 - [Provider Comparison](../explanation/provider-comparison.md) - Choose target provider
 - [Configuration Lifecycle](../explanation/configuration-lifecycle.md) - Configuration management
 

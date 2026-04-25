@@ -100,7 +100,7 @@ func ExampleSOPSKeyValidator_missingFile() {
 	//   SOPS key file not found: /nonexistent/key.txt
 	//   Suggestions:
 	//     - Generate a new Age key: age-keygen -o /nonexistent/key.txt
-	//     - Or use: opencenter sops generate-key
+	//     - Or use: opencenter secrets keys generate
 	//     - Verify the file path is correct
 }
 

@@ -38,8 +38,8 @@ Commands follow the pattern `cmd/<command>_<subcommand>.go`:
 - `cluster_edit.go` - Edit configuration interactively
 - `cluster_update.go` - Update configuration via flags
 - `cluster_list.go` - List clusters
-- `cluster_select.go` - Select active cluster
-- `cluster_info.go` - Show cluster information
+- `cluster_select.go` - Set active cluster
+- `cluster_info.go` - Show cluster details
 - `cluster_destroy.go` - Destroy cluster
 - `cluster_preflight.go` - Run preflight checks
 - `cluster_render.go` - Render templates without deploying

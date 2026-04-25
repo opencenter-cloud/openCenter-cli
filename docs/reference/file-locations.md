@@ -327,7 +327,7 @@ rm -rf ~/.cache/opencenter/
 └── bootstrap-20260411T154500Z.log
 ```
 
-**Override:** `opencenter cluster bootstrap --log /path/to/file.log`
+**Override:** `opencenter cluster deploy --log /path/to/file.log`
 
 **Permissions:** `0600`
 

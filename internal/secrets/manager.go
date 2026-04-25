@@ -348,7 +348,7 @@ func (m *DefaultSecretsManager) ValidateSecrets(ctx context.Context, opts Valida
 
 	// Auto-fix if requested
 	if opts.Fix && !result.Valid {
-		m.logger.Info("Auto-fixing drift by running sync-secrets")
+		m.logger.Info("Auto-fixing drift by running opencenter secrets sync")
 		syncOpts := SyncOptions{
 			Cluster: opts.Cluster,
 			DryRun:  false,

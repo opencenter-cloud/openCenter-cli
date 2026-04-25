@@ -477,10 +477,10 @@ Severity: info
 opencenter cluster validate my-cluster
 
 # Validate with connectivity checks
-opencenter cluster validate my-cluster --connectivity
+opencenter cluster validate my-cluster --check-connectivity
 
 # Validate specific configuration file
-opencenter cluster validate --config /path/to/config.yaml
+opencenter cluster validate my-cluster
 ```
 
 ### Validation Output
@@ -515,7 +515,7 @@ Configuration has 2 errors. Fix errors before deployment.
 
 ```bash
 # Skip validation (not recommended)
-opencenter cluster setup my-cluster --skip-validation
+opencenter cluster generate my-cluster --skip-validation
 
 # Skip specific validation layer
 opencenter cluster validate my-cluster --skip-provider-validation

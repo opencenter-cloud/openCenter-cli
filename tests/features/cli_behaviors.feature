@@ -2,7 +2,7 @@
 # End-to-end CLI behaviors:
 # - listing clusters
 # - selecting (by name & interactive)
-# - info (active & named) with --json and --validate
+# - info (active & named) with --output json and --validate
 # - init (non-interactive) incl. --strict failures
 # - setup (materialization, idempotency, forced overwrite)
 # - bootstrap (git init/commit/remote/push)
@@ -68,7 +68,7 @@ Feature: CLI core flows and validations
 
   @list @json
   Scenario: Listing clusters as JSON
-    When I run "opencenter cluster ls --json"
+    When I run "opencenter cluster ls --output json"
     Then the exit code should be 0
     And stdout should contain '["dev","prod"]'
 
@@ -77,39 +77,39 @@ Feature: CLI core flows and validations
   # ---------------------------------------------------------------------------
   @select @by_name
   Scenario: Selecting a cluster by name
-    When I run "opencenter cluster select dev"
+    When I run "opencenter cluster use dev"
     Then the exit code should be 0
     And the file "<<tmp>>/conf/.active" should match regex "^dev$"
 
   @select @interactive
   Scenario: Selecting a cluster interactively
-    When I run interactively "opencenter cluster select"
+    When I run interactively "opencenter cluster use"
     And I choose "prod" from the prompt
     Then the exit code should be 0
     And the file "<<tmp>>/conf/.active" should match regex "^prod$"
 
   # ---------------------------------------------------------------------------
-  # INFO (active & named) with --json and --validate
+  # DESCRIBE (active & named) with --output json and --validate
   # ---------------------------------------------------------------------------
   @info @active
   Scenario: Showing info for the active cluster
-    Given I run "opencenter cluster select dev"
+    Given I run "opencenter cluster use dev"
     And the exit code should be 0
-    When I run "opencenter cluster info"
+    When I run "opencenter cluster describe"
     Then the exit code should be 0
     And stdout should contain "dev"
     And stdout should contain "git_dir: <<tmp>>/repo-dev"
 
   @info @json
   Scenario: Showing info for a named cluster with JSON output
-    When I run "opencenter cluster info prod --json"
+    When I run "opencenter cluster describe prod --output json"
     Then the exit code should be 0
     And stdout should contain '"cluster_name": "prod"'
     And stdout should contain '"git_dir": "<<tmp>>/repo-prod"'
 
   @info @validate
   Scenario: Validating configuration with --validate
-    When I run "opencenter cluster info dev --validate"
+    When I run "opencenter cluster describe dev --validate"
     Then the exit code should be 0
     And stdout should contain "Validation successful"
     And stdout should not contain "ERROR"
@@ -136,32 +136,32 @@ Feature: CLI core flows and validations
   # ---------------------------------------------------------------------------
   @setup @materialize
   Scenario: Setup materializes GitOps template into git_dir
-    Given I run "opencenter cluster select dev"
+    Given I run "opencenter cluster use dev"
     And the exit code should be 0
-    When I run "opencenter cluster render"
+    When I run "opencenter cluster generate --render-only"
     Then the exit code should be 0
     And the directory "<<tmp>>/repo-dev" should contain a file matching "README.md"
     And the directory "<<tmp>>/repo-dev" should contain a directory "applications"
 
   @setup @idempotent
   Scenario: Running setup again is idempotent
-    Given I run "opencenter cluster select dev"
+    Given I run "opencenter cluster use dev"
     And the exit code should be 0
-    And I run "opencenter cluster render"
+    And I run "opencenter cluster generate --render-only"
     And the exit code should be 0
-    When I run "opencenter cluster render"
+    When I run "opencenter cluster generate --render-only"
     Then the exit code should be 0
     And stdout should contain "Render complete"
 
   @setup @force
   Scenario: Forced setup overwrites existing files
-    Given I run "opencenter cluster select dev"
+    Given I run "opencenter cluster use dev"
     And the exit code should be 0
     And a file "<<tmp>>/repo-dev/README.md" with content:
       """
       manual edit that should be replaced
       """
-    When I run "opencenter cluster render"
+    When I run "opencenter cluster generate --render-only"
     Then the exit code should be 0
     And the file "<<tmp>>/repo-dev/README.md" should not contain "manual edit that should be replaced"
 
@@ -178,11 +178,11 @@ Feature: CLI core flows and validations
           git_dir: "<<tmp>>/repo-dev"
           git_url: "<<tmp>>/remote.git"
       """
-    And I run "opencenter cluster select dev"
+    And I run "opencenter cluster use dev"
     And the exit code should be 0
-    And I run "opencenter cluster render"
+    And I run "opencenter cluster generate --render-only"
     And the exit code should be 0
-    When I run "opencenter cluster bootstrap"
+    When I run "opencenter cluster deploy"
     Then the exit code should be 0
     And the bare repo "<<tmp>>/remote.git" should have branch "main"
 
@@ -198,6 +198,6 @@ Feature: CLI core flows and validations
         gitops:
           git_dir: ""
       """
-    When I run "opencenter cluster render no-gitdir"
+    When I run "opencenter cluster generate --render-only no-gitdir"
     Then the exit code should not be 0
     And stderr should contain "opencenter.gitops.repository.local_dir must be set"

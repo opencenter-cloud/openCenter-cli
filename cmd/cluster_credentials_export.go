@@ -23,7 +23,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/credentials"
 )
 
-// newClusterCredentialsExportCmd creates the "cluster credentials export" command.
+// newClusterCredentialsExportCmd creates the hidden legacy credentials export command.
 func newClusterCredentialsExportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export [cluster-name]",
@@ -50,24 +50,15 @@ Output Formats:
   • clouds-yaml: OpenStack clouds.yaml format (OpenStack only)
 
 The exported credentials can be used with:
-  • eval $(opencenter cluster credentials export --provider aws)
+  • eval "$(opencenter cluster env)"
   • Terraform/OpenTofu infrastructure provisioning
   • Ansible playbooks and inventory
   • Direct cloud CLI tools (aws, openstack)`,
-		Example: `  # Export AWS credentials for current cluster
-  eval $(opencenter cluster credentials export --provider aws)
+		Example: `  # Export current cluster environment
+  eval "$(opencenter cluster env)"
 
-  # Export OpenStack credentials for specific cluster
-  eval $(opencenter cluster credentials export my-cluster --provider openstack)
-
-  # Export all credentials in JSON format
-  opencenter cluster credentials export --provider all --format json
-
-  # Export AWS credentials in Terraform format
-  opencenter cluster credentials export --provider aws --format terraform
-
-  # Export OpenStack credentials as clouds.yaml
-  opencenter cluster credentials export --provider openstack --format clouds-yaml`,
+  # Export a specific cluster environment
+  eval "$(opencenter cluster env my-cluster)"`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster

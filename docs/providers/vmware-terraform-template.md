@@ -287,13 +287,13 @@ Test template generation:
 
 ```bash
 # Generate VMware configuration
-opencenter cluster template --provider vmware --out test-vmware.yaml
+opencenter cluster template --out test-vmware.yaml
 
 # Initialize cluster
-opencenter cluster init test-vmware --provider vmware
+opencenter cluster init test-vmware --type vmware
 
 # Setup (generates main.tf)
-opencenter cluster setup test-vmware
+opencenter cluster generate test-vmware
 
 # Verify generated main.tf
 cat ~/.config/opencenter/clusters/opencenter/test-vmware/gitops/infrastructure/clusters/test-vmware/main.tf
@@ -337,7 +337,7 @@ yq '.opencenter.infrastructure.cloud.vmware.nodes' config.yaml
 export LOG_LEVEL=debug
 
 # Re-run setup
-opencenter cluster setup test-vmware
+opencenter cluster generate test-vmware
 
 # Check for template errors in output
 ```
@@ -380,7 +380,7 @@ To migrate existing baremetal clusters to VMware template:
 
 4. Re-run setup:
    ```bash
-   opencenter cluster setup <cluster-name>
+   opencenter cluster generate <cluster-name>
    ```
 
 ## Related Documentation

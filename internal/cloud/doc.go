@@ -20,8 +20,8 @@
 // through a factory pattern, allowing opencenter to work with OpenStack, VMware, and
 // other cloud platforms.
 //
-// This package is not the registry for lifecycle/bootstrap providers. Providers used
-// by cluster bootstrap or destroy flows may live in sibling packages and be wired
+// This package is not the registry for lifecycle deploy providers. Providers used
+// by cluster deploy or destroy flows may live in sibling packages and be wired
 // directly by those commands or services. Kind is the current example: it manages
 // local cluster lifecycle, but it does not implement the CloudProvider drift
 // interface and is therefore not registered in CloudProviderFactory. Baremetal and

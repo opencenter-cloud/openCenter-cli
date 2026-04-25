@@ -20,7 +20,7 @@ Feature: Active cluster rules
         gitops:
           git_dir: <<tmp>>/repo-demo
       """
-    When I run "opencenter cluster select demo"
+    When I run "opencenter cluster use demo"
     Then the exit code should be 0
     And the file "<<tmp>>/conf/.active" should match regex "^demo$"
 
@@ -35,7 +35,7 @@ Feature: Active cluster rules
           git_dir: <<tmp>>/repo-demo
       """
     And the file "<<tmp>>/conf/active" does not exist
-    When I run "opencenter cluster info"
+    When I run "opencenter cluster describe"
     Then the exit code should not be 0
     And stderr should contain "no active cluster"
 
@@ -50,10 +50,10 @@ Feature: Active cluster rules
           git_dir: <<tmp>>/repo-demo
       """
     And the directory "<<tmp>>/repo-demo" exists
-    And I run "opencenter cluster select demo"
+    And I run "opencenter cluster use demo"
     And the exit code should be 0
     And I cd to "<<tmp>>/repo-demo"
-    When I run "opencenter cluster info"
+    When I run "opencenter cluster describe"
     Then the exit code should be 0
     And the first line of stdout should start with "Active cluster: demo"
 
@@ -67,8 +67,8 @@ Feature: Active cluster rules
         gitops:
           git_dir: <<tmp>>/repo-demo
       """
-    And I run "opencenter cluster select demo"
+    And I run "opencenter cluster use demo"
     And the exit code should be 0
-    When I run "opencenter cluster info"
+    When I run "opencenter cluster describe"
     Then the exit code should be 0
     And stdout should contain "demo"

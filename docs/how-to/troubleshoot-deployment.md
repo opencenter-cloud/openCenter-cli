@@ -151,7 +151,7 @@ cat terraform.log
    Solution: Use valid image ID:
    ```bash
    openstack image list
-   opencenter cluster config set opencenter.infrastructure.cloud.openstack.image_id <valid-id>
+   opencenter cluster set my-cluster opencenter.infrastructure.cloud.openstack.image_id=<valid-id>
    ```
 
 3. **Network Not Found:**
@@ -162,7 +162,7 @@ cat terraform.log
    Solution: Set correct network ID:
    ```bash
    openstack network list
-   opencenter cluster config set opencenter.infrastructure.cloud.openstack.networking.floating_network_id <network-id>
+   opencenter cluster set my-cluster opencenter.infrastructure.cloud.openstack.networking.floating_network_id=<network-id>
    ```
 
 ### SSH Connection Failures
@@ -493,8 +493,8 @@ kubectl describe pod <pod-name> -n <namespace>
    
    Encrypt and regenerate:
    ```bash
-   opencenter sops secrets-encrypt --cluster my-cluster
-   opencenter cluster setup --render
+   opencenter secrets encrypt --path applications/overlays/my-cluster
+   opencenter cluster generate
    ```
 
 2. **Insufficient Resources:**

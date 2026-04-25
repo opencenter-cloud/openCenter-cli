@@ -18,39 +18,39 @@ Use `go run -tags tools ./cmd/docs` to refresh the generated inventory in [`docs
 
 | Flag | Description |
 |------|-------------|
-| `--config` | Alternative cluster configuration file path |
 | `--config-dir` | Configuration directory override |
 | `--dry-run` | Print planned actions without executing them |
 | `--log-level` | Set log level: `debug`, `info`, `warn`, `error` |
-| `--set` | Override configuration values using dot notation |
-| `--show-active` | Display the current active cluster |
+| `--output` | Select output format: `text`, `json`, `yaml` |
+| `--quiet` | Suppress nonessential human output |
+| `--yes` | Answer yes to confirmation prompts |
 | `-h, --help` | Show command help |
 | `-v, --version` | Show version information |
 
-## `--set` Dot-Notation Examples
+## Cluster Set Dot-Notation Examples
 
 ```bash
-# Override provider and VMware metadata for a one-off validation
-opencenter cluster validate prod-cluster \
-  --set opencenter.infrastructure.provider=vmware \
-  --set opencenter.infrastructure.cloud.vmware.datacenter=DC1 \
-  --set opencenter.infrastructure.cloud.vmware.network=dvpg-prod
+# Update provider and VMware metadata
+opencenter cluster set prod-cluster \
+  opencenter.infrastructure.provider=vmware \
+  opencenter.infrastructure.cloud.vmware.datacenter=DC1 \
+  opencenter.infrastructure.cloud.vmware.network=dvpg-prod
 
-# Override a service value during bootstrap
-opencenter cluster bootstrap prod-cluster \
-  --set opencenter.services.cert-manager.email=platform@example.com
+# Update a service value before deployment
+opencenter cluster set prod-cluster \
+  opencenter.services.cert-manager.email=platform@example.com
 ```
 
 ## Root Commands
 
 | Command | Purpose |
 |---------|---------|
-| `opencenter cluster` | Cluster lifecycle, validation, rendering, drift, services, backup, and key management |
+| `opencenter cluster` | Cluster lifecycle, validation, rendering, drift, services, backup, and import management |
 | `opencenter completion` | Shell completion scripts for `bash`, `fish`, `powershell`, and `zsh` |
 | `opencenter config` | CLI defaults and local IDE configuration |
 | `opencenter plugins` | External plugin discovery |
 | `opencenter secrets` | Secret encryption, sync, validation, and key operations |
-| `opencenter shell-init` | Session-scoped shell integration for active-cluster selection |
+| `opencenter shell-init` | Session-scoped shell integration for active-cluster context |
 | `opencenter version` | Version and build metadata |
 | `opencenter <external-plugin>` | Dynamically discovered plugin entrypoints such as `rmpk` |
 
@@ -60,29 +60,30 @@ opencenter cluster bootstrap prod-cluster \
 
 | Command |
 |---------|
-| `opencenter cluster audit-log` |
-| `opencenter cluster bootstrap` |
-| `opencenter cluster check-keys` |
-| `opencenter cluster current` |
+| `opencenter cluster active` |
+| `opencenter cluster configure` |
+| `opencenter cluster deploy` |
+| `opencenter cluster describe` |
 | `opencenter cluster destroy` |
 | `opencenter cluster edit` |
 | `opencenter cluster env` |
-| `opencenter cluster info` |
+| `opencenter cluster export` |
+| `opencenter cluster generate` |
+| `opencenter cluster generate --render-only` |
+| `opencenter cluster import` |
+| `opencenter cluster import apply` |
+| `opencenter cluster import report` |
+| `opencenter cluster import scan` |
 | `opencenter cluster init` |
-| `opencenter cluster install-hooks` |
 | `opencenter cluster list` |
 | `opencenter cluster lock` |
-| `opencenter cluster preflight` |
-| `opencenter cluster render` |
-| `opencenter cluster revoke-key` |
-| `opencenter cluster rotate-keys` |
-| `opencenter cluster select` |
-| `opencenter cluster setup` |
+| `opencenter cluster normalize` |
+| `opencenter cluster doctor` |
+| `opencenter cluster set` |
+| `opencenter cluster use` |
 | `opencenter cluster status` |
 | `opencenter cluster unlock` |
-| `opencenter cluster update` |
 | `opencenter cluster validate` |
-| `opencenter cluster validate-manifests` |
 
 ### Backup
 
@@ -98,8 +99,11 @@ opencenter cluster bootstrap prod-cluster \
 
 | Command |
 |---------|
-| `opencenter cluster config export-effective` |
-| `opencenter cluster config update` |
+| `opencenter cluster describe` |
+| `opencenter cluster edit` |
+| `opencenter cluster export` |
+| `opencenter cluster normalize` |
+| `opencenter cluster set` |
 
 ### Drift Detection
 
@@ -108,13 +112,6 @@ opencenter cluster bootstrap prod-cluster \
 | `opencenter cluster drift detect` |
 | `opencenter cluster drift reconcile` |
 | `opencenter cluster drift schedule` |
-
-### Encryption Keys
-
-| Command |
-|---------|
-| `opencenter cluster keys` |
-| `opencenter cluster keys list` |
 
 ### Services
 
@@ -130,6 +127,8 @@ opencenter cluster bootstrap prod-cluster \
 | Command |
 |---------|
 | `opencenter config edit` |
+| `opencenter config explain` |
+| `opencenter config explain cluster-defaults` |
 | `opencenter config get` |
 | `opencenter config ide` |
 | `opencenter config path` |
@@ -160,7 +159,9 @@ opencenter cluster bootstrap prod-cluster \
 | Command |
 |---------|
 | `opencenter secrets keys backup` |
+| `opencenter secrets keys check` |
 | `opencenter secrets keys generate` |
+| `opencenter secrets keys revoke` |
 | `opencenter secrets keys rotate` |
 | `opencenter secrets keys validate` |
 

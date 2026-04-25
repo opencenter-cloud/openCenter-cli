@@ -46,7 +46,7 @@ The sync operation:
 If no cluster name is provided, uses the currently active cluster.
 
 Multi-cluster mode (--all flag) processes all clusters in parallel with configurable
-concurrency. Use --organization to filter to a specific organization.`,
+concurrency. Use --org to filter to a specific organization.`,
 		Example: `  # Sync secrets for active cluster
   opencenter secrets sync
 
@@ -63,7 +63,7 @@ concurrency. Use --organization to filter to a specific organization.`,
   opencenter secrets sync my-cluster --force
 
   # Sync all clusters in organization
-  opencenter secrets sync --all --organization=myorg
+  opencenter secrets sync --all --org myorg
 
   # Sync all clusters with custom concurrency
   opencenter secrets sync --all --concurrency=8
@@ -79,7 +79,9 @@ concurrency. Use --organization to filter to a specific organization.`,
 	cmd.Flags().Bool("dry-run", false, "Preview changes without applying them")
 	cmd.Flags().Bool("force", false, "Overwrite manifests even if no drift detected")
 	cmd.Flags().Bool("all", false, "Sync secrets for all clusters in organization")
+	cmd.Flags().String("org", "", "Filter to specific organization (used with --all)")
 	cmd.Flags().String("organization", "", "Filter to specific organization (used with --all)")
+	_ = cmd.Flags().MarkHidden("organization")
 	cmd.Flags().Int("concurrency", 4, "Maximum number of parallel cluster syncs (used with --all)")
 	cmd.Flags().Bool("stop-on-error", false, "Stop processing on first failure (used with --all)")
 
@@ -95,7 +97,7 @@ func runClusterSyncSecrets(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	force, _ := cmd.Flags().GetBool("force")
 	all, _ := cmd.Flags().GetBool("all")
-	organization, _ := cmd.Flags().GetString("organization")
+	organization := getSecretsSyncOrganizationFlag(cmd)
 	concurrency, _ := cmd.Flags().GetInt("concurrency")
 	stopOnError, _ := cmd.Flags().GetBool("stop-on-error")
 
@@ -153,6 +155,14 @@ func runClusterSyncSecrets(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func getSecretsSyncOrganizationFlag(cmd *cobra.Command) string {
+	if organization, _ := cmd.Flags().GetString("org"); organization != "" {
+		return organization
+	}
+	organization, _ := cmd.Flags().GetString("organization")
+	return organization
 }
 
 // multiClusterSyncParams holds parameters for multi-cluster sync

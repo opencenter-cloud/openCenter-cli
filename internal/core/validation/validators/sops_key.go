@@ -94,7 +94,7 @@ func (v *SOPSKeyValidator) Validate(ctx context.Context, value interface{}) (*va
 			"sops_key",
 			fmt.Sprintf("SOPS key file not found: %s", keyPath),
 			"Generate a new Age key: age-keygen -o "+keyPath,
-			"Or use: opencenter sops generate-key",
+			"Or use: opencenter secrets keys generate",
 			"Verify the file path is correct",
 		)
 		return result, nil

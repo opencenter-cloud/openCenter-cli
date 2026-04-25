@@ -527,7 +527,7 @@ After changing network configuration:
 
 2. **Regenerate manifests:**
    ```bash
-   opencenter cluster setup --render
+   opencenter cluster generate
    ```
 
 3. **Review changes:**

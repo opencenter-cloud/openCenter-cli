@@ -64,22 +64,16 @@ don't already exist, unless --no-keygen is specified.`,
   opencenter cluster init my-cluster
 
   # Initialize from existing config file
-  opencenter cluster init --config my-cluster-config.yaml
+  opencenter cluster init --config-file my-cluster-config.yaml
 
   # Initialize with organization
   opencenter cluster init my-cluster --org myorg
-
-  # Backward-compatible organization alias
-  opencenter cluster init my-cluster --opencenter.meta.organization=myorg
 
   # Initialize a VMware cluster
   opencenter cluster init my-cluster --org production --type vmware
 
   # Initialize a Kind cluster with the built-in CNI disabled
   opencenter cluster init my-cluster --org local --type kind --kind-disable-default-cni
-
-  # Override config values using native v2 dotted flags
-  opencenter cluster init my-cluster --opencenter.infrastructure.compute.master_count=5
 
   # Initialize without key generation
   opencenter cluster init my-cluster --no-keygen
@@ -92,7 +86,9 @@ don't already exist, unless --no-keygen is specified.`,
 
 	cmd.Flags().String("org", "", "organization name (defaults to 'opencenter')")
 	cmd.Flags().String("type", "openstack", "cluster type: openstack, baremetal, kind, vmware")
+	cmd.Flags().String("config-file", "", "load configuration from file")
 	cmd.Flags().String("config", "", "load configuration from file")
+	_ = cmd.Flags().MarkHidden("config")
 	cmd.Flags().Bool("strict", false, "fail if required values are missing")
 	cmd.Flags().Bool("force", false, "overwrite existing config file")
 	cmd.Flags().Bool("no-keygen", false, "do not auto-generate keys")
@@ -166,7 +162,7 @@ func parseInitOptions(cmd *cobra.Command, args []string) (cluster.InitOptions, e
 	// Get cluster name from args, config file, or active cluster
 	if len(args) > 0 {
 		opts.ClusterName = args[0]
-	} else if configFile, _ := cmd.Flags().GetString("config"); configFile != "" {
+	} else if configFile := getInitConfigFileFlag(cmd); configFile != "" {
 		name, err := extractClusterNameFromConfig(configFile)
 		if err != nil {
 			return opts, err
@@ -220,6 +216,14 @@ func parseInitOptions(cmd *cobra.Command, args []string) (cluster.InitOptions, e
 	opts.SchemaVersion = "2.0"
 
 	return opts, nil
+}
+
+func getInitConfigFileFlag(cmd *cobra.Command) string {
+	if configFile, _ := cmd.Flags().GetString("config-file"); configFile != "" {
+		return configFile
+	}
+	configFile, _ := cmd.Flags().GetString("config")
+	return configFile
 }
 
 func kindDisableDefaultCNIValue(cmd *cobra.Command, provider string) (bool, bool, error) {

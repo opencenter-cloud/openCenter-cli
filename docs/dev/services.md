@@ -89,15 +89,15 @@ Rendering translates the enabled/disabled state into files on disk. Two paths tr
 
 | Trigger | Scope | Function |
 |---|---|---|
-| `cluster setup` | Full cluster | `gitops.RenderClusterApps()` |
+| `cluster generate` | Full cluster | `gitops.RenderClusterApps()` |
 | `cluster service enable --render` | Single service | `gitops.RenderSingleService()` |
 | `cluster service disable --render` | Full cluster apps overlay | `gitops.RenderClusterApps()` |
 
-### Full Render (`cluster setup`)
+### Full Render (`cluster generate`)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  cluster setup                                              │
+│  cluster generate                                              │
 └──────────────────────┬──────────────────────────────────────┘
                        │
                        ▼
@@ -183,9 +183,9 @@ enable/disable
 Config updated ──→ done
 ```
 
-No GitOps repository exists yet. The config change is stored but has no immediate effect. The next `cluster setup` will generate manifests reflecting the current enabled state.
+No GitOps repository exists yet. The config change is stored but has no immediate effect. The next `cluster generate` will generate manifests reflecting the current enabled state.
 
-When to use: initial cluster configuration, before any `cluster setup` has run.
+When to use: initial cluster configuration, before any `cluster generate` has run.
 
 ### Path B: After Setup, Before Bootstrap (GitOps Repo Exists, No Running Cluster)
 
@@ -196,7 +196,7 @@ enable/disable
 Config updated
      │
      ▼
-cluster setup (or service --render)
+cluster generate (or service)
      │
      ▼
 Manifests regenerated
@@ -209,7 +209,7 @@ The GitOps repo exists on disk but FluxCD is not running. Manifests need to be r
 
 1. `cluster service enable <name> --render` — renders only the changed service.
 2. `cluster service disable <name> --render` — updates the overlay immediately after disabling.
-3. `cluster setup --force` — full re-render of all manifests.
+3. `cluster generate --force` — full re-render of all manifests.
 
 ### Path C: After Bootstrap (Running Cluster with FluxCD)
 

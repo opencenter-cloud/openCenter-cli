@@ -117,7 +117,7 @@ The renderer contract needs to be stated more precisely:
 That overlay tree is larger than just `services/`. In the current fixture it may contain:
 
 1. Root overlay files such as `applications/overlays/<cluster>/kustomization.yaml`
-2. Optional cluster bootstrap files such as `applications/overlays/<cluster>/flux-system/`
+2. Optional cluster deployment files such as `applications/overlays/<cluster>/flux-system/`
 3. Platform service overlays under `applications/overlays/<cluster>/services/`
 4. Managed service overlays under `applications/overlays/<cluster>/managed-services/`
 5. Optional customer-managed overlays under `applications/overlays/<cluster>/customer-managed/`

@@ -1331,7 +1331,7 @@ func (w *world) iAnswerThePromptsWith(table *godog.Table) error {
 func (w *world) iChooseFromThePrompt(choice string) error {
 	w.pendingChoice = choice
 	// Simulate interactive selection flows immediately
-	if strings.Contains(w.pendingCmd, "cluster select") {
+	if strings.Contains(w.pendingCmd, "cluster use") {
 		// The interactive selection should write to the config dir specified in the command
 		// Extract config-dir from the pending command
 		configDir := w.configDir

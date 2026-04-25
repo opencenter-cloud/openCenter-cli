@@ -179,7 +179,7 @@ Evidence:
 
 This is the most important nuance in the current implementation:
 
-The production `cluster setup` path does not call `ServicePlugin.Render()` for cert-manager. Instead, it renders by walking the embedded GitOps template tree directly.
+The production `cluster generate` path does not call `ServicePlugin.Render()` for cert-manager. Instead, it renders by walking the embedded GitOps template tree directly.
 
 The current setup flow is:
 

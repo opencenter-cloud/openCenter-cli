@@ -131,7 +131,7 @@ Configuration is valid and ready for deployment.
 Generate updated infrastructure configuration:
 
 ```bash
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 ```
 
 **What's updated:**

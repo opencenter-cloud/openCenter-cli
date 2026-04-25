@@ -171,7 +171,7 @@ Configuration is valid and ready for deployment.
 ### 3. Render Updated Configuration
 
 ```bash
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 ```
 
 **What's updated:**
@@ -185,8 +185,8 @@ opencenter cluster setup my-cluster --render
 **Critical:** Always test upgrades in non-production first.
 
 ```bash
-# Upgrade dev cluster
-opencenter cluster upgrade dev
+# Apply the dev Kubernetes version change from the beginning of the deploy workflow
+opencenter cluster deploy dev --restart
 
 # Verify dev cluster
 kubectl get nodes --context dev
@@ -196,7 +196,7 @@ kubectl get pods -A --context dev
 ./run-tests.sh --context dev
 
 # If successful, proceed to staging
-opencenter cluster upgrade staging
+opencenter cluster deploy staging --restart
 
 # Verify staging cluster
 kubectl get nodes --context staging
@@ -408,7 +408,7 @@ opencenter:
       version: "1.33.5"  # Previous version
 
 # 2. Render configuration
-opencenter cluster setup my-cluster --render
+opencenter cluster generate my-cluster
 
 # 3. Run downgrade playbook
 cd ~/my-cluster-gitops/infrastructure/clusters/my-cluster/inventory

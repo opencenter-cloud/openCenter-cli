@@ -1,9 +1,9 @@
 # tests/features/cluster_commands.feature
 # Expected behavior for the "opencenter cluster" command group:
 # - Parent "cluster" prints help & subcommands
-# - list/ls scans config_dir for *.yaml and prints names (no .yaml); --json outputs JSON
+# - list/ls scans config_dir for *.yaml and prints names (no .yaml); --output json outputs JSON
 # - select (by name & interactive), writes active_pointer; header when CWD == git_dir
-# - info (active & named), human summary; --json prints full JSON; helpful errors
+# - describe (active & named), human summary; --output json prints full JSON; helpful errors
 # - init (non-interactive), does not overwrite unless --force; prints next steps
 # - setup (materialize embedded templates into git_dir), idempotent, --force overwrites
 # - bootstrap (git init/commit/remote/push) with actionable errors on missing prereqs

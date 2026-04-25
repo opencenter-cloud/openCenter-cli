@@ -33,15 +33,8 @@ The schema includes comprehensive validation rules, constraints, and documentati
 for all configuration sections. It can be used for IDE integration, validation,
 and documentation purposes.
 
-Examples:
-  # Print schema to stdout
-  opencenter cluster schema
-
-  # Save schema to file with pretty formatting
-  opencenter cluster schema --out schema/cluster.schema.json --pretty
-
-  # Show schema version
-  opencenter cluster schema --version`,
+Public schema generation is available through:
+  opencenter config ide --schema-only`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			showVersion, _ := cmd.Flags().GetBool("version")
 			if showVersion {

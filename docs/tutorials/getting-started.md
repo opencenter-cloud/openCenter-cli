@@ -158,7 +158,7 @@ See [Platform Services Reference](../reference/platform-services.md) for complet
 Make this cluster the active one:
 
 ```bash
-./bin/opencenter cluster select my-org/demo
+./bin/opencenter cluster use my-org/demo
 ```
 
 This creates `~/.config/opencenter/active` pointing to your cluster. Now you can run commands without specifying the cluster name.
@@ -211,7 +211,7 @@ opencenter:
 Generate the GitOps repository structure:
 
 ```bash
-./bin/opencenter cluster setup --render
+./bin/opencenter cluster generate
 ```
 
 This creates:
@@ -255,7 +255,7 @@ git push -u origin main
 Deploy the cluster:
 
 ```bash
-./bin/opencenter cluster bootstrap
+./bin/opencenter cluster deploy
 ```
 
 This command:
@@ -379,7 +379,7 @@ See [Troubleshooting Guide](../how-to/troubleshoot-deployment.md#validation-erro
 
 ### Bootstrap Hangs
 
-**Problem:** `opencenter cluster bootstrap` appears stuck
+**Problem:** `opencenter cluster deploy` appears stuck
 
 **Solution:** Check logs:
 ```bash
@@ -422,7 +422,7 @@ You've successfully:
 - Deployed a production-ready Kubernetes cluster
 - Verified cluster and services are running
 
-The cluster is now managed through GitOps. All changes should be made by updating the configuration file and running `opencenter cluster setup --render` to regenerate manifests.
+The cluster is now managed through GitOps. All changes should be made by updating the configuration file and running `opencenter cluster generate` to regenerate manifests.
 
 ---
 

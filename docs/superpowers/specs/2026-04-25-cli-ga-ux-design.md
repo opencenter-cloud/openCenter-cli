@@ -18,7 +18,7 @@ The design also defines which flags are truly global, which flags must be scoped
 
 - Produce a GA command surface that is easier to learn and remember.
 - Rename commands when the current name exposes implementation detail or overlaps another command.
-- Consolidate duplicated functionality such as `setup` versus `render`, `cluster update` versus `cluster config update`, and cluster-level key commands versus `secrets keys`.
+- Consolidate duplicated functionality such as `setup` versus `render`, `cluster set` versus `cluster normalize`, and cluster-level key commands versus `secrets keys`.
 - Make global flags actually global only when their behavior is meaningful across the command tree.
 - Standardize output flags across commands.
 - Improve default human output for mutating commands, validation commands, and error messages.
@@ -39,9 +39,9 @@ The current command tree has grown organically and now exposes several internal 
 
 ### Overlapping Lifecycle Commands
 
-`cluster setup`, `cluster render`, and `cluster bootstrap` describe implementation phases rather than user goals. `setup` generates repository structure, `render` renders templates into that repository, and `bootstrap` provisions or deploys the cluster. Users see a lifecycle, but the command names make them learn internal phase names.
+`cluster generate`, `cluster generate --render-only`, and `cluster deploy` describe implementation phases rather than user goals. `setup` generates repository structure, `render` renders templates into that repository, and `bootstrap` provisions or deploys the cluster. Users see a lifecycle, but the command names make them learn internal phase names.
 
-The README and workflow docs still reference `cluster setup --render`, while the live `cluster setup` command does not expose a `--render` flag. This is a concrete example of command semantics drifting across docs, tests, and implementation.
+The README and workflow docs still reference `cluster generate`, while the live `cluster generate` command does not expose a `--render` flag. This is a concrete example of command semantics drifting across docs, tests, and implementation.
 
 ### Ambiguous Configuration Commands
 
@@ -49,15 +49,15 @@ There are three different configuration surfaces:
 
 ```text
 opencenter config ...
-opencenter cluster update ...
-opencenter cluster config update ...
+opencenter cluster set ...
+opencenter cluster normalize ...
 ```
 
 They do different things:
 
 - `config` manages CLI defaults.
-- `cluster update` mutates specific cluster fields through dotted flags.
-- `cluster config update` adds missing default fields to a cluster config.
+- `cluster set` mutates specific cluster fields through dotted flags.
+- `cluster normalize` adds missing default fields to a cluster config.
 
 The names do not make those boundaries clear.
 
@@ -66,8 +66,8 @@ The names do not make those boundaries clear.
 Commands currently use a mix of:
 
 ```text
---json
---format table|json|yaml
+--output json
+--output text|json|yaml
 --output text|json|yaml
 --output <file>
 --out <file>
@@ -81,12 +81,11 @@ This creates avoidable cognitive load and makes scripting inconsistent.
 The root help advertises these global flags:
 
 ```text
---config
+config-file flag
 --config-dir
 --dry-run
 --log-level
---set
---show-active
+removed active-cluster display flag
 --break-lock
 ```
 
@@ -95,14 +94,14 @@ Only some behave as true global flags:
 - `--log-level` is parsed and applied globally.
 - `--config-dir` is pre-parsed before plugin discovery and affects config path resolution.
 - `--dry-run` is inherited by all commands, but only commands that explicitly read it implement preview behavior.
-- `--config` collides with command-local meanings such as `cluster init --config` and `cluster validate --config`.
-- `--set` is parsed globally but does not act as a reliable global override contract across all relevant commands.
-- `--show-active` is parsed but does not provide a clear command-wide behavior.
+- the config file flag collides with command-local meanings such as `cluster init config-file flag` and `cluster validate config-file flag`.
+- the set override mechanism is parsed globally but does not act as a reliable global override contract across all relevant commands.
+- `removed active-cluster display flag` is parsed but does not provide a clear command-wide behavior.
 - `--break-lock` only makes sense for mutating cluster operations that acquire operation locks.
 
 ### Docs and Live Help Drift
 
-The generated reference, README, and tutorial docs contain stale command examples. Examples include `cluster setup --render`, `cluster config get/set`, `opencenter sops ...`, and `cluster select --activate`. The live command tree also contains commands such as `cluster import` and hidden `cluster credentials` that are not represented consistently in the hand-authored command reference.
+The generated reference, README, and tutorial docs contain stale command examples. Examples include old generation flows, old config getter/setter examples, outdated secrets examples, and active-cluster activation flags. The live command tree also contains commands such as `cluster import` and hidden credentials commands that are not represented consistently in the hand-authored command reference.
 
 ## Command Model
 
@@ -172,28 +171,27 @@ Breaking renames are allowed for GA. The old names should be removed from normal
 
 | Current command | GA command | Rationale |
 |---|---|---|
-| `cluster setup` | `cluster generate` | Names the user goal: generate GitOps assets. |
-| `cluster render` | `cluster generate --render-only` | Rendering remains available as an explicit generation mode without a separate public command. |
-| `cluster bootstrap` | `cluster deploy` | Users deploy clusters; bootstrap is internal phase language. |
-| `cluster preflight` | `cluster doctor` | Matches diagnostic intent and broader checks. |
-| `cluster info` | `cluster describe` | Existing command already provides detailed description. |
-| `cluster select` | `cluster use` | Better shell workflow phrasing: use this cluster. |
-| `cluster current` | `cluster active` | Names the active-cluster concept directly. |
-| `cluster update` | `cluster set` | Makes field mutation explicit. |
-| `cluster config update` | `cluster normalize` | Describes adding missing default fields. |
-| `cluster config export-effective` | `cluster export` | Shorter and clearer. |
-| `cluster validate-manifests` | `cluster validate --manifests` | Manifest validation is a validation mode. |
-| `cluster sync-status` | `cluster status --sync` | Keeps status ownership together. |
-| `cluster check-keys` | `secrets keys check` | Key health belongs with secrets. |
-| `cluster rotate-keys` | `secrets keys rotate --cluster <cluster>` | Key rotation belongs with secrets, scoped by cluster when needed. |
-| `cluster revoke-key` | `secrets keys revoke --cluster <cluster>` | Key revocation belongs with secrets. |
-| `cluster install-hooks` | `secrets hooks install` | Hooks protect secrets workflow. |
+| `cluster generate` | `cluster generate` | Names the user goal: generate GitOps assets. |
+| `cluster generate --render-only` | `cluster generate --render-only` | Rendering remains available as an explicit generation mode without a separate public command. |
+| `cluster deploy` | `cluster deploy` | Users deploy clusters; bootstrap is internal phase language. |
+| `cluster doctor` | `cluster doctor` | Matches diagnostic intent and broader checks. |
+| `cluster describe` | `cluster describe` | Existing command already provides detailed description. |
+| `cluster use` | `cluster use` | Better shell workflow phrasing: use this cluster. |
+| `cluster active` | `cluster active` | Names the active-cluster concept directly. |
+| `cluster set` | `cluster set` | Makes field mutation explicit. |
+| `cluster normalize` | `cluster normalize` | Describes adding missing default fields. |
+| `cluster export` | `cluster export` | Shorter and clearer. |
+| `cluster validate --manifests` | `cluster validate --manifests` | Manifest validation is a validation mode. |
+| `cluster status --sync` | `cluster status --sync` | Keeps status ownership together. |
+| `secrets keys check` | `secrets keys check` | Key health belongs with secrets. |
+| `secrets keys rotate --cluster <cluster> --type age` | `secrets keys rotate --cluster <cluster> --type age` | Key rotation belongs with secrets, scoped by cluster when needed. |
+| `secrets keys revoke --cluster <cluster>` | `secrets keys revoke --cluster <cluster>` | Key revocation belongs with secrets. |
 
 `cluster config` should be removed as a public subgroup. Its useful functionality should move to `cluster set`, `cluster normalize`, and `cluster export`.
 
 `cluster import scan/report/apply` should remain. It maps cleanly to the existing artifact workflow and should be promoted in docs as the import/adoption flow.
 
-Hidden `cluster credentials` should be removed. Its environment export behavior should be folded into `cluster env`. The GA public path for environment activation should be:
+The hidden credentials subgroup should be removed. Its environment export behavior should be folded into `cluster env`. The GA public path for environment activation should be:
 
 ```bash
 eval "$(opencenter cluster env prod)"
@@ -225,9 +223,7 @@ Global flags should be limited to behavior that can be applied consistently by r
 
 | Current flag | GA treatment | Rationale |
 |---|---|---|
-| `--config` | Remove as global; use `--cluster-config` or `--file` on specific commands | Avoids collision with CLI config and command-local file input. |
-| `--set` | Remove as global; use `cluster set` or command-specific `--override path=value` | Global override semantics are too broad and currently inconsistent. |
-| `--show-active` | Remove | Use `cluster active`; include active context in normal human output when useful. |
+| `removed active-cluster display flag` | Remove | Use `cluster active`; include active context in normal human output when useful. |
 | `--break-lock` | Scope to mutating cluster commands | It only applies where operation locks are acquired. |
 
 ### Cluster Targeting
@@ -259,7 +255,7 @@ Output destination and output format must not share the same flag name.
 --cluster-config <path>      explicit cluster config input where appropriate
 ```
 
-This replaces command-specific variants such as `--json`, `--format`, `--out`, and file-oriented `--output`.
+This replaces command-specific variants such as `--output json`, `--output`, `--out`, and file-oriented `--output`.
 
 ### Dry-Run Semantics
 
@@ -372,9 +368,10 @@ opencenter secrets list|get|set|delete|describe
 opencenter secrets sync|validate
 opencenter secrets encrypt|decrypt|status
 opencenter secrets keys generate|rotate|backup|validate|check|revoke
-opencenter secrets hooks install
 opencenter secrets login
 ```
+
+Use repository-local Git hooks until a public secrets hook command exists.
 
 Cluster-specific key behavior should be modeled through explicit cluster scoping:
 
@@ -404,13 +401,13 @@ The README, tutorials, how-to guides, generated command reference, and command e
 
 Required documentation updates:
 
-- Replace `cluster setup --render` with `cluster generate`.
-- Replace `cluster bootstrap` with `cluster deploy`.
-- Replace `cluster select/current` with `cluster use/active`.
-- Replace `cluster info` with `cluster describe`.
-- Replace `cluster update` and `cluster config update` with `cluster set` and `cluster normalize`.
-- Replace `--json`, `--format`, and file-oriented `--output` examples with the GA flag model.
-- Remove `opencenter sops ...` examples and use `opencenter secrets ...`.
+- Replace `cluster generate` with `cluster generate`.
+- Replace `cluster deploy` with `cluster deploy`.
+- Replace `cluster use/current` with `cluster use/active`.
+- Replace `cluster describe` with `cluster describe`.
+- Replace `cluster set` and `cluster normalize` with `cluster set` and `cluster normalize`.
+- Replace `--output json`, `--output`, and file-oriented `--output` examples with the GA flag model.
+- Remove `opencenter secrets ...` examples and use `opencenter secrets ...`.
 - Document `cluster import scan/report/apply` in the main CLI reference.
 - Document the global flag contract and command-specific exceptions.
 
@@ -496,5 +493,5 @@ The implementation should avoid unrelated refactors in cluster configuration int
 - `cluster` remains the primary domain for lifecycle operations.
 - `secrets` owns secret values, encryption, key lifecycle, and hooks.
 - `--output` means output format; file destinations use `--output-file` or command-specific file flags.
-- `--config` is not a global GA flag.
-- `--set` is not a global GA flag.
+- the config file flag is not a global GA flag.
+- the set override mechanism is not a global GA flag.

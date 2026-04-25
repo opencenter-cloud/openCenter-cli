@@ -406,21 +406,21 @@ Feature: My Service Configuration
 
   Scenario: Enable my-service
     Given I have a cluster configuration
-    When I run "opencenter cluster update test --opencenter.services.my_service.enabled=true"
+    When I run "opencenter cluster set test opencenter.services.my_service.enabled=true"
     Then the command should succeed
     And the configuration should have my_service enabled
 
   Scenario: Validate my-service dependencies
     Given I have a cluster configuration
     And I have disabled cert-manager
-    When I run "opencenter cluster update test --opencenter.services.my_service.enabled=true"
+    When I run "opencenter cluster set test opencenter.services.my_service.enabled=true"
     And I run "opencenter cluster validate test"
     Then the command should fail
     And the error should contain "my-service requires cert-manager"
 
   Scenario: Deploy my-service
     Given I have a cluster configuration with my-service enabled
-    When I run "opencenter cluster setup test --render"
+    When I run "opencenter cluster generate test"
     Then the command should succeed
     And the file "applications/base/services/my-service/helmrelease.yaml" should exist
     And the file should contain "chart: my-service"
@@ -438,11 +438,11 @@ mise run build
 ./bin/opencenter cluster init test --org test-org
 
 # Enable service
-./bin/opencenter cluster update test \
-  --opencenter.services.my_service.enabled=true
+./bin/opencenter cluster set test \
+  opencenter.services.my_service.enabled=true
 
 # Render templates
-./bin/opencenter cluster setup test --render
+./bin/opencenter cluster generate test
 
 # Verify generated files
 ls -la ~/.config/opencenter/clusters/test-org/test/gitops/applications/base/services/my-service/
@@ -505,24 +505,24 @@ Add to `docs/how-to/customize-services.md`:
 ## Enable my-service
 
 ```bash
-opencenter cluster update my-cluster \
-  --opencenter.services.my_service.enabled=true
+opencenter cluster set my-cluster \
+  opencenter.services.my_service.enabled=true
 ```
 
 ## Configure my-service
 
 ```bash
 # Set version
-opencenter cluster update my-cluster \
-  --opencenter.services.my_service.version="1.2.0"
+opencenter cluster set my-cluster \
+  opencenter.services.my_service.version="1.2.0"
 
 # Set replicas
-opencenter cluster update my-cluster \
-  --opencenter.services.my_service.values.replicas=3
+opencenter cluster set my-cluster \
+  opencenter.services.my_service.values.replicas=3
 
 # Set resource limits
-opencenter cluster update my-cluster \
-  --opencenter.services.my_service.values.resources.limits.memory="1Gi"
+opencenter cluster set my-cluster \
+  opencenter.services.my_service.values.resources.limits.memory="1Gi"
 ```
 ```
 
@@ -571,7 +571,7 @@ Before submitting, verify:
 - [ ] Configuration examples added to `docs/how-to/customize-services.md`
 - [ ] All tests pass (`mise run test && mise run godog`)
 - [ ] Schema verification passes (`mise run schema-verify`)
-- [ ] Templates render correctly (`mise run build && opencenter cluster setup --render`)
+- [ ] Templates render correctly (`mise run build && opencenter cluster generate`)
 
 ## Security Hardening Guidelines
 
@@ -633,8 +633,8 @@ kubectl logs -n my-service -l app.kubernetes.io/name=my-service
 **Solution:** Enable dependencies or update validation:
 ```bash
 # Enable dependency
-opencenter cluster update test \
-  --opencenter.services.cert_manager.enabled=true
+opencenter cluster set test \
+  opencenter.services.cert_manager.enabled=true
 
 # Or make dependency optional in validation
 ```
@@ -647,7 +647,7 @@ opencenter cluster update test \
 ```bash
 # Render templates
 mise run build
-./bin/opencenter cluster setup test --render
+./bin/opencenter cluster generate test
 
 # Check for errors in output
 # Verify generated files

@@ -25,13 +25,13 @@ openCenter uses SOPS with Age encryption to secure sensitive data in Git reposit
 Create a new Age key pair for encrypting secrets:
 
 ```bash
-opencenter sops generate-key --cluster my-cluster
+opencenter secrets keys generate
 ```
 
 This creates:
-- Private key: `~/.config/opencenter/clusters/<org>/secrets/age/<cluster>-key.txt`
+- Private key: `~/.config/sops/age/keys.txt` by default
 - Public key: Embedded in private key file
-- SOPS configuration: `.sops.yaml` in GitOps repository
+- SOPS configuration: `.sops.yaml` in the current directory when enabled
 
 Key format:
 ```
@@ -45,17 +45,15 @@ AGE-SECRET-KEY-1ABC123...
 Specify custom key file location:
 
 ```bash
-opencenter sops generate-key --cluster my-cluster \
-  --key-file /secure/location/my-key.txt
+opencenter secrets keys generate --key-file /secure/location/my-key.txt
 ```
 
-### Backup Key During Generation
+### Skip SOPS Configuration Updates
 
-Create backup copy automatically:
+Generate only the Age key file:
 
 ```bash
-opencenter sops generate-key --cluster my-cluster \
-  --backup-dir /backup/location
+opencenter secrets keys generate --key-file /secure/location/my-key.txt --update-sops-config=false
 ```
 
 ## Validate SOPS Configuration
@@ -63,7 +61,7 @@ opencenter sops generate-key --cluster my-cluster \
 Check that SOPS is properly configured:
 
 ```bash
-opencenter sops validate --cluster my-cluster
+opencenter secrets keys validate
 ```
 
 This validates:
@@ -85,15 +83,15 @@ SOPS configuration is valid
 ### Validate Specific Key File
 
 ```bash
-opencenter sops validate --key-file /path/to/key.txt
+opencenter secrets keys validate --key-file /path/to/key.txt
 ```
 
-### Verbose Validation
+### Validate Secret Drift
 
-See detailed validation information:
+Compare a cluster config with encrypted manifests:
 
 ```bash
-opencenter sops validate --cluster my-cluster --verbose
+opencenter secrets validate my-cluster
 ```
 
 ## Encrypt Secrets
@@ -101,7 +99,7 @@ opencenter sops validate --cluster my-cluster --verbose
 Encrypt sensitive files in your GitOps repository:
 
 ```bash
-opencenter sops secrets-encrypt --cluster my-cluster
+opencenter secrets encrypt --path applications/overlays/my-cluster
 ```
 
 This encrypts:
@@ -113,8 +111,7 @@ This encrypts:
 ### Encrypt Specific File
 
 ```bash
-opencenter sops secrets-encrypt --cluster my-cluster \
-  --file applications/overlays/my-cluster/secrets/credentials.yaml
+opencenter secrets encrypt --path applications/overlays/my-cluster/secrets
 ```
 
 ### Fast Parallel Encryption
@@ -122,7 +119,7 @@ opencenter sops secrets-encrypt --cluster my-cluster \
 Encrypt multiple files in parallel:
 
 ```bash
-opencenter sops secrets-encrypt-fast --cluster my-cluster
+opencenter secrets encrypt --path applications/overlays/my-cluster
 ```
 
 This uses 4 parallel workers for faster encryption of large repositories.
@@ -132,20 +129,19 @@ This uses 4 parallel workers for faster encryption of large repositories.
 Decrypt secrets for viewing or editing:
 
 ```bash
-opencenter sops secrets-decrypt --cluster my-cluster
+opencenter secrets decrypt --path applications/overlays/my-cluster
 ```
 
 ### Decrypt Specific File
 
 ```bash
-opencenter sops secrets-decrypt --cluster my-cluster \
-  --file applications/overlays/my-cluster/secrets/credentials.yaml
+opencenter secrets decrypt --path applications/overlays/my-cluster/secrets
 ```
 
 ### Fast Parallel Decryption
 
 ```bash
-opencenter sops secrets-decrypt-fast --cluster my-cluster
+opencenter secrets decrypt --path applications/overlays/my-cluster
 ```
 
 ## List Encrypted Secrets
@@ -153,7 +149,7 @@ opencenter sops secrets-decrypt-fast --cluster my-cluster
 See all encrypted files in repository:
 
 ```bash
-opencenter sops secrets-list --cluster my-cluster
+opencenter secrets list
 ```
 
 Output shows:
@@ -173,7 +169,7 @@ Total: 4 encrypted files
 Alias for `secrets-list`:
 
 ```bash
-opencenter sops secrets-status --cluster my-cluster
+opencenter secrets status --path applications/overlays/my-cluster
 ```
 
 ## Rotate Encryption Keys
@@ -181,7 +177,7 @@ opencenter sops secrets-status --cluster my-cluster
 Rotate Age keys for security (recommended every 90 days):
 
 ```bash
-opencenter sops rotate-key --cluster my-cluster
+opencenter secrets keys rotate --cluster my-cluster --type age
 ```
 
 This process:
@@ -191,19 +187,16 @@ This process:
 4. Updates `.sops.yaml` configuration
 5. Backs up old key
 
-### Rotate with Custom Backup Location
+### Complete a Dual-Key Rotation
 
 ```bash
-opencenter sops rotate-key --cluster my-cluster \
-  --backup-dir /secure/backup/location
+opencenter secrets keys rotate --cluster my-cluster --type age --complete
 ```
 
-### Rotate Specific Key File
+### Rotate SSH Keys
 
 ```bash
-opencenter sops rotate-key --cluster my-cluster \
-  --key-file /path/to/current-key.txt \
-  --new-key-file /path/to/new-key.txt
+opencenter secrets keys rotate --cluster my-cluster --type ssh
 ```
 
 ## Backup Encryption Keys
@@ -211,27 +204,26 @@ opencenter sops rotate-key --cluster my-cluster \
 Create backup of Age key:
 
 ```bash
-opencenter sops backup-key --cluster my-cluster
+opencenter secrets keys backup
 ```
 
-Default backup location: `~/.config/opencenter/clusters/<org>/secrets/age/backups/`
+Default backup location: `~/.config/sops/age/backups/`
 
 ### Custom Backup Location
 
 ```bash
-opencenter sops backup-key --cluster my-cluster \
-  --backup-dir /secure/backup/location
+opencenter secrets keys backup --backup-dir /secure/backup/location
 ```
 
-### Backup with Timestamp
+### Backup a Specific Key File
 
 ```bash
-opencenter sops backup-key --cluster my-cluster \
-  --backup-dir /backup \
-  --timestamp
+opencenter secrets keys backup \
+  --key-file /secure/location/my-key.txt \
+  --backup-dir /backup
 ```
 
-Creates: `/backup/<cluster>-key-20260217-103000.txt`
+Backups are timestamped automatically.
 
 ## SOPS Configuration File
 
@@ -418,7 +410,7 @@ sops --decrypt secrets/credentials.yaml
 **Solution:** Regenerate key:
 
 ```bash
-opencenter sops generate-key --cluster my-cluster --force
+opencenter secrets keys generate --key-file /path/to/new-key.txt
 ```
 
 ### FluxCD Decryption Fails

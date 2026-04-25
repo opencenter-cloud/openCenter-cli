@@ -652,13 +652,13 @@ test-priority8 = "go test ./... -v args --godog.tags=@priority8 --godog.paths=te
 # Generate the cluster JSON schema into the schema directory
 schema = "./bin/opencenter cluster schema  --pretty --out schema/cluster.schema.json"
 
-# Generate JSON schema from Go struct definitions (v2 schema generator)
+# Generate JSON schema from Go struct definitions
 schema-gen = '''
 #!/usr/bin/env bash
 set -e
 echo "Generating JSON schema from Go structs..."
-go run ./cmd/schema-gen/main.go --version 1.0 --output schema/cluster-v1.schema.json
-echo "Schema generated successfully at schema/cluster-v1.schema.json"
+go run ./cmd/schema-gen/main.go --version 2.0 --output schema/cluster.schema.json
+echo "Schema generated successfully at schema/cluster.schema.json"
 '''
 
 # Convenience tasks for validation
@@ -666,20 +666,6 @@ validate = "./bin/opencenter cluster validate"
 
 # Validate template schema references
 validate-templates = "./hack/validate-template-schema.sh"
-
-# Migrate v1 configuration to v2 format
-migrate-config = '''
-#!/usr/bin/env bash
-set -e
-
-if [ -z "$1" ]; then
-  echo "Usage: mise run migrate-config <input-config.yaml>"
-  echo "Example: mise run migrate-config testdata/cluster-config.yaml"
-  exit 1
-fi
-
-./bin/opencenter cluster migrate-config "$1" --report
-'''
 
 # Export effective configuration with applied defaults
 config-export-effective = '''

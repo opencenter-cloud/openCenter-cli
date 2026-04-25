@@ -621,10 +621,67 @@
         "created_by"
       ]
     },
+    "CustomerManagedConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "repository_name": {
+          "type": "string"
+        },
+        "repository_url": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "flux_name_prefix": {
+          "type": "string"
+        },
+        "secret_name": {
+          "type": "string"
+        },
+        "emit_secret": {
+          "type": "boolean"
+        },
+        "kustomizations": {
+          "items": {
+            "$ref": "#/$defs/CustomerManagedKustomization"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CustomerManagedKustomization": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "Deployment": {
       "properties": {
         "auto_deploy": {
           "type": "boolean"
+        },
+        "method": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -670,21 +727,21 @@
       "additionalProperties": false,
       "type": "object"
     },
-    "GitOpsConfig": {
+    "GitOpsAuth": {
       "properties": {
-        "git_dir": {
-          "type": "string"
+        "ssh": {
+          "$ref": "#/$defs/GitOpsSSHAuth"
         },
-        "git_url": {
-          "type": "string"
-        },
-        "git_ssh_key": {
-          "type": "string"
-        },
-        "git_ssh_pub": {
-          "type": "string"
-        },
-        "git_branch": {
+        "token": {
+          "$ref": "#/$defs/GitOpsTokenAuth"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "GitOpsBaseRepo": {
+      "properties": {
+        "url": {
           "type": "string"
         },
         "release": {
@@ -692,37 +749,33 @@
         },
         "branch": {
           "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "GitOpsConfig": {
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/GitOpsRepository"
         },
-        "uri": {
-          "type": "string"
+        "base_repo": {
+          "$ref": "#/$defs/GitOpsBaseRepo"
+        },
+        "auth": {
+          "$ref": "#/$defs/GitOpsAuth"
         },
         "flux": {
           "$ref": "#/$defs/GitOpsFlux"
         },
-        "gitops_base_repo": {
-          "type": "string",
-          "description": "URL of the GitOps base repository"
-        },
-        "gitops_base_release": {
-          "type": "string",
-          "description": "Release tag of the GitOps base repository"
-        },
-        "gitops_branch": {
-          "type": "string",
-          "description": "Branch of the GitOps base repository",
-          "default": "main"
-        },
-        "secret_name": {
-          "type": "string",
-          "description": "Name of the GitOps secret for repository access",
-          "default": "opencenter-base"
+        "overlay_units": {
+          "$ref": "#/$defs/UnitsConfig"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "git_dir",
-        "git_url"
+        "repository"
       ]
     },
     "GitOpsFlux": {
@@ -737,8 +790,61 @@
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "interval",
         "prune"
+      ]
+    },
+    "GitOpsRepository": {
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "local_dir": {
+          "type": "string"
+        },
+        "secret_name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "url"
+      ]
+    },
+    "GitOpsSSHAuth": {
+      "properties": {
+        "private_key": {
+          "type": "string"
+        },
+        "public_key": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "GitOpsTokenAuth": {
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "token_file": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "provider"
       ]
     },
     "GlobalOIDCConfig": {
@@ -1184,13 +1290,32 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "pod_security_standards": {
+          "type": "string",
+          "enum": [
+            "privileged",
+            "baseline",
+            "restricted"
+          ],
+          "description": "Pod security standards enforcement level"
+        },
+        "audit_logging": {
+          "type": "boolean",
+          "description": "Enable Kubernetes API audit logging"
+        },
+        "encryption_at_rest": {
+          "type": "boolean",
+          "description": "Enable encryption of secrets at rest"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "k8s_hardening",
-        "pod_security_exemptions"
+        "pod_security_exemptions",
+        "audit_logging",
+        "encryption_at_rest"
       ]
     },
     "KubesprayClusterModuleConfig": {
@@ -1495,6 +1620,39 @@
         "source"
       ]
     },
+    "SOPSGenerationConfig": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/SOPSGenerationRule"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "SOPSGenerationRule": {
+      "properties": {
+        "path_regex": {
+          "type": "string"
+        },
+        "age_recipients": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "encrypted_regex": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
     "SSHKey": {
       "properties": {
         "private": {
@@ -1552,6 +1710,9 @@
         },
         "vsphere_csi": {
           "$ref": "#/$defs/VSphereCsiSecrets"
+        },
+        "overlay_units": {
+          "$ref": "#/$defs/Secrets"
         }
       },
       "additionalProperties": false,
@@ -1829,6 +1990,36 @@
           "description": "Worker node boot volume type",
           "default": "HA-Standard"
         },
+        "worker_volume_delete_on_termination": {
+          "type": "boolean",
+          "description": "Delete worker boot volume on instance termination",
+          "default": false
+        },
+        "master_volume_size": {
+          "type": "integer",
+          "description": "Master node boot volume size in GB",
+          "default": 40
+        },
+        "master_volume_destination_type": {
+          "type": "string",
+          "description": "Master node boot volume destination type",
+          "default": "volume"
+        },
+        "master_volume_source_type": {
+          "type": "string",
+          "description": "Master node boot volume source type",
+          "default": "image"
+        },
+        "master_volume_type": {
+          "type": "string",
+          "description": "Master node boot volume type",
+          "default": "HA-Standard"
+        },
+        "master_volume_delete_on_termination": {
+          "type": "boolean",
+          "description": "Delete master boot volume on instance termination",
+          "default": false
+        },
         "additional_block_devices": {
           "items": {
             "type": "object"
@@ -2071,6 +2262,18 @@
         "access_key",
         "secret_key"
       ]
+    },
+    "UnitsConfig": {
+      "properties": {
+        "customer_managed": {
+          "$ref": "#/$defs/CustomerManagedConfig"
+        },
+        "sops": {
+          "$ref": "#/$defs/SOPSGenerationConfig"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
     },
     "VLAN": {
       "properties": {

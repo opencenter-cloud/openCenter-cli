@@ -32,7 +32,7 @@ func TestSecretsKeysCmd_Structure(t *testing.T) {
 	}
 
 	// Verify subcommands exist
-	expectedSubcommands := []string{"generate", "rotate", "backup", "validate"}
+	expectedSubcommands := []string{"generate", "rotate", "backup", "validate", "check", "revoke"}
 	subcommands := cmd.Commands()
 
 	if len(subcommands) != len(expectedSubcommands) {
@@ -53,14 +53,19 @@ func TestSecretsKeysCmd_Structure(t *testing.T) {
 	}
 }
 
-// TestSecretsKeysSubcommands_RequiredFlags verifies all keys subcommands have required flags
+// TestSecretsKeysSubcommands_RequiredFlags verifies SOPS lifecycle keys subcommands have required flags
 // This is a unit test complement to the property test TestProperty_KeysSubcommandsFlagsPresent
 func TestSecretsKeysSubcommands_RequiredFlags(t *testing.T) {
 	keysCmd := NewSecretsKeysCmd()
-	subcommands := keysCmd.Commands()
+	subcommands := []string{"generate", "rotate", "backup", "validate"}
 
-	for _, subcmd := range subcommands {
-		t.Run(subcmd.Use, func(t *testing.T) {
+	for _, name := range subcommands {
+		t.Run(name, func(t *testing.T) {
+			subcmd := findSubcommand(keysCmd, name)
+			if subcmd == nil {
+				t.Fatalf("missing subcommand %q", name)
+			}
+
 			// Check for --key-file flag
 			keyFileFlag := subcmd.Flags().Lookup("key-file")
 			if keyFileFlag == nil {

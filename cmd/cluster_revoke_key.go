@@ -55,16 +55,16 @@ The revocation process:
 
 If no cluster name is provided, uses the currently active cluster.`,
 		Example: `  # Revoke all keys for a user
-  opencenter cluster revoke-key my-cluster --user user@example.com
+  opencenter secrets keys revoke --cluster my-cluster --user user@example.com
 
   # Revoke a specific key by fingerprint
-  opencenter cluster revoke-key my-cluster --key age15n3dugqfej2hk8cqz2kcx78v6lxwllk5gruu4ermz2hu539xrgwq0w7dyn
+  opencenter secrets keys revoke --cluster my-cluster --key age15n3dugqfej2hk8cqz2kcx78v6lxwllk5gruu4ermz2hu539xrgwq0w7dyn
 
   # Emergency revocation (generates new key immediately)
-  opencenter cluster revoke-key my-cluster --key <fingerprint> --emergency
+  opencenter secrets keys revoke --cluster my-cluster --key <fingerprint> --emergency
 
   # Preview revocation without making changes
-  opencenter cluster revoke-key my-cluster --user user@example.com --dry-run`,
+  opencenter secrets keys revoke --cluster my-cluster --user user@example.com --dry-run`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: runClusterRevokeKey,
 	}
@@ -85,6 +85,10 @@ func runClusterRevokeKey(cmd *cobra.Command, args []string) error {
 	keyFingerprint, _ := cmd.Flags().GetString("key")
 	emergency, _ := cmd.Flags().GetBool("emergency")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	clusterFlag := ""
+	if cmd.Flags().Lookup("cluster") != nil {
+		clusterFlag, _ = cmd.Flags().GetString("cluster")
+	}
 
 	// Validate flags
 	if user == "" && keyFingerprint == "" {
@@ -104,7 +108,11 @@ func runClusterRevokeKey(cmd *cobra.Command, args []string) error {
 	}
 
 	// Resolve cluster name
-	clusterName, err := resolveClusterName(args, true)
+	nameArgs := args
+	if clusterFlag != "" {
+		nameArgs = []string{clusterFlag}
+	}
+	clusterName, err := resolveClusterName(nameArgs, true)
 	if err != nil {
 		return err
 	}

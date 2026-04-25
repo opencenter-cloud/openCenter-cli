@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/secrets"
@@ -45,20 +44,20 @@ The dual-key approach ensures zero-downtime rotation. During the transition
 period, secrets can be decrypted with either the old or new key.
 
 Key rotation is recommended every 90 days for Age keys and 180 days for SSH keys.
-Use 'opencenter cluster check-keys' to monitor key expiration.
+Use 'opencenter secrets keys check' to monitor key expiration.
 
 If no cluster name is provided, uses the currently active cluster.`,
 		Example: `  # Rotate Age encryption key
-  opencenter cluster rotate-keys my-cluster --type age
+  opencenter secrets keys rotate --cluster my-cluster --type age
 
   # Rotate SSH key
-  opencenter cluster rotate-keys my-cluster --type ssh
+  opencenter secrets keys rotate --cluster my-cluster --type ssh
 
   # Complete rotation (remove old key)
-  opencenter cluster rotate-keys my-cluster --type age --complete
+  opencenter secrets keys rotate --cluster my-cluster --type age --complete
 
   # Preview rotation plan
-  opencenter cluster rotate-keys my-cluster --type age --dry-run`,
+  opencenter secrets keys rotate --cluster my-cluster --type age --dry-run`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: runClusterRotateKeys,
 	}
@@ -73,7 +72,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 }
 
 func runClusterRotateKeys(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	// Get flags
 	keyType, _ := cmd.Flags().GetString("type")
@@ -143,7 +142,7 @@ func displayRotationResult(cmd *cobra.Command, clusterName, keyType string, resu
 	} else if result.DualKeyActive {
 		fmt.Fprintln(cmd.OutOrStdout(), "Rotation Mode: Dual-key (both keys active)")
 		fmt.Fprintln(cmd.OutOrStdout(), "\nSecrets can be decrypted with either key during transition period.")
-		fmt.Fprintf(cmd.OutOrStdout(), "Run 'opencenter cluster rotate-keys %s --type %s --complete' to finalize rotation.\n", clusterName, keyType)
+		fmt.Fprintf(cmd.OutOrStdout(), "Run 'opencenter secrets keys rotate --cluster %s --type %s --complete' to finalize rotation.\n", clusterName, keyType)
 	} else {
 		fmt.Fprintln(cmd.OutOrStdout(), "Rotation Mode: Single-key")
 	}
@@ -173,7 +172,7 @@ func displayRotationResult(cmd *cobra.Command, clusterName, keyType string, resu
 		fmt.Fprintln(cmd.OutOrStdout(), "\nNext steps:")
 		fmt.Fprintln(cmd.OutOrStdout(), "  1. Verify that all services can decrypt secrets with the new key")
 		fmt.Fprintln(cmd.OutOrStdout(), "  2. Test cluster operations to ensure no issues")
-		fmt.Fprintf(cmd.OutOrStdout(), "  3. Complete rotation: opencenter cluster rotate-keys %s --type %s --complete\n", clusterName, keyType)
+		fmt.Fprintf(cmd.OutOrStdout(), "  3. Complete rotation: opencenter secrets keys rotate --cluster %s --type %s --complete\n", clusterName, keyType)
 	}
 }
 

@@ -44,16 +44,16 @@ Keys are tracked in the key registry with default expiration policies:
 Use --all to check all clusters, or --cluster to check a specific cluster.
 The --warn-days flag controls the warning threshold.`,
 		Example: `  # Check keys for all clusters
-  opencenter cluster check-keys --all
+  opencenter secrets keys check --all
 
   # Check keys for specific cluster
-  opencenter cluster check-keys --cluster my-cluster
+  opencenter secrets keys check --cluster my-cluster
 
   # Check with custom warning threshold (30 days)
-  opencenter cluster check-keys --all --warn-days 30
+  opencenter secrets keys check --all --warn-days 30
 
   # Output in JSON format for automation
-  opencenter cluster check-keys --all --output json`,
+  opencenter secrets keys check --all --output json`,
 		RunE: runClusterCheckKeys,
 	}
 
@@ -204,13 +204,13 @@ func displayExpirationReportText(cmd *cobra.Command, report *secrets.ExpirationR
 		fmt.Fprintln(cmd.OutOrStdout(), "\nRecommendations:")
 		fmt.Fprintln(cmd.OutOrStdout(), "  Rotate expired keys immediately:")
 		for _, info := range report.Expired {
-			fmt.Fprintf(cmd.OutOrStdout(), "    opencenter cluster rotate-keys %s --type %s\n", info.Cluster, info.KeyType)
+			fmt.Fprintf(cmd.OutOrStdout(), "    opencenter secrets keys rotate --cluster %s --type %s\n", info.Cluster, info.KeyType)
 		}
 	} else if len(report.Warning) > 0 {
 		fmt.Fprintln(cmd.OutOrStdout(), "\nRecommendations:")
 		fmt.Fprintln(cmd.OutOrStdout(), "  Schedule rotation for expiring keys:")
 		for _, info := range report.Warning {
-			fmt.Fprintf(cmd.OutOrStdout(), "    opencenter cluster rotate-keys %s --type %s\n", info.Cluster, info.KeyType)
+			fmt.Fprintf(cmd.OutOrStdout(), "    opencenter secrets keys rotate --cluster %s --type %s\n", info.Cluster, info.KeyType)
 		}
 	}
 }

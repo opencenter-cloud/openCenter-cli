@@ -165,16 +165,26 @@ func createTestConfig(backend string) *v2.Config {
 // **Feature: secrets-cli-consolidation, Property 4: Keys subcommands have required flags**
 // **Validates: Requirements 6.6, 6.7**
 //
-// Property 4: Keys subcommands have required flags
-// For any subcommand of NewSecretsKeysCmd(), the command SHALL have both a --key-file flag
-// and a --dry-run flag registered.
+// Property 4: SOPS lifecycle keys subcommands have required flags
+// For any SOPS key lifecycle subcommand of NewSecretsKeysCmd(), the command SHALL have both
+// a --key-file flag and a --dry-run flag registered.
 func TestProperty_KeysSubcommandsFlagsPresent(t *testing.T) {
 	f := func(subcommandIndex uint8) bool {
 		// Get the keys command
 		keysCmd := NewSecretsKeysCmd()
 
-		// Get all subcommands
-		subcommands := keysCmd.Commands()
+		// Get SOPS key lifecycle subcommands. Cluster key commands under secrets keys
+		// intentionally use cluster-scoped flags instead.
+		subcommandNames := []string{"generate", "rotate", "backup", "validate"}
+		subcommands := make([]*cobra.Command, 0, len(subcommandNames))
+		for _, name := range subcommandNames {
+			subcommand := findSubcommand(keysCmd, name)
+			if subcommand == nil {
+				t.Logf("Missing expected subcommand %q", name)
+				return false
+			}
+			subcommands = append(subcommands, subcommand)
+		}
 		if len(subcommands) == 0 {
 			t.Log("No subcommands found in keys command")
 			return false
@@ -447,17 +457,11 @@ func TestProperty_FlagNamingConsistency(t *testing.T) {
 		}
 
 		if keysSubcmd != nil {
-			// Keys subcommands that should have dry-run
-			keysSubcommands := keysSubcmd.Commands()
-			for _, subcmd := range keysSubcommands {
-				// All keys subcommands should have --dry-run
-				expectedFlags["keys "+subcmd.Name()] = []string{"dry-run"}
-
-				// keys rotate should also have --path
-				if subcmd.Name() == "rotate" {
-					expectedFlags["keys "+subcmd.Name()] = []string{"path", "dry-run"}
-				}
+			// Preview-capable mutating keys subcommands should consistently use --dry-run.
+			for _, name := range []string{"generate", "backup", "validate", "revoke"} {
+				expectedFlags["keys "+name] = []string{"dry-run"}
 			}
+			expectedFlags["keys rotate"] = []string{"path", "dry-run"}
 		}
 
 		// Select a subcommand to test using the seed

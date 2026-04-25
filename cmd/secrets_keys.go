@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -29,6 +31,8 @@ for standalone clusters and GitOps deployments.`,
 	cmd.AddCommand(newSecretsKeysRotateCmd())
 	cmd.AddCommand(newSecretsKeysBackupCmd())
 	cmd.AddCommand(newSecretsKeysValidateCmd())
+	cmd.AddCommand(newSecretsKeysCheckCmd())
+	cmd.AddCommand(newSecretsKeysRevokeCmd())
 
 	return cmd
 }
@@ -67,29 +71,35 @@ cluster specifications for SOPS encryption.`,
 // newSecretsKeysRotateCmd creates the rotate subcommand
 func newSecretsKeysRotateCmd() *cobra.Command {
 	var (
-		keyFile string
-		path    string
-		dryRun  bool
+		keyFile     string
+		path        string
+		dryRun      bool
+		clusterName string
+		keyType     string
+		complete    bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "rotate",
-		Short: "Rotate Age keys and re-encrypt existing secrets",
-		Long: `Rotate Age keys and automatically re-encrypt existing SOPS files.
+		Short: "Rotate SOPS files or cluster encryption keys",
+		Long: `Rotate SOPS files or cluster encryption keys.
 
-This command generates a new Age key pair, backs up the old key, and re-encrypts
-all SOPS-encrypted files in the specified path with the new key. This is
-essential for maintaining security through regular key rotation.
+Without --cluster, --type, or --complete, this command rotates the local Age
+key and re-encrypts SOPS files under --path.
 
-The rotation process:
-1. Backs up the existing Age key
-2. Generates a new Age key pair
-3. Finds all SOPS-encrypted files
-4. Re-encrypts each file with the new key
-5. Updates .sops.yaml configuration
+With --cluster, it rotates a cluster encryption key. Use --type age or --type
+ssh to choose the key type, and add --complete to finish a dual-key rotation
+by removing the old key.
 
 If any step fails, the old key is restored automatically.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if clusterName != "" || keyType != "" || complete {
+				name, err := resolveClusterNameFromFlag(clusterName, true)
+				if err != nil {
+					return err
+				}
+				return runClusterKeyRotation(cmd, name, keyType, complete, dryRun)
+			}
 			return executeSOPSRotateKey(cmd.Context(), keyFile, path, dryRun)
 		},
 	}
@@ -97,8 +107,50 @@ If any step fails, the old key is restored automatically.`,
 	cmd.Flags().StringVar(&keyFile, "key-file", "", "Path to Age key file (default: ~/.config/sops/age/keys.txt)")
 	cmd.Flags().StringVar(&path, "path", ".", "Path to search for SOPS files to re-encrypt")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
+	cmd.Flags().StringVar(&clusterName, "cluster", "", "cluster name or organization/cluster for cluster key rotation")
+	cmd.Flags().StringVar(&keyType, "type", "", "cluster key type to rotate: age or ssh")
+	cmd.Flags().BoolVar(&complete, "complete", false, "complete dual-key cluster rotation by removing the old key")
 
 	return cmd
+}
+
+func newSecretsKeysCheckCmd() *cobra.Command {
+	cmd := newClusterCheckKeysCmd()
+	cmd.Use = "check"
+	cmd.Short = "Check encryption key expiration status"
+	return cmd
+}
+
+func newSecretsKeysRevokeCmd() *cobra.Command {
+	cmd := newClusterRevokeKeyCmd()
+	cmd.Use = "revoke"
+	cmd.Short = "Revoke encryption keys for users or compromised keys"
+	cmd.Flags().String("cluster", "", "cluster name or organization/cluster")
+	return cmd
+}
+
+func runClusterKeyRotation(cmd *cobra.Command, clusterName string, keyType string, complete bool, dryRun bool) error {
+	if keyType == "" {
+		return fmt.Errorf("--type is required (age or ssh)")
+	}
+	if keyType != "age" && keyType != "ssh" {
+		return fmt.Errorf("invalid key type %q: expected age or ssh", keyType)
+	}
+
+	args := []string{clusterName, "--type", keyType}
+	if complete {
+		args = append(args, "--complete")
+	}
+	if dryRun {
+		args = append(args, "--dry-run")
+	}
+
+	rotateCmd := newClusterRotateKeysCmd()
+	rotateCmd.SetContext(cmd.Context())
+	rotateCmd.SetOut(cmd.OutOrStdout())
+	rotateCmd.SetErr(cmd.ErrOrStderr())
+	rotateCmd.SetArgs(args)
+	return rotateCmd.Execute()
 }
 
 // newSecretsKeysBackupCmd creates the backup subcommand

@@ -1,837 +1,150 @@
 # opencenter
 
-> opencenter - Command-line tool for streamlined Kubernetes and OpenStack cluster bootstrapping with GitOps
+> opencenter is a configuration-first CLI for Kubernetes cluster configuration, GitOps repository generation, deployment, validation, and SOPS-backed secret workflows.
 
-opencenter is a configuration-first CLI that transforms a single declarative YAML file into a production-ready GitOps repository. It standardizes cluster scaffolding for Kubernetes and OpenStack environments with built-in validation, secrets management via SOPS, and support for multiple infrastructure providers (OpenStack, VMware, AWS, Kind).
+## Current GA Command Surface
 
-## Operator Guidance
+Use this file as a compact command reference for language-model consumers. The generated Cobra reference in `docs/reference/opencenter/` is the source of truth for exact flags.
 
-- All cluster configurations use a single YAML file as the source of truth
-- Organization-based multi-tenancy: configs stored in `~/.config/opencenter/clusters/<org>/<cluster>/`
-- SOPS Age encryption for secrets is automatically configured during `cluster init`
-- GitOps repository generation is template-driven with no hardcoded values
-- Use `cluster select` to set an active cluster for session or persistent context
-- Validation runs before any infrastructure changes to catch errors early
-- VMware provider treats pre-provisioned VMs as baremetal (no auto-provisioning)
-- Schema version 2.0 is the current standard; v1 configs must be migrated first
+### Global Flags
 
-## Installation
-
-### From Source
-
-Build the opencenter binary using Mise for tool management:
+These root flags are available where they make sense:
 
 ```bash
-# Install project tools
-mise install
-
-# Build the binary
-mise run build
-
-# Verify installation
-./bin/opencenter version
+opencenter --config-dir ~/.config/opencenter --log-level info --output json cluster list
+opencenter --quiet cluster active
+opencenter --dry-run cluster generate my-cluster
+opencenter --yes cluster destroy my-cluster
 ```
 
-**Source:** openCenter-cli/README.md
+Supported output formats are `text`, `json`, and `yaml`. Structured output is intended for commands that return inspectable data, such as listing, status, validation, and secrets inspection.
 
-The build process uses ldflags to embed version information from git tags and commits. The binary is created in `bin/opencenter`.
+## Cluster Lifecycle
 
-### From Release
-
-Download pre-built binaries for your platform:
+Create a cluster configuration:
 
 ```bash
-# Linux (x86_64)
-curl -L https://github.com/opencenter-cloud/opencenter-cli/releases/download/v0.0.1/opencenter-0.0.1-linux-amd64 -o opencenter
-chmod +x opencenter
-sudo mv opencenter /usr/local/bin/
-
-# macOS (Apple Silicon)
-curl -L https://github.com/opencenter-cloud/opencenter-cli/releases/download/v0.0.1/opencenter-0.0.1-darwin-arm64 -o opencenter
-chmod +x opencenter
-sudo mv opencenter /usr/local/bin/
-```
-
-**Source:** openCenter-cli/.mise.toml (publish task)
-
-Supported platforms: Linux (AMD64, ARM64), macOS (Intel, Apple Silicon). Windows is not supported due to platform-specific dependencies.
-
-## Quickstart
-
-### Create Your First Cluster
-
-Initialize a new cluster configuration with defaults:
-
-```bash
-# Initialize with defaults (OpenStack provider)
 opencenter cluster init my-cluster
-
-# Initialize with organization
 opencenter cluster init my-cluster --org myorg
-
-# Initialize for VMware
 opencenter cluster init vmware-cluster --type vmware --org production
+opencenter cluster init dev-cluster --type kind
 ```
 
-**Source:** openCenter-cli/cmd/cluster_init.go
-
-This creates a configuration file at `~/.config/opencenter/clusters/<org>/<cluster>/.my-cluster-config.yaml` with schema version 2.0, generates SSH keys, and creates SOPS Age encryption keys.
-
-### Validate and Setup
-
-Validate configuration and setup the GitOps repository:
+Open the guided provider configuration workflow:
 
 ```bash
-# Validate configuration
-opencenter cluster validate my-cluster
-
-# Run preflight checks
-opencenter cluster preflight my-cluster
-
-# Setup GitOps repository
-opencenter cluster setup my-cluster
-
-# Bootstrap the cluster
-opencenter cluster bootstrap my-cluster
+opencenter cluster configure myorg/my-cluster --guided
 ```
 
-**Source:** openCenter-cli/README.md
-
-The setup command generates Kubernetes manifests, Ansible inventory, and encrypts secrets with SOPS. Bootstrap deploys FluxCD and applies GitOps manifests.
-
-## Core Concepts
-
-### Configuration Structure
-
-The cluster configuration uses a hierarchical YAML structure:
-
-```yaml
-schema_version: 2.0
-opencenter:
-  meta:
-    name: my-cluster
-    organization: myorg
-  infrastructure:
-    provider: openstack
-    ssh_user: ubuntu
-    os_version: "24"
-    cloud:
-      openstack:
-        auth_url: https://identity.api.rackspacecloud.com/v3
-        region: sjc3
-        application_credential_id: ""
-        application_credential_secret: ""
-  cluster:
-    cluster_name: my-cluster
-    kubernetes:
-      version: 1.33.5
-      master_count: 3
-      worker_count: 2
-  gitops:
-    git_dir: ./gitops-repo
-secrets:
-  # Encrypted with SOPS
-```
-
-**Source:** openCenter-cli/docs/providers/README.md
-
-Configuration files are validated against a JSON schema. Use `opencenter cluster schema` to view the complete schema.
-
-### Organization-Based Multi-Tenancy
-
-Clusters are organized by organization for multi-tenant environments:
+Validate configuration:
 
 ```bash
-# Directory structure
-~/.config/opencenter/clusters/
-├── myorg/
-│   ├── cluster1/
-│   │   ├── .cluster1-config.yaml
-│   │   └── secrets/
-│   └── cluster2/
-└── production/
-    └── prod-cluster/
+opencenter cluster validate myorg/my-cluster
+opencenter cluster validate myorg/my-cluster --manifests
+opencenter cluster validate myorg/my-cluster --output json
 ```
 
-**Source:** openCenter-cli/cmd/cluster.go
-
-Use `--org` flag or `opencenter.meta.organization` config key to specify organization. Default is "opencenter".
-
-### Active Cluster Context
-
-Set an active cluster for commands that don't require explicit cluster names:
+Generate GitOps assets:
 
 ```bash
-# Select cluster for current session
-opencenter cluster select my-cluster
-
-# Select cluster persistently (all terminals)
-opencenter cluster select my-cluster --persistent
-
-# Show current active cluster
-opencenter cluster current
-
-# Export cluster environment variables
-eval "$(opencenter cluster env)"
-
-# Clear persistent selection
-opencenter cluster select --clear-persistent
+opencenter cluster generate myorg/my-cluster
+opencenter cluster generate myorg/my-cluster --render-only
 ```
 
-**Source:** openCenter-cli/cmd/cluster.go
-
-Session-scoped selection uses environment variables. Persistent selection writes to `~/.config/opencenter/active-cluster`.
-
-### Secrets Management with SOPS
-
-SOPS Age encryption is automatically configured:
+Deploy or restart deployment:
 
 ```bash
-# Generate Age key pair
-opencenter sops generate-key
-
-# Validate SOPS configuration
-opencenter sops validate
-
-# Encrypt secrets in config
-opencenter sops secrets-encrypt
+opencenter cluster deploy myorg/my-cluster
+opencenter cluster deploy myorg/my-cluster --restart
 ```
 
-**Source:** openCenter-cli/README.md
-
-Age keys are stored in `~/.config/opencenter/clusters/<org>/secrets/age/`. The public key is embedded in `.sops.yaml` for automatic encryption.
-
-## Common Recipes
-
-### Initialize Cluster from Template
-
-Generate a configuration template for a specific provider:
+Inspect lifecycle state:
 
 ```bash
-# Generate OpenStack template
-opencenter cluster template --provider openstack --out openstack-cluster.yaml
-
-# Generate VMware template
-opencenter cluster template --provider vmware --out vmware-cluster.yaml
-
-# Initialize from template
-opencenter cluster init --config openstack-cluster.yaml
+opencenter cluster status myorg/my-cluster
+opencenter cluster status myorg/my-cluster --paths
+opencenter cluster status myorg/my-cluster --output json
+opencenter cluster status myorg/my-cluster --sync
 ```
 
-**Source:** openCenter-cli/README.md
+## Active Cluster Context
 
-Templates include all provider-specific fields with documentation comments.
-
-### Update Cluster Configuration
-
-Modify configuration using flags with dot notation:
+Use an explicit `org/name` when possible. For repeated work, set and inspect the active cluster:
 
 ```bash
-# Update provider
-opencenter cluster update my-cluster --opencenter.infrastructure.provider=aws
-
-# Update Kubernetes version
-opencenter cluster update my-cluster --opencenter.cluster.kubernetes.version=1.34.0
-
-# Update worker count
-opencenter cluster update my-cluster --opencenter.cluster.kubernetes.worker_count=5
-```
-
-**Source:** openCenter-cli/cmd/cluster_config_update.go
-
-Configuration updates are validated before being written. Use `--force` to skip validation.
-
-### List and Select Clusters
-
-Manage multiple clusters:
-
-```bash
-# List all clusters
+opencenter cluster use myorg/my-cluster
+opencenter cluster active
 opencenter cluster list
-
-# List clusters in specific organization
-opencenter cluster list --org production
-
-# Select active cluster
-opencenter cluster select prod-cluster
-
-# Show cluster info
-opencenter cluster info prod-cluster
+eval "$(opencenter cluster env)"
 ```
 
-**Source:** openCenter-cli/cmd/cluster.go
+If a command reports that no active cluster is set, either run `opencenter cluster use <org/name>` or pass `<org/name>` to the command that failed.
 
-The list command shows cluster name, organization, provider, and status.
+## Configuration Management
 
-### Export Credentials
-
-Export cloud provider credentials for external tools:
+Patch one or more fields with dot-path assignments:
 
 ```bash
-# Export AWS credentials as environment variables
-eval "$(opencenter cluster credentials export --provider aws --format env)"
-
-# Export OpenStack credentials as clouds.yaml
-opencenter cluster credentials export --provider openstack --format clouds-yaml > clouds.yaml
-
-# Export all credentials
-eval "$(opencenter cluster credentials export --provider all --format env)"
-
-# Clear credentials from environment
-eval "$(opencenter cluster credentials unset --provider aws)"
+opencenter cluster set myorg/my-cluster opencenter.meta.env=staging
+opencenter cluster set myorg/my-cluster opencenter.gitops.repository.url=https://github.com/acme/platform.git
 ```
 
-**Source:** openCenter-cli/.mise.toml
-
-Credentials are decrypted from SOPS-encrypted configuration and exported in the requested format.
-
-### Validate Configuration
-
-Run validation and preflight checks:
+Normalize and export effective configuration:
 
 ```bash
-# Validate configuration schema
-opencenter cluster validate my-cluster
-
-# Run provider-specific preflight checks
-opencenter cluster preflight my-cluster
-
-# Validate Kubernetes manifests
-opencenter cluster validate-manifests my-cluster
+opencenter cluster normalize myorg/my-cluster
+opencenter cluster export myorg/my-cluster --output-file effective-config.yaml
 ```
 
-**Source:** openCenter-cli/README.md
+The per-cluster YAML remains the source of truth. Generated assets should be treated as outputs of `cluster generate`.
 
-Validation checks schema compliance, logical consistency, and provider-specific requirements.
+## Secrets
 
-### Render GitOps Templates
-
-Preview generated GitOps manifests without creating files:
+Secret operations are grouped under `secrets`. Key lifecycle commands are nested under `secrets keys`:
 
 ```bash
-# Render all templates
-opencenter cluster render my-cluster
-
-# Render specific template
-opencenter cluster render my-cluster --template flux-system
-
-# Render to directory
-opencenter cluster render my-cluster --output-dir ./preview
+opencenter secrets list
+opencenter secrets validate myorg/my-cluster
+opencenter secrets encrypt myorg/my-cluster
+opencenter secrets decrypt myorg/my-cluster
+opencenter secrets keys generate
+opencenter secrets keys list
+opencenter secrets keys rotate myorg/my-cluster --type sops
+opencenter secrets keys backup
 ```
 
-**Source:** openCenter-cli/cmd/cluster_render.go
+SOPS Age encryption is configured during cluster initialization. Keep private keys and token files outside Git.
 
-Templates are processed with configuration values and can be previewed before setup.
+## Providers
 
-## Configuration
+Supported infrastructure providers include OpenStack, VMware, Kind, AWS, GCP, Azure, and bare metal depending on the configured workflow.
 
-### Provider Configuration
+OpenStack and Kind workflows support generation and deployment through the CLI. VMware workflows expect pre-provisioned VMs and provider-specific configuration before generation.
 
-#### OpenStack Provider
+## GitOps
 
-```yaml
-opencenter:
-  infrastructure:
-    provider: openstack
-    cloud:
-      openstack:
-        auth_url: https://identity.api.rackspacecloud.com/v3
-        region: sjc3
-        application_credential_id: ""
-        application_credential_secret: ""
-        image_id: "799dcf97-3656-4361-8187-13ab1b295e33"
-        flavor_master: "gp.0.8.80"
-        flavor_worker: "gp.0.16.160"
-```
-
-**Source:** openCenter-cli/docs/providers/README.md
-
-OpenStack provider supports automatic VM provisioning with Terraform/OpenTofu, Cinder CSI for storage, and Octavia load balancers.
-
-#### VMware Provider
-
-```yaml
-opencenter:
-  infrastructure:
-    provider: vmware
-    ssh_user: ubuntu
-    os_version: "24"
-    bastion:
-      address: bastion.example.com
-    cloud:
-      vmware:
-        vcenter_server: vcenter.example.com
-        datacenter: Datacenter1
-        datastore: datastore1
-        cluster: Cluster1
-        network: VM Network
-        nodes:
-          - name: master-1.example.com
-            ip: 192.168.1.10
-            role: master
-          - name: worker-1.example.com
-            ip: 192.168.1.20
-            role: worker
-secrets:
-  vsphere_csi:
-    vcenter_host: vcenter.example.com
-    username: administrator@vsphere.local
-    password: ""  # Encrypted with SOPS
-```
-
-**Source:** openCenter-cli/docs/providers/vmware.md
-
-VMware provider requires pre-provisioned VMs and treats them as baremetal. No automatic VM lifecycle management.
-
-#### Kind Provider
-
-```yaml
-opencenter:
-  infrastructure:
-    provider: kind
-  cluster:
-    kubernetes:
-      version: 1.33.5
-      master_count: 1
-      worker_count: 2
-```
-
-**Source:** openCenter-cli/docs/providers/README.md
-
-Kind provider is for local development. Clusters are created in Docker/Podman containers.
-
-### Kubernetes Configuration
-
-```yaml
-opencenter:
-  cluster:
-    kubernetes:
-      version: 1.33.5
-      master_count: 3
-      worker_count: 2
-      network_plugin:
-        calico:
-          enabled: true
-          cni_iface: ens192
-          encapsulation_type: VXLAN
-      additional_server_pools_worker:
-        - name: gpu-pool
-          count: 2
-          flavor: gpu.large
-```
-
-**Source:** openCenter-cli/schema/cluster.schema.json
-
-Kubernetes configuration includes version, node counts, network plugin, and additional worker pools.
-
-### GitOps Configuration
+Cluster generation creates or updates the local GitOps workspace configured in:
 
 ```yaml
 opencenter:
   gitops:
-    git_dir: ./gitops-repo
-    git_url: https://github.com/myorg/my-cluster-gitops
-    git_branch: main
-    flux:
-      version: v2.2.0
-      namespace: flux-system
+    repository:
+      url: https://github.com/acme/platform.git
+      branch: main
+      local_dir: ./gitops
 ```
 
-**Source:** openCenter-cli/README.md
-
-GitOps configuration specifies the repository location and FluxCD settings.
-
-### Services Configuration
-
-Enable and configure cluster services:
-
-```yaml
-opencenter:
-  services:
-    vsphere-csi:
-      enabled: true
-      image_repository: registry.k8s.io/csi-vsphere
-      image_tag: v3.3.0
-    metallb:
-      enabled: true
-      ip_address_pools:
-        - name: default
-          addresses:
-            - 192.168.1.100-192.168.1.110
-    gateway-api:
-      enabled: true
-    gateway:
-      enabled: true
-      hostname: "*.example.com"
-```
-
-**Source:** openCenter-cli/docs/providers/vmware.md
-
-Services are deployed as part of the GitOps repository and managed by FluxCD.
-
-## API Patterns
-
-### Command Structure
-
-All commands follow a consistent pattern:
-
-```go
-// Command definition
-func newClusterInitCmd() *cobra.Command {
-    cmd := &cobra.Command{
-        Use:   "init [name]",
-        Short: "Initialize a new cluster configuration",
-        RunE:  runClusterInit,
-    }
-    cmd.Flags().String("org", "", "organization name")
-    cmd.Flags().String("type", "openstack", "cluster type")
-    return cmd
-}
-```
-
-**Source:** openCenter-cli/cmd/cluster_init.go
-
-Commands use Cobra framework with consistent flag naming and error handling.
-
-### Configuration Loading
-
-Configuration is loaded with organization context:
-
-```go
-// Resolve cluster name from args or active cluster
-clusterName, err := resolveClusterName(args, true)
-if err != nil {
-    return err
-}
-
-// Load configuration
-cfg, err := config.LoadClusterConfig(clusterName)
-if err != nil {
-    return fmt.Errorf("failed to load config: %w", err)
-}
-```
-
-**Source:** openCenter-cli/cmd/cluster.go
-
-The `resolveClusterName` function handles both "cluster" and "org/cluster" formats.
-
-### Validation Pattern
-
-Validation uses a validator interface:
-
-```go
-// Validate configuration
-validator := validators.NewClusterNameValidator()
-result, err := validator.Validate(ctx, clusterName)
-if err != nil {
-    return fmt.Errorf("validation error: %w", err)
-}
-if !result.Valid {
-    return fmt.Errorf("invalid cluster: %s", result.Errors[0].Message)
-}
-```
-
-**Source:** openCenter-cli/cmd/cluster.go
-
-Validators return structured results with error messages.
-
-### Dependency Injection
-
-The CLI uses a DI container for service management:
-
-```go
-// Get container from context
-container, err := GetContainer(ctx)
-if err != nil {
-    return err
-}
-
-// Resolve service
-configService := container.ConfigService()
-```
-
-**Source:** openCenter-cli/main.go
-
-The container is initialized at startup and passed through context.
+Run `cluster generate` after configuration changes, then `cluster deploy` when ready to apply the lifecycle workflow.
 
 ## Troubleshooting
 
-### Configuration Validation Errors
-
-When validation fails, check the schema:
+Common checks:
 
 ```bash
-# View JSON schema
-opencenter cluster schema --pretty
-
-# Validate with detailed output
-opencenter cluster validate my-cluster --verbose
-
-# Check specific field
-opencenter cluster config get opencenter.infrastructure.provider
+opencenter cluster validate myorg/my-cluster
+opencenter cluster status myorg/my-cluster --paths
+opencenter cluster doctor myorg/my-cluster
+opencenter secrets validate myorg/my-cluster
 ```
 
-**Source:** openCenter-cli/README.md
-
-Validation errors include the field path and expected format.
-
-### SOPS Encryption Issues
-
-If SOPS encryption fails:
-
-```bash
-# Verify Age key exists
-ls ~/.config/opencenter/clusters/myorg/secrets/age/
-
-# Regenerate Age key
-opencenter sops generate-key --force
-
-# Validate SOPS configuration
-opencenter sops validate
-
-# Check .sops.yaml
-cat .sops.yaml
-```
-
-**Source:** openCenter-cli/README.md
-
-Ensure the Age public key in `.sops.yaml` matches the private key in the secrets directory.
-
-### VMware Connection Issues
-
-For VMware provider connection problems:
-
-```bash
-# Test SSH connectivity to nodes
-for node in master-1 worker-1; do
-  ssh ubuntu@${node}.example.com "hostname"
-done
-
-# Verify vCenter credentials
-opencenter cluster credentials export --provider vmware --format env
-
-# Check vSphere CSI driver
-kubectl get pods -n kube-system | grep vsphere-csi
-```
-
-**Source:** openCenter-cli/docs/providers/vmware.md
-
-Verify SSH keys are properly configured and vCenter credentials are correct.
-
-### Active Cluster Not Set
-
-If commands fail with "no active cluster":
-
-```bash
-# Check current active cluster
-opencenter cluster current
-
-# List available clusters
-opencenter cluster list
-
-# Select a cluster
-opencenter cluster select my-cluster
-
-# Or use explicit cluster name
-opencenter cluster validate my-cluster
-```
-
-**Source:** openCenter-cli/cmd/cluster.go
-
-Most commands accept an explicit cluster name as an argument.
-
-### GitOps Repository Issues
-
-If GitOps setup fails:
-
-```bash
-# Render templates to preview
-opencenter cluster render my-cluster --output-dir ./preview
-
-# Check template processing
-opencenter cluster setup my-cluster --dry-run
-
-# Verify git configuration
-git config --list
-```
-
-**Source:** openCenter-cli/README.md
-
-Ensure git is configured with user name and email before running setup.
-
-## Security Notes
-
-### Secrets Encryption
-
-All sensitive data must be encrypted with SOPS:
-
-```yaml
-# Unencrypted (WRONG)
-secrets:
-  password: "my-secret-password"
-
-# Encrypted (CORRECT)
-secrets:
-  password: ENC[AES256_GCM,data:encrypted_data,iv:iv_data,tag:tag_data,type:str]
-sops:
-  age:
-    - recipient: age1234567890abcdef
-      enc: ENC[AES256_GCM,data:encrypted_key,type:str]
-```
-
-**Source:** openCenter-cli/.mise.toml (test-hooks task)
-
-The pre-commit hook validates that sensitive fields are encrypted before commit.
-
-### SSH Key Management
-
-SSH keys are automatically generated and stored securely:
-
-```bash
-# Keys location
-~/.config/opencenter/clusters/<org>/secrets/ssh/<cluster>
-
-# Regenerate keys
-opencenter cluster init my-cluster --regenerate-keys
-
-# Disable key generation
-opencenter cluster init my-cluster --no-keygen
-```
-
-**Source:** openCenter-cli/cmd/cluster_init.go
-
-SSH keys are used for cluster node access during bootstrap.
-
-### Credential Export
-
-Credentials are decrypted only when explicitly exported:
-
-```bash
-# Export to environment (temporary)
-eval "$(opencenter cluster credentials export --provider aws --format env)"
-
-# Clear from environment
-eval "$(opencenter cluster credentials unset --provider aws)"
-```
-
-**Source:** openCenter-cli/.mise.toml
-
-Credentials are never written to disk in plaintext.
-
-## Examples
-
-### Complete OpenStack Cluster Setup
-
-```bash
-# 1. Initialize cluster
-opencenter cluster init prod-cluster --org production --type openstack
-
-# 2. Edit configuration
-opencenter cluster edit prod-cluster
-
-# 3. Validate configuration
-opencenter cluster validate prod-cluster
-
-# 4. Run preflight checks
-opencenter cluster preflight prod-cluster
-
-# 5. Setup GitOps repository
-opencenter cluster setup prod-cluster
-
-# 6. Bootstrap cluster
-opencenter cluster bootstrap prod-cluster
-
-# 7. Check status
-opencenter cluster status prod-cluster
-```
-
-**Source:** openCenter-cli/README.md
-
-This workflow creates a production-ready Kubernetes cluster on OpenStack.
-
-### VMware Cluster with Pre-Provisioned VMs
-
-```bash
-# 1. Generate VMware template
-opencenter cluster template --provider vmware --out vmware.yaml
-
-# 2. Edit template with VM details
-# Add node IPs and hostnames
-
-# 3. Initialize from template
-opencenter cluster init vmware-prod --config vmware.yaml --org production
-
-# 4. Validate configuration
-opencenter cluster validate vmware-prod
-
-# 5. Setup and bootstrap
-opencenter cluster setup vmware-prod
-opencenter cluster bootstrap vmware-prod
-```
-
-**Source:** openCenter-cli/docs/providers/vmware.md
-
-VMware clusters require manual VM provisioning before initialization.
-
-### Local Development with Kind
-
-```bash
-# 1. Initialize Kind cluster
-opencenter cluster init dev-cluster --type kind
-
-# 2. Setup GitOps
-opencenter cluster setup dev-cluster
-
-# 3. Bootstrap
-opencenter cluster bootstrap dev-cluster
-
-# 4. Access cluster
-export KUBECONFIG=~/.config/opencenter/clusters/opencenter/dev-cluster/kubeconfig
-kubectl get nodes
-```
-
-**Source:** openCenter-cli/docs/providers/README.md
-
-Kind clusters are ideal for local testing and development.
-
-### Multi-Organization Management
-
-```bash
-# Create clusters in different organizations
-opencenter cluster init dev-cluster --org development
-opencenter cluster init staging-cluster --org staging
-opencenter cluster init prod-cluster --org production
-
-# List all clusters
-opencenter cluster list
-
-# List clusters by organization
-opencenter cluster list --org production
-
-# Select cluster with organization prefix
-opencenter cluster select production/prod-cluster
-
-# Or select and switch organization context
-opencenter cluster select prod-cluster --org production
-```
-
-**Source:** openCenter-cli/cmd/cluster.go
-
-Organization-based structure enables clean separation of environments.
-
-### Configuration Migration
-
-```bash
-# Export effective configuration with defaults
-opencenter cluster config export-effective my-cluster -o effective-config.yaml
-
-# Update configuration from file
-opencenter cluster update my-cluster --config updated-config.yaml
-
-# Validate after update
-opencenter cluster validate my-cluster
-```
-
-**Source:** openCenter-cli/.mise.toml
-
-Export effective configuration to see all applied defaults and computed values.
+Use `--output json` or `--output yaml` on supported read-only commands when automation needs structured data.

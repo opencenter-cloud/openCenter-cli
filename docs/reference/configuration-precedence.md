@@ -39,7 +39,11 @@ Flags always win. Two categories:
 | `--log-level` | string | Log level: `debug`, `info`, `warn`, `error` |
 | `--dry-run` | bool | Preview without executing |
 | `--yes` | bool | Auto-confirm destructive operations |
-| `--break-lock` | bool | Force removal of existing lock |
+| `--config-dir` | string | Override the openCenter configuration directory |
+| `--output` | string | Output format for supported commands: `text`, `json`, `yaml` |
+| `--quiet` | bool | Suppress nonessential human output |
+
+Command-scoped flags still take precedence over configuration and environment values. For example, lifecycle commands that acquire locks expose their own `--break-lock` flag.
 
 **the set override mechanism** overrides individual fields using dot-path notation:
 
@@ -47,7 +51,7 @@ Flags always win. Two categories:
 opencenter cluster set my-cluster opencenter.meta.env=staging
 ```
 
-Evidence: `cmd/root.go` — `addGlobalFlags()`, `parseGlobalFlags()`
+Evidence: `cmd/root.go` — `addGlobalFlags()`, `parseGlobalOptions()`
 
 ### 2. Environment Variables
 

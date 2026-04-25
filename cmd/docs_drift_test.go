@@ -45,6 +45,7 @@ func TestDocsDoNotUseRemovedGACommands(t *testing.T) {
 
 	repoRoot := testRepoRoot(t)
 	paths := []string{
+		filepath.Join(repoRoot, "llms.txt"),
 		filepath.Join(repoRoot, "README.md"),
 		filepath.Join(repoRoot, "docs"),
 		filepath.Join(repoRoot, "tests", "features"),

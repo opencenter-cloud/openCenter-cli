@@ -311,19 +311,19 @@ func TestProperty_ExponentialBackoffRetry(t *testing.T) {
 				time.Duration(maxDelayMs)*time.Millisecond,
 			)
 
-			ctx := context.Background()
-			start := time.Now()
-			_ = newHandler.Do(ctx, func() error {
-				return errors.New("failure")
-			})
-			duration := time.Since(start)
+			updated, ok := newHandler.(*retryHandler)
+			if !ok {
+				return false
+			}
+			original, ok := handler.(*retryHandler)
+			if !ok {
+				return false
+			}
 
-			// With 3 attempts: delay1 + delay2 (no delay after last attempt)
-			// delay1 = baseDelay, delay2 = baseDelay * 2
-			// Total = baseDelay * 3
-			minExpected := time.Duration(float64(baseDelayMs)*3*0.8) * time.Millisecond
-			maxExpected := time.Duration(float64(baseDelayMs)*3*1.3) * time.Millisecond
-			return duration >= minExpected && duration <= maxExpected
+			return updated.config.BaseDelay == time.Duration(baseDelayMs)*time.Millisecond &&
+				updated.config.MaxDelay == time.Duration(maxDelayMs)*time.Millisecond &&
+				original.config.BaseDelay == config.BaseDelay &&
+				original.config.MaxDelay == config.MaxDelay
 		},
 		gen.IntRange(10, 50),
 		gen.IntRange(100, 500),

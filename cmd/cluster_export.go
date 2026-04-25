@@ -23,38 +23,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newClusterConfigCmd creates the "cluster config" command for cluster configuration operations.
-// Requirements: 15.7, 15.8
-func newClusterConfigCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "config",
-		Short: "Manage cluster configuration",
-		Long: `Manage cluster configuration operations including export and inspection.
-
-The config subcommand provides utilities for working with cluster configurations,
-including exporting effective configurations with applied defaults.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
-	}
-
-	// Add subcommands
-	cmd.AddCommand(newClusterConfigExportEffectiveCmd())
-	cmd.AddCommand(newClusterConfigUpdateCmd())
-
-	return cmd
-}
-
-// newClusterConfigExportEffectiveCmd creates the "cluster config export-effective" command.
-// This command exports the effective configuration (config + applied defaults) with comments
-// indicating the source of each default value.
-// Requirements: 15.7, 15.8
-func newClusterConfigExportEffectiveCmd() *cobra.Command {
+// newClusterExportCmd creates the "cluster export" command.
+func newClusterExportCmd() *cobra.Command {
 	var outputPath string
 
 	cmd := &cobra.Command{
-		Use:   "export-effective [name]",
-		Short: "Export effective configuration with applied defaults",
+		Use:   "export [name]",
+		Short: "Export effective cluster configuration",
 		Long: `Export the effective configuration including all applied defaults.
 
 This command loads a cluster configuration, applies all defaults (provider-region,
@@ -74,16 +49,16 @@ This is useful for:
 
 If no cluster name is provided, exports the currently active cluster.`,
 		Example: `  # Export effective config for active cluster
-  opencenter cluster config export-effective
+  opencenter cluster export
 
   # Export effective config for specific cluster
-  opencenter cluster config export-effective my-cluster
+  opencenter cluster export my-cluster
 
   # Export to specific file
-  opencenter cluster config export-effective my-cluster -o /tmp/effective-config.yaml
+  opencenter cluster export my-cluster -o /tmp/effective-config.yaml
 
   # Export with organization prefix
-  opencenter cluster config export-effective myorg/my-cluster`,
+  opencenter cluster export myorg/my-cluster`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
@@ -109,17 +84,11 @@ If no cluster name is provided, exports the currently active cluster.`,
 				return fmt.Errorf("failed to resolve configuration path: %w", err)
 			}
 
-			// Determine output path
-			if outputPath == "" {
-				// Default to current directory with cluster name
-				outputPath = fmt.Sprintf("%s-effective.yaml", name)
-			}
-
 			return exportV2EffectiveConfig(cmd, configPath, outputPath)
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "output file path (default: <cluster-name>-effective.yaml)")
+	cmd.Flags().StringVarP(&outputPath, "output-file", "o", "", "write effective configuration to this file instead of stdout")
 
 	return cmd
 }
@@ -145,7 +114,11 @@ func exportV2EffectiveConfig(cmd *cobra.Command, configPath, outputPath string) 
 		return fmt.Errorf("failed to export effective configuration: %w", err)
 	}
 
-	// Write to file
+	if outputPath == "" {
+		fmt.Fprint(cmd.OutOrStdout(), string(effectiveConfig))
+		return nil
+	}
+
 	if err := os.WriteFile(outputPath, effectiveConfig, 0600); err != nil {
 		return fmt.Errorf("failed to write effective configuration: %w", err)
 	}

@@ -23,24 +23,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// newClusterConfigUpdateCmd creates the "cluster config update" command.
-// This command adds missing keys to an existing cluster configuration by merging
-// with the default configuration template. It creates a backup before modifying.
-func newClusterConfigUpdateCmd() *cobra.Command {
+// newClusterNormalizeCmd creates the "cluster normalize" command.
+// This command adds missing default fields to an existing cluster configuration.
+func newClusterNormalizeCmd() *cobra.Command {
 	var noBackup bool
-	var dryRun bool
 
 	cmd := &cobra.Command{
-		Use:   "update [name]",
-		Short: "Add missing keys to existing cluster configuration",
-		Long: `Add missing keys to an existing cluster configuration.
+		Use:   "normalize [name]",
+		Short: "Add missing default fields to a cluster configuration",
+		Long: `Add missing default fields to an existing cluster configuration.
 
 This command loads the current cluster configuration, merges it with the default
 configuration template to add any missing keys, and writes the updated configuration
 back to the file.
 
-To set specific configuration values, use 'opencenter cluster update' with dotted
-flags instead (e.g., --opencenter.gitops.git_url=...).
+To set specific configuration values, use 'opencenter cluster set' with native v2
+dot notation instead (e.g., opencenter.gitops.repository.url=...).
 
 A timestamped backup is automatically created before modification:
   <config-file>.backup.<timestamp>
@@ -55,21 +53,21 @@ Missing keys are added with their default values based on:
 
 Existing values are preserved - only missing keys are added.
 
-If no cluster name is provided, updates the currently active cluster.`,
-		Example: `  # Update active cluster configuration
-  opencenter cluster config update
+If no cluster name is provided, normalizes the currently active cluster.`,
+		Example: `  # Normalize active cluster configuration
+  opencenter cluster normalize
 
-  # Update specific cluster
-  opencenter cluster config update my-cluster
+  # Normalize specific cluster
+  opencenter cluster normalize my-cluster
 
-  # Update with organization prefix
-  opencenter cluster config update myorg/my-cluster
+  # Normalize with organization prefix
+  opencenter cluster normalize myorg/my-cluster
 
   # Dry run to preview changes
-  opencenter cluster config update my-cluster --dry-run
+  opencenter cluster normalize my-cluster --dry-run
 
   # Update without creating backup (not recommended)
-  opencenter cluster config update my-cluster --no-backup`,
+  opencenter cluster normalize my-cluster --no-backup`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
@@ -135,12 +133,13 @@ If no cluster name is provided, updates the currently active cluster.`,
 			completeSize := len(completeData)
 			addedBytes := completeSize - existingSize
 
+			dryRun := getGlobalOptions(cmd).DryRun
 			if dryRun {
 				fmt.Fprintf(cmd.OutOrStdout(), "Dry run - no changes will be made\n\n")
-				fmt.Fprintf(cmd.OutOrStdout(), "Would update configuration:\n")
+				fmt.Fprintf(cmd.OutOrStdout(), "Would normalize configuration:\n")
 				fmt.Fprintf(cmd.OutOrStdout(), "  File: %s\n", configPath)
 				fmt.Fprintf(cmd.OutOrStdout(), "  Current size: %d bytes\n", existingSize)
-				fmt.Fprintf(cmd.OutOrStdout(), "  Updated size: %d bytes\n", completeSize)
+				fmt.Fprintf(cmd.OutOrStdout(), "  Normalized size: %d bytes\n", completeSize)
 				fmt.Fprintf(cmd.OutOrStdout(), "  Added: ~%d bytes\n", addedBytes)
 				if !noBackup {
 					backupPath := generateBackupPath(configPath)
@@ -164,8 +163,8 @@ If no cluster name is provided, updates the currently active cluster.`,
 			}
 
 			// Success output
-			fmt.Fprintf(cmd.OutOrStdout(), "✓ Configuration updated successfully\n\n")
-			fmt.Fprintf(cmd.OutOrStdout(), "Updated configuration:\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "✓ Configuration normalized successfully\n\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "Normalized configuration:\n")
 			fmt.Fprintf(cmd.OutOrStdout(), "  File: %s\n", configPath)
 			fmt.Fprintf(cmd.OutOrStdout(), "  Added: ~%d bytes of missing keys\n", addedBytes)
 
@@ -180,8 +179,7 @@ If no cluster name is provided, updates the currently active cluster.`,
 		},
 	}
 
-	cmd.Flags().BoolVar(&noBackup, "no-backup", false, "Skip creating backup before updating")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without modifying files")
+	cmd.Flags().BoolVar(&noBackup, "no-backup", false, "skip creating a backup before normalizing")
 
 	return cmd
 }

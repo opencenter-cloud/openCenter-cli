@@ -8,7 +8,7 @@ helm = "latest"
 # Override the default config directory via environment for reproducible tests
 #OPENCENTER_CONFIG_DIR = "./testdata/config"
 
-# When true deubg logs are set to true and other artifacts are created to help trouble shoot or verify functionality
+# When true debug logs are set to true and other artifacts are created to help troubleshoot or verify functionality
 #OPENCENTER_DEBUG = true
 
 # Enable podman support for KIND utility
@@ -19,19 +19,21 @@ CONTAINER_RUNTIME = "podman"
 #OPENCENTER_PLUGINS_DIR = "./testdata/plugins/"
 
 [tasks]
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+
 # Build the opencenter CLI binary with version information
 build-cli = '''
 #!/usr/bin/env bash
 set -e
 
-# Get git information
 GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
 BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 VERSION=${GIT_TAG:-"0.0.1"}
 
-# Build with ldflags
 go build -ldflags "\
   -X main.version=${VERSION} \
   -X main.gitCommit=${GIT_COMMIT} \
@@ -58,72 +60,17 @@ build = [
   "mise run build-local-plugin"
 ]
 
-# Build and install to local bin directory
-local-install = '''
-#!/usr/bin/env bash
-set -e
-
-# Build both binaries before installation
-mise run build-cli
-mise run build-local-plugin
-
-# Ensure ~/.local/bin exists
-mkdir -p ~/.local/bin
-mkdir -p "${OPENCENTER_CONFIG_DIR:-$HOME/.config/opencenter}/plugins"
-
-PLUGINS_DIR="${OPENCENTER_CONFIG_DIR:-$HOME/.config/opencenter}/plugins"
-PLUGIN_PATH="${PLUGINS_DIR}/opencenter-local"
-CHECKSUMS_FILE="${PLUGINS_DIR}/checksums.txt"
-
-# Copy binary to ~/.local/bin
-cp bin/opencenter ~/.local/bin/opencenter
-cp bin/opencenter-local "${PLUGIN_PATH}"
-
-# Make it executable
-chmod +x ~/.local/bin/opencenter
-chmod +x "${PLUGIN_PATH}"
-
-# Register the plugin checksum so discovery treats it as verified
-PLUGIN_SHA=$(shasum -a 256 "${PLUGIN_PATH}" | awk '{print $1}')
-TMP_CHECKSUMS=$(mktemp)
-if [ -f "${CHECKSUMS_FILE}" ]; then
-  grep -v ' opencenter-local$' "${CHECKSUMS_FILE}" > "${TMP_CHECKSUMS}" || true
-fi
-printf '%s  opencenter-local\n' "${PLUGIN_SHA}" >> "${TMP_CHECKSUMS}"
-mv "${TMP_CHECKSUMS}" "${CHECKSUMS_FILE}"
-
-echo "Installed opencenter to ~/.local/bin/opencenter"
-echo "Installed opencenter-local to ${PLUGIN_PATH}"
-echo "Updated plugin checksum in ${CHECKSUMS_FILE}"
-'''
-
-# Enhance CLI to support array indexing in flags
-enhance-array-flags = '''
-#!/usr/bin/env bash
-set -e
-
-echo "Implementing array flag support..."
-echo "1. Enhancing setField function for bracket syntax"
-echo "2. Adding dedicated server-pool flag handler"
-echo "3. Testing with additional_server_pools_worker"
-
-# This task would implement the enhanced setField function
-# and add dedicated flag handlers for complex array types
-'''
-
 # Build the opencenter binary for Linux
 build-linux = '''
 #!/usr/bin/env bash
 set -e
 
-# Get git information
 GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
 BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 VERSION=${GIT_TAG:-"0.0.1"}
 
-# Build with ldflags
 GOOS=linux GOARCH=amd64 go build -ldflags "\
   -X main.version=${VERSION} \
   -X main.gitCommit=${GIT_COMMIT} \
@@ -142,7 +89,6 @@ set -e
 
 echo "Building for multiple platforms..."
 
-# Get git information
 GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
@@ -155,24 +101,55 @@ LDFLAGS="-X main.version=${VERSION} \
   -X main.gitTag=${GIT_TAG} \
   -X main.buildDate=${BUILD_DATE}"
 
-# Build for each supported platform (Unix-like systems only)
 GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/opencenter-linux-amd64
 GOOS=linux GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/opencenter-linux-arm64
 GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/opencenter-darwin-amd64
 GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/opencenter-darwin-arm64
 
-echo "Build complete. Binaries created:"
+echo "Build complete:"
 ls -la bin/opencenter-*
 echo ""
-echo "Version: ${VERSION}"
-echo "Commit: ${GIT_COMMIT:0:7}"
-echo "Branch: ${GIT_BRANCH}"
-if [ -n "${GIT_TAG}" ]; then
-  echo "Tag: ${GIT_TAG}"
-fi
-echo ""
-echo "Note: Windows builds excluded due to platform-specific dependencies"
+echo "Version: ${VERSION} | Commit: ${GIT_COMMIT:0:7} | Branch: ${GIT_BRANCH}"
 '''
+
+# Build and install to local bin directory
+local-install = '''
+#!/usr/bin/env bash
+set -e
+
+mise run build-cli
+mise run build-local-plugin
+
+mkdir -p ~/.local/bin
+mkdir -p "${OPENCENTER_CONFIG_DIR:-$HOME/.config/opencenter}/plugins"
+
+PLUGINS_DIR="${OPENCENTER_CONFIG_DIR:-$HOME/.config/opencenter}/plugins"
+PLUGIN_PATH="${PLUGINS_DIR}/opencenter-local"
+CHECKSUMS_FILE="${PLUGINS_DIR}/checksums.txt"
+
+cp bin/opencenter ~/.local/bin/opencenter
+cp bin/opencenter-local "${PLUGIN_PATH}"
+
+chmod +x ~/.local/bin/opencenter
+chmod +x "${PLUGIN_PATH}"
+
+# Register the plugin checksum so discovery treats it as verified
+PLUGIN_SHA=$(shasum -a 256 "${PLUGIN_PATH}" | awk '{print $1}')
+TMP_CHECKSUMS=$(mktemp)
+if [ -f "${CHECKSUMS_FILE}" ]; then
+  grep -v ' opencenter-local' "${CHECKSUMS_FILE}" > "${TMP_CHECKSUMS}" || true
+fi
+printf '%s  opencenter-local\n' "${PLUGIN_SHA}" >> "${TMP_CHECKSUMS}"
+mv "${TMP_CHECKSUMS}" "${CHECKSUMS_FILE}"
+
+echo "Installed opencenter to ~/.local/bin/opencenter"
+echo "Installed opencenter-local to ${PLUGIN_PATH}"
+echo "Updated plugin checksum in ${CHECKSUMS_FILE}"
+'''
+
+# ---------------------------------------------------------------------------
+# Release
+# ---------------------------------------------------------------------------
 
 # Build release binaries for all platforms with specified version and generate release notes
 # Usage: mise run release <version> [publish-target]
@@ -182,26 +159,21 @@ release = '''
 #!/usr/bin/env bash
 set -e
 
-# Check if version argument is provided
 if [ -z "$1" ]; then
   echo "ERROR: Version argument required"
   echo "Usage: mise run release <version> [publish-target]"
   echo "Example: mise run release v0.0.1-rc3"
-  echo "Example: mise run release v0.0.1-rc3 opencenter-cloud/community-artifacts"
   exit 1
 fi
 
 VERSION="$1"
 PUBLISH_TARGET="${2:-opencenter-cloud/opencenter-cli}"
-
-# Strip 'v' prefix if present for consistency
 VERSION="${VERSION#v}"
 
 echo "Building release binaries for version ${VERSION}..."
 echo "Publish target: ${PUBLISH_TARGET}"
 echo ""
 
-# Get git information
 GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
 GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
@@ -212,10 +184,8 @@ LDFLAGS="-X main.version=${VERSION} \
   -X main.gitTag=${VERSION} \
   -X main.buildDate=${BUILD_DATE}"
 
-# Create release directory
 mkdir -p bin/release
 
-# Build for each supported platform (Unix-like systems only)
 echo "Building Linux AMD64..."
 GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/release/opencenter-${VERSION}-linux-amd64
 
@@ -230,90 +200,57 @@ GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/release/opencente
 
 echo ""
 echo "=== Release Build Complete ==="
+echo "Version: ${VERSION} | Commit: ${GIT_COMMIT:0:7} | Branch: ${GIT_BRANCH}"
 echo ""
-echo "Version: ${VERSION}"
-echo "Commit: ${GIT_COMMIT:0:7}"
-echo "Branch: ${GIT_BRANCH}"
-echo "Build Date: ${BUILD_DATE}"
-echo ""
-echo "Release binaries created in bin/release/:"
 ls -lh bin/release/
-echo ""
-echo "Supported platforms:"
-echo "  - Linux AMD64"
-echo "  - Linux ARM64"
-echo "  - macOS AMD64 (Intel)"
-echo "  - macOS ARM64 (Apple Silicon)"
-echo ""
-echo "Note: Windows builds are not currently supported due to platform-specific dependencies"
 echo ""
 
 # Generate release notes
-echo "=== Generating Release Notes ==="
-echo ""
 mise run publish "${VERSION}" "${PUBLISH_TARGET}"
 
 echo ""
-echo "=== Release Complete ==="
-echo ""
 echo "Next steps:"
-echo "  1. Review release notes in bin/release/RELEASE_NOTES_${VERSION}.md"
+echo "  1. Review bin/release/RELEASE_NOTES_${VERSION}.md"
 echo "  2. Test binaries on target platforms"
-echo "  3. Create and push git tag:"
+echo "  3. Tag and push:"
 echo "     git tag -a v${VERSION} -m 'Release ${VERSION}'"
 echo "     git push origin v${VERSION}"
-echo ""
-echo "  4. Create GitHub release using gh CLI (if installed):"
+echo "  4. Create GitHub release:"
 echo "     gh release create v${VERSION} \\"
 echo "       --repo ${PUBLISH_TARGET} \\"
 echo "       --title 'opencenter ${VERSION}' \\"
 echo "       --notes-file bin/release/RELEASE_NOTES_${VERSION}.md \\"
 echo "       --prerelease \\"
 echo "       bin/release/opencenter-*"
-echo ""
-echo "     OR manually at: https://github.com/${PUBLISH_TARGET}/releases/new?tag=v${VERSION}"
 '''
 
 # Publish release to GitHub with auto-generated release notes
 # Usage: mise run publish <version> [publish-target]
-# Example: mise run publish 1.0.0-rc2
-# Example: mise run publish 1.0.0-rc2 opencenter-cloud/community-artifacts
 publish = '''
 #!/usr/bin/env bash
 set -e
 
-# Check if version argument is provided
 if [ -z "$1" ]; then
   echo "ERROR: Version argument required"
   echo "Usage: mise run publish <version> [publish-target]"
-  echo "Example: mise run publish 1.0.0-rc2"
-  echo "Example: mise run publish 1.0.0-rc2 opencenter-cloud/community-artifacts"
   exit 1
 fi
 
 VERSION="$1"
 PUBLISH_TARGET="${2:-opencenter-cloud/opencenter-cli}"
-
-# Strip 'v' prefix if present for consistency
 VERSION="${VERSION#v}"
 TAG="v${VERSION}"
 RELEASE_DIR="bin/release"
 
 echo "=== Generating Release Notes for ${VERSION} ==="
-echo "Publish target: ${PUBLISH_TARGET}"
-echo ""
 
-# Get the last tag to generate changelog
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 if [ -z "$LAST_TAG" ]; then
-  echo "No previous tag found, generating full changelog..."
   COMMIT_RANGE="HEAD"
 else
-  echo "Generating changelog since ${LAST_TAG}..."
   COMMIT_RANGE="${LAST_TAG}..HEAD"
 fi
 
-# Generate release notes following documentation steering guidelines
 RELEASE_NOTES_FILE="${RELEASE_DIR}/RELEASE_NOTES_${VERSION}.md"
 mkdir -p "${RELEASE_DIR}"
 
@@ -326,41 +263,32 @@ Release ${VERSION} of opencenter CLI.
 
 EOF
 
-# Extract and format feature commits
 FEATURES=$(git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ feat" | sed 's/^[a-f0-9]* feat//' || echo "")
 if [ -n "$FEATURES" ]; then
   echo "**New Features**" >> "$RELEASE_NOTES_FILE"
   echo "" >> "$RELEASE_NOTES_FILE"
   echo "$FEATURES" | while IFS= read -r line; do
-    if [ -n "$line" ]; then
-      echo "- $line" >> "$RELEASE_NOTES_FILE"
-    fi
+    [ -n "$line" ] && echo "- $line" >> "$RELEASE_NOTES_FILE"
   done
   echo "" >> "$RELEASE_NOTES_FILE"
 fi
 
-# Extract and format fix commits
 FIXES=$(git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ fix" | sed 's/^[a-f0-9]* fix//' || echo "")
 if [ -n "$FIXES" ]; then
   echo "**Bug Fixes**" >> "$RELEASE_NOTES_FILE"
   echo "" >> "$RELEASE_NOTES_FILE"
   echo "$FIXES" | while IFS= read -r line; do
-    if [ -n "$line" ]; then
-      echo "- $line" >> "$RELEASE_NOTES_FILE"
-    fi
+    [ -n "$line" ] && echo "- $line" >> "$RELEASE_NOTES_FILE"
   done
   echo "" >> "$RELEASE_NOTES_FILE"
 fi
 
-# Extract and format docs commits
 DOCS=$(git log $COMMIT_RANGE --oneline --no-merges | grep -E "^[a-f0-9]+ docs" | sed 's/^[a-f0-9]* docs//' || echo "")
 if [ -n "$DOCS" ]; then
   echo "**Documentation**" >> "$RELEASE_NOTES_FILE"
   echo "" >> "$RELEASE_NOTES_FILE"
   echo "$DOCS" | while IFS= read -r line; do
-    if [ -n "$line" ]; then
-      echo "- $line" >> "$RELEASE_NOTES_FILE"
-    fi
+    [ -n "$line" ] && echo "- $line" >> "$RELEASE_NOTES_FILE"
   done
   echo "" >> "$RELEASE_NOTES_FILE"
 fi
@@ -405,13 +333,12 @@ opencenter version
 
 ## Platform Support
 
-This release includes binaries for:
 - Linux x86_64
 - Linux ARM64
 - macOS Intel
 - macOS Apple Silicon
 
-Windows is not supported in this release due to platform-specific file locking code.
+Windows is not supported due to platform-specific file locking code.
 
 ## Known Issues
 
@@ -422,16 +349,17 @@ See the [issue tracker](https://github.com/${PUBLISH_TARGET}/issues) for current
 Compare changes: https://github.com/${PUBLISH_TARGET}/compare/${LAST_TAG}...${TAG}
 EOF
 
-echo "✅ Release notes generated: $RELEASE_NOTES_FILE"
-echo ""
-cat "$RELEASE_NOTES_FILE"
-echo ""
-echo "=== Release Notes Complete ==="
-echo ""
-echo "File saved to: ${RELEASE_NOTES_FILE}"
+echo "Release notes generated: $RELEASE_NOTES_FILE"
 '''
 
-# Build the opencenter binary
+# ---------------------------------------------------------------------------
+# Code quality
+# ---------------------------------------------------------------------------
+
+# Format all Go source files
+fmt = "gofmt -w ."
+
+# Tidy Go module dependencies
 tidy = "go mod tidy"
 
 # Upgrade all Go dependencies to their latest versions
@@ -439,23 +367,23 @@ upgrade-deps = '''
 #!/usr/bin/env bash
 set -e
 
-echo "Upgrading all Go dependencies to latest versions..."
-
-# Get all dependencies and upgrade them
+echo "Upgrading all Go dependencies..."
 go get -u ./...
-
-# Tidy up the go.mod and go.sum files
 go mod tidy
-
-echo "Dependencies upgraded successfully!"
-echo ""
-echo "Run 'mise run test' to verify everything still works."
+echo "Done. Run 'mise run test' to verify."
 '''
 
-# Format all files to golang standards
-fmt = "gofmt -w ."
+# Lint Go source files
+lint = [
+  "echo Linting...",
+  "bin/golangci-lint run ./..."
+]
 
-# Run the deterministic GA verification lane
+# ---------------------------------------------------------------------------
+# Test
+# ---------------------------------------------------------------------------
+
+# Run unit tests (config, cmd, cloud packages)
 test = '''
 #!/usr/bin/env bash
 set -e
@@ -464,20 +392,27 @@ go test ./internal/config/... ./cmd/... -count=1
 go test ./internal/cloud/... -count=1
 '''
 
-# Run BDD tests via godog CLI (optional)
+# Run BDD tests via godog (non-@wip scenarios)
 godog = "go test ./... -v args --godog.tags=~@wip --godog.paths=tests/features"
 
-# Run only @wip scenarios for focused development
+# Run only @wip BDD scenarios for focused development
 godog-wip = "go test ./... -v args --godog.tags=@wip --godog.paths=tests/features"
 
-# Check documentation for broken links
-doc-check = "./hack/check-doc-links.sh docs"
+# Run BDD scenarios filtered by tag
+# Usage: mise run godog-tag <tag>
+# Example: mise run godog-tag priority3
+godog-tag = '''
+#!/usr/bin/env bash
+set -e
 
-# Detect failing scenarios and tag them with @wip
-tag-wip-failures = "python3 hack/tag_wip_failures.py"
+if [ -z "$1" ]; then
+  echo "Usage: mise run godog-tag <tag>"
+  echo "Example: mise run godog-tag priority3"
+  exit 1
+fi
 
-# Run all BDD tests (alias for godog)
-test-bdd = "go test ./... -v args --godog.tags=~@wip --godog.paths=tests/features"
+go test ./... -v args --godog.tags=@$1 --godog.paths=tests/features
+'''
 
 # Run all property-based tests
 property = '''
@@ -485,133 +420,28 @@ property = '''
 set -e
 
 echo "=== Running Property-Based Tests ==="
-echo ""
-
-# Run all property tests across the codebase
 go test ./internal/... -v -run "TestProperty"
-
-echo ""
 echo "=== Property-Based Tests Complete ==="
 '''
 
-test-properties = "mise run property"
-
-# Run v2-specific tests (v2 schema, migration, validation)
-test-v2 = '''
-#!/usr/bin/env bash
-set -e
-
-echo "=== Running v2 Configuration Tests ==="
-echo ""
-
-echo "1. Testing v2 configuration structs..."
-go test -v ./internal/config/v2 -run "Test"
-
-echo ""
-echo "2. Testing configuration migration..."
-go test -v ./internal/config -run "TestMigration"
-
-echo ""
-echo "3. Testing v2 validation..."
-go test -v ./internal/config -run "TestV2"
-
-echo ""
-echo "4. Testing v2 property tests..."
-go test -v ./internal/config/v2 -run "TestProperty"
-
-echo ""
-echo "=== v2 Configuration Tests Complete ==="
-'''
-
-# Run all security-related tests (Phase 1 security components)
-test-security = '''
-#!/usr/bin/env bash
-set -e
-
-echo "=== Running Security Tests ==="
-echo ""
-
-echo "1. Testing Input Validator (unit + property tests)..."
-go test -v ./internal/security -run "TestInputValidator|TestProperty.*InputValidation"
-
-echo ""
-echo "2. Testing Command Sanitizer (unit + property tests)..."
-go test -v ./internal/security -run "TestCommandSanitizer|TestProperty.*CommandExecution"
-
-echo ""
-echo "3. Testing Credential Masker (unit + property tests)..."
-go test -v ./internal/security -run "TestCredentialMasker|TestProperty.*CredentialMasking"
-
-echo ""
-echo "4. Testing Audit Logger (unit + property tests)..."
-go test -v ./internal/security -run "TestAuditLogger|TestProperty.*AuditLogging"
-
-echo ""
-echo "5. Testing Template Sandbox (unit + property tests)..."
-go test -v ./internal/template -run "TestSandbox|TestProperty.*Template"
-
-echo ""
-echo "6. Testing SOPS Key Manager (unit + property tests)..."
-go test -v ./internal/sops -run "TestKeyManager|TestProperty.*Key"
-
-echo ""
-echo "=== Security Tests Complete ==="
-echo ""
-echo "Summary:"
-echo "  ✓ Input validation and sanitization"
-echo "  ✓ Command injection prevention"
-echo "  ✓ Credential masking"
-echo "  ✓ Audit logging"
-echo "  ✓ Template sandboxing"
-echo "  ✓ Secure key storage"
-'''
-
-# Run all operational readiness tests (Phase 2 operational components)
+# Run integration tests (resilience, operations, cluster setup)
 integration = '''
 #!/usr/bin/env bash
 set -e
 
 echo "=== Running Integration Tests ==="
-echo ""
 
-echo "1. Testing Cluster Setup Integration..."
+echo "1. Cluster Setup Integration..."
 go test -v ./cmd -run "TestClusterSetup"
 
-echo ""
-echo "2. Testing Retry Handler (unit + property tests)..."
-go test -v ./internal/resilience -run "TestRetry|TestProperty.*Retry"
+echo "2. Resilience (retry, circuit breaker, lock manager)..."
+go test -v ./internal/resilience/... -run "TestRetry|TestCircuitBreaker|TestLockManager|TestProperty"
 
-echo ""
-echo "3. Testing Circuit Breaker (unit + property tests)..."
-go test -v ./internal/resilience -run "TestCircuitBreaker|TestProperty.*CircuitBreaker"
+echo "3. Operations (drift detector, backup manager)..."
+go test -v ./internal/operations/... -run "TestDriftDetector|TestBackupManager|TestProperty"
 
-echo ""
-echo "4. Testing Lock Manager (unit + property tests)..."
-go test -v ./internal/resilience -run "TestLockManager|TestProperty.*Lock"
-
-echo ""
-echo "5. Testing Drift Detector (unit + property tests)..."
-go test -v ./internal/operations -run "TestDriftDetector|TestProperty.*Drift"
-
-echo ""
-echo "6. Testing Backup Manager (unit + property tests)..."
-go test -v ./internal/operations -run "TestBackupManager|TestProperty.*Backup"
-
-echo ""
 echo "=== Integration Tests Complete ==="
-echo ""
-echo "Summary:"
-echo "  ✓ Cluster setup workflow"
-echo "  ✓ Retry logic with exponential backoff"
-echo "  ✓ Circuit breaker pattern"
-echo "  ✓ Distributed locking"
-echo "  ✓ Drift detection and reconciliation"
-echo "  ✓ Backup and disaster recovery"
-echo ""
-echo "Note: Observability components (metrics, logging) are in separate observability spec"
 '''
-
-test-integration = "mise run integration"
 
 # Run performance-tagged checks
 perf = '''
@@ -621,36 +451,19 @@ set -e
 go test -tags perf ./internal/config -run "TestMemoryUsageRegression" -count=1
 '''
 
-# Run regression tests (non-WIP scenarios)
-test-regression = "go test ./... -v args --godog.tags=~@wip --godog.paths=tests/features"
+# Run all tests: unit + BDD + property
+test-all = [
+  "mise run test",
+  "mise run godog",
+  "mise run property"
+]
 
-# Priority-specific test tasks for testing-tasks-fix implementation
-# Priority 1: Config Loader for Organization Structure (18 failing tests)
-test-priority1 = "go test ./... -v args --godog.tags=@priority1 --godog.paths=tests/features"
-
-# Priority 2: GitOps Idempotency and Validation (7 failing tests)
-test-priority2 = "go test ./... -v args --godog.tags=@priority2 --godog.paths=tests/features"
-
-# Priority 3: Cluster List and Select Commands (4 failing tests)
-test-priority3 = "go test ./... -v args --godog.tags=@priority3 --godog.paths=tests/features"
-
-# Priority 4: Validation Logic (6 failing tests)
-test-priority4 = "go test ./... -v args --godog.tags=@priority4 --godog.paths=tests/features"
-
-# Priority 5: Bootstrap Cleanup (1 failing test)
-test-priority5 = "go test ./... -v args --godog.tags=@priority5 --godog.paths=tests/features"
-
-# Priority 6: Info Command Output (2 failing tests)
-test-priority6 = "go test ./... -v args --godog.tags=@priority6 --godog.paths=tests/features"
-
-# Priority 7: Cluster Destroy Command (2 failing tests)
-test-priority7 = "go test ./... -v args --godog.tags=@priority7 --godog.paths=tests/features"
-
-# Priority 8: Init Validation (2 failing tests)
-test-priority8 = "go test ./... -v args --godog.tags=@priority8 --godog.paths=tests/features"
+# ---------------------------------------------------------------------------
+# Schema & validation
+# ---------------------------------------------------------------------------
 
 # Generate the cluster JSON schema into the schema directory
-schema = "./bin/opencenter cluster schema  --pretty --out schema/cluster.schema.json"
+schema = "./bin/opencenter cluster schema --pretty --out schema/cluster.schema.json"
 
 # Generate JSON schema from Go struct definitions
 schema-gen = '''
@@ -658,169 +471,13 @@ schema-gen = '''
 set -e
 echo "Generating JSON schema from Go structs..."
 go run ./cmd/schema-gen/main.go --version 2.0 --output schema/cluster.schema.json
-echo "Schema generated successfully at schema/cluster.schema.json"
+echo "Schema generated at schema/cluster.schema.json"
 '''
 
-# Convenience tasks for validation
+# Validate cluster configuration
 validate = "./bin/opencenter cluster validate"
 
-# Validate template schema references
-validate-templates = "./hack/validate-template-schema.sh"
-
-# Export effective configuration with applied defaults
-config-export-effective = '''
-#!/usr/bin/env bash
-set -e
-
-if [ -z "$1" ]; then
-  echo "Usage: mise run config-export-effective <cluster-name> [output-file]"
-  echo "Example: mise run config-export-effective my-cluster"
-  echo "Example: mise run config-export-effective my-cluster /tmp/effective-config.yaml"
-  exit 1
-fi
-
-CLUSTER_NAME="$1"
-OUTPUT_FILE="${2:-${CLUSTER_NAME}-effective.yaml}"
-
-./bin/opencenter cluster config export-effective "$CLUSTER_NAME" -o "$OUTPUT_FILE"
-'''
-
-# Preflight task for preflight
-preflight = "./bin/opencenter cluster preflight"
-
-# Generate and view documentation
-doc = "go doc ./..."
-doc-serve = "go run golang.org/x/pkgsite/cmd/pkgsite@latest"
-
-# Generate CLI documentation
-docs-gen = "go run generate.go"
-
-lint = [
-  "echo Linting...",
-  "bin/golangci-lint run ./..."
-]
-
-gitea-setup = [
-  "echo Starting gitea...",
-  "go run ./cmd/opencenter-local gitea up"
-]
-
-gitea-configure = [
-  "echo Provisioning gitea users, tokens, and repository via the local plugin...",
-  "go run ./cmd/opencenter-local gitea up"
-]
-
-# Start and configure local Gitea for testing (setup → configure)
-gitea-up = [
-  "echo Starting and provisioning gitea via the local plugin...",
-  "go run ./cmd/opencenter-local gitea up"
-]
-
-gitea-cleanup = [
-  "echo Cleaning up local git...",
-  "go run ./cmd/opencenter-local gitea destroy"
-]
-
-clean = [
-  "echo Cleaning up...",
-  "rm -rf testdata",
-  "rm -rf bin"
-]
-
-# Generate Terraform main.tf from cluster configuration
-terraform-generate = '''
-#!/usr/bin/env bash
-set -e
-
-if [ $# -eq 0 ]; then
-  echo "Usage: mise run terraform-generate <cluster-name> [output-dir]"
-  echo "Example: mise run terraform-generate my-cluster ./output"
-  exit 1
-fi
-
-CLUSTER_NAME="$1"
-OUTPUT_DIR="${2:-./terraform-output}"
-
-echo "Generating Terraform configuration for cluster: ${CLUSTER_NAME}"
-echo "Output directory: ${OUTPUT_DIR}"
-
-# Build the binary first
-mise run build
-
-# Generate the Terraform files
-./bin/opencenter cluster terraform-generate "${CLUSTER_NAME}" --output-dir="${OUTPUT_DIR}"
-
-echo "Terraform files generated successfully in ${OUTPUT_DIR}"
-echo "Files created:"
-ls -la "${OUTPUT_DIR}/"
-'''
-
-# Export AWS credentials for current cluster
-export-aws-creds = "./bin/opencenter cluster credentials export --provider aws --format env"
-
-# Export OpenStack credentials for current cluster  
-export-os-creds = "./bin/opencenter cluster credentials export --provider openstack --format env"
-
-# Export all credentials for current cluster
-export-all-creds = "./bin/opencenter cluster credentials export --provider all --format env"
-
-# Export AWS credentials in Terraform format
-export-aws-terraform = "./bin/opencenter cluster credentials export --provider aws --format terraform"
-
-# Export OpenStack credentials as clouds.yaml
-export-os-clouds = "./bin/opencenter cluster credentials export --provider openstack --format clouds-yaml"
-
-# Clear AWS credentials from environment
-unset-aws-creds = "./bin/opencenter cluster credentials unset --provider aws"
-
-# Clear OpenStack credentials from environment
-unset-os-creds = "./bin/opencenter cluster credentials unset --provider openstack"
-
-# Clear all cloud credentials from environment
-unset-all-creds = "./bin/opencenter cluster credentials unset --provider all"
-
-# Setup development environment with credentials
-dev-env-setup = '''
-#!/usr/bin/env bash
-set -e
-
-echo "Setting up development environment..."
-
-# Check if there's an active cluster
-ACTIVE_CLUSTER=$(./bin/opencenter cluster current 2>/dev/null || echo "")
-
-if [ -z "$ACTIVE_CLUSTER" ]; then
-  echo "No active cluster found. Use 'opencenter cluster select <name>' to set one."
-  exit 1
-fi
-
-echo "Using active cluster: $ACTIVE_CLUSTER"
-
-# Export credentials
-echo "Exporting credentials..."
-eval $(./bin/opencenter cluster credentials export --provider all --format env)
-
-echo "Development environment ready!"
-echo "Available environment variables:"
-env | grep -E "^(AWS_|OS_)" | sort
-'''
-
-# Clean development environment credentials
-dev-env-clean = '''
-#!/usr/bin/env bash
-set -e
-
-echo "Cleaning development environment credentials..."
-eval $(./bin/opencenter cluster credentials unset --provider all)
-echo "Credentials cleared from environment."
-'''
-
-# Comprehensive schema change verification task
-# Use this task whenever making changes to:
-# - internal/config/schema.go (schema definition)
-# - internal/config/config.go (struct definitions)
-# - testdata/schema.yaml (reference schema)
-# - Any schema-related default generation logic
+# Comprehensive schema change verification
 schema-verify = [
   "echo === Building project ===",
   "mise run build",
@@ -833,43 +490,66 @@ schema-verify = [
   "echo === Testing validation ===",
   "unset OPENCENTER_DEBUG && OPENCENTER_CONFIG_DIR=./testdata/config ./bin/opencenter cluster validate test-verify && echo 'Validation successful' || echo 'FAILED: Validation'",
   "echo === Running unit tests ===",
-  "mise run test && echo 'Unit tests passed' || echo 'WARNING: Unit tests failed - may need test updates for schema changes'",
+  "mise run test && echo 'Unit tests passed' || echo 'WARNING: Unit tests failed'",
   "echo === Running BDD tests ===",
-  "mise run godog && echo 'BDD tests passed' || echo 'WARNING: BDD tests failed - may need test updates for schema changes'",
-  "echo === Comparing with reference schema ===",
-  "if [ -f testdata/schema.yaml ]; then echo 'Reference schema found - manual comparison recommended:'; echo 'Run: diff testdata/schema.yaml testdata/config/test-verify.yaml'; else echo 'No reference schema found at testdata/schema.yaml'; fi",
-  "echo === Schema verification results ===",
-  "echo 'Generated files:'",
-  "echo '  - new-schema.json (JSON schema)'",
-  "echo '  - testdata/config/test-verify.yaml (sample config)'",
-  "echo ''",
-  "echo 'Manual verification steps:'",
-  "echo '1. Review new-schema.json for correct structure'",
-  "echo '2. Compare generated config with testdata/schema.yaml'",
-  "echo '3. Update tests if they failed due to schema changes'",
-  "echo '4. Update documentation (docs/reference/config.md)'",
-  "echo '5. Test with existing cluster configurations'",
-  "echo '=== Schema verification complete ==='",
+  "mise run godog && echo 'BDD tests passed' || echo 'WARNING: BDD tests failed'",
+  "echo === Schema verification complete ==="
 ]
+
+# ---------------------------------------------------------------------------
+# Documentation
+# ---------------------------------------------------------------------------
+
+# Generate CLI documentation
+docs-gen = "go run cmd/docs/generate.go"
+
+# Detect failing BDD scenarios and tag them with @wip
+tag-wip-failures = "python3 hack/tag_wip_failures.py"
+
+# ---------------------------------------------------------------------------
+# Local development environment
+# ---------------------------------------------------------------------------
+
+# Start and configure local Gitea for testing
+gitea-up = [
+  "echo Starting and provisioning gitea via the local plugin...",
+  "go run ./cmd/opencenter-local gitea up"
+]
+
+# Tear down local Gitea instance
+gitea-cleanup = [
+  "echo Cleaning up local gitea...",
+  "go run ./cmd/opencenter-local gitea destroy"
+]
+
 # Show the current active cluster status
 active = "./bin/opencenter cluster status"
 
-# Show just the active cluster name (quiet mode)
-active-name = "./bin/opencenter cluster status --quiet"
+# Generate Terraform main.tf from cluster configuration
+# Usage: mise run terraform-generate <cluster-name> [output-dir]
+terraform-generate = '''
+#!/usr/bin/env bash
+set -e
 
-# Show active cluster with detailed paths
-active-paths = "./bin/opencenter cluster status --paths"
+if [ $# -eq 0 ]; then
+  echo "Usage: mise run terraform-generate <cluster-name> [output-dir]"
+  exit 1
+fi
 
-# Fast active cluster lookup (optimized for shell prompts)
-active-fast = "./bin/opencenter cluster active-fast"
+CLUSTER_NAME="$1"
+OUTPUT_DIR="${2:-./terraform-output}"
 
-# Fast active cluster for prompt (with brackets)
-active-prompt = "./bin/opencenter cluster active-fast --prompt"
+echo "Generating Terraform configuration for cluster: ${CLUSTER_NAME}"
+mise run build
+./bin/opencenter cluster terraform-generate "${CLUSTER_NAME}" --output-dir="${OUTPUT_DIR}"
+echo "Terraform files generated in ${OUTPUT_DIR}"
+ls -la "${OUTPUT_DIR}/"
+'''
 
-# Fast active cluster short name
-active-short = "./bin/opencenter cluster active-fast --short"
+# Preflight checks for cluster deployment
+preflight = "./bin/opencenter cluster preflight"
 
-# Install shell integration
+# Install shell integration (prompt, completions)
 install-shell-integration = "./hack/install-shell-integration.sh"
 
 # Install git hooks for development
@@ -878,195 +558,32 @@ install-hooks = '''
 set -e
 
 echo "Installing git hooks for opencenter development..."
-
-# Create hooks directory if it doesn't exist
 mkdir -p .git/hooks
 
-# Install pre-commit hook for SOPS encryption validation
 if [ ! -f .git/hooks/pre-commit ]; then
     echo "ERROR: Pre-commit hook not found in repository"
-    echo "This should be committed to the repository for all developers"
     exit 1
 fi
 
-# Make sure the hook is executable
 chmod +x .git/hooks/pre-commit
-
-echo "✅ Git hooks installed successfully!"
-echo ""
-echo "Installed hooks:"
-echo "  - pre-commit: Validates SOPS encryption of cluster config secrets"
-echo ""
-echo "The pre-commit hook will:"
-echo "  - Check cluster configuration files for sensitive data"
-echo "  - Ensure sensitive data is encrypted with SOPS"
-echo "  - Block commits with unencrypted secrets"
-echo ""
-echo "To encrypt a file with SOPS:"
-echo "  sops -e -i <file>"
-echo "  # or"
-echo "  opencenter sops secrets-encrypt <file>"
+echo "Git hooks installed. Pre-commit hook validates SOPS encryption of cluster config secrets."
 '''
 
-# Test the pre-commit hook with sample files
-test-hooks = '''
-#!/usr/bin/env bash
-set -e
-
-echo "Testing pre-commit hook functionality..."
-
-# Create a temporary test directory
-TEST_DIR=$(mktemp -d)
-cd "$TEST_DIR"
-
-# Initialize a git repo
-git init
-git config user.email "test@example.com"
-git config user.name "Test User"
-
-# Copy the pre-commit hook
-cp "$OLDPWD/.git/hooks/pre-commit" .git/hooks/
-chmod +x .git/hooks/pre-commit
-
-echo "Creating test files..."
-
-# Test 1: File with no sensitive data (should pass)
-cat > test-safe-config.yaml << EOF
-opencenter:
-  cluster:
-    cluster_name: test-cluster
-    provider: openstack
-  infrastructure:
-    cloud:
-      openstack:
-        auth_url: https://keystone.example.com/v3
-        region: RegionOne
-        application_credential_id: ""
-        application_credential_secret: ""
-EOF
-
-# Test 2: File with sensitive data (should fail)
-cat > test-unsafe-config.yaml << EOF
-opencenter:
-  cluster:
-    cluster_name: test-cluster
-    provider: openstack
-  infrastructure:
-    cloud:
-      openstack:
-        auth_url: https://keystone.example.com/v3
-        region: RegionOne
-        application_credential_id: "real-credential-id"
-        application_credential_secret: "real-secret-value"
-EOF
-
-# Test 3: File with SOPS encrypted data (should pass)
-cat > test-encrypted-config.yaml << EOF
-opencenter:
-  cluster:
-    cluster_name: test-cluster
-    provider: openstack
-  infrastructure:
-    cloud:
-      openstack:
-        auth_url: https://keystone.example.com/v3
-        region: RegionOne
-        application_credential_id: ENC[AES256_GCM,data:encrypted_data_here,iv:iv_here,tag:tag_here,type:str]
-        application_credential_secret: ENC[AES256_GCM,data:encrypted_secret_here,iv:iv_here,tag:tag_here,type:str]
-sops:
-    age:
-        - recipient: age1234567890abcdef
-          enc: ENC[AES256_GCM,data:encrypted_key_here,type:str]
-    lastmodified: "2024-01-01T00:00:00Z"
-    mac: ENC[AES256_GCM,data:mac_here,type:str]
-EOF
-
-echo "Running tests..."
-
-# Test safe file (should pass)
-git add test-safe-config.yaml
-if git commit -m "Test safe config"; then
-    echo "✅ Test 1 PASSED: Safe config file accepted"
-else
-    echo "❌ Test 1 FAILED: Safe config file rejected"
-    exit 1
-fi
-
-# Test unsafe file (should fail)
-git add test-unsafe-config.yaml
-if git commit -m "Test unsafe config" 2>/dev/null; then
-    echo "❌ Test 2 FAILED: Unsafe config file was accepted (should have been rejected)"
-    exit 1
-else
-    echo "✅ Test 2 PASSED: Unsafe config file correctly rejected"
-fi
-
-# Test encrypted file (should pass)
-git add test-encrypted-config.yaml
-if git commit -m "Test encrypted config"; then
-    echo "✅ Test 3 PASSED: Encrypted config file accepted"
-else
-    echo "❌ Test 3 FAILED: Encrypted config file rejected"
-    exit 1
-fi
-
+# ---------------------------------------------------------------------------
 # Cleanup
-cd "$OLDPWD"
-rm -rf "$TEST_DIR"
+# ---------------------------------------------------------------------------
 
-echo ""
-echo "🎉 All pre-commit hook tests passed!"
-echo "The hook is working correctly and will protect against committing unencrypted secrets."
-'''
+# Remove build artifacts and generated files
+clean = [
+  "echo Cleaning up...",
+  "rm -rf bin/",
+  "rm -rf testdata/",
+  "rm -f new-schema.json",
+  "rm -rf terraform-output/"
+]
 
-# Run file scanner and generate cleanup report
-cleanup-scan = '''
-#!/usr/bin/env bash
-set -e
-
-echo "=== Repository Cleanup Scanner ==="
-echo ""
-echo "Building scanner utility..."
-mise run build
-
-echo ""
-echo "Running file scanner..."
-go run ./internal/cleanup/cmd/scanner/main.go > cleanup-report.md
-
-echo ""
-echo "✅ Scan complete!"
-echo "Report generated: cleanup-report.md"
-echo ""
-echo "Next steps:"
-echo "  1. Review cleanup-report.md"
-echo "  2. Identify files to keep, move, or remove"
-echo "  3. Document decisions in report annotations"
-'''
-
-# Add or update Table of Contents in documentation files
-docs-toc = '''
-#!/usr/bin/env bash
-set -e
-
-echo "=== Documentation TOC Management ==="
-echo ""
-echo "Adding/updating TOCs in markdown files > 100 lines..."
-./hack/add-toc.sh
-
-echo ""
-echo "✅ TOC update complete!"
-echo ""
-echo "Files updated with TOCs follow the documentation standard:"
-echo "  - TOC placed after main title"
-echo "  - Includes all ## and ### headings"
-echo "  - Proper anchor link formatting"
-'''
-
-# Destroy the local Kind cluster and Gitea instance, removing all local dev state.
-# Runs the cleanup steps from docs/how-to/create-kind-cluster.md:
-#   1. opencenter cluster destroy my-cluster --force
-#   2. opencenter local gitea destroy
-#   3. Verify nothing remains (kind get clusters, opencenter cluster list)
+# Destroy local Kind cluster and Gitea instance
+# Usage: mise run kind-cleanup [cluster-name]
 kind-cleanup = '''
 #!/usr/bin/env bash
 set -e
@@ -1074,79 +591,42 @@ set -e
 CLUSTER="${1:-my-cluster}"
 
 echo "=== Cleaning up local Kind environment ==="
-echo ""
 
 echo "1. Destroying cluster '${CLUSTER}'..."
 if ./bin/opencenter cluster info "${CLUSTER}" >/dev/null 2>&1; then
   ./bin/opencenter cluster destroy "${CLUSTER}" --force
-  echo "   ✓ Cluster destroyed"
+  echo "   Cluster destroyed"
 else
   echo "   (cluster not found, skipping)"
 fi
 
-echo ""
 echo "2. Destroying local Gitea instance..."
 if ./bin/opencenter local gitea status >/dev/null 2>&1; then
   ./bin/opencenter local gitea destroy
-  echo "   ✓ Gitea destroyed"
+  echo "   Gitea destroyed"
 else
   echo "   (gitea not running, skipping)"
 fi
 
-echo ""
 echo "3. Verifying cleanup..."
-
 KIND_CLUSTERS=$(kind get clusters 2>&1 || true)
 if echo "${KIND_CLUSTERS}" | grep -q "${CLUSTER}"; then
-  echo "   ✗ WARNING: Kind cluster '${CLUSTER}' still exists"
-  echo "     Run: kind delete cluster --name ${CLUSTER}"
+  echo "   WARNING: Kind cluster '${CLUSTER}' still exists. Run: kind delete cluster --name ${CLUSTER}"
 else
-  echo "   ✓ No Kind cluster '${CLUSTER}'"
-fi
-
-if ./bin/opencenter cluster list 2>/dev/null | grep -q "local/${CLUSTER}"; then
-  echo "   ✗ WARNING: Cluster config for '${CLUSTER}' still registered"
-else
-  echo "   ✓ No cluster config for '${CLUSTER}'"
+  echo "   No Kind cluster '${CLUSTER}'"
 fi
 
 LOCK_FILE="${HOME}/.config/opencenter/locks/${CLUSTER}.lock"
 if [ -f "${LOCK_FILE}" ]; then
   rm -f "${LOCK_FILE}"
-  echo "   ✓ Removed stale lock file"
-else
-  echo "   ✓ No stale lock file"
+  echo "   Removed stale lock file"
 fi
 
-echo ""
 echo "=== Cleanup complete ==="
 '''
 
-# Remove build artifacts, test fixtures, and generated files from the workspace.
-dev-cleanup = '''
-#!/usr/bin/env bash
-set -e
-
-echo "=== Cleaning development artifacts ==="
-
-rm -rf bin/
-echo "✓ Removed bin/"
-
-rm -rf testdata/
-echo "✓ Removed testdata/"
-
-rm -f new-schema.json
-echo "✓ Removed generated schema files"
-
-rm -rf terraform-output/
-echo "✓ Removed terraform output"
-
-echo ""
-echo "=== Dev cleanup complete ==="
-'''
-
-# Full demo teardown: destroy local Kind cluster + Gitea, then clean build artifacts.
+# Full demo teardown: destroy local Kind cluster + Gitea, then clean build artifacts
 demo-cleanup = [
   "mise run kind-cleanup",
-  "mise run dev-cleanup"
+  "mise run clean"
 ]

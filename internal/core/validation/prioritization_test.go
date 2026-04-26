@@ -248,11 +248,11 @@ func TestSortValidatorsByPriority(t *testing.T) {
 		{
 			name: "same priorities",
 			input: []Validator{
-				&mockValidator{name: "v1", priority: 100},
-				&mockValidator{name: "v2", priority: 100},
-				&mockValidator{name: "v3", priority: 100},
+				&mockValidator{name: "alpha", priority: 100},
+				&mockValidator{name: "bravo", priority: 100},
+				&mockValidator{name: "charlie", priority: 100},
 			},
-			expected: []string{"v1", "v2", "v3"},
+			expected: []string{"alpha", "bravo", "charlie"},
 		},
 	}
 

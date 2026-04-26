@@ -490,7 +490,7 @@ func TestInfrastructureStageConditions(t *testing.T) {
 
 func createTestConfigInfra(provider string) v2.Config {
 	return v2.Config{
-		SchemaVersion: "1.0.0",
+		SchemaVersion: "2.0",
 		OpenCenter: v2.OpenCenterConfig{
 			Meta: v2.MetaConfig{
 				Name:         "test-cluster",

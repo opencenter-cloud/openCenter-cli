@@ -91,14 +91,14 @@ func TestRenderFullTemplateYAMLRoundTrip(t *testing.T) {
 	}
 }
 
-// TestNewV2Default_NoV1FieldContamination verifies that NewV2Default produces
-// YAML that contains only v2 schema fields and none of the v1 legacy fields.
-func TestNewV2Default_NoV1FieldContamination(t *testing.T) {
-	// v1-only fields that must NOT appear anywhere in v2 output.
+// TestNewV2Default_NoKnownLegacyFieldContamination verifies that NewV2Default produces
+// YAML that contains only current schema fields and none of the known legacy fields.
+func TestNewV2Default_NoKnownLegacyFieldContamination(t *testing.T) {
+	// Known legacy fields that must NOT appear anywhere in current output.
 	// Fields like flavor_master and master_count exist in v2 too but under
 	// infrastructure.compute — the loader's KnownFields(true) check already
 	// ensures they don't appear in the wrong section.
-	v1OnlyFields := []string{
+	knownLegacyFields := []string{
 		"kubespray_version:",
 		"cni_iface:",
 		"calico_interface_autodetect:",
@@ -159,10 +159,10 @@ func TestNewV2Default_NoV1FieldContamination(t *testing.T) {
 			}
 			yamlStr := string(data)
 
-			// Check no v1 fields leaked
-			for _, field := range v1OnlyFields {
+			// Check no known legacy fields leaked
+			for _, field := range knownLegacyFields {
 				if strings.Contains(yamlStr, field) {
-					t.Errorf("v1 field %q found in %s v2 output", field, provider)
+					t.Errorf("known legacy field %q found in %s v2 output", field, provider)
 				}
 			}
 

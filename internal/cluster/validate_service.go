@@ -41,7 +41,7 @@ type ValidationResult struct {
 	ConfigValid       bool
 	ConnectivityValid bool
 	ProviderValid     bool
-	SchemaVersion     string // v1 or v2
+	SchemaVersion     string // normalized schema identifier
 	DebugConfigPath   string // Path to generated debug config (if requested)
 }
 

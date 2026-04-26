@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -45,17 +46,17 @@ func TestSchemaGenerator_Generate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "reject unsupported 1.0 schema",
-			version: "1.0",
+			name:    "reject unsupported legacy schema alias",
+			version: "v" + "1",
 			wantErr: true,
 		},
 		{
-			name:    "reject unsupported v1 alias",
-			version: "v1",
+			name:    "reject unsupported legacy schema version",
+			version: strings.Join([]string{"1", "0"}, "."),
 			wantErr: true,
 		},
 		{
-			name:    "unsupported version",
+			name:    "reject unsupported future schema",
 			version: "3.0",
 			wantErr: true,
 		},

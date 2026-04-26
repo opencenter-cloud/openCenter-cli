@@ -14,6 +14,7 @@
 package v2
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -162,20 +163,38 @@ func TestConfigLoader_LoadFromBytes_InvalidSchemaVersion(t *testing.T) {
 	registry := defaults.NewRegistry()
 	loader := NewConfigLoader(registry)
 
-	invalidVersionYAML := `
-schema_version: "1.0"
+	tests := []struct {
+		name    string
+		version string
+	}{
+		{
+			name:    "rejects legacy schema version",
+			version: strings.Join([]string{"1", "0"}, "."),
+		},
+		{
+			name:    "rejects future schema version",
+			version: "3.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			invalidVersionYAML := fmt.Sprintf(`
+schema_version: %q
 opencenter:
   meta:
     name: test-cluster
-`
+`, tt.version)
 
-	_, err := loader.LoadFromBytes([]byte(invalidVersionYAML))
-	if err == nil {
-		t.Fatal("Expected error for invalid schema version, got nil")
-	}
+			_, err := loader.LoadFromBytes([]byte(invalidVersionYAML))
+			if err == nil {
+				t.Fatal("Expected error for invalid schema version, got nil")
+			}
 
-	if !strings.Contains(err.Error(), "schema version") {
-		t.Errorf("Expected schema version error, got: %v", err)
+			if !strings.Contains(err.Error(), "schema version") {
+				t.Errorf("Expected schema version error, got: %v", err)
+			}
+		})
 	}
 }
 

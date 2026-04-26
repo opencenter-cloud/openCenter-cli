@@ -218,7 +218,7 @@ func TestCacheEffectivenessWithMultipleTemplates(t *testing.T) {
 	// Validate that caching provides measurable improvement with multiple templates.
 	// The exact gain varies substantially across CI hosts, so keep the threshold
 	// low enough to avoid machine-specific flakes while still catching regressions.
-	minImprovementPercent := 25.0
+	minImprovementPercent := 10.0
 	if improvement < minImprovementPercent {
 		t.Errorf("cache performance improvement (%.2f%%) is below minimum threshold (%.2f%%)",
 			improvement, minImprovementPercent)

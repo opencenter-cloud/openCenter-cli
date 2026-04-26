@@ -260,7 +260,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 			AutoDeploy: true,
 			Method:     "kubespray",
 			Kubespray: &KubesprayConfig{
-				Version: "2.29.1",
+				Version: "2.31.0",
 				Modules: map[string]ModuleConfig{
 					"kubespray": {
 						Enabled: true,

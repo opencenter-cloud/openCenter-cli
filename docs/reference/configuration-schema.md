@@ -231,7 +231,7 @@ opencenter:
   cluster:
     kubernetes:
       version: "1.33.5"          # Kubernetes version (required)
-      kubespray_version: "v2.29.1"
+      kubespray_version: "v2.31.0"
       api_port: 443
       kube_vip_enabled: true
       kubelet_rotate_server_certs: false

@@ -256,7 +256,7 @@ Notes:
 
 ### 3. Tune compute, storage, and networking
 
-The OpenStack defaults are usable, but you should review them before provisioning. The current v2 defaults start with 3 control planes, 2 workers, Kubespray `v2.29.1`, Kubernetes `1.33.5`, and a local OpenTofu state backend.
+The OpenStack defaults are usable, but you should review them before provisioning. The current v2 defaults start with 3 control planes, 2 workers, Kubespray `v2.31.0`, Kubernetes `1.33.5`, and a local OpenTofu state backend.
 
 Edit these sections as needed:
 

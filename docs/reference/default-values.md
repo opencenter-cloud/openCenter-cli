@@ -86,7 +86,7 @@ All new configurations use schema version 2.0.
 | Field | Default | Description |
 |-------|---------|-------------|
 | `opencenter.cluster.kubernetes.version` | `"1.33.5"` | Kubernetes version |
-| `opencenter.cluster.kubernetes.kubespray_version` | `"v2.29.1"` | Kubespray version |
+| `opencenter.cluster.kubernetes.kubespray_version` | `"v2.31.0"` | Kubespray version |
 | `opencenter.cluster.kubernetes.api_port` | `443` | API server port |
 | `opencenter.cluster.kubernetes.kube_vip_enabled` | `true` | Enable Kube-VIP |
 | `opencenter.cluster.kubernetes.kubelet_rotate_server_certs` | `false` | Rotate kubelet certs |

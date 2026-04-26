@@ -113,7 +113,7 @@ locals {
 
   # ====================================
   #Kubespray Settings
-  kubespray_version                       = "{{ .Deployment.Kubespray.Version | default "v2.29.1" }}"
+  kubespray_version                       = "{{ if hasPrefix "v" (.Deployment.Kubespray.Version | default "v2.31.0") }}{{ .Deployment.Kubespray.Version | default "v2.31.0" }}{{ else }}v{{ .Deployment.Kubespray.Version }}{{ end }}"
   kubernetes_version                      = "{{ .OpenCenter.Cluster.Kubernetes.Version | default "1.33.7" }}"
   # CNI install_method: "helm" (default) skips CNI in Kubespray, CNI will be installed via GitOps/Helm after cluster is up
   #                     "kubespray" installs CNI during cluster bootstrap

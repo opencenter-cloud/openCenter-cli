@@ -47,11 +47,11 @@ opencenter cluster init my-cluster
 ```
 
 **What it affects:**
-- Default cluster configuration location when `OPENCENTER_CLUSTER_DIR` and `paths.clustersDir` are unset
-- Default per-cluster secrets storage location when `OPENCENTER_CLUSTER_DIR` and `paths.clustersDir` are unset
+- Default cluster configuration location when `OPENCENTER_CLUSTERS_DIR` and `paths.clustersDir` are unset
+- Default per-cluster secrets storage location when `OPENCENTER_CLUSTERS_DIR` and `paths.clustersDir` are unset
 - CLI defaults location
 
-### OPENCENTER_CLUSTER_DIR
+### OPENCENTER_CLUSTERS_DIR
 
 Cluster storage directory location.
 
@@ -60,7 +60,7 @@ Cluster storage directory location.
 **Usage:**
 ```bash
 export OPENCENTER_CONFIG_DIR=/custom/opencenter-config
-export OPENCENTER_CLUSTER_DIR=/data/opencenter-clusters
+export OPENCENTER_CLUSTERS_DIR=/data/opencenter-clusters
 opencenter cluster list
 ```
 
@@ -72,7 +72,7 @@ opencenter cluster list
 **Example:**
 ```bash
 export OPENCENTER_CONFIG_DIR=/tmp/opencenter-config
-export OPENCENTER_CLUSTER_DIR=/srv/opencenter-clusters
+export OPENCENTER_CLUSTERS_DIR=/srv/opencenter-clusters
 opencenter cluster init test-cluster
 
 # CLI config created at:
@@ -111,6 +111,22 @@ opencenter cluster deploy dev-cluster
 # /tmp/opencenter-state/audit/audit.log
 # /tmp/opencenter-state/locks/
 ```
+
+### OPENCENTER_PLUGINS_DIR
+
+Plugins directory location.
+
+**Default:** `${OPENCENTER_CONFIG_DIR:-~/.config/opencenter}/plugins`
+
+**Usage:**
+```bash
+export OPENCENTER_PLUGINS_DIR=/opt/opencenter/plugins
+opencenter plugins list
+```
+
+**What it affects:**
+- External CLI plugin discovery
+- Default `paths.pluginsDir` value in the CLI config
 
 ### XDG_STATE_HOME
 
@@ -594,12 +610,14 @@ export OS_PASSWORD="env-password"
 ```bash
 # Set for current session
 export OPENCENTER_CONFIG_DIR=/tmp/opencenter
-export OPENCENTER_CLUSTER_DIR=/tmp/opencenter-clusters
+export OPENCENTER_CLUSTERS_DIR=/tmp/opencenter-clusters
+export OPENCENTER_PLUGINS_DIR=/tmp/opencenter-plugins
 opencenter cluster init test-cluster
 
 # Unset after use
 unset OPENCENTER_CONFIG_DIR
-unset OPENCENTER_CLUSTER_DIR
+unset OPENCENTER_CLUSTERS_DIR
+unset OPENCENTER_PLUGINS_DIR
 ```
 
 ### Permanent (Shell Profile)
@@ -607,7 +625,8 @@ unset OPENCENTER_CLUSTER_DIR
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
 echo 'export OPENCENTER_CONFIG_DIR=~/opencenter' >> ~/.bashrc
-echo 'export OPENCENTER_CLUSTER_DIR=~/opencenter-clusters' >> ~/.bashrc
+echo 'export OPENCENTER_CLUSTERS_DIR=~/opencenter-clusters' >> ~/.bashrc
+echo 'export OPENCENTER_PLUGINS_DIR=~/opencenter-plugins' >> ~/.bashrc
 source ~/.bashrc
 
 # Or add to ~/.profile
@@ -669,7 +688,8 @@ variables:
 ```bash
 # Check variable is set
 echo $OPENCENTER_CONFIG_DIR
-echo $OPENCENTER_CLUSTER_DIR
+echo $OPENCENTER_CLUSTERS_DIR
+echo $OPENCENTER_PLUGINS_DIR
 
 # Check variable name (case-sensitive)
 env | grep OPENCENTER
@@ -679,14 +699,17 @@ env | grep OPENCENTER
 ```bash
 # Ensure correct variable name
 export OPENCENTER_CONFIG_DIR=/custom/path  # Correct
-export OPENCENTER_CLUSTER_DIR=/custom/clusters  # Correct
+export OPENCENTER_CLUSTERS_DIR=/custom/clusters  # Correct
+export OPENCENTER_PLUGINS_DIR=/custom/plugins  # Correct
 export opencenter_config_dir=/custom/path  # Wrong (lowercase)
 
 # Verify variable is exported
 export OPENCENTER_CONFIG_DIR=/custom/path
 echo $OPENCENTER_CONFIG_DIR
-export OPENCENTER_CLUSTER_DIR=/custom/clusters
-echo $OPENCENTER_CLUSTER_DIR
+export OPENCENTER_CLUSTERS_DIR=/custom/clusters
+echo $OPENCENTER_CLUSTERS_DIR
+export OPENCENTER_PLUGINS_DIR=/custom/plugins
+echo $OPENCENTER_PLUGINS_DIR
 ```
 
 ### Precedence Issues

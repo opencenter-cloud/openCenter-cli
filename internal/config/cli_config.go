@@ -215,6 +215,13 @@ func DefaultCLIConfig() *CLIConfig {
 	pluginsDir := filepath.Join(configDir, "plugins")
 	stateDir := DefaultStateDir()
 
+	if envClustersDir := clustersDirFromEnv(); envClustersDir != "" {
+		clustersDir = corePaths.ExpandPath(envClustersDir)
+	}
+	if envPluginsDir := os.Getenv("OPENCENTER_PLUGINS_DIR"); envPluginsDir != "" {
+		pluginsDir = corePaths.ExpandPath(envPluginsDir)
+	}
+
 	return &CLIConfig{
 		Logging: LoggingConfig{
 			Level:  "warn",

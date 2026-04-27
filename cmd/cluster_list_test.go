@@ -83,7 +83,7 @@ func TestClusterListUsesIndependentClusterDir(t *testing.T) {
 	clusterDir := filepath.Join(t.TempDir(), "cluster-root")
 
 	prepareCommandTestEnv(t, configDir)
-	t.Setenv("OPENCENTER_CLUSTER_DIR", clusterDir)
+	t.Setenv("OPENCENTER_CLUSTERS_DIR", clusterDir)
 
 	resolver := paths.NewPathResolver(clusterDir)
 	if err := resolver.CreateClusterDirectories(context.Background(), "external", "opencenter"); err != nil {

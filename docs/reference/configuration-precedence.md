@@ -135,13 +135,13 @@ Evidence: `internal/config/persistence/paths.go` — `DefaultConfigDir()`
 Determines the base path for all organization and cluster directories.
 
 ```
-1. OPENCENTER_CLUSTER_DIR env var
+1. OPENCENTER_CLUSTERS_DIR env var
 2. CLI config paths.clustersDir   (from ~/.config/opencenter/config.yaml)
 3. OPENCENTER_CONFIG_DIR + /clusters
 4. <DefaultConfigDir>/clusters
 ```
 
-`OPENCENTER_CLUSTER_DIR` is a runtime override for cluster storage. Without it, the CLI config value takes priority even when `OPENCENTER_CONFIG_DIR` is set. This allows pointing the config dir at one location while storing clusters elsewhere.
+`OPENCENTER_CLUSTERS_DIR` is a runtime override for cluster storage. Without it, the CLI config value takes priority even when `OPENCENTER_CONFIG_DIR` is set. This allows pointing the config dir at one location while storing clusters elsewhere.
 
 Evidence: `internal/config/cli_config_helpers.go` — `ResolveClustersDir()`
 
@@ -163,8 +163,9 @@ Evidence: `internal/config/persistence/paths.go` — `DefaultStateDir()`
 ### Plugins Directory
 
 ```
-1. CLI config paths.pluginsDir
-2. <DefaultConfigDir>/plugins
+1. OPENCENTER_PLUGINS_DIR env var
+2. CLI config paths.pluginsDir
+3. <DefaultConfigDir>/plugins
 ```
 
 Evidence: `internal/config/cli_config_helpers.go` — `GetPluginsDir()`
@@ -244,7 +245,7 @@ Evidence: `cmd/root.go` — `PersistentPreRunE`
 
 ## Common Pitfalls
 
-**Cluster storage vs `OPENCENTER_CONFIG_DIR`:** `OPENCENTER_CONFIG_DIR` controls CLI-level configuration. To override cluster storage without editing config.yaml, set `OPENCENTER_CLUSTER_DIR`. If it is unset, an explicit CLI config `paths.clustersDir` takes priority over the `OPENCENTER_CONFIG_DIR/clusters` fallback.
+**Cluster storage vs `OPENCENTER_CONFIG_DIR`:** `OPENCENTER_CONFIG_DIR` controls CLI-level configuration. To override cluster storage without editing config.yaml, set `OPENCENTER_CLUSTERS_DIR`. If it is unset, an explicit CLI config `paths.clustersDir` takes priority over the `OPENCENTER_CONFIG_DIR/clusters` fallback.
 
 **`--log-level` default masking:** The env var `OPENCENTER_LOG_LEVEL` is only read when the flag is at its default value (`warn`). If you pass `--log-level warn` explicitly, the CLI treats it as "flag was set" and the env var is still read (because the value matches the default). This is a Cobra limitation — the CLI checks the value, not whether the flag was explicitly passed.
 

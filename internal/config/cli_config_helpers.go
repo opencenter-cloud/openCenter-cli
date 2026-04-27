@@ -22,11 +22,11 @@ import (
 )
 
 // ResolveClustersDir returns the runtime clusters directory.
-// If OPENCENTER_CLUSTER_DIR is set, it is used as the cluster storage root.
+// If OPENCENTER_CLUSTERS_DIR is set, it is used as the cluster storage root.
 // Otherwise, the CLI config clustersDir value is used, falling back to
 // OPENCENTER_CONFIG_DIR/clusters or the default clusters path.
 func ResolveClustersDir() string {
-	if dir := os.Getenv("OPENCENTER_CLUSTER_DIR"); dir != "" {
+	if dir := clustersDirFromEnv(); dir != "" {
 		return normalizeDirectoryPath(dir)
 	}
 
@@ -47,11 +47,11 @@ func ResolveClustersDir() string {
 }
 
 // GetClustersDir returns the clusters directory from the CLI config.
-// OPENCENTER_CLUSTER_DIR overrides the CLI config. If the CLI config cannot be
+// OPENCENTER_CLUSTERS_DIR overrides the CLI config. If the CLI config cannot be
 // loaded or clustersDir is not set, it returns the default.
 // This function is safe to call from anywhere and will not cause circular dependencies.
 func GetClustersDir() string {
-	if dir := os.Getenv("OPENCENTER_CLUSTER_DIR"); dir != "" {
+	if dir := clustersDirFromEnv(); dir != "" {
 		return normalizeDirectoryPath(dir)
 	}
 
@@ -71,6 +71,10 @@ func GetClustersDir() string {
 // GetConfigDir returns the configuration directory from the CLI config.
 // If the CLI config cannot be loaded or configDir is not set, it returns the default.
 func GetConfigDir() string {
+	if configDir := os.Getenv("OPENCENTER_CONFIG_DIR"); configDir != "" {
+		return normalizeDirectoryPath(configDir)
+	}
+
 	// Try to load CLI config (but don't fail if it doesn't exist)
 	cliConfigManager, err := NewConfigManager("")
 	if err == nil && cliConfigManager != nil {
@@ -87,6 +91,10 @@ func GetConfigDir() string {
 // GetPluginsDir returns the plugins directory from the CLI config.
 // If the CLI config cannot be loaded or pluginsDir is not set, it returns the default.
 func GetPluginsDir() string {
+	if pluginsDir := os.Getenv("OPENCENTER_PLUGINS_DIR"); pluginsDir != "" {
+		return normalizeDirectoryPath(pluginsDir)
+	}
+
 	// Try to load CLI config (but don't fail if it doesn't exist)
 	cliConfigManager, err := NewConfigManager("")
 	if err == nil && cliConfigManager != nil {
@@ -115,6 +123,10 @@ func GetStateDir() string {
 	}
 
 	return DefaultStateDir()
+}
+
+func clustersDirFromEnv() string {
+	return os.Getenv("OPENCENTER_CLUSTERS_DIR")
 }
 
 func normalizeDirectoryPath(path string) string {

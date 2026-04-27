@@ -179,7 +179,7 @@ func TestResolveClustersDirUsesIndependentClusterDir(t *testing.T) {
 	clusterDir := filepath.Join(t.TempDir(), "cluster-store")
 
 	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
-	t.Setenv("OPENCENTER_CLUSTER_DIR", clusterDir)
+	t.Setenv("OPENCENTER_CLUSTERS_DIR", clusterDir)
 
 	got := ResolveClustersDir()
 	if got != clusterDir {
@@ -188,6 +188,67 @@ func TestResolveClustersDirUsesIndependentClusterDir(t *testing.T) {
 
 	if _, err := os.Stat(filepath.Join(clusterDir, "config.yaml")); !os.IsNotExist(err) {
 		t.Fatalf("cluster dir config.yaml stat error = %v, want not exist", err)
+	}
+}
+
+func TestPathEnvironmentVariablesMapToCLIConfigPaths(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, "tool-config")
+	clustersDir := filepath.Join(root, "cluster-configs")
+	pluginsDir := filepath.Join(root, "plugins")
+	stateDir := filepath.Join(root, "state")
+
+	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
+	t.Setenv("OPENCENTER_CLUSTERS_DIR", clustersDir)
+	t.Setenv("OPENCENTER_PLUGINS_DIR", pluginsDir)
+	t.Setenv("OPENCENTER_STATE_DIR", stateDir)
+
+	defaults := DefaultCLIConfig()
+	if defaults.Paths.ConfigDir != configDir {
+		t.Fatalf("DefaultCLIConfig paths.configDir = %q, want %q", defaults.Paths.ConfigDir, configDir)
+	}
+	if defaults.Paths.ClustersDir != clustersDir {
+		t.Fatalf("DefaultCLIConfig paths.clustersDir = %q, want %q", defaults.Paths.ClustersDir, clustersDir)
+	}
+	if defaults.Paths.PluginsDir != pluginsDir {
+		t.Fatalf("DefaultCLIConfig paths.pluginsDir = %q, want %q", defaults.Paths.PluginsDir, pluginsDir)
+	}
+	if defaults.Paths.StateDir != stateDir {
+		t.Fatalf("DefaultCLIConfig paths.stateDir = %q, want %q", defaults.Paths.StateDir, stateDir)
+	}
+
+	if got := GetConfigDir(); got != configDir {
+		t.Fatalf("GetConfigDir() = %q, want %q", got, configDir)
+	}
+	if got := ResolveClustersDir(); got != clustersDir {
+		t.Fatalf("ResolveClustersDir() = %q, want %q", got, clustersDir)
+	}
+	if got := GetPluginsDir(); got != pluginsDir {
+		t.Fatalf("GetPluginsDir() = %q, want %q", got, pluginsDir)
+	}
+	if got := GetStateDir(); got != stateDir {
+		t.Fatalf("GetStateDir() = %q, want %q", got, stateDir)
+	}
+}
+
+func TestConfigManagerCreatesConfigOnlyInConfigDir(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, "tool-config")
+	clustersDir := filepath.Join(root, "cluster-configs")
+
+	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
+	t.Setenv("OPENCENTER_CLUSTERS_DIR", clustersDir)
+
+	if _, err := NewConfigManager(""); err != nil {
+		t.Fatalf("NewConfigManager() error = %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(configDir, "config.yaml")); err != nil {
+		t.Fatalf("config dir config.yaml stat error = %v, want exists", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(clustersDir, "config.yaml")); !os.IsNotExist(err) {
+		t.Fatalf("clusters dir config.yaml stat error = %v, want not exist", err)
 	}
 }
 

@@ -297,7 +297,7 @@ See [Code Structure](docs/dev/code-structure.md) for detailed explanation.
 - **SOPS Age keys:** `~/.config/opencenter/clusters/<org>/secrets/age/`
 - **SSH keys:** `~/.config/opencenter/clusters/<org>/secrets/ssh/`
 
-Override CLI configuration storage with `OPENCENTER_CONFIG_DIR` and cluster storage with `OPENCENTER_CLUSTER_DIR`.
+Override CLI configuration storage with `OPENCENTER_CONFIG_DIR` and cluster storage with `OPENCENTER_CLUSTERS_DIR`.
 
 See [File Locations Reference](docs/reference/file-locations.md) for complete paths.
 
@@ -306,7 +306,8 @@ See [File Locations Reference](docs/reference/file-locations.md) for complete pa
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `OPENCENTER_CONFIG_DIR` | Configuration directory | `~/.config/opencenter` |
-| `OPENCENTER_CLUSTER_DIR` | Cluster storage directory | `${OPENCENTER_CONFIG_DIR}/clusters` |
+| `OPENCENTER_CLUSTERS_DIR` | Cluster storage directory | `${OPENCENTER_CONFIG_DIR}/clusters` |
+| `OPENCENTER_PLUGINS_DIR` | Plugins directory | `${OPENCENTER_CONFIG_DIR}/plugins` |
 | `OPENCENTER_DEBUG` | Enable debug logging | `false` |
 | `SOPS_AGE_KEY_FILE` | Path to Age key file | |
 | `SOPS_AGE_RECIPIENTS` | Age public keys for encryption | |

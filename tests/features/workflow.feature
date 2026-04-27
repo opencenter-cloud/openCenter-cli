@@ -1,40 +1,38 @@
-# tests/features/organization_workflow.feature
-# Maps to organization-based workflow:
-#   ./opencenter cluster init demo --org my-org
-#   ./opencenter cluster use my-org/demo
-#   # minimal network choice: use_octavia=false -> must set vrrp_ip
-#   ./opencenter cluster validate
-#   ./opencenter cluster generate
-#   ./opencenter cluster deploy
+# Organization-based minimal network workflow (VRRP) from init to bootstrap
+#
+# @wip triage (2026-04-26): This end-to-end workflow scenario was @wip because
+# the validation and deploy steps require infrastructure that isn't available
+# in the test harness. The scenario has been kept as a reference for future
+# integration testing but remains @wip until a local test environment
+# (e.g., Kind + local Gitea) is available.
 
 Feature: Organization-based minimal network workflow (VRRP) from init to bootstrap
 
   Background:
-    Given an empty directory "tmp/conf"
-    And an empty directory "tmp/repo-demo"
+    Given an empty directory "<<tmp>>/conf"
+    And an empty directory "<<tmp>>/repo-demo"
 
   @workflow @init @select @validate @setup @bootstrap @wip
   Scenario: Initialize with org, select, validate VRRP requirement, render setup, and bootstrap
     # ./opencenter cluster init demo --org my-org
-    When I run "opencenter cluster init demo --org my-org --config-dir tmp/conf --force"
+    When I run "opencenter cluster init demo --org my-org --config-dir <<tmp>>/conf --force"
     Then the exit code should be 0
-    And the file "tmp/conf/clusters/my-org/.demo-config.yaml" should exist
+    And the file "<<tmp>>/conf/clusters/my-org/.demo-config.yaml" should exist
 
     # ./opencenter cluster use my-org/demo
-    When I run "opencenter cluster use my-org/demo --config-dir tmp/conf"
+    When I run "opencenter cluster use my-org/demo --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the file "tmp/conf/active" should match regex "^my-org/demo\\s*$"
+    And the file "<<tmp>>/conf/active" should match regex "^my-org/demo\\s*$"
 
-    # minimal network choice: use_octavia=false -> must set vrrp_ip (first show the failure)
     # Configure minimal fields with missing vrrp_ip to ensure validator catches it.
-    Given I update the YAML "tmp/conf/clusters/my-org/.demo-config.yaml" to set:
+    Given I update the YAML "<<tmp>>/conf/clusters/my-org/.demo-config.yaml" to set:
       """
 opencenter:
   cluster:
     domain: example.com
   gitops:
-    git_dir: tmp/repo-demo
-    git_url: tmp/remote.git
+    git_dir: <<tmp>>/repo-demo
+    git_url: <<tmp>>/remote.git
   infrastructure:
     provider: openstack
     cloud:
@@ -54,34 +52,34 @@ networking:
   vrrp_ip: ""
 """
     # ./opencenter cluster validate  (expect failure due to missing vrrp_ip)
-    When I run "opencenter cluster validate --config-dir tmp/conf"
+    When I run "opencenter cluster validate --config-dir <<tmp>>/conf"
     Then the exit code should not be 0
     And stderr should contain "vrrp_ip"
     And stderr should contain "must be set"
 
     # Fix the config: set a proper vrrp_ip and validate again
-    Given I update the YAML "tmp/conf/clusters/my-org/.demo-config.yaml" to set:
+    Given I update the YAML "<<tmp>>/conf/clusters/my-org/.demo-config.yaml" to set:
       """
 networking:
   vrrp_ip: 10.0.0.10
 """
-    When I run "opencenter cluster validate --config-dir tmp/conf"
+    When I run "opencenter cluster validate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "validation"
     And stdout should not contain "ERROR"
 
     # ./opencenter cluster generate (renders and materializes the repo)
-    When I run "opencenter cluster generate --config-dir tmp/conf"
+    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And stdout should contain "Setup complete"
-    And the directory "tmp/repo-demo" should exist
-    And the directory "tmp/repo-demo" should contain a file matching "gitignore"
-    And the directory "tmp/repo-demo" should contain a directory "applications"
+    And the directory "<<tmp>>/repo-demo" should exist
+    And the directory "<<tmp>>/repo-demo" should contain a file matching "gitignore"
+    And the directory "<<tmp>>/repo-demo" should contain a directory "applications"
 
     # Prepare the remote for bootstrap
-    Given a bare git repository exists at "tmp/remote.git"
+    Given a bare git repository exists at "<<tmp>>/remote.git"
 
     # ./opencenter cluster deploy (pushes to remote)
-    When I run "opencenter cluster deploy --config-dir tmp/conf"
+    When I run "opencenter cluster deploy --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the bare repo "tmp/remote.git" should have branch "main"
+    And the bare repo "<<tmp>>/remote.git" should have branch "main"

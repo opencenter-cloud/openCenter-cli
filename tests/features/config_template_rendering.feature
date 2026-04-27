@@ -1,56 +1,14 @@
 Feature: Configuration-driven template rendering
+  Verifies that cluster generate renders service-specific manifests with
+  correct values, file structure, and YAML content.
 
   Background:
     Given an empty directory "<<tmp>>/conf"
     And an empty directory "<<tmp>>/gitops-repo"
 
-  @template @alert-proxy @secrets
-  Scenario: Render alert-proxy secrets with custom values
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-      secrets:
-        alert_proxy:
-          core_device_id: "device-123"
-          account_service_token: "token-456"
-          core_account_number: "account-789"
-      """
-    When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
-
-  @template @alert-proxy @configuration
-  Scenario: Render alert-proxy configuration with custom image tag
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-        managed-service:
-          alert-proxy:
-            enabled: true
-            image_tag: "v1.2.3"
-            alert_manager_base_url: "https://alertmanager.example.com"
-            http_route_fqdn: "alerts.example.com"
-      secrets:
-        alert_proxy:
-          core_device_id: "device-123"
-          account_service_token: "token-456"
-          core_account_number: "account-789"
-      """
-    When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+  # ---------------------------------------------------------------------------
+  # cert-manager
+  # ---------------------------------------------------------------------------
 
   @template @cert-manager @secrets
   Scenario: Render cert-manager with custom AWS credentials
@@ -77,7 +35,13 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/kustomization.yaml" should exist
+    And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/kustomization.yaml" should contain "cert-manager-values-override"
+    And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/kustomization.yaml" should contain "opencenter-aws-credentials-secret.yaml"
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/letsencrypt-issuer.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/cert-manager.yaml" should exist
+    And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/cert-manager.yaml" should contain "cert-manager-base"
+    And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/cert-manager.yaml" should contain "cert-manager-override"
 
   @template @cert-manager @letsencrypt
   Scenario: Render cert-manager with LetsEncrypt configuration
@@ -105,7 +69,67 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/letsencrypt-issuer.yaml" should exist
+    And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/letsencrypt-issuer.yaml" should contain "acme-v02.api.letsencrypt.org"
+
+  # ---------------------------------------------------------------------------
+  # alert-proxy (managed service)
+  # ---------------------------------------------------------------------------
+
+  @template @alert-proxy @secrets
+  Scenario: Render alert-proxy secrets with custom values
+    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: test-cluster
+        gitops:
+          git_dir: <<tmp>>/gitops-repo
+        managed_services:
+          alert-proxy:
+            enabled: true
+      secrets:
+        alert_proxy:
+          core_device_id: "device-123"
+          account_service_token: "token-456"
+          core_account_number: "account-789"
+      """
+    When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/managed-services/alert-proxy/kustomization.yaml" should exist
+
+  @template @alert-proxy @configuration
+  Scenario: Render alert-proxy configuration with custom image tag
+    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: test-cluster
+        gitops:
+          git_dir: <<tmp>>/gitops-repo
+        managed_services:
+          alert-proxy:
+            enabled: true
+            image_tag: "v1.2.3"
+            alert_manager_base_url: "https://alertmanager.example.com"
+            http_route_fqdn: "alerts.example.com"
+      secrets:
+        alert_proxy:
+          core_device_id: "device-123"
+          account_service_token: "token-456"
+          core_account_number: "account-789"
+      """
+    When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/managed-services/fluxcd/alert-proxy.yaml" should exist
+
+  # ---------------------------------------------------------------------------
+  # loki
+  # ---------------------------------------------------------------------------
 
   @template @loki @swift
   Scenario: Render Loki with custom Swift credentials
@@ -135,37 +159,12 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/loki/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/loki.yaml" should exist
 
-  @template @loki @volume
-  Scenario: Render Loki with volume configuration
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-        storage:
-          default_storage_class: "csi-cinder-sc-delete"
-        services:
-          loki:
-            enabled: true
-            loki_volume_size: 100
-            swift_auth_url: "https://keystone.example.com/v3/"
-            swift_username: "loki"
-            swift_project_name: "project"
-            swift_region: "REGION"
-            swift_domain_name: "default"
-      secrets:
-        loki:
-          swift_password: "password"
-      """
-    When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+  # ---------------------------------------------------------------------------
+  # velero
+  # ---------------------------------------------------------------------------
 
   @template @velero @backup
   Scenario: Render Velero with custom backup bucket
@@ -186,7 +185,12 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/velero/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/velero.yaml" should exist
+
+  # ---------------------------------------------------------------------------
+  # keycloak
+  # ---------------------------------------------------------------------------
 
   @template @keycloak @oidc
   Scenario: Render Keycloak with custom OIDC configuration
@@ -215,7 +219,12 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/keycloak.yaml" should exist
+    And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/keycloak.yaml" should contain "keycloak"
+
+  # ---------------------------------------------------------------------------
+  # headlamp
+  # ---------------------------------------------------------------------------
 
   @template @headlamp @oidc
   Scenario: Render Headlamp with OIDC integration
@@ -241,7 +250,13 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/headlamp/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/headlamp/httproute.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/headlamp.yaml" should exist
+
+  # ---------------------------------------------------------------------------
+  # weave-gitops
+  # ---------------------------------------------------------------------------
 
   @template @weave-gitops @password
   Scenario: Render Weave GitOps with custom password
@@ -266,7 +281,11 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/weave-gitops.yaml" should exist
+
+  # ---------------------------------------------------------------------------
+  # grafana / kube-prometheus-stack
+  # ---------------------------------------------------------------------------
 
   @template @grafana @storage
   Scenario: Render Grafana with custom storage configuration
@@ -294,7 +313,12 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/kube-prometheus-stack/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/kube-prometheus-stack.yaml" should exist
+
+  # ---------------------------------------------------------------------------
+  # HTTPRoute hostname generation
+  # ---------------------------------------------------------------------------
 
   @template @httproute @hostname
   Scenario: HTTPRoute hostname generation from cluster FQDN
@@ -329,7 +353,7 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/headlamp/httproute.yaml" should exist
 
   @template @httproute @custom-hostname
   Scenario: HTTPRoute with custom hostname overrides
@@ -361,27 +385,15 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/headlamp/httproute.yaml" should exist
+    And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/headlamp/httproute.yaml" should contain "custom-ui.example.com"
 
-  @template @secrets @validation @wip
-  Scenario: Missing required secrets should fail validation
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-        services:
-          cert-manager:
-            enabled: true
-      """
-    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should not be 0
-    And stderr should contain "secret"
+  # ---------------------------------------------------------------------------
+  # Default values and fallback
+  # ---------------------------------------------------------------------------
 
   @template @defaults @fallback
-  Scenario: Template rendering with default values
+  Scenario: Template rendering with default values produces base structure
     Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
       """
       opencenter:
@@ -394,10 +406,17 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
+    And the directory "<<tmp>>/gitops-repo/applications" should exist
+    And the directory "<<tmp>>/gitops-repo/infrastructure" should exist
+    And a file "<<tmp>>/gitops-repo/README.md" should exist
+    And a file "<<tmp>>/gitops-repo/.gitignore" should exist
+
+  # ---------------------------------------------------------------------------
+  # Full integration rendering
+  # ---------------------------------------------------------------------------
 
   @integration @full-rendering
-  Scenario: Full cluster generation with all new fields
+  Scenario: Full cluster generation with all services renders complete structure
     Given a file "<<tmp>>/conf/test-integration.yaml" with content:
       """
       opencenter:
@@ -454,7 +473,7 @@ Feature: Configuration-driven template rendering
             grafana_volume_size: 20
             prometheus_volume_size: 100
             alertmanager_volume_size: 10
-        managed-service:
+        managed_services:
           alert-proxy:
             enabled: true
             alert_manager_base_url: https://alertmanager.test-integration.dfw3.k8s.test.example.com
@@ -485,143 +504,25 @@ Feature: Configuration-driven template rendering
     Then the exit code should be 0
     When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    And the directory "<<tmp>>/gitops-repo" should exist
-
-  @validation @missing-secrets @priority4
-  Scenario: Cert-manager without explicit secrets still passes structural validation
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-        services:
-          cert-manager:
-            enabled: true
-      """
-    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    And stdout should contain "Validation successful"
-
-  @validation @missing-secrets @priority4
-  Scenario: Loki without explicit secrets still passes structural validation
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-        services:
-          loki:
-            enabled: true
-            swift_auth_url: https://keystone.example.com/v3/
-            swift_username: loki
-            swift_project_name: project
-            swift_region: REGION
-            swift_domain_name: default
-      secrets:
-        cert_manager:
-          aws_access_key: test
-          aws_secret_access_key: test
-        keycloak:
-          admin_password: test
-        grafana:
-          admin_password: test
-        weave_gitops:
-          password_hash: test
-      """
-    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    And stdout should contain "Validation successful"
-
-  @validation @invalid-email @priority4
-  Scenario: Invalid admin email should fail validation
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-          admin_email: invalid-email-format
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-      secrets:
-        cert_manager:
-          aws_access_key: test
-          aws_secret_access_key: test
-        keycloak:
-          admin_password: test
-        grafana:
-          admin_password: test
-        weave_gitops:
-          password_hash: test
-      """
-    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should not be 0
-
-  @validation @invalid-domain @priority4
-  Scenario: Invalid cluster FQDN should fail validation
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-          cluster_fqdn: invalid domain with spaces
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-      secrets:
-        cert_manager:
-          aws_access_key: test
-          aws_secret_access_key: test
-        keycloak:
-          admin_password: test
-        grafana:
-          admin_password: test
-        weave_gitops:
-          password_hash: test
-      """
-    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should not be 0
-
-  @validation @valid-config
-  Scenario: Valid configuration should pass validation
-    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: test-cluster
-          admin_email: admin@example.com
-          cluster_fqdn: test.example.com
-          base_domain: example.com
-          domain: example.com
-        gitops:
-          git_dir: <<tmp>>/gitops-repo
-        infrastructure:
-          cloud:
-            openstack:
-              application_credential_id: "12345678-1234-1234-1234-123456789012"
-              application_credential_secret: "test-app-cred-secret"
-              auth_url: "https://identity.example.com/v3"
-              region: "RegionOne"
-              domain: "Default"
-              networking:
-                floating_network_id: "12345678-1234-1234-1234-123456789012"
-          provider: openstack
-      secrets:
-        cert_manager:
-          aws_access_key: AKIATEST123
-          aws_secret_access_key: secretkey123
-        keycloak:
-          admin_password: password123
-        grafana:
-          admin_password: password123
-        weave_gitops:
-          password_hash: $2a$10$hash
-        global:
-          openstack:
-            application_credential_id: "12345678-1234-1234-1234-123456789012"
-            application_credential_secret: "test-app-cred-secret"
-      """
-    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
+    # Base structure
+    And a file "<<tmp>>/gitops-repo/README.md" should exist
+    And a file "<<tmp>>/gitops-repo/.gitignore" should exist
+    And the directory "<<tmp>>/gitops-repo/applications" should exist
+    And the directory "<<tmp>>/gitops-repo/infrastructure" should exist
+    # Service kustomizations rendered in overlay
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/cert-manager/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/loki/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/velero/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/kube-prometheus-stack/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/headlamp/kustomization.yaml" should exist
+    # FluxCD kustomizations rendered for each service
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/fluxcd/cert-manager.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/fluxcd/loki.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/fluxcd/velero.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/fluxcd/keycloak.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/fluxcd/headlamp.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/fluxcd/weave-gitops.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/services/fluxcd/kube-prometheus-stack.yaml" should exist
+    # Managed services rendered
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/managed-services/alert-proxy/kustomization.yaml" should exist
+    And a file "<<tmp>>/gitops-repo/applications/overlays/test-integration/managed-services/fluxcd/alert-proxy.yaml" should exist

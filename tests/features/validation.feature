@@ -118,30 +118,9 @@ Feature: Configuration validation rules
     Then the exit code should not be 0
     And stderr should contain "opencenter.gitops.repository.local_dir must be set"
 
-  @validation @opentofu_s3_requires_creds @wip
-  Scenario: OpenTofu S3 backend requires credentials -> error then pass
-    # Note: S3 backend validation may have been removed or changed
-    # This test is skipped until validation is re-implemented
-    Given a file "<<tmp>>/conf/s3.yaml" with content:
-      """
-      opencenter:
-        cluster:
-          cluster_name: s3
-        gitops:
-          git_dir: "<<tmp>>/repo-bad"
-      opentofu:
-        enabled: true
-        backend:
-          type: s3
-          s3:
-            bucket: b
-            key: k
-            region: us-east-1
-      """
-    When I run "opencenter cluster describe s3 --validate"
-    Then the exit code should not be 0
-    And stderr should contain "opencenter.cluster.aws_access_key"
-    And stderr should contain "opencenter.cluster.aws_secret_access_key"
+  # @wip triage (2026-04-26): OpenTofu S3 backend validation was removed or changed.
+  # The @opentofu_s3_requires_creds scenario has been deleted. Re-add when S3 backend
+  # validation is re-implemented.
 
   @validation @s3_with_creds_ok
   Scenario: OpenTofu S3 backend with credentials -> ok
@@ -165,8 +144,6 @@ Feature: Configuration validation rules
       """
     When I run "opencenter cluster describe s3ok --validate"
     Then the exit code should be 0
-
-  # All other legacy iac.* validations removed in the new model.
 
   @validation @hand_authored_v2_validation
   Scenario: hand-authored v2 cluster configuration validation
@@ -198,3 +175,146 @@ Feature: Configuration validation rules
     And stdout should contain "Infrastructure > Networking"
     And stdout should contain "opencenter.infrastructure.networking.vrrpip"
     And stdout should contain "conditionally required based on related field"
+
+  # ---------------------------------------------------------------------------
+  # Structural validation (from config_template_rendering)
+  # ---------------------------------------------------------------------------
+
+  @validation @missing-secrets @priority4
+  Scenario: Cert-manager without explicit secrets still passes structural validation
+    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: test-cluster
+        gitops:
+          git_dir: <<tmp>>/repo-bad
+        services:
+          cert-manager:
+            enabled: true
+      """
+    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Validation successful"
+
+  @validation @missing-secrets @priority4
+  Scenario: Loki without explicit secrets still passes structural validation
+    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: test-cluster
+        gitops:
+          git_dir: <<tmp>>/repo-bad
+        services:
+          loki:
+            enabled: true
+            swift_auth_url: https://keystone.example.com/v3/
+            swift_username: loki
+            swift_project_name: project
+            swift_region: REGION
+            swift_domain_name: default
+      secrets:
+        cert_manager:
+          aws_access_key: test
+          aws_secret_access_key: test
+        keycloak:
+          admin_password: test
+        grafana:
+          admin_password: test
+        weave_gitops:
+          password_hash: test
+      """
+    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
+    Then the exit code should be 0
+    And stdout should contain "Validation successful"
+
+  @validation @invalid-email @priority4
+  Scenario: Invalid admin email should fail validation
+    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: test-cluster
+          admin_email: invalid-email-format
+        gitops:
+          git_dir: <<tmp>>/repo-bad
+      secrets:
+        cert_manager:
+          aws_access_key: test
+          aws_secret_access_key: test
+        keycloak:
+          admin_password: test
+        grafana:
+          admin_password: test
+        weave_gitops:
+          password_hash: test
+      """
+    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+
+  @validation @invalid-domain @priority4
+  Scenario: Invalid cluster FQDN should fail validation
+    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: test-cluster
+          cluster_fqdn: invalid domain with spaces
+        gitops:
+          git_dir: <<tmp>>/repo-bad
+      secrets:
+        cert_manager:
+          aws_access_key: test
+          aws_secret_access_key: test
+        keycloak:
+          admin_password: test
+        grafana:
+          admin_password: test
+        weave_gitops:
+          password_hash: test
+      """
+    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
+    Then the exit code should not be 0
+
+  @validation @valid-config
+  Scenario: Valid configuration should pass validation
+    Given a file "<<tmp>>/conf/test-cluster.yaml" with content:
+      """
+      opencenter:
+        cluster:
+          cluster_name: test-cluster
+          admin_email: admin@example.com
+          cluster_fqdn: test.example.com
+          base_domain: example.com
+          domain: example.com
+        gitops:
+          git_dir: <<tmp>>/repo-bad
+        infrastructure:
+          cloud:
+            openstack:
+              application_credential_id: "12345678-1234-1234-1234-123456789012"
+              application_credential_secret: "test-app-cred-secret"
+              auth_url: "https://identity.example.com/v3"
+              region: "RegionOne"
+              domain: "Default"
+              networking:
+                floating_network_id: "12345678-1234-1234-1234-123456789012"
+          provider: openstack
+      secrets:
+        cert_manager:
+          aws_access_key: AKIATEST123
+          aws_secret_access_key: secretkey123
+        keycloak:
+          admin_password: password123
+        grafana:
+          admin_password: password123
+        weave_gitops:
+          password_hash: $2a$10$hash
+        global:
+          openstack:
+            application_credential_id: "12345678-1234-1234-1234-123456789012"
+            application_credential_secret: "test-app-cred-secret"
+      """
+    When I run "opencenter cluster validate test-cluster --config-dir <<tmp>>/conf"
+    Then the exit code should be 0

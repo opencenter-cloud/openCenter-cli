@@ -443,7 +443,7 @@ func TestClusterInitThenValidateFailsUntilPlaceholdersAreReplaced(t *testing.T) 
 	}
 	for _, want := range []string{
 		"Validation failed",
-		`placeholder value "CHANGEME"`,
+		"non-placeholder secret value",
 		"secrets.keycloak.client_secret",
 		"opencenter.infrastructure.cloud.openstack.application_credential_secret",
 	} {

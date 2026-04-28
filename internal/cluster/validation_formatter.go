@@ -6,17 +6,21 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
 // ValidationError represents a single parsed validation error with structured fields.
 type ValidationError struct {
-	Section  string `json:"section"`
-	Field    string `json:"field"`
-	YAMLPath string `json:"yaml_path"`
-	Tag      string `json:"tag"`
-	Message  string `json:"message"`
-	Category string `json:"category"` // "configuration", "connectivity", "credentials", "provider"
-	Provider string `json:"provider,omitempty"`
+	Section    string `json:"section"`
+	Field      string `json:"field"`
+	YAMLPath   string `json:"yaml_path"`
+	Tag        string `json:"tag"`
+	Message    string `json:"message"`
+	Category   string `json:"category"` // "configuration", "connectivity", "credentials", "provider"
+	Severity   string `json:"severity,omitempty"`
+	Suggestion string `json:"suggestion,omitempty"`
+	Provider   string `json:"provider,omitempty"`
 }
 
 // ValidationOutput is the structured JSON output for CI/CD pipelines.
@@ -28,6 +32,7 @@ type ValidationOutput struct {
 	ErrorsBySection map[string][]ValidationError `json:"errors_by_section,omitempty"`
 	Warnings        []string                     `json:"warnings,omitempty"`
 	Suggestions     []string                     `json:"suggestions,omitempty"`
+	Issues          []v2.ValidationIssue         `json:"issues,omitempty"`
 	SchemaVersion   string                       `json:"schema_version,omitempty"`
 	DebugConfigPath string                       `json:"debug_config_path,omitempty"`
 }
@@ -423,6 +428,43 @@ func parseRawErrors(rawErrors []string, activeProvider string) []ValidationError
 	return allErrors
 }
 
+func validationErrorsForResult(result *ValidationResult, activeProvider string) []ValidationError {
+	if len(result.Issues) == 0 {
+		return parseRawErrors(result.Errors, activeProvider)
+	}
+
+	errors := make([]ValidationError, 0, len(result.Issues))
+	for _, issue := range result.Issues {
+		if issue.Severity != v2.SeverityError {
+			continue
+		}
+		yamlPath := issue.Path
+		section := "General"
+		if yamlPath != "" {
+			section = sectionFromYAMLPath(yamlPath)
+		}
+		errors = append(errors, ValidationError{
+			Section:    section,
+			Field:      fieldFromYAMLPath(yamlPath),
+			YAMLPath:   yamlPath,
+			Tag:        string(issue.Severity),
+			Message:    issue.Message,
+			Category:   string(issue.Category),
+			Severity:   string(issue.Severity),
+			Suggestion: issue.Suggestion,
+		})
+	}
+	return errors
+}
+
+func fieldFromYAMLPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	parts := strings.Split(path, ".")
+	return parts[len(parts)-1]
+}
+
 // groupBySection groups errors by their section.
 func groupBySection(errors []ValidationError) map[string][]ValidationError {
 	grouped := make(map[string][]ValidationError)
@@ -488,8 +530,11 @@ func (s *ValidateService) FormatResultGrouped(result *ValidationResult, provider
 		return out.String()
 	}
 
-	// Parse raw errors into structured form
-	parsed := parseRawErrors(result.Errors, provider)
+	if provider == "" {
+		provider = result.Provider
+	}
+
+	parsed := validationErrorsForResult(result, provider)
 	grouped := groupBySection(parsed)
 	sections := sortedSections(grouped)
 
@@ -558,7 +603,11 @@ func (s *ValidateService) formatWarnings(warnings []string) string {
 
 // FormatResultJSON returns the validation result as structured JSON.
 func (s *ValidateService) FormatResultJSON(result *ValidationResult, provider string) (string, error) {
-	parsed := parseRawErrors(result.Errors, provider)
+	if provider == "" {
+		provider = result.Provider
+	}
+
+	parsed := validationErrorsForResult(result, provider)
 	grouped := groupBySection(parsed)
 
 	sectionCounts := make(map[string]int)
@@ -592,6 +641,7 @@ func (s *ValidateService) FormatResultJSON(result *ValidationResult, provider st
 		ErrorsBySection: grouped,
 		Warnings:        result.Warnings,
 		Suggestions:     suggestions,
+		Issues:          result.Issues,
 		SchemaVersion:   result.SchemaVersion,
 		DebugConfigPath: result.DebugConfigPath,
 	}

@@ -2,11 +2,13 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	openstackcloud "github.com/opencenter-cloud/opencenter-cli/internal/cloud/openstack"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
@@ -148,7 +150,6 @@ func TestValidateService_ValidateFailsForEnabledServicePlaceholders(t *testing.T
 
 	errMsg := strings.Join(result.Errors, "\n")
 	for _, want := range []string{
-		`placeholder value "CHANGEME"`,
 		"secrets.keycloak.client_secret",
 		"secrets.keycloak.admin_password",
 		"secrets.headlamp.oidc_client_secret",
@@ -156,6 +157,102 @@ func TestValidateService_ValidateFailsForEnabledServicePlaceholders(t *testing.T
 		if !strings.Contains(errMsg, want) {
 			t.Fatalf("expected validation errors to contain %q, got:\n%s", want, errMsg)
 		}
+	}
+}
+
+func TestValidateService_ValidatePopulatesStructuredReadinessIssues(t *testing.T) {
+	cfg, err := v2.NewV2Default("structured-issues", "kind")
+	if err != nil {
+		t.Fatalf("create default config: %v", err)
+	}
+
+	configPath := writeV2Config(t, cfg)
+	service := NewValidateService(paths.NewPathResolver(t.TempDir()), validation.NewValidationEngine(), nil)
+
+	result, err := service.Validate(context.Background(), ValidateOptions{ConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("Validate() returned unexpected error: %v", err)
+	}
+	if result.Valid {
+		t.Fatal("expected validation to fail for default placeholder secrets")
+	}
+	if len(result.Issues) == 0 {
+		t.Fatalf("expected structured readiness issues, got result: %#v", result)
+	}
+
+	var found bool
+	for _, issue := range result.Issues {
+		if issue.Path == "secrets.keycloak.admin_password" && issue.Category == v2.CategoryServices {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected keycloak admin password service issue, got: %#v", result.Issues)
+	}
+}
+
+func TestValidateService_CheckProviderUsesOpenStackDiscovery(t *testing.T) {
+	cfg := validOpenStackConfigForValidation(t)
+	cfg.OpenCenter.Infrastructure.Compute.FlavorWorker = "missing-worker"
+	configPath := writeV2Config(t, cfg)
+
+	fake := &fakeOpenStackDiscovery{
+		catalog: &openstackcloud.DiscoveryCatalog{
+			Images: []openstackcloud.CatalogItem{
+				{ID: cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ImageID, Name: "ubuntu"},
+			},
+			Flavors: []openstackcloud.CatalogItem{
+				{ID: "m1.medium", Name: cfg.OpenCenter.Infrastructure.Compute.FlavorMaster},
+				{ID: "m1.small", Name: cfg.OpenCenter.Infrastructure.Compute.FlavorBastion},
+			},
+			Networks: []openstackcloud.CatalogItem{
+				{ID: cfg.OpenCenter.Infrastructure.Cloud.OpenStack.NetworkID, Name: "private"},
+			},
+			Subnets: []openstackcloud.CatalogItem{
+				{ID: cfg.OpenCenter.Infrastructure.Cloud.OpenStack.SubnetID, Name: "nodes"},
+			},
+			ExternalNetworks: []openstackcloud.CatalogItem{
+				{ID: cfg.OpenCenter.Infrastructure.Cloud.OpenStack.RouterExternalNetworkID, Name: "public"},
+			},
+			AvailabilityZones: []openstackcloud.CatalogItem{
+				{ID: cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AvailabilityZone, Name: cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AvailabilityZone},
+			},
+		},
+	}
+
+	service := NewValidateService(paths.NewPathResolver(t.TempDir()), validation.NewValidationEngine(), nil)
+	service.openStackDiscovery = fake
+
+	result, err := service.Validate(context.Background(), ValidateOptions{
+		ConfigPath:        configPath,
+		CheckProvider:     true,
+		CheckConnectivity: true,
+	})
+	if err != nil {
+		t.Fatalf("Validate() returned unexpected error: %v", err)
+	}
+	if !fake.called {
+		t.Fatal("expected OpenStack discovery client to be called")
+	}
+	if result.Valid {
+		t.Fatal("expected validation to fail for missing OpenStack flavor")
+	}
+	if result.ProviderValid {
+		t.Fatal("expected provider validation status to be invalid")
+	}
+
+	var found bool
+	for _, issue := range result.Issues {
+		if issue.Category == v2.CategoryProvider &&
+			issue.Path == "opencenter.infrastructure.compute.flavor_worker" &&
+			strings.Contains(issue.Message, "missing-worker") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected missing worker flavor provider issue, got: %#v", result.Issues)
 	}
 }
 
@@ -268,6 +365,61 @@ func setupTestCluster(t *testing.T, clusterName string, configContent string) (s
 
 	// Return cluster name and the clusters base directory (not configDir)
 	return clusterName, clustersBaseDir
+}
+
+func writeV2Config(t *testing.T, cfg *v2.Config) string {
+	t.Helper()
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	configPath := filepath.Join(t.TempDir(), fmt.Sprintf("%s.yaml", cfg.ClusterName()))
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	return configPath
+}
+
+func validOpenStackConfigForValidation(t *testing.T) *v2.Config {
+	t.Helper()
+	cfg, err := v2.NewV2Default("openstack-validation", "openstack")
+	if err != nil {
+		t.Fatalf("create config: %v", err)
+	}
+	cfg.Secrets.Keycloak.ClientSecret = "keycloak-client-secret"
+	cfg.Secrets.Keycloak.AdminPassword = "keycloak-admin-password"
+	cfg.Secrets.Headlamp.OIDCClientSecret = "headlamp-oidc-secret"
+	cfg.Secrets.Grafana.AdminPassword = "grafana-admin-password"
+	cfg.Secrets.Loki.SwiftApplicationCredentialSecret = "loki-swift-secret"
+	cfg.Secrets.Tempo.SwiftApplicationCredentialSecret = "tempo-swift-secret"
+	cfg.OpenCenter.GitOps.Auth.SSH.PrivateKey = "secrets/gitops/id_ed25519"
+	cfg.OpenCenter.GitOps.Auth.SSH.PublicKey = "secrets/gitops/id_ed25519.pub"
+
+	osCfg := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
+	osCfg.ApplicationCredentialID = "app-cred-id"
+	osCfg.ApplicationCredentialSecret = "app-cred-secret"
+	osCfg.NetworkID = "network-id"
+	osCfg.SubnetID = "subnet-id"
+	osCfg.RouterExternalNetworkID = "external-network-id"
+	osCfg.AvailabilityZone = "az1"
+	osCfg.AvailabilityZones = []string{"az1"}
+	return cfg
+}
+
+type fakeOpenStackDiscovery struct {
+	catalog *openstackcloud.DiscoveryCatalog
+	err     error
+	called  bool
+}
+
+func (f *fakeOpenStackDiscovery) Discover(ctx context.Context, cfg *v2.Config) (*openstackcloud.DiscoveryCatalog, error) {
+	_ = ctx
+	_ = cfg
+	f.called = true
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.catalog, nil
 }
 
 func validTestConfig() string {

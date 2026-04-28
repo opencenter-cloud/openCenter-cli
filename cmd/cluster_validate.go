@@ -15,9 +15,9 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/cluster"
-	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -76,12 +76,11 @@ If no cluster name is provided, validates the currently active cluster.`,
 			// Check if a configuration file was provided via --config-file flag.
 			configFile := getValidateConfigFileFlag(cmd)
 
-			// Resolve cluster name, organization, and provider from args or active cluster
+			// Resolve cluster identifier from args or active cluster. The validation
+			// service owns storage resolution and config loading.
 			var clusterName string
 			var organization string
-			var provider string
 			if configFile == "" {
-				// Determine identifier from args or active cluster
 				var identifier string
 				if len(args) > 0 {
 					identifier = args[0]
@@ -93,16 +92,12 @@ If no cluster name is provided, validates the currently active cluster.`,
 					}
 				}
 
-				// Use loadConfigWithIdentifier to support organization/cluster-name format
-				var cfg v2.Config
-				cfg, clusterName, organization, err = loadConfigWithIdentifier(cmd.Context(), identifier)
-				if err != nil {
-					return err
+				clusterName = identifier
+				if strings.Contains(identifier, "/") {
+					parts := strings.SplitN(identifier, "/", 2)
+					organization = parts[0]
+					clusterName = parts[1]
 				}
-				provider = cfg.OpenCenter.Infrastructure.Provider
-			} else {
-				// Get organization from global flag if using an explicit config file.
-				organization, _ = cmd.Flags().GetString("organization")
 			}
 
 			// Get validation options from flags
@@ -124,7 +119,6 @@ If no cluster name is provided, validates the currently active cluster.`,
 				OutputDir:           outputDir,
 				Verbose:             verbose,
 				OutputFormat:        outputFormat,
-				Provider:            provider,
 			}
 
 			// Perform validation
@@ -135,13 +129,13 @@ If no cluster name is provided, validates the currently active cluster.`,
 
 			// Format and display result
 			if outputFormat == "json" {
-				jsonStr, err := validateService.FormatResultJSON(result, provider)
+				jsonStr, err := validateService.FormatResultJSON(result, result.Provider)
 				if err != nil {
 					return fmt.Errorf("formatting JSON output: %w", err)
 				}
 				fmt.Fprint(cmd.OutOrStdout(), jsonStr)
 			} else {
-				output := validateService.FormatResultGrouped(result, provider)
+				output := validateService.FormatResultGrouped(result, result.Provider)
 				fmt.Fprint(cmd.OutOrStdout(), output)
 			}
 

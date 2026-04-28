@@ -4,12 +4,14 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
+	"gopkg.in/yaml.v3"
 )
 
 func TestValidateService_Validate(t *testing.T) {
@@ -109,6 +111,51 @@ func TestValidateService_Validate(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestValidateService_ValidateFailsForEnabledServicePlaceholders(t *testing.T) {
+	cfg, err := v2.NewV2Default("placeholder-cluster", "kind")
+	if err != nil {
+		t.Fatalf("create default config: %v", err)
+	}
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+
+	configPath := filepath.Join(t.TempDir(), "placeholder-cluster.yaml")
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	service := NewValidateService(
+		paths.NewPathResolver(t.TempDir()),
+		validation.NewValidationEngine(),
+		nil,
+	)
+
+	result, err := service.Validate(context.Background(), ValidateOptions{
+		ConfigPath: configPath,
+	})
+	if err != nil {
+		t.Fatalf("Validate() returned unexpected error: %v", err)
+	}
+	if result.Valid {
+		t.Fatal("expected validation to fail for enabled services with CHANGEME placeholders")
+	}
+
+	errMsg := strings.Join(result.Errors, "\n")
+	for _, want := range []string{
+		`placeholder value "CHANGEME"`,
+		"secrets.keycloak.client_secret",
+		"secrets.keycloak.admin_password",
+		"secrets.headlamp.oidc_client_secret",
+	} {
+		if !strings.Contains(errMsg, want) {
+			t.Fatalf("expected validation errors to contain %q, got:\n%s", want, errMsg)
+		}
 	}
 }
 

@@ -418,7 +418,7 @@ func TestClusterInitNoSOPSKeygenLeavesSOPSPathEmpty(t *testing.T) {
 	}
 }
 
-func TestClusterInitThenValidateSucceeds(t *testing.T) {
+func TestClusterInitThenValidateFailsUntilPlaceholdersAreReplaced(t *testing.T) {
 	dir := t.TempDir()
 	prepareCommandTestEnv(t, dir)
 
@@ -438,11 +438,18 @@ func TestClusterInitThenValidateSucceeds(t *testing.T) {
 	validateCmd.SetErr(&stderr)
 	validateCmd.SetArgs([]string{"--config", configPath})
 	err := validateCmd.Execute()
-	if err != nil {
-		t.Fatalf("expected structural validation to succeed, got:\nstdout: %s\nstderr: %s\nerr: %v", stdout.String(), stderr.String(), err)
+	if err == nil {
+		t.Fatalf("expected validation to fail for template placeholders, got:\nstdout: %s\nstderr: %s", stdout.String(), stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "Validation successful") {
-		t.Fatalf("expected successful validation output, got:\nstdout: %s\nstderr: %s", stdout.String(), stderr.String())
+	for _, want := range []string{
+		"Validation failed",
+		`placeholder value "CHANGEME"`,
+		"secrets.keycloak.client_secret",
+		"opencenter.infrastructure.cloud.openstack.application_credential_secret",
+	} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("expected validation output to contain %q, got:\nstdout: %s\nstderr: %s", want, stdout.String(), stderr.String())
+		}
 	}
 }
 

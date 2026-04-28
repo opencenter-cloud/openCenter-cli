@@ -161,6 +161,12 @@ func (s *ValidateService) validateV2Config(ctx context.Context, configPath strin
 		return result, nil
 	}
 
+	if err := v2.ValidateForDeployment(cfg); err != nil {
+		result.Valid = false
+		result.ConfigValid = false
+		result.Errors = append(result.Errors, fmt.Sprintf("[validation] %s", err.Error()))
+	}
+
 	// Generate debug config if requested
 	if opts.GenerateDebugConfig || os.Getenv("OPENCENTER_DEBUG") != "" {
 		outputDir := opts.OutputDir

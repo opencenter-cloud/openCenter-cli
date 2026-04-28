@@ -127,10 +127,6 @@ func (r *readinessBuilder) validateOpenStackProvider(cfg *Config) {
 		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.openstack.application_credential_secret", "OpenStack application credential secret is required for readiness validation.", "Set the OpenStack application credential secret.")
 	}
 
-	if strings.TrimSpace(os.NetworkID) == "" && strings.TrimSpace(os.NetworkName) == "" {
-		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.openstack.network_id", "OpenStack network ID or network name is required.", "Set network_id or network_name for cluster nodes.")
-	}
-
 	compute := cfg.OpenCenter.Infrastructure.Compute
 	if compute.MasterCount > 0 {
 		r.requireNonPlaceholder(CategoryProvider, "opencenter.infrastructure.compute.flavor_master", compute.FlavorMaster, "OpenStack master flavor is required when master_count is greater than zero.", "Set compute.flavor_master.")

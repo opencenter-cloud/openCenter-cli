@@ -63,9 +63,6 @@ func (p *OpenStackProvider) ValidateConfig(cfg *InfrastructureConfig) error {
 	if os.ImageID == "" {
 		return fmt.Errorf("infrastructure.cloud.openstack.image_id is required")
 	}
-	if os.NetworkID == "" {
-		return fmt.Errorf("infrastructure.cloud.openstack.network_id is required")
-	}
 
 	// Validate that only OpenStack section is populated
 	if cfg.Cloud.AWS != nil && !isEmptyAWSConfig(cfg.Cloud.AWS) {

@@ -20,12 +20,22 @@ func TestValidateReadinessOpenStackOfflineRules(t *testing.T) {
 	report := ValidateReadiness(cfg)
 
 	assertIssue(t, report, SeverityWarning, CategoryProvider, "opencenter.infrastructure.cloud.openstack.auth_url")
-	assertIssue(t, report, SeverityError, CategoryProvider, "opencenter.infrastructure.cloud.openstack.network_id")
+	assertNoIssue(t, report, "opencenter.infrastructure.cloud.openstack.network_id")
 	assertIssue(t, report, SeverityError, CategoryProvider, "opencenter.infrastructure.compute.flavor_worker")
 	assertIssue(t, report, SeverityError, CategoryProvider, "opencenter.infrastructure.compute.additional_server_pools_worker[0].flavor")
 	if report.Valid {
 		t.Fatalf("expected readiness validation to fail, got valid report: %#v", report)
 	}
+}
+
+func TestValidateReadinessOpenStackAllowsOpenTofuManagedNetwork(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.NetworkID = ""
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.NetworkName = ""
+
+	report := ValidateReadiness(cfg)
+
+	assertNoIssue(t, report, "opencenter.infrastructure.cloud.openstack.network_id")
 }
 
 func TestValidateReadinessGitOpsHTTPSRequiresMatchingTokenProvider(t *testing.T) {

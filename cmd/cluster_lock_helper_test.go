@@ -79,15 +79,11 @@ func TestAcquireLockWithPrompt_WithBreakLockFlag(t *testing.T) {
 	resilience.DefaultLockConfig.LockDir = lockDir
 	defer func() { resilience.DefaultLockConfig = origConfig }()
 
-	// Create an existing lock file
+	// Create an existing lock file with a future expiry so it's still active
 	lockPath := filepath.Join(lockDir, "test-cluster.lock")
-	lockContent := `owner=other-host:99999
-acquired=2026-04-14T01:00:00Z
-expires=2026-04-14T02:00:00Z
-ttl=1h0m0s
-operation=deploy
-command=cluster deploy
-`
+	futureExpiry := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
+	recentAcquire := time.Now().Add(-30 * time.Minute).Format(time.RFC3339)
+	lockContent := "owner=other-host:99999\nacquired=" + recentAcquire + "\nexpires=" + futureExpiry + "\nttl=1h0m0s\noperation=deploy\ncommand=cluster deploy\n"
 	if err := os.WriteFile(lockPath, []byte(lockContent), 0644); err != nil {
 		t.Fatalf("failed to create lock file: %v", err)
 	}
@@ -146,15 +142,11 @@ func TestAcquireLockWithPrompt_WithoutBreakLockFlag_Confirmed(t *testing.T) {
 	resilience.DefaultLockConfig.LockDir = lockDir
 	defer func() { resilience.DefaultLockConfig = origConfig }()
 
-	// Create an existing lock file
+	// Create an existing lock file with a future expiry so it's still active
 	lockPath := filepath.Join(lockDir, "test-cluster.lock")
-	lockContent := `owner=other-host:99999
-acquired=2026-04-14T01:00:00Z
-expires=2026-04-14T02:00:00Z
-ttl=1h0m0s
-operation=deploy
-command=cluster deploy
-`
+	futureExpiry := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
+	recentAcquire := time.Now().Add(-30 * time.Minute).Format(time.RFC3339)
+	lockContent := "owner=other-host:99999\nacquired=" + recentAcquire + "\nexpires=" + futureExpiry + "\nttl=1h0m0s\noperation=deploy\ncommand=cluster deploy\n"
 	if err := os.WriteFile(lockPath, []byte(lockContent), 0644); err != nil {
 		t.Fatalf("failed to create lock file: %v", err)
 	}
@@ -198,6 +190,69 @@ command=cluster deploy
 	output := stdout.String()
 	if !bytes.Contains([]byte(output), []byte("Broke existing lock")) {
 		t.Errorf("expected output to mention breaking lock, got: %s", output)
+	}
+
+	// Clean up
+	result.LockManager.Release(result.Lock)
+}
+
+func TestAcquireLockWithPrompt_ExpiredLock_AutoCleanup(t *testing.T) {
+	// Create a temporary lock directory
+	tmpDir := t.TempDir()
+	lockDir := filepath.Join(tmpDir, "locks")
+	if err := os.MkdirAll(lockDir, 0755); err != nil {
+		t.Fatalf("failed to create lock dir: %v", err)
+	}
+
+	// Set up lock manager config
+	origConfig := resilience.DefaultLockConfig
+	resilience.DefaultLockConfig.LockDir = lockDir
+	defer func() { resilience.DefaultLockConfig = origConfig }()
+
+	// Create an existing lock file that has already expired
+	lockPath := filepath.Join(lockDir, "test-cluster.lock")
+	pastExpiry := time.Now().Add(-30 * time.Minute).Format(time.RFC3339)
+	pastAcquire := time.Now().Add(-90 * time.Minute).Format(time.RFC3339)
+	lockContent := "owner=other-host:99999\nacquired=" + pastAcquire + "\nexpires=" + pastExpiry + "\nttl=1h0m0s\noperation=deploy\ncommand=cluster deploy\n"
+	if err := os.WriteFile(lockPath, []byte(lockContent), 0644); err != nil {
+		t.Fatalf("failed to create lock file: %v", err)
+	}
+
+	// Create a test command without --break-lock flag
+	cmd := &cobra.Command{}
+	cmd.Flags().Bool("break-lock", false, "")
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+
+	ctx := context.Background()
+	result, err := AcquireLockWithPrompt(ctx, cmd, "test-cluster", "deploy", 1*time.Hour, map[string]string{
+		"operation": "deploy",
+	})
+
+	// Expired lock should be auto-cleaned without prompting
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected result, got nil")
+	}
+	if result.Lock == nil {
+		t.Fatal("expected lock, got nil")
+	}
+	if result.ExistingLock == nil {
+		t.Error("expected existing lock info to be preserved")
+	}
+	if !result.WasBroken {
+		t.Error("expected WasBroken to be true")
+	}
+	if result.UserConfirmed {
+		t.Error("expected UserConfirmed to be false (expired lock should not prompt)")
+	}
+
+	// Verify the output mentions cleaning up the expired lock
+	output := stdout.String()
+	if !bytes.Contains([]byte(output), []byte("Cleaned up expired lock")) {
+		t.Errorf("expected output to mention cleaning up expired lock, got: %s", output)
 	}
 
 	// Clean up

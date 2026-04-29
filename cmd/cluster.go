@@ -297,10 +297,16 @@ func AcquireLockWithPrompt(ctx context.Context, cmd *cobra.Command, resource str
 	if existingLock != nil {
 		result.ExistingLock = existingLock
 
-		// Check if --break-lock flag is set
-		breakLock, _ := cmd.Flags().GetBool("break-lock")
-
-		if breakLock {
+		// Auto-clean expired locks without prompting
+		if time.Now().After(existingLock.ExpiresAt) {
+			if err := lockMgr.ForceBreak(resource); err != nil {
+				return nil, fmt.Errorf("failed to clean up expired lock: %w", err)
+			}
+			result.WasBroken = true
+			fmt.Fprintf(cmd.OutOrStdout(), "Cleaned up expired lock held by %s (operation: %s, expired %s ago)\n",
+				existingLock.Owner, existingLock.Metadata["operation"],
+				time.Since(existingLock.ExpiresAt).Round(time.Second))
+		} else if breakLock, _ := cmd.Flags().GetBool("break-lock"); breakLock {
 			// Force break the lock
 			if err := lockMgr.ForceBreak(resource); err != nil {
 				return nil, fmt.Errorf("failed to break existing lock: %w", err)

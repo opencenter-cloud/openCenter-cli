@@ -38,6 +38,7 @@ or at the location specified by the OPENCENTER_CONFIG_DIR environment variable.
 Configuration values can be accessed and modified using dot notation (e.g., logging.level).
 The cluster_defaults section controls values injected into new cluster configs during
 "opencenter cluster init".`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -50,7 +51,6 @@ The cluster_defaults section controls values injected into new cluster configs d
 	cmd.AddCommand(newConfigResetCmd())
 	cmd.AddCommand(newConfigPathCmd())
 	cmd.AddCommand(newConfigEditCmd())
-	cmd.AddCommand(newConfigIDECmd())
 	cmd.AddCommand(newConfigExplainCmd())
 
 	return cmd

@@ -183,7 +183,6 @@ opencenter cluster destroy <name>           # Destroy cluster
 
 # Utilities
 opencenter version                          # Show version information
-opencenter config ide --schema-only         # Generate JSON schema for IDEs
 opencenter --help                           # Show help
 ```
 

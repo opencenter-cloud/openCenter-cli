@@ -41,50 +41,17 @@ func TestGetCachedDefaultConfig(t *testing.T) {
 	}
 }
 
-func TestGetCachedSchemaDefaults(t *testing.T) {
-	// Clear cache before test
-	InvalidateAllConfigCaches()
-
-	// First call should generate and cache
-	defaults1, err := GetCachedSchemaDefaults("test-cluster")
-	if err != nil {
-		t.Fatalf("GetCachedSchemaDefaults failed: %v", err)
-	}
-	if len(defaults1) == 0 {
-		t.Fatal("GetCachedSchemaDefaults returned empty data")
-	}
-
-	// Second call should return cached version
-	defaults2, err := GetCachedSchemaDefaults("test-cluster")
-	if err != nil {
-		t.Fatalf("GetCachedSchemaDefaults failed: %v", err)
-	}
-	if len(defaults2) == 0 {
-		t.Fatal("GetCachedSchemaDefaults returned empty data")
-	}
-
-	// Verify cache stats
-	stats := GetConfigCacheStats()
-	if stats.SchemaDefaultsCount != 1 {
-		t.Errorf("Expected 1 cached schema defaults, got %d", stats.SchemaDefaultsCount)
-	}
-}
-
 func TestInvalidateConfigCache(t *testing.T) {
 	// Clear cache before test
 	InvalidateAllConfigCaches()
 
 	// Generate and cache
 	_ = GetCachedDefaultConfig("test-cluster")
-	_, _ = GetCachedSchemaDefaults("test-cluster")
 
 	// Verify cached
 	stats := GetConfigCacheStats()
 	if stats.DefaultConfigCount != 1 {
 		t.Errorf("Expected 1 cached config, got %d", stats.DefaultConfigCount)
-	}
-	if stats.SchemaDefaultsCount != 1 {
-		t.Errorf("Expected 1 cached schema defaults, got %d", stats.SchemaDefaultsCount)
 	}
 
 	// Invalidate
@@ -95,9 +62,6 @@ func TestInvalidateConfigCache(t *testing.T) {
 	if stats.DefaultConfigCount != 0 {
 		t.Errorf("Expected 0 cached configs after invalidation, got %d", stats.DefaultConfigCount)
 	}
-	if stats.SchemaDefaultsCount != 0 {
-		t.Errorf("Expected 0 cached schema defaults after invalidation, got %d", stats.SchemaDefaultsCount)
-	}
 }
 
 func TestInvalidateAllConfigCaches(t *testing.T) {
@@ -107,16 +71,11 @@ func TestInvalidateAllConfigCaches(t *testing.T) {
 	// Generate and cache multiple clusters
 	_ = GetCachedDefaultConfig("cluster1")
 	_ = GetCachedDefaultConfig("cluster2")
-	_, _ = GetCachedSchemaDefaults("cluster1")
-	_, _ = GetCachedSchemaDefaults("cluster2")
 
 	// Verify cached
 	stats := GetConfigCacheStats()
 	if stats.DefaultConfigCount != 2 {
 		t.Errorf("Expected 2 cached configs, got %d", stats.DefaultConfigCount)
-	}
-	if stats.SchemaDefaultsCount != 2 {
-		t.Errorf("Expected 2 cached schema defaults, got %d", stats.SchemaDefaultsCount)
 	}
 
 	// Invalidate all
@@ -126,9 +85,6 @@ func TestInvalidateAllConfigCaches(t *testing.T) {
 	stats = GetConfigCacheStats()
 	if stats.DefaultConfigCount != 0 {
 		t.Errorf("Expected 0 cached configs after invalidation, got %d", stats.DefaultConfigCount)
-	}
-	if stats.SchemaDefaultsCount != 0 {
-		t.Errorf("Expected 0 cached schema defaults after invalidation, got %d", stats.SchemaDefaultsCount)
 	}
 }
 
@@ -148,7 +104,6 @@ func TestCacheConcurrency(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < iterations; j++ {
 				_ = GetCachedDefaultConfig("test-cluster")
-				_, _ = GetCachedSchemaDefaults("test-cluster")
 			}
 		}()
 	}
@@ -159,9 +114,6 @@ func TestCacheConcurrency(t *testing.T) {
 	stats := GetConfigCacheStats()
 	if stats.DefaultConfigCount != 1 {
 		t.Errorf("Expected 1 cached config after concurrent access, got %d", stats.DefaultConfigCount)
-	}
-	if stats.SchemaDefaultsCount != 1 {
-		t.Errorf("Expected 1 cached schema defaults after concurrent access, got %d", stats.SchemaDefaultsCount)
 	}
 }
 
@@ -236,27 +188,6 @@ func BenchmarkCachePerformance(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			InvalidateAllConfigCaches()
 			_ = GetCachedDefaultConfig("test-cluster")
-		}
-	})
-}
-
-// BenchmarkSchemaDefaultsCache compares cached vs uncached schema defaults
-func BenchmarkSchemaDefaultsCache(b *testing.B) {
-	b.Run("Uncached", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			_, _ = GenerateDefaultFromSchema("test-cluster")
-		}
-	})
-
-	b.Run("Cached", func(b *testing.B) {
-		// Pre-populate cache
-		_, _ = GetCachedSchemaDefaults("test-cluster")
-
-		b.ReportAllocs()
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, _ = GetCachedSchemaDefaults("test-cluster")
 		}
 	})
 }

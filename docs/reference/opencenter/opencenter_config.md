@@ -29,7 +29,6 @@ opencenter config [flags]
 * [opencenter config edit](opencenter_config_edit.md)	 - Edit the CLI configuration file in your default editor
 * [opencenter config explain](opencenter_config_explain.md)	 - Explain how configuration values affect CLI behavior
 * [opencenter config get](opencenter_config_get.md)	 - Get a configuration value using dot notation
-* [opencenter config ide](opencenter_config_ide.md)	 - Set up IDE integration for cluster configuration files
 * [opencenter config path](opencenter_config_path.md)	 - Show the path to the configuration file
 * [opencenter config reset](opencenter_config_reset.md)	 - Reset configuration to default values
 * [opencenter config set](opencenter_config_set.md)	 - Set a configuration value using dot notation

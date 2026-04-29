@@ -73,7 +73,7 @@ func defaultConfig(name string) Config {
 	}
 
 	cfg := Config{
-		SchemaVersion: SchemaVersion,
+		SchemaVersion: "2.0",
 		OpenCenter: SimplifiedOpenCenter{
 			Meta: ClusterMeta{
 				Name:         name,

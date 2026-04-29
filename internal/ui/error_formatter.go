@@ -394,7 +394,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Description: "The cluster configuration contains validation errors.",
 		Fix:         "Run validation to see specific errors:",
 		FixCommand:  "opencenter cluster validate {cluster}",
-		Hint:        "Generate the configuration schema: opencenter config ide --schema-only",
+		Hint:        "Edit the cluster configuration after reviewing validation output.",
 		DocsURL:     "https://docs.opencenter.cloud/errors/E1004",
 		Severity:    SeverityCritical,
 	}
@@ -405,7 +405,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Description: "A required configuration field is missing or empty.",
 		Fix:         "Edit the configuration and add the required field:",
 		FixCommand:  "opencenter cluster edit {cluster}",
-		Hint:        "Generate the schema for required fields: opencenter config ide --schema-only",
+		Hint:        "Run validation again after adding the missing field.",
 		DocsURL:     "https://docs.opencenter.cloud/errors/E1005",
 		Severity:    SeverityCritical,
 	}

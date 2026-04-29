@@ -32,9 +32,6 @@ opencenter [flags]
   # Validate cluster configuration
   opencenter cluster validate my-cluster
 
-  # Generate IDE schema support
-  opencenter config ide --schema-only
-
   # List all clusters
   opencenter cluster list
 

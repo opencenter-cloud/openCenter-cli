@@ -38,7 +38,7 @@ func testModeConfig(name string) Config {
 // Use this for tests that don't need full configuration.
 func minimalConfig(name string) Config {
 	cfg := Config{
-		SchemaVersion: SchemaVersion,
+		SchemaVersion: "2.0",
 		OpenCenter: SimplifiedOpenCenter{
 			Meta: ClusterMeta{
 				Name:         name,

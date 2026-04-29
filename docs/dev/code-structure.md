@@ -52,7 +52,6 @@ Commands follow the pattern `cmd/<command>_<subcommand>.go`:
 
 **Configuration commands** (`config_*.go`):
 - `config_edit.go` - Edit global configuration
-- `config_ide.go` - Configure IDE integration
 
 **Utility commands**:
 - `version.go` - Show version information

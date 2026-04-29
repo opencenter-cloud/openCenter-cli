@@ -130,7 +130,6 @@ opencenter cluster set prod-cluster \
 | `opencenter config explain` |
 | `opencenter config explain cluster-defaults` |
 | `opencenter config get` |
-| `opencenter config ide` |
 | `opencenter config path` |
 | `opencenter config reset` |
 | `opencenter config set` |

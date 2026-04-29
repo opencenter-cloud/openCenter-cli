@@ -24,7 +24,18 @@ func TestLoadExternalPlugins_RegistersLocalPluginName(t *testing.T) {
 	root := &cobra.Command{Use: "opencenter-test"}
 	LoadExternalPlugins(root)
 
-	if root.Commands()[0].Name() != "local" {
-		t.Fatalf("expected plugin command name local, got %q", root.Commands()[0].Name())
+	var found bool
+	for _, c := range root.Commands() {
+		if c.Name() == "local" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		names := make([]string, 0, len(root.Commands()))
+		for _, c := range root.Commands() {
+			names = append(names, c.Name())
+		}
+		t.Fatalf("expected plugin command 'local' among registered commands %v", names)
 	}
 }

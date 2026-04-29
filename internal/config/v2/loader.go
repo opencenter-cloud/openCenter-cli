@@ -32,7 +32,16 @@ type YAMLTypeErrors struct {
 }
 
 func (e *YAMLTypeErrors) Error() string {
-	return fmt.Sprintf("YAML type errors (%d)", len(e.Errors))
+	if len(e.Errors) == 0 {
+		return "YAML type errors (0)"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "YAML type errors (%d):", len(e.Errors))
+	for _, msg := range e.Errors {
+		b.WriteString("\n  - ")
+		b.WriteString(strings.TrimSpace(msg))
+	}
+	return b.String()
 }
 
 // ConfigLoader implements the v2 configuration loading pipeline.

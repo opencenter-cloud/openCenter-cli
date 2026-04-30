@@ -35,6 +35,7 @@ func newClusterStatusCmd() *cobra.Command {
 	var showPaths bool
 	var quiet bool
 	var syncStatus bool
+	var refresh bool
 	var syncTimeout time.Duration
 
 	cmd := &cobra.Command{
@@ -46,7 +47,11 @@ This command displays:
 - The requested cluster, or the currently active cluster when no name is passed
 - Basic cluster metadata (environment, region, organization)
 - Cluster lifecycle state (stage and status)
+- Network and node inventory from local configuration and OpenTofu state
 - Key file paths (with --paths flag)
+
+By default this command is offline and does not contact Kubernetes or provider APIs.
+Use --refresh to collect live Kubernetes node IPs and API readiness.
 
 If no cluster is requested and no cluster is active, it will show available clusters
 and suggest using 'opencenter cluster use' to set one.`,
@@ -58,6 +63,9 @@ and suggest using 'opencenter cluster use' to set one.`,
 
   # Show active cluster with file paths
   opencenter cluster status --paths
+
+  # Refresh status from live Kubernetes/provider checks
+  opencenter cluster status my-cluster --refresh
 
   # Sync service status from the live cluster into configuration
   opencenter cluster status my-cluster --sync
@@ -149,7 +157,7 @@ and suggest using 'opencenter cluster use' to set one.`,
 			resolvedClusterPaths, _ := pathResolver.Resolve(ctx, cfg.ClusterName(), cfg.OpenCenter.Meta.Organization)
 
 			if structuredOutput {
-				payload := buildClusterStatusOutput(ctx, clusterName, activeCluster, &cfg, resolvedClusterPaths, showPaths)
+				payload := buildClusterStatusOutput(ctx, clusterName, activeCluster, &cfg, resolvedClusterPaths, showPaths, refresh)
 				return writeStructuredOutput(cmd, opts.Output, payload)
 			}
 
@@ -192,12 +200,24 @@ and suggest using 'opencenter cluster use' to set one.`,
 				}
 			}
 
+			infraDir := clusterInfrastructureDir(&cfg)
+			kubeconfigPath := ""
+			if resolvedClusterPaths != nil {
+				kubeconfigPath = resolvedClusterPaths.KubeconfigPath
+			}
+			inventory := buildClusterInventory(ctx, &cfg, infraDir, kubeconfigPath, refresh)
+			renderClusterInventoryText(cmd.OutOrStdout(), inventory)
+
 			if strings.EqualFold(cfg.OpenCenter.Infrastructure.Provider, "kind") && resolvedClusterPaths != nil {
 				renderedKindConfigPath := filepath.Join(resolvedClusterPaths.ClusterDir, "kind-config.yaml")
 				gitOpsReady := pathExists(cfg.OpenCenter.GitOps.Repository.LocalDir)
 				kindConfigReady := pathExists(renderedKindConfigPath)
 				kubeconfigReady := pathExists(resolvedClusterPaths.KubeconfigPath)
-				clusterExists, apiReady, endpoint, providerError := kindClusterStatus(ctx, &cfg, resolvedClusterPaths.KubeconfigPath)
+				var clusterExists, apiReady bool
+				var endpoint, providerError string
+				if refresh {
+					clusterExists, apiReady, endpoint, providerError = kindClusterStatus(ctx, &cfg, resolvedClusterPaths.KubeconfigPath)
+				}
 				defaultCNIStatus := "Enabled"
 				if cfg.OpenCenter.Infrastructure.Kind != nil && cfg.OpenCenter.Infrastructure.Kind.DisableDefaultCNI {
 					defaultCNIStatus = "Disabled"
@@ -209,8 +229,13 @@ and suggest using 'opencenter cluster use' to set one.`,
 				fmt.Fprintf(cmd.OutOrStdout(), "  GitOps Setup:      %s\n", statusLabel(gitOpsReady, "Ready", "Not ready"))
 				fmt.Fprintf(cmd.OutOrStdout(), "  kind-config.yaml:  %s\n", statusLabel(kindConfigReady, "Present", "Missing"))
 				fmt.Fprintf(cmd.OutOrStdout(), "  Kubeconfig:        %s\n", statusLabel(kubeconfigReady, "Present", "Missing"))
-				fmt.Fprintf(cmd.OutOrStdout(), "  Cluster Exists:    %s\n", statusLabel(clusterExists, "Present", "Missing"))
-				fmt.Fprintf(cmd.OutOrStdout(), "  API Ready:         %s\n", statusLabel(apiReady, "Ready", "Not ready"))
+				if refresh {
+					fmt.Fprintf(cmd.OutOrStdout(), "  Cluster Exists:    %s\n", statusLabel(clusterExists, "Present", "Missing"))
+					fmt.Fprintf(cmd.OutOrStdout(), "  API Ready:         %s\n", statusLabel(apiReady, "Ready", "Not ready"))
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "  Cluster Exists:    skipped (use --refresh)\n")
+					fmt.Fprintf(cmd.OutOrStdout(), "  API Ready:         skipped (use --refresh)\n")
+				}
 				if endpoint != "" {
 					fmt.Fprintf(cmd.OutOrStdout(), "  API Endpoint:      %s\n", endpoint)
 				}
@@ -219,11 +244,14 @@ and suggest using 'opencenter cluster use' to set one.`,
 				}
 			}
 			if strings.EqualFold(cfg.OpenCenter.Infrastructure.Provider, "openstack") && resolvedClusterPaths != nil {
-				infraDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", cfg.ClusterName())
 				gitOpsReady := pathExists(cfg.OpenCenter.GitOps.Repository.LocalDir)
 				infraReady := pathExists(infraDir)
 				kubeconfigReady := pathExists(resolvedClusterPaths.KubeconfigPath)
-				apiReady, endpoint, providerError := cloudClusterStatus(ctx, resolvedClusterPaths.KubeconfigPath)
+				var apiReady bool
+				var endpoint, providerError string
+				if refresh {
+					apiReady, endpoint, providerError = cloudClusterStatus(ctx, resolvedClusterPaths.KubeconfigPath)
+				}
 
 				fmt.Fprintf(cmd.OutOrStdout(), "\nOpenStack Status:\n")
 				fmt.Fprintf(cmd.OutOrStdout(), "  Config:            ✓ Present\n")
@@ -231,7 +259,11 @@ and suggest using 'opencenter cluster use' to set one.`,
 				fmt.Fprintf(cmd.OutOrStdout(), "  Infrastructure:    %s\n", statusLabel(infraReady, "Rendered", "Missing"))
 				fmt.Fprintf(cmd.OutOrStdout(), "  OpenTofu State:    %s\n", openTofuStateStatus(&cfg, infraDir))
 				fmt.Fprintf(cmd.OutOrStdout(), "  Kubeconfig:        %s\n", statusLabel(kubeconfigReady, "Present", "Missing"))
-				fmt.Fprintf(cmd.OutOrStdout(), "  API Ready:         %s\n", statusLabel(apiReady, "Ready", "Not ready"))
+				if refresh {
+					fmt.Fprintf(cmd.OutOrStdout(), "  API Ready:         %s\n", statusLabel(apiReady, "Ready", "Not ready"))
+				} else {
+					fmt.Fprintf(cmd.OutOrStdout(), "  API Ready:         skipped (use --refresh)\n")
+				}
 				if endpoint != "" {
 					fmt.Fprintf(cmd.OutOrStdout(), "  API Endpoint:      %s\n", endpoint)
 				}
@@ -254,6 +286,7 @@ and suggest using 'opencenter cluster use' to set one.`,
 
 	cmd.Flags().BoolVar(&showPaths, "paths", false, "show cluster file paths and their status")
 	cmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "quiet output (just the cluster name)")
+	cmd.Flags().BoolVar(&refresh, "refresh", false, "refresh live Kubernetes/provider status")
 	cmd.Flags().BoolVar(&syncStatus, "sync", false, "sync service status from the live cluster into configuration")
 	cmd.Flags().DurationVar(&syncTimeout, "sync-timeout", 30*time.Second, "timeout for live cluster status sync")
 
@@ -261,27 +294,34 @@ and suggest using 'opencenter cluster use' to set one.`,
 }
 
 type clusterStatusOutput struct {
-	Cluster           string         `json:"cluster" yaml:"cluster"`
-	Active            bool           `json:"active" yaml:"active"`
-	ActiveCluster     string         `json:"active_cluster,omitempty" yaml:"active_cluster,omitempty"`
-	Name              string         `json:"name,omitempty" yaml:"name,omitempty"`
-	Environment       string         `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Region            string         `json:"region,omitempty" yaml:"region,omitempty"`
-	Stage             string         `json:"stage,omitempty" yaml:"stage,omitempty"`
-	Status            string         `json:"status,omitempty" yaml:"status,omitempty"`
-	Organization      string         `json:"organization,omitempty" yaml:"organization,omitempty"`
-	Provider          string         `json:"provider,omitempty" yaml:"provider,omitempty"`
-	ConfigValid       bool           `json:"config_valid" yaml:"config_valid"`
-	Message           string         `json:"message,omitempty" yaml:"message,omitempty"`
-	AvailableClusters []string       `json:"available_clusters,omitempty" yaml:"available_clusters,omitempty"`
-	Paths             map[string]any `json:"paths,omitempty" yaml:"paths,omitempty"`
-	ProviderStatus    map[string]any `json:"provider_status,omitempty" yaml:"provider_status,omitempty"`
-	NextSteps         []string       `json:"next_steps,omitempty" yaml:"next_steps,omitempty"`
+	Cluster           string            `json:"cluster" yaml:"cluster"`
+	Active            bool              `json:"active" yaml:"active"`
+	ActiveCluster     string            `json:"active_cluster,omitempty" yaml:"active_cluster,omitempty"`
+	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Environment       string            `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Region            string            `json:"region,omitempty" yaml:"region,omitempty"`
+	Stage             string            `json:"stage,omitempty" yaml:"stage,omitempty"`
+	Status            string            `json:"status,omitempty" yaml:"status,omitempty"`
+	Organization      string            `json:"organization,omitempty" yaml:"organization,omitempty"`
+	Provider          string            `json:"provider,omitempty" yaml:"provider,omitempty"`
+	ConfigValid       bool              `json:"config_valid" yaml:"config_valid"`
+	Message           string            `json:"message,omitempty" yaml:"message,omitempty"`
+	AvailableClusters []string          `json:"available_clusters,omitempty" yaml:"available_clusters,omitempty"`
+	Paths             map[string]any    `json:"paths,omitempty" yaml:"paths,omitempty"`
+	ProviderStatus    map[string]any    `json:"provider_status,omitempty" yaml:"provider_status,omitempty"`
+	Inventory         *clusterInventory `json:"inventory,omitempty" yaml:"inventory,omitempty"`
+	NextSteps         []string          `json:"next_steps,omitempty" yaml:"next_steps,omitempty"`
 }
 
-func buildClusterStatusOutput(ctx context.Context, clusterName, activeCluster string, cfg *v2.Config, resolvedClusterPaths *paths.ClusterPaths, showPaths bool) clusterStatusOutput {
+func buildClusterStatusOutput(ctx context.Context, clusterName, activeCluster string, cfg *v2.Config, resolvedClusterPaths *paths.ClusterPaths, showPaths, refresh bool) clusterStatusOutput {
 	stage := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Stage))
 	status := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Status))
+	infraDir := clusterInfrastructureDir(cfg)
+	kubeconfigPath := ""
+	if resolvedClusterPaths != nil {
+		kubeconfigPath = resolvedClusterPaths.KubeconfigPath
+	}
+	inventory := buildClusterInventory(ctx, cfg, infraDir, kubeconfigPath, refresh)
 	output := clusterStatusOutput{
 		Cluster:       clusterName,
 		Active:        activeCluster != "" && activeCluster == clusterName,
@@ -294,6 +334,7 @@ func buildClusterStatusOutput(ctx context.Context, clusterName, activeCluster st
 		Organization:  cfg.OpenCenter.Meta.Organization,
 		Provider:      cfg.OpenCenter.Infrastructure.Provider,
 		ConfigValid:   true,
+		Inventory:     &inventory,
 		NextSteps:     nextStepsForCluster(clusterName, stage, status),
 	}
 
@@ -318,29 +359,38 @@ func buildClusterStatusOutput(ctx context.Context, clusterName, activeCluster st
 		gitOpsReady := pathExists(cfg.OpenCenter.GitOps.Repository.LocalDir)
 		kindConfigReady := pathExists(renderedKindConfigPath)
 		kubeconfigReady := pathExists(resolvedClusterPaths.KubeconfigPath)
-		clusterExists, apiReady, endpoint, providerError := kindClusterStatus(ctx, cfg, resolvedClusterPaths.KubeconfigPath)
+		var clusterExists, apiReady bool
+		var endpoint, providerError string
+		if refresh {
+			clusterExists, apiReady, endpoint, providerError = kindClusterStatus(ctx, cfg, resolvedClusterPaths.KubeconfigPath)
+		}
 		defaultCNIStatus := "enabled"
 		if cfg.OpenCenter.Infrastructure.Kind != nil && cfg.OpenCenter.Infrastructure.Kind.DisableDefaultCNI {
 			defaultCNIStatus = "disabled"
 		}
 		output.ProviderStatus = map[string]any{
-			"provider":            "kind",
-			"config_present":      true,
-			"default_cni":         defaultCNIStatus,
-			"gitops_setup_ready":  gitOpsReady,
-			"kind_config_present": kindConfigReady,
-			"kubeconfig_present":  kubeconfigReady,
-			"cluster_exists":      clusterExists,
-			"api_ready":           apiReady,
-			"api_endpoint":        endpoint,
-			"provider_check":      providerError,
+			"provider":               "kind",
+			"config_present":         true,
+			"default_cni":            defaultCNIStatus,
+			"gitops_setup_ready":     gitOpsReady,
+			"kind_config_present":    kindConfigReady,
+			"kubeconfig_present":     kubeconfigReady,
+			"cluster_exists_checked": refresh,
+			"cluster_exists":         clusterExists,
+			"api_ready_checked":      refresh,
+			"api_ready":              apiReady,
+			"api_endpoint":           endpoint,
+			"provider_check":         providerError,
 		}
 	case "openstack":
-		infraDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", cfg.ClusterName())
 		gitOpsReady := pathExists(cfg.OpenCenter.GitOps.Repository.LocalDir)
 		infraReady := pathExists(infraDir)
 		kubeconfigReady := pathExists(resolvedClusterPaths.KubeconfigPath)
-		apiReady, endpoint, providerError := cloudClusterStatus(ctx, resolvedClusterPaths.KubeconfigPath)
+		var apiReady bool
+		var endpoint, providerError string
+		if refresh {
+			apiReady, endpoint, providerError = cloudClusterStatus(ctx, resolvedClusterPaths.KubeconfigPath)
+		}
 		output.ProviderStatus = map[string]any{
 			"provider":             "openstack",
 			"config_present":       true,
@@ -348,6 +398,7 @@ func buildClusterStatusOutput(ctx context.Context, clusterName, activeCluster st
 			"infrastructure_ready": infraReady,
 			"opentofu_state":       openTofuStateStatus(cfg, infraDir),
 			"kubeconfig_present":   kubeconfigReady,
+			"api_ready_checked":    refresh,
 			"api_ready":            apiReady,
 			"api_endpoint":         endpoint,
 			"provider_check":       providerError,
@@ -355,6 +406,13 @@ func buildClusterStatusOutput(ctx context.Context, clusterName, activeCluster st
 	}
 
 	return output
+}
+
+func clusterInfrastructureDir(cfg *v2.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	return filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", cfg.ClusterName())
 }
 
 func displayLifecycleValue(value string) string {

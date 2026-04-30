@@ -20,7 +20,7 @@ The command must remain safe and predictable by default. A plain `cluster status
 - Do not persist refreshed live data back into the cluster config.
 - Do not require root OpenTofu outputs to exist before the UX works.
 - Do not call OpenStack, Kubernetes, or other provider APIs unless `--refresh` is set.
-- Do not redesign `cluster describe` or `cluster sync-status`.
+- Do not redesign `cluster describe` or the `cluster status --sync` mode.
 
 ## Data Sources
 
@@ -193,4 +193,3 @@ Update generated/reference documentation for:
 - the new `--refresh` flag
 - default offline/OpenTofu-first behavior
 - examples for state-backed inventory and refreshed live inventory
-

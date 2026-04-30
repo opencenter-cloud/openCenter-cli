@@ -139,7 +139,7 @@ func TestClusterStatusShowsKindStatusDetails(t *testing.T) {
 	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&bytes.Buffer{})
-	cmd.SetArgs([]string{"status-kind-cluster"})
+	cmd.SetArgs([]string{"status-kind-cluster", "--refresh"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("cluster status failed: %v", err)

@@ -260,6 +260,18 @@ case "${1:-}" in
     echo "https://127.0.0.1:6443"
     exit 0
     ;;
+  get)
+    if [ "${2:-}" = "nodes" ] && [ "${3:-}" = "-o" ] && [ "${4:-}" = "json" ]; then
+      if [ -f "$state_dir/nodes.json" ]; then
+        cat "$state_dir/nodes.json"
+      else
+        cat <<'EOF'
+{"items":[]}
+EOF
+      fi
+      exit 0
+    fi
+    ;;
 esac
 
 echo "unsupported fake kubectl invocation: $*" >&2

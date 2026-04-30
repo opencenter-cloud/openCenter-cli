@@ -10,7 +10,11 @@ This command displays:
 - The requested cluster, or the currently active cluster when no name is passed
 - Basic cluster metadata (environment, region, organization)
 - Cluster lifecycle state (stage and status)
+- Network and node inventory from local configuration and OpenTofu state
 - Key file paths (with --paths flag)
+
+By default this command is offline and does not contact Kubernetes or provider APIs.
+Use --refresh to collect live Kubernetes node IPs and API readiness.
 
 If no cluster is requested and no cluster is active, it will show available clusters
 and suggest using 'opencenter cluster use' to set one.
@@ -31,6 +35,9 @@ opencenter cluster status [name] [flags]
   # Show active cluster with file paths
   opencenter cluster status --paths
 
+  # Refresh status from live Kubernetes/provider checks
+  opencenter cluster status my-cluster --refresh
+
   # Sync service status from the live cluster into configuration
   opencenter cluster status my-cluster --sync
 
@@ -44,9 +51,16 @@ opencenter cluster status [name] [flags]
   -h, --help                    help for status
       --paths                   show cluster file paths and their status
   -q, --quiet                   quiet output (just the cluster name)
+      --refresh                 refresh live Kubernetes/provider status
       --sync                    sync service status from the live cluster into configuration
       --sync-timeout duration   timeout for live cluster status sync (default 30s)
 ```
+
+### Inventory behavior
+
+`cluster status` reads local configuration and local OpenTofu state by default. When OpenTofu provisioning has completed, the output includes controller IPs, worker IPs, API VIPs, internal VIPs, load balancer provider, floating IP pool, and bastion floating IP when those values are present in state.
+
+If OpenTofu state is missing or cannot be inspected, the command still succeeds and shows configured VIP/load balancer values with a warning. Pass `--refresh` to query the cluster-owned kubeconfig for current node IPs and API readiness.
 
 ### SEE ALSO
 

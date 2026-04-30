@@ -125,7 +125,7 @@ locals {
   #Hardening
   k8s_hardening_enabled                   = true
   kube_pod_security_exemptions_namespaces = ["trivy-temp"]
-  kubelet_rotate_server_certificates      = true
+  kubelet_rotate_server_certificates      = false
   os_hardening_enabled                    = true
 
   {{- if .OpenCenter.Cluster.Kubernetes.OIDC.Enabled }}

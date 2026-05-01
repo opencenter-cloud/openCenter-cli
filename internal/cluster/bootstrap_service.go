@@ -510,7 +510,7 @@ func (s *BootstrapService) executeBootstrapSteps(ctx context.Context, selectedSt
 	for i, step := range selectedSteps {
 		// Skip if already completed (unless ignoring state)
 		if !ignoreState && stateEnabled && s.isStepSuccess(state, step.ID) {
-			s.progress("  [%d/%d] ⏭ %s (already completed)", i+1, totalSteps, step.Description)
+			s.progress("  [%d/%d] ⏭ %s (%s) (already completed)", i+1, totalSteps, step.Description, step.ID)
 			config.Debugf("bootstrap: step %s skipped (already completed in saved state)", step.ID)
 			logBootstrapMessage(ctx, "step skipped from saved state: %s", step.ID)
 			continue
@@ -526,7 +526,7 @@ func (s *BootstrapService) executeBootstrapSteps(ctx context.Context, selectedSt
 		if opts != nil && opts.Debug {
 			s.printStepDebug(step)
 		}
-		s.progress("  [%d/%d] → %s...", i+1, totalSteps, step.Description)
+		s.progress("  [%d/%d] → %s (%s)...", i+1, totalSteps, step.Description, step.ID)
 		config.Debugf("bootstrap: step %s started - %s", step.ID, step.Description)
 		logBootstrapMessage(ctx, "step started: %s - %s", step.ID, step.Description)
 
@@ -544,7 +544,7 @@ func (s *BootstrapService) executeBootstrapSteps(ctx context.Context, selectedSt
 			}
 			result.StepsFailed = append(result.StepsFailed, step.ID)
 			result.ResumeStatePath = statePath
-			s.progress("  [%d/%d] ✗ %s failed after %s: %v", i+1, totalSteps, step.Description, stepDuration, err)
+			s.progress("  [%d/%d] ✗ %s (%s) failed after %s: %v", i+1, totalSteps, step.Description, step.ID, stepDuration, err)
 			config.Debugf("bootstrap: step %s failed after %s: %v", step.ID, stepDuration, err)
 			logBootstrapMessage(ctx, "step failed: %s: %v", step.ID, err)
 			return fmt.Errorf("step %q failed: %w", step.ID, err)
@@ -560,7 +560,7 @@ func (s *BootstrapService) executeBootstrapSteps(ctx context.Context, selectedSt
 			}
 		}
 		result.StepsCompleted = append(result.StepsCompleted, step.ID)
-		s.progress("  [%d/%d] ✓ %s (%s)", i+1, totalSteps, step.Description, stepDuration)
+		s.progress("  [%d/%d] ✓ %s (%s) (%s)", i+1, totalSteps, step.Description, step.ID, stepDuration)
 		config.Debugf("bootstrap: step %s completed in %s", step.ID, stepDuration)
 		logBootstrapMessage(ctx, "step completed: %s", step.ID)
 	}

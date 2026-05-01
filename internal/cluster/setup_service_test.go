@@ -166,29 +166,27 @@ func TestSetupService_commitChanges(t *testing.T) {
 
 func TestSetupService_countGeneratedFiles(t *testing.T) {
 	tests := []struct {
-		name       string
-		setupFiles func(t *testing.T, gitDir string)
-		wantCount  int
+		name           string
+		setupBefore    func(t *testing.T, gitDir string) // files present before generation
+		setupAfter     func(t *testing.T, gitDir string) // files written during generation
+		wantCount      int
 	}{
 		{
-			name: "empty directory",
-			setupFiles: func(t *testing.T, gitDir string) {
-				// No files
-			},
-			wantCount: 0,
+			name:        "empty directory, no new files",
+			setupBefore: func(t *testing.T, gitDir string) {},
+			setupAfter:  func(t *testing.T, gitDir string) {},
+			wantCount:   0,
 		},
 		{
-			name: "with files",
-			setupFiles: func(t *testing.T, gitDir string) {
-				// Create some files
+			name:        "all files are new",
+			setupBefore: func(t *testing.T, gitDir string) {},
+			setupAfter: func(t *testing.T, gitDir string) {
 				if err := os.WriteFile(filepath.Join(gitDir, "file1.txt"), []byte("test"), 0o644); err != nil {
 					t.Fatalf("failed to create file1: %v", err)
 				}
 				if err := os.WriteFile(filepath.Join(gitDir, "file2.txt"), []byte("test"), 0o644); err != nil {
 					t.Fatalf("failed to create file2: %v", err)
 				}
-
-				// Create subdirectory with file
 				subDir := filepath.Join(gitDir, "subdir")
 				if err := os.MkdirAll(subDir, 0o755); err != nil {
 					t.Fatalf("failed to create subdir: %v", err)
@@ -200,9 +198,23 @@ func TestSetupService_countGeneratedFiles(t *testing.T) {
 			wantCount: 3,
 		},
 		{
-			name: "with .git directory",
-			setupFiles: func(t *testing.T, gitDir string) {
-				// Create .git directory (should be skipped)
+			name: "pre-existing files are not counted",
+			setupBefore: func(t *testing.T, gitDir string) {
+				if err := os.WriteFile(filepath.Join(gitDir, "old.txt"), []byte("old"), 0o644); err != nil {
+					t.Fatalf("failed to create old file: %v", err)
+				}
+			},
+			setupAfter: func(t *testing.T, gitDir string) {
+				if err := os.WriteFile(filepath.Join(gitDir, "new.txt"), []byte("new"), 0o644); err != nil {
+					t.Fatalf("failed to create new file: %v", err)
+				}
+			},
+			wantCount: 1, // Only new.txt
+		},
+		{
+			name: ".git directory is skipped",
+			setupBefore: func(t *testing.T, gitDir string) {},
+			setupAfter: func(t *testing.T, gitDir string) {
 				gitSubDir := filepath.Join(gitDir, ".git")
 				if err := os.MkdirAll(gitSubDir, 0o755); err != nil {
 					t.Fatalf("failed to create .git dir: %v", err)
@@ -210,13 +222,51 @@ func TestSetupService_countGeneratedFiles(t *testing.T) {
 				if err := os.WriteFile(filepath.Join(gitSubDir, "config"), []byte("test"), 0o644); err != nil {
 					t.Fatalf("failed to create git config: %v", err)
 				}
-
-				// Create regular file
 				if err := os.WriteFile(filepath.Join(gitDir, "file1.txt"), []byte("test"), 0o644); err != nil {
 					t.Fatalf("failed to create file1: %v", err)
 				}
 			},
 			wantCount: 1, // Only file1.txt, .git directory is skipped
+		},
+		{
+			name: "non-generated directories are skipped",
+			setupBefore: func(t *testing.T, gitDir string) {},
+			setupAfter: func(t *testing.T, gitDir string) {
+				// Create directories that should be excluded from the count:
+				// .terraform, venv, kubespray, .bin (matches SOPS exclusion list)
+				for _, dir := range []string{".terraform", "venv", "kubespray", ".bin"} {
+					d := filepath.Join(gitDir, "infrastructure", "clusters", "test", dir)
+					if err := os.MkdirAll(d, 0o755); err != nil {
+						t.Fatalf("failed to create %s dir: %v", dir, err)
+					}
+					if err := os.WriteFile(filepath.Join(d, "state.json"), []byte("{}"), 0o644); err != nil {
+						t.Fatalf("failed to create file in %s: %v", dir, err)
+					}
+				}
+				// One real generated file
+				if err := os.WriteFile(filepath.Join(gitDir, "kustomization.yaml"), []byte("test"), 0o644); err != nil {
+					t.Fatalf("failed to create kustomization.yaml: %v", err)
+				}
+			},
+			wantCount: 1, // Only kustomization.yaml; .terraform, venv, kubespray, .bin skipped
+		},
+		{
+			name: "modified files are counted",
+			setupBefore: func(t *testing.T, gitDir string) {
+				if err := os.WriteFile(filepath.Join(gitDir, "config.yaml"), []byte("old-content"), 0o644); err != nil {
+					t.Fatalf("failed to create config: %v", err)
+				}
+			},
+			setupAfter: func(t *testing.T, gitDir string) {
+				// Overwrite existing file (simulates re-generation)
+				if err := os.WriteFile(filepath.Join(gitDir, "config.yaml"), []byte("new-content"), 0o644); err != nil {
+					t.Fatalf("failed to update config: %v", err)
+				}
+				if err := os.WriteFile(filepath.Join(gitDir, "new.yaml"), []byte("brand-new"), 0o644); err != nil {
+					t.Fatalf("failed to create new file: %v", err)
+				}
+			},
+			wantCount: 2, // config.yaml (modified) + new.yaml (new)
 		},
 	}
 
@@ -229,15 +279,27 @@ func TestSetupService_countGeneratedFiles(t *testing.T) {
 				t.Fatalf("failed to create gitops dir: %v", err)
 			}
 
-			if tt.setupFiles != nil {
-				tt.setupFiles(t, gitDir)
+			// Set up pre-existing files
+			if tt.setupBefore != nil {
+				tt.setupBefore(t, gitDir)
 			}
 
 			pathResolver := paths.NewPathResolver(tmpDir)
 			validationEngine := validation.NewValidationEngine()
 			service := NewSetupService(pathResolver, validationEngine)
 
-			count, err := service.countGeneratedFiles(gitDir)
+			// Take snapshot before generation
+			snapshot, err := service.snapshotFileModTimes(gitDir)
+			if err != nil {
+				t.Fatalf("snapshotFileModTimes() unexpected error: %v", err)
+			}
+
+			// Simulate generation by writing new/modified files
+			if tt.setupAfter != nil {
+				tt.setupAfter(t, gitDir)
+			}
+
+			count, err := service.countGeneratedFiles(gitDir, snapshot)
 
 			if err != nil {
 				t.Errorf("countGeneratedFiles() unexpected error: %v", err)

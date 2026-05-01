@@ -104,18 +104,26 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		},
 	}
 
-	// When the deployment method is kubespray, add steps to create a Python
-	// virtual environment and run ansible-playbook. All Python/Ansible binaries
-	// are invoked via their full venv path (e.g. venv/bin/pip) instead of
-	// sourcing the activate script, because exec.Command runs processes
-	// directly without a shell.
-	if cfg.Deployment.Method == "kubespray" {
-		kubespraySteps, err := p.buildKubespraySteps(cfg, clusterPaths, clusterDir, planEnv, opts)
-		if err != nil {
-			return nil, fmt.Errorf("building kubespray steps: %w", err)
-		}
-		steps = append(steps, kubespraySteps...)
-	}
+	// DISABLED: kubespray steps (kubespray-venv-create, kubespray-pip-install,
+	// kubespray-ansible-playbook) are intentionally skipped here.
+	//
+	// The OpenTofu module for this provider already embeds a
+	// null_resource.run_kubespray with a local-exec provisioner that runs the
+	// full Ansible/Kubespray playbook as part of opentofu-apply (step 3).
+	// Appending these steps caused Ansible to run a second time against a
+	// cluster that was already provisioned, wasting ~1h of deploy time.
+	//
+	// Long-term fix: remove the null_resource.run_kubespray local-exec from
+	// the OpenTofu templates so that OpenTofu only provisions infrastructure
+	// and these steps own the Ansible run exclusively.
+	//
+	// if cfg.Deployment.Method == "kubespray" {
+	// 	kubespraySteps, err := p.buildKubespraySteps(cfg, clusterPaths, clusterDir, planEnv, opts)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("building kubespray steps: %w", err)
+	// 	}
+	// 	steps = append(steps, kubespraySteps...)
+	// }
 
 	apiEndpointIP := resolveAPIEndpointIP(cfg)
 	steps = append(steps, bootstrapStep{

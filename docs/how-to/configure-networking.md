@@ -68,6 +68,7 @@ opencenter:
       network_plugin:
         calico:
           enabled: true
+          install_method: helm
           cni_iface: "enp3s0"
           calico_interface_autodetect: "interface"
           autodetect_cidr: ""
@@ -138,11 +139,12 @@ opencenter:
           enabled: false
         cilium:
           enabled: true
+          install_method: helm
           operator_enabled: true
           kube_proxy_replacement: true
 ```
 
-**Note:** Only one CNI plugin can be enabled at a time.
+**Note:** Only one CNI plugin can be enabled at a time. For OpenStack clusters, CNI installation is handled after kubeconfig normalization with `install_method: helm` or `install_method: kustomize-helm`; Kubespray is not used to install CNIs.
 
 ### Kube-OVN
 
@@ -157,6 +159,7 @@ opencenter:
           enabled: false
         kube-ovn:
           enabled: true
+          install_method: helm
           cilium_integration: true
 ```
 
@@ -554,14 +557,15 @@ After changing network configuration:
 **Solution:** Check CNI plugin status:
 
 ```bash
-kubectl get pods -n kube-system | grep calico
-kubectl logs -n kube-system <calico-pod>
+kubectl get pods -n calico-system
+kubectl get pods -n kube-system -l k8s-app=cilium
+kubectl get pods -n kube-system -l app.kubernetes.io/part-of=kube-ovn
 ```
 
 Verify interface configuration:
 
 ```bash
-kubectl exec -n kube-system <calico-pod> -- ip addr
+kubectl exec -n calico-system <calico-pod> -- ip addr
 ```
 
 ### Load Balancer Not Working

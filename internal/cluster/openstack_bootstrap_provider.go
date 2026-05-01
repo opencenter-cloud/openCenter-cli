@@ -142,6 +142,12 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		},
 	})
 
+	networkPluginStep, err := p.buildNetworkPluginInstallStep(cfg, clusterDir, planEnv, opts)
+	if err != nil {
+		return nil, err
+	}
+	steps = append(steps, networkPluginStep)
+
 	return steps, nil
 }
 

@@ -75,7 +75,7 @@ sequenceDiagram
     BS->>OSP: BuildSteps(cfg, clusterPaths, opts)
     OSP->>Creds: ExtractOpenStack()
     Creds-->>OSP: auth_url, region, app creds, project, network data
-    OSP-->>BS: [openstack-preflight, opentofu-init, opentofu-apply, openstack-normalize-kubeconfig]
+    OSP-->>BS: [openstack-preflight, opentofu-init, opentofu-apply, openstack-normalize-kubeconfig, openstack-install-network-plugin]
 
     Note over BS: Step execution is resumable via saved state
 
@@ -102,6 +102,12 @@ sequenceDiagram
         Note over BS,BS: Step 4: openstack-normalize-kubeconfig
         BS->>BS: copy discovered kubeconfig to cluster-owned path
         Note over BS: infrastructure/clusters/prod-cluster/kubeconfig.yaml
+    end
+
+    rect rgb(255, 243, 224)
+        Note over BS,K8s: Step 5: openstack-install-network-plugin
+        BS->>K8s: install selected CNI with Helm or Kustomize+Helm
+        K8s-->>BS: Calico, Cilium, or Kube-OVN pods ready
     end
 
     BS->>K8s: kubectl cluster-info --kubeconfig ...
@@ -256,7 +262,7 @@ Notes:
 
 ### 3. Tune compute, storage, and networking
 
-The OpenStack defaults are usable, but you should review them before provisioning. The current v2 defaults start with 3 control planes, 2 workers, Kubespray `v2.31.0`, Kubernetes `1.33.5`, and a local OpenTofu state backend.
+The OpenStack defaults are usable, but you should review them before provisioning. The current v2 defaults start with 3 control planes, 2 workers, Kubespray `v2.31.0`, Kubernetes `1.33.5`, Calico installed by Helm after kubeconfig normalization, and a local OpenTofu state backend.
 
 Edit these sections as needed:
 
@@ -453,9 +459,11 @@ The OpenStack bootstrap provider runs these step IDs (defined in `internal/clust
 2. `opentofu-init` — runs `opentofu init` in the cluster infrastructure directory
 3. `opentofu-apply` — runs `opentofu apply -auto-approve` to provision infrastructure
 4. `openstack-normalize-kubeconfig` — copies the discovered kubeconfig to the cluster-owned path
+5. `openstack-install-network-plugin` — installs the selected CNI with Helm or Kustomize+Helm
 
 Additional runtime behavior to be aware of:
 
+- OpenStack deploy does not use Kubespray to install CNIs. Set exactly one `network_plugin` to `enabled: true`; supported OpenStack `install_method` values are `helm` and `kustomize-helm`.
 - Bootstrap acquires a cluster-level lock to prevent concurrent operations. If a lock exists from a previous run, you are prompted to break it.
 - Bootstrap writes a log under the openCenter state directory, by default `~/.local/state/opencenter/logs/bootstrap/<org>/<cluster>/`.
 - Bootstrap keeps resumable state in `~/.local/state/opencenter/bootstrap/<org>/<cluster>/state.json`.
@@ -484,6 +492,9 @@ opencenter cluster deploy prod-cluster --from-step opentofu-apply
 
 # Run only the preflight step
 opencenter cluster deploy prod-cluster --step openstack-preflight
+
+# Re-run only CNI installation after fixing Helm values or chart access
+opencenter cluster deploy prod-cluster --step openstack-install-network-plugin
 
 # Throw away saved state and rerun the full sequence
 opencenter cluster deploy prod-cluster --restart

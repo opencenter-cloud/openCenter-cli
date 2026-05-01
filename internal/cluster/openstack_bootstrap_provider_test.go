@@ -95,58 +95,31 @@ users:
 		},
 	}
 
-	// Default config uses deployment method "kubespray", so BuildSteps
-	// produces the kubespray venv/pip/ansible-playbook steps in addition
-	// to the opentofu steps.
-	venvDir := filepath.Join(clusterDir, "venv")
 	provider := &openstackBootstrapProvider{runner: fakeRunner}
 	steps, err := provider.BuildSteps(&cfg, nil, &BootstrapOptions{KubeconfigPath: targetKubeconfig})
 	if err != nil {
 		t.Fatalf("BuildSteps() error = %v", err)
 	}
 
-	for _, step := range steps {
+	wantIDs := []string{"openstack-preflight", "opentofu-init", "opentofu-apply", "openstack-normalize-kubeconfig", "openstack-install-network-plugin"}
+	if got := bootstrapStepIDs(steps); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
+		t.Fatalf("BuildSteps() IDs = %v, want %v", got, wantIDs)
+	}
+
+	for _, step := range steps[:4] {
 		if err := step.Run(context.Background()); err != nil {
 			t.Fatalf("step %q failed: %v", step.ID, err)
 		}
 	}
 
-	// Expect 5 runner calls: opentofu init, opentofu apply,
-	// python3 -m venv, pip install, ansible-playbook.
-	if len(fakeRunner.calls) != 5 {
-		t.Fatalf("expected 5 lifecycle commands, got %d", len(fakeRunner.calls))
+	if len(fakeRunner.calls) != 2 {
+		t.Fatalf("expected opentofu init/apply lifecycle commands, got %d", len(fakeRunner.calls))
 	}
 	if fakeRunner.calls[0].name != "opentofu" || len(fakeRunner.calls[0].args) == 0 || fakeRunner.calls[0].args[0] != "init" {
 		t.Fatalf("expected first command to be opentofu init, got %#v", fakeRunner.calls[0])
 	}
 	if fakeRunner.calls[1].name != "opentofu" || len(fakeRunner.calls[1].args) < 2 || fakeRunner.calls[1].args[0] != "apply" || fakeRunner.calls[1].args[1] != "-auto-approve" {
 		t.Fatalf("expected second command to be opentofu apply -auto-approve, got %#v", fakeRunner.calls[1])
-	}
-
-	// Verify kubespray venv creation uses python3 directly (no shell).
-	if fakeRunner.calls[2].name != "python3" || len(fakeRunner.calls[2].args) < 3 || fakeRunner.calls[2].args[1] != "venv" {
-		t.Fatalf("expected third command to be python3 -m venv, got %#v", fakeRunner.calls[2])
-	}
-
-	// Verify pip install uses the venv binary path, not a bare "pip".
-	expectedPip := filepath.Join(venvDir, "bin", "pip")
-	if fakeRunner.calls[3].name != expectedPip {
-		t.Fatalf("expected pip command to use venv path %q, got %q", expectedPip, fakeRunner.calls[3].name)
-	}
-	if fakeRunner.calls[3].env["VIRTUAL_ENV"] != venvDir {
-		t.Fatalf("expected VIRTUAL_ENV=%q in pip env, got %q", venvDir, fakeRunner.calls[3].env["VIRTUAL_ENV"])
-	}
-
-	// Verify ansible-playbook uses the venv binary path.
-	expectedAnsible := filepath.Join(venvDir, "bin", "ansible-playbook")
-	if fakeRunner.calls[4].name != expectedAnsible {
-		t.Fatalf("expected ansible-playbook command to use venv path %q, got %q", expectedAnsible, fakeRunner.calls[4].name)
-	}
-	if fakeRunner.calls[4].env["VIRTUAL_ENV"] != venvDir {
-		t.Fatalf("expected VIRTUAL_ENV=%q in ansible env, got %q", venvDir, fakeRunner.calls[4].env["VIRTUAL_ENV"])
-	}
-	if fakeRunner.calls[4].env["ANSIBLE_HOST_KEY_CHECKING"] != "False" {
-		t.Fatalf("expected ANSIBLE_HOST_KEY_CHECKING=False, got %q", fakeRunner.calls[4].env["ANSIBLE_HOST_KEY_CHECKING"])
 	}
 
 	if fakeRunner.calls[0].env["OS_AUTH_URL"] != "https://keystone.example.com/v3" {
@@ -241,18 +214,174 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 		t.Fatalf("provisionInfrastructure() error = %v", err)
 	}
 
-	if len(fakeRunner.calls) != 4 {
-		t.Fatalf("expected apply + 3 kubespray commands to run after resuming, got %d calls", len(fakeRunner.calls))
+	if len(fakeRunner.calls) < 2 {
+		t.Fatalf("expected opentofu apply and network plugin commands to run after resuming, got %d calls", len(fakeRunner.calls))
 	}
 	if len(fakeRunner.calls[0].args) == 0 || fakeRunner.calls[0].args[0] != "apply" {
 		t.Fatalf("expected resumed command to be opentofu apply, got %#v", fakeRunner.calls[0])
 	}
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install calico projectcalico/tigera-operator")
 	if _, err := os.Stat(clusterPaths.KubeconfigPath); err != nil {
 		t.Fatalf("expected cluster-owned kubeconfig at %s: %v", clusterPaths.KubeconfigPath, err)
 	}
 	if _, err := os.Stat(runtimePaths.StatePath); err != nil {
 		t.Fatalf("expected migrated bootstrap state at %s: %v", runtimePaths.StatePath, err)
 	}
+}
+
+func TestOpenStackNetworkPluginInstallCalicoUsesNativeV3CRDs(t *testing.T) {
+	cfg, clusterDir, kubeconfigPath := openStackNetworkPluginTestConfig(t, "calico-demo")
+	fakeRunner := &fakeLifecycleRunner{}
+	provider := &openstackBootstrapProvider{runner: fakeRunner}
+
+	step := findBootstrapStep(t, provider, cfg, clusterDir, kubeconfigPath, "openstack-install-network-plugin")
+	if err := step.Run(context.Background()); err != nil {
+		t.Fatalf("install step failed: %v", err)
+	}
+
+	assertRecordedCommand(t, fakeRunner.calls, "helm", "repo add projectcalico https://docs.tigera.io/calico/charts")
+	assertRecordedCommand(t, fakeRunner.calls, "helm", "template calico-crds projectcalico/projectcalico.org.v3 --version v3.29.2")
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install calico projectcalico/tigera-operator --namespace tigera-operator")
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" apply --server-side -f")
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n calico-system wait --for=condition=Ready pods --all --timeout=10m")
+}
+
+func TestOpenStackNetworkPluginInstallCiliumUsesHelmOCIChartAndReadiness(t *testing.T) {
+	cfg, clusterDir, kubeconfigPath := openStackNetworkPluginTestConfig(t, "cilium-demo")
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium = &v2.CiliumConfig{
+		Enabled:       true,
+		Hubble:        true,
+		NetworkPolicy: true,
+	}
+	fakeRunner := &fakeLifecycleRunner{}
+	provider := &openstackBootstrapProvider{runner: fakeRunner}
+
+	step := findBootstrapStep(t, provider, cfg, clusterDir, kubeconfigPath, "openstack-install-network-plugin")
+	if err := step.Run(context.Background()); err != nil {
+		t.Fatalf("install step failed: %v", err)
+	}
+
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install cilium oci://quay.io/cilium/charts/cilium --namespace kube-system --version 1.19.3")
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n kube-system rollout status ds/cilium --timeout=10m")
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n kube-system rollout status deploy/cilium-operator --timeout=10m")
+}
+
+func TestOpenStackNetworkPluginInstallKubeOVNUsesHelmOCIChartAndReadiness(t *testing.T) {
+	cfg, clusterDir, kubeconfigPath := openStackNetworkPluginTestConfig(t, "kubeovn-demo")
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN = &v2.KubeOVNConfig{
+		Enabled:       true,
+		NetworkPolicy: true,
+	}
+	fakeRunner := &fakeLifecycleRunner{}
+	provider := &openstackBootstrapProvider{runner: fakeRunner}
+
+	step := findBootstrapStep(t, provider, cfg, clusterDir, kubeconfigPath, "openstack-install-network-plugin")
+	if err := step.Run(context.Background()); err != nil {
+		t.Fatalf("install step failed: %v", err)
+	}
+
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install kube-ovn oci://ghcr.io/kubeovn/charts/kube-ovn-v2 --namespace kube-system --version v1.17.0")
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n kube-system wait --for=condition=Ready pods -l app.kubernetes.io/part-of=kube-ovn --timeout=10m")
+}
+
+func TestOpenStackNetworkPluginInstallCiliumSupportsKustomizeHelm(t *testing.T) {
+	cfg, clusterDir, kubeconfigPath := openStackNetworkPluginTestConfig(t, "cilium-kustomize-demo")
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium = &v2.CiliumConfig{
+		Enabled:       true,
+		InstallMethod: "kustomize-helm",
+	}
+	fakeRunner := &fakeLifecycleRunner{}
+	provider := &openstackBootstrapProvider{runner: fakeRunner}
+
+	step := findBootstrapStep(t, provider, cfg, clusterDir, kubeconfigPath, "openstack-install-network-plugin")
+	if err := step.Run(context.Background()); err != nil {
+		t.Fatalf("install step failed: %v", err)
+	}
+
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" kustomize --enable-helm")
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" apply -f")
+}
+
+func openStackNetworkPluginTestConfig(t *testing.T, clusterName string) (*v2.Config, string, string) {
+	t.Helper()
+
+	cfg := mustNewClusterTestConfig(clusterName, "openstack")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(t.TempDir(), "repo")
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://keystone.example.com/v3"
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "app-cred-id"
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "app-cred-secret"
+
+	clusterDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, "infrastructure", "clusters", clusterName)
+	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
+		t.Fatalf("mkdir cluster dir: %v", err)
+	}
+
+	kubeconfigPath := filepath.Join(t.TempDir(), "kubeconfig.yaml")
+	if err := os.WriteFile(kubeconfigPath, []byte("apiVersion: v1\n"), 0o600); err != nil {
+		t.Fatalf("write kubeconfig: %v", err)
+	}
+
+	return &cfg, clusterDir, kubeconfigPath
+}
+
+func findBootstrapStep(t *testing.T, provider *openstackBootstrapProvider, cfg *v2.Config, clusterDir, kubeconfigPath, stepID string) bootstrapStep {
+	t.Helper()
+
+	steps, err := provider.BuildSteps(cfg, nil, &BootstrapOptions{KubeconfigPath: kubeconfigPath})
+	if err != nil {
+		t.Fatalf("BuildSteps() error = %v", err)
+	}
+	for _, step := range steps {
+		if step.ID == stepID {
+			return step
+		}
+	}
+	t.Fatalf("step %q not found in %v for %s", stepID, bootstrapStepIDs(steps), clusterDir)
+	return bootstrapStep{}
+}
+
+func bootstrapStepIDs(steps []bootstrapStep) []string {
+	ids := make([]string, 0, len(steps))
+	for _, step := range steps {
+		ids = append(ids, step.ID)
+	}
+	return ids
+}
+
+func assertRecordedCommand(t *testing.T, calls []recordedLifecycleCommand, name, args string) {
+	t.Helper()
+	for _, call := range calls {
+		if call.name == name && strings.Join(call.args, " ") == args {
+			return
+		}
+	}
+	t.Fatalf("expected command %s %s, got:\n%s", name, args, renderRecordedCommands(calls))
+}
+
+func assertRecordedCommandContains(t *testing.T, calls []recordedLifecycleCommand, name, argsSubstring string) {
+	t.Helper()
+	for _, call := range calls {
+		if call.name == name && strings.Contains(strings.Join(call.args, " "), argsSubstring) {
+			return
+		}
+	}
+	t.Fatalf("expected command %s containing %q, got:\n%s", name, argsSubstring, renderRecordedCommands(calls))
+}
+
+func renderRecordedCommands(calls []recordedLifecycleCommand) string {
+	var b strings.Builder
+	for _, call := range calls {
+		b.WriteString(call.name)
+		if len(call.args) > 0 {
+			b.WriteByte(' ')
+			b.WriteString(strings.Join(call.args, " "))
+		}
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 func TestReplaceLocalhostInKubeconfig(t *testing.T) {

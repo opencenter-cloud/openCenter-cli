@@ -53,8 +53,8 @@ type CalicoConfig struct {
 	VXLANMode     string `yaml:"vxlan_mode,omitempty" json:"vxlan_mode,omitempty" validate:"omitempty,oneof=Always CrossSubnet Never"`
 	NetworkPolicy bool   `yaml:"network_policy" json:"network_policy"`
 	// InstallMethod specifies how the CNI should be installed.
-	// Valid values: "helm" (default, installed via GitOps/Helm after cluster is up) or "kubespray" (installed during cluster bootstrap)
-	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm"`
+	// Valid values: "helm" (default), "kustomize-helm", or "kubespray" for non-OpenStack migration compatibility.
+	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm kustomize-helm"`
 }
 
 // CiliumConfig represents Cilium CNI configuration.
@@ -65,8 +65,8 @@ type CiliumConfig struct {
 	Hubble        bool   `yaml:"hubble" json:"hubble"`
 	NetworkPolicy bool   `yaml:"network_policy" json:"network_policy"`
 	// InstallMethod specifies how the CNI should be installed.
-	// Valid values: "helm" (default, installed via GitOps/Helm after cluster is up) or "kubespray" (installed during cluster bootstrap)
-	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm"`
+	// Valid values: "helm" (default), "kustomize-helm", or "kubespray" for non-OpenStack migration compatibility.
+	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm kustomize-helm"`
 }
 
 // KubeOVNConfig represents Kube-OVN CNI configuration.
@@ -75,8 +75,8 @@ type KubeOVNConfig struct {
 	Version       string `yaml:"version,omitempty" json:"version,omitempty"`
 	NetworkPolicy bool   `yaml:"network_policy" json:"network_policy"`
 	// InstallMethod specifies how the CNI should be installed.
-	// Valid values: "helm" (default, installed via GitOps/Helm after cluster is up) or "kubespray" (installed during cluster bootstrap)
-	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm"`
+	// Valid values: "helm" (default), "kustomize-helm", or "kubespray" for non-OpenStack migration compatibility.
+	InstallMethod string `yaml:"install_method,omitempty" json:"install_method,omitempty" validate:"omitempty,oneof=kubespray helm kustomize-helm"`
 }
 
 // StoragePluginConfig represents CSI plugin configuration.

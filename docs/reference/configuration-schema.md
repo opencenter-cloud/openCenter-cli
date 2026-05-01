@@ -278,6 +278,7 @@ opencenter:
       network_plugin:
         calico:
           enabled: true
+          install_method: helm
           cni_iface: "enp3s0"
           calico_interface_autodetect: "interface"
           autodetect_cidr: ""
@@ -288,6 +289,7 @@ opencenter:
               source: "github.com/opencenter-cloud/opencenter-gitops-base.git//iac/cni/calico?ref=main"
         cilium:
           enabled: false
+          install_method: helm
           operator_enabled: true
           kube_proxy_replacement: true
           modules:
@@ -295,6 +297,7 @@ opencenter:
               source: "github.com/opencenter-cloud/opencenter-gitops-base.git//iac/cni/cilium?ref=main"
         kube-ovn:
           enabled: false
+          install_method: helm
           cilium_integration: true
           modules:
             kube_ovn:
@@ -304,6 +307,7 @@ opencenter:
 **Validation:**
 
 - Only one CNI plugin can have `enabled: true`
+- For OpenStack, supported CNI `install_method` values are `helm` and `kustomize-helm`; `kubespray` is rejected with migration guidance.
 - `cni_iface` required for Calico when `calico_interface_autodetect: "interface"`
 
 ### opencenter.cluster.kubernetes.oidc

@@ -115,10 +115,10 @@ locals {
   #Kubespray Settings
   kubespray_version                       = "{{ if hasPrefix "v" (.Deployment.Kubespray.Version | default "v2.31.0") }}{{ .Deployment.Kubespray.Version | default "v2.31.0" }}{{ else }}v{{ .Deployment.Kubespray.Version }}{{ end }}"
   kubernetes_version                      = "{{ .OpenCenter.Cluster.Kubernetes.Version | default "1.33.7" }}"
-  # CNI install_method: "helm" (default) skips CNI in Kubespray, CNI will be installed via GitOps/Helm after cluster is up
-  #                     "kubespray" installs CNI during cluster bootstrap
-  # When install_method is "helm", network_plugin is set to "none" so Kubespray skips CNI installation
-  network_plugin                          = "{{- if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.InstallMethod | default "helm") "helm" }}none{{- else }}calico{{- end }}{{- else if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.InstallMethod | default "helm") "helm" }}none{{- else }}cilium{{- end }}{{- else if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.InstallMethod | default "helm") "helm" }}none{{- else }}kube-ovn{{- end }}{{- else }}none{{- end }}"
+  # CNI install_method: "helm" (default) and "kustomize-helm" skip CNI in Kubespray.
+  # OpenStack deploy installs the selected CNI after kubeconfig normalization.
+  # "kubespray" is retained only for non-OpenStack migration compatibility.
+  network_plugin                          = "{{- if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.InstallMethod | default "helm") "kubespray" }}calico{{- else }}none{{- end }}{{- else if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.InstallMethod | default "helm") "kubespray" }}cilium{{- else }}none{{- end }}{{- else if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.InstallMethod | default "helm") "kubespray" }}kube-ovn{{- else }}none{{- end }}{{- else }}none{{- end }}"
   deploy_cluster                          = {{ .Deployment.AutoDeploy | default true }}
   #kub-vip settings
   kube_vip_enabled                        = {{ .OpenCenter.Cluster.Kubernetes.KubeVIPEnabled | default true }}

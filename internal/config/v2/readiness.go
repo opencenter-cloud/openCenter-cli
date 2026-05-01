@@ -52,6 +52,7 @@ func ValidateReadiness(cfg *Config) ReadinessReport {
 	}
 
 	r.validateProvider(cfg)
+	r.validateNetworkPlugin(cfg)
 	r.validateGitOps(cfg)
 	r.validateServiceSecrets(cfg)
 
@@ -94,6 +95,71 @@ func (r *readinessBuilder) validateProvider(cfg *Config) {
 		r.addError(CategoryProvider, "opencenter.infrastructure.provider", "provider is required", "Set infrastructure.provider to a supported provider.")
 	default:
 		r.addError(CategoryProvider, "opencenter.infrastructure.provider", fmt.Sprintf("unsupported provider %q", provider), "Use one of: openstack, aws, gcp, azure, baremetal, vsphere, vmware, kind.")
+	}
+}
+
+func (r *readinessBuilder) validateNetworkPlugin(cfg *Config) {
+	plugins := cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin
+	type enabledPlugin struct {
+		name   string
+		path   string
+		method string
+	}
+
+	var enabled []enabledPlugin
+	if plugins.Calico != nil && plugins.Calico.Enabled {
+		enabled = append(enabled, enabledPlugin{
+			name:   "calico",
+			path:   "opencenter.cluster.kubernetes.network_plugin.calico.install_method",
+			method: plugins.Calico.InstallMethod,
+		})
+	}
+	if plugins.Cilium != nil && plugins.Cilium.Enabled {
+		enabled = append(enabled, enabledPlugin{
+			name:   "cilium",
+			path:   "opencenter.cluster.kubernetes.network_plugin.cilium.install_method",
+			method: plugins.Cilium.InstallMethod,
+		})
+	}
+	if plugins.KubeOVN != nil && plugins.KubeOVN.Enabled {
+		enabled = append(enabled, enabledPlugin{
+			name:   "kube-ovn",
+			path:   "opencenter.cluster.kubernetes.network_plugin.kube-ovn.install_method",
+			method: plugins.KubeOVN.InstallMethod,
+		})
+	}
+
+	switch len(enabled) {
+	case 0:
+		r.addError(CategorySchema, "opencenter.cluster.kubernetes.network_plugin", "exactly one network_plugin must be enabled.", "Enable exactly one of calico, cilium, or kube-ovn.")
+		return
+	case 1:
+	default:
+		names := make([]string, 0, len(enabled))
+		for _, plugin := range enabled {
+			names = append(names, plugin.name)
+		}
+		r.addError(CategorySchema, "opencenter.cluster.kubernetes.network_plugin", fmt.Sprintf("only one network_plugin may be enabled; enabled: %s.", strings.Join(names, ", ")), "Disable all but one of calico, cilium, or kube-ovn.")
+		return
+	}
+
+	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
+	if provider != "openstack" {
+		return
+	}
+
+	plugin := enabled[0]
+	method := strings.ToLower(strings.TrimSpace(plugin.method))
+	if method == "" {
+		method = "helm"
+	}
+	switch method {
+	case "helm", "kustomize-helm":
+		return
+	case "kubespray":
+		r.addError(CategorySchema, plugin.path, fmt.Sprintf("OpenStack network_plugin %s cannot use install_method %q.", plugin.name, method), "Use install_method: helm or install_method: kustomize-helm.")
+	default:
+		r.addError(CategorySchema, plugin.path, fmt.Sprintf("unsupported OpenStack network_plugin install_method %q; accepted values are helm and kustomize-helm.", method), "Use install_method: helm or install_method: kustomize-helm.")
 	}
 }
 

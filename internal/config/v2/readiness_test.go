@@ -38,6 +38,75 @@ func TestValidateReadinessOpenStackAllowsOpenTofuManagedNetwork(t *testing.T) {
 	assertNoIssue(t, report, "opencenter.infrastructure.cloud.openstack.network_id")
 }
 
+func TestValidateReadinessNetworkPluginAllowsOneEnabledPlugin(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+
+	report := ValidateReadiness(cfg)
+
+	assertNoIssue(t, report, "opencenter.cluster.kubernetes.network_plugin")
+	assertNoIssue(t, report, "opencenter.cluster.kubernetes.network_plugin.calico.install_method")
+	if !report.Valid {
+		t.Fatalf("expected readiness validation to pass, got:\n%s", renderIssues(report.Issues))
+	}
+}
+
+func TestValidateReadinessNetworkPluginRequiresOneEnabledPlugin(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
+
+	report := ValidateReadiness(cfg)
+
+	assertIssue(t, report, SeverityError, CategorySchema, "opencenter.cluster.kubernetes.network_plugin")
+}
+
+func TestValidateReadinessNetworkPluginRejectsMultipleEnabledPlugins(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium = &CiliumConfig{Enabled: true}
+
+	report := ValidateReadiness(cfg)
+
+	issue := assertIssue(t, report, SeverityError, CategorySchema, "opencenter.cluster.kubernetes.network_plugin")
+	if !strings.Contains(issue.Message, "calico") || !strings.Contains(issue.Message, "cilium") {
+		t.Fatalf("expected multiple-plugin issue to name enabled plugins, got: %q", issue.Message)
+	}
+}
+
+func TestValidateReadinessOpenStackRejectsKubesprayNetworkPluginInstall(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.InstallMethod = "kubespray"
+
+	report := ValidateReadiness(cfg)
+
+	issue := assertIssue(t, report, SeverityError, CategorySchema, "opencenter.cluster.kubernetes.network_plugin.calico.install_method")
+	if !strings.Contains(issue.Message, "kubespray") || !strings.Contains(issue.Suggestion, "helm") || !strings.Contains(issue.Suggestion, "kustomize-helm") {
+		t.Fatalf("expected kubespray migration guidance, got issue: %#v", issue)
+	}
+}
+
+func TestValidateReadinessOpenStackAcceptsKustomizeHelmNetworkPluginInstall(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.InstallMethod = "kustomize-helm"
+
+	report := ValidateReadiness(cfg)
+
+	assertNoIssue(t, report, "opencenter.cluster.kubernetes.network_plugin.calico.install_method")
+	if !report.Valid {
+		t.Fatalf("expected readiness validation to pass, got:\n%s", renderIssues(report.Issues))
+	}
+}
+
+func TestValidateReadinessOpenStackRejectsUnsupportedNetworkPluginInstall(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.InstallMethod = "flux"
+
+	report := ValidateReadiness(cfg)
+
+	issue := assertIssue(t, report, SeverityError, CategorySchema, "opencenter.cluster.kubernetes.network_plugin.calico.install_method")
+	if !strings.Contains(issue.Message, "flux") || !strings.Contains(issue.Message, "helm") || !strings.Contains(issue.Message, "kustomize-helm") {
+		t.Fatalf("expected unsupported install method issue to name accepted values, got: %#v", issue)
+	}
+}
+
 func TestValidateReadinessGitOpsHTTPSRequiresMatchingTokenProvider(t *testing.T) {
 	cfg := validReadinessConfig(t, "kind")
 	cfg.OpenCenter.GitOps.Repository.URL = "https://github.com/example/cluster.git"
@@ -195,14 +264,15 @@ func validReadinessConfig(t *testing.T, provider string) *Config {
 	return cfg
 }
 
-func assertIssue(t *testing.T, report ReadinessReport, severity ValidationSeverity, category ValidationCategory, path string) {
+func assertIssue(t *testing.T, report ReadinessReport, severity ValidationSeverity, category ValidationCategory, path string) ValidationIssue {
 	t.Helper()
 	for _, issue := range report.Issues {
 		if issue.Severity == severity && issue.Category == category && issue.Path == path {
-			return
+			return issue
 		}
 	}
 	t.Fatalf("expected %s %s issue at %s, got:\n%s", severity, category, path, renderIssues(report.Issues))
+	return ValidationIssue{}
 }
 
 func assertNoIssue(t *testing.T, report ReadinessReport, path string) {

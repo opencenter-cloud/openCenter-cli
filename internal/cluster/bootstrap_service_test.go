@@ -434,7 +434,7 @@ func TestBootstrapService_DryRunOpenStackBuildsPlanWithoutPrerequisites(t *testi
 	if result.Plan == nil {
 		t.Fatal("expected dry-run plan")
 	}
-	wantIDs := []string{"openstack-preflight", "opentofu-init", "opentofu-apply", "kubespray-venv-create", "kubespray-pip-install", "kubespray-ansible-playbook", "openstack-normalize-kubeconfig"}
+	wantIDs := []string{"openstack-preflight", "opentofu-init", "opentofu-apply", "openstack-normalize-kubeconfig", "openstack-install-network-plugin"}
 	if got := planStepIDs(result.Plan); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("plan steps = %v, want %v", got, wantIDs)
 	}
@@ -448,6 +448,57 @@ func TestBootstrapService_DryRunOpenStackBuildsPlanWithoutPrerequisites(t *testi
 	}
 	if !envHasRedacted(initStep.Environment, "OS_APPLICATION_CREDENTIAL_SECRET") {
 		t.Fatalf("expected redacted OpenStack credential env, got %#v", initStep.Environment)
+	}
+}
+
+func TestBootstrapService_DryRunOpenStackStepFiltersNetworkPluginPlan(t *testing.T) {
+	tmpDir := t.TempDir()
+	clusterName := "openstack-filter-plan"
+	organization := "test-org"
+
+	pathResolver := paths.NewPathResolver(tmpDir)
+	bootstrapService := createTestBootstrapService(pathResolver)
+
+	ctx := context.Background()
+	if err := pathResolver.CreateClusterDirectories(ctx, clusterName, organization); err != nil {
+		t.Fatalf("create cluster directories: %v", err)
+	}
+
+	cfg := mustNewClusterTestConfig(clusterName, "openstack")
+	cfg.OpenCenter.Meta.Organization = organization
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "gitops-repo")
+	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
+
+	result, err := bootstrapService.Bootstrap(ctx, BootstrapOptions{
+		ClusterName:  clusterName,
+		Organization: organization,
+		DryRun:       true,
+		OnlyStep:     "openstack-install-network-plugin",
+	})
+	if err != nil {
+		t.Fatalf("Bootstrap() dry-run with --step error: %v", err)
+	}
+	if got := planStepIDs(result.Plan); strings.Join(got, ",") != "openstack-install-network-plugin" {
+		t.Fatalf("--step plan steps = %v, want [openstack-install-network-plugin]", got)
+	}
+	if !strings.Contains(result.Plan.Filter, "--step openstack-install-network-plugin") {
+		t.Fatalf("expected filter description, got %q", result.Plan.Filter)
+	}
+
+	result, err = bootstrapService.Bootstrap(ctx, BootstrapOptions{
+		ClusterName:  clusterName,
+		Organization: organization,
+		DryRun:       true,
+		FromStep:     "openstack-install-network-plugin",
+	})
+	if err != nil {
+		t.Fatalf("Bootstrap() dry-run with --from-step error: %v", err)
+	}
+	if got := planStepIDs(result.Plan); strings.Join(got, ",") != "openstack-install-network-plugin" {
+		t.Fatalf("--from-step plan steps = %v, want [openstack-install-network-plugin]", got)
+	}
+	if !strings.Contains(result.Plan.Filter, "--from-step openstack-install-network-plugin") {
+		t.Fatalf("expected filter description, got %q", result.Plan.Filter)
 	}
 }
 

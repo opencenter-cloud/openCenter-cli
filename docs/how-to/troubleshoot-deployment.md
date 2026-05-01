@@ -242,10 +242,10 @@ cat ansible.log
 
 3. **Network Plugin Failure:**
    ```
-   TASK [network_plugin/calico : Calico | Create calico manifests] failed
+   step "openstack-install-network-plugin" failed
    ```
    
-   Solution: Check CNI configuration:
+   Solution: Check that exactly one CNI is enabled and that OpenStack uses a Helm-backed install method:
    ```yaml
    opencenter:
      cluster:
@@ -253,7 +253,7 @@ cat ansible.log
          network_plugin:
            calico:
              enabled: true
-             cni_iface: "enp3s0"  # Correct interface
+             install_method: helm
    ```
 
 ### Node Not Ready
@@ -277,8 +277,9 @@ kubectl describe node <node-name>
    
    Solution: Check CNI pods:
    ```bash
-   kubectl get pods -n kube-system | grep calico
-   kubectl logs -n kube-system <calico-pod>
+   kubectl get pods -n calico-system
+   kubectl get pods -n kube-system -l k8s-app=cilium
+   kubectl get pods -n kube-system -l app.kubernetes.io/part-of=kube-ovn
    ```
 
 2. **Disk Pressure:**
@@ -543,8 +544,8 @@ nslookup kubernetes.default
 **Solution:** Check CNI plugin:
 
 ```bash
-kubectl get pods -n kube-system | grep calico
-kubectl logs -n kube-system <calico-node-pod>
+kubectl get pods -n calico-system
+kubectl logs -n calico-system <calico-node-pod>
 ```
 
 ### Service Not Accessible
@@ -672,7 +673,7 @@ Before asking for help, collect:
 3. **Logs:**
    ```bash
    kubectl logs -n flux-system <flux-pod> > flux-logs.txt
-   kubectl logs -n kube-system <calico-pod> > calico-logs.txt
+   kubectl logs -n calico-system <calico-pod> > calico-logs.txt
    ```
 
 ### Report Issues

@@ -117,6 +117,7 @@ All new configurations use schema version 2.0.
 | Field | Default | Description |
 |-------|---------|-------------|
 | `opencenter.cluster.kubernetes.network_plugin.calico.enabled` | `true` | Enable Calico |
+| `opencenter.cluster.kubernetes.network_plugin.calico.install_method` | `"helm"` | OpenStack CNI install backend (`helm` or `kustomize-helm`) |
 | `opencenter.cluster.kubernetes.network_plugin.calico.cni_iface` | `"enp3s0"` | Network interface |
 | `opencenter.cluster.kubernetes.network_plugin.calico.calico_interface_autodetect` | `"interface"` | Interface detection |
 | `opencenter.cluster.kubernetes.network_plugin.calico.encapsulation_type` | `"VXLAN"` | Encapsulation type |
@@ -127,6 +128,7 @@ All new configurations use schema version 2.0.
 | Field | Default | Description |
 |-------|---------|-------------|
 | `opencenter.cluster.kubernetes.network_plugin.cilium.enabled` | `false` | Enable Cilium |
+| `opencenter.cluster.kubernetes.network_plugin.cilium.install_method` | `"helm"` | OpenStack CNI install backend (`helm` or `kustomize-helm`) |
 | `opencenter.cluster.kubernetes.network_plugin.cilium.operator_enabled` | `true` | Enable operator |
 | `opencenter.cluster.kubernetes.network_plugin.cilium.kube_proxy_replacement` | `true` | Replace kube-proxy |
 
@@ -135,6 +137,7 @@ All new configurations use schema version 2.0.
 | Field | Default | Description |
 |-------|---------|-------------|
 | `opencenter.cluster.kubernetes.network_plugin.kube-ovn.enabled` | `false` | Enable Kube-OVN |
+| `opencenter.cluster.kubernetes.network_plugin.kube-ovn.install_method` | `"helm"` | OpenStack CNI install backend (`helm` or `kustomize-helm`) |
 | `opencenter.cluster.kubernetes.network_plugin.kube-ovn.cilium_integration` | `true` | Cilium integration |
 
 ## OIDC Configuration

@@ -62,12 +62,21 @@ The cluster name can be specified in two formats:
 			// Handle --validate flag
 			validate, _ := cmd.Flags().GetBool("validate")
 			if validate {
+				app, err := GetApp(cmd.Context())
+				if err != nil {
+					return fmt.Errorf("resolving application context: %w", err)
+				}
 				nativeCfg, _, _, _, err := loadNativeV2ConfigWithIdentifier(ctx, identifier)
 				if err != nil {
 					return fmt.Errorf("failed to load native config: %w", err)
 				}
-				if err := validateNativeV2Config(nativeCfg); err != nil {
-					fmt.Fprintln(cmd.ErrOrStderr(), err)
+				result, err := app.ValidateService.ValidateConfig(ctx, nativeCfg)
+				if err != nil {
+					return fmt.Errorf("validation error: %w", err)
+				}
+				if !result.Valid {
+					output := app.ValidateService.FormatResultGrouped(result, result.Provider)
+					fmt.Fprint(cmd.ErrOrStderr(), output)
 					return fmt.Errorf("validation failed")
 				}
 				fmt.Fprintln(cmd.OutOrStdout(), "Validation successful.")

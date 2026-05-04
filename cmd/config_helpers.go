@@ -26,7 +26,6 @@ import (
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -237,24 +236,6 @@ func saveNativeV2Config(ctx context.Context, cfg *v2.Config) error {
 
 	loader := v2.NewConfigLoader(defaults.NewRegistry())
 	return loader.SaveToFile(cfg, configPath)
-}
-
-func validateNativeV2Config(cfg *v2.Config) error {
-	if cfg == nil {
-		return fmt.Errorf("configuration cannot be nil")
-	}
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("marshal v2 config for validation: %w", err)
-	}
-
-	loader := v2.NewConfigLoader(defaults.NewRegistry())
-	if _, err := loader.LoadFromBytes(data); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // listClusters lists all cluster configurations using the ConfigurationManager.

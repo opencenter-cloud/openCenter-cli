@@ -19,6 +19,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
+	"gopkg.in/yaml.v3"
 )
 
 // ValidateOptions contains options for cluster validation
@@ -240,6 +241,79 @@ func (s *ValidateService) validateV2Config(ctx context.Context, configPath strin
 			}
 		}
 	}
+
+	return result, nil
+}
+
+// ValidateConfig validates an in-memory v2 configuration using the same
+// pipeline as Validate (schema round-trip + ValidateReadiness). It always
+// runs in offline mode and skips debug-config generation.
+func (s *ValidateService) ValidateConfig(ctx context.Context, cfg *v2.Config) (*ValidationResult, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("configuration cannot be nil")
+	}
+
+	result := &ValidationResult{
+		Valid:             true,
+		ConfigValid:       true,
+		ConnectivityValid: true,
+		ProviderValid:     true,
+		SchemaVersion:     "v2",
+		ValidationMode:    ValidationModeOffline,
+	}
+
+	// Round-trip through the loader to catch schema/type errors, matching
+	// the same path that validateV2Config uses when loading from file.
+	registry := defaults.NewRegistry()
+	loader := v2.NewConfigLoader(registry)
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		result.Valid = false
+		result.ConfigValid = false
+		result.addIssue(v2.ValidationIssue{
+			Severity: v2.SeverityError,
+			Category: v2.CategorySchema,
+			Message:  fmt.Sprintf("failed to marshal config: %v", err),
+		})
+		return result, nil
+	}
+
+	reloaded, err := loader.LoadFromBytes(data)
+	if err != nil {
+		result.Valid = false
+		result.ConfigValid = false
+
+		var yamlTypeErrs *v2.YAMLTypeErrors
+		if stderrors.As(err, &yamlTypeErrs) {
+			for _, e := range yamlTypeErrs.Errors {
+				result.addIssue(v2.ValidationIssue{
+					Severity: v2.SeverityError,
+					Category: v2.CategorySchema,
+					Message:  strings.TrimSpace(e),
+				})
+			}
+		} else {
+			result.addIssue(v2.ValidationIssue{
+				Severity: v2.SeverityError,
+				Category: v2.CategorySchema,
+				Message:  err.Error(),
+			})
+		}
+		return result, nil
+	}
+
+	result.Provider = strings.TrimSpace(reloaded.OpenCenter.Infrastructure.Provider)
+	result.Target.Cluster = firstNonEmptyValidation(reloaded.OpenCenter.Meta.Name, reloaded.ClusterName())
+	result.Target.Organization = firstNonEmptyValidation(reloaded.OpenCenter.Meta.Organization)
+	result.Target.Provider = result.Provider
+
+	report := v2.ValidateReadiness(reloaded)
+	for _, issue := range report.Issues {
+		result.addIssue(issue)
+	}
+
+	s.populateOperatorReport(ctx, reloaded, result)
 
 	return result, nil
 }

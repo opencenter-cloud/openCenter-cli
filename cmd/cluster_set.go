@@ -62,8 +62,17 @@ Fields use native v2 dot notation, for example:
 
 			strict, _ := cmd.Flags().GetBool("strict")
 			if strict {
-				if err := validateNativeV2Config(cfg); err != nil {
-					fmt.Fprintln(cmd.ErrOrStderr(), err)
+				app, err := GetApp(cmd.Context())
+				if err != nil {
+					return fmt.Errorf("resolving application context: %w", err)
+				}
+				result, err := app.ValidateService.ValidateConfig(cmd.Context(), cfg)
+				if err != nil {
+					return fmt.Errorf("validation error: %w", err)
+				}
+				if !result.Valid {
+					output := app.ValidateService.FormatResultGrouped(result, result.Provider)
+					fmt.Fprint(cmd.ErrOrStderr(), output)
 					return fmt.Errorf("validation failed")
 				}
 			}

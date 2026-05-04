@@ -665,7 +665,6 @@ func TestPathResolver_CreateClusterDirectories(t *testing.T) {
 					filepath.Join(baseDir, "test-org", "secrets", "age"),
 					filepath.Join(baseDir, "test-org", "secrets", "age", "keys"),
 					filepath.Join(baseDir, "test-org", "infrastructure", "clusters", "test-cluster", "inventory"),
-					filepath.Join(baseDir, "test-org", "infrastructure", "clusters", "test-cluster", "venv"),
 					filepath.Join(baseDir, "test-org", "infrastructure", "clusters", "test-cluster", ".bin"),
 				}
 

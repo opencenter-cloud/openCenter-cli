@@ -414,7 +414,7 @@ func (r *PathResolver) GetOrganization(ctx context.Context, clusterName string) 
 //   - Infrastructure/clusters/<cluster>
 //   - Applications/overlays/<cluster>
 //   - Secrets directories (age, ssh)
-//   - Inventory, venv, and bin directories
+//   - Inventory and bin directories
 //
 // All directories are created with 0755 permissions. If ValidatePaths option
 // is enabled, write permissions are verified for each directory.
@@ -476,7 +476,6 @@ func (r *PathResolver) CreateClusterDirectories(ctx context.Context, clusterName
 		filepath.Join(paths.SecretsDir, "ssh"), // ssh directory
 		filepath.Dir(paths.SSHKeyPath),         // ssh key parent directory
 		paths.InventoryPath,
-		paths.VenvPath,
 		paths.BinPath,
 	}
 

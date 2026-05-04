@@ -121,6 +121,7 @@ func TestBootstrapServiceTalosResumeSkipsCompletedSteps(t *testing.T) {
 	}
 	cfg := mustNewClusterTestConfig(clusterName, "openstack")
 	v2.ApplyTalosDeploymentDefaults(&cfg)
+	cfg.Deployment.Talos.Network.ManagementCIDRs = []string{"203.0.113.10/32"}
 	cfg.OpenCenter.Meta.Organization = organization
 	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "gitops")
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://keystone.example.com/v3"
@@ -175,6 +176,7 @@ func talosBootstrapTestConfig(t *testing.T, clusterName, organization string) (v
 
 	cfg := mustNewClusterTestConfig(clusterName, "openstack")
 	v2.ApplyTalosDeploymentDefaults(&cfg)
+	cfg.Deployment.Talos.Network.ManagementCIDRs = []string{"203.0.113.10/32"}
 	cfg.OpenCenter.Meta.Organization = organization
 	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "gitops")
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://keystone.example.com/v3"
@@ -186,6 +188,27 @@ func talosBootstrapTestConfig(t *testing.T, clusterName, organization string) (v
 		t.Fatalf("mkdir cluster dir: %v", err)
 	}
 	return cfg, clusterPaths
+}
+
+func TestTalosBootstrapProviderPreflightRequiresManagementCIDRs(t *testing.T) {
+	cfg, clusterPaths := talosBootstrapTestConfig(t, "talos-no-management", "opencenter")
+	cfg.Deployment.Talos.Network.ManagementCIDRs = nil
+	provider := newTalosBootstrapProvider(&fakeLifecycleRunner{})
+
+	steps, err := provider.BuildSteps(&cfg, clusterPaths, &BootstrapOptions{KubeconfigPath: clusterPaths.KubeconfigPath})
+	if err != nil {
+		t.Fatalf("BuildSteps() error = %v", err)
+	}
+	if len(steps) == 0 || steps[0].ID != "talos-preflight" {
+		t.Fatalf("first step = %#v, want talos-preflight", bootstrapStepIDs(steps))
+	}
+	err = steps[0].Run(context.Background())
+	if err == nil {
+		t.Fatal("expected talos-preflight to reject missing management CIDRs")
+	}
+	if !strings.Contains(err.Error(), "deployment.talos.network.management_cidrs") {
+		t.Fatalf("error = %q, want management_cidrs guidance", err.Error())
+	}
 }
 
 func replaceTalosRuntimeFactory(t *testing.T, runtime talosBootstrapRuntime) func() {

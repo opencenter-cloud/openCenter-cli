@@ -58,9 +58,10 @@ type TalosInstallConfig struct {
 
 // TalosNetworkConfig represents Talos cluster network settings.
 type TalosNetworkConfig struct {
-	PodSubnet     string `yaml:"pod_subnet" json:"pod_subnet" validate:"required,cidrv4"`
-	ServiceSubnet string `yaml:"service_subnet" json:"service_subnet" validate:"required,cidrv4"`
-	TalosAPIPort  int    `yaml:"talos_api_port" json:"talos_api_port" validate:"required,min=1,max=65535"`
+	PodSubnet       string   `yaml:"pod_subnet" json:"pod_subnet" validate:"required,cidrv4"`
+	ServiceSubnet   string   `yaml:"service_subnet" json:"service_subnet" validate:"required,cidrv4"`
+	TalosAPIPort    int      `yaml:"talos_api_port" json:"talos_api_port" validate:"required,min=1,max=65535"`
+	ManagementCIDRs []string `yaml:"management_cidrs" json:"management_cidrs,omitempty" validate:"omitempty,dive,cidrv4"`
 }
 
 // TalosPatchesConfig lists generated/static Talos machine config patches.

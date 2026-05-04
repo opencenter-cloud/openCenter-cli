@@ -85,6 +85,8 @@ func (g generator) schemaFor(t reflect.Type, validateTag string) map[string]any 
 			"type":  "array",
 			"items": g.schemaFor(t.Elem(), itemValidateTag(validateTag)),
 		}
+		applyValidation(schema, parentValidateTag(validateTag))
+		return schema
 	case reflect.Bool:
 		schema = map[string]any{"type": "boolean"}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -254,6 +256,16 @@ func itemValidateTag(tag string) string {
 		}
 	}
 	return ""
+}
+
+func parentValidateTag(tag string) string {
+	parts := strings.Split(tag, ",")
+	for i, part := range parts {
+		if part == "dive" {
+			return strings.Join(parts[:i], ",")
+		}
+	}
+	return tag
 }
 
 func applyValidation(schema map[string]any, tag string) {

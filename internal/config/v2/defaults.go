@@ -351,6 +351,7 @@ func ApplyTalosDeploymentDefaults(cfg *Config) {
 		serviceSubnet = "10.43.0.0/16"
 	}
 
+	cfg.OpenCenter.Cluster.Kubernetes.APIPort = 443
 	cfg.Deployment.Method = "talos"
 	cfg.Deployment.Kubespray = nil
 	cfg.Deployment.Talos = &TalosConfig{
@@ -362,9 +363,10 @@ func ApplyTalosDeploymentDefaults(cfg *Config) {
 			Image: "ghcr.io/siderolabs/installer:" + defaultTalosVersion,
 		},
 		Network: TalosNetworkConfig{
-			PodSubnet:     podSubnet,
-			ServiceSubnet: serviceSubnet,
-			TalosAPIPort:  50000,
+			PodSubnet:       podSubnet,
+			ServiceSubnet:   serviceSubnet,
+			TalosAPIPort:    50000,
+			ManagementCIDRs: []string{},
 		},
 		Patches: TalosPatchesConfig{
 			Static: []string{

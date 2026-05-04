@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,9 +74,15 @@ func (p *talosBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths.
 				Action:     "Validate OpenStack credentials and Talos bootstrap prerequisites",
 				WorkingDir: clusterDir,
 				Reads:      []string{clusterDir},
-				Notes:      []string{"Plan only; OpenStack credentials, infrastructure directory, and Talos inventory were not checked."},
+				Notes: []string{
+					"Plan only; OpenStack credentials, infrastructure directory, and Talos inventory were not checked.",
+					"Talos OpenStack requires deployment.talos.network.management_cidrs and Kubernetes API port 443.",
+				},
 			},
 			Run: func(ctx context.Context) error {
+				if err := validateTalosBootstrapManagementCIDRs(cfg); err != nil {
+					return err
+				}
 				if _, err := os.Stat(clusterDir); err != nil {
 					return fmt.Errorf("cluster infrastructure directory not found in GitOps repository: %s", clusterDir)
 				}
@@ -125,7 +132,10 @@ func (p *talosBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths.
 				Environment: planEnv,
 				Reads:       []string{clusterDir},
 				Writes:      []string{"OpenStack infrastructure resources", filepath.Join(clusterDir, "terraform.tfstate"), artifactPaths.InventoryPath},
-				Notes:       []string{"Plan only; OpenStack API access and infrastructure changes were not simulated."},
+				Notes: []string{
+					"Plan only; OpenStack API access and infrastructure changes were not simulated.",
+					"OpenTofu will expose Kubernetes API on 443 and create per-node Talos management access for deployment.talos.network.management_cidrs.",
+				},
 			},
 			Run: func(ctx context.Context) error {
 				env, err := buildOpenStackBootstrapEnvironment(cfg, opts.KubeconfigPath)
@@ -158,6 +168,23 @@ func (p *talosBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths.
 			return runtime.WaitReady(ctx)
 		}),
 	}, nil
+}
+
+func validateTalosBootstrapManagementCIDRs(cfg *v2.Config) error {
+	if cfg == nil || cfg.Deployment.Talos == nil {
+		return fmt.Errorf("deployment.talos must be configured for Talos bootstrap")
+	}
+	cidrs := cfg.Deployment.Talos.Network.ManagementCIDRs
+	if len(cidrs) == 0 {
+		return fmt.Errorf("deployment.talos.network.management_cidrs must contain at least one IPv4 CIDR before Talos OpenStack bootstrap")
+	}
+	for _, cidr := range cidrs {
+		ip, _, err := net.ParseCIDR(strings.TrimSpace(cidr))
+		if err != nil || ip == nil || ip.To4() == nil {
+			return fmt.Errorf("deployment.talos.network.management_cidrs contains invalid IPv4 CIDR %q", cidr)
+		}
+	}
+	return nil
 }
 
 func talosRuntimeStep(

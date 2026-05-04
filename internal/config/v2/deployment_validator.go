@@ -15,6 +15,8 @@ package v2
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
 )
 
 // DeploymentMethod interface defines deployment-method-specific validation.
@@ -84,6 +86,37 @@ func (d *TalosDeployment) ValidateConfig(cfg *Config) error {
 	}
 	if cfg.Deployment.Talos.Network.ServiceSubnet == "" {
 		return fmt.Errorf("deployment.talos.network.service_subnet is required")
+	}
+	if len(cfg.Deployment.Talos.Network.ManagementCIDRs) == 0 {
+		return fmt.Errorf("deployment.talos.network.management_cidrs is required for external Talos management access")
+	}
+	if cfg.OpenCenter.Cluster.Kubernetes.APIPort != 443 {
+		return fmt.Errorf("opencenter.cluster.kubernetes.api_port must be 443 for Talos OpenStack deployments")
+	}
+	if endpoint := strings.TrimSpace(cfg.Deployment.Talos.Endpoint); endpoint != "" {
+		if err := validateTalosHTTPS443Endpoint("deployment.talos.endpoint", endpoint); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateTalosHTTPS443Endpoint(path, endpoint string) error {
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return fmt.Errorf("%s must be an explicit https://...:443 endpoint: %w", path, err)
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("%s must use https scheme", path)
+	}
+	if parsed.Hostname() == "" {
+		return fmt.Errorf("%s must include a host", path)
+	}
+	if parsed.Port() == "" {
+		return fmt.Errorf("%s must include explicit port 443", path)
+	}
+	if parsed.Port() != "443" {
+		return fmt.Errorf("%s must use port 443", path)
 	}
 	return nil
 }

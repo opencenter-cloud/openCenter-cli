@@ -344,6 +344,7 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 		v2.ApplyTalosDeploymentDefaults(cfg)
 		setNestedConfigValue(configMap, "talos", "deployment", "method")
 		setNestedConfigValue(configMap, nil, "deployment", "kubespray")
+		setNestedConfigValue(configMap, cfg.OpenCenter.Cluster.Kubernetes.APIPort, "opencenter", "cluster", "kubernetes", "api_port")
 		setNestedConfigValue(configMap, map[string]any{
 			"version":            cfg.Deployment.Talos.Version,
 			"kubernetes_version": cfg.Deployment.Talos.KubernetesVersion,
@@ -353,9 +354,10 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 				"image": cfg.Deployment.Talos.Install.Image,
 			},
 			"network": map[string]any{
-				"pod_subnet":     cfg.Deployment.Talos.Network.PodSubnet,
-				"service_subnet": cfg.Deployment.Talos.Network.ServiceSubnet,
-				"talos_api_port": cfg.Deployment.Talos.Network.TalosAPIPort,
+				"pod_subnet":       cfg.Deployment.Talos.Network.PodSubnet,
+				"service_subnet":   cfg.Deployment.Talos.Network.ServiceSubnet,
+				"talos_api_port":   cfg.Deployment.Talos.Network.TalosAPIPort,
+				"management_cidrs": cfg.Deployment.Talos.Network.ManagementCIDRs,
 			},
 			"patches": map[string]any{
 				"static": cfg.Deployment.Talos.Patches.Static,

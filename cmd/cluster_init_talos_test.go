@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestClusterInitTalosDeploymentOpenStack(t *testing.T) {
@@ -34,7 +35,7 @@ func TestClusterInitTalosDeploymentOpenStack(t *testing.T) {
 	}
 
 	configPath := filepath.Join(dir, "clusters", "opencenter", ".talos-init-config.yaml")
-	cfg := loadV2ConfigForTest(t, configPath)
+	cfg := loadTalosInitConfigForTest(t, configPath)
 
 	if cfg.OpenCenter.Infrastructure.Provider != "openstack" {
 		t.Fatalf("provider = %q, want openstack", cfg.OpenCenter.Infrastructure.Provider)
@@ -59,6 +60,12 @@ func TestClusterInitTalosDeploymentOpenStack(t *testing.T) {
 	}
 	if got := cfg.Deployment.Talos.Network.TalosAPIPort; got != 50000 {
 		t.Fatalf("talos api port = %d, want 50000", got)
+	}
+	if got := cfg.OpenCenter.Cluster.Kubernetes.APIPort; got != 443 {
+		t.Fatalf("kubernetes api port = %d, want 443", got)
+	}
+	if got := len(cfg.Deployment.Talos.Network.ManagementCIDRs); got != 0 {
+		t.Fatalf("management cidrs len = %d, want 0", got)
 	}
 	if cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico != nil && cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled {
 		t.Fatal("expected Calico to be disabled for Talos defaults")
@@ -153,7 +160,7 @@ func TestClusterInitTalosDottedOverridesRemainUnderDeploymentTalos(t *testing.T)
 	}
 
 	configPath := filepath.Join(dir, "clusters", "opencenter", ".talos-overrides-config.yaml")
-	cfg := loadV2ConfigForTest(t, configPath)
+	cfg := loadTalosInitConfigForTest(t, configPath)
 	if cfg.Deployment.Talos == nil {
 		t.Fatal("expected deployment.talos")
 	}
@@ -171,6 +178,23 @@ func TestClusterInitTalosDottedOverridesRemainUnderDeploymentTalos(t *testing.T)
 	if strings.Contains(string(data), "\nopencenter:\n  talos:") {
 		t.Fatalf("legacy opencenter.talos should not be emitted:\n%s", string(data))
 	}
+}
+
+func loadTalosInitConfigForTest(t *testing.T, configPath string) *v2.Config {
+	t.Helper()
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read config %s: %v", configPath, err)
+	}
+	if !strings.Contains(string(data), "management_cidrs: []") {
+		t.Fatalf("generated Talos config must include management_cidrs placeholder:\n%s", string(data))
+	}
+	var cfg v2.Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("unmarshal config %s: %v", configPath, err)
+	}
+	return &cfg
 }
 
 func TestClusterInitTalosDeploymentAllowsOnlyOpenStack(t *testing.T) {

@@ -31,7 +31,7 @@ const (
 	defaultWorkerVolumeType           = "Performance"
 	defaultOpenStackProjectID         = "project-id-placeholder"
 	defaultOpenStackProjectName       = "project-name-placeholder"
-	defaultOpenStackNetworkID         = "network-id-placeholder"
+	defaultOpenStackNetworkID         = ""
 	defaultOpenStackSubnetID          = ""
 	defaultOpenStackExternalNetworkID = "external-network-id-placeholder"
 	defaultOpenStackFloatingPool      = "PUBLICNET"

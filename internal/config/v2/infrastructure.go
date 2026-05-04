@@ -240,9 +240,9 @@ type OpenStackCloudConfig struct {
 	ImageIDWindows              string                     `yaml:"image_id_windows,omitempty" json:"image_id_windows,omitempty"`
 	ImageName                   string                     `yaml:"image_name,omitempty" json:"image_name,omitempty"`
 	AvailabilityZone            string                     `yaml:"availability_zone,omitempty" json:"availability_zone,omitempty"`
-	NetworkID                   string                     `yaml:"network_id,omitempty" json:"network_id,omitempty"`
+	NetworkID                   string                     `yaml:"network_id" json:"network_id"`
 	NetworkName                 string                     `yaml:"network_name,omitempty" json:"network_name,omitempty"`
-	SubnetID                    string                     `yaml:"subnet_id,omitempty" json:"subnet_id,omitempty"`
+	SubnetID                    string                     `yaml:"subnet_id" json:"subnet_id"`
 	FloatingIPPool              string                     `yaml:"floating_ip_pool,omitempty" json:"floating_ip_pool,omitempty"`
 	FloatingNetworkID           string                     `yaml:"floating_network_id,omitempty" json:"floating_network_id,omitempty"`
 	ExternalNetworkName         string                     `yaml:"external_network_name,omitempty" json:"external_network_name,omitempty"`
@@ -259,9 +259,9 @@ type OpenStackCloudConfig struct {
 type OpenStackNetworkingConfig struct {
 	FloatingIPPool          string           `yaml:"floating_ip_pool,omitempty" json:"floating_ip_pool,omitempty"`
 	FloatingNetworkID       string           `yaml:"floating_network_id,omitempty" json:"floating_network_id,omitempty"`
-	NetworkID               string           `yaml:"network_id,omitempty" json:"network_id,omitempty"`
+	NetworkID               string           `yaml:"network_id" json:"network_id"`
 	RouterExternalNetworkID string           `yaml:"router_external_network_id,omitempty" json:"router_external_network_id,omitempty"`
-	SubnetID                string           `yaml:"subnet_id,omitempty" json:"subnet_id,omitempty"`
+	SubnetID                string           `yaml:"subnet_id" json:"subnet_id"`
 	K8sAPIPortACL           []string         `yaml:"k8s_api_port_acl,omitempty" json:"k8s_api_port_acl,omitempty"`
 	Designate               DesignateConfig  `yaml:"designate,omitempty" json:"designate,omitempty"`
 	VLAN                    VLANConfigLegacy `yaml:"vlan,omitempty" json:"vlan,omitempty"`

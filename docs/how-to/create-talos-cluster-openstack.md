@@ -23,6 +23,7 @@ Talos is a deployment method for OpenStack infrastructure. Use `--type openstack
 - Existing OpenStack network, subnet, Talos-compatible OpenStack image, and external network IDs for the target region
 - Enough quota for the default footprint: 1 bastion, 3 control planes, and 2 workers
 - A Git remote for the generated GitOps repository
+- The public IPv4 CIDR ranges that may administer Talos. These are configured explicitly in `deployment.talos.network.management_cidrs`; openCenter does not auto-detect the operator IP.
 
 Talos bootstrap uses native Talos Go machinery and client APIs from the CLI. `talosctl` is not required.
 
@@ -153,6 +154,8 @@ opencenter:
   cluster:
     cluster_fqdn: "prod-talos.sjc3.k8s.example.com"
     admin_email: "platform@example.com"
+    kubernetes:
+      api_port: 443
 
   gitops:
     repository:
@@ -209,6 +212,8 @@ deployment:
       pod_subnet: 10.42.0.0/16
       service_subnet: 10.43.0.0/16
       talos_api_port: 50000
+      management_cidrs:
+        - "203.0.113.10/32"
     patches:
       static:
         - disable-cni
@@ -217,7 +222,9 @@ deployment:
         - ntp
 ```
 
-Set `deployment.talos.endpoint` only when you need to override the generated Kubernetes API endpoint. When omitted, the OpenStack Talos template uses the OpenStack Kubernetes API address rendered by OpenTofu.
+Set `deployment.talos.endpoint` only when you need to override the generated Kubernetes API endpoint. It must be an explicit `https://...:443` URL. When omitted, the OpenStack Talos template uses `https://<openstack-k8s-api-ip>:443`.
+
+`management_cidrs` controls direct access to each node's Talos API on TCP `50000`. The Kubernetes API VIP or floating IP only exposes `443`; it does not forward Talos API traffic. During bootstrap, openCenter connects directly to each node's management floating IP.
 
 Review compute and network sizing before provisioning:
 
@@ -264,6 +271,22 @@ ls "$GITOPS_DIR/infrastructure/clusters/prod-talos/talos/patches"
 ```
 
 You should see `main.tf`, `variables.tf`, `provider.tf`, `Makefile`, `talos/inventory.yaml`, and generated patch files. Kubespray inventory files are not rendered for Talos deployments.
+
+The Talos OpenStack `main.tf` creates per-node management floating IPs and security group rules for `deployment.talos.network.management_cidrs`. The generated `talos/inventory.yaml` keeps separate addresses:
+
+```yaml
+cluster:
+  endpoint: https://198.51.100.50:443
+  talos_api_port: 50000
+control_plane:
+  - name: prod-talos-cp-1
+    talos_api_ip: 198.51.100.11
+    internal_ip: 10.2.128.11
+workers:
+  - name: prod-talos-wn-1
+    talos_api_ip: 198.51.100.21
+    internal_ip: 10.2.128.21
+```
 
 ### 5. Configure the remote and push the initial commit
 
@@ -404,13 +427,14 @@ opencenter cluster deploy prod-talos --from-step opentofu-apply
 
 ### Bootstrap fails while applying machine configs
 
-Confirm the OpenStack image is a Talos-compatible image and that the Talos API port is reachable from the host running the CLI. The default Talos API port is `50000`.
+Confirm the OpenStack image is a Talos-compatible image and that each node management floating IP is reachable from the host running the CLI. The default Talos API port is `50000`; it is reached directly on each node, not through the Kubernetes API VIP.
 
 Review:
 
 - `opencenter.infrastructure.cloud.openstack.image_id`
 - `deployment.talos.network.talos_api_port`
-- OpenStack security group rules rendered by the infrastructure module
+- `deployment.talos.network.management_cidrs`
+- OpenStack per-node management floating IPs and security group rules rendered by the infrastructure template
 - the bootstrap log under `~/.local/state/opencenter/logs/bootstrap/<org>/<cluster>/`
 
 ### Machine secrets or talosconfig cannot be read

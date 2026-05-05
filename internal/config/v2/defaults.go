@@ -47,8 +47,8 @@ const (
 	defaultAllocationPoolEnd          = "10.2.131.250"
 	defaultGateway                    = "10.2.128.1"
 	defaultVRRPIP                     = "10.2.128.5"
-	defaultTalosVersion               = "v1.8.0"
-	defaultCiliumVersion              = "1.16.0"
+	defaultTalosVersion               = "v1.13.0"
+	defaultCiliumVersion              = "1.19.3"
 
 	// Kind provider defaults — kept in sync with internal/config/defaults/kind.yaml.
 	kindDefaultKubernetesVersion = "1.33.7"

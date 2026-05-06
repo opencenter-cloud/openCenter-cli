@@ -144,19 +144,11 @@ func (r *readinessBuilder) validateNetworkPlugin(cfg *Config) {
 	}
 
 	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
-	deploymentMethod := strings.ToLower(strings.TrimSpace(cfg.Deployment.Method))
 
 	plugin := enabled[0]
 	method := strings.ToLower(strings.TrimSpace(plugin.method))
 	if method == "" {
 		method = "helm"
-	}
-
-	// Talos manages CNI externally (Helm/kustomize-helm). The kubespray
-	// install method is never valid for Talos regardless of provider.
-	if deploymentMethod == "talos" && method == "kubespray" {
-		r.addError(CategorySchema, plugin.path, fmt.Sprintf("network_plugin %s install_method %q is incompatible with deployment.method talos.", plugin.name, method), "Use install_method: helm or install_method: kustomize-helm.")
-		return
 	}
 
 	if provider != "openstack" {

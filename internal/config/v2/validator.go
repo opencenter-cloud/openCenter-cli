@@ -119,17 +119,14 @@ func (v *defaultValidator) Validate(cfg *Config) error {
 	return nil
 }
 
-// ValidateCleanBreakRules rejects legacy Talos shapes before generic schema
+// ValidateCleanBreakRules rejects legacy shapes before generic schema
 // validation so users get the explicit migration-free guidance.
 func (v *defaultValidator) ValidateCleanBreakRules(cfg *Config) error {
 	if cfg == nil {
 		return nil
 	}
-	if strings.EqualFold(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider), "talos") {
-		return fmt.Errorf("talos is a deployment method, not an infrastructure provider. Use --type openstack --deployment talos.")
-	}
 	if len(cfg.OpenCenter.LegacyTalos) > 0 {
-		return fmt.Errorf("opencenter.talos is not supported in v2; use deployment.talos")
+		return fmt.Errorf("opencenter.talos is not supported in v2; remove the opencenter.talos section")
 	}
 	return nil
 }
@@ -147,7 +144,7 @@ func (v *defaultValidator) ValidateSchema(cfg *Config) error {
 // Requirements: 11.2
 func (v *defaultValidator) ValidateBusinessRules(cfg *Config) error {
 	if len(cfg.OpenCenter.LegacyTalos) > 0 {
-		return fmt.Errorf("opencenter.talos is not supported in v2; use deployment.talos")
+		return fmt.Errorf("opencenter.talos is not supported in v2; remove the opencenter.talos section")
 	}
 
 	// Validate OpenTofu backend configuration
@@ -192,8 +189,6 @@ func (v *defaultValidator) ValidateProvider(cfg *Config) error {
 	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
 
 	switch provider {
-	case "talos":
-		return fmt.Errorf("talos is a deployment method, not an infrastructure provider. Use --type openstack --deployment talos.")
 	case "kind":
 		if cfg.OpenCenter.Infrastructure.Kind == nil {
 			return fmt.Errorf("opencenter.infrastructure.kind must be configured for the kind provider")

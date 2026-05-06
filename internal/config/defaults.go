@@ -307,7 +307,6 @@ func defaultConfig(name string) Config {
 				MasterVolumeDeleteOnTermination: false,
 				AdditionalBlockDevices:          []map[string]any{},
 			},
-			Talos: nil, // Talos is disabled by default, can be enabled by user
 			ManagedService: ServiceMap{
 				"alert-proxy": &services.AlertProxyConfig{
 					BaseConfig: services.BaseConfig{
@@ -550,53 +549,6 @@ func defaultConfig(name string) Config {
 //   - Config: A new Config object with default values.
 func NewDefault(name string) Config {
 	return defaultConfig(name)
-}
-
-// DefaultTalosConfig returns a TalosConfig initialized with secure default values.
-// This function should be called when enabling Talos for a cluster.
-//
-// Inputs:
-//   - clusterName: The name of the cluster.
-//
-// Outputs:
-//   - *TalosConfig: A new TalosConfig object with default values.
-func DefaultTalosConfig(clusterName string) *TalosConfig {
-	talosVersion := "v1.8.0"
-	return &TalosConfig{
-		Enabled:        true,
-		Version:        talosVersion,
-		ImageURL:       fmt.Sprintf("https://github.com/siderolabs/talos/releases/download/%s/openstack-amd64.raw.xz", talosVersion),
-		ImageSignature: "",
-		MachineConfig: TalosMachineConfig{
-			AppArmorEnabled:  true,
-			SeccompEnabled:   true,
-			DiskEncryption:   true,
-			KubePrismEnabled: true,
-			SystemExtensions: []string{},
-			LogDestination:   "",
-		},
-		NetworkConfig: TalosNetworkConfig{
-			ManagementSubnet: "10.0.1.0/24",
-			ControlSubnet:    "10.0.2.0/24",
-			DataSubnet:       "10.0.3.0/24",
-			WireGuardPort:    51820,
-			TalosAPIPort:     50000,
-			AllowedCIDRs:     []string{},
-		},
-		SecurityConfig: TalosSecurityConfig{
-			VTPMEnabled:       true,
-			BarbicanKeyID:     "",
-			ImageVerification: true,
-			MFARequired:       true,
-			AuditLogEnabled:   true,
-		},
-		PulumiConfig: TalosPulumiConfig{
-			StackName:         fmt.Sprintf("%s-talos", clusterName),
-			SwiftContainer:    fmt.Sprintf("%s-pulumi-state", clusterName),
-			SwiftPrefix:       clusterName,
-			SecretsPassphrase: "",
-		},
-	}
 }
 
 // applyOrganizationDefaults applies organization-based defaults to the configuration.

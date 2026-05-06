@@ -442,33 +442,6 @@ func TestConfigDiff_HasChangesInPath(t *testing.T) {
 	}
 }
 
-func TestCompareConfigs_NilPointerHandling(t *testing.T) {
-	config1 := NewDefault("test-cluster")
-	config2 := NewDefault("test-cluster")
-
-	// Set Talos to nil in config1 and non-nil in config2
-	config1.OpenCenter.Talos = nil
-	config2.OpenCenter.Talos = DefaultTalosConfig("test-cluster")
-
-	diff := CompareConfigs(config1, config2)
-
-	if !diff.HasChanges {
-		t.Fatal("Expected changes to be detected when Talos is added")
-	}
-
-	// Check that the Talos addition was detected
-	found := false
-	for _, change := range diff.Changes {
-		if change.Path == "OpenCenter.Talos" && change.Type == ChangeTypeAdded {
-			found = true
-		}
-	}
-
-	if !found {
-		t.Error("Expected to find Talos addition in diff")
-	}
-}
-
 func TestCompareConfigs_EmptySliceVsNilSlice(t *testing.T) {
 	config1 := NewDefault("test-cluster")
 	config2 := NewDefault("test-cluster")

@@ -38,7 +38,7 @@ func newClusterDoctorCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// Tools: git, kubectl, talosctl
+			// Tools: git, kubectl
 			check := func(bin string) string {
 				if _, err := exec.LookPath(bin); err == nil {
 					return "OK"
@@ -47,7 +47,6 @@ func newClusterDoctorCmd() *cobra.Command {
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "git: %s\n", check("git"))
 			fmt.Fprintf(cmd.OutOrStdout(), "kubectl: %s\n", check("kubectl"))
-			fmt.Fprintf(cmd.OutOrStdout(), "talosctl: %s\n", check("talosctl"))
 			// Provider-specific checks
 			switch cfg.OpenCenter.Infrastructure.Provider {
 			case "openstack", "":

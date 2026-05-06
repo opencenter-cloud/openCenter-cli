@@ -44,16 +44,18 @@ func TestKubeletRotateServerCertsRendering(t *testing.T) {
 
 	mainTfContent := string(content)
 
-	// Check that kubelet_rotate_server_certificates is enabled in locals
-	assert.Contains(t, mainTfContent, "kubelet_rotate_server_certificates      = true",
-		"Expected kubelet_rotate_server_certificates to be true in locals block")
+	// kubelet_rotate_server_certificates must be false for initial bootstrap because
+	// no CNI is installed by Kubespray (CNI is deployed via GitOps after kubeconfig
+	// normalization). Kubelet cert rotation requires node Ready, which needs a CNI.
+	assert.Contains(t, mainTfContent, "kubelet_rotate_server_certificates      = false",
+		"Expected kubelet_rotate_server_certificates to be false in locals block (CNI not yet installed)")
 
 	// Check that it's passed to the kubespray-cluster module
 	assert.Contains(t, mainTfContent, "kubelet_rotate_server_certificates      = local.kubelet_rotate_server_certificates",
 		"Expected kubelet_rotate_server_certificates to be passed to kubespray-cluster module")
 
-	t.Logf("Rendered locals block (true case):\n%s", extractSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
-	t.Logf("Rendered module block (true case):\n%s", extractModuleSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
+	t.Logf("Rendered locals block:\n%s", extractSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
+	t.Logf("Rendered module block:\n%s", extractModuleSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
 }
 
 func TestKubeletRotateServerCertsDefaultValue(t *testing.T) {
@@ -77,8 +79,10 @@ func TestKubeletRotateServerCertsDefaultValue(t *testing.T) {
 
 	mainTfContent := string(content)
 
-	assert.Contains(t, mainTfContent, "kubelet_rotate_server_certificates      = true",
-		"Expected kubelet_rotate_server_certificates to remain enabled by default")
+	// Must be false: CNI is not installed during initial Kubespray run, so kubelet
+	// certificate rotation would fail (nodes never reach Ready without a CNI).
+	assert.Contains(t, mainTfContent, "kubelet_rotate_server_certificates      = false",
+		"Expected kubelet_rotate_server_certificates to be false by default (CNI not yet installed)")
 
 	t.Logf("Rendered locals block (default/unset case):\n%s", extractSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
 }

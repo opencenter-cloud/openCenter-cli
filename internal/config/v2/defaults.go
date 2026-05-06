@@ -47,7 +47,6 @@ const (
 	defaultAllocationPoolEnd          = "10.2.131.250"
 	defaultGateway                    = "10.2.128.1"
 	defaultVRRPIP                     = "10.2.128.5"
-	defaultTalosVersion               = "v1.13.0"
 	defaultCiliumVersion              = "1.19.3"
 
 	// Kind provider defaults — kept in sync with internal/config/defaults/kind.yaml.
@@ -330,72 +329,6 @@ func NewV2Default(name, provider string) (*Config, error) {
 	return cfg, nil
 }
 
-// ApplyTalosDeploymentDefaults converts a v2 config to the Talos deployment
-// method while keeping OpenStack as the infrastructure provider.
-func ApplyTalosDeploymentDefaults(cfg *Config) {
-	if cfg == nil {
-		return
-	}
-
-	kubernetesVersion := strings.TrimSpace(cfg.OpenCenter.Cluster.Kubernetes.Version)
-	if kubernetesVersion == "" {
-		kubernetesVersion = "1.33.5"
-	}
-
-	podSubnet := strings.TrimSpace(cfg.OpenCenter.Cluster.Kubernetes.SubnetPods)
-	if podSubnet == "" {
-		podSubnet = "10.42.0.0/16"
-	}
-	serviceSubnet := strings.TrimSpace(cfg.OpenCenter.Cluster.Kubernetes.SubnetServices)
-	if serviceSubnet == "" {
-		serviceSubnet = "10.43.0.0/16"
-	}
-
-	cfg.OpenCenter.Cluster.Kubernetes.APIPort = 443
-	cfg.Deployment.Method = "talos"
-	cfg.Deployment.Kubespray = nil
-	cfg.Deployment.Talos = &TalosConfig{
-		Version:           defaultTalosVersion,
-		KubernetesVersion: kubernetesVersion,
-		Endpoint:          "",
-		Install: TalosInstallConfig{
-			Disk:  "/dev/sda",
-			Image: "ghcr.io/siderolabs/installer:" + defaultTalosVersion,
-		},
-		Network: TalosNetworkConfig{
-			PodSubnet:       podSubnet,
-			ServiceSubnet:   serviceSubnet,
-			TalosAPIPort:    50000,
-			ManagementCIDRs: []string{"0.0.0.0/0"},
-		},
-		Patches: TalosPatchesConfig{
-			Static: []string{
-				"disable-cni",
-				"disable-kubeproxy",
-				"disable-node-cidr-allocator",
-				"ntp",
-			},
-		},
-	}
-
-	if cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico != nil {
-		cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false
-	}
-	if cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium == nil {
-		cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium = &CiliumConfig{}
-	}
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled = true
-	if strings.TrimSpace(cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Version) == "" {
-		cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Version = defaultCiliumVersion
-	}
-	if strings.TrimSpace(cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.TunnelMode) == "" {
-		cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.TunnelMode = "vxlan"
-	}
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Hubble = true
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.NetworkPolicy = true
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.InstallMethod = "helm"
-}
-
 // NewV2FullTemplate returns a more explicit v2 template for --full-schema output.
 func NewV2FullTemplate(name, provider string) (*Config, error) {
 	cfg, err := NewV2Default(name, provider)
@@ -564,6 +497,7 @@ func applyProviderCloudDefaults(cfg *Config, availabilityZone string) {
 			Template:      defaultVMwareTemplate,
 			Folder:        "/vm/opencenter",
 		}
+		cfg.OpenCenter.Infrastructure.Bastion.Enabled = false
 	default:
 		cfg.OpenCenter.Infrastructure.Cloud = CloudConfig{}
 	}

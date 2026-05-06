@@ -649,8 +649,6 @@ func RenderInfrastructureClusterAtomic(cfg v2.Config, workspace *GitOpsWorkspace
 	if provider == "" {
 		provider = "openstack" // default
 	}
-	deploymentMethod := strings.ToLower(strings.TrimSpace(cfg.Deployment.Method))
-
 	// Map provider to template file
 	var mainTfTemplate string
 	switch provider {
@@ -658,12 +656,6 @@ func RenderInfrastructureClusterAtomic(cfg v2.Config, workspace *GitOpsWorkspace
 		mainTfTemplate = "main-baremetal.tf.tpl"
 	case "vmware":
 		mainTfTemplate = "main-vmware.tf.tpl"
-	case "openstack":
-		if deploymentMethod == "talos" {
-			mainTfTemplate = "main-openstack-talos.tf.tpl"
-		} else {
-			mainTfTemplate = "main-default.tf.tpl"
-		}
 	default:
 		// openstack and all other providers use main-default.tf.tpl
 		mainTfTemplate = "main-default.tf.tpl"
@@ -686,7 +678,7 @@ func RenderInfrastructureClusterAtomic(cfg v2.Config, workspace *GitOpsWorkspace
 		filename := d.Name()
 
 		// Skip provider-specific main.tf templates that don't match current provider
-		if filename == "main-baremetal.tf.tpl" || filename == "main-vmware.tf.tpl" || filename == "main-default.tf.tpl" || filename == "main-openstack-talos.tf.tpl" {
+		if filename == "main-baremetal.tf.tpl" || filename == "main-vmware.tf.tpl" || filename == "main-default.tf.tpl" {
 			if filename != mainTfTemplate {
 				// Skip this template, it's not for the current provider
 				return nil
@@ -696,17 +688,9 @@ func RenderInfrastructureClusterAtomic(cfg v2.Config, workspace *GitOpsWorkspace
 			return renderTemplateAtomic(path, dst, cfg, workspace)
 		}
 
-		if deploymentMethod == "talos" && strings.HasPrefix(filepath.ToSlash(rel), "inventory/") {
+		// Skip talos/ directory since Talos is no longer supported
+		if strings.HasPrefix(filepath.ToSlash(rel), "talos/") {
 			return nil
-		}
-		if deploymentMethod != "talos" && strings.HasPrefix(filepath.ToSlash(rel), "talos/") {
-			return nil
-		}
-
-		if deploymentMethod == "talos" &&
-			strings.HasPrefix(filepath.ToSlash(rel), "talos/patches/") &&
-			strings.HasSuffix(filename, ".tmpl") {
-			return copyFileAtomic(path, filepath.Join(target, rel), workspace)
 		}
 
 		// Replace cluster-name and cluster_name placeholders in filename

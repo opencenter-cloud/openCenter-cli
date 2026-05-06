@@ -410,8 +410,6 @@ func addOpenCenterComments(key, value *yaml.Node, provider string) {
 			addClusterComments(subKey, subValue)
 		case "gitops":
 			addGitOpsComments(subKey, subValue)
-		case "talos":
-			addTalosComments(subKey, subValue)
 		}
 	}
 }
@@ -682,30 +680,6 @@ func addGitOpsRepositoryComments(value *yaml.Node) {
 			subKey.LineComment = "Directory within repo for this cluster"
 		case "secret_name":
 			subKey.LineComment = "K8s secret name for repository access"
-		}
-	}
-}
-
-// addTalosComments adds comments for Talos configuration
-func addTalosComments(key, value *yaml.Node) {
-	key.HeadComment = "Talos Linux deployment configuration"
-
-	if value.Kind != yaml.MappingNode {
-		return
-	}
-
-	for i := 0; i < len(value.Content); i += 2 {
-		if i+1 >= len(value.Content) {
-			break
-		}
-		subKey := value.Content[i]
-		switch subKey.Value {
-		case "enabled":
-			subKey.LineComment = "Enable Talos Linux"
-		case "version":
-			subKey.LineComment = "Talos version"
-		case "install_disk":
-			subKey.LineComment = "Disk device for Talos installation"
 		}
 	}
 }

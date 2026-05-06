@@ -17,9 +17,8 @@ package v2
 // Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
 type DeploymentConfig struct {
 	AutoDeploy bool              `yaml:"auto_deploy" json:"auto_deploy"`
-	Method     string            `yaml:"method" json:"method" validate:"required,oneof=kubespray talos kamaji eks gke aks cluster-api"`
+	Method     string            `yaml:"method" json:"method" validate:"required,oneof=kubespray kamaji eks gke aks cluster-api"`
 	Kubespray  *KubesprayConfig  `yaml:"kubespray,omitempty" json:"kubespray,omitempty"`
-	Talos      *TalosConfig      `yaml:"talos,omitempty" json:"talos,omitempty"`
 	Kamaji     *KamajiConfig     `yaml:"kamaji,omitempty" json:"kamaji,omitempty"`
 	ClusterAPI *ClusterAPIConfig `yaml:"cluster_api,omitempty" json:"cluster_api,omitempty"`
 }
@@ -37,36 +36,6 @@ type ModuleConfig struct {
 	Enabled bool           `yaml:"enabled" json:"enabled"`
 	Version string         `yaml:"version,omitempty" json:"version,omitempty"`
 	Config  map[string]any `yaml:"config,omitempty" json:"config,omitempty"`
-}
-
-// TalosConfig represents Talos Linux deployment configuration.
-// Requirements: 5.3
-type TalosConfig struct {
-	Version           string             `yaml:"version" json:"version" validate:"required,semver"`
-	KubernetesVersion string             `yaml:"kubernetes_version" json:"kubernetes_version" validate:"required,semver"`
-	Endpoint          string             `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
-	Install           TalosInstallConfig `yaml:"install" json:"install" validate:"required"`
-	Network           TalosNetworkConfig `yaml:"network" json:"network" validate:"required"`
-	Patches           TalosPatchesConfig `yaml:"patches,omitempty" json:"patches,omitempty"`
-}
-
-// TalosInstallConfig represents machine installation settings for Talos.
-type TalosInstallConfig struct {
-	Disk  string `yaml:"disk" json:"disk" validate:"required"`
-	Image string `yaml:"image" json:"image" validate:"required"`
-}
-
-// TalosNetworkConfig represents Talos cluster network settings.
-type TalosNetworkConfig struct {
-	PodSubnet       string   `yaml:"pod_subnet" json:"pod_subnet" validate:"required,cidrv4"`
-	ServiceSubnet   string   `yaml:"service_subnet" json:"service_subnet" validate:"required,cidrv4"`
-	TalosAPIPort    int      `yaml:"talos_api_port" json:"talos_api_port" validate:"required,min=1,max=65535"`
-	ManagementCIDRs []string `yaml:"management_cidrs" json:"management_cidrs,omitempty" validate:"omitempty,dive,cidrv4"`
-}
-
-// TalosPatchesConfig lists generated/static Talos machine config patches.
-type TalosPatchesConfig struct {
-	Static []string `yaml:"static,omitempty" json:"static,omitempty"`
 }
 
 // KamajiConfig represents Kamaji hosted control plane configuration.
@@ -142,8 +111,8 @@ type ClusterAPIConfig struct {
 // Requirements: 10.6
 type ClusterAPIProviders struct {
 	Infrastructure string `yaml:"infrastructure" json:"infrastructure" validate:"required,oneof=openstack aws azure vsphere vmware metal3"`
-	Bootstrap      string `yaml:"bootstrap" json:"bootstrap" validate:"required,oneof=kubeadm talos"`
-	ControlPlane   string `yaml:"control_plane" json:"control_plane" validate:"required,oneof=kubeadm talos"`
+	Bootstrap      string `yaml:"bootstrap" json:"bootstrap" validate:"required,oneof=kubeadm"`
+	ControlPlane   string `yaml:"control_plane" json:"control_plane" validate:"required,oneof=kubeadm"`
 }
 
 // CAPIOpenStackConfig represents CAPI OpenStack provider configuration.
@@ -170,19 +139,17 @@ type CAPIVMwareConfig struct {
 // KamajiWorkerPool represents a Kamaji worker pool configuration.
 // Requirements: 10.7, 10.8
 type KamajiWorkerPool struct {
-	Name              string             `yaml:"name" json:"name" validate:"required,dns1123"`
-	OS                string             `yaml:"os" json:"os" validate:"required,oneof=ubuntu windows talos"`
-	Count             int                `yaml:"count" json:"count" validate:"required,min=1"`
-	Flavor            string             `yaml:"flavor" json:"flavor" validate:"required"`
-	Image             string             `yaml:"image" json:"image" validate:"required"`
-	BootstrapProvider string             `yaml:"bootstrap_provider" json:"bootstrap_provider" validate:"required,oneof=kubeadm talos"`
-	TalosVersion      string             `yaml:"talos_version,omitempty" json:"talos_version,omitempty" validate:"required_if=OS talos,omitempty,semver"`
-	BootVolume        VolumeConfig       `yaml:"boot_volume" json:"boot_volume" validate:"required"`
-	AdditionalVolumes []VolumeConfig     `yaml:"additional_volumes,omitempty" json:"additional_volumes,omitempty"`
-	Labels            map[string]string  `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Taints            []TaintConfig      `yaml:"taints,omitempty" json:"taints,omitempty"`
-	Autoscaling       AutoscalingConfig  `yaml:"autoscaling,omitempty" json:"autoscaling,omitempty"`
-	TalosConfig       *TalosWorkerConfig `yaml:"talos_config,omitempty" json:"talos_config,omitempty"`
+	Name              string            `yaml:"name" json:"name" validate:"required,dns1123"`
+	OS                string            `yaml:"os" json:"os" validate:"required,oneof=ubuntu windows"`
+	Count             int               `yaml:"count" json:"count" validate:"required,min=1"`
+	Flavor            string            `yaml:"flavor" json:"flavor" validate:"required"`
+	Image             string            `yaml:"image" json:"image" validate:"required"`
+	BootstrapProvider string            `yaml:"bootstrap_provider" json:"bootstrap_provider" validate:"required,oneof=kubeadm"`
+	BootVolume        VolumeConfig      `yaml:"boot_volume" json:"boot_volume" validate:"required"`
+	AdditionalVolumes []VolumeConfig    `yaml:"additional_volumes,omitempty" json:"additional_volumes,omitempty"`
+	Labels            map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Taints            []TaintConfig     `yaml:"taints,omitempty" json:"taints,omitempty"`
+	Autoscaling       AutoscalingConfig `yaml:"autoscaling,omitempty" json:"autoscaling,omitempty"`
 }
 
 // AutoscalingConfig represents autoscaling configuration for worker pools.
@@ -192,9 +159,3 @@ type AutoscalingConfig struct {
 	MaxReplicas int  `yaml:"max_replicas,omitempty" json:"max_replicas,omitempty" validate:"omitempty,gtefield=MinReplicas"`
 }
 
-// TalosWorkerConfig represents Talos-specific worker configuration.
-type TalosWorkerConfig struct {
-	InstallDisk string            `yaml:"install_disk,omitempty" json:"install_disk,omitempty"`
-	Extensions  []string          `yaml:"extensions,omitempty" json:"extensions,omitempty"`
-	KernelArgs  map[string]string `yaml:"kernel_args,omitempty" json:"kernel_args,omitempty"`
-}

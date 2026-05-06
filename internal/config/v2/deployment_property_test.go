@@ -29,7 +29,7 @@ import (
 // - `cluster.kubernetes.kube_vip_enabled` must be false
 // - `deployment.kamaji.control_plane.replicas` must be an odd number (1, 3, 5, 7)
 // - At least one worker pool must be defined
-// - Each worker pool's bootstrap_provider must match its OS (ubuntu/windows→kubeadm, talos→talos)
+// - Each worker pool's bootstrap_provider must match its OS (ubuntu/windows→kubeadm)
 // **Validates: Requirements 10.2, 10.3, 10.8, 10.10, 10.11, 10.12**
 func TestProperty_KamajiDeploymentConstraints(t *testing.T) {
 	parameters := gopter.DefaultTestParameters()
@@ -93,21 +93,9 @@ func TestProperty_KamajiDeploymentConstraints(t *testing.T) {
 			switch pool.OS {
 			case "ubuntu", "windows":
 				return pool.BootstrapProvider == "kubeadm"
-			case "talos":
-				return pool.BootstrapProvider == "talos"
 			default:
 				return false
 			}
-		},
-		genKamajiWorkerPool(),
-	))
-
-	properties.Property("Kamaji Talos worker pools require talos_version", prop.ForAll(
-		func(pool KamajiWorkerPool) bool {
-			if pool.OS == "talos" {
-				return pool.TalosVersion != ""
-			}
-			return true
 		},
 		genKamajiWorkerPool(),
 	))
@@ -333,7 +321,7 @@ func genComputeConfigForKamaji() gopter.Gen {
 func genKamajiWorkerPool() gopter.Gen {
 	return gopter.CombineGens(
 		gen.OneConstOf("pool-a", "pool-b", "pool-c"),
-		gen.OneConstOf("ubuntu", "windows", "talos"),
+		gen.OneConstOf("ubuntu", "windows"),
 		gen.IntRange(1, 10),
 		gen.Bool(),
 	).Map(func(parts []interface{}) KamajiWorkerPool {
@@ -344,11 +332,6 @@ func genKamajiWorkerPool() gopter.Gen {
 
 		// Determine bootstrap provider based on OS
 		bootstrapProvider := "kubeadm"
-		talosVersion := ""
-		if os == "talos" {
-			bootstrapProvider = "talos"
-			talosVersion = "1.6.0"
-		}
 
 		// Generate autoscaling config
 		autoscaling := AutoscalingConfig{
@@ -366,7 +349,6 @@ func genKamajiWorkerPool() gopter.Gen {
 			Flavor:            "m1.large",
 			Image:             "ubuntu-22.04",
 			BootstrapProvider: bootstrapProvider,
-			TalosVersion:      talosVersion,
 			BootVolume: VolumeConfig{
 				Size: 100,
 				Type: "ssd",
@@ -408,7 +390,7 @@ func TestProperty_ProviderDeploymentCompatibility(t *testing.T) {
 			return err != nil
 		},
 		gen.OneConstOf("openstack", "aws", "gcp", "azure", "baremetal", "vmware"),
-		gen.OneConstOf("kubespray", "talos", "kamaji"),
+		gen.OneConstOf("kubespray", "kamaji"),
 	))
 
 	properties.Property("kubespray supports all providers", prop.ForAll(
@@ -431,19 +413,7 @@ func TestProperty_ProviderDeploymentCompatibility(t *testing.T) {
 			vsphereErr := deploymentValidator.ValidateCompatibility("vsphere")
 			return (vmwareErr == nil) == (vsphereErr == nil)
 		},
-		gen.OneConstOf("kubespray", "talos", "kamaji"),
-	))
-
-	properties.Property("talos only supports openstack", prop.ForAll(
-		func(provider string) bool {
-			deploymentValidator := &TalosDeployment{}
-			err := deploymentValidator.ValidateCompatibility(provider)
-			if provider == "openstack" {
-				return err == nil
-			}
-			return err != nil
-		},
-		gen.OneConstOf("openstack", "aws", "gcp", "azure", "baremetal", "vmware"),
+		gen.OneConstOf("kubespray", "kamaji"),
 	))
 
 	properties.Property("kamaji does not support baremetal", prop.ForAll(
@@ -532,7 +502,7 @@ func TestProperty_ProviderDeploymentCompatibility(t *testing.T) {
 			// Methods not requiring masters should accept master_count=0
 			return err == nil
 		},
-		gen.OneConstOf("kubespray", "talos", "kamaji"),
+		gen.OneConstOf("kubespray", "kamaji"),
 	))
 
 	properties.TestingRun(t, gopter.ConsoleReporter(false))
@@ -542,7 +512,6 @@ func TestProperty_ProviderDeploymentCompatibility(t *testing.T) {
 func isValidProviderDeploymentCombination(provider, method string) bool {
 	validCombinations := map[string][]string{
 		"kubespray": {"openstack", "aws", "gcp", "azure", "baremetal", "vmware", "kind"},
-		"talos":     {"openstack"},
 		"kamaji":    {"openstack", "aws", "gcp", "azure", "vmware"},
 	}
 

@@ -170,7 +170,6 @@ func TestBuilderReturnsBuilderInstance(t *testing.T) {
 		{"WithDefaultStorageClass", func(b ConfigBuilder) ConfigBuilder { return b.WithDefaultStorageClass("standard") }},
 		{"WithK8sHardening", func(b ConfigBuilder) ConfigBuilder { return b.WithK8sHardening(true) }},
 		{"WithOSHardening", func(b ConfigBuilder) ConfigBuilder { return b.WithOSHardening(true) }},
-		{"WithTalosEnabled", func(b ConfigBuilder) ConfigBuilder { return b.WithTalosEnabled(false) }},
 		{"WithOverride", func(b ConfigBuilder) ConfigBuilder { return b.WithOverride("test.path", "value") }},
 		{"WithTag", func(b ConfigBuilder) ConfigBuilder { return b.WithTag("key", "value") }},
 		{"WithAnnotation", func(b ConfigBuilder) ConfigBuilder { return b.WithAnnotation("key", "value") }},

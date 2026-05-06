@@ -15,8 +15,6 @@ package v2
 
 import (
 	"fmt"
-	"net/url"
-	"strings"
 )
 
 // DeploymentMethod interface defines deployment-method-specific validation.
@@ -60,116 +58,6 @@ func (d *KubesprayDeployment) GetMethodName() string {
 
 // RequiresMasterNodes returns whether this deployment method requires master nodes.
 func (d *KubesprayDeployment) RequiresMasterNodes() bool {
-	return true
-}
-
-// TalosDeployment implements deployment validation for Talos.
-// Requirements: 5.7
-type TalosDeployment struct{}
-
-// ValidateConfig validates Talos deployment configuration.
-func (d *TalosDeployment) ValidateConfig(cfg *Config) error {
-	if cfg.OpenCenter.Infrastructure.Compute.MasterCount == 0 {
-		return fmt.Errorf("talos requires master_count > 0")
-	}
-	if cfg.Deployment.Talos == nil {
-		return fmt.Errorf("deployment.method: talos requires deployment.talos")
-	}
-	if cfg.Deployment.Talos.Install.Disk == "" {
-		return fmt.Errorf("deployment.talos.install.disk is required")
-	}
-	if cfg.Deployment.Talos.Install.Image == "" {
-		return fmt.Errorf("deployment.talos.install.image is required")
-	}
-	if cfg.Deployment.Talos.Network.PodSubnet == "" {
-		return fmt.Errorf("deployment.talos.network.pod_subnet is required")
-	}
-	if cfg.Deployment.Talos.Network.ServiceSubnet == "" {
-		return fmt.Errorf("deployment.talos.network.service_subnet is required")
-	}
-	if len(cfg.Deployment.Talos.Network.ManagementCIDRs) == 0 {
-		return fmt.Errorf("deployment.talos.network.management_cidrs is required for external Talos management access")
-	}
-	if cfg.OpenCenter.Cluster.Kubernetes.APIPort != 443 {
-		return fmt.Errorf("opencenter.cluster.kubernetes.api_port must be 443 for Talos OpenStack deployments")
-	}
-	if endpoint := strings.TrimSpace(cfg.Deployment.Talos.Endpoint); endpoint != "" {
-		if err := validateTalosHTTPS443Endpoint("deployment.talos.endpoint", endpoint); err != nil {
-			return err
-		}
-	}
-	if err := validateTalosNetworkPlugin(cfg); err != nil {
-		return err
-	}
-	return nil
-}
-
-// validateTalosNetworkPlugin validates that the CNI configuration is compatible
-// with Talos deployments. Talos disables the built-in CNI (via the disable-cni
-// patch) and manages CNI installation externally through Helm. The kubespray
-// install method is incompatible because Talos nodes do not run Kubespray.
-func validateTalosNetworkPlugin(cfg *Config) error {
-	np := cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin
-
-	// Check each enabled plugin for kubespray install method, which is
-	// incompatible with Talos.
-	if np.Calico != nil && np.Calico.Enabled {
-		method := strings.ToLower(strings.TrimSpace(np.Calico.InstallMethod))
-		if method == "kubespray" {
-			return fmt.Errorf("network_plugin calico install_method %q is incompatible with deployment.method talos; use helm or kustomize-helm", method)
-		}
-	}
-	if np.Cilium != nil && np.Cilium.Enabled {
-		method := strings.ToLower(strings.TrimSpace(np.Cilium.InstallMethod))
-		if method == "kubespray" {
-			return fmt.Errorf("network_plugin cilium install_method %q is incompatible with deployment.method talos; use helm or kustomize-helm", method)
-		}
-	}
-	if np.KubeOVN != nil && np.KubeOVN.Enabled {
-		method := strings.ToLower(strings.TrimSpace(np.KubeOVN.InstallMethod))
-		if method == "kubespray" {
-			return fmt.Errorf("network_plugin kube-ovn install_method %q is incompatible with deployment.method talos; use helm or kustomize-helm", method)
-		}
-	}
-	return nil
-}
-
-func validateTalosHTTPS443Endpoint(path, endpoint string) error {
-	parsed, err := url.Parse(endpoint)
-	if err != nil {
-		return fmt.Errorf("%s must be an explicit https://...:443 endpoint: %w", path, err)
-	}
-	if parsed.Scheme != "https" {
-		return fmt.Errorf("%s must use https scheme", path)
-	}
-	if parsed.Hostname() == "" {
-		return fmt.Errorf("%s must include a host", path)
-	}
-	if parsed.Port() == "" {
-		return fmt.Errorf("%s must include explicit port 443", path)
-	}
-	if parsed.Port() != "443" {
-		return fmt.Errorf("%s must use port 443", path)
-	}
-	return nil
-}
-
-// ValidateCompatibility validates Talos compatibility with infrastructure provider.
-func (d *TalosDeployment) ValidateCompatibility(provider string) error {
-	provider = canonicalInfrastructureProvider(provider)
-	if provider == "openstack" {
-		return nil
-	}
-	return fmt.Errorf("deployment.method: talos requires opencenter.infrastructure.provider: openstack")
-}
-
-// GetMethodName returns the deployment method name.
-func (d *TalosDeployment) GetMethodName() string {
-	return "talos"
-}
-
-// RequiresMasterNodes returns whether this deployment method requires master nodes.
-func (d *TalosDeployment) RequiresMasterNodes() bool {
 	return true
 }
 
@@ -279,15 +167,8 @@ func ValidateKamajiWorkerPool(pool *KamajiWorkerPool) error {
 		if pool.BootstrapProvider != "kubeadm" {
 			return fmt.Errorf("worker pool %s: bootstrap_provider must be 'kubeadm' for OS '%s'", pool.Name, pool.OS)
 		}
-	case "talos":
-		if pool.BootstrapProvider != "talos" {
-			return fmt.Errorf("worker pool %s: bootstrap_provider must be 'talos' for OS 'talos'", pool.Name)
-		}
-		if pool.TalosVersion == "" {
-			return fmt.Errorf("worker pool %s: talos_version is required when OS is 'talos'", pool.Name)
-		}
 	default:
-		return fmt.Errorf("worker pool %s: invalid OS '%s' (must be ubuntu, windows, or talos)", pool.Name, pool.OS)
+		return fmt.Errorf("worker pool %s: invalid OS '%s' (must be ubuntu or windows)", pool.Name, pool.OS)
 	}
 
 	// Validate autoscaling constraints
@@ -324,8 +205,6 @@ func GetDeploymentMethod(methodName string) (DeploymentMethod, error) {
 	switch methodName {
 	case "kubespray":
 		return &KubesprayDeployment{}, nil
-	case "talos":
-		return &TalosDeployment{}, nil
 	case "kamaji":
 		return &KamajiDeployment{}, nil
 	default:

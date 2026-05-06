@@ -48,15 +48,13 @@
               "properties": {
                 "bootstrap": {
                   "enum": [
-                    "kubeadm",
-                    "talos"
+                    "kubeadm"
                   ],
                   "type": "string"
                 },
                 "control_plane": {
                   "enum": [
-                    "kubeadm",
-                    "talos"
+                    "kubeadm"
                   ],
                   "type": "string"
                 },
@@ -140,15 +138,13 @@
                   "properties": {
                     "bootstrap": {
                       "enum": [
-                        "kubeadm",
-                        "talos"
+                        "kubeadm"
                       ],
                       "type": "string"
                     },
                     "control_plane": {
                       "enum": [
-                        "kubeadm",
-                        "talos"
+                        "kubeadm"
                       ],
                       "type": "string"
                     },
@@ -472,8 +468,7 @@
                   },
                   "bootstrap_provider": {
                     "enum": [
-                      "kubeadm",
-                      "talos"
+                      "kubeadm"
                     ],
                     "type": "string"
                   },
@@ -500,8 +495,7 @@
                   "os": {
                     "enum": [
                       "ubuntu",
-                      "windows",
-                      "talos"
+                      "windows"
                     ],
                     "type": "string"
                   },
@@ -531,34 +525,6 @@
                       "type": "object"
                     },
                     "type": "array"
-                  },
-                  "talos_config": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "extensions": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      },
-                      "install_disk": {
-                        "type": "string"
-                      },
-                      "kernel_args": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "type": "object"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "talos_version": {
-                    "pattern": "^v?[0-9]+(\\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?$",
-                    "type": "string",
-                    "x-opencenter-validation": [
-                      "required_if=OS talos"
-                    ]
                   }
                 },
                 "required": [
@@ -619,7 +585,6 @@
         "method": {
           "enum": [
             "kubespray",
-            "talos",
             "kamaji",
             "eks",
             "gke",
@@ -627,88 +592,6 @@
             "cluster-api"
           ],
           "type": "string"
-        },
-        "talos": {
-          "additionalProperties": false,
-          "properties": {
-            "endpoint": {
-              "type": "string"
-            },
-            "install": {
-              "additionalProperties": false,
-              "properties": {
-                "disk": {
-                  "type": "string"
-                },
-                "image": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "disk",
-                "image"
-              ],
-              "type": "object"
-            },
-            "kubernetes_version": {
-              "pattern": "^v?[0-9]+(\\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?$",
-              "type": "string"
-            },
-            "network": {
-              "additionalProperties": false,
-              "properties": {
-                "management_cidrs": {
-                  "items": {
-                    "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
-                    "type": "string"
-                  },
-                  "type": "array"
-                },
-                "pod_subnet": {
-                  "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
-                  "type": "string"
-                },
-                "service_subnet": {
-                  "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
-                  "type": "string"
-                },
-                "talos_api_port": {
-                  "maximum": 65535,
-                  "minimum": 1,
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "pod_subnet",
-                "service_subnet",
-                "talos_api_port"
-              ],
-              "type": "object"
-            },
-            "patches": {
-              "additionalProperties": false,
-              "properties": {
-                "static": {
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
-                }
-              },
-              "type": "object"
-            },
-            "version": {
-              "pattern": "^v?[0-9]+(\\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?$",
-              "type": "string"
-            }
-          },
-          "required": [
-            "install",
-            "kubernetes_version",
-            "network",
-            "version"
-          ],
-          "type": "object"
         }
       },
       "required": [

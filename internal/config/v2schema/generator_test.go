@@ -101,19 +101,6 @@ func TestGenerateHandlesPointersSlicesAndMaps(t *testing.T) {
 	}
 }
 
-func TestGenerateTalosManagementCIDRs(t *testing.T) {
-	schema := generatedSchemaMap(t)
-
-	managementCIDRs := schemaAt(t, schema, "properties", "deployment", "properties", "talos", "properties", "network", "properties", "management_cidrs")
-	if got := managementCIDRs["type"]; got != "array" {
-		t.Fatalf("management_cidrs type = %v, want array", got)
-	}
-	items := schemaAt(t, managementCIDRs, "items")
-	if got := items["pattern"]; got != `^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$` {
-		t.Fatalf("management_cidrs item pattern = %v, want cidrv4 pattern", got)
-	}
-}
-
 func TestGenerateServiceMapIncludesRegisteredServicesAndAllowsCustomServices(t *testing.T) {
 	schema := generatedSchemaMap(t)
 

@@ -50,34 +50,6 @@ func TestValidateReadinessNetworkPluginAllowsOneEnabledPlugin(t *testing.T) {
 	}
 }
 
-func TestValidateReadinessTalosCiliumPassesValidation(t *testing.T) {
-	cfg := validReadinessConfig(t, "openstack")
-	ApplyTalosDeploymentDefaults(cfg)
-	cfg.Deployment.Talos.Network.ManagementCIDRs = []string{"203.0.113.10/32"}
-
-	report := ValidateReadiness(cfg)
-
-	assertNoIssue(t, report, "opencenter.cluster.kubernetes.network_plugin")
-	assertNoIssue(t, report, "opencenter.cluster.kubernetes.network_plugin.cilium.install_method")
-	if !report.Valid {
-		t.Fatalf("expected Talos + Cilium readiness to pass, got:\n%s", renderIssues(report.Issues))
-	}
-}
-
-func TestValidateReadinessTalosRejectsKubesprayInstallMethod(t *testing.T) {
-	cfg := validReadinessConfig(t, "openstack")
-	ApplyTalosDeploymentDefaults(cfg)
-	cfg.Deployment.Talos.Network.ManagementCIDRs = []string{"203.0.113.10/32"}
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.InstallMethod = "kubespray"
-
-	report := ValidateReadiness(cfg)
-
-	issue := assertIssue(t, report, SeverityError, CategorySchema, "opencenter.cluster.kubernetes.network_plugin.cilium.install_method")
-	if !strings.Contains(issue.Message, "kubespray") || !strings.Contains(issue.Message, "talos") {
-		t.Fatalf("expected Talos kubespray incompatibility issue, got: %#v", issue)
-	}
-}
-
 func TestValidateReadinessNetworkPluginRequiresOneEnabledPlugin(t *testing.T) {
 	cfg := validReadinessConfig(t, "openstack")
 	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled = false

@@ -1,4 +1,0 @@
-cluster:
-  controllerManager:
-    extraArgs:
-      allocate-node-cidrs: "false"

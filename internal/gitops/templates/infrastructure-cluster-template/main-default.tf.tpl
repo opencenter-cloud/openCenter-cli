@@ -125,6 +125,10 @@ locals {
   #Hardening
   k8s_hardening_enabled                   = true
   kube_pod_security_exemptions_namespaces = ["trivy-temp"]
+  # Must remain false for the initial bootstrap. No CNI is installed by Kubespray
+  # (CNI is deployed via GitOps after kubeconfig normalization). Kubelet certificate
+  # rotation requires node Ready status, which depends on a functioning CNI.
+  # Enabling this before the CNI is running causes bootstrap failure.
   kubelet_rotate_server_certificates      = false
   os_hardening_enabled                    = true
 

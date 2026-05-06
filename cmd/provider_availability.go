@@ -18,16 +18,11 @@ import (
 	"strings"
 )
 
-const talosProviderMisuseMessage = "talos is a deployment method, not an infrastructure provider. Use --type openstack --deployment talos."
-
 // checkProviderAvailability returns an error if the given provider is planned
 // but not yet implemented. Planned providers (aws, gcp, azure) are rejected
 // with a message listing the currently supported providers.
 func checkProviderAvailability(provider string) error {
 	provider = strings.ToLower(strings.TrimSpace(provider))
-	if provider == "talos" {
-		return fmt.Errorf(talosProviderMisuseMessage)
-	}
 	planned := map[string]bool{"aws": true, "gcp": true, "azure": true}
 	if planned[provider] {
 		return fmt.Errorf("provider %q is planned for a future release and not yet available. "+

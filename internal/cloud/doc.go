@@ -24,8 +24,8 @@
 // by cluster deploy or destroy flows may live in sibling packages and be wired
 // directly by those commands or services. Kind is the current example: it manages
 // local cluster lifecycle, but it does not implement the CloudProvider drift
-// interface and is therefore not registered in CloudProviderFactory. Baremetal and
-// Talos are also outside the drift-provider registry today.
+// interface and is therefore not registered in CloudProviderFactory. Baremetal
+// is also outside the drift-provider registry today.
 //
 // # Architecture
 //

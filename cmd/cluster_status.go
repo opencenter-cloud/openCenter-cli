@@ -27,7 +27,6 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
-	talosdeploy "github.com/opencenter-cloud/opencenter-cli/internal/deployment/talos"
 	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 )
 
@@ -272,11 +271,7 @@ and suggest using 'opencenter cluster use' to set one.`,
 					fmt.Fprintf(cmd.OutOrStdout(), "  Provider Check:    %s\n", providerError)
 				}
 			}
-			if isTalosDeployment(&cfg) && resolvedClusterPaths != nil {
-				renderTalosStatusText(ctx, cmd.OutOrStdout(), &cfg, resolvedClusterPaths, refresh)
-			}
-
-			stage := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Stage))
+				stage := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Stage))
 			status := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Status))
 			nextSteps := nextStepsForCluster(clusterName, stage, status)
 			fmt.Fprintf(cmd.OutOrStdout(), "\nNext Steps:\n")
@@ -313,7 +308,6 @@ type clusterStatusOutput struct {
 	AvailableClusters []string          `json:"available_clusters,omitempty" yaml:"available_clusters,omitempty"`
 	Paths             map[string]any    `json:"paths,omitempty" yaml:"paths,omitempty"`
 	ProviderStatus    map[string]any    `json:"provider_status,omitempty" yaml:"provider_status,omitempty"`
-	TalosStatus       map[string]any    `json:"talos_status,omitempty" yaml:"talos_status,omitempty"`
 	Inventory         *clusterInventory `json:"inventory,omitempty" yaml:"inventory,omitempty"`
 	NextSteps         []string          `json:"next_steps,omitempty" yaml:"next_steps,omitempty"`
 }
@@ -409,149 +403,7 @@ func buildClusterStatusOutput(ctx context.Context, clusterName, activeCluster st
 			"provider_check":       providerError,
 		}
 	}
-	if isTalosDeployment(cfg) {
-		output.TalosStatus = buildTalosStatus(ctx, cfg, resolvedClusterPaths, refresh)
-	}
-
 	return output
-}
-
-func isTalosDeployment(cfg *v2.Config) bool {
-	return cfg != nil && strings.EqualFold(strings.TrimSpace(cfg.Deployment.Method), "talos")
-}
-
-func renderTalosStatusText(ctx context.Context, out interface {
-	Write([]byte) (int, error)
-}, cfg *v2.Config, clusterPaths *paths.ClusterPaths, refresh bool) {
-	status := buildTalosStatus(ctx, cfg, clusterPaths, refresh)
-
-	fmt.Fprintf(out, "\nTalos Status:\n")
-	fmt.Fprintf(out, "  Inventory:         %s\n", statusLabel(talosStatusBool(status, "inventory_present"), "Present", "Missing"))
-	fmt.Fprintf(out, "  Machine Secrets:   %s\n", statusLabel(talosStatusBool(status, "machine_secrets_present"), "Present", "Missing"))
-	fmt.Fprintf(out, "  Talosconfig:       %s\n", statusLabel(talosStatusBool(status, "talosconfig_present"), "Present", "Missing"))
-	fmt.Fprintf(out, "  Kubeconfig:        %s\n", statusLabel(talosStatusBool(status, "kubeconfig_present"), "Present", "Missing"))
-	if refresh {
-		fmt.Fprintf(out, "  Talos API Ready:   %s\n", statusLabel(talosStatusBool(status, "talos_api_ready"), "Ready", "Not ready"))
-		fmt.Fprintf(out, "  Kubernetes API:    %s\n", statusLabel(talosStatusBool(status, "kubernetes_api_ready"), "Ready", "Not ready"))
-	} else {
-		fmt.Fprintf(out, "  Talos API Ready:   skipped (use --refresh)\n")
-		fmt.Fprintf(out, "  Kubernetes API:    skipped (use --refresh)\n")
-	}
-	if endpoint, ok := status["kubernetes_api_endpoint"].(string); ok && endpoint != "" {
-		fmt.Fprintf(out, "  API Endpoint:      %s\n", endpoint)
-	}
-	if errText, ok := status["talos_api_check"].(string); ok && errText != "" {
-		fmt.Fprintf(out, "  Talos API Check:   %s\n", errText)
-	}
-	if errText, ok := status["kubernetes_api_check"].(string); ok && errText != "" {
-		fmt.Fprintf(out, "  Kubernetes Check:  %s\n", errText)
-	}
-	if nodes, ok := status["nodes"].([]map[string]string); ok && len(nodes) > 0 {
-		fmt.Fprintf(out, "  Management Endpoints:\n")
-		for _, node := range nodes {
-			fmt.Fprintf(out, "    %-24s %s\n", node["name"], node["talos_api_endpoint"])
-		}
-	}
-}
-
-func buildTalosStatus(ctx context.Context, cfg *v2.Config, clusterPaths *paths.ClusterPaths, refresh bool) map[string]any {
-	status := map[string]any{
-		"deployment":                   "talos",
-		"inventory_present":            false,
-		"machine_secrets_present":      false,
-		"talosconfig_present":          false,
-		"kubeconfig_present":           false,
-		"talos_api_ready_checked":      refresh,
-		"talos_api_ready":              false,
-		"kubernetes_api_ready_checked": refresh,
-		"kubernetes_api_ready":         false,
-		"kubernetes_api_endpoint":      "",
-		"talos_api_check":              "",
-		"kubernetes_api_check":         "",
-		"nodes":                        []map[string]string{},
-		"control_plane_count":          0,
-		"worker_count":                 0,
-	}
-	if cfg == nil || clusterPaths == nil {
-		return status
-	}
-
-	artifactPaths := talosdeploy.ResolveArtifactPaths(clusterPaths, cfg.ClusterName())
-	status["inventory_path"] = artifactPaths.InventoryPath
-	status["machine_secrets_path"] = artifactPaths.MachineSecretsPath
-	status["talosconfig_path"] = artifactPaths.TalosConfigPath
-	status["kubeconfig_path"] = artifactPaths.KubeconfigPath
-	status["inventory_present"] = pathExists(artifactPaths.InventoryPath)
-	status["machine_secrets_present"] = pathExists(artifactPaths.MachineSecretsPath)
-	status["talosconfig_present"] = pathExists(artifactPaths.TalosConfigPath)
-	status["kubeconfig_present"] = pathExists(artifactPaths.KubeconfigPath)
-
-	var inventory *talosdeploy.Inventory
-	if pathExists(artifactPaths.InventoryPath) {
-		loaded, err := talosdeploy.LoadInventory(artifactPaths.InventoryPath)
-		if err != nil {
-			status["inventory_error"] = err.Error()
-		} else {
-			inventory = loaded
-			status["control_plane_count"] = len(loaded.ControlPlane)
-			status["worker_count"] = len(loaded.Workers)
-			allNodes := loaded.AllNodes()
-			allEndpoints := loaded.AllNodeEndpoints()
-			nodes := make([]map[string]string, 0, len(allNodes))
-			for idx, node := range allNodes {
-				endpoint := ""
-				if idx < len(allEndpoints) {
-					endpoint = allEndpoints[idx]
-				}
-				nodes = append(nodes, map[string]string{
-					"name":               node.Name,
-					"role":               string(node.Role),
-					"talos_api_ip":       node.TalosAPIIP,
-					"talos_api_endpoint": endpoint,
-					"internal_ip":        node.InternalIP,
-				})
-			}
-			status["nodes"] = nodes
-		}
-	}
-
-	if refresh {
-		if inventory != nil && pathExists(artifactPaths.TalosConfigPath) {
-			ready, errText := talosAPIStatus(ctx, artifactPaths.TalosConfigPath, inventory.AllNodeEndpoints())
-			status["talos_api_ready"] = ready
-			status["talos_api_check"] = errText
-		}
-		apiReady, endpoint, errText := cloudClusterStatus(ctx, artifactPaths.KubeconfigPath)
-		status["kubernetes_api_ready"] = apiReady
-		status["kubernetes_api_endpoint"] = endpoint
-		status["kubernetes_api_check"] = errText
-	}
-	return status
-}
-
-var talosAPIStatus = func(ctx context.Context, talosConfigPath string, endpoints []string) (bool, string) {
-	if !pathExists(talosConfigPath) {
-		return false, ""
-	}
-	talosConfig, err := talosdeploy.LoadTalosConfig(talosConfigPath)
-	if err != nil {
-		return false, err.Error()
-	}
-	statusCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	client, err := talosdeploy.NewMachineryClient(statusCtx, talosConfig, endpoints)
-	if err != nil {
-		return false, err.Error()
-	}
-	if err := client.Health(statusCtx, endpoints); err != nil {
-		return false, err.Error()
-	}
-	return true, ""
-}
-
-func talosStatusBool(status map[string]any, key string) bool {
-	value, _ := status[key].(bool)
-	return value
 }
 
 func clusterInfrastructureDir(cfg *v2.Config) string {

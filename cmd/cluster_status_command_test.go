@@ -36,72 +36,6 @@ func saveOpenStackStatusConfig(t *testing.T, dir, clusterName, organization stri
 	return cfg, clusterPaths.KubeconfigPath
 }
 
-func saveTalosStatusConfig(t *testing.T, dir, clusterName, organization string) (v2.Config, string) {
-	t.Helper()
-
-	resolver, clusterPaths := createClusterDirectoriesForTest(t, dir, clusterName, organization)
-	cfgPtr, err := v2.NewV2Default(clusterName, "openstack")
-	if err != nil {
-		t.Fatalf("NewV2Default() error = %v", err)
-	}
-	cfg := *cfgPtr
-	v2.ApplyTalosDeploymentDefaults(&cfg)
-	cfg.OpenCenter.Meta.Name = clusterName
-	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(dir, "gitops", clusterName)
-	cfg.Deployment.Talos.Endpoint = "https://10.2.128.5:443"
-	cfg.Deployment.Talos.Network.ManagementCIDRs = []string{"203.0.113.10/32"}
-	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL = "https://keystone.example.com/v3"
-	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "app-cred-id"
-	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "app-cred-secret"
-
-	talosDir := filepath.Join(clusterPaths.ClusterDir, "talos")
-	if err := os.MkdirAll(talosDir, 0o755); err != nil {
-		t.Fatalf("mkdir talos dir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(talosDir, "inventory.yaml"), []byte(`cluster:
-  name: status-talos
-  endpoint: https://10.2.128.5:443
-  talos_api_port: 50000
-control_plane:
-  - name: status-talos-cp-1
-    talos_api_ip: 198.51.100.11
-    internal_ip: 10.2.128.11
-    install_disk: /dev/vda
-workers:
-  - name: status-talos-wn-1
-    talos_api_ip: 198.51.100.21
-    internal_ip: 10.2.128.21
-    install_disk: /dev/vda
-`), 0o600); err != nil {
-		t.Fatalf("write talos inventory: %v", err)
-	}
-	secretsDir := filepath.Join(clusterPaths.SecretsDir, "talos", clusterName)
-	if err := os.MkdirAll(secretsDir, 0o700); err != nil {
-		t.Fatalf("mkdir talos secrets dir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(secretsDir, "machine-secrets.yaml"), []byte("Cluster: {}\nSecrets: {}\n"), 0o600); err != nil {
-		t.Fatalf("write talos secrets: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(secretsDir, "talosconfig.yaml"), []byte(`context: status-talos
-contexts:
-  status-talos:
-    endpoints:
-      - 198.51.100.11:50000
-    ca: ca
-    crt: crt
-    key: key
-`), 0o600); err != nil {
-		t.Fatalf("write talosconfig: %v", err)
-	}
-	if err := os.WriteFile(clusterPaths.KubeconfigPath, []byte("apiVersion: v1\nclusters: []\n"), 0o600); err != nil {
-		t.Fatalf("write kubeconfig: %v", err)
-	}
-
-	testhelpers.SaveConfigWithPathResolver(t, cfg, resolver)
-	return cfg, clusterPaths.KubeconfigPath
-}
-
 func writeStatusOpenTofuState(t *testing.T, cfg v2.Config, extraOutputs string) string {
 	t.Helper()
 
@@ -210,45 +144,6 @@ func TestClusterStatusShowsOpenStackInfrastructureDetails(t *testing.T) {
 
 	if _, err := os.Stat(filepath.Join(stateDir, "kubectl.log")); err == nil {
 		t.Fatalf("default cluster status should not call kubectl, got log at %s", filepath.Join(stateDir, "kubectl.log"))
-	}
-}
-
-func TestClusterStatusShowsTalosArtifacts(t *testing.T) {
-	dir := t.TempDir()
-	prepareCommandTestEnv(t, dir)
-	saveTalosStatusConfig(t, dir, "status-talos", "opencenter")
-
-	cmd := newClusterStatusCmd()
-	out := &bytes.Buffer{}
-	errOut := &bytes.Buffer{}
-	cmd.SetOut(out)
-	cmd.SetErr(errOut)
-	cmd.SetArgs([]string{"status-talos"})
-	cmd.SetContext(context.Background())
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("cluster status failed: %v\nstderr: %s", err, errOut.String())
-	}
-
-	output := out.String()
-	expectedSnippets := []string{
-		"Talos Status:",
-		"Inventory:         ✓ Present",
-		"Machine Secrets:   ✓ Present",
-		"Talosconfig:       ✓ Present",
-		"Kubeconfig:        ✓ Present",
-		"Talos API Ready:   skipped (use --refresh)",
-		"Kubernetes API:    skipped (use --refresh)",
-		"Management Endpoints:",
-		"status-talos-cp-1",
-		"198.51.100.11:50000",
-		"status-talos-wn-1",
-		"198.51.100.21:50000",
-	}
-	for _, snippet := range expectedSnippets {
-		if !strings.Contains(output, snippet) {
-			t.Fatalf("expected output to contain %q, got:\n%s", snippet, output)
-		}
 	}
 }
 
@@ -510,65 +405,6 @@ func TestClusterStatusHonorsJSONOutput(t *testing.T) {
 	}
 	if len(payload.NextSteps) == 0 {
 		t.Fatalf("expected next steps in json payload, got %#v", payload)
-	}
-}
-
-func TestClusterStatusTalosJSONIncludesTalosStatus(t *testing.T) {
-	dir := t.TempDir()
-	prepareCommandTestEnv(t, dir)
-	saveTalosStatusConfig(t, dir, "status-talos-json", "opencenter")
-
-	root := &cobra.Command{
-		Use:           "opencenter",
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			return applyGlobalOptions(cmd, args)
-		},
-	}
-	addGlobalFlags(root)
-	root.AddCommand(NewClusterCmd())
-
-	out := &bytes.Buffer{}
-	errOut := &bytes.Buffer{}
-	root.SetOut(out)
-	root.SetErr(errOut)
-	root.SetArgs([]string{"cluster", "status", "status-talos-json", "--output", "json"})
-
-	if err := root.Execute(); err != nil {
-		t.Fatalf("cluster status --output json failed: %v\nstderr: %s", err, errOut.String())
-	}
-
-	var payload struct {
-		Cluster     string         `json:"cluster"`
-		Provider    string         `json:"provider"`
-		TalosStatus map[string]any `json:"talos_status"`
-	}
-	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
-		t.Fatalf("expected valid json output, got error %v and output:\n%s", err, out.String())
-	}
-	if payload.Cluster != "status-talos-json" {
-		t.Fatalf("cluster = %q, want status-talos-json", payload.Cluster)
-	}
-	if payload.Provider != "openstack" {
-		t.Fatalf("provider = %q, want openstack", payload.Provider)
-	}
-	if payload.TalosStatus == nil {
-		t.Fatalf("expected talos_status in payload: %#v", payload)
-	}
-	if present, _ := payload.TalosStatus["inventory_present"].(bool); !present {
-		t.Fatalf("expected inventory_present true, got %#v", payload.TalosStatus)
-	}
-	if count, _ := payload.TalosStatus["control_plane_count"].(float64); count != 1 {
-		t.Fatalf("expected control_plane_count 1, got %#v", payload.TalosStatus)
-	}
-	nodes, _ := payload.TalosStatus["nodes"].([]any)
-	if len(nodes) == 0 {
-		t.Fatalf("expected talos nodes in payload, got %#v", payload.TalosStatus)
-	}
-	first, _ := nodes[0].(map[string]any)
-	if endpoint, _ := first["talos_api_endpoint"].(string); endpoint != "198.51.100.11:50000" {
-		t.Fatalf("first talos_api_endpoint = %q, want 198.51.100.11:50000", endpoint)
 	}
 }
 

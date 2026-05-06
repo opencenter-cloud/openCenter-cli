@@ -425,11 +425,6 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 }
 
 func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error) {
-	if strings.EqualFold(strings.TrimSpace(cfg.Deployment.Method), "talos") {
-		providerImpl := newTalosBootstrapProvider(s.runner)
-		return providerImpl.BuildSteps(cfg, clusterPaths, opts)
-	}
-
 	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 	if provider == "" {
 		provider = "openstack"
@@ -578,10 +573,6 @@ func (s *BootstrapService) deployCluster(ctx context.Context, cfg *v2.Config, cl
 	// For most providers, deployment is handled by the infrastructure provisioning step
 	// This method is a placeholder for future provider-specific deployment logic
 	// that may be separate from infrastructure provisioning
-	if strings.EqualFold(strings.TrimSpace(cfg.Deployment.Method), "talos") {
-		return nil
-	}
-
 	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 
 	switch provider {
@@ -600,13 +591,6 @@ func (s *BootstrapService) deployCluster(ctx context.Context, cfg *v2.Config, cl
 
 // waitForReady waits for the cluster to be ready and returns the endpoint
 func (s *BootstrapService) waitForReady(ctx context.Context, cfg *v2.Config, timeout time.Duration, kubeconfigPath string) (string, error) {
-	if strings.EqualFold(strings.TrimSpace(cfg.Deployment.Method), "talos") {
-		if cfg.Deployment.Talos != nil {
-			return strings.TrimSpace(cfg.Deployment.Talos.Endpoint), nil
-		}
-		return "", nil
-	}
-
 	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

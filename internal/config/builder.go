@@ -80,10 +80,6 @@ type ConfigBuilder interface {
 	WithK8sHardening(enabled bool) ConfigBuilder
 	WithOSHardening(enabled bool) ConfigBuilder
 
-	// Talos configuration
-	WithTalosConfig(config *TalosConfig) ConfigBuilder
-	WithTalosEnabled(enabled bool) ConfigBuilder
-
 	// Generic override (string-based, runtime validation)
 	WithOverride(path string, value interface{}) ConfigBuilder
 
@@ -379,22 +375,6 @@ func (b *FluentConfigBuilder) WithK8sHardening(enabled bool) ConfigBuilder {
 // WithOSHardening enables or disables OS hardening at the cluster networking level.
 func (b *FluentConfigBuilder) WithOSHardening(enabled bool) ConfigBuilder {
 	b.config.OpenCenter.Cluster.Networking.Security.OSHardening = enabled
-	return b
-}
-
-// WithTalosConfig sets the complete Talos configuration.
-func (b *FluentConfigBuilder) WithTalosConfig(config *TalosConfig) ConfigBuilder {
-	b.config.OpenCenter.Talos = config
-	return b
-}
-
-// WithTalosEnabled enables or disables Talos.
-func (b *FluentConfigBuilder) WithTalosEnabled(enabled bool) ConfigBuilder {
-	if enabled && b.config.OpenCenter.Talos == nil {
-		b.config.OpenCenter.Talos = DefaultTalosConfig(b.config.OpenCenter.Cluster.ClusterName)
-	} else if !enabled {
-		b.config.OpenCenter.Talos = nil
-	}
 	return b
 }
 

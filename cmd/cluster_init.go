@@ -53,10 +53,6 @@ command-line flags with dot notation.
 
 This command generates schema version "2.0" configuration only.
 
-Use --deployment talos with --type openstack to initialize a Talos deployment
-on OpenStack infrastructure. Talos is a deployment method, not an
-infrastructure provider; --type talos is rejected.
-
 The configuration is created in an organization-based directory structure:
   ~/.config/opencenter/clusters/<organization>/<cluster>/
 
@@ -76,9 +72,6 @@ don't already exist, unless --no-keygen is specified.`,
   # Initialize a VMware cluster
   opencenter cluster init my-cluster --org production --type vmware
 
-  # Initialize a Talos OpenStack cluster
-  opencenter cluster init my-cluster --org production --type openstack --deployment talos
-
   # Initialize a Kind cluster with the built-in CNI disabled
   opencenter cluster init my-cluster --org local --type kind --kind-disable-default-cni
 
@@ -93,7 +86,6 @@ don't already exist, unless --no-keygen is specified.`,
 
 	cmd.Flags().String("org", "", "organization name (defaults to 'opencenter')")
 	cmd.Flags().String("type", "openstack", "cluster type: openstack, baremetal, kind, vmware")
-	cmd.Flags().String("deployment", "kubespray", "deployment method: kubespray, talos")
 	cmd.Flags().String("config-file", "", "load configuration from file")
 	cmd.Flags().String("config", "", "load configuration from file")
 	_ = cmd.Flags().MarkHidden("config")
@@ -188,15 +180,8 @@ func parseInitOptions(cmd *cobra.Command, args []string) (cluster.InitOptions, e
 	// Parse flags
 	opts.Organization, _ = cmd.Flags().GetString("org")
 	opts.Provider, _ = cmd.Flags().GetString("type")
-	opts.DeploymentMethod, _ = cmd.Flags().GetString("deployment")
 	opts.Provider = strings.ToLower(strings.TrimSpace(opts.Provider))
-	opts.DeploymentMethod = strings.ToLower(strings.TrimSpace(opts.DeploymentMethod))
-	if opts.DeploymentMethod == "" {
-		opts.DeploymentMethod = "kubespray"
-	}
-	if opts.DeploymentMethod != "kubespray" && opts.DeploymentMethod != "talos" {
-		return opts, fmt.Errorf("unsupported deployment method %q (supported: kubespray, talos)", opts.DeploymentMethod)
-	}
+	opts.DeploymentMethod = "kubespray"
 
 	// Handle org/cluster identifier format: extract organization if embedded
 	// in the cluster name and no explicit --org was provided

@@ -663,17 +663,6 @@ creation_rules:
 		}
 	}
 
-	config += `  - path_regex: 'secrets/talos/.*\.ya?ml$'
-    age: >-
-`
-	for i, key := range ageKeys {
-		if i == len(ageKeys)-1 {
-			config += fmt.Sprintf("      %s\n", key)
-		} else {
-			config += fmt.Sprintf("      %s,\n", key)
-		}
-	}
-
 	// Add third rule for application overlays
 	config += `  - path_regex: 'applications/overlays/[^/]+/(managed-services|services)/.*/.*\.ya?ml$'
     encrypted_regex: "^(secret)$"

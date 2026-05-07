@@ -30,7 +30,9 @@ func (p *openstackBootstrapProvider) buildGitOpsPushStep(
 			WorkingDir: gitDir,
 			Commands: []BootstrapPlanCommand{
 				commandPlan("git", "remote", "add", "origin", gitURL),
+				commandPlan("git", "stash"),
 				commandPlan("git", "pull", "--rebase", "origin", "main"),
+				commandPlan("git", "stash", "pop"),
 				commandPlan("git", "push", "-u", "origin", "main"),
 			},
 			Environment: planEnv,

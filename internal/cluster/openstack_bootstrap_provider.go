@@ -162,6 +162,13 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		steps = append(steps, fluxStep)
 	}
 
+	// Push the GitOps repository to the remote so FluxCD can reconcile.
+	// Only add when a git URL is configured.
+	if cfg.ConfiguredGitURL() != "" {
+		gitopsPushStep := p.buildGitOpsPushStep(cfg, planEnv, opts)
+		steps = append(steps, gitopsPushStep)
+	}
+
 	return steps, nil
 }
 

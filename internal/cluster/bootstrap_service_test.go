@@ -486,18 +486,14 @@ func TestBootstrapService_DryRunOpenStackStepFiltersNetworkPluginPlan(t *testing
 	}
 	networkPluginPlan := renderPlanCommands(result.Plan.Steps[0].Commands)
 	for _, want := range []string{
-		"kubectl --kubeconfig",
-		"<bundled v1_crd_projectcalico_org.yaml>",
-		"<patched bundled custom-resources-bpf.yaml>",
+		"helm repo add projectcalico",
+		"helm upgrade --install calico projectcalico/tigera-operator",
+		"--namespace tigera-operator",
+		"--create-namespace",
 		"tigerastatus/calico",
 	} {
 		if !strings.Contains(networkPluginPlan, want) {
 			t.Fatalf("expected Calico dry-run plan to contain %q, got:\n%s", want, networkPluginPlan)
-		}
-	}
-	for _, notWant := range []string{"helm ", "projectcalico/tigera-operator", "helm template"} {
-		if strings.Contains(networkPluginPlan, notWant) {
-			t.Fatalf("Calico dry-run plan should not contain %q, got:\n%s", notWant, networkPluginPlan)
 		}
 	}
 

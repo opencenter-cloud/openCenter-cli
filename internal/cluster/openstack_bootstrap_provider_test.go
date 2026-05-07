@@ -2,8 +2,6 @@ package cluster
 
 import (
 	"context"
-	"crypto/sha256"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -193,6 +191,15 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 		t.Fatalf("mkdir cluster dir: %v", err)
 	}
 
+	// Create the Calico Helm override values file expected by the Helm install step
+	calicoValuesDir := filepath.Join(cfg.OpenCenter.GitOps.Repository.LocalDir, organization, "applications", "overlays", clusterName, "services", "calico", "helm-values")
+	if err := os.MkdirAll(calicoValuesDir, 0o755); err != nil {
+		t.Fatalf("mkdir calico values dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(calicoValuesDir, "override_values.yaml"), []byte("installation: {}\n"), 0o600); err != nil {
+		t.Fatalf("write calico override values: %v", err)
+	}
+
 	stateRoot := t.TempDir()
 	t.Setenv("OPENCENTER_STATE_DIR", stateRoot)
 
@@ -222,8 +229,8 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 	if len(fakeRunner.calls[0].args) == 0 || fakeRunner.calls[0].args[0] != "apply" {
 		t.Fatalf("expected resumed command to be opentofu apply, got %#v", fakeRunner.calls[0])
 	}
-	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "apply --server-side -f")
-	assertNoRecordedCommandName(t, fakeRunner.calls, "helm")
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "repo add projectcalico")
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install calico projectcalico/tigera-operator")
 	if _, err := os.Stat(clusterPaths.KubeconfigPath); err != nil {
 		t.Fatalf("expected cluster-owned kubeconfig at %s: %v", clusterPaths.KubeconfigPath, err)
 	}
@@ -232,119 +239,60 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 	}
 }
 
-func TestOpenStackNetworkPluginInstallCalicoUsesBundledEBPFManifests(t *testing.T) {
-	cfg, clusterDir, kubeconfigPath := openStackNetworkPluginTestConfig(t, "calico-demo")
-	cfg.OpenCenter.Cluster.Kubernetes.SubnetPods = "10.99.0.0/16"
-	type appliedManifest struct {
-		base string
-		data string
+func TestOpenStackNetworkPluginInstallCalicoUsesHelmChart(t *testing.T) {
+	cfg, _, kubeconfigPath := openStackNetworkPluginTestConfig(t, "calico-demo")
+
+	// Create the override values file at the expected path
+	organization := cfg.Organization()
+	clusterName := cfg.ClusterName()
+	valuesDir := filepath.Join(cfg.GitDir(), organization, "applications", "overlays", clusterName, "services", "calico", "helm-values")
+	if err := os.MkdirAll(valuesDir, 0o755); err != nil {
+		t.Fatalf("mkdir values dir: %v", err)
 	}
-	var applied []appliedManifest
-	fakeRunner := &fakeLifecycleRunner{
-		onRun: func(dir string, env map[string]string, name string, args ...string) ([]byte, error) {
-			joined := strings.Join(args, " ")
-			if name == "kubectl" && strings.Contains(joined, "apply") {
-				for i, arg := range args {
-					if arg == "-f" && i+1 < len(args) {
-						data, err := os.ReadFile(args[i+1])
-						if err != nil {
-							t.Fatalf("read applied manifest %s: %v", args[i+1], err)
-						}
-						applied = append(applied, appliedManifest{
-							base: filepath.Base(args[i+1]),
-							data: string(data),
-						})
-					}
-				}
-			}
-			return nil, nil
-		},
+	valuesPath := filepath.Join(valuesDir, "override_values.yaml")
+	if err := os.WriteFile(valuesPath, []byte("installation:\n  calicoNetwork:\n    linuxDataplane: BPF\n"), 0o600); err != nil {
+		t.Fatalf("write override values: %v", err)
 	}
+
+	fakeRunner := &fakeLifecycleRunner{}
 	provider := &openstackBootstrapProvider{runner: fakeRunner}
 
-	step := findBootstrapStep(t, provider, cfg, clusterDir, kubeconfigPath, "openstack-install-network-plugin")
+	step := findBootstrapStep(t, provider, cfg, cfg.GitDir(), kubeconfigPath, "openstack-install-network-plugin")
 	if err := step.Run(context.Background()); err != nil {
 		t.Fatalf("install step failed: %v", err)
 	}
 
-	assertNoRecordedCommandName(t, fakeRunner.calls, "helm")
-	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" apply --server-side -f")
-	if len(applied) < 3 {
-		t.Fatalf("expected at least three applied manifests, got %d:\n%s", len(applied), renderRecordedCommands(fakeRunner.calls))
-	}
-	wantApplied := []string{"v1_crd_projectcalico_org.yaml", "tigera-operator.yaml", "custom-resources-bpf.yaml"}
-	for i, want := range wantApplied {
-		if applied[i].base != want {
-			t.Fatalf("applied manifest %d = %q, want %q", i, applied[i].base, want)
-		}
-	}
-	if !strings.Contains(applied[2].data, "cidr: 10.99.0.0/16") {
-		t.Fatalf("patched custom resources missing pod CIDR:\n%s", applied[2].data)
-	}
-	for _, want := range []string{"linuxDataplane: BPF", "bpfNetworkBootstrap: Enabled", "kubeProxyManagement: Enabled"} {
-		if !strings.Contains(applied[2].data, want) {
-			t.Fatalf("patched custom resources missing %q:\n%s", want, applied[2].data)
-		}
-	}
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "repo add projectcalico https://docs.tigera.io/calico/charts")
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install calico projectcalico/tigera-operator --namespace tigera-operator --create-namespace -f "+valuesPath)
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n tigera-operator rollout status deployment/tigera-operator --timeout=5m")
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" wait --for=create tigerastatus/calico --timeout=5m")
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" wait --for=condition=Available tigerastatus/calico --timeout=10m")
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n calico-system wait --for=condition=Ready pods --all --timeout=10m")
 }
 
-func TestOpenStackCalicoSelectionRequiresBundledVersion(t *testing.T) {
+func TestOpenStackCalicoSelectionAcceptsAnyVersion(t *testing.T) {
 	cfg, _, _ := openStackNetworkPluginTestConfig(t, "calico-version")
 
-	for _, version := range []string{"", "3.32.0", "v3.32.0"} {
-		cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Version = version
-		selection, err := selectOpenStackNetworkPlugin(cfg)
-		if err != nil {
-			t.Fatalf("selectOpenStackNetworkPlugin(%q) error = %v", version, err)
-		}
-		if selection.Version != "v3.32.0" {
-			t.Fatalf("selectOpenStackNetworkPlugin(%q) version = %q, want v3.32.0", version, selection.Version)
-		}
-	}
-
-	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Version = "3.31.0"
-	_, err := selectOpenStackNetworkPlugin(cfg)
-	if err == nil {
-		t.Fatal("selectOpenStackNetworkPlugin should reject non-bundled Calico versions")
-	}
-	if !strings.Contains(err.Error(), "bundles v3.32.0") {
-		t.Fatalf("expected bundled-version error, got: %v", err)
-	}
-}
-
-func TestOpenStackCalicoBundledAssetChecksums(t *testing.T) {
 	tests := []struct {
-		name       string
-		wantSHA256 string
+		input   string
+		want    string
 	}{
-		{
-			name:       "v1_crd_projectcalico_org.yaml",
-			wantSHA256: "d9fe9189f1003ea80d93fb4776bfbadfffa42a470909cd2494a0003197cb1a9a",
-		},
-		{
-			name:       "tigera-operator.yaml",
-			wantSHA256: "e48fe027f8be3d9136a012a32450f1eabc4c5257c0b76083cd1ab32316637d47",
-		},
-		{
-			name:       "custom-resources-bpf.yaml",
-			wantSHA256: "c705f212aa713cc3f87710ead805168f8cf03bfff383d6921a082121ae74af5c",
-		},
+		{"", "v3.32.0"},
+		{"3.32.0", "v3.32.0"},
+		{"v3.32.0", "v3.32.0"},
+		{"3.31.0", "v3.31.0"},
+		{"v3.33.1", "v3.33.1"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			data, err := readOpenStackCalicoAsset(tt.name)
-			if err != nil {
-				t.Fatalf("readOpenStackCalicoAsset(%q) error = %v", tt.name, err)
-			}
-			got := fmt.Sprintf("%x", sha256.Sum256(data))
-			if got != tt.wantSHA256 {
-				t.Fatalf("sha256(%s) = %s, want %s", tt.name, got, tt.wantSHA256)
-			}
-		})
+		cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Version = tt.input
+		selection, err := selectOpenStackNetworkPlugin(cfg)
+		if err != nil {
+			t.Fatalf("selectOpenStackNetworkPlugin(%q) error = %v", tt.input, err)
+		}
+		if selection.Version != tt.want {
+			t.Fatalf("selectOpenStackNetworkPlugin(%q) version = %q, want %q", tt.input, selection.Version, tt.want)
+		}
 	}
 }
 

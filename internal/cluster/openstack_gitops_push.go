@@ -22,6 +22,14 @@ func (p *openstackBootstrapProvider) buildGitOpsPushStep(
 	gitDir := cfg.GitDir()
 	gitURL := cfg.ConfiguredGitURL()
 
+	// Build a masked version of the authenticated URL for the plan output
+	// (shows the format without exposing the actual token)
+	gitOrg := ""
+	if cfg.OpenCenter.GitOps.Auth.Token != nil {
+		gitOrg = strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.Organization)
+	}
+	planURL := fmt.Sprintf("https://%s:<token>@<host>/<path>.git", gitOrg)
+
 	return bootstrapStep{
 		ID:          openStackGitOpsPushStepID,
 		Description: "Push GitOps repository to remote",
@@ -30,7 +38,7 @@ func (p *openstackBootstrapProvider) buildGitOpsPushStep(
 			Action:     "Push GitOps repository to remote origin",
 			WorkingDir: gitDir,
 			Commands: []BootstrapPlanCommand{
-				commandPlan("git", "remote", "add", "origin", gitURL),
+				commandPlan("git", "remote", "add", "origin", planURL),
 				commandPlan("git", "stash", "--include-untracked"),
 				commandPlan("git", "pull", "--rebase", "origin", "main"),
 				commandPlan("git", "stash", "pop"),
@@ -75,24 +83,18 @@ func (p *openstackBootstrapProvider) runGitOpsPush(ctx context.Context, cfg *v2.
 		return fmt.Errorf("gitops.auth.token.organization must be configured for gitops push")
 	}
 
+	env := buildGitOpsPushEnvironment()
+
 	// Build the authenticated URL: https://<organization>:<token>@<host>/<path>
 	authURL, err := buildAuthenticatedGitURL(gitURL, gitOrg, token)
 	if err != nil {
 		return fmt.Errorf("building authenticated git URL: %w", err)
 	}
 
-	env := buildGitOpsPushEnvironment()
-
-	// Check if origin remote already exists (compare against the plain URL,
-	// not the authenticated one, to avoid leaking tokens in error messages)
-	if err := p.ensureOriginRemote(ctx, gitDir, env, gitURL); err != nil {
+	// Check if origin remote already exists; if not, add it with the
+	// authenticated URL. If it exists, verify it matches.
+	if err := p.ensureOriginRemote(ctx, gitDir, env, authURL); err != nil {
 		return err
-	}
-
-	// Set the push URL to the authenticated version so git push uses the token.
-	// This avoids storing the token in the remote config permanently.
-	if _, err := p.runner.Run(ctx, gitDir, env, "git", "remote", "set-url", "--push", "origin", authURL); err != nil {
-		return fmt.Errorf("set authenticated push URL: %w", err)
 	}
 
 	// Stash any unstaged changes so pull --rebase can proceed
@@ -119,13 +121,10 @@ func (p *openstackBootstrapProvider) runGitOpsPush(ctx context.Context, cfg *v2.
 	// Commit only if there are staged changes (--allow-empty is not used)
 	_, _ = p.runner.Run(ctx, gitDir, env, "git", "commit", "-m", "chore: bootstrap cluster gitops state")
 
-	// Push to remote using the authenticated push URL
+	// Push to remote using the authenticated origin URL
 	if _, err := p.runner.Run(ctx, gitDir, env, "git", "push", "-u", "origin", "main"); err != nil {
 		return fmt.Errorf("git push to origin: %w", err)
 	}
-
-	// Reset the push URL back to the plain URL so the token is not persisted
-	_, _ = p.runner.Run(ctx, gitDir, env, "git", "remote", "set-url", "--push", "origin", gitURL)
 
 	fmt.Println("\n✓ GitOps repository pushed to remote")
 	fmt.Println("\nTo check FluxCD reconciliation status, run:")
@@ -149,12 +148,17 @@ func (p *openstackBootstrapProvider) ensureOriginRemote(ctx context.Context, git
 		return nil
 	}
 
-	// Origin exists — verify it matches the configured URL.
-	// Strip any embedded credentials from the current URL before comparing
-	// so that a previously-authenticated URL still matches.
+	// Origin exists — verify the host/path matches the configured URL.
+	// Strip credentials before comparing to avoid false mismatches from
+	// different tokens and to avoid leaking tokens in error messages.
 	currentURL := strings.TrimSpace(string(output))
 	if stripCredentialsFromURL(currentURL) != stripCredentialsFromURL(strings.TrimSpace(expectedURL)) {
-		return fmt.Errorf("git remote origin is %q but configuration expects %q; update the remote or fix gitops.repository.url", currentURL, expectedURL)
+		return fmt.Errorf("git remote origin host/path %q does not match configuration %q; update the remote or fix gitops.repository.url", stripCredentialsFromURL(currentURL), stripCredentialsFromURL(expectedURL))
+	}
+
+	// Update the remote URL to ensure the current token is used
+	if _, err := p.runner.Run(ctx, gitDir, env, "git", "remote", "set-url", "origin", expectedURL); err != nil {
+		return fmt.Errorf("update git remote origin URL: %w", err)
 	}
 
 	return nil

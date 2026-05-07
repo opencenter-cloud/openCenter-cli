@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
@@ -55,7 +56,7 @@ func (r execLifecycleCommandRunner) Run(ctx context.Context, dir string, env map
 	err = cmd.Run()
 	output := append(stdout.Bytes(), stderr.Bytes()...)
 	if err != nil {
-		return output, fmt.Errorf("command failed: %s %v: %w\nOutput: %s", name, args, err, string(output))
+		return output, fmt.Errorf("command failed: %s %s: %w\nOutput: %s", name, strings.Join(args, " "), err, string(output))
 	}
 
 	return output, nil

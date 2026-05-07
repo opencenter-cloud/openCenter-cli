@@ -97,13 +97,13 @@ func TestOpenStackDestroyProvider_BuildSteps(t *testing.T) {
 	}
 
 	// Verify init command
-	if runner.calls[0].name != "opentofu" || runner.calls[0].args[0] != "init" {
-		t.Errorf("expected first command to be 'opentofu init', got %s %v", runner.calls[0].name, runner.calls[0].args)
+	if runner.calls[0].name != "tofu" || runner.calls[0].args[0] != "init" {
+		t.Errorf("expected first command to be 'tofu init', got %s %v", runner.calls[0].name, runner.calls[0].args)
 	}
 
 	// Verify destroy command with -auto-approve
-	if runner.calls[1].name != "opentofu" || runner.calls[1].args[0] != "destroy" {
-		t.Errorf("expected second command to be 'opentofu destroy', got %s %v", runner.calls[1].name, runner.calls[1].args)
+	if runner.calls[1].name != "tofu" || runner.calls[1].args[0] != "destroy" {
+		t.Errorf("expected second command to be 'tofu destroy', got %s %v", runner.calls[1].name, runner.calls[1].args)
 	}
 	if len(runner.calls[1].args) < 2 || runner.calls[1].args[1] != "-auto-approve" {
 		t.Errorf("expected -auto-approve flag, got args: %v", runner.calls[1].args)

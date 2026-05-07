@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/credentials"
@@ -55,9 +54,9 @@ func (p *openstackDestroyProvider) BuildSteps(cfg *v2.Config, opts *DestroyInfra
 	env := buildDestroyEnvironment()
 	mergeBootstrapEnvironment(env, creds.ToEnvMap())
 
-	openTofuPath := strings.TrimSpace(cfg.OpenTofu.Path)
-	if openTofuPath == "" {
-		openTofuPath = "opentofu"
+	openTofuPath, err := resolveTofuBinary(cfg.OpenTofu.Path)
+	if err != nil {
+		return nil, err
 	}
 
 	destroyArgs := []string{"destroy"}

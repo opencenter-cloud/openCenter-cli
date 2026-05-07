@@ -282,7 +282,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 		},
 		OpenTofu: OpenTofuConfig{
 			Enabled: selectedProvider != "kind",
-			Path:    "opentofu",
+			Path:    "",
 			Backend: BackendConfig{
 				Type: "local",
 				Local: &LocalBackendConfig{

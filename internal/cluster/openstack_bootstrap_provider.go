@@ -30,9 +30,9 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		return nil, fmt.Errorf("opentofu must be enabled for openstack bootstrap")
 	}
 
-	openTofuPath := strings.TrimSpace(cfg.OpenTofu.Path)
-	if openTofuPath == "" {
-		openTofuPath = "opentofu"
+	openTofuPath, err := resolveTofuBinary(cfg.OpenTofu.Path)
+	if err != nil {
+		return nil, err
 	}
 	planEnv := openStackPlanEnv(opts.KubeconfigPath)
 

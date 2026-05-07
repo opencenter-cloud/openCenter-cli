@@ -75,7 +75,7 @@ func TestClusterDeployDryRunMake(t *testing.T) {
 		"No commands will be run, no files will be written, and prerequisites are not fully validated.",
 		"Provider: openstack",
 		"opentofu-init",
-		"Command: opentofu init",
+		"Command: tofu init",
 		"Working dir: " + clusterDir,
 		"OS_APPLICATION_CREDENTIAL_SECRET=<redacted>",
 	} {

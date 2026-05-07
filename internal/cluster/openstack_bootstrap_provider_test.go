@@ -115,13 +115,13 @@ users:
 	}
 
 	if len(fakeRunner.calls) != 2 {
-		t.Fatalf("expected opentofu init/apply lifecycle commands, got %d", len(fakeRunner.calls))
+		t.Fatalf("expected tofu init/apply lifecycle commands, got %d", len(fakeRunner.calls))
 	}
-	if fakeRunner.calls[0].name != "opentofu" || len(fakeRunner.calls[0].args) == 0 || fakeRunner.calls[0].args[0] != "init" {
-		t.Fatalf("expected first command to be opentofu init, got %#v", fakeRunner.calls[0])
+	if fakeRunner.calls[0].name != "tofu" || len(fakeRunner.calls[0].args) == 0 || fakeRunner.calls[0].args[0] != "init" {
+		t.Fatalf("expected first command to be tofu init, got %#v", fakeRunner.calls[0])
 	}
-	if fakeRunner.calls[1].name != "opentofu" || len(fakeRunner.calls[1].args) < 2 || fakeRunner.calls[1].args[0] != "apply" || fakeRunner.calls[1].args[1] != "-auto-approve" {
-		t.Fatalf("expected second command to be opentofu apply -auto-approve, got %#v", fakeRunner.calls[1])
+	if fakeRunner.calls[1].name != "tofu" || len(fakeRunner.calls[1].args) < 2 || fakeRunner.calls[1].args[0] != "apply" || fakeRunner.calls[1].args[1] != "-auto-approve" {
+		t.Fatalf("expected second command to be tofu apply -auto-approve, got %#v", fakeRunner.calls[1])
 	}
 
 	if fakeRunner.calls[0].env["OS_AUTH_URL"] != "https://keystone.example.com/v3" {

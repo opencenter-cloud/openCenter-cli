@@ -83,6 +83,7 @@ const (
 // configurations via "opencenter cluster init". These values are injected into the
 // cluster config YAML when the corresponding field is not already set.
 type ClusterDefaultsConfig struct {
+	Organization      string   `yaml:"organization,omitempty"`
 	Provider          string   `yaml:"provider"`
 	Region            string   `yaml:"region"`
 	Environment       string   `yaml:"environment"`
@@ -284,6 +285,7 @@ func DefaultCLIConfig() *CLIConfig {
 			Validation:  ValidationModeOffline,
 		},
 		ClusterDefaults: ClusterDefaultsConfig{
+			Organization:     "opencenter",
 			Provider:         "openstack",
 			Region:           "dfw3",
 			Environment:      "dev",
@@ -376,15 +378,12 @@ func (cm *ConfigManager) Load() error {
 	return nil
 }
 
-// createDefaultConfig creates a default configuration file.
+// createDefaultConfig creates a default configuration file with cluster_defaults
+// fields commented out so users can see all available options without them being active.
 func (cm *ConfigManager) createDefaultConfig() error {
-	data, err := yaml.Marshal(cm.defaults)
-	if err != nil {
-		return fmt.Errorf("failed to marshal default configuration: %w", err)
-	}
+	content := cm.generateDefaultConfigTemplate()
 
-	// Use atomic write for configuration file
-	if err := cm.fileSystem.WriteFileAtomic(cm.configPath, data, 0600); err != nil {
+	if err := cm.fileSystem.WriteFileAtomic(cm.configPath, []byte(content), 0600); err != nil {
 		return &ConfigError{
 			Type:    "permission",
 			Field:   "configFile",
@@ -394,6 +393,62 @@ func (cm *ConfigManager) createDefaultConfig() error {
 	}
 
 	return nil
+}
+
+// generateDefaultConfigTemplate produces the settings.yaml content with cluster_defaults
+// fields commented out. Active sections (logging, paths, behavior) are written normally;
+// cluster_defaults values are present but commented so users can uncomment what they need.
+func (cm *ConfigManager) generateDefaultConfigTemplate() string {
+	d := cm.defaults
+
+	var b strings.Builder
+
+	// Logging section (active)
+	b.WriteString("logging:\n")
+	b.WriteString("  level: " + d.Logging.Level + "\n")
+	b.WriteString("  format: " + d.Logging.Format + "\n")
+	b.WriteString("  output: " + d.Logging.Output + "\n")
+	b.WriteString("  file:\n")
+	b.WriteString("    maxSize: " + strconv.Itoa(d.Logging.File.MaxSize) + "\n")
+	b.WriteString("    maxBackups: " + strconv.Itoa(d.Logging.File.MaxBackups) + "\n")
+	b.WriteString("    maxAge: " + strconv.Itoa(d.Logging.File.MaxAge) + "\n")
+	b.WriteString("    compress: " + strconv.FormatBool(d.Logging.File.Compress) + "\n")
+
+	// Paths section (active)
+	b.WriteString("paths:\n")
+	b.WriteString("  settingsDir: " + d.Paths.SettingsDir + "\n")
+	b.WriteString("  clustersDir: " + d.Paths.ClustersDir + "\n")
+	b.WriteString("  blueprintsDir: " + d.Paths.BlueprintsDir + "\n")
+	b.WriteString("  gitopsDir: " + d.Paths.GitOpsDir + "\n")
+	b.WriteString("  clusterStateDir: " + d.Paths.ClusterStateDir + "\n")
+	b.WriteString("  secretsDir: " + d.Paths.SecretsDir + "\n")
+	b.WriteString("  pluginsDir: " + d.Paths.PluginsDir + "\n")
+	b.WriteString("  stateDir: " + d.Paths.StateDir + "\n")
+
+	// Behavior section (active)
+	b.WriteString("behavior:\n")
+	b.WriteString("  autoConfirm: " + strconv.FormatBool(d.Behavior.AutoConfirm) + "\n")
+	b.WriteString("  dryRun: " + strconv.FormatBool(d.Behavior.DryRun) + "\n")
+	b.WriteString("  validation: " + d.Behavior.Validation + "\n")
+
+	// Cluster defaults section (all commented out)
+	b.WriteString("\n# Default values applied during 'opencenter cluster init'.\n")
+	b.WriteString("# Uncomment and modify the values you want to override.\n")
+	b.WriteString("cluster_defaults:\n")
+	b.WriteString("  # organization: " + d.ClusterDefaults.Organization + "\n")
+	b.WriteString("  # provider: " + d.ClusterDefaults.Provider + "\n")
+	b.WriteString("  # region: " + d.ClusterDefaults.Region + "\n")
+	b.WriteString("  # environment: " + d.ClusterDefaults.Environment + "\n")
+	b.WriteString("  # gitops_auth_method: " + d.ClusterDefaults.GitopsAuthMethod + "\n")
+	b.WriteString("  # base_domain: " + d.ClusterDefaults.BaseDomain + "\n")
+	b.WriteString("  # admin_email: " + d.ClusterDefaults.AdminEmail + "\n")
+	b.WriteString("  # kubernetes_version: " + d.ClusterDefaults.KubernetesVersion + "\n")
+	b.WriteString("  # cni: " + d.ClusterDefaults.CNI + "\n")
+	b.WriteString("  # ssh_user: " + d.ClusterDefaults.SSHUser + "\n")
+	b.WriteString("  # ssh_authorized_keys:\n")
+	b.WriteString("  #   - ssh-ed25519 AAAAC3... user@example.com\n")
+
+	return b.String()
 }
 
 // mergeWithDefaults merges the loaded configuration with defaults to ensure completeness.
@@ -455,6 +510,9 @@ func (cm *ConfigManager) mergeWithDefaults(config *CLIConfig) *CLIConfig {
 	}
 
 	// Merge cluster defaults configuration
+	if config.ClusterDefaults.Organization != "" {
+		merged.ClusterDefaults.Organization = config.ClusterDefaults.Organization
+	}
 	if config.ClusterDefaults.Provider != "" {
 		merged.ClusterDefaults.Provider = config.ClusterDefaults.Provider
 	}

@@ -59,6 +59,7 @@ const (
 )
 
 type cliDefaults struct {
+	Organization      string   `yaml:"organization"`
 	Provider          string   `yaml:"provider"`
 	Region            string   `yaml:"region"`
 	Environment       string   `yaml:"environment"`
@@ -93,6 +94,11 @@ func NewV2Default(name, provider string) (*Config, error) {
 	environment := strings.TrimSpace(defaults.Environment)
 	if environment == "" {
 		environment = defaultEnvironment
+	}
+
+	organization := strings.TrimSpace(defaults.Organization)
+	if organization == "" {
+		organization = defaultOrganization
 	}
 
 	clusterFQDN := fmt.Sprintf("%s.%s.%s", name, region, defaultBaseDomain)
@@ -130,7 +136,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 		OpenCenter: OpenCenterConfig{
 			Meta: MetaConfig{
 				Name:         name,
-				Organization: defaultOrganization,
+				Organization: organization,
 				Env:          environment,
 				Region:       region,
 				Stage:        "init",
@@ -242,7 +248,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 				Repository: GitOpsRepository{
 					Branch:   defaultGitBranch,
 					Path:     filepath.ToSlash(filepath.Join("clusters", name)),
-					LocalDir: filepath.ToSlash(filepath.Join("clusters", defaultOrganization)),
+					LocalDir: filepath.ToSlash(filepath.Join("clusters", organization)),
 				},
 				BaseRepo: GitOpsBaseRepo{
 					URL:     defaultGitBaseRepoURL,
@@ -723,6 +729,7 @@ func storagePluginDefaults(provider string) StoragePluginConfig {
 
 func loadCLIDefaults() cliDefaults {
 	defaults := cliDefaults{
+		Organization:     defaultOrganization,
 		Provider:         defaultProvider,
 		Region:           defaultRegion,
 		Environment:      defaultEnvironment,
@@ -744,6 +751,9 @@ func loadCLIDefaults() cliDefaults {
 		return defaults
 	}
 
+	if strings.TrimSpace(cfg.ClusterDefaults.Organization) != "" {
+		defaults.Organization = cfg.ClusterDefaults.Organization
+	}
 	if strings.TrimSpace(cfg.ClusterDefaults.Provider) != "" {
 		defaults.Provider = cfg.ClusterDefaults.Provider
 	}

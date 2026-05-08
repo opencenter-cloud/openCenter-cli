@@ -51,6 +51,14 @@ func getDefaultEnvironment(cliDefaults *ClusterDefaultsConfig) string {
 	return ""
 }
 
+// getDefaultOrganization returns organization from CLI defaults or "opencenter" as fallback.
+func getDefaultOrganization(cliDefaults *ClusterDefaultsConfig) string {
+	if cliDefaults != nil && cliDefaults.Organization != "" {
+		return cliDefaults.Organization
+	}
+	return "opencenter"
+}
+
 // defaultConfig returns a Config pre-populated with the default
 // values based on the simplified schema. This function can be used to
 // initialise new cluster configurations.
@@ -80,7 +88,7 @@ func defaultConfig(name string) Config {
 				Env:          getDefaultEnvironment(cliDefaults),
 				Region:       region,
 				Status:       "",
-				Organization: "opencenter",
+				Organization: getDefaultOrganization(cliDefaults),
 			},
 			Secrets: OpenCenterSecrets{
 				Backend: "sops",

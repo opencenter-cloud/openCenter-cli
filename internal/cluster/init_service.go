@@ -120,6 +120,13 @@ func (s *InitService) Initialize(ctx context.Context, opts InitOptions) (*InitRe
 
 	// Validate organization
 	if opts.Organization == "" {
+		if s.configManager != nil {
+			if cliConfig := s.configManager.GetConfig(); cliConfig != nil && cliConfig.ClusterDefaults.Organization != "" {
+				opts.Organization = cliConfig.ClusterDefaults.Organization
+			}
+		}
+	}
+	if opts.Organization == "" {
 		opts.Organization = "opencenter"
 	}
 	if err := s.validateOrganization(ctx, opts.Organization); err != nil {

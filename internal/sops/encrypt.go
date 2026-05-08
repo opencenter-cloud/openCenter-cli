@@ -164,18 +164,57 @@ func (e *DefaultEncryptor) EncryptFile(ctx context.Context, filePath string, con
 		return nil
 	}
 
+	// Capture stderr for diagnostic output
+	var stderrBuf strings.Builder
+	if !config.Verbose {
+		cmd.Stderr = &stderrBuf
+	}
+
 	if err := cmd.Run(); err != nil {
+		stderrOutput := strings.TrimSpace(stderrBuf.String())
+
+		// Build a diagnostic message with the actual sops output
+		message := "SOPS encryption failed"
+		if stderrOutput != "" {
+			message = fmt.Sprintf("SOPS encryption failed: %s", stderrOutput)
+		}
+
+		suggestions := []string{
+			fmt.Sprintf("Command: sops %s", strings.Join(args, " ")),
+		}
+
+		// Check for missing SOPS_AGE_KEY_FILE
+		if os.Getenv("SOPS_AGE_KEY_FILE") == "" {
+			suggestions = append(suggestions,
+				"SOPS_AGE_KEY_FILE is not set. Export it before running:",
+				fmt.Sprintf("  export SOPS_AGE_KEY_FILE=<path-to-age-key>"),
+				"Or activate the cluster environment first:",
+				fmt.Sprintf("  eval $(opencenter cluster env %s)", filepath.Base(filepath.Dir(filepath.Dir(filePath)))),
+			)
+		} else {
+			keyFile := os.Getenv("SOPS_AGE_KEY_FILE")
+			if _, statErr := os.Stat(keyFile); os.IsNotExist(statErr) {
+				suggestions = append(suggestions,
+					fmt.Sprintf("SOPS_AGE_KEY_FILE points to a missing file: %s", keyFile),
+				)
+			}
+		}
+
+		// Check for missing .sops.yaml
+		if config.ConfigFile != "" {
+			if _, statErr := os.Stat(config.ConfigFile); os.IsNotExist(statErr) {
+				suggestions = append(suggestions,
+					fmt.Sprintf("SOPS config file not found: %s", config.ConfigFile),
+				)
+			}
+		}
+
 		return &errors.StructuredError{
-			Type:    errors.SOPSError,
-			Field:   filePath,
-			Message: "SOPS encryption failed",
-			Cause:   err,
-			Suggestions: []string{
-				"Check that SOPS is installed and accessible",
-				"Verify the age/PGP keys are valid",
-				"Ensure the file format is supported",
-				"Check SOPS configuration",
-			},
+			Type:        errors.SOPSError,
+			Field:       filePath,
+			Message:     message,
+			Cause:       err,
+			Suggestions: suggestions,
 		}
 	}
 
@@ -307,23 +346,47 @@ func (e *DefaultEncryptor) DecryptFile(ctx context.Context, filePath string, out
 		}
 	}
 
+	// Capture stderr for diagnostic output
+	var stderrBuf strings.Builder
 	if outputPath == "" {
 		cmd.Stdout = os.Stdout
 	}
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = &stderrBuf
 
 	if err := cmd.Run(); err != nil {
+		stderrOutput := strings.TrimSpace(stderrBuf.String())
+
+		message := "SOPS decryption failed"
+		if stderrOutput != "" {
+			message = fmt.Sprintf("SOPS decryption failed: %s", stderrOutput)
+		}
+
+		suggestions := []string{
+			fmt.Sprintf("Command: sops %s", strings.Join(args, " ")),
+		}
+
+		if os.Getenv("SOPS_AGE_KEY_FILE") == "" {
+			suggestions = append(suggestions,
+				"SOPS_AGE_KEY_FILE is not set. Export it before running:",
+				"  export SOPS_AGE_KEY_FILE=<path-to-age-key>",
+				"Or activate the cluster environment first:",
+				"  eval $(opencenter cluster env <org/cluster>)",
+			)
+		} else {
+			keyFile := os.Getenv("SOPS_AGE_KEY_FILE")
+			if _, statErr := os.Stat(keyFile); os.IsNotExist(statErr) {
+				suggestions = append(suggestions,
+					fmt.Sprintf("SOPS_AGE_KEY_FILE points to a missing file: %s", keyFile),
+				)
+			}
+		}
+
 		return &errors.StructuredError{
-			Type:    errors.SOPSError,
-			Field:   filePath,
-			Message: "SOPS decryption failed",
-			Cause:   err,
-			Suggestions: []string{
-				"Check that SOPS is installed and accessible",
-				"Verify you have access to the decryption keys",
-				"Ensure the file is properly encrypted",
-				"Check SOPS configuration and key files",
-			},
+			Type:        errors.SOPSError,
+			Field:       filePath,
+			Message:     message,
+			Cause:       err,
+			Suggestions: suggestions,
 		}
 	}
 

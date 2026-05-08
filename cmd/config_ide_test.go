@@ -13,7 +13,7 @@ func TestConfigIDE_DefaultWritesSchemaAndPrintsGenericInstructions(t *testing.T)
 	t.Chdir(t.TempDir())
 
 	var out bytes.Buffer
-	cmd := NewConfigCmd()
+	cmd := NewSettingsCmd()
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetArgs([]string{"ide"})
@@ -39,7 +39,7 @@ func TestConfigIDE_PrintWritesSchemaToStdoutOnly(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	var out bytes.Buffer
-	cmd := NewConfigCmd()
+	cmd := NewSettingsCmd()
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetArgs([]string{"ide", "--print"})
@@ -59,7 +59,7 @@ func TestConfigIDE_SchemaOnlySkipsEditorInstructions(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	var out bytes.Buffer
-	cmd := NewConfigCmd()
+	cmd := NewSettingsCmd()
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetArgs([]string{"ide", "--schema-only"})
@@ -181,7 +181,7 @@ func TestConfigIDE_WriteUnsupportedForJetBrains(t *testing.T) {
 
 func executeConfigIDE(args ...string) (string, error) {
 	var out bytes.Buffer
-	cmd := NewConfigCmd()
+	cmd := NewSettingsCmd()
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
 	cmd.SetArgs(args)

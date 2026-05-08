@@ -29,7 +29,7 @@ func main() {
 
 	// Manually add all subcommands to build the complete command tree.
 	rootCmd.AddCommand(cmd.NewClusterCmd())
-	rootCmd.AddCommand(cmd.NewConfigCmd())
+	rootCmd.AddCommand(cmd.NewSettingsCmd())
 	rootCmd.AddCommand(cmd.NewSecretsCmd())
 	rootCmd.AddCommand(cmd.NewPluginsCmd())
 	rootCmd.AddCommand(cmd.NewShellInitCmd())

@@ -12,7 +12,7 @@ func newGARootForCommandSurfaceTest() *cobra.Command {
 	root := &cobra.Command{Use: "opencenter"}
 	addGlobalFlags(root)
 	root.AddCommand(NewClusterCmd())
-	root.AddCommand(NewConfigCmd())
+	root.AddCommand(NewSettingsCmd())
 	root.AddCommand(NewSecretsCmd())
 	root.AddCommand(NewPluginsCmd())
 	root.AddCommand(NewShellInitCmd())

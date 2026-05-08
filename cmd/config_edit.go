@@ -27,19 +27,19 @@ import (
 func newConfigEditCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "edit",
-		Short: "Edit the CLI configuration file in your default editor",
-		Long: `Edit the CLI configuration file in your default editor.
+		Short: "Edit the CLI settings file in your default editor",
+		Long: `Edit the CLI settings file in your default editor.
 
-This command opens the configuration file in the editor specified by the EDITOR
+This command opens the settings file in the editor specified by the EDITOR
 environment variable. If EDITOR is not set, it falls back to common editors
 in the following order: vim, vi, nano.
 
-After editing, the configuration will be validated. If validation fails, you'll
+After editing, the settings will be validated. If validation fails, you'll
 be notified of the errors but the file will remain saved.
 
 Examples:
-  opencenter config edit
-  EDITOR=nano opencenter config edit`,
+  opencenter settings edit
+  EDITOR=nano opencenter settings edit`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get the configuration file path
 			cm, err := config.NewConfigManager("")

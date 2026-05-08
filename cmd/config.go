@@ -23,19 +23,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// NewConfigCmd creates the top-level "config" command for CLI configuration management.
+// NewSettingsCmd creates the top-level "settings" command for CLI settings management.
 // It provides subcommands for viewing, setting, getting, resetting, and locating
-// the CLI configuration file.
-func NewConfigCmd() *cobra.Command {
+// the CLI settings file.
+func NewSettingsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "config",
-		Short: "Manage CLI configuration settings",
-		Long: `Manage CLI configuration settings including logging, paths, behavior, and cluster defaults.
+		Use:   "settings",
+		Short: "Manage CLI settings",
+		Long: `Manage CLI settings including logging, paths, behavior, and cluster defaults.
 
-The configuration file is stored at ~/.config/opencenter/config.yaml by default,
+The settings file is stored at ~/.config/opencenter/settings.yaml by default,
 or at the location specified by the OPENCENTER_CONFIG_DIR environment variable.
 
-Configuration values can be accessed and modified using dot notation (e.g., logging.level).
+Settings values can be accessed and modified using dot notation (e.g., logging.level).
 The cluster_defaults section controls values injected into new cluster configs during
 "opencenter cluster init".`,
 		Args: cobra.NoArgs,
@@ -57,15 +57,15 @@ The cluster_defaults section controls values injected into new cluster configs d
 	return cmd
 }
 
-// newConfigViewCmd creates the "config view" command to display the current configuration.
+// newConfigViewCmd creates the "settings view" command to display the current settings.
 func newConfigViewCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "view",
-		Short: "Display the current CLI configuration",
-		Long: `Display the current CLI configuration in YAML format.
+		Short: "Display the current CLI settings",
+		Long: `Display the current CLI settings in YAML format.
 
-This shows the configuration file content exactly as it would appear in an editor.
-Use 'opencenter config edit' to modify the configuration.`,
+This shows the settings file content exactly as it would appear in an editor.
+Use 'opencenter settings edit' to modify the settings.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get the configuration file path
 			cm, err := config.NewConfigManager("")
@@ -91,26 +91,26 @@ Use 'opencenter config edit' to modify the configuration.`,
 	}
 }
 
-// newConfigSetCmd creates the "config set" command to modify configuration values.
+// newConfigSetCmd creates the "settings set" command to modify settings values.
 func newConfigSetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "set <key> <value>",
-		Short: "Set a configuration value using dot notation",
-		Long: `Set a configuration value using dot notation.
+		Short: "Set a settings value using dot notation",
+		Long: `Set a settings value using dot notation.
 
 Examples:
-  opencenter config set logging.level debug
-  opencenter config set paths.clustersDir ~/my-clusters
-  opencenter config set paths.pluginsDir ~/my-plugins
-  opencenter config set paths.stateDir ~/.local/state/opencenter
-  opencenter config set behavior.autoConfirm true
-  opencenter config set behavior.validation online
-  opencenter config set cluster_defaults.provider openstack
-  opencenter config set cluster_defaults.gitops_auth_method token
-  opencenter config set cluster_defaults.base_domain k8s.example.com
-  opencenter config set cluster_defaults.kubernetes_version 1.34.3
+  opencenter settings set logging.level debug
+  opencenter settings set paths.clustersDir ~/my-clusters
+  opencenter settings set paths.pluginsDir ~/my-plugins
+  opencenter settings set paths.stateDir ~/.local/state/opencenter
+  opencenter settings set behavior.autoConfirm true
+  opencenter settings set behavior.validation online
+  opencenter settings set cluster_defaults.provider openstack
+  opencenter settings set cluster_defaults.gitops_auth_method token
+  opencenter settings set cluster_defaults.base_domain k8s.example.com
+  opencenter settings set cluster_defaults.kubernetes_version 1.34.3
 
-Supported configuration sections:
+Supported settings sections:
   - logging.level (debug, info, warn, error)
   - logging.format (text, json, yaml)
   - logging.output (stdout, stderr, or file path)
@@ -118,7 +118,7 @@ Supported configuration sections:
   - logging.file.maxBackups (integer)
   - logging.file.maxAge (integer, days)
   - logging.file.compress (boolean)
-  - paths.configDir (string)
+  - paths.settingsDir (string)
   - paths.clustersDir (string)
   - paths.pluginsDir (string)
   - paths.stateDir (string)
@@ -167,21 +167,21 @@ Supported configuration sections:
 	}
 }
 
-// newConfigGetCmd creates the "config get" command to retrieve configuration values.
+// newConfigGetCmd creates the "settings get" command to retrieve settings values.
 func newConfigGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <key>",
-		Short: "Get a configuration value using dot notation",
-		Long: `Get a configuration value using dot notation.
+		Short: "Get a settings value using dot notation",
+		Long: `Get a settings value using dot notation.
 
 Examples:
-  opencenter config get logging.level
-  opencenter config get paths.clustersDir
-  opencenter config get paths.pluginsDir
-  opencenter config get paths.stateDir
-  opencenter config get behavior.autoConfirm
+  opencenter settings get logging.level
+  opencenter settings get paths.clustersDir
+  opencenter settings get paths.pluginsDir
+  opencenter settings get paths.stateDir
+  opencenter settings get behavior.autoConfirm
 
-Use dot notation to access nested configuration values. If the key doesn't exist,
+Use dot notation to access nested settings values. If the key doesn't exist,
 an error will be returned.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -221,21 +221,21 @@ an error will be returned.`,
 	}
 }
 
-// newConfigResetCmd creates the "config reset" command to restore default configuration.
+// newConfigResetCmd creates the "settings reset" command to restore default settings.
 func newConfigResetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "reset",
-		Short: "Reset configuration to default values",
-		Long: `Reset the CLI configuration to default values.
+		Short: "Reset settings to default values",
+		Long: `Reset the CLI settings to default values.
 
-This will overwrite the current configuration file with default values.
+This will overwrite the current settings file with default values.
 All custom settings will be lost.
 
 Default values:
   - logging.level: warn
   - logging.format: text
   - logging.output: stderr
-  - paths.configDir: ~/.config/opencenter
+  - paths.settingsDir: ~/.config/opencenter
   - paths.clustersDir: ~/.config/opencenter/clusters
   - paths.pluginsDir: ~/.config/opencenter/plugins
   - paths.stateDir: ~/.local/state/opencenter
@@ -263,18 +263,18 @@ Default values:
 	}
 }
 
-// newConfigPathCmd creates the "config path" command to show the configuration file location.
+// newConfigPathCmd creates the "settings path" command to show the settings file location.
 func newConfigPathCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "path",
-		Short: "Show the path to the configuration file",
-		Long: `Show the absolute path to the CLI configuration file.
+		Short: "Show the path to the settings file",
+		Long: `Show the absolute path to the CLI settings file.
 
-The configuration file location is determined by:
+The settings file location is determined by:
 1. OPENCENTER_CONFIG_DIR environment variable (if set)
 2. Default OS-specific config directory (~/.config/opencenter on Linux/macOS)
 
-The configuration file is named 'config.yaml' within the configuration directory.`,
+The settings file is named 'settings.yaml' within the configuration directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Create config manager to get the path
 			cm, err := config.NewConfigManager("")

@@ -51,7 +51,7 @@ func TestInitServiceInitializeUsesSecureLayoutAndHygiene(t *testing.T) {
 	}
 
 	clusterPaths := result.ClusterPaths
-	wantConfigPath := filepath.Join(tmpDir, "state", "acme", "secure-demo", "secure-demo-config.yaml")
+	wantConfigPath := filepath.Join(tmpDir, "blueprints", "acme", "secure-demo", "secure-demo-config.yaml")
 	if result.ConfigPath != wantConfigPath {
 		t.Fatalf("ConfigPath = %q, want %q", result.ConfigPath, wantConfigPath)
 	}

@@ -13,9 +13,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/security"
-	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/tofu"
-	"github.com/opencenter-cloud/opencenter-cli/internal/util/crypto"
 )
 
 // SetupOptions contains options for cluster setup
@@ -41,27 +39,6 @@ type SetupService struct {
 	validationEngine *validation.ValidationEngine
 	configurationMgr *config.ConfigurationManager
 	commandRunner    security.CommandRunner
-	encryptor        ManifestEncryptor
-}
-
-// ManifestEncryptor encrypts Secret manifests in the GitOps tree. The default
-// implementation delegates to SOPS; tests inject a fake that rewrites values
-// without requiring a real SOPS binary.
-type ManifestEncryptor interface {
-	EncryptSecretManifest(ctx context.Context, path string, publicKey string, sopsConfigPath string) error
-}
-
-// sopsManifestEncryptor delegates to the real SOPS encryptor.
-type sopsManifestEncryptor struct{}
-
-func (e *sopsManifestEncryptor) EncryptSecretManifest(ctx context.Context, path string, publicKey string, sopsConfigPath string) error {
-	encryptor := sops.NewDefaultEncryptor(nil, nil)
-	encryptConfig := sops.EncryptionConfig{
-		AgeKeys:    []string{publicKey},
-		ConfigFile: sopsConfigPath,
-		InPlace:    true,
-	}
-	return encryptor.EncryptFile(ctx, path, encryptConfig)
 }
 
 // NewSetupService creates a new SetupService
@@ -84,19 +61,11 @@ func NewSetupServiceWithConfigMgr(
 		configurationMgr, _ = config.NewConfigurationManager()
 	}
 
-	var enc ManifestEncryptor
-	if os.Getenv("OPENCENTER_TEST_MODE") == "1" {
-		enc = &fakeManifestEncryptor{}
-	} else {
-		enc = &sopsManifestEncryptor{}
-	}
-
 	return &SetupService{
 		pathResolver:     pathResolver,
 		validationEngine: validationEngine,
 		configurationMgr: configurationMgr,
 		commandRunner:    security.GetDefaultCommandRunner(),
-		encryptor:        enc,
 	}
 }
 
@@ -237,10 +206,6 @@ func (s *SetupService) generateGitOpsManifests(ctx context.Context, cfg v2.Confi
 		}
 	}
 
-	if err := s.encryptGeneratedSecretManifests(ctx, cfg, clusterPaths); err != nil {
-		return 0, err
-	}
-
 	// Count only the files that were actually written during this generation.
 	manifestCount, err := s.countGeneratedFiles(clusterPaths.GitOpsDir, snapshotBefore)
 	if err != nil {
@@ -248,124 +213,6 @@ func (s *SetupService) generateGitOpsManifests(ctx context.Context, cfg v2.Confi
 	}
 
 	return manifestCount, nil
-}
-
-func (s *SetupService) encryptGeneratedSecretManifests(ctx context.Context, cfg v2.Config, clusterPaths *paths.ClusterPaths) error {
-	findings, err := gitops.ScanGitOpsSecrets(clusterPaths.GitOpsDir)
-	if err != nil {
-		return fmt.Errorf("scanning generated manifests before encryption: %w", err)
-	}
-
-	secretFiles := make(map[string]struct{})
-	for _, finding := range findings {
-		switch finding.Rule {
-		case "unencrypted-kubernetes-secret", "plaintext-secret-field", "invalid-sops-metadata":
-			secretFiles[finding.Path] = struct{}{}
-		case "age-private-key", "private-key", "git-token":
-			return fmt.Errorf("generated GitOps tree contains %s in %s: %s", finding.Rule, finding.Path, finding.Message)
-		case "invalid-yaml":
-			return fmt.Errorf("generated GitOps tree contains invalid YAML in %s: %s", finding.Path, finding.Message)
-		}
-	}
-	if len(secretFiles) == 0 {
-		return nil
-	}
-
-	ageKeyPath := strings.TrimSpace(cfg.Secrets.SopsAgeKeyFile)
-	if ageKeyPath == "" {
-		return fmt.Errorf("generated Secret manifests require SOPS encryption, but secrets.sops_age_key_file is not configured")
-	}
-	publicKey, err := readAgePublicKeyFile(ageKeyPath)
-	if err != nil {
-		return fmt.Errorf("loading SOPS public key for generated Secret encryption: %w", err)
-	}
-
-	for rel := range secretFiles {
-		path := filepath.Join(clusterPaths.GitOpsDir, filepath.FromSlash(rel))
-		if err := s.encryptor.EncryptSecretManifest(ctx, path, publicKey, clusterPaths.SOPSConfigPath); err != nil {
-			return fmt.Errorf("encrypting generated Secret manifest %s: %w", rel, err)
-		}
-	}
-	return nil
-}
-
-// fakeManifestEncryptor rewrites Secret manifests with ENC[TEST] markers
-// without requiring a real SOPS binary. Used only in test mode.
-type fakeManifestEncryptor struct{}
-
-func (e *fakeManifestEncryptor) EncryptSecretManifest(_ context.Context, path string, _ string, _ string) error {
-	return testEncryptSecretManifest(path)
-}
-
-func testEncryptSecretManifest(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	lines := strings.Split(string(data), "\n")
-	out := make([]string, 0, len(lines)+2)
-	inSecretMap := false
-	secretIndent := 0
-	hasSOPS := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "sops:" || strings.HasPrefix(trimmed, "sops:") {
-			hasSOPS = true
-		}
-
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		if trimmed == "data:" || trimmed == "stringData:" {
-			inSecretMap = true
-			secretIndent = indent
-			out = append(out, line)
-			continue
-		}
-		if inSecretMap && trimmed != "" && indent <= secretIndent {
-			inSecretMap = false
-		}
-		if inSecretMap && strings.Contains(trimmed, ":") && !strings.HasPrefix(trimmed, "#") {
-			key, value, _ := strings.Cut(line, ":")
-			if !strings.HasPrefix(strings.TrimSpace(value), "ENC[") {
-				line = key + ": ENC[TEST]"
-			}
-		}
-		out = append(out, line)
-	}
-
-	if !hasSOPS {
-		if len(out) > 0 && out[len(out)-1] == "" {
-			out = out[:len(out)-1]
-		}
-		out = append(out,
-			"sops:",
-			"  mac: ENC[TEST]",
-			"  age:",
-			"    - recipient: age1test",
-			"      enc: ENC[TEST]",
-		)
-	}
-
-	return os.WriteFile(path, []byte(strings.Join(out, "\n")+"\n"), 0o600)
-}
-
-func readAgePublicKeyFile(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "AGE-SECRET-KEY-") {
-			keyPair, err := crypto.ParseAgeKey(line)
-			if err != nil {
-				return "", err
-			}
-			return strings.TrimSpace(keyPair.PublicKey), nil
-		}
-	}
-	return "", fmt.Errorf("no Age private key found in %s", path)
 }
 
 func (s *SetupService) validateSetupConfig(cfg *v2.Config) error {
@@ -392,14 +239,6 @@ func (s *SetupService) validateSetupConfig(cfg *v2.Config) error {
 
 // validateManifests validates generated GitOps manifests
 func (s *SetupService) validateManifests(clusterPaths *paths.ClusterPaths) error {
-	// If using a fake encryptor (test mode), ensure any remaining plaintext
-	// Secret manifests are marked as encrypted before validation runs.
-	if _, ok := s.encryptor.(*fakeManifestEncryptor); ok {
-		if err := testEncryptPlaintextSecretFindings(clusterPaths.GitOpsDir); err != nil {
-			return err
-		}
-	}
-
 	// Create manifest validator
 	validator := gitops.NewManifestValidator(clusterPaths.GitOpsDir)
 
@@ -408,26 +247,6 @@ func (s *SetupService) validateManifests(clusterPaths *paths.ClusterPaths) error
 		return fmt.Errorf("manifest validation failed: %w", err)
 	}
 
-	return nil
-}
-
-func testEncryptPlaintextSecretFindings(gitOpsDir string) error {
-	findings, err := gitops.ScanGitOpsSecrets(gitOpsDir)
-	if err != nil {
-		return err
-	}
-	secretFiles := map[string]struct{}{}
-	for _, finding := range findings {
-		if finding.Rule == "unencrypted-kubernetes-secret" || finding.Rule == "plaintext-secret-field" || finding.Rule == "invalid-sops-metadata" {
-			secretFiles[finding.Path] = struct{}{}
-		}
-	}
-	for rel := range secretFiles {
-		path := filepath.Join(gitOpsDir, filepath.FromSlash(rel))
-		if err := testEncryptSecretManifest(path); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

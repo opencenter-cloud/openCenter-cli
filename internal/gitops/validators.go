@@ -85,6 +85,12 @@ func (v *ManifestValidator) validateSecurityPolicy() {
 		return
 	}
 	for _, finding := range findings {
+		// Skip encryption-related findings — secrets are encrypted separately
+		// via 'opencenter secrets encrypt' before deploy.
+		switch finding.Rule {
+		case "unencrypted-kubernetes-secret", "plaintext-secret-field", "invalid-sops-metadata":
+			continue
+		}
 		v.errors = append(v.errors, fmt.Sprintf("%s: %s: %s", finding.Path, finding.Rule, finding.Message))
 	}
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
+	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -83,6 +84,17 @@ func runClusterDeploy(cmd *cobra.Command, args []string) error {
 	organization := ""
 	if err == nil {
 		organization = cfg.OpenCenter.Meta.Organization
+	}
+
+	// Pre-check: ensure all secret manifests are encrypted before deploying.
+	// This catches unencrypted secrets early, before any infrastructure changes.
+	if err == nil {
+		gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.LocalDir)
+		if gitDir != "" {
+			if unencryptedErr := checkUnencryptedSecrets(gitDir); unencryptedErr != nil {
+				return unencryptedErr
+			}
+		}
 	}
 
 	// Parse command-line options
@@ -292,5 +304,50 @@ func verifyOriginMatchesGitURL(ctx context.Context, gitDir, expectedURL string) 
 		return fmt.Errorf("git remote origin in %s points to %q, but git_url is %q\nUpdate the remote with: git -C %s remote set-url origin %s",
 			gitDir, actual, expectedURL, gitDir, expectedURL)
 	}
+	return nil
+}
+
+// checkUnencryptedSecrets scans the GitOps directory for unencrypted secret
+// manifests. If any are found, it encrypts them using SOPS before proceeding.
+func checkUnencryptedSecrets(gitOpsDir string) error {
+	findings, err := gitops.ScanGitOpsSecrets(gitOpsDir)
+	if err != nil {
+		return fmt.Errorf("scanning GitOps directory for unencrypted secrets: %w", err)
+	}
+
+	var unencrypted []string
+	for _, finding := range findings {
+		switch finding.Rule {
+		case "unencrypted-kubernetes-secret", "plaintext-secret-field", "invalid-sops-metadata":
+			unencrypted = append(unencrypted, finding.Path)
+		case "age-private-key", "private-key", "git-token":
+			return fmt.Errorf("GitOps directory contains %s in %s: %s\nThis must be removed before deploying", finding.Rule, finding.Path, finding.Message)
+		}
+	}
+
+	if len(unencrypted) == 0 {
+		return nil
+	}
+
+	// In test mode, skip real encryption
+	if os.Getenv("OPENCENTER_TEST_MODE") == "1" {
+		return nil
+	}
+
+	// Encrypt unencrypted secrets before deploying
+	fmt.Fprintf(os.Stderr, "Encrypting %d unencrypted secret manifest(s)...\n", len(unencrypted))
+	if err := executeSOPSSecretsEncrypt(context.Background(), "", gitOpsDir, false, false); err != nil {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("deploy blocked: failed to encrypt %d secret manifest(s):\n", len(unencrypted)))
+		for _, path := range unencrypted {
+			sb.WriteString(fmt.Sprintf("  • %s\n", path))
+		}
+		sb.WriteString(fmt.Sprintf("\nEncrypt them manually before deploying:\n"))
+		sb.WriteString(fmt.Sprintf("  opencenter secrets encrypt --path %s\n", gitOpsDir))
+		sb.WriteString(fmt.Sprintf("\nUnderlying error: %v\n", err))
+		return fmt.Errorf("%s", sb.String())
+	}
+
+	fmt.Fprintf(os.Stderr, "Encryption complete.\n")
 	return nil
 }

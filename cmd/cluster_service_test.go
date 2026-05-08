@@ -34,7 +34,15 @@ func setupServiceTestEnv(t *testing.T, clusterName string) (string, func()) {
 	oldActiveCluster := os.Getenv("OPENCENTER_CLUSTER")
 	oldSessionFile := os.Getenv("OPENCENTER_SESSION_FILE")
 	oldSessionID := os.Getenv("OPENCENTER_SESSION_ID")
+	oldClustersDir := os.Getenv("OPENCENTER_CLUSTERS_DIR")
+	oldGitOpsDir := os.Getenv("OPENCENTER_GITOPS_DIR")
+	oldClusterStateDir := os.Getenv("OPENCENTER_CLUSTER_STATE_DIR")
+	oldSecretsDir := os.Getenv("OPENCENTER_SECRETS_DIR")
 	os.Setenv("OPENCENTER_CONFIG_DIR", cfgDir)
+	os.Setenv("OPENCENTER_CLUSTERS_DIR", filepath.Join(cfgDir, "clusters"))
+	os.Unsetenv("OPENCENTER_GITOPS_DIR")
+	os.Unsetenv("OPENCENTER_CLUSTER_STATE_DIR")
+	os.Unsetenv("OPENCENTER_SECRETS_DIR")
 	os.Unsetenv("OPENCENTER_CLUSTER")
 	os.Unsetenv("OPENCENTER_SESSION_FILE")
 	os.Unsetenv("OPENCENTER_SESSION_ID")
@@ -60,6 +68,26 @@ func setupServiceTestEnv(t *testing.T, clusterName string) (string, func()) {
 			os.Setenv("OPENCENTER_SESSION_ID", oldSessionID)
 		} else {
 			os.Unsetenv("OPENCENTER_SESSION_ID")
+		}
+		if oldClustersDir != "" {
+			os.Setenv("OPENCENTER_CLUSTERS_DIR", oldClustersDir)
+		} else {
+			os.Unsetenv("OPENCENTER_CLUSTERS_DIR")
+		}
+		if oldGitOpsDir != "" {
+			os.Setenv("OPENCENTER_GITOPS_DIR", oldGitOpsDir)
+		} else {
+			os.Unsetenv("OPENCENTER_GITOPS_DIR")
+		}
+		if oldClusterStateDir != "" {
+			os.Setenv("OPENCENTER_CLUSTER_STATE_DIR", oldClusterStateDir)
+		} else {
+			os.Unsetenv("OPENCENTER_CLUSTER_STATE_DIR")
+		}
+		if oldSecretsDir != "" {
+			os.Setenv("OPENCENTER_SECRETS_DIR", oldSecretsDir)
+		} else {
+			os.Unsetenv("OPENCENTER_SECRETS_DIR")
 		}
 		resetCommandStateForTests()
 	}
@@ -848,7 +876,15 @@ func TestClusterServiceStatus(t *testing.T) {
 				oldActiveCluster := os.Getenv("OPENCENTER_CLUSTER")
 				oldSessionFile := os.Getenv("OPENCENTER_SESSION_FILE")
 				oldSessionID := os.Getenv("OPENCENTER_SESSION_ID")
+				oldClustersDir := os.Getenv("OPENCENTER_CLUSTERS_DIR")
+				oldGitOpsDir := os.Getenv("OPENCENTER_GITOPS_DIR")
+				oldClusterStateDir := os.Getenv("OPENCENTER_CLUSTER_STATE_DIR")
+				oldSecretsDir := os.Getenv("OPENCENTER_SECRETS_DIR")
 				os.Setenv("OPENCENTER_CONFIG_DIR", cfgDir)
+				os.Setenv("OPENCENTER_CLUSTERS_DIR", filepath.Join(cfgDir, "clusters"))
+				os.Unsetenv("OPENCENTER_GITOPS_DIR")
+				os.Unsetenv("OPENCENTER_CLUSTER_STATE_DIR")
+				os.Unsetenv("OPENCENTER_SECRETS_DIR")
 				os.Unsetenv("OPENCENTER_CLUSTER")
 				os.Unsetenv("OPENCENTER_SESSION_FILE")
 				os.Unsetenv("OPENCENTER_SESSION_ID")
@@ -873,6 +909,26 @@ func TestClusterServiceStatus(t *testing.T) {
 						os.Setenv("OPENCENTER_SESSION_ID", oldSessionID)
 					} else {
 						os.Unsetenv("OPENCENTER_SESSION_ID")
+					}
+					if oldClustersDir != "" {
+						os.Setenv("OPENCENTER_CLUSTERS_DIR", oldClustersDir)
+					} else {
+						os.Unsetenv("OPENCENTER_CLUSTERS_DIR")
+					}
+					if oldGitOpsDir != "" {
+						os.Setenv("OPENCENTER_GITOPS_DIR", oldGitOpsDir)
+					} else {
+						os.Unsetenv("OPENCENTER_GITOPS_DIR")
+					}
+					if oldClusterStateDir != "" {
+						os.Setenv("OPENCENTER_CLUSTER_STATE_DIR", oldClusterStateDir)
+					} else {
+						os.Unsetenv("OPENCENTER_CLUSTER_STATE_DIR")
+					}
+					if oldSecretsDir != "" {
+						os.Setenv("OPENCENTER_SECRETS_DIR", oldSecretsDir)
+					} else {
+						os.Unsetenv("OPENCENTER_SECRETS_DIR")
 					}
 					resetCommandStateForTests()
 				}

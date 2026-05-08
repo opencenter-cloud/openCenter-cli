@@ -393,10 +393,10 @@ go test ./internal/cloud/... -count=1
 '''
 
 # Run BDD tests via godog (non-@wip scenarios)
-godog = "go test ./... -v args --godog.tags=~@wip --godog.paths=tests/features"
+godog = "go test ./tests/features/steps/... -v -- --godog.tags=~@wip --godog.paths=tests/features"
 
 # Run only @wip BDD scenarios for focused development
-godog-wip = "go test ./... -v args --godog.tags=@wip --godog.paths=tests/features"
+godog-wip = "go test ./tests/features/steps/... -v -- --godog.tags=@wip --godog.paths=tests/features"
 
 # Run BDD scenarios filtered by tag
 # Usage: mise run godog-tag <tag>
@@ -411,7 +411,7 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-go test ./... -v args --godog.tags=@$1 --godog.paths=tests/features
+go test ./tests/features/steps/... -v -- --godog.tags=@$1 --godog.paths=tests/features
 '''
 
 # Run all property-based tests

@@ -50,7 +50,7 @@ const (
 	defaultCiliumVersion              = "1.19.3"
 
 	// Kind provider defaults — kept in sync with internal/config/defaults/kind.yaml.
-	kindDefaultKubernetesVersion = "1.33.7"
+	kindDefaultKubernetesVersion = "1.36.0"
 	kindDefaultAPIPort           = 6443
 	kindDefaultControlPlaneCount = 1
 	kindDefaultWorkerCount       = 2
@@ -152,7 +152,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 				ClusterFQDN: clusterFQDN,
 				AdminEmail:  "admin@example.com",
 				Kubernetes: KubernetesConfig{
-					Version:        "1.33.5",
+					Version:        "1.36.0",
 					APIPort:        443,
 					KubeVIPEnabled: selectedProvider != "kind",
 					SubnetPods:     "10.42.0.0/16",

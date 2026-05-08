@@ -127,17 +127,17 @@ func runClusterGenerate(cmd *cobra.Command, args []string) error {
 	} else {
 		fmt.Fprintf(cmd.OutOrStdout(), "Generate complete\n")
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "GitOps path:     %s\n", result.GitOpsPath)
+	fmt.Fprintf(cmd.OutOrStdout(), "GitOps path:       %s\n", result.GitOpsPath)
 	fmt.Fprintf(cmd.OutOrStdout(), "Manifests created: %d\n", result.ManifestsCreated)
-	if result.CommitHash != "" {
-		fmt.Fprintf(cmd.OutOrStdout(), "Commit:          %s\n", result.CommitHash)
-	}
 
 	if !dryRun {
 		if err := config.UpdateStatus(name, config.StageSetup, config.StatusSuccess); err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Next: opencenter cluster deploy %s\n", name)
+		fmt.Fprintf(cmd.OutOrStdout(), "\nNext steps:\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "  opencenter secrets sync %s       # encrypt secrets\n", name)
+		fmt.Fprintf(cmd.OutOrStdout(), "  opencenter cluster validate %s   # verify readiness\n", name)
+		fmt.Fprintf(cmd.OutOrStdout(), "  opencenter cluster deploy %s     # deploy cluster\n", name)
 	}
 
 	return nil

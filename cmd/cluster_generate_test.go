@@ -250,11 +250,6 @@ func TestClusterGenerateDryRunSkipsCommit(t *testing.T) {
 		t.Fatalf("dry-run generate failed: %v", err)
 	}
 
-	// In dry-run mode, CommitHash should be empty (commit is skipped)
-	if result.CommitHash != "" {
-		t.Errorf("expected empty CommitHash in dry-run mode, got %q", result.CommitHash)
-	}
-
 	// ManifestsCreated should be non-zero (estimated count)
 	if result.ManifestsCreated == 0 {
 		t.Error("expected non-zero ManifestsCreated in dry-run mode")

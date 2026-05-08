@@ -11,6 +11,7 @@ import (
 	"time"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 )
 
 func (s *ValidateService) populateOperatorReport(ctx context.Context, cfg *v2.Config, result *ValidationResult) {
@@ -124,6 +125,7 @@ func (s *ValidateService) buildGitOpsReport(ctx context.Context, cfg *v2.Config,
 	} else {
 		report.Checks = append(report.Checks, ValidationCheck{Name: "Local path", Status: CheckStatusPass, Detail: localPath})
 		report.Checks = append(report.Checks, s.localGitChecks(ctx, localPath)...)
+		report.Checks = append(report.Checks, s.secretEncryptionChecks(ctx, localPath)...)
 	}
 
 	if mode != ValidationModeOnline {
@@ -246,6 +248,38 @@ func describePorcelainStatus(output string) string {
 		parts = append(parts, fmt.Sprintf("%d untracked", untracked))
 	}
 	return strings.Join(parts, ", ")
+}
+
+// secretEncryptionChecks scans the local GitOps directory for Kubernetes Secret
+// manifests that are not SOPS-encrypted. This catches the same issues that the
+// generate command's pre-commit scan would reject, giving operators early
+// feedback during validate.
+func (s *ValidateService) secretEncryptionChecks(ctx context.Context, localPath string) []ValidationCheck {
+	if _, err := os.Stat(localPath); err != nil {
+		// Directory doesn't exist yet; nothing to scan.
+		return nil
+	}
+
+	findings, err := gitops.ScanGitOpsSecretsWithOptions(ctx, gitops.SecretScanOptions{
+		Root:   localPath,
+		Staged: false,
+	})
+	if err != nil {
+		return []ValidationCheck{{Name: "Secret encryption", Status: CheckStatusWarn, Message: fmt.Sprintf("scan error: %v", err)}}
+	}
+
+	if len(findings) == 0 {
+		return []ValidationCheck{{Name: "Secret encryption", Status: CheckStatusPass, Message: "all secrets encrypted"}}
+	}
+
+	// Group findings by file for a concise summary.
+	fileSet := make(map[string]bool)
+	for _, f := range findings {
+		fileSet[f.Path] = true
+	}
+
+	message := fmt.Sprintf("%d unencrypted secret file(s) found; run 'opencenter secrets sync' to encrypt", len(fileSet))
+	return []ValidationCheck{{Name: "Secret encryption", Status: CheckStatusFail, Message: message}}
 }
 
 func buildMissing(issues []v2.ValidationIssue, gitops ValidationGitOpsReport, services []ValidationServiceReport) []ValidationMissing {

@@ -121,7 +121,7 @@ func TestClusterGenerateIntegrationKindProvider(t *testing.T) {
 	if err := setupCmd.Execute(); err != nil {
 		t.Fatalf("cluster generate failed: %v\nstderr: %s", err, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "Next: opencenter cluster deploy kind-setup-int") {
+	if !strings.Contains(stdout.String(), "opencenter cluster deploy kind-setup-int") {
 		t.Fatalf("expected deploy next step in generate output, got:\n%s", stdout.String())
 	}
 

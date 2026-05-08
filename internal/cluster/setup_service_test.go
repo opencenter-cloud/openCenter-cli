@@ -3,7 +3,6 @@ package cluster
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -113,54 +112,6 @@ func TestSetupService_validateManifests(t *testing.T) {
 	err = service.validateManifests(clusterPaths)
 	if err != nil {
 		t.Errorf("validateManifests() unexpected error: %v", err)
-	}
-}
-
-func TestSetupService_commitChanges(t *testing.T) {
-	// Skip if git is not available
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not available, skipping test")
-	}
-
-	tmpDir := t.TempDir()
-	gitDir := filepath.Join(tmpDir, "gitops")
-
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
-		t.Fatalf("failed to create gitops dir: %v", err)
-	}
-
-	// Create a file to commit
-	if err := os.WriteFile(filepath.Join(gitDir, "test.txt"), []byte("test"), 0o644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	pathResolver := paths.NewPathResolver(tmpDir)
-
-	// Create cluster directories
-	ctx := context.Background()
-	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "test-org"); err != nil {
-		t.Fatalf("failed to create cluster directories: %v", err)
-	}
-
-	clusterPaths, err := pathResolver.Resolve(ctx, "test-cluster", "test-org")
-	if err != nil {
-		t.Fatalf("failed to resolve paths: %v", err)
-	}
-	clusterPaths.GitOpsDir = gitDir
-
-	validationEngine := validation.NewValidationEngine()
-	service := NewSetupService(pathResolver, validationEngine)
-
-	commitHash, err := service.commitChanges(ctx, clusterPaths)
-
-	if err != nil {
-		t.Errorf("commitChanges() unexpected error: %v", err)
-		return
-	}
-
-	// Verify commit hash is not empty
-	if commitHash == "" {
-		t.Error("commitChanges() returned empty commit hash")
 	}
 }
 
@@ -412,32 +363,6 @@ func TestSetupService_Setup(t *testing.T) {
 func TestSetupService_Setup_KindProviderRendersKindConfigOnly(t *testing.T) {
 	tmpDir := t.TempDir()
 	gitDir := filepath.Join(tmpDir, "gitops")
-	binDir := filepath.Join(tmpDir, "bin")
-	if err := os.MkdirAll(binDir, 0o755); err != nil {
-		t.Fatalf("failed to create bin dir: %v", err)
-	}
-	fakeGitPath := filepath.Join(binDir, "git")
-	fakeGit := `#!/bin/sh
-case "$1" in
-  init)
-    mkdir -p .git
-    ;;
-  add)
-    ;;
-  status)
-    ;;
-  commit)
-    ;;
-  rev-parse)
-    echo deadbeef
-    ;;
-esac
-exit 0
-`
-	if err := os.WriteFile(fakeGitPath, []byte(fakeGit), 0o755); err != nil {
-		t.Fatalf("failed to write fake git: %v", err)
-	}
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	pathResolver := paths.NewPathResolver(tmpDir)
 

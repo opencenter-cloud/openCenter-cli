@@ -12,7 +12,6 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
-	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/tofu"
 )
 
@@ -30,7 +29,6 @@ type SetupResult struct {
 	GitOpsPath       string
 	ManifestsCreated int
 	ValidationPassed bool
-	CommitHash       string
 }
 
 // SetupService handles cluster setup business logic
@@ -38,7 +36,6 @@ type SetupService struct {
 	pathResolver     *paths.PathResolver
 	validationEngine *validation.ValidationEngine
 	configurationMgr *config.ConfigurationManager
-	commandRunner    security.CommandRunner
 }
 
 // NewSetupService creates a new SetupService
@@ -65,7 +62,6 @@ func NewSetupServiceWithConfigMgr(
 		pathResolver:     pathResolver,
 		validationEngine: validationEngine,
 		configurationMgr: configurationMgr,
-		commandRunner:    security.GetDefaultCommandRunner(),
 	}
 }
 
@@ -158,15 +154,6 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 		return nil, fmt.Errorf("validating manifests: %w", err)
 	}
 
-	// Commit changes if not dry run
-	if !opts.DryRun {
-		commitHash, err := s.commitChanges(ctx, clusterPaths)
-		if err != nil {
-			return nil, fmt.Errorf("committing changes: %w", err)
-		}
-		result.CommitHash = commitHash
-	}
-
 	return result, nil
 }
 
@@ -248,118 +235,6 @@ func (s *SetupService) validateManifests(clusterPaths *paths.ClusterPaths) error
 	}
 
 	return nil
-}
-
-// commitChanges commits generated manifests to git
-func (s *SetupService) commitChanges(ctx context.Context, clusterPaths *paths.ClusterPaths) (string, error) {
-	gitDir := clusterPaths.GitOpsDir
-	if err := writeGitOpsHygiene(gitDir); err != nil {
-		return "", err
-	}
-
-	// Check if git repository is initialized
-	if _, err := os.Stat(filepath.Join(gitDir, ".git")); os.IsNotExist(err) {
-		// Initialize git repository
-		cmd, err := s.commandRunner.PrepareCommandContext(ctx, "git", "init")
-		if err != nil {
-			return "", fmt.Errorf("preparing git init: %w", err)
-		}
-		cmd.Dir = gitDir
-		if err := cmd.Run(); err != nil {
-			return "", fmt.Errorf("initializing git repository: %w", err)
-		}
-
-		// Configure local git identity so commits work in environments
-		// without a global git config (CI, containers, fresh installs).
-		for _, kv := range [][2]string{
-			{"user.name", "opencenter"},
-			{"user.email", "opencenter@localhost"},
-		} {
-			cfgCmd, err := s.commandRunner.PrepareCommandContext(ctx, "git", "config", kv[0], kv[1])
-			if err != nil {
-				return "", fmt.Errorf("preparing git config %s: %w", kv[0], err)
-			}
-			cfgCmd.Dir = gitDir
-			if err := cfgCmd.Run(); err != nil {
-				return "", fmt.Errorf("setting git config %s: %w", kv[0], err)
-			}
-		}
-	}
-
-	hookCmd, err := s.commandRunner.PrepareCommandContext(ctx, "git", "config", "core.hooksPath", ".opencenter/hooks")
-	if err != nil {
-		return "", fmt.Errorf("preparing git config core.hooksPath: %w", err)
-	}
-	hookCmd.Dir = gitDir
-	if err := hookCmd.Run(); err != nil {
-		return "", fmt.Errorf("setting git config core.hooksPath: %w", err)
-	}
-
-	// Stage all files
-	cmd, err := s.commandRunner.PrepareCommandContext(ctx, "git", "add", ".")
-	if err != nil {
-		return "", fmt.Errorf("preparing git add: %w", err)
-	}
-	cmd.Dir = gitDir
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("staging files: %w", err)
-	}
-
-	findings, err := gitops.ScanGitOpsSecretsWithOptions(ctx, gitops.SecretScanOptions{Root: gitDir, Staged: true})
-	if err != nil {
-		return "", fmt.Errorf("scanning staged GitOps files: %w", err)
-	}
-	if len(findings) > 0 {
-		var messages []string
-		for _, finding := range findings {
-			messages = append(messages, fmt.Sprintf("%s: %s: %s", finding.Path, finding.Rule, finding.Message))
-		}
-		return "", fmt.Errorf("refusing to commit GitOps security findings:\n%s", strings.Join(messages, "\n"))
-	}
-
-	// Check if there are changes to commit
-	cmd, err = s.commandRunner.PrepareCommandContext(ctx, "git", "status", "--porcelain")
-	if err != nil {
-		return "", fmt.Errorf("preparing git status: %w", err)
-	}
-	cmd.Dir = gitDir
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("checking git status: %w", err)
-	}
-
-	if len(strings.TrimSpace(string(output))) == 0 {
-		// No changes to commit
-		return "", nil
-	}
-
-	// Commit changes
-	// Use --no-verify because the pre-commit hook calls `opencenter cluster
-	// validate-manifests` which may not be available during initial setup, and
-	// we already ran the security scan above on the staged blobs.
-	commitMessage := "Initialize GitOps repository structure\n\n- Add base GitOps structure\n- Add cluster-specific applications\n- Add infrastructure templates"
-	cmd, err = s.commandRunner.PrepareCommandContext(ctx, "git", "commit", "--no-verify", "-m", commitMessage)
-	if err != nil {
-		return "", fmt.Errorf("preparing git commit: %w", err)
-	}
-	cmd.Dir = gitDir
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("committing changes: %w", err)
-	}
-
-	// Get commit hash
-	cmd, err = s.commandRunner.PrepareCommandContext(ctx, "git", "rev-parse", "HEAD")
-	if err != nil {
-		return "", fmt.Errorf("preparing git rev-parse: %w", err)
-	}
-	cmd.Dir = gitDir
-	output, err = cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("getting commit hash: %w", err)
-	}
-
-	commitHash := strings.TrimSpace(string(output))
-	return commitHash, nil
 }
 
 // skippedDirs lists directories that are not generated by opencenter and must

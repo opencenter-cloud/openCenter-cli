@@ -29,6 +29,7 @@ type SetupResult struct {
 	GitOpsPath       string
 	ManifestsCreated int
 	ValidationPassed bool
+	Warnings         []string
 }
 
 // SetupService handles cluster setup business logic
@@ -134,9 +135,7 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 	if !opts.SkipValidation {
 		if err := s.validateSetupConfig(&cfg); err != nil {
 			result.ValidationPassed = false
-			if !opts.Force {
-				return nil, fmt.Errorf("validation failed: %w", err)
-			}
+			result.Warnings = append(result.Warnings, fmt.Sprintf("validation: %v", err))
 		} else {
 			result.ValidationPassed = true
 		}
@@ -149,9 +148,9 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 	}
 	result.ManifestsCreated = manifestCount
 
-	// Validate generated manifests
+	// Validate generated manifests (non-blocking)
 	if err := s.validateManifests(clusterPaths); err != nil {
-		return nil, fmt.Errorf("validating manifests: %w", err)
+		result.Warnings = append(result.Warnings, fmt.Sprintf("manifest validation: %v", err))
 	}
 
 	return result, nil

@@ -130,6 +130,14 @@ func runClusterGenerate(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(cmd.OutOrStdout(), "GitOps path:       %s\n", result.GitOpsPath)
 	fmt.Fprintf(cmd.OutOrStdout(), "Manifests created: %d\n", result.ManifestsCreated)
 
+	// Report warnings (non-fatal)
+	if len(result.Warnings) > 0 {
+		fmt.Fprintf(cmd.ErrOrStderr(), "\nWarnings:\n")
+		for _, w := range result.Warnings {
+			fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠ %s\n", w)
+		}
+	}
+
 	if !dryRun {
 		if err := config.UpdateStatus(name, config.StageSetup, config.StatusSuccess); err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to update cluster status: %v\n", err)

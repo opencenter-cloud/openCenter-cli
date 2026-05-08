@@ -269,7 +269,7 @@ func TestClusterInitUsesSSHAuthWhenConfigured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create config manager: %v", err)
 	}
-	if err := cm.SetValue("cluster_defaults.tops_auth_method", "ssh"); err != nil {
+	if err := cm.SetValue("cluster_defaults.gitops_auth_method", "ssh"); err != nil {
 		t.Fatalf("set tops auth method: %v", err)
 	}
 	if err := cm.Save(); err != nil {

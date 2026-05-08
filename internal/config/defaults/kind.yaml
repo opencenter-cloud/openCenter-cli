@@ -1,7 +1,7 @@
 locals:
   cluster_name: "dev-cluster"
   naming_prefix: "local.cluster_name"
-  kubernetes_version: "1.33.7"
+  kubernetes_version: "1.35.0"
   node_count: 3
   worker_count: 2
   control_plane_count: 1

@@ -14,7 +14,7 @@ Examples:
   opencenter config set behavior.autoConfirm true
   opencenter config set behavior.validation online
   opencenter config set cluster_defaults.provider openstack
-  opencenter config set cluster_defaults.tops_auth_method token
+  opencenter config set cluster_defaults.gitops_auth_method token
   opencenter config set cluster_defaults.base_domain k8s.example.com
   opencenter config set cluster_defaults.kubernetes_version 1.34.3
 
@@ -36,7 +36,7 @@ Supported configuration sections:
   - cluster_defaults.provider (string)
   - cluster_defaults.region (string)
   - cluster_defaults.environment (string)
-  - cluster_defaults.tops_auth_method (string: ssh, token)
+  - cluster_defaults.gitops_auth_method (string: ssh, token)
   - cluster_defaults.base_domain (string)
   - cluster_defaults.admin_email (string)
   - cluster_defaults.kubernetes_version (string)

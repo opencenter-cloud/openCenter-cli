@@ -74,8 +74,8 @@ const (
 	ValidationModeOffline = "offline"
 	ValidationModeOnline  = "online"
 
-	TopsAuthMethodSSH   = "ssh"
-	TopsAuthMethodToken = "token"
+	GitopsAuthMethodSSH   = "ssh"
+	GitopsAuthMethodToken = "token"
 )
 
 // ClusterDefaultsConfig contains default values applied when generating new cluster
@@ -85,7 +85,7 @@ type ClusterDefaultsConfig struct {
 	Provider          string   `yaml:"provider"`
 	Region            string   `yaml:"region"`
 	Environment       string   `yaml:"environment"`
-	TopsAuthMethod    string   `yaml:"tops_auth_method"`
+	GitopsAuthMethod    string   `yaml:"gitops_auth_method"`
 	SSHAuthorizedKeys []string `yaml:"ssh_authorized_keys,omitempty"`
 	BaseDomain        string   `yaml:"base_domain,omitempty"`
 	AdminEmail        string   `yaml:"admin_email,omitempty"`
@@ -280,7 +280,7 @@ func DefaultCLIConfig() *CLIConfig {
 			Provider:       "openstack",
 			Region:         "dfw3",
 			Environment:    "dev",
-			TopsAuthMethod: TopsAuthMethodToken,
+			GitopsAuthMethod: GitopsAuthMethodToken,
 		},
 	}
 }
@@ -454,8 +454,8 @@ func (cm *ConfigManager) mergeWithDefaults(config *CLIConfig) *CLIConfig {
 	if config.ClusterDefaults.Environment != "" {
 		merged.ClusterDefaults.Environment = config.ClusterDefaults.Environment
 	}
-	if config.ClusterDefaults.TopsAuthMethod != "" {
-		merged.ClusterDefaults.TopsAuthMethod = config.ClusterDefaults.TopsAuthMethod
+	if config.ClusterDefaults.GitopsAuthMethod != "" {
+		merged.ClusterDefaults.GitopsAuthMethod = config.ClusterDefaults.GitopsAuthMethod
 	}
 	if len(config.ClusterDefaults.SSHAuthorizedKeys) > 0 {
 		merged.ClusterDefaults.SSHAuthorizedKeys = config.ClusterDefaults.SSHAuthorizedKeys
@@ -1104,26 +1104,26 @@ func (cm *ConfigManager) setClusterDefaultsValue(defaults *ClusterDefaultsConfig
 				Message: "environment must be a string",
 			}
 		}
-	case "tops_auth_method":
+	case "gitops_auth_method":
 		str, ok := value.(string)
 		if !ok {
 			return &ConfigError{
 				Type:    "validation",
-				Field:   "cluster_defaults.tops_auth_method",
+				Field:   "cluster_defaults.gitops_auth_method",
 				Value:   value,
-				Message: "tops_auth_method must be a string",
+				Message: "gitops_auth_method must be a string",
 			}
 		}
 		str = strings.ToLower(strings.TrimSpace(str))
-		if err := ValidateTopsAuthMethod(str); err != nil {
+		if err := ValidateGitopsAuthMethod(str); err != nil {
 			return &ConfigError{
 				Type:    "validation",
-				Field:   "cluster_defaults.tops_auth_method",
+				Field:   "cluster_defaults.gitops_auth_method",
 				Value:   value,
 				Message: err.Error(),
 			}
 		}
-		defaults.TopsAuthMethod = str
+		defaults.GitopsAuthMethod = str
 	case "base_domain":
 		if str, ok := value.(string); ok {
 			defaults.BaseDomain = str
@@ -1337,8 +1337,8 @@ func (cm *ConfigManager) getClusterDefaultsValue(defaults *ClusterDefaultsConfig
 		return defaults.Region, nil
 	case "environment":
 		return defaults.Environment, nil
-	case "tops_auth_method":
-		return defaults.TopsAuthMethod, nil
+	case "gitops_auth_method":
+		return defaults.GitopsAuthMethod, nil
 	case "ssh_authorized_keys":
 		return defaults.SSHAuthorizedKeys, nil
 	case "base_domain":
@@ -1848,13 +1848,13 @@ func ValidateBehaviorValidationMode(mode string) error {
 	}
 }
 
-func ValidateTopsAuthMethod(method string) error {
+func ValidateGitopsAuthMethod(method string) error {
 	method = strings.ToLower(strings.TrimSpace(method))
 	switch method {
-	case TopsAuthMethodSSH, TopsAuthMethodToken:
+	case GitopsAuthMethodSSH, GitopsAuthMethodToken:
 		return nil
 	default:
-		return fmt.Errorf("invalid cluster_defaults.tops_auth_method %q; expected ssh or token", method)
+		return fmt.Errorf("invalid cluster_defaults.gitops_auth_method %q; expected ssh or token", method)
 	}
 }
 
@@ -1892,14 +1892,14 @@ func (cv *ConfigValidator) validateClusterDefaultsWithResult(defaults *ClusterDe
 		})
 	}
 
-	if defaults.TopsAuthMethod == "" {
-		defaults.TopsAuthMethod = TopsAuthMethodToken
+	if defaults.GitopsAuthMethod == "" {
+		defaults.GitopsAuthMethod = GitopsAuthMethodToken
 	}
-	if err := ValidateTopsAuthMethod(defaults.TopsAuthMethod); err != nil {
+	if err := ValidateGitopsAuthMethod(defaults.GitopsAuthMethod); err != nil {
 		result.Errors = append(result.Errors, &ConfigError{
 			Type:    "validation",
-			Field:   "cluster_defaults.tops_auth_method",
-			Value:   defaults.TopsAuthMethod,
+			Field:   "cluster_defaults.gitops_auth_method",
+			Value:   defaults.GitopsAuthMethod,
 			Message: err.Error(),
 		})
 	}

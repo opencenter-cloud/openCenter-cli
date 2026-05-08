@@ -233,9 +233,9 @@ func TestNewV2Default_KindSpecificBehavior(t *testing.T) {
 		t.Error("VMware cloud config should be nil for Kind")
 	}
 
-	// Kind-specific overrides from kind.yaml defaults
-	if got := cfg.OpenCenter.Cluster.Kubernetes.Version; got != "1.33.7" {
-		t.Errorf("Kubernetes version = %q, want %q", got, "1.33.7")
+	// Kind-specific overrides — kept in sync with kindDefaultKubernetesVersion constant.
+	if got := cfg.OpenCenter.Cluster.Kubernetes.Version; got != kindDefaultKubernetesVersion {
+		t.Errorf("Kubernetes version = %q, want %q", got, kindDefaultKubernetesVersion)
 	}
 	if got := cfg.OpenCenter.Cluster.Kubernetes.APIPort; got != 6443 {
 		t.Errorf("API port = %d, want %d", got, 6443)

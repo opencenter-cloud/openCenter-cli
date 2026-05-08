@@ -62,7 +62,7 @@ var clusterDefaultExplanations = []clusterDefaultExplanation{
 		During:    "cluster init, config load",
 	},
 	{
-		Key:       "cluster_defaults.tops_auth_method",
+		Key:       "cluster_defaults.gitops_auth_method",
 		AppliedTo: "opencenter.gitops.auth",
 		When:      "cluster init chooses the GitOps bootstrap auth shape",
 		During:    "cluster init",
@@ -143,8 +143,8 @@ func fieldValue(cd config.ClusterDefaultsConfig, key string) string {
 		return quote(cd.Region)
 	case "cluster_defaults.environment":
 		return quote(cd.Environment)
-	case "cluster_defaults.tops_auth_method":
-		return quote(cd.TopsAuthMethod)
+	case "cluster_defaults.gitops_auth_method":
+		return quote(cd.GitopsAuthMethod)
 	case "cluster_defaults.ssh_authorized_keys":
 		if len(cd.SSHAuthorizedKeys) == 0 {
 			return "(not set)"

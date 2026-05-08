@@ -106,7 +106,7 @@ Examples:
   opencenter config set behavior.autoConfirm true
   opencenter config set behavior.validation online
   opencenter config set cluster_defaults.provider openstack
-  opencenter config set cluster_defaults.tops_auth_method token
+  opencenter config set cluster_defaults.gitops_auth_method token
   opencenter config set cluster_defaults.base_domain k8s.example.com
   opencenter config set cluster_defaults.kubernetes_version 1.34.3
 
@@ -128,7 +128,7 @@ Supported configuration sections:
   - cluster_defaults.provider (string)
   - cluster_defaults.region (string)
   - cluster_defaults.environment (string)
-  - cluster_defaults.tops_auth_method (string: ssh, token)
+  - cluster_defaults.gitops_auth_method (string: ssh, token)
   - cluster_defaults.base_domain (string)
   - cluster_defaults.admin_email (string)
   - cluster_defaults.kubernetes_version (string)
@@ -244,7 +244,7 @@ Default values:
   - cluster_defaults.provider: openstack
   - cluster_defaults.region: dfw3
   - cluster_defaults.environment: dev
-  - cluster_defaults.tops_auth_method: token`,
+  - cluster_defaults.gitops_auth_method: token`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Create config manager
 			cm, err := config.NewConfigManager("")
@@ -323,9 +323,9 @@ func convertConfigValue(key, value string) (interface{}, error) {
 			return nil, err
 		}
 		return mode, nil
-	case key == "cluster_defaults.tops_auth_method":
+	case key == "cluster_defaults.gitops_auth_method":
 		method := strings.ToLower(strings.TrimSpace(value))
-		if err := config.ValidateTopsAuthMethod(method); err != nil {
+		if err := config.ValidateGitopsAuthMethod(method); err != nil {
 			return nil, err
 		}
 		return method, nil

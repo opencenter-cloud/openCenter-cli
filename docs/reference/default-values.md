@@ -25,7 +25,7 @@ All new configurations use schema version 2.0.
 | Field | Default | Description |
 |-------|---------|-------------|
 | `behavior.validation` | `"offline"` | Default `cluster validate` mode. Offline validation does not contact providers, Git remotes, Kubernetes APIs, or external services. |
-| `cluster_defaults.tops_auth_method` | `"token"` | Default GitOps bootstrap auth shape for `cluster init`. `token` writes GitHub token auth with `token: "CHANGEME"`; `ssh` writes SSH key auth paths. |
+| `cluster_defaults.gitops_auth_method` | `"token"` | Default GitOps bootstrap auth shape for `cluster init`. `token` writes GitHub token auth with `token: "CHANGEME"`; `ssh` writes SSH key auth paths. |
 
 ## Cluster Metadata
 
@@ -363,7 +363,7 @@ All new configurations use schema version 2.0.
 | `cluster_defaults.provider` | `"openstack"` | Default provider |
 | `cluster_defaults.region` | `"dfw3"` | Default region |
 | `cluster_defaults.environment` | `"dev"` | Default environment |
-| `cluster_defaults.tops_auth_method` | `"token"` | Default GitOps bootstrap auth method (`token` or `ssh`) |
+| `cluster_defaults.gitops_auth_method` | `"token"` | Default GitOps bootstrap auth method (`token` or `ssh`) |
 | `cluster_defaults.ssh_authorized_keys` | `[]` | Default SSH keys |
 
 ## Configuration Precedence
@@ -398,7 +398,7 @@ opencenter cluster init my-cluster \
 ```bash
 opencenter config set cluster_defaults.provider vmware
 opencenter config set cluster_defaults.region us-west-2
-opencenter config set cluster_defaults.tops_auth_method ssh
+opencenter config set cluster_defaults.gitops_auth_method ssh
 ```
 
 ---

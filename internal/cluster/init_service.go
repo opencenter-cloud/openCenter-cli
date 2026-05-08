@@ -392,15 +392,15 @@ func (s *InitService) updateConfigPaths(cfg *v2.Config, configMap map[string]any
 	setNestedConfigValue(configMap, sshKeyPath, "secrets", "ssh_key", "private")
 	setNestedConfigValue(configMap, sshKeyPath+".pub", "secrets", "ssh_key", "public")
 
-	authMethod := s.effectiveTopsAuthMethod()
+	authMethod := s.effectiveGitopsAuthMethod()
 	if hasExplicitConfigValue(configMap, opts, "opencenter", "gitops", "auth", "ssh") {
-		authMethod = config.TopsAuthMethodSSH
+		authMethod = config.GitopsAuthMethodSSH
 	}
 	if hasExplicitConfigValue(configMap, opts, "opencenter", "gitops", "auth", "token") {
-		authMethod = config.TopsAuthMethodToken
+		authMethod = config.GitopsAuthMethodToken
 	}
 
-	if authMethod == config.TopsAuthMethodSSH {
+	if authMethod == config.GitopsAuthMethodSSH {
 		if !hasExplicitConfigValue(configMap, opts, "opencenter", "gitops", "repository", "url") {
 			cfg.OpenCenter.GitOps.Repository.URL = "ssh://git@example.com/opencenter/cluster-config.git"
 			setNestedConfigValue(configMap, cfg.OpenCenter.GitOps.Repository.URL, "opencenter", "gitops", "repository", "url")
@@ -459,14 +459,14 @@ func (s *InitService) updateConfigPaths(cfg *v2.Config, configMap map[string]any
 	setNestedConfigValue(configMap, clusterPaths.SOPSKeyPath, "secrets", "sops", "age_key_file")
 }
 
-func (s *InitService) effectiveTopsAuthMethod() string {
+func (s *InitService) effectiveGitopsAuthMethod() string {
 	if s != nil && s.configManager != nil {
-		method := strings.ToLower(strings.TrimSpace(s.configManager.GetConfig().ClusterDefaults.TopsAuthMethod))
-		if method == config.TopsAuthMethodSSH || method == config.TopsAuthMethodToken {
+		method := strings.ToLower(strings.TrimSpace(s.configManager.GetConfig().ClusterDefaults.GitopsAuthMethod))
+		if method == config.GitopsAuthMethodSSH || method == config.GitopsAuthMethodToken {
 			return method
 		}
 	}
-	return config.TopsAuthMethodToken
+	return config.GitopsAuthMethodToken
 }
 
 // validateConfig validates the configuration

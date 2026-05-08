@@ -26,7 +26,7 @@ const (
 	defaultHTTPSGitURLPlaceholder     = "https://github.com/opencenter/cluster-config.git"
 	defaultGitBaseRepoURL             = "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git"
 	defaultGitBaseRepoRelease         = "2026.01"
-	defaultTopsAuthMethod             = "token"
+	defaultGitopsAuthMethod             = "token"
 	defaultDefaultStorageClass        = "Performance"
 	defaultWorkerVolumeType           = "Performance"
 	defaultOpenStackProjectID         = "project-id-placeholder"
@@ -50,7 +50,7 @@ const (
 	defaultCiliumVersion              = "1.19.3"
 
 	// Kind provider defaults — kept in sync with internal/config/defaults/kind.yaml.
-	kindDefaultKubernetesVersion = "1.36.0"
+	kindDefaultKubernetesVersion = "1.35.0"
 	kindDefaultAPIPort           = 6443
 	kindDefaultControlPlaneCount = 1
 	kindDefaultWorkerCount       = 2
@@ -62,7 +62,7 @@ type cliDefaults struct {
 	Provider          string   `yaml:"provider"`
 	Region            string   `yaml:"region"`
 	Environment       string   `yaml:"environment"`
-	TopsAuthMethod    string   `yaml:"tops_auth_method"`
+	GitopsAuthMethod    string   `yaml:"gitops_auth_method"`
 	SSHAuthorizedKeys []string `yaml:"ssh_authorized_keys"`
 	BaseDomain        string   `yaml:"base_domain"`
 	AdminEmail        string   `yaml:"admin_email"`
@@ -324,7 +324,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 
 	applyProviderCloudDefaults(cfg, availabilityZone)
 	applyProviderBehaviorDefaults(cfg)
-	applyGitOpsAuthDefaults(cfg, defaults.TopsAuthMethod, sshKeyPath)
+	applyGitOpsAuthDefaults(cfg, defaults.GitopsAuthMethod, sshKeyPath)
 
 	return cfg, nil
 }
@@ -628,7 +628,7 @@ func applyProviderBehaviorDefaults(cfg *Config) {
 }
 
 func applyGitOpsAuthDefaults(cfg *Config, authMethod, sshKeyPath string) {
-	switch normalizeTopsAuthMethod(authMethod) {
+	switch normalizeGitopsAuthMethod(authMethod) {
 	case "ssh":
 		cfg.OpenCenter.GitOps.Repository.URL = defaultGitURLPlaceholder
 		cfg.OpenCenter.GitOps.Auth.SSH = &GitOpsSSHAuth{
@@ -646,14 +646,14 @@ func applyGitOpsAuthDefaults(cfg *Config, authMethod, sshKeyPath string) {
 	}
 }
 
-func normalizeTopsAuthMethod(authMethod string) string {
+func normalizeGitopsAuthMethod(authMethod string) string {
 	switch strings.ToLower(strings.TrimSpace(authMethod)) {
 	case "ssh":
 		return "ssh"
 	case "token", "":
 		return "token"
 	default:
-		return defaultTopsAuthMethod
+		return defaultGitopsAuthMethod
 	}
 }
 
@@ -726,7 +726,7 @@ func loadCLIDefaults() cliDefaults {
 		Provider:       defaultProvider,
 		Region:         defaultRegion,
 		Environment:    defaultEnvironment,
-		TopsAuthMethod: defaultTopsAuthMethod,
+		GitopsAuthMethod: defaultGitopsAuthMethod,
 	}
 
 	configPath, err := defaultCLIConfigPath()
@@ -753,8 +753,8 @@ func loadCLIDefaults() cliDefaults {
 	if strings.TrimSpace(cfg.ClusterDefaults.Environment) != "" {
 		defaults.Environment = cfg.ClusterDefaults.Environment
 	}
-	if strings.TrimSpace(cfg.ClusterDefaults.TopsAuthMethod) != "" {
-		defaults.TopsAuthMethod = normalizeTopsAuthMethod(cfg.ClusterDefaults.TopsAuthMethod)
+	if strings.TrimSpace(cfg.ClusterDefaults.GitopsAuthMethod) != "" {
+		defaults.GitopsAuthMethod = normalizeGitopsAuthMethod(cfg.ClusterDefaults.GitopsAuthMethod)
 	}
 	if len(cfg.ClusterDefaults.SSHAuthorizedKeys) > 0 {
 		defaults.SSHAuthorizedKeys = cfg.ClusterDefaults.SSHAuthorizedKeys

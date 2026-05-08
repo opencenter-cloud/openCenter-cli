@@ -102,7 +102,7 @@ Currently, the defaults that affect initial construction are:
 - provider
 - region
 - environment
-- `tops_auth_method`
+- `gitops_auth_method`
 - `ssh_authorized_keys`
 
 The struct also reads `base_domain`, `admin_email`, `kubernetes_version`,
@@ -146,7 +146,7 @@ config, including:
 - `secrets.sops_age_key_file`
 - `secrets.sops.age_key_file`
 
-It also rewrites Git auth defaults based on the effective `tops_auth_method`.
+It also rewrites Git auth defaults based on the effective `gitops_auth_method`.
 
 ## Overrides
 

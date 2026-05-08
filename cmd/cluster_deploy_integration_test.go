@@ -50,7 +50,7 @@ func TestClusterDeployIntegration(t *testing.T) {
 		t.Fatalf("expected status next step in deploy output, got:\n%s", stdout.String())
 	}
 
-	kubeconfigPath := filepath.Join(clusterDir, "kubeconfig.yaml")
+	kubeconfigPath := filepath.Join(dir, "clusters", "state", "opencenter", "kind-bootstrap-int", "kubeconfig.yaml")
 	if _, err := os.Stat(kubeconfigPath); err != nil {
 		t.Fatalf("expected kubeconfig at cluster-owned path: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestClusterDeployIntegration(t *testing.T) {
 		t.Fatalf("expected export kubeconfig invocation in log\nlog:\n%s", string(kindLog))
 	}
 
-	configPath := filepath.Join(dir, "clusters", "opencenter", ".kind-bootstrap-int-config.yaml")
+	configPath := filepath.Join(dir, "clusters", "state", "opencenter", "kind-bootstrap-int", "kind-bootstrap-int-config.yaml")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		t.Fatalf("read config: %v", err)
@@ -152,26 +152,28 @@ func TestClusterDeployServiceIntegration(t *testing.T) {
 	clusterName := "test-service-cluster"
 	organization := "opencenter"
 
-	// Create cluster directory structure following org-based strategy
-	orgDir := filepath.Join(dir, "clusters", organization)
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", clusterName)
-	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
-		t.Fatalf("failed to create cluster directory: %v", err)
+	if err := pathResolver.CreateClusterDirectories(context.Background(), clusterName, organization); err != nil {
+		t.Fatalf("failed to create cluster directories: %v", err)
+	}
+	clusterPaths, err := pathResolver.Resolve(context.Background(), clusterName, organization)
+	if err != nil {
+		t.Fatalf("resolve cluster paths: %v", err)
 	}
 
-	// Create a schema-valid native v2 config file at the org root path expected by PathResolver.
-	configPath := filepath.Join(orgDir, "."+clusterName+"-config.yaml")
 	cfgPtr, err := v2.NewV2Default(clusterName, "kind")
 	if err != nil {
 		t.Fatalf("create v2 config: %v", err)
 	}
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(dir, "clusters", organization)
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
 
 	loader := v2.NewConfigLoader(configdefaults.NewRegistry())
-	if err := loader.SaveToFile(&cfg, configPath); err != nil {
+	if err := loader.SaveToFile(&cfg, clusterPaths.ConfigPath); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
+	}
+	if err := os.Chmod(clusterPaths.ConfigPath, 0o600); err != nil {
+		t.Fatalf("chmod config: %v", err)
 	}
 
 	// Test bootstrap with dry-run
@@ -403,7 +405,7 @@ func TestKindLifecycleSmoke(t *testing.T) {
 	initCmd := newClusterInitCmd()
 	initCmd.SetOut(&bytes.Buffer{})
 	initCmd.SetErr(&bytes.Buffer{})
-	initCmd.SetArgs([]string{clusterName, "--type", "kind", "--no-keygen"})
+	initCmd.SetArgs([]string{clusterName, "--type", "kind"})
 	if err := initCmd.Execute(); err != nil {
 		t.Fatalf("cluster init failed: %v", err)
 	}
@@ -471,7 +473,7 @@ func prepareKindBootstrapFixture(t *testing.T, clusterName string) (string, stri
 	initCmd := newClusterInitCmd()
 	initCmd.SetOut(&bytes.Buffer{})
 	initCmd.SetErr(&bytes.Buffer{})
-	initCmd.SetArgs([]string{clusterName, "--type", "kind", "--no-keygen"})
+	initCmd.SetArgs([]string{clusterName, "--type", "kind"})
 	if err := initCmd.Execute(); err != nil {
 		t.Fatalf("cluster init failed: %v", err)
 	}
@@ -488,6 +490,6 @@ func prepareKindBootstrapFixture(t *testing.T, clusterName string) (string, stri
 
 	resetCommandStateForTests()
 
-	clusterDir := filepath.Join(dir, "clusters", "opencenter", "infrastructure", "clusters", clusterName)
+	clusterDir := filepath.Join(dir, "clusters", "gitops", "opencenter", "infrastructure", "clusters", clusterName)
 	return dir, stateDir, clusterDir
 }

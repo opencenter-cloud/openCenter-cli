@@ -91,7 +91,7 @@ func runClusterInstallHooks(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if hooks already exist
-	hookPath := filepath.Join(gitDir, "hooks", "pre-commit")
+	hookPath := filepath.Join(absRepoPath, ".opencenter", "hooks", "pre-commit")
 	if _, err := os.Stat(hookPath); err == nil && !force {
 		return fmt.Errorf("pre-commit hook already exists at %s\nUse --force to overwrite", hookPath)
 	}

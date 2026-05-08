@@ -117,6 +117,57 @@ case "$subcommand" in
 esac
 exit 0
 `)
+
+	writeFakeExecutable(t, filepath.Join(binDir, "sops"), `#!/bin/sh
+set -eu
+file=""
+for arg in "$@"; do
+  case "$arg" in
+    -*)
+      ;;
+    *)
+      file="$arg"
+      ;;
+  esac
+done
+if [ -z "$file" ]; then
+  exit 0
+fi
+python3 - "$file" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    lines = fh.read().splitlines()
+out = []
+in_secret_values = False
+secret_indent = 0
+for line in lines:
+    stripped = line.lstrip()
+    indent = len(line) - len(stripped)
+    if stripped in ("data:", "stringData:"):
+        in_secret_values = True
+        secret_indent = indent
+        out.append(line)
+        continue
+    if in_secret_values and stripped and indent <= secret_indent:
+        in_secret_values = False
+    if in_secret_values and ":" in stripped and not stripped.startswith("#"):
+        key = stripped.split(":", 1)[0]
+        out.append(" " * indent + key + ": ENC[FAKE]")
+    else:
+        out.append(line)
+if not any(line == "sops:" or line.startswith("sops:") for line in out):
+    out.extend([
+        "sops:",
+        "  mac: ENC[FAKE]",
+        "  age:",
+        "    - recipient: age1fake",
+        "      enc: ENC[FAKE]",
+    ])
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write("\n".join(out) + "\n")
+PY
+`)
 }
 
 func installFakeKindBinary(t *testing.T, binDir string) {

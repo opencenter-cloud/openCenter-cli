@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -230,9 +231,9 @@ func (s *InitService) validateOrganization(ctx context.Context, organization str
 
 // checkExistingCluster checks if cluster already exists and handles force flag
 func (s *InitService) checkExistingCluster(clusterPaths *paths.ClusterPaths, clusterName, organization string, force bool) error {
-	if _, err := os.Stat(clusterPaths.ClusterDir); err == nil {
+	if _, err := os.Stat(clusterPaths.ConfigPath); err == nil {
 		if !force {
-			return fmt.Errorf("cluster '%s' already exists in organization '%s' at %s, use --force to overwrite", clusterName, organization, clusterPaths.ClusterDir)
+			return fmt.Errorf("cluster '%s' already exists in organization '%s' at %s, use --force to overwrite", clusterName, organization, clusterPaths.ConfigPath)
 		}
 		// If force is true, we'll overwrite the config but preserve keys
 	}
@@ -378,10 +379,8 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 
 // updateConfigPaths updates configuration with resolved paths
 func (s *InitService) updateConfigPaths(cfg *v2.Config, configMap map[string]any, clusterPaths *paths.ClusterPaths, opts InitOptions) {
-	if !hasExplicitConfigValue(configMap, opts, "opencenter", "gitops", "repository", "local_dir") {
-		cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
-		setNestedConfigValue(configMap, clusterPaths.GitOpsDir, "opencenter", "gitops", "repository", "local_dir")
-	}
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
+	setNestedConfigValue(configMap, clusterPaths.GitOpsDir, "opencenter", "gitops", "repository", "local_dir")
 
 	// Update SSH key paths (used by non-Kind providers for Git SSH auth).
 	sshKeyPath := clusterPaths.SSHKeyPath
@@ -494,7 +493,22 @@ func (s *InitService) createDirectories(ctx context.Context, clusterPaths *paths
 		return fmt.Errorf("creating cluster directories: %w", err)
 	}
 
-	return nil
+	for _, secureDir := range []string{
+		clusterPaths.ClusterStateDir,
+		clusterPaths.InventoryPath,
+		clusterPaths.VenvPath,
+		clusterPaths.BinPath,
+		clusterPaths.SecretsDir,
+		filepath.Join(clusterPaths.SecretsDir, "age"),
+		filepath.Dir(clusterPaths.SOPSKeyPath),
+		filepath.Join(clusterPaths.SecretsDir, "ssh"),
+	} {
+		if err := ensureMode(secureDir, 0o700); err != nil {
+			return err
+		}
+	}
+
+	return clusterPaths.Validate()
 }
 
 // saveConfig saves the configuration to disk using ConfigurationManager
@@ -514,20 +528,20 @@ func (s *InitService) saveConfig(ctx context.Context, cfg *v2.Config, configPath
 		if err := s.fileSystem.WriteFileAtomic(configPath, data, 0o600); err != nil {
 			return fmt.Errorf("writing config file: %w", err)
 		}
-		return nil
+		return verifyMode(configPath, 0o600)
 	}
 
 	if err := loader.SaveToFile(cfg, configPath); err != nil {
 		return fmt.Errorf("saving v2 config: %w", err)
 	}
 
-	return nil
+	return verifyMode(configPath, 0o600)
 }
 
 // buildResultMessage builds a user-friendly result message
 func (s *InitService) buildResultMessage(clusterPaths *paths.ClusterPaths, organization, gitDir string, keysGenerated bool) string {
 	var msg strings.Builder
-	msg.WriteString(fmt.Sprintf("Created cluster configuration in organization '%s' at '%s'\n", organization, clusterPaths.ClusterDir))
+	msg.WriteString(fmt.Sprintf("Created cluster configuration in organization '%s' at '%s'\n", organization, clusterPaths.ConfigPath))
 	msg.WriteString(fmt.Sprintf("GitOps repository root: %s\n", gitDir))
 	if keysGenerated {
 		msg.WriteString(fmt.Sprintf("SOPS key location: %s\n", clusterPaths.SOPSKeyPath))
@@ -676,8 +690,11 @@ func (s *InitService) generateKeys(clusterPaths *paths.ClusterPaths, cfg *v2.Con
 func (s *InitService) generateSOPSKey(clusterPaths *paths.ClusterPaths) error {
 	// Create the secrets directory with proper permissions
 	secretsKeyDir := filepath.Dir(clusterPaths.SOPSKeyPath)
-	if err := os.MkdirAll(secretsKeyDir, 0o755); err != nil {
+	if err := os.MkdirAll(secretsKeyDir, 0o700); err != nil {
 		return fmt.Errorf("creating secrets directory: %w", err)
+	}
+	if err := ensureMode(secretsKeyDir, 0o700); err != nil {
+		return err
 	}
 
 	// Use the SOPS key manager to generate and save an Age key
@@ -697,7 +714,7 @@ func (s *InitService) generateSOPSKey(clusterPaths *paths.ClusterPaths) error {
 		return fmt.Errorf("saving Age key pair: %w", err)
 	}
 
-	return nil
+	return verifyMode(clusterPaths.SOPSKeyPath, 0o600)
 }
 
 func (s *InitService) ensureSOPSConfig(clusterPaths *paths.ClusterPaths, cfg *v2.Config) error {
@@ -723,7 +740,10 @@ func (s *InitService) ensureSOPSConfig(clusterPaths *paths.ClusterPaths, cfg *v2
       %s
 `, publicKey, publicKey, publicKey, cfg.OpenCenter.Cluster.ClusterName, publicKey)
 
-	return s.fileSystem.WriteFileAtomic(clusterPaths.SOPSConfigPath, []byte(content), 0o600)
+	if err := s.fileSystem.WriteFileAtomic(clusterPaths.SOPSConfigPath, []byte(content), 0o644); err != nil {
+		return err
+	}
+	return verifyMode(clusterPaths.SOPSConfigPath, 0o644)
 }
 
 func (s *InitService) readAgePublicKey(keyPath string) (string, error) {
@@ -767,21 +787,14 @@ func (s *InitService) generateSSHKey(clusterPaths *paths.ClusterPaths, cfg *v2.C
 	if err := os.MkdirAll(sshDir, 0o700); err != nil {
 		return fmt.Errorf("creating SSH directory: %w", err)
 	}
+	if err := ensureMode(sshDir, 0o700); err != nil {
+		return err
+	}
 
-	// Extract cluster name and organization from paths for the comment
-	// Path format: <org>/secrets/ssh/<cluster>-<env>-<region>
-	keyFileName := filepath.Base(clusterPaths.SSHKeyPath)
-	parts := strings.Split(keyFileName, "-")
-	clusterName := parts[0]
-
-	// Get organization from the path
-	pathParts := strings.Split(clusterPaths.SSHKeyPath, string(filepath.Separator))
-	var organization string
-	for i, part := range pathParts {
-		if part == "clusters" && i+1 < len(pathParts) {
-			organization = pathParts[i+1]
-			break
-		}
+	clusterName := cfg.ClusterName()
+	organization := cfg.OpenCenter.Meta.Organization
+	if organization == "" {
+		organization = filepath.Base(filepath.Dir(clusterPaths.SecretsDir))
 	}
 
 	// Get region from config
@@ -809,11 +822,17 @@ func (s *InitService) generateSSHKey(clusterPaths *paths.ClusterPaths, cfg *v2.C
 	if err := s.fileSystem.WriteFileAtomic(clusterPaths.SSHKeyPath, keyPair.PrivateKey, 0o600); err != nil {
 		return fmt.Errorf("writing SSH private key: %w", err)
 	}
+	if err := verifyMode(clusterPaths.SSHKeyPath, 0o600); err != nil {
+		return err
+	}
 
 	// Write public key
 	pubKeyPath := clusterPaths.SSHKeyPath + ".pub"
 	if err := s.fileSystem.WriteFile(pubKeyPath, keyPair.PublicKey, 0o644); err != nil {
 		return fmt.Errorf("writing SSH public key: %w", err)
+	}
+	if err := verifyMode(pubKeyPath, 0o644); err != nil {
+		return err
 	}
 
 	if shouldPopulateGeneratedSSHAuthorizedKey(cfg.OpenCenter.Infrastructure.SSH.AuthorizedKeys) {
@@ -849,16 +868,131 @@ func (s *InitService) initGitRepo(clusterPaths *paths.ClusterPaths) error {
 		return fmt.Errorf("creating GitOps directory: %w", err)
 	}
 
-	// Check if git repository already exists
-	gitDir := filepath.Join(clusterPaths.GitOpsDir, ".git")
-	if _, err := os.Stat(gitDir); err == nil {
-		// Git repository already exists, skip initialization
-		return nil
+	if err := writeGitOpsHygiene(clusterPaths.GitOpsDir); err != nil {
+		return err
 	}
 
-	// Initialize git repository
-	// Note: This is a placeholder implementation
-	// The actual git initialization will be done by the command layer
-	// which has access to the cobra command for output
+	gitDir := filepath.Join(clusterPaths.GitOpsDir, ".git")
+	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+		cmd := exec.Command("git", "init")
+		cmd.Dir = clusterPaths.GitOpsDir
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("git init failed: %w: %s", err, strings.TrimSpace(string(output)))
+		}
+	}
+
+	cmd := exec.Command("git", "config", "core.hooksPath", ".opencenter/hooks")
+	cmd.Dir = clusterPaths.GitOpsDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git config core.hooksPath failed: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+
+	return nil
+}
+
+func writeGitOpsHygiene(gitOpsDir string) error {
+	files := map[string]struct {
+		content string
+		mode    os.FileMode
+	}{
+		".gitignore": {
+			content: gitIgnoreContent,
+			mode:    0o644,
+		},
+		filepath.Join(".opencenter", "hooks", "pre-commit"): {
+			content: preCommitHookContent,
+			mode:    0o755,
+		},
+		filepath.Join(".opencenter", "scripts", "scan-secrets"): {
+			content: scannerScriptContent,
+			mode:    0o755,
+		},
+		filepath.Join(".github", "workflows", "opencenter-secret-scan.yml"): {
+			content: githubSecretScanWorkflow,
+			mode:    0o644,
+		},
+	}
+
+	for rel, spec := range files {
+		path := filepath.Join(gitOpsDir, rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return fmt.Errorf("creating %s parent: %w", rel, err)
+		}
+		if err := os.WriteFile(path, []byte(spec.content), spec.mode); err != nil {
+			return fmt.Errorf("writing %s: %w", rel, err)
+		}
+		if err := verifyMode(path, spec.mode); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+const gitIgnoreContent = `# Private keys and secrets should never exist in this GitOps tree.
+*.key
+*-key.txt
+id_rsa*
+id_ed25519*
+*.pem
+*.age
+
+# Cluster config input is local state, not a GitOps artifact.
+/*-config.yaml
+/.*-config.yaml
+`
+
+const preCommitHookContent = `#!/usr/bin/env sh
+set -eu
+
+if [ "${OPENCENTER_SKIP_HOOKS:-}" = "1" ]; then
+  echo "WARNING: openCenter pre-commit checks skipped by OPENCENTER_SKIP_HOOKS=1" >&2
+  exit 0
+fi
+
+repo_root=$(git rev-parse --show-toplevel)
+opencenter cluster validate-manifests --repo-path "$repo_root" --staged --security-only
+`
+
+const scannerScriptContent = `#!/usr/bin/env sh
+set -eu
+
+repo_root=${1:-$(git rev-parse --show-toplevel)}
+opencenter cluster validate-manifests --repo-path "$repo_root" --security-only
+`
+
+const githubSecretScanWorkflow = `name: openCenter secret scan
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run openCenter secret scanner
+        run: ./.opencenter/scripts/scan-secrets "$GITHUB_WORKSPACE"
+`
+
+func ensureMode(path string, want os.FileMode) error {
+	if err := os.Chmod(path, want); err != nil {
+		return fmt.Errorf("setting mode on %s: %w", path, err)
+	}
+	return verifyMode(path, want)
+}
+
+func verifyMode(path string, want os.FileMode) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", path, err)
+	}
+	if got := info.Mode().Perm(); got != want {
+		if os.Getenv("OPENCENTER_ALLOW_INSECURE_FILE_MODES") == "1" {
+			fmt.Fprintf(os.Stderr, "warning: %s mode is %#o, expected %#o; continuing because OPENCENTER_ALLOW_INSECURE_FILE_MODES=1\n", path, got, want)
+			return nil
+		}
+		return fmt.Errorf("%s mode is %#o, expected %#o", path, got, want)
+	}
 	return nil
 }

@@ -177,24 +177,8 @@ func generateClusterSelectOutput(clusterName string, shellOverride string) (Clus
 		return ClusterSelectOutput{}, fmt.Errorf("invalid cluster identifier: %w", err)
 	}
 
-	// Get CLI configuration manager
-	configManager, err := config.NewConfigManager("")
-	if err != nil {
-		return ClusterSelectOutput{}, fmt.Errorf("failed to create config manager: %w", err)
-	}
-
-	// Get base directory for clusters
-	baseDir := configManager.GetConfig().Paths.ClustersDir
-	if baseDir == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return ClusterSelectOutput{}, fmt.Errorf("failed to get home directory: %w", err)
-		}
-		baseDir = filepath.Join(homeDir, ".config", "opencenter", "clusters")
-	}
-
 	// Create path resolver
-	pathResolver := paths.NewPathResolver(baseDir)
+	pathResolver := config.NewPathResolverFromConfig()
 
 	// Validate that cluster exists first
 	ctx := context.Background()

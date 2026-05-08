@@ -27,7 +27,6 @@ import (
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
-	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"gopkg.in/yaml.v3"
 )
@@ -610,13 +609,13 @@ func (m *DefaultSecretsManager) loadClusterConfig(ctx context.Context, cluster s
 // getConfigPath returns the expected path to the cluster config file.
 // The config file is located at ~/.config/opencenter/clusters/<org>/<cluster>/.k8s-<cluster>-config.yaml
 func (m *DefaultSecretsManager) getConfigPath(ctx context.Context, cluster string) (string, error) {
-	pathResolver := paths.NewPathResolver(config.ResolveClustersDir())
+	pathResolver := config.NewPathResolverFromConfig()
 	clusterPaths, err := pathResolver.ResolveWithFallback(ctx, cluster)
 	if err == nil {
 		return clusterPaths.ConfigPath, nil
 	}
 
-	return filepath.Join(config.ResolveClustersDir(), "<org>", cluster, fmt.Sprintf(".k8s-%s-config.yaml", cluster)), nil
+	return filepath.Join(config.GetClusterStateDir(), "<org>", cluster, fmt.Sprintf("%s-config.yaml", cluster)), nil
 }
 
 // extractSecretsFromConfig extracts all secrets from the config file.

@@ -20,6 +20,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -61,17 +62,17 @@ func TestInstallHooks(t *testing.T) {
 	manager, tmpDir, cleanup := setupTestHookManager(t)
 	defer cleanup()
 
-	// Create a mock git repository
+	// Create a git repository
 	repoPath := filepath.Join(tmpDir, "test-repo")
-	gitDir := filepath.Join(repoPath, ".git")
-	require.NoError(t, os.MkdirAll(gitDir, 0755))
+	require.NoError(t, os.MkdirAll(repoPath, 0755))
+	require.NoError(t, exec.Command("git", "-C", repoPath, "init").Run())
 
 	ctx := context.Background()
 	err := manager.InstallHooks(ctx, repoPath, "test-cluster")
 	require.NoError(t, err)
 
 	// Verify hook file was created
-	hookPath := filepath.Join(gitDir, "hooks", "pre-commit")
+	hookPath := filepath.Join(repoPath, ".opencenter", "hooks", "pre-commit")
 	assert.FileExists(t, hookPath)
 
 	// Verify hook file is executable
@@ -83,8 +84,13 @@ func TestInstallHooks(t *testing.T) {
 	content, err := os.ReadFile(hookPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "test-cluster")
-	assert.Contains(t, string(content), "#!/bin/bash")
+	assert.Contains(t, string(content), "#!/usr/bin/env sh")
 	assert.Contains(t, string(content), "OPENCENTER_SKIP_HOOKS")
+	assert.Contains(t, string(content), "validate-manifests --repo-path")
+
+	output, err := exec.Command("git", "-C", repoPath, "config", "--get", "core.hooksPath").Output()
+	require.NoError(t, err)
+	assert.Equal(t, ".opencenter/hooks\n", string(output))
 }
 
 func TestInstallHooks_NotGitRepo(t *testing.T) {
@@ -105,9 +111,9 @@ func TestUninstallHooks(t *testing.T) {
 	manager, tmpDir, cleanup := setupTestHookManager(t)
 	defer cleanup()
 
-	// Create a mock git repository with hooks
+	// Create a mock git repository with tracked hooks
 	repoPath := filepath.Join(tmpDir, "test-repo")
-	hooksDir := filepath.Join(repoPath, ".git", "hooks")
+	hooksDir := filepath.Join(repoPath, ".opencenter", "hooks")
 	require.NoError(t, os.MkdirAll(hooksDir, 0755))
 
 	// Create a pre-commit hook
@@ -418,17 +424,11 @@ func TestGenerateHookScript(t *testing.T) {
 	script := manager.generateHookScript("test-cluster")
 
 	// Verify script contains required elements
-	assert.Contains(t, script, "#!/bin/bash")
+	assert.Contains(t, script, "#!/usr/bin/env sh")
 	assert.Contains(t, script, "test-cluster")
 	assert.Contains(t, script, "OPENCENTER_SKIP_HOOKS")
-	assert.Contains(t, script, "secrets/age/")
-	assert.Contains(t, script, "secrets/ssh/")
-	assert.Contains(t, script, "applications/overlays/")
-	assert.Contains(t, script, "sops:")
-	assert.Contains(t, script, "opencenter secrets sync")
-
-	// Verify drift detection is included
-	assert.Contains(t, script, "opencenter secrets validate")
-	assert.Contains(t, script, "Configuration drift detected")
+	assert.Contains(t, script, "cluster validate-manifests")
+	assert.Contains(t, script, "--staged")
+	assert.Contains(t, script, "--security-only")
 	assert.Contains(t, script, "command -v opencenter")
 }

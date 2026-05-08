@@ -32,6 +32,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util"
+	utilcrypto "github.com/opencenter-cloud/opencenter-cli/internal/util/crypto"
 	yaml "gopkg.in/yaml.v3"
 	"regexp"
 )
@@ -54,6 +55,7 @@ type world struct {
 	answers       map[string]string
 	pendingChoice string
 	cwd           string
+	binDir        string
 	oldConfigEnv  string
 	oldStateEnv   string
 	oldClusterEnv string
@@ -91,6 +93,65 @@ func repoRoot() string {
 
 func newScratchDir(prefix string) (string, error) {
 	return os.MkdirTemp("", prefix)
+}
+
+func writeScenarioFakeSOPS(binDir string) error {
+	script := `#!/bin/sh
+set -eu
+if [ "${1:-}" = "--version" ]; then
+  echo "sops 3.9.0"
+  exit 0
+fi
+target=""
+for arg in "$@"; do
+  case "$arg" in
+    -*) ;;
+    *) target="$arg" ;;
+  esac
+done
+if [ -z "$target" ]; then
+  exit 0
+fi
+python3 - "$target" <<'PY'
+import sys
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as f:
+    lines = f.read().splitlines()
+out = []
+in_secret_map = False
+secret_indent = 0
+for line in lines:
+    stripped = line.strip()
+    indent = len(line) - len(line.lstrip(" "))
+    if stripped in ("data:", "stringData:"):
+        in_secret_map = True
+        secret_indent = indent
+        out.append(line)
+        continue
+    if in_secret_map and stripped and indent <= secret_indent:
+        in_secret_map = False
+    if in_secret_map and ":" in stripped and not stripped.startswith("#"):
+        key, _, value = line.partition(":")
+        if not value.strip().startswith("ENC["):
+            line = key + ": ENC[FAKE]"
+    out.append(line)
+if not any(line == "sops:" or line.startswith("sops:") for line in out):
+    out.extend([
+        "sops:",
+        "  mac: ENC[FAKE]",
+        "  age:",
+        "    - recipient: age1fake",
+        "      enc: ENC[FAKE]",
+    ])
+with open(path, "w", encoding="utf-8") as f:
+    f.write("\n".join(out) + "\n")
+PY
+`
+	path := filepath.Join(binDir, "sops")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		return err
+	}
+	return nil
 }
 
 // buildBinary builds the opencenter binary once per test suite. The
@@ -144,6 +205,13 @@ func (w *world) isolateConfigDir() error {
 	if err := os.MkdirAll(w.homeDir, 0o755); err != nil {
 		return err
 	}
+	w.binDir = filepath.Join(w.tmpDir, "bin")
+	if err := os.MkdirAll(w.binDir, 0o755); err != nil {
+		return err
+	}
+	if err := writeScenarioFakeSOPS(w.binDir); err != nil {
+		return err
+	}
 
 	// Set the environment variables for the CLI to use.
 	w.oldConfigEnv = os.Getenv("OPENCENTER_CONFIG_DIR")
@@ -179,6 +247,9 @@ func (w *world) runOpenCenter(args []string) error {
 	env = append(env, fmt.Sprintf("OPENCENTER_CONFIG_DIR=%s", w.configDir))
 	env = append(env, fmt.Sprintf("OPENCENTER_STATE_DIR=%s", w.stateDir))
 	env = append(env, "OPENCENTER_TEST_MODE=1")
+	if w.binDir != "" {
+		env = append(env, fmt.Sprintf("PATH=%s%s%s", w.binDir, string(os.PathListSeparator), os.Getenv("PATH")))
+	}
 	if w.homeDir != "" {
 		env = append(env, fmt.Sprintf("HOME=%s", w.homeDir))
 		env = append(env, fmt.Sprintf("USERPROFILE=%s", w.homeDir))
@@ -215,9 +286,97 @@ func (w *world) pathFromFeature(p string) string {
 	// Map config-dir home shorthand to the isolated config dir
 	if strings.HasPrefix(p, "~/.config/opencenter") {
 		suffix := strings.TrimPrefix(p, "~/.config/opencenter")
-		return filepath.Join(w.configDir, suffix)
+		p = filepath.Join(w.configDir, suffix)
 	}
-	return p
+	return w.securePathAlias(p)
+}
+
+func (w *world) securePathAlias(path string) string {
+	path = filepath.Clean(path)
+	sep := string(filepath.Separator)
+
+	for _, legacyRepoName := range []string{"repo-dev", "repo-prod", "gitops-repo", "opencenter-demo"} {
+		legacyRepo := filepath.Join(w.tmpDir, legacyRepoName)
+		if path == legacyRepo || strings.HasPrefix(path, legacyRepo+sep) {
+			suffix := strings.TrimPrefix(path, legacyRepo)
+			return filepath.Join(w.configDir, "clusters", "gitops", w.gitOpsAliasOrganization(), suffix)
+		}
+	}
+
+	for _, clustersRoot := range []string{
+		filepath.Join(w.configDir, "clusters"),
+		filepath.Join(w.tmpDir, "custom-clusters"),
+		filepath.Join(w.tmpDir, "env-clusters"),
+	} {
+		if mapped, ok := securePathAliasUnderClustersRoot(path, clustersRoot); ok {
+			return mapped
+		}
+	}
+
+	return path
+}
+
+func (w *world) gitOpsAliasOrganization() string {
+	gitOpsRoot := filepath.Join(w.configDir, "clusters", "gitops")
+	entries, err := os.ReadDir(gitOpsRoot)
+	if err != nil {
+		return "opencenter"
+	}
+	var orgs []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			orgs = append(orgs, entry.Name())
+		}
+	}
+	if len(orgs) == 1 {
+		return orgs[0]
+	}
+	return "opencenter"
+}
+
+func securePathAliasUnderClustersRoot(path, clustersRoot string) (string, bool) {
+	clustersRoot = filepath.Clean(clustersRoot)
+	if path == clustersRoot {
+		return path, true
+	}
+	sep := string(filepath.Separator)
+	if !strings.HasPrefix(path, clustersRoot+sep) {
+		return "", false
+	}
+
+	rel := strings.TrimPrefix(path, clustersRoot+sep)
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	if len(parts) == 0 || parts[0] == "" {
+		return path, true
+	}
+	if parts[0] == "gitops" || parts[0] == "state" || parts[0] == "secrets" {
+		return path, true
+	}
+
+	org := parts[0]
+	if len(parts) == 1 {
+		return filepath.Join(clustersRoot, "gitops", org), true
+	}
+
+	switch parts[1] {
+	case "infrastructure", "applications", ".sops.yaml", ".gitignore", ".opencenter", ".github":
+		return filepath.Join(append([]string{clustersRoot, "gitops", org}, parts[1:]...)...), true
+	case "secrets":
+		if len(parts) >= 5 && parts[2] == "age" && parts[3] == "keys" {
+			cluster := strings.TrimSuffix(parts[4], "-key.txt")
+			if cluster != "" && cluster != parts[4] {
+				return filepath.Join(append([]string{clustersRoot, "secrets", org, cluster}, parts[2:]...)...), true
+			}
+		}
+		return filepath.Join(append([]string{clustersRoot, "secrets", org}, parts[2:]...)...), true
+	default:
+		if strings.HasPrefix(parts[1], ".") && strings.HasSuffix(parts[1], "-config.yaml") {
+			cluster := strings.TrimSuffix(strings.TrimPrefix(parts[1], "."), "-config.yaml")
+			return filepath.Join(clustersRoot, "state", org, cluster, cluster+"-config.yaml"), true
+		}
+	}
+
+	return path, true
 }
 
 func filteredScenarioEnv(env []string) []string {
@@ -230,7 +389,8 @@ func filteredScenarioEnv(env []string) []string {
 			strings.HasPrefix(entry, "USERPROFILE=") ||
 			strings.HasPrefix(entry, "OPENCENTER_CLUSTER=") ||
 			strings.HasPrefix(entry, "OPENCENTER_SESSION_FILE=") ||
-			strings.HasPrefix(entry, "OPENCENTER_SESSION_ID=") {
+			strings.HasPrefix(entry, "OPENCENTER_SESSION_ID=") ||
+			strings.HasPrefix(entry, "PATH=") {
 			continue
 		}
 		filtered = append(filtered, entry)
@@ -257,6 +417,19 @@ func (w *world) resolveClusterConfigPath(clusterName string) (string, error) {
 	clustersDir := filepath.Join(w.configDir, "clusters")
 	if _, err := os.Stat(clustersDir); os.IsNotExist(err) {
 		return "", fmt.Errorf("cluster configuration not found for %s", clusterName)
+	}
+
+	stateDir := filepath.Join(clustersDir, "state")
+	if entries, err := os.ReadDir(stateDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			configPath := filepath.Join(stateDir, entry.Name(), clusterName, clusterName+"-config.yaml")
+			if _, err := os.Stat(configPath); err == nil {
+				return configPath, nil
+			}
+		}
 	}
 
 	entries, err := os.ReadDir(clustersDir)
@@ -1155,13 +1328,18 @@ func (w *world) aFileWithContent(path string, content *godog.DocString) error {
 		if err := w.ensureCanonicalClusterFixtureLayout(filepath.Dir(canonicalPath), clusterName, organization); err != nil {
 			return err
 		}
+		body = w.canonicalClusterFixtureBody(body, filepath.Dir(canonicalPath), clusterName, organization)
 	}
 
 	dir := filepath.Dir(p)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	return os.WriteFile(p, []byte(body), 0644)
+	mode := os.FileMode(0o644)
+	if strings.Contains(p, string(filepath.Separator)+"clusters"+string(filepath.Separator)+"state"+string(filepath.Separator)) {
+		mode = 0o600
+	}
+	return os.WriteFile(p, []byte(body), mode)
 }
 
 func (w *world) canonicalClusterFixturePath(path, body string) (string, string, string, bool) {
@@ -1195,19 +1373,29 @@ func (w *world) canonicalClusterFixturePath(path, body string) (string, string, 
 	}
 
 	baseDir := filepath.Dir(path)
-	return filepath.Join(baseDir, "clusters", organization, "."+clusterName+"-config.yaml"), clusterName, organization, true
+	return filepath.Join(baseDir, "clusters", "state", organization, clusterName, clusterName+"-config.yaml"), clusterName, organization, true
 }
 
-func (w *world) ensureCanonicalClusterFixtureLayout(orgDir, clusterName, organization string) error {
+func (w *world) ensureCanonicalClusterFixtureLayout(clusterStateDir, clusterName, organization string) error {
 	if clusterName == "" {
 		return nil
 	}
+	if organization == "" {
+		organization = "opencenter"
+	}
+
+	clustersDir := filepath.Clean(filepath.Join(clusterStateDir, "..", "..", ".."))
+	gitOpsDir := filepath.Join(clustersDir, "gitops", organization)
+	secretsDir := filepath.Join(clustersDir, "secrets", organization, clusterName)
 
 	dirs := []string{
-		filepath.Join(orgDir, "infrastructure", "clusters", clusterName),
-		filepath.Join(orgDir, "applications", "overlays", clusterName),
-		filepath.Join(orgDir, "secrets", "age", "keys"),
-		filepath.Join(orgDir, "secrets", "ssh"),
+		filepath.Join(gitOpsDir, "infrastructure", "clusters", clusterName),
+		filepath.Join(gitOpsDir, "applications", "overlays", clusterName),
+		filepath.Join(clusterStateDir, "inventory"),
+		filepath.Join(clusterStateDir, "venv"),
+		filepath.Join(clusterStateDir, ".bin"),
+		filepath.Join(secretsDir, "age", "keys"),
+		filepath.Join(secretsDir, "ssh"),
 	}
 
 	for _, dir := range dirs {
@@ -1216,15 +1404,51 @@ func (w *world) ensureCanonicalClusterFixtureLayout(orgDir, clusterName, organiz
 		}
 	}
 
-	if organization == "" {
-		return nil
+	keyPair, err := utilcrypto.NewAgeKeyGenerator().GenerateAgeKey()
+	if err != nil {
+		return err
+	}
+	keyPath := filepath.Join(secretsDir, "age", "keys", clusterName+"-key.txt")
+	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+		content := fmt.Sprintf("# public key: %s\n%s\n", keyPair.PublicKey, keyPair.PrivateKey)
+		if err := os.WriteFile(keyPath, []byte(content), 0o600); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
+func (w *world) canonicalClusterFixtureBody(body, clusterStateDir, clusterName, organization string) string {
+	var cfg v2.Config
+	if err := yaml.Unmarshal([]byte(body), &cfg); err != nil {
+		return body
+	}
+	if organization == "" {
+		organization = "opencenter"
+	}
+	clustersDir := filepath.Clean(filepath.Join(clusterStateDir, "..", "..", ".."))
+	gitOpsDir := filepath.Join(clustersDir, "gitops", organization)
+	sopsKeyPath := filepath.Join(clustersDir, "secrets", organization, clusterName, "age", "keys", clusterName+"-key.txt")
+
+	cfg.OpenCenter.Cluster.ClusterName = clusterName
+	cfg.OpenCenter.Meta.Name = clusterName
+	cfg.OpenCenter.Meta.Organization = organization
+	if strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.LocalDir) != "" {
+		cfg.OpenCenter.GitOps.Repository.LocalDir = gitOpsDir
+	}
+	cfg.Secrets.SopsAgeKeyFile = sopsKeyPath
+	cfg.Secrets.SOPSConfig.AgeKeyFile = sopsKeyPath
+
+	out, err := yaml.Marshal(&cfg)
+	if err != nil {
+		return body
+	}
+	return string(out)
+}
+
 func (w *world) theFileShouldMatchRegex(path, pattern string) error {
-	p := w.replaceTmp(path)
+	p := w.pathFromFeature(path)
 	resolvedPath, err := w.resolveFeatureFilePath(p)
 	if err != nil {
 		return err
@@ -1285,7 +1509,7 @@ func (w *world) theExitCodeShouldNotBe(code int) error {
 }
 
 func (w *world) iCdTo(path string) error {
-	p := w.replaceTmp(path)
+	p := w.pathFromFeature(path)
 	if err := os.Chdir(p); err != nil {
 		return err
 	}
@@ -1399,7 +1623,7 @@ func deepMerge(dst, src map[string]interface{}) {
 }
 
 func (w *world) iUpdateTheYAMLToSet(path string, content *godog.DocString) error {
-	p := w.replaceTmp(path)
+	p := w.pathFromFeature(path)
 	data, err := os.ReadFile(p)
 	if err != nil {
 		// If the file doesn't exist at the old location, check if it's a cluster config file
@@ -1440,7 +1664,11 @@ func (w *world) iUpdateTheYAMLToSet(path string, content *godog.DocString) error
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(p, data, 0644)
+	mode := os.FileMode(0o644)
+	if strings.Contains(p, string(filepath.Separator)+"clusters"+string(filepath.Separator)+"state"+string(filepath.Separator)) {
+		mode = 0o600
+	}
+	return os.WriteFile(p, data, mode)
 }
 
 func (w *world) stdoutShouldBeEmpty() error {
@@ -1472,7 +1700,7 @@ func (w *world) theBareRepoShouldHaveBranch(path, branch string) error {
 }
 
 func (w *world) theDirectoryDoesNotExist(path string) error {
-	p := w.replaceTmp(path)
+	p := w.pathFromFeature(path)
 	if _, err := os.Stat(p); !os.IsNotExist(err) {
 		return fmt.Errorf("expected directory %s to not exist, but it does", p)
 	}
@@ -1480,7 +1708,7 @@ func (w *world) theDirectoryDoesNotExist(path string) error {
 }
 
 func (w *world) theDirectoryShouldContainADirectory(parent, child string) error {
-	p := filepath.Join(w.replaceTmp(parent), child)
+	p := filepath.Join(w.pathFromFeature(parent), child)
 	if fi, err := os.Stat(p); err != nil || !fi.IsDir() {
 		return fmt.Errorf("expected directory %s to contain directory %s, but it did not", parent, child)
 	}
@@ -1488,7 +1716,7 @@ func (w *world) theDirectoryShouldContainADirectory(parent, child string) error 
 }
 
 func (w *world) theDirectoryShouldContainAFileMatching(parent, pattern string) error {
-	p := w.replaceTmp(parent)
+	p := w.pathFromFeature(parent)
 	files, err := os.ReadDir(p)
 	if err != nil {
 		return err
@@ -1506,7 +1734,7 @@ func (w *world) theDirectoryShouldContainAFileMatching(parent, pattern string) e
 }
 
 func (w *world) theFileDoesNotExist(path string) error {
-	p := w.replaceTmp(path)
+	p := w.pathFromFeature(path)
 	if _, err := os.Stat(p); !os.IsNotExist(err) {
 		return fmt.Errorf("expected file %s to not exist, but it does", p)
 	}
@@ -1514,7 +1742,11 @@ func (w *world) theFileDoesNotExist(path string) error {
 }
 
 func (w *world) theFileShouldNotContain(path, substr string) error {
-	p := w.replaceTmp(path)
+	p := w.pathFromFeature(path)
+	resolvedPath, err := w.resolveFeatureFilePath(p)
+	if err == nil {
+		p = resolvedPath
+	}
 	data, err := os.ReadFile(p)
 	if err != nil {
 		return err
@@ -1538,6 +1770,19 @@ func (w *world) findClusterConfigPath(clusterName string) (string, error) {
 	clustersDir := filepath.Join(w.configDir, "clusters")
 	if _, err := os.Stat(clustersDir); os.IsNotExist(err) {
 		return "", fmt.Errorf("clusters directory does not exist")
+	}
+
+	stateDir := filepath.Join(clustersDir, "state")
+	if entries, err := os.ReadDir(stateDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			configPath := filepath.Join(stateDir, entry.Name(), clusterName, clusterName+"-config.yaml")
+			if _, err := os.Stat(configPath); err == nil {
+				return configPath, nil
+			}
+		}
 	}
 
 	entries, err := os.ReadDir(clustersDir)

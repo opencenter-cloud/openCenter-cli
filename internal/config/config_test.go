@@ -195,11 +195,17 @@ func TestPathEnvironmentVariablesMapToCLIConfigPaths(t *testing.T) {
 	root := t.TempDir()
 	configDir := filepath.Join(root, "tool-config")
 	clustersDir := filepath.Join(root, "cluster-configs")
+	gitopsDir := filepath.Join(root, "gitops")
+	clusterStateDir := filepath.Join(root, "cluster-state")
+	secretsDir := filepath.Join(root, "secrets")
 	pluginsDir := filepath.Join(root, "plugins")
 	stateDir := filepath.Join(root, "state")
 
 	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
 	t.Setenv("OPENCENTER_CLUSTERS_DIR", clustersDir)
+	t.Setenv("OPENCENTER_GITOPS_DIR", gitopsDir)
+	t.Setenv("OPENCENTER_CLUSTER_STATE_DIR", clusterStateDir)
+	t.Setenv("OPENCENTER_SECRETS_DIR", secretsDir)
 	t.Setenv("OPENCENTER_PLUGINS_DIR", pluginsDir)
 	t.Setenv("OPENCENTER_STATE_DIR", stateDir)
 
@@ -209,6 +215,15 @@ func TestPathEnvironmentVariablesMapToCLIConfigPaths(t *testing.T) {
 	}
 	if defaults.Paths.ClustersDir != clustersDir {
 		t.Fatalf("DefaultCLIConfig paths.clustersDir = %q, want %q", defaults.Paths.ClustersDir, clustersDir)
+	}
+	if defaults.Paths.GitOpsDir != gitopsDir {
+		t.Fatalf("DefaultCLIConfig paths.gitopsDir = %q, want %q", defaults.Paths.GitOpsDir, gitopsDir)
+	}
+	if defaults.Paths.ClusterStateDir != clusterStateDir {
+		t.Fatalf("DefaultCLIConfig paths.clusterStateDir = %q, want %q", defaults.Paths.ClusterStateDir, clusterStateDir)
+	}
+	if defaults.Paths.SecretsDir != secretsDir {
+		t.Fatalf("DefaultCLIConfig paths.secretsDir = %q, want %q", defaults.Paths.SecretsDir, secretsDir)
 	}
 	if defaults.Paths.PluginsDir != pluginsDir {
 		t.Fatalf("DefaultCLIConfig paths.pluginsDir = %q, want %q", defaults.Paths.PluginsDir, pluginsDir)
@@ -222,6 +237,15 @@ func TestPathEnvironmentVariablesMapToCLIConfigPaths(t *testing.T) {
 	}
 	if got := ResolveClustersDir(); got != clustersDir {
 		t.Fatalf("ResolveClustersDir() = %q, want %q", got, clustersDir)
+	}
+	if got := GetGitOpsDir(); got != gitopsDir {
+		t.Fatalf("GetGitOpsDir() = %q, want %q", got, gitopsDir)
+	}
+	if got := GetClusterStateDir(); got != clusterStateDir {
+		t.Fatalf("GetClusterStateDir() = %q, want %q", got, clusterStateDir)
+	}
+	if got := GetSecretsDir(); got != secretsDir {
+		t.Fatalf("GetSecretsDir() = %q, want %q", got, secretsDir)
 	}
 	if got := GetPluginsDir(); got != pluginsDir {
 		t.Fatalf("GetPluginsDir() = %q, want %q", got, pluginsDir)

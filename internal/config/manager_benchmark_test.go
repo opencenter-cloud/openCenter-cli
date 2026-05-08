@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 
@@ -36,15 +35,8 @@ func setupBenchmarkManager(b *testing.B) (*ConfigurationManager, string, func())
 	// Create temporary directory
 	tmpDir := b.TempDir()
 
-	// Create organization structure
-	clusterDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", "bench-cluster")
-	err := os.MkdirAll(clusterDir, 0755)
-	if err != nil {
-		b.Fatalf("Failed to create cluster directory: %v", err)
-	}
-
 	// Create a sample config file
-	configPath := filepath.Join(tmpDir, "test-org", ".bench-cluster-config.yaml")
+	configPath := createSecureConfigTestCluster(b, tmpDir, "test-org", "bench-cluster")
 	sampleConfig := createSampleConfig("bench-cluster")
 	data, err := yaml.Marshal(sampleConfig)
 	if err != nil {
@@ -181,15 +173,10 @@ func BenchmarkSave_AtomicWrite(b *testing.B) {
 	// Create a config to save
 	config := createSampleConfig("save-bench-cluster")
 
-	// Create the cluster directory
-	orgDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", "save-bench-cluster")
-	err := os.MkdirAll(orgDir, 0755)
-	if err != nil {
-		b.Fatalf("Failed to create cluster directory: %v", err)
-	}
+	createSecureConfigTestCluster(b, tmpDir, "test-org", "save-bench-cluster")
 
 	// Test if save works at all
-	err = manager.Save(ctx, config)
+	err := manager.Save(ctx, config)
 	if err != nil {
 		b.Skip("Skipping benchmark - config validation failed")
 	}
@@ -212,15 +199,10 @@ func BenchmarkSave_WithValidation(b *testing.B) {
 	// Create a config to save
 	config := createSampleConfig("validate-bench-cluster")
 
-	// Create the cluster directory
-	orgDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", "validate-bench-cluster")
-	err := os.MkdirAll(orgDir, 0755)
-	if err != nil {
-		b.Fatalf("Failed to create cluster directory: %v", err)
-	}
+	createSecureConfigTestCluster(b, tmpDir, "test-org", "validate-bench-cluster")
 
 	// Test if operations work
-	err = manager.Validate(ctx, config)
+	err := manager.Validate(ctx, config)
 	if err != nil {
 		b.Skip("Skipping benchmark - config validation failed")
 	}
@@ -272,11 +254,7 @@ func BenchmarkConcurrentSave(b *testing.B) {
 	numClusters := 10
 	for i := 0; i < numClusters; i++ {
 		clusterName := fmt.Sprintf("concurrent-cluster-%d", i)
-		orgDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", clusterName)
-		err := os.MkdirAll(orgDir, 0755)
-		if err != nil {
-			b.Fatalf("Failed to create cluster directory: %v", err)
-		}
+		createSecureConfigTestCluster(b, tmpDir, "test-org", clusterName)
 	}
 
 	b.ResetTimer()
@@ -314,11 +292,7 @@ func BenchmarkList(b *testing.B) {
 	numClusters := 50
 	for i := 0; i < numClusters; i++ {
 		clusterName := fmt.Sprintf("list-cluster-%d", i)
-		orgDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", clusterName)
-		err := os.MkdirAll(orgDir, 0755)
-		if err != nil {
-			b.Fatalf("Failed to create cluster directory: %v", err)
-		}
+		createSecureConfigTestCluster(b, tmpDir, "test-org", clusterName)
 	}
 
 	b.ResetTimer()
@@ -351,14 +325,7 @@ func BenchmarkDelete(b *testing.B) {
 
 		// Create a cluster to delete
 		clusterName := fmt.Sprintf("delete-cluster-%d", i)
-		orgDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", clusterName)
-		err := os.MkdirAll(orgDir, 0755)
-		if err != nil {
-			b.Fatalf("Failed to create cluster directory: %v", err)
-		}
-
-		// Create config file
-		configPath := filepath.Join(orgDir, fmt.Sprintf(".%s-config.yaml", clusterName))
+		configPath := createSecureConfigTestCluster(b, tmpDir, "test-org", clusterName)
 		config := createSampleConfig(clusterName)
 		data, err := yaml.Marshal(config)
 		if err != nil {

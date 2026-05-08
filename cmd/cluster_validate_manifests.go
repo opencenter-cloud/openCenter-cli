@@ -14,7 +14,9 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -48,10 +50,22 @@ Examples:
 		RunE: runClusterValidateManifests,
 	}
 
+	cmd.Flags().String("repo-path", "", "Path to GitOps repository to validate")
+	cmd.Flags().Bool("staged", false, "Validate staged Git blobs instead of worktree files")
+	cmd.Flags().Bool("security-only", false, "Run only GitOps secret and credential scanning")
+
 	return cmd
 }
 
 func runClusterValidateManifests(cmd *cobra.Command, args []string) error {
+	repoPath, _ := cmd.Flags().GetString("repo-path")
+	staged, _ := cmd.Flags().GetBool("staged")
+	securityOnly, _ := cmd.Flags().GetBool("security-only")
+
+	if strings.TrimSpace(repoPath) != "" {
+		return runGitOpsManifestValidationForRepo(cmd, repoPath, staged, securityOnly)
+	}
+
 	// Resolve cluster name from args or active cluster
 	name, err := resolveClusterNameForCommand(cmd, args, true)
 	if err != nil {
@@ -82,5 +96,35 @@ func runClusterValidateManifests(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("✅ All manifests validated successfully\n")
+	return nil
+}
+
+func runGitOpsManifestValidationForRepo(cmd *cobra.Command, repoPath string, staged bool, securityOnly bool) error {
+	fmt.Fprintf(cmd.OutOrStdout(), "Validating GitOps repository: %s\n\n", repoPath)
+
+	if securityOnly {
+		findings, err := gitops.ScanGitOpsSecretsWithOptions(context.Background(), gitops.SecretScanOptions{
+			Root:   repoPath,
+			Staged: staged,
+		})
+		if err != nil {
+			return fmt.Errorf("security scan failed: %w", err)
+		}
+		if len(findings) > 0 {
+			for _, finding := range findings {
+				fmt.Fprintf(cmd.ErrOrStderr(), "%s: %s: %s\n", finding.Path, finding.Rule, finding.Message)
+			}
+			return fmt.Errorf("GitOps security validation failed with %d finding(s)", len(findings))
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), "GitOps security validation passed")
+		return nil
+	}
+
+	validator := gitops.NewManifestValidator(repoPath)
+	if err := validator.Validate(); err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "Validation failed:\n\n%v\n", err)
+		return fmt.Errorf("manifest validation failed")
+	}
+	fmt.Fprintln(cmd.OutOrStdout(), "All manifests validated successfully")
 	return nil
 }

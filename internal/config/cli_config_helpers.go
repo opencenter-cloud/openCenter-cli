@@ -68,6 +68,69 @@ func GetClustersDir() string {
 	return normalizeDirectoryPath(filepath.Join(DefaultConfigDir(), "clusters"))
 }
 
+// GetGitOpsDir returns the GitOps repository root using the precedence:
+// OPENCENTER_GITOPS_DIR, CLI config paths.gitopsDir, then clustersDir/gitops.
+func GetGitOpsDir() string {
+	if gitopsDir := os.Getenv("OPENCENTER_GITOPS_DIR"); gitopsDir != "" {
+		return normalizeDirectoryPath(gitopsDir)
+	}
+
+	if cliConfigManager, err := NewConfigManager(""); err == nil && cliConfigManager != nil {
+		gitopsDir := cliConfigManager.GetConfig().Paths.GitOpsDir
+		if gitopsDir != "" {
+			return normalizeDirectoryPath(gitopsDir)
+		}
+	}
+
+	return normalizeDirectoryPath(filepath.Join(GetClustersDir(), "gitops"))
+}
+
+// GetClusterStateDir returns the per-cluster state root using the precedence:
+// OPENCENTER_CLUSTER_STATE_DIR, CLI config paths.clusterStateDir, then clustersDir/state.
+func GetClusterStateDir() string {
+	if stateDir := os.Getenv("OPENCENTER_CLUSTER_STATE_DIR"); stateDir != "" {
+		return normalizeDirectoryPath(stateDir)
+	}
+
+	if cliConfigManager, err := NewConfigManager(""); err == nil && cliConfigManager != nil {
+		stateDir := cliConfigManager.GetConfig().Paths.ClusterStateDir
+		if stateDir != "" {
+			return normalizeDirectoryPath(stateDir)
+		}
+	}
+
+	return normalizeDirectoryPath(filepath.Join(GetClustersDir(), "state"))
+}
+
+// GetSecretsDir returns the per-cluster secrets root using the precedence:
+// OPENCENTER_SECRETS_DIR, CLI config paths.secretsDir, then clustersDir/secrets.
+func GetSecretsDir() string {
+	if secretsDir := os.Getenv("OPENCENTER_SECRETS_DIR"); secretsDir != "" {
+		return normalizeDirectoryPath(secretsDir)
+	}
+
+	if cliConfigManager, err := NewConfigManager(""); err == nil && cliConfigManager != nil {
+		secretsDir := cliConfigManager.GetConfig().Paths.SecretsDir
+		if secretsDir != "" {
+			return normalizeDirectoryPath(secretsDir)
+		}
+	}
+
+	return normalizeDirectoryPath(filepath.Join(GetClustersDir(), "secrets"))
+}
+
+// NewPathResolverFromConfig returns a secure zone-aware path resolver using the
+// current CLI config and environment variable precedence.
+func NewPathResolverFromConfig() *corePaths.PathResolver {
+	return corePaths.NewPathResolverWithRoots(
+		GetClustersDir(),
+		GetGitOpsDir(),
+		GetClusterStateDir(),
+		GetSecretsDir(),
+		corePaths.DefaultResolutionOptions(),
+	)
+}
+
 // GetConfigDir returns the configuration directory from the CLI config.
 // If the CLI config cannot be loaded or configDir is not set, it returns the default.
 func GetConfigDir() string {

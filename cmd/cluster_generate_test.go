@@ -206,16 +206,13 @@ func TestClusterGenerateDryRunSkipsCommit(t *testing.T) {
 	organization := "test-org"
 	clustersDir := filepath.Join(cfgDir, "clusters")
 
-	// Create the org-based directory structure expected by PathResolver
-	orgDir := filepath.Join(clustersDir, organization)
-	infraDir := filepath.Join(orgDir, "infrastructure", "clusters", clusterName)
-	if err := os.MkdirAll(infraDir, 0o755); err != nil {
-		t.Fatalf("failed to create infrastructure directory: %v", err)
+	pathResolver := paths.NewPathResolver(clustersDir)
+	if err := pathResolver.CreateClusterDirectories(context.Background(), clusterName, organization); err != nil {
+		t.Fatalf("failed to create cluster directories: %v", err)
 	}
-
-	gitopsDir := filepath.Join(cfgDir, "gitops", clusterName)
-	if err := os.MkdirAll(gitopsDir, 0o755); err != nil {
-		t.Fatalf("failed to create gitops directory: %v", err)
+	clusterPaths, err := pathResolver.Resolve(context.Background(), clusterName, organization)
+	if err != nil {
+		t.Fatalf("resolve cluster paths: %v", err)
 	}
 
 	// Write config file directly at the expected path
@@ -225,17 +222,15 @@ func TestClusterGenerateDryRunSkipsCommit(t *testing.T) {
 	}
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Organization = organization
-	cfg.OpenCenter.GitOps.Repository.LocalDir = gitopsDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
 
-	configPath := filepath.Join(orgDir, "."+clusterName+"-config.yaml")
 	loader := v2.NewConfigLoader(configdefaults.NewRegistry())
-	if err := loader.SaveToFile(&cfg, configPath); err != nil {
+	if err := loader.SaveToFile(&cfg, clusterPaths.ConfigPath); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
 	}
 
 	// Run SetupService directly with DryRun to verify behavior,
 	// since the Cobra command depends on the global DI container.
-	pathResolver := paths.NewPathResolver(clustersDir)
 	validationEngine := validation.NewValidationEngine()
 	if err := validationEngine.Register(validators.NewClusterNameValidator()); err != nil {
 		t.Fatalf("failed to register validator: %v", err)

@@ -50,6 +50,9 @@ type PathResolver struct {
 	// baseDir is the base directory for all clusters
 	baseDir string
 
+	// roots contains the secure zone roots for GitOps, cluster state, and secrets.
+	roots PathRoots
+
 	// strategies contains all resolution strategies, sorted by priority
 	strategies []ResolutionStrategy
 
@@ -98,10 +101,21 @@ func NewPathResolver(baseDir string) *PathResolver {
 //	}
 //	resolver := paths.NewPathResolverWithOptions("~/.config/opencenter/clusters", opts)
 func NewPathResolverWithOptions(baseDir string, options ResolutionOptions) *PathResolver {
-	baseDir = expandPath(baseDir)
+	roots := DefaultPathRoots(baseDir)
+	return NewPathResolverWithRoots(roots.ClustersDir, roots.GitOpsDir, roots.ClusterStateDir, roots.SecretsDir, options)
+}
+
+// NewPathResolverWithRoots creates a resolver with explicit secure zone roots.
+func NewPathResolverWithRoots(baseDir, gitopsRoot, clusterStateRoot, secretsRoot string, options ResolutionOptions) *PathResolver {
+	roots := expandPathRoots(PathRoots{
+		ClustersDir:     baseDir,
+		GitOpsDir:       gitopsRoot,
+		ClusterStateDir: clusterStateRoot,
+		SecretsDir:      secretsRoot,
+	})
 
 	// Create organization-based strategy only
-	strategy := NewOrgBasedStrategy(baseDir)
+	strategy := NewOrgBasedStrategyWithRoots(roots)
 
 	// Create cache if enabled
 	var cache *PathCache
@@ -110,7 +124,8 @@ func NewPathResolverWithOptions(baseDir string, options ResolutionOptions) *Path
 	}
 
 	return &PathResolver{
-		baseDir:    baseDir,
+		baseDir:    roots.ClustersDir,
+		roots:      roots,
 		strategies: []ResolutionStrategy{strategy},
 		cache:      cache,
 		options:    options,
@@ -199,12 +214,8 @@ func (r *PathResolver) Resolve(ctx context.Context, clusterName, organization st
 }
 
 // ResolveWithFallback resolves paths for a cluster without knowing its organization.
-// It searches across all organization directories to find the cluster.
-//
-// This method is useful when:
-//   - The organization is unknown
-//   - Migrating from legacy structure
-//   - Supporting backward compatibility
+// It searches only the secure cluster-state zone. Legacy org-root layouts are
+// not a compatibility path.
 //
 // The search process:
 //  1. Checks cache first
@@ -244,51 +255,66 @@ func (r *PathResolver) ResolveWithFallback(ctx context.Context, clusterName stri
 		}
 	}
 
-	// Search for cluster in all organization directories
+	// Search for cluster in all organization directories under the state root.
 	r.mu.RLock()
-	baseDir := r.baseDir
+	stateRoot := r.roots.ClusterStateDir
 	r.mu.RUnlock()
 
-	entries, err := os.ReadDir(baseDir)
+	entries, err := os.ReadDir(stateRoot)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("clusters directory does not exist: %s", baseDir)
+			if legacyErr := r.detectLegacyLayoutForCluster(clusterName); legacyErr != nil {
+				return nil, legacyErr
+			}
+			return nil, fmt.Errorf("cluster %s not found in any organization (cluster state directory does not exist: %s)", clusterName, stateRoot)
 		}
-		return nil, fmt.Errorf("failed to read clusters directory: %w", err)
+		return nil, fmt.Errorf("failed to read cluster state directory: %w", err)
 	}
 
+	var matches []*ClusterPaths
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 
 		orgName := entry.Name()
-
-		// Check infrastructure directory
-		clusterDir := filepath.Join(baseDir, orgName, "infrastructure", "clusters", clusterName)
-		if _, err := os.Stat(clusterDir); err == nil {
+		stateDir := filepath.Join(stateRoot, orgName, clusterName)
+		configFile := filepath.Join(stateDir, clusterName+"-config.yaml")
+		if _, err := os.Stat(stateDir); err == nil {
 			paths, err := r.Resolve(ctx, clusterName, orgName)
 			if err == nil {
-				if r.cache != nil {
-					r.cache.Set(clusterName, "", "org-search", paths)
-				}
-				return paths, nil
+				matches = append(matches, paths)
+				continue
 			}
-		}
-
-		// Check config file in organization root
-		configFile := filepath.Join(baseDir, orgName, "."+clusterName+"-config.yaml")
-		if _, err := os.Stat(configFile); err == nil {
+			if _, ok := err.(*LegacyLayoutError); ok {
+				return nil, err
+			}
+		} else if _, err := os.Stat(configFile); err == nil {
 			paths, err := r.Resolve(ctx, clusterName, orgName)
 			if err == nil {
-				if r.cache != nil {
-					r.cache.Set(clusterName, "", "org-search", paths)
-				}
-				return paths, nil
+				matches = append(matches, paths)
+				continue
 			}
 		}
 	}
 
+	if legacyErr := r.detectLegacyLayoutForCluster(clusterName); legacyErr != nil {
+		return nil, legacyErr
+	}
+
+	if len(matches) > 1 {
+		var orgs []string
+		for _, match := range matches {
+			orgs = append(orgs, filepath.Base(match.GitOpsDir))
+		}
+		return nil, fmt.Errorf("cluster %s found in multiple organizations: %s", clusterName, strings.Join(orgs, ", "))
+	}
+	if len(matches) == 1 {
+		if r.cache != nil {
+			r.cache.Set(clusterName, "", "state-search", matches[0])
+		}
+		return matches[0], nil
+	}
 	return nil, fmt.Errorf("cluster %s not found in any organization", clusterName)
 }
 
@@ -347,61 +373,57 @@ func (r *PathResolver) DetectStructureType(ctx context.Context, clusterName stri
 		return StructureTypeUnknown, fmt.Errorf("invalid cluster name: %w", err)
 	}
 
-	// Check if cluster exists in organization structure
-	r.mu.RLock()
-	strategy := r.strategies[0]
-	r.mu.RUnlock()
-
-	canResolve, err := strategy.CanResolve(ctx, clusterName, "")
-	if err != nil {
-		return StructureTypeUnknown, err
-	}
-
-	if canResolve {
+	if _, err := r.ResolveWithFallback(ctx, clusterName); err == nil {
 		return StructureTypeOrganization, nil
+	} else if _, ok := err.(*LegacyLayoutError); ok {
+		return StructureTypeUnknown, err
 	}
 
 	return StructureTypeUnknown, nil
 }
 
 // GetOrganization determines the organization for a cluster.
-// Returns empty string if the cluster uses legacy structure.
+// Returns empty string if the cluster cannot be found in the secure layout.
 func (r *PathResolver) GetOrganization(ctx context.Context, clusterName string) (string, error) {
 	if err := r.validateClusterName(clusterName); err != nil {
 		return "", fmt.Errorf("invalid cluster name: %w", err)
 	}
 
-	// Check if cluster exists in organization structure
 	r.mu.RLock()
-	baseDir := r.baseDir
+	stateRoot := r.roots.ClusterStateDir
 	r.mu.RUnlock()
 
-	entries, err := os.ReadDir(baseDir)
+	entries, err := os.ReadDir(stateRoot)
 	if err != nil {
 		if os.IsNotExist(err) {
+			if legacyErr := r.detectLegacyLayoutForCluster(clusterName); legacyErr != nil {
+				return "", legacyErr
+			}
 			return "", nil
 		}
 		return "", err
 	}
 
+	var matches []string
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 
 		orgName := entry.Name()
-
-		// Check infrastructure directory
-		clusterDir := filepath.Join(baseDir, orgName, "infrastructure", "clusters", clusterName)
-		if _, err := os.Stat(clusterDir); err == nil {
-			return orgName, nil
+		stateDir := filepath.Join(stateRoot, orgName, clusterName)
+		if _, err := os.Stat(stateDir); err == nil {
+			matches = append(matches, orgName)
 		}
-
-		// Check config file in organization root
-		configFile := filepath.Join(baseDir, orgName, "."+clusterName+"-config.yaml")
-		if _, err := os.Stat(configFile); err == nil {
-			return orgName, nil
-		}
+	}
+	if legacyErr := r.detectLegacyLayoutForCluster(clusterName); legacyErr != nil {
+		return "", legacyErr
+	}
+	if len(matches) > 1 {
+		return "", fmt.Errorf("cluster %s found in multiple organizations: %s", clusterName, strings.Join(matches, ", "))
+	}
+	if len(matches) == 1 {
+		return matches[0], nil
 	}
 
 	return "", nil
@@ -461,40 +483,50 @@ func (r *PathResolver) CreateClusterDirectories(ctx context.Context, clusterName
 		return fmt.Errorf("failed to resolve paths: %w", err)
 	}
 
-	// Create all directories
-	dirs := []string{
-		paths.OrganizationDir,
-		filepath.Join(paths.OrganizationDir, "infrastructure"),
-		filepath.Join(paths.OrganizationDir, "infrastructure", "clusters"),
-		paths.ClusterDir,
-		filepath.Join(paths.OrganizationDir, "applications"),
-		filepath.Join(paths.OrganizationDir, "applications", "overlays"),
-		paths.ApplicationsDir,
-		paths.SecretsDir,
-		filepath.Join(paths.SecretsDir, "age"),
-		filepath.Dir(paths.SOPSKeyPath),        // age/keys directory
-		filepath.Join(paths.SecretsDir, "ssh"), // ssh directory
-		filepath.Dir(paths.SSHKeyPath),         // ssh key parent directory
-		paths.InventoryPath,
-		paths.BinPath,
+	// Create all directories with zone-specific baseline permissions. Strict
+	// post-write mode checks are handled by init when secrets and state files
+	// are created. Order matters: parents must be created before children so
+	// that MkdirAll does not silently assign the child's mode to intermediate
+	// directories.
+	type dirEntry struct {
+		path string
+		mode os.FileMode
+	}
+	dirs := []dirEntry{
+		{paths.OrganizationDir, 0o755},
+		{filepath.Join(paths.OrganizationDir, "infrastructure"), 0o755},
+		{filepath.Join(paths.OrganizationDir, "infrastructure", "clusters"), 0o755},
+		{paths.ClusterDir, 0o755},
+		{filepath.Join(paths.OrganizationDir, "applications"), 0o755},
+		{filepath.Join(paths.OrganizationDir, "applications", "overlays"), 0o755},
+		{paths.ApplicationsDir, 0o755},
+		{paths.ClusterStateDir, 0o700},
+		{paths.InventoryPath, 0o700},
+		{paths.VenvPath, 0o700},
+		{paths.BinPath, 0o700},
+		{paths.SecretsDir, 0o700},
+		{filepath.Join(paths.SecretsDir, "age"), 0o700},
+		{filepath.Dir(paths.SOPSKeyPath), 0o700},
+		{filepath.Join(paths.SecretsDir, "ssh"), 0o700},
+		{filepath.Dir(paths.SSHKeyPath), 0o700},
 	}
 
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+	for _, d := range dirs {
+		if err := os.MkdirAll(d.path, d.mode); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", d.path, err)
 		}
 
 		// Verify the directory was created
-		if stat, err := os.Stat(dir); err != nil {
-			return fmt.Errorf("failed to verify directory %s: %w", dir, err)
+		if stat, err := os.Stat(d.path); err != nil {
+			return fmt.Errorf("failed to verify directory %s: %w", d.path, err)
 		} else if !stat.IsDir() {
-			return fmt.Errorf("path %s exists but is not a directory", dir)
+			return fmt.Errorf("path %s exists but is not a directory", d.path)
 		}
 
 		// Validate permissions if requested
 		if validatePaths {
-			if err := r.validateDirectoryPermissions(dir); err != nil {
-				return fmt.Errorf("directory %s has insufficient permissions: %w", dir, err)
+			if err := r.validateDirectoryPermissions(d.path); err != nil {
+				return fmt.Errorf("directory %s has insufficient permissions: %w", d.path, err)
 			}
 		}
 	}
@@ -592,11 +624,49 @@ func (r *PathResolver) validateDirectoryPermissions(dir string) error {
 	return nil
 }
 
+func (r *PathResolver) detectLegacyLayoutForCluster(clusterName string) error {
+	r.mu.RLock()
+	baseDir := r.baseDir
+	r.mu.RUnlock()
+
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		return nil
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		orgDir := filepath.Join(baseDir, entry.Name())
+		if _, err := os.Stat(filepath.Join(orgDir, ".git")); err != nil {
+			continue
+		}
+		legacyPaths := []string{
+			filepath.Join(orgDir, "secrets"),
+			filepath.Join(orgDir, "."+clusterName+"-config.yaml"),
+			filepath.Join(orgDir, "infrastructure", "clusters", clusterName),
+		}
+		for _, path := range legacyPaths {
+			if _, err := os.Stat(path); err == nil {
+				return &LegacyLayoutError{Path: orgDir}
+			}
+		}
+	}
+	return nil
+}
+
 // GetBaseDir returns the base directory for clusters.
 func (r *PathResolver) GetBaseDir() string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.baseDir
+}
+
+// GetRoots returns the configured secure zone roots.
+func (r *PathResolver) GetRoots() PathRoots {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.roots
 }
 
 // GetStrategies returns all registered resolution strategies.

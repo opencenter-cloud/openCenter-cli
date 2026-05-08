@@ -11,20 +11,34 @@ import (
 
 	configdefaults "github.com/opencenter-cloud/opencenter-cli/internal/config/defaults"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/resilience"
 )
 
 func writeTestConfig(t *testing.T, dir, name, provider, gitDir string) {
 	t.Helper()
+
+	baseDir := filepath.Join(dir, "clusters")
+	gitopsRoot := filepath.Join(baseDir, "gitops")
 	if gitDir != "" {
-		if err := os.MkdirAll(gitDir, 0o755); err != nil {
-			t.Fatalf("mkdir git dir: %v", err)
-		}
+		gitopsRoot = filepath.Dir(gitDir)
+		t.Setenv("OPENCENTER_GITOPS_DIR", gitopsRoot)
 	}
-	orgDir := filepath.Join(dir, "clusters", "opencenter")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", name)
-	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
-		t.Fatalf("create cluster directory: %v", err)
+
+	resolver := paths.NewPathResolverWithRoots(
+		baseDir,
+		gitopsRoot,
+		filepath.Join(baseDir, "state"),
+		filepath.Join(baseDir, "secrets"),
+		paths.DefaultResolutionOptions(),
+	)
+	if err := resolver.CreateClusterDirectories(context.Background(), name, "opencenter"); err != nil {
+		t.Fatalf("create cluster directories: %v", err)
+	}
+
+	clusterPaths, err := resolver.Resolve(context.Background(), name, "opencenter")
+	if err != nil {
+		t.Fatalf("resolve cluster paths: %v", err)
 	}
 
 	cfgPtr, err := v2.NewV2Default(name, provider)
@@ -33,14 +47,14 @@ func writeTestConfig(t *testing.T, dir, name, provider, gitDir string) {
 	}
 	cfg := *cfgPtr
 	cfg.OpenCenter.Meta.Organization = "opencenter"
-	if gitDir != "" {
-		cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
-	}
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
 
 	loader := v2.NewConfigLoader(configdefaults.NewRegistry())
-	configPath := filepath.Join(orgDir, "."+name+"-config.yaml")
-	if err := loader.SaveToFile(&cfg, configPath); err != nil {
+	if err := loader.SaveToFile(&cfg, clusterPaths.ConfigPath); err != nil {
 		t.Fatalf("write config: %v", err)
+	}
+	if err := os.Chmod(clusterPaths.ConfigPath, 0o600); err != nil {
+		t.Fatalf("chmod config: %v", err)
 	}
 }
 
@@ -48,7 +62,7 @@ func TestClusterDeployDryRunMake(t *testing.T) {
 	t.Setenv("CONTAINER_RUNTIME", "")
 
 	cfgDir := t.TempDir()
-	gitDir := filepath.Join(t.TempDir(), "repo")
+	gitDir := filepath.Join(t.TempDir(), "opencenter")
 	clusterDir := filepath.Join(gitDir, "infrastructure", "clusters", "demo")
 	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
 		t.Fatalf("mkdir cluster dir: %v", err)
@@ -90,7 +104,7 @@ func TestClusterDeployDryRunMake(t *testing.T) {
 
 func TestClusterDeployDryRunKind(t *testing.T) {
 	cfgDir := t.TempDir()
-	gitDir := filepath.Join(t.TempDir(), "repo")
+	gitDir := filepath.Join(t.TempDir(), "opencenter")
 	writeTestConfig(t, cfgDir, "demo", "kind", gitDir)
 	prepareCommandTestEnv(t, cfgDir)
 	t.Setenv("CONTAINER_RUNTIME", "docker")
@@ -151,7 +165,7 @@ command=cluster deploy
 		t.Fatalf("write lock: %v", err)
 	}
 
-	writeTestConfig(t, cfgDir, "demo", "kind", filepath.Join(t.TempDir(), "repo"))
+	writeTestConfig(t, cfgDir, "demo", "kind", filepath.Join(t.TempDir(), "opencenter"))
 	prepareCommandTestEnv(t, cfgDir)
 
 	cmd := newClusterDeployCmd()
@@ -179,7 +193,7 @@ command=cluster deploy
 
 func TestClusterDeployFailurePrintsLogAndResumeState(t *testing.T) {
 	cfgDir := t.TempDir()
-	gitDir := filepath.Join(t.TempDir(), "repo")
+	gitDir := filepath.Join(t.TempDir(), "opencenter")
 	clusterDir := filepath.Join(gitDir, "infrastructure", "clusters", "demo")
 	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
 		t.Fatalf("mkdir cluster dir: %v", err)

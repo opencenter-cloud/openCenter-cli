@@ -399,7 +399,7 @@ func TestBootstrapService_DryRunKindBuildsProviderPlan(t *testing.T) {
 	if create.Commands[0].Name != "kind" || strings.Join(create.Commands[0].Args, " ") != "get clusters" {
 		t.Fatalf("unexpected first kind-create command: %#v", create.Commands[0])
 	}
-	if !containsString(create.Reads, filepath.Join(tmpDir, organization, "infrastructure", "clusters", clusterName, "kind-config.yaml")) {
+	if !containsString(create.Reads, filepath.Join(tmpDir, "gitops", organization, "infrastructure", "clusters", clusterName, "kind-config.yaml")) {
 		t.Fatalf("kind-create reads missing kind config path: %#v", create.Reads)
 	}
 }

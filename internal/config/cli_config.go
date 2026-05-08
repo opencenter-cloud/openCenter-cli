@@ -54,10 +54,13 @@ type FileConfig struct {
 
 // PathsConfig controls default paths for configuration and clusters.
 type PathsConfig struct {
-	ConfigDir   string `yaml:"configDir"`
-	ClustersDir string `yaml:"clustersDir"`
-	PluginsDir  string `yaml:"pluginsDir"`
-	StateDir    string `yaml:"stateDir"`
+	ConfigDir       string `yaml:"configDir"`
+	ClustersDir     string `yaml:"clustersDir"`
+	GitOpsDir       string `yaml:"gitopsDir"`
+	ClusterStateDir string `yaml:"clusterStateDir"`
+	SecretsDir      string `yaml:"secretsDir"`
+	PluginsDir      string `yaml:"pluginsDir"`
+	StateDir        string `yaml:"stateDir"`
 }
 
 // BehaviorConfig controls CLI behavior settings.
@@ -156,7 +159,7 @@ func (ce *ConfigError) Suggestions() []string {
 			return []string{"Use a non-negative integer value"}
 		case "logging.file.maxAge":
 			return []string{"Use a non-negative integer value (days)"}
-		case "paths.configDir", "paths.clustersDir":
+		case "paths.configDir", "paths.clustersDir", "paths.gitopsDir", "paths.clusterStateDir", "paths.secretsDir":
 			return []string{"Use an absolute path or path starting with ~"}
 		case "paths.stateDir":
 			return []string{"Use an absolute path or path starting with ~"}
@@ -222,11 +225,26 @@ func NewConfigManager(configPath string) (*ConfigManager, error) {
 func DefaultCLIConfig() *CLIConfig {
 	configDir := DefaultConfigDir()
 	clustersDir := filepath.Join(configDir, "clusters")
+	gitopsDir := filepath.Join(clustersDir, "gitops")
+	clusterStateDir := filepath.Join(clustersDir, "state")
+	secretsDir := filepath.Join(clustersDir, "secrets")
 	pluginsDir := filepath.Join(configDir, "plugins")
 	stateDir := DefaultStateDir()
 
 	if envClustersDir := clustersDirFromEnv(); envClustersDir != "" {
 		clustersDir = corePaths.ExpandPath(envClustersDir)
+		gitopsDir = filepath.Join(clustersDir, "gitops")
+		clusterStateDir = filepath.Join(clustersDir, "state")
+		secretsDir = filepath.Join(clustersDir, "secrets")
+	}
+	if envGitOpsDir := os.Getenv("OPENCENTER_GITOPS_DIR"); envGitOpsDir != "" {
+		gitopsDir = corePaths.ExpandPath(envGitOpsDir)
+	}
+	if envClusterStateDir := os.Getenv("OPENCENTER_CLUSTER_STATE_DIR"); envClusterStateDir != "" {
+		clusterStateDir = corePaths.ExpandPath(envClusterStateDir)
+	}
+	if envSecretsDir := os.Getenv("OPENCENTER_SECRETS_DIR"); envSecretsDir != "" {
+		secretsDir = corePaths.ExpandPath(envSecretsDir)
 	}
 	if envPluginsDir := os.Getenv("OPENCENTER_PLUGINS_DIR"); envPluginsDir != "" {
 		pluginsDir = corePaths.ExpandPath(envPluginsDir)
@@ -245,10 +263,13 @@ func DefaultCLIConfig() *CLIConfig {
 			},
 		},
 		Paths: PathsConfig{
-			ConfigDir:   configDir,
-			ClustersDir: clustersDir,
-			PluginsDir:  pluginsDir,
-			StateDir:    stateDir,
+			ConfigDir:       configDir,
+			ClustersDir:     clustersDir,
+			GitOpsDir:       gitopsDir,
+			ClusterStateDir: clusterStateDir,
+			SecretsDir:      secretsDir,
+			PluginsDir:      pluginsDir,
+			StateDir:        stateDir,
 		},
 		Behavior: BehaviorConfig{
 			AutoConfirm: false,
@@ -400,6 +421,15 @@ func (cm *ConfigManager) mergeWithDefaults(config *CLIConfig) *CLIConfig {
 	if config.Paths.ClustersDir != "" {
 		merged.Paths.ClustersDir = config.Paths.ClustersDir
 	}
+	if config.Paths.GitOpsDir != "" {
+		merged.Paths.GitOpsDir = config.Paths.GitOpsDir
+	}
+	if config.Paths.ClusterStateDir != "" {
+		merged.Paths.ClusterStateDir = config.Paths.ClusterStateDir
+	}
+	if config.Paths.SecretsDir != "" {
+		merged.Paths.SecretsDir = config.Paths.SecretsDir
+	}
 	if config.Paths.PluginsDir != "" {
 		merged.Paths.PluginsDir = config.Paths.PluginsDir
 	}
@@ -453,6 +483,9 @@ func (cm *ConfigManager) mergeWithDefaults(config *CLIConfig) *CLIConfig {
 func (cm *ConfigManager) expandConfigPaths() {
 	cm.config.Paths.ConfigDir = corePaths.ExpandPath(cm.config.Paths.ConfigDir)
 	cm.config.Paths.ClustersDir = corePaths.ExpandPath(cm.config.Paths.ClustersDir)
+	cm.config.Paths.GitOpsDir = corePaths.ExpandPath(cm.config.Paths.GitOpsDir)
+	cm.config.Paths.ClusterStateDir = corePaths.ExpandPath(cm.config.Paths.ClusterStateDir)
+	cm.config.Paths.SecretsDir = corePaths.ExpandPath(cm.config.Paths.SecretsDir)
 	cm.config.Paths.PluginsDir = corePaths.ExpandPath(cm.config.Paths.PluginsDir)
 	cm.config.Paths.StateDir = corePaths.ExpandPath(cm.config.Paths.StateDir)
 }
@@ -895,6 +928,39 @@ func (cm *ConfigManager) setPathsValue(paths *PathsConfig, parts []string, value
 				Message: "clustersDir must be a string",
 			}
 		}
+	case "gitopsDir":
+		if str, ok := value.(string); ok {
+			paths.GitOpsDir = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "paths.gitopsDir",
+				Value:   value,
+				Message: "gitopsDir must be a string",
+			}
+		}
+	case "clusterStateDir":
+		if str, ok := value.(string); ok {
+			paths.ClusterStateDir = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "paths.clusterStateDir",
+				Value:   value,
+				Message: "clusterStateDir must be a string",
+			}
+		}
+	case "secretsDir":
+		if str, ok := value.(string); ok {
+			paths.SecretsDir = str
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "paths.secretsDir",
+				Value:   value,
+				Message: "secretsDir must be a string",
+			}
+		}
 	case "pluginsDir":
 		if str, ok := value.(string); ok {
 			paths.PluginsDir = str
@@ -1217,6 +1283,12 @@ func (cm *ConfigManager) getPathsValue(paths *PathsConfig, parts []string) (inte
 		return paths.ConfigDir, nil
 	case "clustersDir":
 		return paths.ClustersDir, nil
+	case "gitopsDir":
+		return paths.GitOpsDir, nil
+	case "clusterStateDir":
+		return paths.ClusterStateDir, nil
+	case "secretsDir":
+		return paths.SecretsDir, nil
 	case "pluginsDir":
 		return paths.PluginsDir, nil
 	case "stateDir":
@@ -1572,6 +1644,71 @@ func (cv *ConfigValidator) validatePathsWithResult(paths *PathsConfig, result *V
 		}
 	}
 
+	validateZonePath := func(field string, value *string, defaultValue string) {
+		if *value == "" {
+			if cv.autoRepair {
+				*value = defaultValue
+				result.Repaired = append(result.Repaired, &ConfigError{
+					Type:     "validation",
+					Field:    field,
+					Value:    *value,
+					Message:  fmt.Sprintf("empty %s, repaired to default '%s'", field, defaultValue),
+					Repaired: true,
+				})
+			} else {
+				result.Errors = append(result.Errors, &ConfigError{
+					Type:    "validation",
+					Field:   field,
+					Value:   *value,
+					Message: fmt.Sprintf("%s cannot be empty", strings.TrimPrefix(field, "paths.")),
+				})
+			}
+			return
+		}
+
+		expandedPath := corePaths.ExpandPath(*value)
+		if stat, err := os.Stat(expandedPath); err == nil {
+			if !stat.IsDir() {
+				result.Errors = append(result.Errors, &ConfigError{
+					Type:    "path",
+					Field:   field,
+					Value:   *value,
+					Message: fmt.Sprintf("%s path exists but is not a directory", field),
+				})
+			}
+		} else if err != nil && !os.IsNotExist(err) {
+			result.Warnings = append(result.Warnings, &ConfigError{
+				Type:    "path",
+				Field:   field,
+				Value:   *value,
+				Message: fmt.Sprintf("%s path may not be accessible: %v", field, err),
+			})
+		}
+	}
+
+	validateZonePath("paths.gitopsDir", &paths.GitOpsDir, defaults.Paths.GitOpsDir)
+	validateZonePath("paths.clusterStateDir", &paths.ClusterStateDir, defaults.Paths.ClusterStateDir)
+	validateZonePath("paths.secretsDir", &paths.SecretsDir, defaults.Paths.SecretsDir)
+
+	if paths.GitOpsDir != "" && paths.ClusterStateDir != "" && paths.SecretsDir != "" {
+		samplePaths := corePaths.ClusterPaths{
+			GitOpsDir:       paths.GitOpsDir,
+			ClusterStateDir: paths.ClusterStateDir,
+			SecretsDir:      paths.SecretsDir,
+			ConfigPath:      filepath.Join(paths.ClusterStateDir, "sample-config.yaml"),
+			SOPSKeyPath:     filepath.Join(paths.SecretsDir, "age", "keys", "sample-key.txt"),
+			SSHKeyPath:      filepath.Join(paths.SecretsDir, "ssh", "sample"),
+		}
+		if err := samplePaths.Validate(); err != nil {
+			result.Errors = append(result.Errors, &ConfigError{
+				Type:    "validation",
+				Field:   "paths",
+				Value:   paths,
+				Message: err.Error(),
+			})
+		}
+	}
+
 	// Validate plugins directory
 	if paths.PluginsDir == "" {
 		if cv.autoRepair {
@@ -1784,6 +1921,9 @@ func (cv *ConfigValidator) validateDependenciesWithResult(config *CLIConfig, res
 	// Check if required directories are accessible
 	expandedConfigDir := corePaths.ExpandPath(config.Paths.ConfigDir)
 	expandedClustersDir := corePaths.ExpandPath(config.Paths.ClustersDir)
+	expandedGitOpsDir := corePaths.ExpandPath(config.Paths.GitOpsDir)
+	expandedClusterStateDir := corePaths.ExpandPath(config.Paths.ClusterStateDir)
+	expandedSecretsDir := corePaths.ExpandPath(config.Paths.SecretsDir)
 	expandedPluginsDir := corePaths.ExpandPath(config.Paths.PluginsDir)
 	expandedStateDir := corePaths.ExpandPath(config.Paths.StateDir)
 
@@ -1804,6 +1944,30 @@ func (cv *ConfigValidator) validateDependenciesWithResult(config *CLIConfig, res
 			Field:   "paths.clustersDir",
 			Value:   expandedClustersDir,
 			Message: fmt.Sprintf("disk space warning for clustersDir: %v", err),
+		})
+	}
+	if err := cv.checkDiskSpaceForExistingParent(expandedGitOpsDir); err != nil {
+		result.Warnings = append(result.Warnings, &ConfigError{
+			Type:    "dependency",
+			Field:   "paths.gitopsDir",
+			Value:   expandedGitOpsDir,
+			Message: fmt.Sprintf("disk space warning for gitopsDir: %v", err),
+		})
+	}
+	if err := cv.checkDiskSpaceForExistingParent(expandedClusterStateDir); err != nil {
+		result.Warnings = append(result.Warnings, &ConfigError{
+			Type:    "dependency",
+			Field:   "paths.clusterStateDir",
+			Value:   expandedClusterStateDir,
+			Message: fmt.Sprintf("disk space warning for clusterStateDir: %v", err),
+		})
+	}
+	if err := cv.checkDiskSpaceForExistingParent(expandedSecretsDir); err != nil {
+		result.Warnings = append(result.Warnings, &ConfigError{
+			Type:    "dependency",
+			Field:   "paths.secretsDir",
+			Value:   expandedSecretsDir,
+			Message: fmt.Sprintf("disk space warning for secretsDir: %v", err),
 		})
 	}
 
@@ -1905,6 +2069,23 @@ func (cv *ConfigValidator) checkDiskSpace(path string) error {
 	}
 
 	return nil
+}
+
+func (cv *ConfigValidator) checkDiskSpaceForExistingParent(path string) error {
+	current := filepath.Clean(path)
+	for {
+		if stat, err := os.Stat(current); err == nil && stat.IsDir() {
+			return cv.checkDiskSpace(current)
+		} else if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("cannot check disk space: %w", err)
+		}
+
+		parent := filepath.Dir(current)
+		if parent == current {
+			return fmt.Errorf("cannot check disk space: no existing parent for %s", path)
+		}
+		current = parent
+	}
 }
 
 // convertToInt converts various types to int.

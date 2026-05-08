@@ -10,7 +10,6 @@ import (
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
-	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,7 +48,7 @@ func PrepareClusterWritePlan(ctx context.Context, cluster ClusterImportResult) (
 		return nil, fmt.Errorf("cluster is missing a name")
 	}
 
-	resolver := paths.NewPathResolver(config.ResolveClustersDir())
+	resolver := config.NewPathResolverFromConfig()
 	if err := resolver.CreateClusterDirectories(ctx, clusterName, organization); err != nil {
 		return nil, fmt.Errorf("create cluster directories: %w", err)
 	}

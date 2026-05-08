@@ -21,6 +21,26 @@ import (
 	"testing"
 )
 
+func createSecureClusterForTest(t testing.TB, baseDir, organization, clusterName string) {
+	t.Helper()
+	if organization == "" {
+		organization = "opencenter"
+	}
+	stateDir := filepath.Join(baseDir, "state", organization, clusterName)
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func createSecureConfigForTest(t testing.TB, baseDir, organization, clusterName string) {
+	t.Helper()
+	createSecureClusterForTest(t, baseDir, organization, clusterName)
+	configFile := filepath.Join(baseDir, "state", organization, clusterName, clusterName+"-config.yaml")
+	if err := os.WriteFile(configFile, []byte("schema_version: \"2.0\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestPathResolver_Resolve(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
@@ -36,11 +56,7 @@ func TestPathResolver_Resolve(t *testing.T) {
 		{
 			name: "resolve with explicit organization",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "test-org")
-				clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 				return tmpDir
 			},
 			clusterName:  "test-cluster",
@@ -50,7 +66,7 @@ func TestPathResolver_Resolve(t *testing.T) {
 				if paths == nil {
 					t.Fatal("paths is nil")
 				}
-				expectedOrgDir := filepath.Join(tmpDir, "test-org")
+				expectedOrgDir := filepath.Join(tmpDir, "gitops", "test-org")
 				if paths.OrganizationDir != expectedOrgDir {
 					t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 				}
@@ -59,11 +75,7 @@ func TestPathResolver_Resolve(t *testing.T) {
 		{
 			name: "resolve with default organization",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "opencenter")
-				clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "opencenter", "test-cluster")
 				return tmpDir
 			},
 			clusterName:  "test-cluster",
@@ -73,7 +85,7 @@ func TestPathResolver_Resolve(t *testing.T) {
 				if paths == nil {
 					t.Fatal("paths is nil")
 				}
-				expectedOrgDir := filepath.Join(tmpDir, "opencenter")
+				expectedOrgDir := filepath.Join(tmpDir, "gitops", "opencenter")
 				if paths.OrganizationDir != expectedOrgDir {
 					t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 				}
@@ -91,14 +103,7 @@ func TestPathResolver_Resolve(t *testing.T) {
 		{
 			name: "resolve config-file-only cluster (no infrastructure directory)",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "cfg-org")
-				if err := os.MkdirAll(orgDir, 0755); err != nil {
-					t.Fatal(err)
-				}
-				configFile := filepath.Join(orgDir, ".cfg-cluster-config.yaml")
-				if err := os.WriteFile(configFile, []byte("schema_version: \"2.0\"\n"), 0644); err != nil {
-					t.Fatal(err)
-				}
+				createSecureConfigForTest(t, tmpDir, "cfg-org", "cfg-cluster")
 				return tmpDir
 			},
 			clusterName:  "cfg-cluster",
@@ -108,11 +113,11 @@ func TestPathResolver_Resolve(t *testing.T) {
 				if paths == nil {
 					t.Fatal("paths is nil")
 				}
-				expectedOrgDir := filepath.Join(tmpDir, "cfg-org")
+				expectedOrgDir := filepath.Join(tmpDir, "gitops", "cfg-org")
 				if paths.OrganizationDir != expectedOrgDir {
 					t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 				}
-				expectedConfig := filepath.Join(expectedOrgDir, ".cfg-cluster-config.yaml")
+				expectedConfig := filepath.Join(tmpDir, "state", "cfg-org", "cfg-cluster", "cfg-cluster-config.yaml")
 				if paths.ConfigPath != expectedConfig {
 					t.Errorf("ConfigPath = %s, want %s", paths.ConfigPath, expectedConfig)
 				}
@@ -169,11 +174,7 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 		{
 			name: "find cluster in first organization",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "org1")
-				clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "org1", "test-cluster")
 				return tmpDir
 			},
 			clusterName: "test-cluster",
@@ -182,7 +183,7 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 				if paths == nil {
 					t.Fatal("paths is nil")
 				}
-				expectedOrgDir := filepath.Join(tmpDir, "org1")
+				expectedOrgDir := filepath.Join(tmpDir, "gitops", "org1")
 				if paths.OrganizationDir != expectedOrgDir {
 					t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 				}
@@ -191,20 +192,13 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 		{
 			name: "find cluster in organization",
 			setup: func() string {
-				// Create org-alpha without the cluster
-				orgAlphaDir := filepath.Join(tmpDir, "org-alpha")
-				if err := os.MkdirAll(orgAlphaDir, 0755); err != nil {
+				if err := os.MkdirAll(filepath.Join(tmpDir, "state", "org-alpha"), 0o755); err != nil {
 					t.Fatal(err)
 				}
-				// Create org-beta with the cluster
-				orgBetaDir := filepath.Join(tmpDir, "org-beta")
-				clusterDir := filepath.Join(orgBetaDir, "infrastructure", "clusters", "test-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "org-beta", "beta-cluster")
 				return tmpDir
 			},
-			clusterName: "test-cluster",
+			clusterName: "beta-cluster",
 			wantErr:     false,
 			validate: func(t *testing.T, paths *ClusterPaths) {
 				if paths == nil {
@@ -221,8 +215,7 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 		{
 			name: "cluster not found in any organization",
 			setup: func() string {
-				org1Dir := filepath.Join(tmpDir, "org1")
-				if err := os.MkdirAll(org1Dir, 0755); err != nil {
+				if err := os.MkdirAll(filepath.Join(tmpDir, "state", "org1"), 0o755); err != nil {
 					t.Fatal(err)
 				}
 				return tmpDir
@@ -233,14 +226,7 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 		{
 			name: "find config-file-only cluster via fallback",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "fallback-cfg-org")
-				if err := os.MkdirAll(orgDir, 0755); err != nil {
-					t.Fatal(err)
-				}
-				configFile := filepath.Join(orgDir, ".fallback-cluster-config.yaml")
-				if err := os.WriteFile(configFile, []byte("schema_version: \"2.0\"\n"), 0644); err != nil {
-					t.Fatal(err)
-				}
+				createSecureConfigForTest(t, tmpDir, "fallback-cfg-org", "fallback-cluster")
 				return tmpDir
 			},
 			clusterName: "fallback-cluster",
@@ -249,7 +235,7 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 				if paths == nil {
 					t.Fatal("paths is nil")
 				}
-				expectedOrgDir := filepath.Join(tmpDir, "fallback-cfg-org")
+				expectedOrgDir := filepath.Join(tmpDir, "gitops", "fallback-cfg-org")
 				if paths.OrganizationDir != expectedOrgDir {
 					t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 				}
@@ -295,12 +281,7 @@ func TestPathResolver_InvalidateCache(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
 
-	// Setup test cluster
-	orgDir := filepath.Join(tmpDir, "test-org")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 
 	resolver := NewPathResolver(tmpDir)
 
@@ -333,10 +314,7 @@ func TestPathResolver_ClearCache(t *testing.T) {
 	// Setup multiple test clusters
 	for _, org := range []string{"org1", "org2"} {
 		for _, cluster := range []string{"cluster1", "cluster2"} {
-			clusterDir := filepath.Join(tmpDir, org, "infrastructure", "clusters", cluster)
-			if err := os.MkdirAll(clusterDir, 0755); err != nil {
-				t.Fatal(err)
-			}
+			createSecureClusterForTest(t, tmpDir, org, cluster)
 		}
 	}
 
@@ -373,12 +351,7 @@ func TestPathResolver_ThreadSafety(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
 
-	// Setup test cluster
-	orgDir := filepath.Join(tmpDir, "test-org")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 
 	resolver := NewPathResolver(tmpDir)
 
@@ -441,12 +414,7 @@ func TestPathResolver_CacheHitRate(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
 
-	// Setup test cluster
-	orgDir := filepath.Join(tmpDir, "test-org")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 
 	resolver := NewPathResolver(tmpDir)
 
@@ -574,11 +542,7 @@ func TestPathResolver_GetOrganization(t *testing.T) {
 		{
 			name: "cluster in organization",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "test-org")
-				clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 				return tmpDir
 			},
 			clusterName: "test-cluster",
@@ -588,8 +552,7 @@ func TestPathResolver_GetOrganization(t *testing.T) {
 		{
 			name: "cluster not found",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "test-org")
-				if err := os.MkdirAll(orgDir, 0755); err != nil {
+				if err := os.MkdirAll(filepath.Join(tmpDir, "state", "test-org"), 0o755); err != nil {
 					t.Fatal(err)
 				}
 				return tmpDir
@@ -601,14 +564,7 @@ func TestPathResolver_GetOrganization(t *testing.T) {
 		{
 			name: "cluster found via config file only",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "cfg-org-detect")
-				if err := os.MkdirAll(orgDir, 0755); err != nil {
-					t.Fatal(err)
-				}
-				configFile := filepath.Join(orgDir, ".cfg-detect-cluster-config.yaml")
-				if err := os.WriteFile(configFile, []byte("schema_version: \"2.0\"\n"), 0644); err != nil {
-					t.Fatal(err)
-				}
+				createSecureConfigForTest(t, tmpDir, "cfg-org-detect", "cfg-detect-cluster")
 				return tmpDir
 			},
 			clusterName: "cfg-detect-cluster",
@@ -654,18 +610,19 @@ func TestPathResolver_CreateClusterDirectories(t *testing.T) {
 			wantErr:      false,
 			validate: func(t *testing.T, baseDir string) {
 				expectedDirs := []string{
-					filepath.Join(baseDir, "test-org"),
-					filepath.Join(baseDir, "test-org", "infrastructure"),
-					filepath.Join(baseDir, "test-org", "infrastructure", "clusters"),
-					filepath.Join(baseDir, "test-org", "infrastructure", "clusters", "test-cluster"),
-					filepath.Join(baseDir, "test-org", "applications"),
-					filepath.Join(baseDir, "test-org", "applications", "overlays"),
-					filepath.Join(baseDir, "test-org", "applications", "overlays", "test-cluster"),
-					filepath.Join(baseDir, "test-org", "secrets"),
-					filepath.Join(baseDir, "test-org", "secrets", "age"),
-					filepath.Join(baseDir, "test-org", "secrets", "age", "keys"),
-					filepath.Join(baseDir, "test-org", "infrastructure", "clusters", "test-cluster", "inventory"),
-					filepath.Join(baseDir, "test-org", "infrastructure", "clusters", "test-cluster", ".bin"),
+					filepath.Join(baseDir, "gitops", "test-org"),
+					filepath.Join(baseDir, "gitops", "test-org", "infrastructure"),
+					filepath.Join(baseDir, "gitops", "test-org", "infrastructure", "clusters"),
+					filepath.Join(baseDir, "gitops", "test-org", "infrastructure", "clusters", "test-cluster"),
+					filepath.Join(baseDir, "gitops", "test-org", "applications"),
+					filepath.Join(baseDir, "gitops", "test-org", "applications", "overlays"),
+					filepath.Join(baseDir, "gitops", "test-org", "applications", "overlays", "test-cluster"),
+					filepath.Join(baseDir, "state", "test-org", "test-cluster"),
+					filepath.Join(baseDir, "state", "test-org", "test-cluster", "inventory"),
+					filepath.Join(baseDir, "state", "test-org", "test-cluster", ".bin"),
+					filepath.Join(baseDir, "secrets", "test-org", "test-cluster"),
+					filepath.Join(baseDir, "secrets", "test-org", "test-cluster", "age"),
+					filepath.Join(baseDir, "secrets", "test-org", "test-cluster", "age", "keys"),
 				}
 
 				for _, dir := range expectedDirs {
@@ -683,7 +640,7 @@ func TestPathResolver_CreateClusterDirectories(t *testing.T) {
 			organization: "",
 			wantErr:      false,
 			validate: func(t *testing.T, baseDir string) {
-				expectedDir := filepath.Join(baseDir, "opencenter", "infrastructure", "clusters", "test-cluster")
+				expectedDir := filepath.Join(baseDir, "gitops", "opencenter", "infrastructure", "clusters", "test-cluster")
 				if stat, err := os.Stat(expectedDir); err != nil {
 					t.Errorf("directory %s does not exist: %v", expectedDir, err)
 				} else if !stat.IsDir() {
@@ -779,10 +736,7 @@ func TestPathResolver_DetectStructureType(t *testing.T) {
 		{
 			name: "organization structure with default org",
 			setup: func() {
-				clusterDir := filepath.Join(tmpDir, "opencenter", "infrastructure", "clusters", "test-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "opencenter", "test-cluster")
 			},
 			clusterName: "test-cluster",
 			want:        StructureTypeOrganization,
@@ -877,12 +831,7 @@ func TestPathResolver_WithCustomOptions(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
 
-	// Setup cluster with custom organization
-	orgDir := filepath.Join(tmpDir, "custom-org")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	createSecureClusterForTest(t, tmpDir, "custom-org", "test-cluster")
 
 	options := ResolutionOptions{
 		Organization:  "custom-org",
@@ -898,7 +847,7 @@ func TestPathResolver_WithCustomOptions(t *testing.T) {
 		t.Fatalf("Resolve() error = %v", err)
 	}
 
-	expectedOrgDir := filepath.Join(tmpDir, "custom-org")
+	expectedOrgDir := filepath.Join(tmpDir, "gitops", "custom-org")
 	if paths.OrganizationDir != expectedOrgDir {
 		t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 	}
@@ -908,12 +857,7 @@ func TestPathResolver_CacheDisabled(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
 
-	// Setup test cluster
-	orgDir := filepath.Join(tmpDir, "test-org")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 
 	options := ResolutionOptions{
 		Organization:  "opencenter",
@@ -950,10 +894,7 @@ func TestPathResolver_MultipleClustersSameOrganization(t *testing.T) {
 	organization := "test-org"
 
 	for _, cluster := range clusters {
-		clusterDir := filepath.Join(tmpDir, organization, "infrastructure", "clusters", cluster)
-		if err := os.MkdirAll(clusterDir, 0755); err != nil {
-			t.Fatal(err)
-		}
+		createSecureClusterForTest(t, tmpDir, organization, cluster)
 	}
 
 	resolver := NewPathResolver(tmpDir)
@@ -966,7 +907,7 @@ func TestPathResolver_MultipleClustersSameOrganization(t *testing.T) {
 			continue
 		}
 
-		expectedClusterDir := filepath.Join(tmpDir, organization, "infrastructure", "clusters", cluster)
+		expectedClusterDir := filepath.Join(tmpDir, "gitops", organization, "infrastructure", "clusters", cluster)
 		if paths.ClusterDir != expectedClusterDir {
 			t.Errorf("ClusterDir for %s = %s, want %s", cluster, paths.ClusterDir, expectedClusterDir)
 		}
@@ -977,12 +918,7 @@ func TestPathResolver_ResolveAfterInvalidate(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
 
-	// Setup test cluster
-	orgDir := filepath.Join(tmpDir, "test-org")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 
 	resolver := NewPathResolver(tmpDir)
 

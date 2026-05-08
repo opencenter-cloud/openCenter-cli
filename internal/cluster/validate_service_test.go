@@ -428,14 +428,13 @@ func setupTestCluster(t *testing.T, clusterName string, configContent string) (s
 	t.Helper()
 
 	configDir := t.TempDir()
-	// Use organization-based structure - need to create the clusters base directory
 	clustersBaseDir := filepath.Join(configDir, "clusters")
-	clusterDir := filepath.Join(clustersBaseDir, "opencenter", "infrastructure", "clusters", clusterName)
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
+	clusterStateDir := filepath.Join(clustersBaseDir, "state", "opencenter", clusterName)
+	if err := os.MkdirAll(clusterStateDir, 0755); err != nil {
 		t.Fatalf("failed to create cluster directory: %v", err)
 	}
 
-	configFile := filepath.Join(clusterDir, "."+clusterName+"-config.yaml")
+	configFile := filepath.Join(clusterStateDir, clusterName+"-config.yaml")
 	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
 		t.Fatalf("failed to write config file: %v", err)
 	}

@@ -14,6 +14,8 @@
 package di
 
 import (
+	"path/filepath"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/cluster"
@@ -39,6 +41,9 @@ func ProvideLogger() (*logrus.Logger, error) {
 // ProvidePathResolver creates a new PathResolver instance.
 // Requirements: 19.2, 1.1
 func ProvidePathResolver(baseDir string) (*paths.PathResolver, error) {
+	if baseDir != "" && filepath.Clean(baseDir) == filepath.Clean(config.ResolveClustersDir()) {
+		return config.NewPathResolverFromConfig(), nil
+	}
 	return paths.NewPathResolver(baseDir), nil
 }
 

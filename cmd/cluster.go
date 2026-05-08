@@ -101,6 +101,7 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterLockCmd())
 	cmd.AddCommand(newClusterUnlockCmd())
 	cmd.AddCommand(newClusterImportCmd())
+	cmd.AddCommand(newClusterMigrateLayoutCmd())
 	return cmd
 }
 

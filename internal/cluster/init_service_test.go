@@ -3,6 +3,8 @@ package cluster
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
@@ -26,6 +28,81 @@ func setupValidationEngine(t *testing.T) *validation.ValidationEngine {
 	}
 
 	return engine
+}
+
+func TestInitServiceInitializeUsesSecureLayoutAndHygiene(t *testing.T) {
+	tmpDir := t.TempDir()
+	pathResolver := paths.NewPathResolver(tmpDir)
+	validationEngine := setupValidationEngine(t)
+	configManager, err := config.NewConfigManager("")
+	if err != nil {
+		t.Fatalf("Failed to create config manager: %v", err)
+	}
+	initService := NewInitService(pathResolver, validationEngine, configManager)
+
+	result, err := initService.Initialize(context.Background(), InitOptions{
+		ClusterName:  "secure-demo",
+		Organization: "acme",
+		Provider:     "kind",
+		NoGitInit:    false,
+	})
+	if err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+
+	clusterPaths := result.ClusterPaths
+	wantConfigPath := filepath.Join(tmpDir, "state", "acme", "secure-demo", "secure-demo-config.yaml")
+	if result.ConfigPath != wantConfigPath {
+		t.Fatalf("ConfigPath = %q, want %q", result.ConfigPath, wantConfigPath)
+	}
+
+	for _, path := range []string{clusterPaths.ConfigPath, clusterPaths.SOPSKeyPath, clusterPaths.SSHKeyPath} {
+		rel, err := filepath.Rel(clusterPaths.GitOpsDir, path)
+		if err == nil && rel != "." && rel != ".." && !filepath.IsAbs(rel) && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			t.Fatalf("%s must not be inside GitOps dir %s", path, clusterPaths.GitOpsDir)
+		}
+	}
+
+	for _, path := range []string{
+		filepath.Join(clusterPaths.GitOpsDir, ".gitignore"),
+		filepath.Join(clusterPaths.GitOpsDir, ".sops.yaml"),
+		filepath.Join(clusterPaths.GitOpsDir, ".opencenter", "hooks", "pre-commit"),
+		filepath.Join(clusterPaths.GitOpsDir, ".opencenter", "scripts", "scan-secrets"),
+		filepath.Join(clusterPaths.GitOpsDir, ".github", "workflows", "opencenter-secret-scan.yml"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected GitOps hygiene file %s: %v", path, err)
+		}
+	}
+
+	gitignoreData, err := os.ReadFile(filepath.Join(clusterPaths.GitOpsDir, ".gitignore"))
+	if err != nil {
+		t.Fatalf("read .gitignore: %v", err)
+	}
+	if strings.Contains(string(gitignoreData), "\n*-config.yaml") {
+		t.Fatalf(".gitignore must not ignore nested rendered config manifests:\n%s", string(gitignoreData))
+	}
+	for _, want := range []string{"\n/*-config.yaml", "\n/.*-config.yaml"} {
+		if !strings.Contains(string(gitignoreData), want) {
+			t.Fatalf(".gitignore missing root-only config guard %q:\n%s", want, string(gitignoreData))
+		}
+	}
+
+	assertMode := func(path string, want os.FileMode) {
+		t.Helper()
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat %s: %v", path, err)
+		}
+		if got := info.Mode().Perm(); got != want {
+			t.Fatalf("mode %s = %#o, want %#o", path, got, want)
+		}
+	}
+	assertMode(clusterPaths.ClusterStateDir, 0o700)
+	assertMode(clusterPaths.SecretsDir, 0o700)
+	assertMode(clusterPaths.ConfigPath, 0o600)
+	assertMode(clusterPaths.SOPSKeyPath, 0o600)
+	assertMode(clusterPaths.SSHKeyPath, 0o600)
 }
 
 func TestInitService_Initialize(t *testing.T) {

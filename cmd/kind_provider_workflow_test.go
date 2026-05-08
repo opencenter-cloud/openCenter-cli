@@ -28,7 +28,7 @@ func TestClusterInitKindDefaults(t *testing.T) {
 		t.Fatalf("cluster init failed: %v", err)
 	}
 
-	configPath := filepath.Join(dir, "clusters", "opencenter", ".kind-cluster-config.yaml")
+	configPath := filepath.Join(dir, "clusters", "state", "opencenter", "kind-cluster", "kind-cluster-config.yaml")
 	cfg := loadKindV2ConfigForTest(t, configPath)
 
 	if cfg.OpenCenter.Infrastructure.Provider != "kind" {

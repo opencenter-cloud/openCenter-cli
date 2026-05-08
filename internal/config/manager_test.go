@@ -204,19 +204,7 @@ func TestConfigurationManager_ListWithOrganization(t *testing.T) {
 	// Create temporary directory structure
 	tmpDir := t.TempDir()
 
-	// Create organization structure
-	orgDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters")
-	err := os.MkdirAll(orgDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create org directory: %v", err)
-	}
-
-	// Create a cluster directory
-	clusterDir := filepath.Join(orgDir, "test-cluster")
-	err = os.MkdirAll(clusterDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create cluster directory: %v", err)
-	}
+	createSecureConfigTestCluster(t, tmpDir, "test-org", "test-cluster")
 
 	// Create manager with test directory
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
@@ -265,18 +253,45 @@ func TestConfigurationManager_ListWithOrganization(t *testing.T) {
 	}
 }
 
+func TestConfigurationManager_ListRejectsLegacyMixedLayout(t *testing.T) {
+	tmpDir := t.TempDir()
+	createSecureConfigTestCluster(t, tmpDir, "test-org", "test-cluster")
+
+	legacyOrgDir := filepath.Join(tmpDir, "legacy-org")
+	if err := os.MkdirAll(filepath.Join(legacyOrgDir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(legacyOrgDir, ".legacy-cluster-config.yaml"), []byte("schema_version: '2.0'\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
+	fileSystem := fs.NewDefaultFileSystem(errorHandler)
+	pathResolver := paths.NewPathResolver(tmpDir)
+	validator := validation.NewValidationEngine()
+	cache := NewConfigCache()
+	loader := NewConfigIOHandler(fileSystem)
+	manager := NewConfigurationManagerWithDeps(loader, validator, cache, pathResolver, fileSystem)
+
+	if _, err := manager.List(context.Background()); err == nil {
+		t.Fatal("List() error = nil, want legacy layout error")
+	} else if _, ok := err.(*paths.LegacyLayoutError); !ok {
+		t.Fatalf("List() error = %T %v, want LegacyLayoutError", err, err)
+	}
+
+	if _, err := manager.ListWithOrganization(context.Background(), "legacy-org"); err == nil {
+		t.Fatal("ListWithOrganization() error = nil, want legacy layout error")
+	} else if _, ok := err.(*paths.LegacyLayoutError); !ok {
+		t.Fatalf("ListWithOrganization() error = %T %v, want LegacyLayoutError", err, err)
+	}
+}
+
 // TestConfigurationManager_ListDiscoversConfigFiles verifies that clusters
 // are discovered from config files even when no infrastructure directory exists.
 func TestConfigurationManager_ListDiscoversConfigFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	orgDir := filepath.Join(tmpDir, "test-org")
-	if err := os.MkdirAll(orgDir, 0755); err != nil {
-		t.Fatalf("create org dir: %v", err)
-	}
-
-	// Create a config file without a matching infrastructure/clusters/ directory
-	configFile := filepath.Join(orgDir, ".config-only-cluster-config.yaml")
+	configFile := createSecureConfigTestCluster(t, tmpDir, "test-org", "config-only-cluster")
 	if err := os.WriteFile(configFile, []byte("schema_version: '2.0'\n"), 0600); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
@@ -322,26 +337,19 @@ func TestConfigurationManager_ListDiscoversConfigFiles(t *testing.T) {
 func TestConfigurationManager_ListMergesDirectoriesAndConfigFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	orgDir := filepath.Join(tmpDir, "my-org")
-
-	// Create a cluster with both a directory and a config file (should appear once)
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "both-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatalf("create cluster dir: %v", err)
-	}
-	bothConfig := filepath.Join(orgDir, ".both-cluster-config.yaml")
+	bothConfig := createSecureConfigTestCluster(t, tmpDir, "my-org", "both-cluster")
 	if err := os.WriteFile(bothConfig, []byte("schema_version: '2.0'\n"), 0600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 
 	// Create a cluster with only a directory (no config file)
-	dirOnlyCluster := filepath.Join(orgDir, "infrastructure", "clusters", "dir-only")
+	dirOnlyCluster := filepath.Join(tmpDir, "state", "my-org", "dir-only")
 	if err := os.MkdirAll(dirOnlyCluster, 0755); err != nil {
 		t.Fatalf("create dir-only cluster: %v", err)
 	}
 
 	// Create a cluster with only a config file (no directory)
-	configOnlyFile := filepath.Join(orgDir, ".config-only-config.yaml")
+	configOnlyFile := createSecureConfigTestCluster(t, tmpDir, "my-org", "config-only")
 	if err := os.WriteFile(configOnlyFile, []byte("schema_version: '2.0'\n"), 0600); err != nil {
 		t.Fatalf("write config-only file: %v", err)
 	}
@@ -379,15 +387,15 @@ func TestParseConfigFileName(t *testing.T) {
 		wantName string
 		wantOK   bool
 	}{
-		{".my-cluster-config.yaml", "my-cluster", true},
-		{".talos-test-01-config.yaml", "talos-test-01", true},
-		{".a-config.yaml", "a", true},
-		{"not-dotted-config.yaml", "", false},         // missing leading dot
-		{".config.yaml", "", false},                   // no -config.yaml suffix
-		{".sops.yaml", "", false},                     // unrelated dotfile
-		{"README.md", "", false},                      // unrelated file
-		{".-config.yaml", "", false},                  // empty cluster name
-		{".my-cluster-config.yaml.backup", "", false}, // backup file
+		{"my-cluster-config.yaml", "my-cluster", true},
+		{"talos-test-01-config.yaml", "talos-test-01", true},
+		{"a-config.yaml", "a", true},
+		{".my-cluster-config.yaml", "", false},       // legacy dotted config
+		{"config.yaml", "", false},                   // no cluster prefix
+		{".sops.yaml", "", false},                    // unrelated dotfile
+		{"README.md", "", false},                     // unrelated file
+		{"-config.yaml", "", false},                  // empty cluster name
+		{"my-cluster-config.yaml.backup", "", false}, // backup file
 	}
 
 	for _, tt := range tests {
@@ -408,18 +416,10 @@ func TestConfigurationManager_DeleteWithBackup(t *testing.T) {
 	// Create temporary directory structure
 	tmpDir := t.TempDir()
 
-	// Create organization and cluster structure
-	clusterDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", "test-cluster")
-	err := os.MkdirAll(clusterDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create cluster directory: %v", err)
-	}
-
 	// Create a test config file
-	configPath := filepath.Join(tmpDir, "test-org", ".test-cluster-config.yaml")
+	configPath := createSecureConfigTestCluster(t, tmpDir, "test-org", "test-cluster")
 	testContent := []byte("test: config\ndata: value")
-	err = os.WriteFile(configPath, testContent, 0600)
-	if err != nil {
+	if err := os.WriteFile(configPath, testContent, 0600); err != nil {
 		t.Fatalf("Failed to create test config: %v", err)
 	}
 
@@ -445,7 +445,7 @@ func TestConfigurationManager_DeleteWithBackup(t *testing.T) {
 	}
 
 	// Delete the cluster
-	err = manager.Delete(ctx, "test-cluster")
+	err := manager.Delete(ctx, "test-cluster")
 	if err != nil {
 		t.Fatalf("Failed to delete cluster: %v", err)
 	}
@@ -494,11 +494,7 @@ func TestConfigurationManager_ListMultipleOrganizations(t *testing.T) {
 
 	for _, org := range orgs {
 		for _, cluster := range org.clusters {
-			clusterDir := filepath.Join(tmpDir, org.name, "infrastructure", "clusters", cluster)
-			err := os.MkdirAll(clusterDir, 0755)
-			if err != nil {
-				t.Fatalf("Failed to create cluster directory: %v", err)
-			}
+			createSecureConfigTestCluster(t, tmpDir, org.name, cluster)
 		}
 	}
 

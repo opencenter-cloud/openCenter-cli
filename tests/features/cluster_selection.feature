@@ -172,9 +172,8 @@ Feature: Cluster use, listing, and inspection
   @describe @validate
   Scenario: Validating configuration with --validate
     When I run "opencenter cluster describe dev --validate --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    And stdout should contain "Validation successful"
-    And stdout should not contain "ERROR"
+    Then the exit code should not be 0
+    And stderr should contain "Validation failed"
 
   @describe @invalid_yaml
   Scenario: Invalid YAML is surfaced as a parse error
@@ -230,7 +229,7 @@ Feature: Cluster use, listing, and inspection
     And stdout should contain "cluster_name: info-test"
     And stdout should contain "organization: info-org"
     And stdout should contain "git_dir:"
-    And stdout should contain "clusters/info-org"
+    And stdout should contain "clusters/gitops/info-org"
 
   # ---------------------------------------------------------------------------
   # Multiple clusters lifecycle

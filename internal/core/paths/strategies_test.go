@@ -43,11 +43,7 @@ func TestOrgBasedStrategy_CanResolve(t *testing.T) {
 		{
 			name: "cluster exists in organization",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "test-org")
-				clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 				return tmpDir
 			},
 			clusterName:  "test-cluster",
@@ -58,8 +54,7 @@ func TestOrgBasedStrategy_CanResolve(t *testing.T) {
 		{
 			name: "cluster does not exist",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "test-org")
-				if err := os.MkdirAll(orgDir, 0755); err != nil {
+				if err := os.MkdirAll(filepath.Join(tmpDir, "state", "test-org"), 0o755); err != nil {
 					t.Fatal(err)
 				}
 				return tmpDir
@@ -82,11 +77,7 @@ func TestOrgBasedStrategy_CanResolve(t *testing.T) {
 		{
 			name: "default organization when empty",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "opencenter")
-				clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "opencenter", "test-cluster")
 				return tmpDir
 			},
 			clusterName:  "test-cluster",
@@ -97,14 +88,7 @@ func TestOrgBasedStrategy_CanResolve(t *testing.T) {
 		{
 			name: "cluster found via config file only (no infrastructure directory)",
 			setup: func() string {
-				orgDir := filepath.Join(tmpDir, "config-only-org")
-				if err := os.MkdirAll(orgDir, 0755); err != nil {
-					t.Fatal(err)
-				}
-				configFile := filepath.Join(orgDir, ".init-only-cluster-config.yaml")
-				if err := os.WriteFile(configFile, []byte("schema_version: \"2.0\"\n"), 0644); err != nil {
-					t.Fatal(err)
-				}
+				createSecureConfigForTest(t, tmpDir, "config-only-org", "init-only-cluster")
 				return tmpDir
 			},
 			clusterName:  "init-only-cluster",
@@ -115,10 +99,7 @@ func TestOrgBasedStrategy_CanResolve(t *testing.T) {
 		{
 			name: "cluster found via infrastructure directory when config file missing",
 			setup: func() string {
-				clusterDir := filepath.Join(tmpDir, "infra-only-org", "infrastructure", "clusters", "infra-only-cluster")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "infra-only-org", "infra-only-cluster")
 				return tmpDir
 			},
 			clusterName:  "infra-only-cluster",
@@ -160,7 +141,7 @@ func TestOrgBasedStrategy_Resolve(t *testing.T) {
 			clusterName:  "test-cluster",
 			organization: "test-org",
 			validate: func(t *testing.T, paths *ClusterPaths) {
-				expectedOrgDir := filepath.Join(tmpDir, "test-org")
+				expectedOrgDir := filepath.Join(tmpDir, "gitops", "test-org")
 				if paths.OrganizationDir != expectedOrgDir {
 					t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 				}
@@ -175,7 +156,7 @@ func TestOrgBasedStrategy_Resolve(t *testing.T) {
 					t.Errorf("ApplicationsDir = %s, want %s", paths.ApplicationsDir, expectedAppsDir)
 				}
 
-				expectedSecretsDir := filepath.Join(expectedOrgDir, "secrets")
+				expectedSecretsDir := filepath.Join(tmpDir, "secrets", "test-org", "test-cluster")
 				if paths.SecretsDir != expectedSecretsDir {
 					t.Errorf("SecretsDir = %s, want %s", paths.SecretsDir, expectedSecretsDir)
 				}
@@ -190,27 +171,28 @@ func TestOrgBasedStrategy_Resolve(t *testing.T) {
 					t.Errorf("SOPSConfigPath = %s, want %s", paths.SOPSConfigPath, expectedSOPSConfig)
 				}
 
-				expectedKubeconfig := filepath.Join(expectedClusterDir, "kubeconfig.yaml")
+				expectedStateDir := filepath.Join(tmpDir, "state", "test-org", "test-cluster")
+				expectedKubeconfig := filepath.Join(expectedStateDir, "kubeconfig.yaml")
 				if paths.KubeconfigPath != expectedKubeconfig {
 					t.Errorf("KubeconfigPath = %s, want %s", paths.KubeconfigPath, expectedKubeconfig)
 				}
 
-				expectedInventory := filepath.Join(expectedClusterDir, "inventory")
+				expectedInventory := filepath.Join(expectedStateDir, "inventory")
 				if paths.InventoryPath != expectedInventory {
 					t.Errorf("InventoryPath = %s, want %s", paths.InventoryPath, expectedInventory)
 				}
 
-				expectedVenv := filepath.Join(expectedClusterDir, "venv")
+				expectedVenv := filepath.Join(expectedStateDir, "venv")
 				if paths.VenvPath != expectedVenv {
 					t.Errorf("VenvPath = %s, want %s", paths.VenvPath, expectedVenv)
 				}
 
-				expectedBin := filepath.Join(expectedClusterDir, ".bin")
+				expectedBin := filepath.Join(expectedStateDir, ".bin")
 				if paths.BinPath != expectedBin {
 					t.Errorf("BinPath = %s, want %s", paths.BinPath, expectedBin)
 				}
 
-				expectedConfig := filepath.Join(expectedOrgDir, ".test-cluster-config.yaml")
+				expectedConfig := filepath.Join(expectedStateDir, "test-cluster-config.yaml")
 				if paths.ConfigPath != expectedConfig {
 					t.Errorf("ConfigPath = %s, want %s", paths.ConfigPath, expectedConfig)
 				}
@@ -230,7 +212,7 @@ func TestOrgBasedStrategy_Resolve(t *testing.T) {
 			clusterName:  "prod-cluster",
 			organization: "",
 			validate: func(t *testing.T, paths *ClusterPaths) {
-				expectedOrgDir := filepath.Join(tmpDir, "opencenter")
+				expectedOrgDir := filepath.Join(tmpDir, "gitops", "opencenter")
 				if paths.OrganizationDir != expectedOrgDir {
 					t.Errorf("OrganizationDir = %s, want %s (default org)", paths.OrganizationDir, expectedOrgDir)
 				}
@@ -246,7 +228,7 @@ func TestOrgBasedStrategy_Resolve(t *testing.T) {
 			clusterName:  "my-test-cluster",
 			organization: "my-org",
 			validate: func(t *testing.T, paths *ClusterPaths) {
-				expectedConfig := filepath.Join(tmpDir, "my-org", ".my-test-cluster-config.yaml")
+				expectedConfig := filepath.Join(tmpDir, "state", "my-org", "my-test-cluster", "my-test-cluster-config.yaml")
 				if paths.ConfigPath != expectedConfig {
 					t.Errorf("ConfigPath = %s, want %s", paths.ConfigPath, expectedConfig)
 				}
@@ -434,10 +416,7 @@ func TestOrgBasedStrategy_MultipleOrganizations(t *testing.T) {
 
 	for _, org := range orgs {
 		for _, cluster := range clusters {
-			clusterDir := filepath.Join(tmpDir, org, "infrastructure", "clusters", cluster)
-			if err := os.MkdirAll(clusterDir, 0755); err != nil {
-				t.Fatal(err)
-			}
+			createSecureClusterForTest(t, tmpDir, org, cluster)
 		}
 	}
 
@@ -480,10 +459,7 @@ func TestOrgBasedStrategy_EdgeCases(t *testing.T) {
 		{
 			name: "cluster with special characters in name",
 			setup: func() {
-				clusterDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", "test_cluster-123")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "test-org", "test_cluster-123")
 			},
 			clusterName:  "test_cluster-123",
 			organization: "test-org",
@@ -493,10 +469,7 @@ func TestOrgBasedStrategy_EdgeCases(t *testing.T) {
 		{
 			name: "organization with hyphens",
 			setup: func() {
-				clusterDir := filepath.Join(tmpDir, "my-test-org", "infrastructure", "clusters", "cluster1")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "my-test-org", "cluster1")
 			},
 			clusterName:  "cluster1",
 			organization: "my-test-org",
@@ -506,10 +479,7 @@ func TestOrgBasedStrategy_EdgeCases(t *testing.T) {
 		{
 			name: "organization with underscores",
 			setup: func() {
-				clusterDir := filepath.Join(tmpDir, "my_test_org", "infrastructure", "clusters", "cluster2")
-				if err := os.MkdirAll(clusterDir, 0755); err != nil {
-					t.Fatal(err)
-				}
+				createSecureClusterForTest(t, tmpDir, "my_test_org", "cluster2")
 			},
 			clusterName:  "cluster2",
 			organization: "my_test_org",
@@ -645,7 +615,7 @@ func TestOrgBasedStrategy_PathStructure(t *testing.T) {
 	}
 
 	// Verify path structure follows organization-based layout
-	expectedOrgDir := filepath.Join(tmpDir, organization)
+	expectedOrgDir := filepath.Join(tmpDir, "gitops", organization)
 	if paths.OrganizationDir != expectedOrgDir {
 		t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 	}
@@ -660,13 +630,13 @@ func TestOrgBasedStrategy_PathStructure(t *testing.T) {
 		t.Errorf("ApplicationsDir %s is not under applications/overlays", paths.ApplicationsDir)
 	}
 
-	// Verify SecretsDir is under organization
-	if !filepath.HasPrefix(paths.SecretsDir, expectedOrgDir) {
-		t.Errorf("SecretsDir %s is not under organization directory", paths.SecretsDir)
+	expectedSecretsRoot := filepath.Join(tmpDir, "secrets", organization, clusterName)
+	if !filepath.HasPrefix(paths.SecretsDir, expectedSecretsRoot) {
+		t.Errorf("SecretsDir %s is not under secure secrets directory", paths.SecretsDir)
 	}
 
 	// Verify SOPSKeyPath is under secrets/age/keys
-	if !filepath.HasPrefix(paths.SOPSKeyPath, filepath.Join(expectedOrgDir, "secrets", "age", "keys")) {
+	if !filepath.HasPrefix(paths.SOPSKeyPath, filepath.Join(expectedSecretsRoot, "age", "keys")) {
 		t.Errorf("SOPSKeyPath %s is not under secrets/age/keys", paths.SOPSKeyPath)
 	}
 }

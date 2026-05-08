@@ -52,7 +52,7 @@ func SetupContainer(baseDir string) (Container, error) {
 	// Register PathResolver as singleton (no dependencies for now)
 	// Requirements: 5.5
 	if err := container.Singleton("PathResolver", func() (*paths.PathResolver, error) {
-		return paths.NewPathResolver(baseDir), nil
+		return ProvidePathResolver(baseDir)
 	}); err != nil {
 		return nil, fmt.Errorf("registering PathResolver: %w", err)
 	}

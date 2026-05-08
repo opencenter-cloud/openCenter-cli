@@ -143,6 +143,12 @@ Feature: CLI configuration system
   Scenario: Custom configuration paths work correctly
     Given I run "opencenter config set paths.clustersDir <<tmp>>/custom-clusters --config-dir <<tmp>>/conf"
     And the exit code should be 0
+    And I run "opencenter config set paths.gitopsDir <<tmp>>/custom-clusters/gitops --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    And I run "opencenter config set paths.clusterStateDir <<tmp>>/custom-clusters/state --config-dir <<tmp>>/conf"
+    And the exit code should be 0
+    And I run "opencenter config set paths.secretsDir <<tmp>>/custom-clusters/secrets --config-dir <<tmp>>/conf"
+    And the exit code should be 0
     When I run "opencenter cluster init custom-path-test --org custom-org"
     Then the exit code should be 0
     And a directory "<<tmp>>/custom-clusters/custom-org/infrastructure/clusters/custom-path-test" should exist

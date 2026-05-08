@@ -22,12 +22,15 @@ import (
 )
 
 var allowedPathVariables = map[string]struct{}{
-	"HOME":                    {},
-	"OPENCENTER_CLUSTERS_DIR": {},
-	"OPENCENTER_CONFIG_DIR":   {},
-	"OPENCENTER_PLUGINS_DIR":  {},
-	"OPENCENTER_STATE_DIR":    {},
-	"XDG_STATE_HOME":          {},
+	"HOME":                         {},
+	"OPENCENTER_CLUSTER_STATE_DIR": {},
+	"OPENCENTER_CLUSTERS_DIR":      {},
+	"OPENCENTER_CONFIG_DIR":        {},
+	"OPENCENTER_GITOPS_DIR":        {},
+	"OPENCENTER_PLUGINS_DIR":       {},
+	"OPENCENTER_SECRETS_DIR":       {},
+	"OPENCENTER_STATE_DIR":         {},
+	"XDG_STATE_HOME":               {},
 }
 
 var pathVariablePattern = regexp.MustCompile(`\$(\w+)|\$\{([^}]+)\}`)
@@ -106,16 +109,24 @@ type ResolutionStrategy interface {
 	Resolve(ctx context.Context, clusterName, organization string) (*ClusterPaths, error)
 }
 
-// OrgBasedStrategy implements organization-based path resolution.
-// Structure: clusters/<org>/infrastructure/clusters/<cluster>/
+// OrgBasedStrategy implements organization-based path resolution across the
+// secure GitOps, cluster-state, and secrets zones.
 type OrgBasedStrategy struct {
 	baseDir string
+	roots   PathRoots
 }
 
 // NewOrgBasedStrategy creates a new organization-based strategy.
 func NewOrgBasedStrategy(baseDir string) *OrgBasedStrategy {
+	return NewOrgBasedStrategyWithRoots(DefaultPathRoots(baseDir))
+}
+
+// NewOrgBasedStrategyWithRoots creates a strategy with explicit zone roots.
+func NewOrgBasedStrategyWithRoots(roots PathRoots) *OrgBasedStrategy {
+	roots = expandPathRoots(roots)
 	return &OrgBasedStrategy{
-		baseDir: expandPath(baseDir),
+		baseDir: roots.ClustersDir,
+		roots:   roots,
 	}
 }
 
@@ -124,34 +135,22 @@ func (s *OrgBasedStrategy) Name() string {
 	return "org-based"
 }
 
-// CanResolve checks if organization-based structure exists for the cluster.
-//
-// A cluster is considered resolvable if either of these exists:
-//   - The infrastructure directory: <org>/infrastructure/clusters/<cluster>/
-//   - The config file: <org>/.<cluster>-config.yaml
-//
-// This matches the discovery logic in ConfigurationManager.discoverClustersInOrg
-// so that freshly initialized clusters (config file exists, infrastructure
-// directory not yet created) are resolvable by all commands.
+// CanResolve checks if the secure cluster-state structure exists.
 func (s *OrgBasedStrategy) CanResolve(ctx context.Context, clusterName, organization string) (bool, error) {
 	if organization == "" {
 		organization = "opencenter"
 	}
 
-	// Check if organization directory exists
-	orgDir := filepath.Join(s.baseDir, organization)
-	if _, err := os.Stat(orgDir); os.IsNotExist(err) {
-		return false, nil
+	if err := s.rejectLegacyLayout(clusterName, organization); err != nil {
+		return false, err
 	}
 
-	// Check if cluster directory exists in organization structure
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", clusterName)
-	if _, err := os.Stat(clusterDir); err == nil {
+	stateDir := filepath.Join(s.roots.ClusterStateDir, organization, clusterName)
+	if _, err := os.Stat(stateDir); err == nil {
 		return true, nil
 	}
 
-	// Check if config file exists in organization root
-	configFile := filepath.Join(orgDir, "."+clusterName+"-config.yaml")
+	configFile := filepath.Join(stateDir, clusterName+"-config.yaml")
 	if _, err := os.Stat(configFile); err == nil {
 		return true, nil
 	}
@@ -165,26 +164,54 @@ func (s *OrgBasedStrategy) Resolve(ctx context.Context, clusterName, organizatio
 		organization = "opencenter"
 	}
 
-	orgDir := filepath.Join(s.baseDir, organization)
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", clusterName)
-	applicationsDir := filepath.Join(orgDir, "applications", "overlays", clusterName)
-	secretsDir := filepath.Join(orgDir, "secrets")
+	gitOpsDir := filepath.Join(s.roots.GitOpsDir, organization)
+	clusterStateDir := filepath.Join(s.roots.ClusterStateDir, organization, clusterName)
+	secretsDir := filepath.Join(s.roots.SecretsDir, organization, clusterName)
+	clusterDir := filepath.Join(gitOpsDir, "infrastructure", "clusters", clusterName)
+	applicationsDir := filepath.Join(gitOpsDir, "applications", "overlays", clusterName)
 
-	return &ClusterPaths{
-		OrganizationDir: orgDir,
-		GitOpsDir:       orgDir,
+	clusterPaths := &ClusterPaths{
+		OrganizationDir: gitOpsDir,
+		GitOpsDir:       gitOpsDir,
+		ClusterStateDir: clusterStateDir,
 		ClusterDir:      clusterDir,
 		ApplicationsDir: applicationsDir,
 		SecretsDir:      secretsDir,
 		SOPSKeyPath:     filepath.Join(secretsDir, "age", "keys", clusterName+"-key.txt"),
-		SOPSConfigPath:  filepath.Join(orgDir, ".sops.yaml"),
-		KubeconfigPath:  filepath.Join(clusterDir, "kubeconfig.yaml"),
-		InventoryPath:   filepath.Join(clusterDir, "inventory"),
-		VenvPath:        filepath.Join(clusterDir, "venv"),
-		BinPath:         filepath.Join(clusterDir, ".bin"),
-		ConfigPath:      filepath.Join(orgDir, "."+clusterName+"-config.yaml"),
+		SOPSConfigPath:  filepath.Join(gitOpsDir, ".sops.yaml"),
+		KubeconfigPath:  filepath.Join(clusterStateDir, "kubeconfig.yaml"),
+		InventoryPath:   filepath.Join(clusterStateDir, "inventory"),
+		VenvPath:        filepath.Join(clusterStateDir, "venv"),
+		BinPath:         filepath.Join(clusterStateDir, ".bin"),
+		ConfigPath:      filepath.Join(clusterStateDir, clusterName+"-config.yaml"),
 		SSHKeyPath:      filepath.Join(secretsDir, "ssh", clusterName),
-	}, nil
+	}
+
+	if err := clusterPaths.Validate(); err != nil {
+		return nil, err
+	}
+
+	return clusterPaths, nil
+}
+
+func (s *OrgBasedStrategy) rejectLegacyLayout(clusterName, organization string) error {
+	orgDir := filepath.Join(s.baseDir, organization)
+	if _, err := os.Stat(filepath.Join(orgDir, ".git")); err != nil {
+		return nil
+	}
+
+	legacyPaths := []string{
+		filepath.Join(orgDir, "secrets"),
+		filepath.Join(orgDir, "."+clusterName+"-config.yaml"),
+		filepath.Join(orgDir, "infrastructure", "clusters", clusterName),
+	}
+	for _, path := range legacyPaths {
+		if _, err := os.Stat(path); err == nil {
+			return &LegacyLayoutError{Path: orgDir}
+		}
+	}
+
+	return nil
 }
 
 // ExpandPath expands environment variables and tilde in a path.

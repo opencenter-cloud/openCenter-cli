@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev"
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev/gitea"
 	"gopkg.in/yaml.v3"
@@ -38,9 +39,9 @@ func (f *fakeExecutor) RunStreaming(ctx context.Context, opts localdev.RunOption
 func TestBootstrapUsesHostIPURLAndReconciles(t *testing.T) {
 	configDir := t.TempDir()
 	stateDir := t.TempDir()
-	gitDir := filepath.Join(t.TempDir(), "gitops")
 	clusterName := "dev-cluster"
 	org := "local"
+	gitDir := filepath.Join(t.TempDir(), org)
 	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
 
 	clusterCtx := writeClusterFixture(t, configDir, clusterName, org, gitDir)
@@ -102,9 +103,9 @@ func TestBootstrapUsesHostIPURLAndReconciles(t *testing.T) {
 func TestBootstrapPrefersConfiguredGitURLAndTokenPath(t *testing.T) {
 	configDir := t.TempDir()
 	stateDir := t.TempDir()
-	gitDir := filepath.Join(t.TempDir(), "gitops")
 	clusterName := "dev-cluster"
 	org := "local"
+	gitDir := filepath.Join(t.TempDir(), org)
 	configuredTokenPath := filepath.Join(t.TempDir(), "cluster-user.token")
 	configuredRepoURL := "https://172.16.0.200:3001/newuser/test-repo.git"
 	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
@@ -161,12 +162,31 @@ func writeClusterFixture(t *testing.T, configDir, clusterName, org, gitDir strin
 func writeClusterFixtureWithGitOps(t *testing.T, configDir, clusterName, org, gitDir, gitURL, gitToken string) *localdev.ClusterContext {
 	t.Helper()
 
+	baseDir := filepath.Join(configDir, "clusters")
+	gitopsRoot := filepath.Dir(gitDir)
+	t.Setenv("OPENCENTER_GITOPS_DIR", gitopsRoot)
+
+	pathResolver := paths.NewPathResolverWithRoots(
+		baseDir,
+		gitopsRoot,
+		filepath.Join(baseDir, "state"),
+		filepath.Join(baseDir, "secrets"),
+		paths.DefaultResolutionOptions(),
+	)
+	if err := pathResolver.CreateClusterDirectories(context.Background(), clusterName, org); err != nil {
+		t.Fatalf("CreateClusterDirectories() error = %v", err)
+	}
+	clusterPaths, err := pathResolver.Resolve(context.Background(), clusterName, org)
+	if err != nil {
+		t.Fatalf("Resolve paths() error = %v", err)
+	}
+
 	cfg, err := v2.NewV2Default(clusterName, "kind")
 	if err != nil {
 		t.Fatalf("NewV2Default() error = %v", err)
 	}
 	cfg.OpenCenter.Meta.Organization = org
-	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
 	if gitURL != "" {
 		cfg.OpenCenter.GitOps.Repository.URL = gitURL
 	}
@@ -183,18 +203,10 @@ func writeClusterFixtureWithGitOps(t *testing.T, configDir, clusterName, org, gi
 		t.Fatalf("yaml.Marshal() error = %v", err)
 	}
 
-	orgDir := filepath.Join(configDir, "clusters", org)
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", clusterName)
-	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
-		t.Fatalf("mkdir cluster dir: %v", err)
-	}
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
-		t.Fatalf("mkdir git dir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(clusterDir, "kubeconfig.yaml"), []byte("apiVersion: v1\n"), 0o644); err != nil {
+	if err := os.WriteFile(clusterPaths.KubeconfigPath, []byte("apiVersion: v1\n"), 0o600); err != nil {
 		t.Fatalf("write kubeconfig: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(orgDir, "."+clusterName+"-config.yaml"), data, 0o644); err != nil {
+	if err := os.WriteFile(clusterPaths.ConfigPath, data, 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 

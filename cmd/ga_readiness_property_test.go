@@ -153,25 +153,23 @@ func initTestClusterForProperty3(t *testing.T, dir, clusterName, organization st
 		ClusterName:  clusterName,
 		Organization: organization,
 		Provider:     "openstack",
-		NoKeyGen:     true,
+		NoKeyGen:     false,
 		NoGitInit:    true,
 	})
 	if err != nil {
 		return fmt.Errorf("initializing cluster: %w", err)
 	}
 
-	// Update config to set git_dir to the organization directory.
-	// In production, git_dir points to the org root which contains
-	// infrastructure/, applications/, and secrets/ as siblings.
+	// Update config to set git_dir to the secure GitOps repository.
 	cfg := initResult.Config
-	cfg.OpenCenter.GitOps.Repository.LocalDir = initResult.ClusterPaths.OrganizationDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = initResult.ClusterPaths.GitOpsDir
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 
-	if err := os.WriteFile(initResult.ConfigPath, data, 0o644); err != nil {
+	if err := os.WriteFile(initResult.ConfigPath, data, 0o600); err != nil {
 		return fmt.Errorf("writing config: %w", err)
 	}
 
@@ -263,10 +261,9 @@ func TestProperty_SetupProducesRequiredDirectoryStructure(t *testing.T) {
 			return false
 		}
 
-		// Verify the three required subdirectories exist under the GitOps path.
+		// Verify the required subdirectories exist under the GitOps path.
 		// infrastructure/ and applications/ are created by CopyBase from embedded templates.
-		// secrets/ is created by CreateClusterDirectories during cluster init.
-		requiredDirs := []string{"infrastructure", "applications", "secrets"}
+		requiredDirs := []string{"infrastructure", "applications"}
 		for _, subdir := range requiredDirs {
 			dirPath := filepath.Join(gitOpsPath, subdir)
 			info, err := os.Stat(dirPath)

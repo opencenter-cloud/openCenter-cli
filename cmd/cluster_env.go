@@ -17,11 +17,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
-	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/credentials"
 	"github.com/spf13/cobra"
 )
@@ -76,23 +74,7 @@ This is useful for:
 				return fmt.Errorf("failed to load cluster configuration: %w", err)
 			}
 
-			// Get cluster paths
-			configManager, err := config.NewConfigManager("")
-			if err != nil {
-				return fmt.Errorf("failed to create config manager: %w", err)
-			}
-
-			// Get base directory for clusters
-			baseDir := configManager.GetConfig().Paths.ClustersDir
-			if baseDir == "" {
-				homeDir, err := os.UserHomeDir()
-				if err != nil {
-					return fmt.Errorf("failed to get home directory: %w", err)
-				}
-				baseDir = filepath.Join(homeDir, ".config", "opencenter", "clusters")
-			}
-
-			pathResolver := paths.NewPathResolver(baseDir)
+			pathResolver := config.NewPathResolverFromConfig()
 
 			// Parse cluster identifier to get organization and cluster name
 			organization, actualClusterName, err := config.ParseClusterIdentifier(clusterName)

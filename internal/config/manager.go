@@ -89,8 +89,8 @@ func NewConfigurationManager() (*ConfigurationManager, error) {
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
-	// Create PathResolver with base directory from CLI config
-	pathResolver := paths.NewPathResolver(ResolveClustersDir())
+	// Create PathResolver with secure zone roots from CLI config
+	pathResolver := NewPathResolverFromConfig()
 
 	// Create ValidationEngine
 	// Note: Config validation is currently disabled as the ConfigValidator
@@ -564,10 +564,6 @@ const configFileSuffix = "-config.yaml"
 
 // ListWithOrganization returns cluster names filtered by organization.
 //
-// Clusters are discovered from two sources and merged (deduplicated):
-//  1. Directories under <org>/infrastructure/clusters/<cluster>/
-//  2. Config files matching .<cluster>-config.yaml in the organization root
-//
 // If organization is empty, returns clusters from all organizations.
 //
 // Parameters:
@@ -582,25 +578,31 @@ const configFileSuffix = "-config.yaml"
 //
 //	clusters, err := manager.ListWithOrganization(ctx, "my-org")
 func (cm *ConfigurationManager) ListWithOrganization(ctx context.Context, organization string) ([]string, error) {
-	baseDir := cm.pathResolver.GetBaseDir()
+	_ = ctx
+
+	if err := cm.rejectLegacyLayouts(organization); err != nil {
+		return nil, err
+	}
+
+	stateRoot := cm.pathResolver.GetRoots().ClusterStateDir
 
 	// Check if base directory exists
-	if !cm.fileSystem.Exists(baseDir) {
+	if !cm.fileSystem.Exists(stateRoot) {
 		return []string{}, nil
 	}
 
 	// If organization is specified, only scan that organization
 	if organization != "" {
-		orgDir := filepath.Join(baseDir, organization)
-		names := cm.discoverClustersInOrg(orgDir)
+		orgDir := filepath.Join(stateRoot, organization)
+		names := cm.discoverClustersInStateOrg(orgDir)
 		sort.Strings(names)
 		return names, nil
 	}
 
 	// Scan all organizations
-	entries, err := os.ReadDir(baseDir)
+	entries, err := os.ReadDir(stateRoot)
 	if err != nil {
-		return nil, NewFileError("read", baseDir, err)
+		return nil, NewFileError("read", stateRoot, err)
 	}
 
 	var clusters []string
@@ -610,8 +612,8 @@ func (cm *ConfigurationManager) ListWithOrganization(ctx context.Context, organi
 		}
 
 		orgName := entry.Name()
-		orgDir := filepath.Join(baseDir, orgName)
-		names := cm.discoverClustersInOrg(orgDir)
+		orgDir := filepath.Join(stateRoot, orgName)
+		names := cm.discoverClustersInStateOrg(orgDir)
 
 		for _, name := range names {
 			clusters = append(clusters, fmt.Sprintf("%s/%s", orgName, name))
@@ -622,35 +624,68 @@ func (cm *ConfigurationManager) ListWithOrganization(ctx context.Context, organi
 	return clusters, nil
 }
 
-// discoverClustersInOrg returns deduplicated cluster names found in an
-// organization directory. It merges two discovery sources:
-//   - Subdirectories under <orgDir>/infrastructure/clusters/
-//   - Config files matching .<name>-config.yaml in <orgDir>/
-func (cm *ConfigurationManager) discoverClustersInOrg(orgDir string) []string {
-	seen := make(map[string]struct{})
+func (cm *ConfigurationManager) rejectLegacyLayouts(organization string) error {
+	clustersRoot := cm.pathResolver.GetRoots().ClustersDir
+	if organization != "" {
+		return legacyLayoutErrorIfMixed(filepath.Join(clustersRoot, organization))
+	}
 
-	// Source 1: directories under infrastructure/clusters/
-	infraDir := filepath.Join(orgDir, "infrastructure", "clusters")
-	if cm.fileSystem.Exists(infraDir) {
-		entries, err := os.ReadDir(infraDir)
-		if err == nil {
-			for _, entry := range entries {
-				if entry.IsDir() {
-					seen[entry.Name()] = struct{}{}
-				}
-			}
+	entries, err := os.ReadDir(clustersRoot)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return NewFileError("read", clustersRoot, err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if err := legacyLayoutErrorIfMixed(filepath.Join(clustersRoot, entry.Name())); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func legacyLayoutErrorIfMixed(orgDir string) error {
+	if _, err := os.Stat(filepath.Join(orgDir, ".git")); err != nil {
+		return nil
+	}
+	markers := []string{
+		filepath.Join(orgDir, "secrets"),
+		filepath.Join(orgDir, "infrastructure", "clusters"),
+	}
+	for _, marker := range markers {
+		if _, err := os.Stat(marker); err == nil {
+			return &paths.LegacyLayoutError{Path: orgDir}
+		} else if err != nil && !os.IsNotExist(err) {
+			return err
 		}
 	}
 
-	// Source 2: config files matching .<name>-config.yaml in the org root
+	if matches, err := filepath.Glob(filepath.Join(orgDir, ".*-config.yaml")); err == nil && len(matches) > 0 {
+		return &paths.LegacyLayoutError{Path: orgDir}
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
+// discoverClustersInStateOrg returns deduplicated cluster names found in a
+// secure cluster-state organization directory.
+func (cm *ConfigurationManager) discoverClustersInStateOrg(orgDir string) []string {
+	seen := make(map[string]struct{})
+
 	entries, err := os.ReadDir(orgDir)
 	if err == nil {
 		for _, entry := range entries {
-			if entry.IsDir() {
+			if !entry.IsDir() {
 				continue
 			}
-			name := entry.Name()
-			if clusterName, ok := parseConfigFileName(name); ok {
+			clusterName := entry.Name()
+			configPath := filepath.Join(orgDir, clusterName, clusterName+"-config.yaml")
+			if cm.fileSystem.Exists(configPath) || cm.fileSystem.Exists(filepath.Join(orgDir, clusterName)) {
 				seen[clusterName] = struct{}{}
 			}
 		}
@@ -664,15 +699,17 @@ func (cm *ConfigurationManager) discoverClustersInOrg(orgDir string) []string {
 }
 
 // parseConfigFileName extracts the cluster name from a config file name
-// matching the pattern .<cluster>-config.yaml. Returns the cluster name
-// and true if the filename matches, or empty string and false otherwise.
+// matching the pattern <cluster>-config.yaml (no leading dot). The leading
+// dot was dropped in the secure layout; config files now live in the
+// cluster-state zone at <state>/<org>/<cluster>/<cluster>-config.yaml.
+// Returns the cluster name and true if the filename matches, or empty string
+// and false otherwise.
 func parseConfigFileName(filename string) (string, bool) {
-	if !strings.HasPrefix(filename, ".") || !strings.HasSuffix(filename, configFileSuffix) {
+	if strings.HasPrefix(filename, ".") || !strings.HasSuffix(filename, configFileSuffix) {
 		return "", false
 	}
 
-	// Strip leading dot and trailing suffix
-	name := filename[1 : len(filename)-len(configFileSuffix)]
+	name := filename[:len(filename)-len(configFileSuffix)]
 	if name == "" {
 		return "", false
 	}

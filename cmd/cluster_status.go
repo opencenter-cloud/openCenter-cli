@@ -153,7 +153,7 @@ and suggest using 'opencenter cluster use' to set one.`,
 				return nil
 			}
 
-			pathResolver := paths.NewPathResolver(config.ResolveClustersDir())
+			pathResolver := config.NewPathResolverFromConfig()
 			resolvedClusterPaths, _ := pathResolver.Resolve(ctx, cfg.ClusterName(), cfg.OpenCenter.Meta.Organization)
 
 			if structuredOutput {
@@ -271,7 +271,7 @@ and suggest using 'opencenter cluster use' to set one.`,
 					fmt.Fprintf(cmd.OutOrStdout(), "  Provider Check:    %s\n", providerError)
 				}
 			}
-				stage := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Stage))
+			stage := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Stage))
 			status := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Meta.Status))
 			nextSteps := nextStepsForCluster(clusterName, stage, status)
 			fmt.Fprintf(cmd.OutOrStdout(), "\nNext Steps:\n")

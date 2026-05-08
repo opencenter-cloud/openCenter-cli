@@ -34,7 +34,7 @@ func NewClusterResolver() (*ClusterResolver, error) {
 
 	return &ClusterResolver{
 		configManager: configManager,
-		pathResolver:  paths.NewPathResolver(config.ResolveClustersDir()),
+		pathResolver:  config.NewPathResolverFromConfig(),
 	}, nil
 }
 

@@ -251,7 +251,7 @@ func removeClusterFiles(ctx context.Context, cmd *cobra.Command, cfg v2.Config, 
 
 	var clusterPaths *paths.ClusterPaths
 	if !isFlatConfig {
-		pathResolver := paths.NewPathResolver(config.ResolveClustersDir())
+		pathResolver := config.NewPathResolverFromConfig()
 		clusterPaths, _ = pathResolver.Resolve(context.Background(), clusterName, organization)
 	}
 

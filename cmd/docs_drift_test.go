@@ -143,7 +143,6 @@ func removedGAForbiddenTexts() []string {
 		"validate-" + secrets,
 		"sync-" + secrets,
 		cluster + " upgrade",
-		cluster + " validate-manifests",
 		cluster + " sync-status",
 		cluster + " check-keys",
 		cluster + " rotate-keys",

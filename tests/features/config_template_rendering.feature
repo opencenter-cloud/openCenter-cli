@@ -434,7 +434,7 @@ Feature: Configuration-driven template rendering
           default_storage_class: csi-cinder-sc-delete
         gitops:
           git_dir: <<tmp>>/gitops-repo
-          gitops_base_repo: ssh://git@github.com/opencenter-cloud/opencenter-gitops-base.git
+          gitops_base_repo: ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git
           gitops_base_release: v0.2.0
           gitops_branch: main
         services:

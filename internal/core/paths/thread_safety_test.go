@@ -142,10 +142,7 @@ func TestPathResolver_ConcurrentResolve(t *testing.T) {
 
 	for _, org := range orgs {
 		for _, cluster := range clusters {
-			clusterDir := filepath.Join(tmpDir, org, "infrastructure", "clusters", cluster)
-			if err := os.MkdirAll(clusterDir, 0755); err != nil {
-				t.Fatal(err)
-			}
+			createSecureClusterForTest(t, tmpDir, org, cluster)
 		}
 	}
 
@@ -201,10 +198,7 @@ func TestPathResolver_ConcurrentResolveWithFallback(t *testing.T) {
 
 	for i, cluster := range clusters {
 		org := orgs[i%len(orgs)]
-		clusterDir := filepath.Join(tmpDir, org, "infrastructure", "clusters", cluster)
-		if err := os.MkdirAll(clusterDir, 0755); err != nil {
-			t.Fatal(err)
-		}
+		createSecureClusterForTest(t, tmpDir, org, cluster)
 	}
 
 	resolver := NewPathResolver(tmpDir)
@@ -234,12 +228,7 @@ func TestPathResolver_ConcurrentCacheOperations(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
 
-	// Setup test cluster
-	orgDir := filepath.Join(tmpDir, "test-org")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 
 	resolver := NewPathResolver(tmpDir)
 
@@ -320,7 +309,7 @@ func TestPathResolver_ConcurrentCreateDirectories(t *testing.T) {
 
 	// Verify all directories were created
 	for _, cluster := range clusters {
-		clusterDir := filepath.Join(tmpDir, "test-org", "infrastructure", "clusters", cluster)
+		clusterDir := filepath.Join(tmpDir, "gitops", "test-org", "infrastructure", "clusters", cluster)
 		if stat, err := os.Stat(clusterDir); err != nil {
 			t.Errorf("cluster directory %s was not created: %v", clusterDir, err)
 		} else if !stat.IsDir() {
@@ -336,12 +325,7 @@ func TestPathResolver_ConcurrentGetters(t *testing.T) {
 	tmpDir := t.TempDir()
 	ctx := context.Background()
 
-	// Setup test cluster
-	orgDir := filepath.Join(tmpDir, "test-org")
-	clusterDir := filepath.Join(orgDir, "infrastructure", "clusters", "test-cluster")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	createSecureClusterForTest(t, tmpDir, "test-org", "test-cluster")
 
 	resolver := NewPathResolver(tmpDir)
 

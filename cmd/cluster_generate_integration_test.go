@@ -106,7 +106,7 @@ func TestClusterGenerateIntegrationKindProvider(t *testing.T) {
 	initCmd := newClusterInitCmd()
 	initCmd.SetOut(&bytes.Buffer{})
 	initCmd.SetErr(&bytes.Buffer{})
-	initCmd.SetArgs([]string{"kind-setup-int", "--type", "kind", "--no-keygen"})
+	initCmd.SetArgs([]string{"kind-setup-int", "--type", "kind"})
 	if err := initCmd.Execute(); err != nil {
 		t.Fatalf("cluster init failed: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestClusterGenerateIntegrationKindProvider(t *testing.T) {
 		t.Fatalf("expected deploy next step in generate output, got:\n%s", stdout.String())
 	}
 
-	clusterDir := filepath.Join(dir, "clusters", "opencenter", "infrastructure", "clusters", "kind-setup-int")
+	clusterDir := filepath.Join(dir, "clusters", "gitops", "opencenter", "infrastructure", "clusters", "kind-setup-int")
 	kindConfigPath := filepath.Join(clusterDir, "kind-config.yaml")
 	if _, err := os.Stat(kindConfigPath); err != nil {
 		t.Fatalf("expected kind-config.yaml to exist: %v", err)
@@ -159,7 +159,7 @@ func TestClusterGenerateIntegrationKindProviderDisableDefaultCNI(t *testing.T) {
 	initCmd := newClusterInitCmd()
 	initCmd.SetOut(&bytes.Buffer{})
 	initCmd.SetErr(&bytes.Buffer{})
-	initCmd.SetArgs([]string{"kind-setup-cni-int", "--type", "kind", "--no-keygen", "--kind-disable-default-cni"})
+	initCmd.SetArgs([]string{"kind-setup-cni-int", "--type", "kind", "--kind-disable-default-cni"})
 	if err := initCmd.Execute(); err != nil {
 		t.Fatalf("cluster init failed: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestClusterGenerateIntegrationKindProviderDisableDefaultCNI(t *testing.T) {
 		t.Fatalf("cluster generate failed: %v\nstderr: %s", err, stderr.String())
 	}
 
-	clusterDir := filepath.Join(dir, "clusters", "opencenter", "infrastructure", "clusters", "kind-setup-cni-int")
+	clusterDir := filepath.Join(dir, "clusters", "gitops", "opencenter", "infrastructure", "clusters", "kind-setup-cni-int")
 	kindConfigPath := filepath.Join(clusterDir, "kind-config.yaml")
 	kindConfigBytes, err := os.ReadFile(kindConfigPath)
 	if err != nil {
@@ -501,7 +501,7 @@ func initializeTestCluster(t *testing.T, clusterName, organization string) error
 		ClusterName:  clusterName,
 		Organization: organization,
 		Provider:     "openstack",
-		NoKeyGen:     true, // Skip key generation for faster test
+		NoKeyGen:     false,
 		NoGitInit:    true, // Skip git init for faster test
 	}
 
@@ -512,8 +512,7 @@ func initializeTestCluster(t *testing.T, clusterName, organization string) error
 
 	// Update the config to set a valid git_dir
 	cfg := result.Config
-	gitopsDir := filepath.Join(result.ClusterPaths.OrganizationDir, "gitops")
-	cfg.OpenCenter.GitOps.Repository.LocalDir = gitopsDir
+	cfg.OpenCenter.GitOps.Repository.LocalDir = result.ClusterPaths.GitOpsDir
 
 	// Save the updated config
 	configPath := result.ConfigPath

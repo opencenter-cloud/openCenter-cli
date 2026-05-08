@@ -15,8 +15,6 @@ package config
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"testing"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
@@ -31,14 +29,8 @@ func TestConfigurationManager_Integration(t *testing.T) {
 	// Create temporary directory for test
 	tmpDir := t.TempDir()
 
-	// Create organization and cluster structure
 	orgName := "test-org"
 	clusterName := "test-cluster"
-	clusterDir := filepath.Join(tmpDir, orgName, "infrastructure", "clusters", clusterName)
-	err := os.MkdirAll(clusterDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create cluster directory: %v", err)
-	}
 
 	// Create a test configuration file
 	// Create manager with test directory
@@ -52,7 +44,7 @@ func TestConfigurationManager_Integration(t *testing.T) {
 	manager := NewConfigurationManagerWithDeps(loader, validator, cache, pathResolver, fileSystem)
 
 	ctx := context.Background()
-	configPath := filepath.Join(tmpDir, orgName, "."+clusterName+"-config.yaml")
+	configPath := createSecureConfigTestCluster(t, tmpDir, orgName, clusterName)
 	cfg, err := v2.NewV2Default(clusterName, "kind")
 	if err != nil {
 		t.Fatalf("NewV2Default() error = %v", err)

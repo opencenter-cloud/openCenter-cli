@@ -2,8 +2,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: cert-manager
-{{- $certManager := index .OpenCenter.Services "cert-manager" -}}
-{{- $dnsProvider := $certManager.DNSProvider | default "route53" -}}
+{{ $certManager := index .OpenCenter.Services "cert-manager" -}}
+{{ $dnsProvider := $certManager.DNSProvider | default "route53" -}}
 resources:
   - "./rackspace-selfsigned-issuer.yaml"
   - "./rackspace-selfsigned-ca.yaml"

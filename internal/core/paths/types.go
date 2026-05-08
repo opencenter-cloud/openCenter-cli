@@ -14,85 +14,72 @@
 package paths
 
 // ClusterPaths contains all organization-aware paths for a cluster.
-// This structure supports the organization-based directory layout and provides
-// a single source of truth for all cluster-related paths.
-//
-// Directory Structure:
-//
-//	~/.config/opencenter/clusters/
-//	└── <organization>/
-//	    ├── infrastructure/
-//	    │   └── clusters/
-//	    │       └── <cluster>/
-//	    │           ├── .<cluster>-config.yaml  (ConfigPath)
-//	    │           ├── kubeconfig.yaml         (KubeconfigPath)
-//	    │           ├── inventory/              (InventoryPath)
-//	    │           ├── venv/                   (VenvPath)
-//	    │           └── .bin/                   (BinPath)
-//	    ├── applications/
-//	    │   └── overlays/
-//	    │       └── <cluster>/                  (ApplicationsDir)
-//	    ├── secrets/
-//	    │   ├── age/
-//	    │   │   └── keys/
-//	    │   │       └── <cluster>-key.txt       (SOPSKeyPath)
-//	    │   └── ssh/
-//	    │       └── <cluster>                   (SSHKeyPath)
-//	    └── .sops.yaml                          (SOPSConfigPath)
-//
-// All paths are absolute and fully resolved (no ~ or environment variables).
+// GitOps, local state, and secrets are separate zones. GitOps paths are safe to
+// commit; state and secrets must never resolve into the GitOps worktree.
 type ClusterPaths struct {
-	// OrganizationDir is the root directory for the organization
-	// Example: ~/.config/opencenter/clusters/<organization>
+	// OrganizationDir is the effective organization GitOps repository root.
+	// Example: ~/.config/opencenter/clusters/gitops/<organization>
 	OrganizationDir string
 
 	// GitOpsDir is the root directory for GitOps manifests
-	// Example: ~/.config/opencenter/clusters/<organization>
+	// Example: ~/.config/opencenter/clusters/gitops/<organization>
 	GitOpsDir string
 
+	// ClusterStateDir is the local state directory for this cluster.
+	// Example: ~/.config/opencenter/clusters/state/<organization>/<cluster>
+	ClusterStateDir string
+
 	// ClusterDir is the directory containing cluster-specific infrastructure
-	// Example: ~/.config/opencenter/clusters/<organization>/infrastructure/clusters/<cluster>
+	// Example: ~/.config/opencenter/clusters/gitops/<organization>/infrastructure/clusters/<cluster>
 	ClusterDir string
 
 	// ApplicationsDir is the directory containing cluster-specific application overlays
-	// Example: ~/.config/opencenter/clusters/<organization>/applications/overlays/<cluster>
+	// Example: ~/.config/opencenter/clusters/gitops/<organization>/applications/overlays/<cluster>
 	ApplicationsDir string
 
-	// SecretsDir is the directory containing encrypted secrets
-	// Example: ~/.config/opencenter/clusters/<organization>/secrets
+	// SecretsDir is the local secrets directory for this cluster.
+	// Example: ~/.config/opencenter/clusters/secrets/<organization>/<cluster>
 	SecretsDir string
 
 	// SOPSKeyPath is the path to the SOPS Age encryption key
-	// Example: ~/.config/opencenter/clusters/<organization>/secrets/age/keys/<cluster>-key.txt
+	// Example: ~/.config/opencenter/clusters/secrets/<organization>/<cluster>/age/keys/<cluster>-key.txt
 	SOPSKeyPath string
 
 	// SOPSConfigPath is the path to the SOPS configuration file
-	// Example: ~/.config/opencenter/clusters/<organization>/.sops.yaml
+	// Example: ~/.config/opencenter/clusters/gitops/<organization>/.sops.yaml
 	SOPSConfigPath string
 
 	// KubeconfigPath is the path to the cluster kubeconfig file
-	// Example: ~/.config/opencenter/clusters/<organization>/infrastructure/clusters/<cluster>/kubeconfig.yaml
+	// Example: ~/.config/opencenter/clusters/state/<organization>/<cluster>/kubeconfig.yaml
 	KubeconfigPath string
 
 	// InventoryPath is the path to the Ansible inventory directory
-	// Example: ~/.config/opencenter/clusters/<organization>/infrastructure/clusters/<cluster>/inventory
+	// Example: ~/.config/opencenter/clusters/state/<organization>/<cluster>/inventory
 	InventoryPath string
 
 	// VenvPath is the path to the Python virtual environment
-	// Example: ~/.config/opencenter/clusters/<organization>/infrastructure/clusters/<cluster>/venv
+	// Example: ~/.config/opencenter/clusters/state/<organization>/<cluster>/venv
 	VenvPath string
 
 	// BinPath is the path to cluster-specific binaries
-	// Example: ~/.config/opencenter/clusters/<organization>/infrastructure/clusters/<cluster>/.bin
+	// Example: ~/.config/opencenter/clusters/state/<organization>/<cluster>/.bin
 	BinPath string
 
 	// ConfigPath is the path to the cluster configuration file
-	// Example: ~/.config/opencenter/clusters/<organization>/infrastructure/clusters/<cluster>/.<cluster>-config.yaml
+	// Example: ~/.config/opencenter/clusters/state/<organization>/<cluster>/<cluster>-config.yaml
 	ConfigPath string
 
 	// SSHKeyPath is the path to the cluster SSH key
-	// Example: ~/.config/opencenter/clusters/<organization>/secrets/ssh/<cluster>-<env>-<region>
+	// Example: ~/.config/opencenter/clusters/secrets/<organization>/<cluster>/ssh/<cluster>-<env>-<region>
 	SSHKeyPath string
+}
+
+// PathRoots contains the zone root directories used by PathResolver.
+type PathRoots struct {
+	ClustersDir     string
+	GitOpsDir       string
+	ClusterStateDir string
+	SecretsDir      string
 }
 
 // ResolutionOptions contains options for path resolution.

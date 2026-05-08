@@ -222,6 +222,9 @@ func TestConfigManagerSetGetValue(t *testing.T) {
 		{"cluster_defaults.tops_auth_method", "ssh"},
 		{"logging.file.maxSize", 200},
 		{"paths.stateDir", filepath.Join(tmpDir, "state")},
+		{"paths.gitopsDir", filepath.Join(tmpDir, "gitops")},
+		{"paths.clusterStateDir", filepath.Join(tmpDir, "cluster-state")},
+		{"paths.secretsDir", filepath.Join(tmpDir, "secrets")},
 	}
 
 	for _, test := range tests {
@@ -1063,8 +1066,8 @@ func TestConfigValidatorComprehensive(t *testing.T) {
 			},
 			autoRepair:     false,
 			expectValid:    false,
-			expectErrors:   9, // level, format, maxSize, maxBackups, maxAge, configDir, clustersDir, pluginsDir, stateDir
-			expectWarnings: 8, // autoConfirm without dryRun, provider, region, environment, disk space warnings (configDir, clustersDir, pluginsDir, stateDir)
+			expectErrors:   12, // includes secure zone roots
+			expectWarnings: 8,  // autoConfirm without dryRun, provider, region, environment, disk space warnings (configDir, clustersDir, pluginsDir, stateDir)
 			expectRepairs:  0,
 		},
 		{
@@ -1097,8 +1100,8 @@ func TestConfigValidatorComprehensive(t *testing.T) {
 			autoRepair:     true,
 			expectValid:    true,
 			expectErrors:   0,
-			expectWarnings: 4, // Warnings are not auto-repaired (excluding disk space warnings which are repaired)
-			expectRepairs:  9, // All validation errors should be repaired (including pluginsDir and stateDir)
+			expectWarnings: 4,  // Warnings are not auto-repaired (excluding disk space warnings which are repaired)
+			expectRepairs:  12, // All validation errors should be repaired, including secure zone roots
 		},
 		{
 			name:           "valid config",

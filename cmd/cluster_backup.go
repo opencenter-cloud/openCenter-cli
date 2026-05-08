@@ -21,7 +21,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
+	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/operations"
 	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/spf13/cobra"
@@ -111,17 +111,11 @@ If no cluster name is provided, uses the currently active cluster.`,
 				return err
 			}
 
-			// Get config directory
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-
-			configDir := filepath.Join(homeDir, ".config", "opencenter")
+			configDir := config.GetConfigDir()
 			backupDir := filepath.Join(configDir, "backups")
 
 			// Create path resolver
-			pathResolver := paths.NewPathResolver(configDir)
+			pathResolver := config.NewPathResolverFromConfig()
 
 			// Create backup manager
 			bm, err := operations.NewBackupManager(pathResolver, backupDir)
@@ -196,17 +190,11 @@ configurations. You can then manually move them to the appropriate locations.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			backupID := args[0]
 
-			// Get config directory
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-
-			configDir := filepath.Join(homeDir, ".config", "opencenter")
+			configDir := config.GetConfigDir()
 			backupDir := filepath.Join(configDir, "backups")
 
 			// Create path resolver
-			pathResolver := paths.NewPathResolver(configDir)
+			pathResolver := config.NewPathResolverFromConfig()
 
 			// Create backup manager
 			bm, err := operations.NewBackupManager(pathResolver, backupDir)
@@ -262,17 +250,11 @@ Displays backup ID, creation time, size, and storage location.`,
 				clusterName = args[0]
 			}
 
-			// Get config directory
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-
-			configDir := filepath.Join(homeDir, ".config", "opencenter")
+			configDir := config.GetConfigDir()
 			backupDir := filepath.Join(configDir, "backups")
 
 			// Create path resolver
-			pathResolver := paths.NewPathResolver(configDir)
+			pathResolver := config.NewPathResolverFromConfig()
 
 			// Create backup manager
 			bm, err := operations.NewBackupManager(pathResolver, backupDir)
@@ -349,17 +331,11 @@ This operation is irreversible. Use with caution.`,
 				}
 			}
 
-			// Get config directory
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-
-			configDir := filepath.Join(homeDir, ".config", "opencenter")
+			configDir := config.GetConfigDir()
 			backupDir := filepath.Join(configDir, "backups")
 
 			// Create path resolver
-			pathResolver := paths.NewPathResolver(configDir)
+			pathResolver := config.NewPathResolverFromConfig()
 
 			// Create backup manager
 			bm, err := operations.NewBackupManager(pathResolver, backupDir)
@@ -423,14 +399,9 @@ If no cluster name is provided, uses the currently active cluster.`,
 				return fmt.Errorf("invalid retention: %w", err)
 			}
 
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-
-			configDir := filepath.Join(homeDir, ".config", "opencenter")
+			configDir := config.GetConfigDir()
 			backupDir := filepath.Join(configDir, "backups")
-			pathResolver := paths.NewPathResolver(configDir)
+			pathResolver := config.NewPathResolverFromConfig()
 
 			bm, err := operations.NewBackupManager(pathResolver, backupDir)
 			if err != nil {

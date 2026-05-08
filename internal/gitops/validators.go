@@ -68,6 +68,7 @@ func (v *ManifestValidator) Validate() error {
 	v.validateVSphereCSI()
 	v.validateMetalLB()
 	v.validateHeadlamp()
+	v.validateSecurityPolicy()
 
 	if len(v.errors) > 0 {
 		return fmt.Errorf("manifest validation failed with %d errors:\n%s",
@@ -75,6 +76,17 @@ func (v *ManifestValidator) Validate() error {
 	}
 
 	return nil
+}
+
+func (v *ManifestValidator) validateSecurityPolicy() {
+	findings, err := ScanGitOpsSecrets(v.gitDir)
+	if err != nil {
+		v.errors = append(v.errors, fmt.Sprintf("security scan failed: %v", err))
+		return
+	}
+	for _, finding := range findings {
+		v.errors = append(v.errors, fmt.Sprintf("%s: %s: %s", finding.Path, finding.Rule, finding.Message))
+	}
 }
 
 // validateFile validates a file using the ValidationEngine
@@ -249,7 +261,7 @@ func (v *ManifestValidator) validateCertManager() {
 		if dataMap, ok := secret["data"].(map[string]interface{}); ok {
 			for key, value := range dataMap {
 				if strValue, ok := value.(string); ok {
-					if !v.isBase64(strValue) {
+					if !strings.HasPrefix(strings.TrimSpace(strValue), "ENC[") && !v.isBase64(strValue) {
 						v.errors = append(v.errors, fmt.Sprintf("%s: secret field '%s' is not base64 encoded", file, key))
 					}
 				}

@@ -607,7 +607,7 @@ func (m *DefaultSecretsManager) loadClusterConfig(ctx context.Context, cluster s
 }
 
 // getConfigPath returns the expected path to the cluster config file.
-// The config file is located at ~/.config/opencenter/clusters/<org>/<cluster>/.k8s-<cluster>-config.yaml
+// The config file is located at ~/.config/opencenter/clusters/blueprints/<org>/<cluster>/<cluster>-config.yaml
 func (m *DefaultSecretsManager) getConfigPath(ctx context.Context, cluster string) (string, error) {
 	pathResolver := config.NewPathResolverFromConfig()
 	clusterPaths, err := pathResolver.ResolveWithFallback(ctx, cluster)
@@ -615,7 +615,23 @@ func (m *DefaultSecretsManager) getConfigPath(ctx context.Context, cluster strin
 		return clusterPaths.ConfigPath, nil
 	}
 
-	return filepath.Join(config.GetClusterStateDir(), "<org>", cluster, fmt.Sprintf("%s-config.yaml", cluster)), nil
+	// Fallback: search blueprints directory for the cluster config
+	blueprintsDir := config.GetBlueprintsDir()
+	entries, readErr := os.ReadDir(blueprintsDir)
+	if readErr == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			candidate := filepath.Join(blueprintsDir, entry.Name(), cluster, fmt.Sprintf("%s-config.yaml", cluster))
+			if _, statErr := os.Stat(candidate); statErr == nil {
+				return candidate, nil
+			}
+		}
+	}
+
+	// Final fallback: assume default "opencenter" organization
+	return filepath.Join(blueprintsDir, "opencenter", cluster, fmt.Sprintf("%s-config.yaml", cluster)), nil
 }
 
 // extractSecretsFromConfig extracts all secrets from the config file.

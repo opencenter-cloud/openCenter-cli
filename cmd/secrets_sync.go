@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
+	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/secrets"
 	"github.com/spf13/cobra"
 )
@@ -287,57 +287,51 @@ func runMultiClusterSync(
 
 // discoverClusters finds all clusters, optionally filtered by organization
 func discoverClusters(organization string) ([]string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user home directory: %w", err)
-	}
+	blueprintsDir := config.GetBlueprintsDir()
 
-	clustersDir := filepath.Join(homeDir, ".config", "opencenter", "clusters")
-
-	// Check if clusters directory exists
-	if _, err := os.Stat(clustersDir); os.IsNotExist(err) {
+	// Check if blueprints directory exists
+	if _, err := os.Stat(blueprintsDir); os.IsNotExist(err) {
 		return []string{}, nil
 	}
 
 	var clusters []string
 
-	// Walk the clusters directory
-	err = filepath.Walk(clustersDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip directories with errors
-		}
-
-		// Look for config files matching pattern .k8s-*-config.yaml
-		if !info.IsDir() && strings.HasPrefix(info.Name(), ".k8s-") && strings.HasSuffix(info.Name(), "-config.yaml") {
-			// Extract cluster name from filename
-			clusterName := strings.TrimPrefix(info.Name(), ".k8s-")
-			clusterName = strings.TrimSuffix(clusterName, "-config.yaml")
-
-			// Get organization from path
-			relPath, err := filepath.Rel(clustersDir, filepath.Dir(path))
-			if err != nil {
-				return nil
-			}
-
-			// Organization is the first directory component
-			parts := strings.Split(relPath, string(filepath.Separator))
-			if len(parts) > 0 {
-				org := parts[0]
-
-				// Filter by organization if specified
-				if organization != "" && org != organization {
-					return nil
-				}
-			}
-
-			clusters = append(clusters, clusterName)
-		}
-
-		return nil
-	})
-
+	// List organization directories under blueprints
+	orgEntries, err := os.ReadDir(blueprintsDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to walk clusters directory: %w", err)
+		return nil, fmt.Errorf("failed to read blueprints directory: %w", err)
+	}
+
+	for _, orgEntry := range orgEntries {
+		if !orgEntry.IsDir() {
+			continue
+		}
+
+		orgName := orgEntry.Name()
+
+		// Filter by organization if specified
+		if organization != "" && orgName != organization {
+			continue
+		}
+
+		orgPath := filepath.Join(blueprintsDir, orgName)
+		clusterEntries, err := os.ReadDir(orgPath)
+		if err != nil {
+			continue // Skip organizations with read errors
+		}
+
+		for _, clusterEntry := range clusterEntries {
+			if !clusterEntry.IsDir() {
+				continue
+			}
+
+			clusterName := clusterEntry.Name()
+			// Verify config file exists: <cluster>-config.yaml
+			configPath := filepath.Join(orgPath, clusterName, clusterName+"-config.yaml")
+			if _, err := os.Stat(configPath); err == nil {
+				clusters = append(clusters, clusterName)
+			}
+		}
 	}
 
 	return clusters, nil

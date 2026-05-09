@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -84,7 +85,7 @@ func TestGetAdoptionMode(t *testing.T) {
 		},
 		{
 			name: "BaseServiceCfg with sync mode",
-			input: config.BaseServiceCfg{
+			input: services.BaseConfig{
 				Enabled:      true,
 				AdoptionMode: config.AdoptionModeSync,
 			},
@@ -92,7 +93,7 @@ func TestGetAdoptionMode(t *testing.T) {
 		},
 		{
 			name: "ServiceCfg with deferred mode",
-			input: config.ServiceCfg{
+			input: services.BaseConfig{
 				Enabled:      true,
 				AdoptionMode: config.AdoptionModeDeferred,
 			},
@@ -273,7 +274,7 @@ func TestGetServiceAdoptionSettings(t *testing.T) {
 	}{
 		{
 			name: "service with sync mode",
-			input: config.ServiceCfg{
+			input: services.BaseConfig{
 				Enabled:      true,
 				AdoptionMode: config.AdoptionModeSync,
 			},
@@ -281,7 +282,7 @@ func TestGetServiceAdoptionSettings(t *testing.T) {
 		},
 		{
 			name: "service with deferred mode",
-			input: config.ServiceCfg{
+			input: services.BaseConfig{
 				Enabled:      true,
 				AdoptionMode: config.AdoptionModeDeferred,
 			},

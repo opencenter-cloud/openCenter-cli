@@ -95,13 +95,12 @@ func TestBuiltInServicesIntegration(t *testing.T) {
 		config := &services.VeleroConfig{
 			BaseConfig: services.BaseConfig{
 				Enabled: true,
-				Status:  "running",
 			},
 			BackupBucket: "my-bucket",
 		}
 
 		status := veleroService.Plugin.Status(config)
-		assert.Equal(t, "running", status.State)
+		assert.Equal(t, "pending", status.State)
 		assert.Contains(t, status.Message, "Velero")
 		assert.NotNil(t, status.Details)
 	})

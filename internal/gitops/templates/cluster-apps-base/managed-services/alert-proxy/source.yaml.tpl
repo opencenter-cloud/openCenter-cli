@@ -6,6 +6,6 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1h
-  url: {{ (index .OpenCenter.ManagedServices "alert-proxy").Uri | default (index .OpenCenter.ManagedServices "alert-proxy").GitOpsSourceRepo }}
+  url: {{ (index .OpenCenter.ManagedServices "alert-proxy").Source.Repo | default (index .OpenCenter.ManagedServices "alert-proxy").Source.Repo }}
   ref:
-    branch: {{ (index .OpenCenter.ManagedServices "alert-proxy").Branch | default (index .OpenCenter.ManagedServices "alert-proxy").GitOpsSourceBranch | default "main" }}
+    branch: {{ (index .OpenCenter.ManagedServices "alert-proxy").Source.Branch | default (index .OpenCenter.ManagedServices "alert-proxy").Source.Source.Branch | default "main" }}

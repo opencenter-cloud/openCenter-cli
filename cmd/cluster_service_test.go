@@ -734,11 +734,11 @@ func TestClusterServiceStatus(t *testing.T) {
 				if !strings.Contains(output, "SERVICE NAME") {
 					t.Error("expected header in output")
 				}
-				if !strings.Contains(output, "ENABLED") {
-					t.Error("expected ENABLED column in output")
+				if !strings.Contains(output, "STATE") {
+					t.Error("expected STATE column in output")
 				}
-				if !strings.Contains(output, "STATUS") {
-					t.Error("expected STATUS column in output")
+				if !strings.Contains(output, "ADOPTION MODE") {
+					t.Error("expected ADOPTION MODE column in output")
 				}
 			},
 		},
@@ -754,8 +754,8 @@ func TestClusterServiceStatus(t *testing.T) {
 				if cfg.OpenCenter.Services == nil {
 					cfg.OpenCenter.Services = make(v2.ServiceMap)
 				}
-				cfg.OpenCenter.Services["prometheus"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: "running"}}
-				cfg.OpenCenter.Services["grafana"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false, Status: "pending"}}
+				cfg.OpenCenter.Services["prometheus"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
+				cfg.OpenCenter.Services["grafana"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}}
 				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -774,8 +774,8 @@ func TestClusterServiceStatus(t *testing.T) {
 				if !strings.Contains(output, "disabled") {
 					t.Error("expected 'disabled' in output")
 				}
-				if !strings.Contains(output, "running") {
-					t.Error("expected 'running' status in output")
+				if !strings.Contains(output, "managed") {
+					t.Error("expected 'managed' adoption mode in output")
 				}
 			},
 		},
@@ -791,7 +791,7 @@ func TestClusterServiceStatus(t *testing.T) {
 				if cfg.OpenCenter.ManagedServices == nil {
 					cfg.OpenCenter.ManagedServices = make(v2.ServiceMap)
 				}
-				cfg.OpenCenter.ManagedServices["custom-app"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: "success"}}
+				cfg.OpenCenter.ManagedServices["custom-app"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
 				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -802,10 +802,7 @@ func TestClusterServiceStatus(t *testing.T) {
 					t.Error("expected custom-app in output")
 				}
 				if !strings.Contains(output, "managed") {
-					t.Error("expected '(managed)' label in output")
-				}
-				if !strings.Contains(output, "success") {
-					t.Error("expected 'success' status in output")
+					t.Error("expected '(managed)' label or adoption mode in output")
 				}
 			},
 		},
@@ -821,7 +818,7 @@ func TestClusterServiceStatus(t *testing.T) {
 				if cfg.OpenCenter.Services == nil {
 					cfg.OpenCenter.Services = make(v2.ServiceMap)
 				}
-				cfg.OpenCenter.Services["loki"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Status: ""}}
+				cfg.OpenCenter.Services["loki"] = &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}}
 				if err := saveConfig(context.Background(), cfg); err != nil {
 					t.Fatalf("failed to save config: %v", err)
 				}
@@ -831,19 +828,19 @@ func TestClusterServiceStatus(t *testing.T) {
 				if !strings.Contains(output, "loki") {
 					t.Error("expected loki in output")
 				}
-				// Should show "-" for empty status
+				// Should show "managed" as default adoption mode
 				lines := strings.Split(output, "\n")
 				found := false
 				for _, line := range lines {
 					if strings.Contains(line, "loki") {
-						if strings.Contains(line, "-") {
+						if strings.Contains(line, "managed") {
 							found = true
 							break
 						}
 					}
 				}
 				if !found {
-					t.Error("expected '-' for empty status field")
+					t.Error("expected 'managed' adoption mode for loki service")
 				}
 			},
 		},

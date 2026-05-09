@@ -568,7 +568,7 @@ func TestGetRelatedFields(t *testing.T) {
 		},
 		{
 			name:           "loki storage type field",
-			field:          "opencenter.services.loki.loki_storage_type",
+			field:          "opencenter.services.loki.storage_type",
 			expectNonZero:  true,
 			expectContains: "swift",
 		},

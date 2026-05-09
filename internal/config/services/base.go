@@ -20,27 +20,35 @@ const (
 	AdoptionModeTakeover AdoptionMode = "takeover"
 )
 
-// BaseConfig contains common fields for all services
+// ServiceSource describes where the GitOps manifests for a service come from.
+type ServiceSource struct {
+	Repo    string `yaml:"repo,omitempty" json:"repo,omitempty" jsonschema:"description=GitOps source repository URL"`
+	Branch  string `yaml:"branch,omitempty" json:"branch,omitempty" jsonschema:"description=Git branch to track"`
+	Release string `yaml:"release,omitempty" json:"release,omitempty" jsonschema:"description=Pinned release tag (mutually exclusive with branch)"`
+}
+
+// ServiceImage describes the container image for a service.
+type ServiceImage struct {
+	Repository string `yaml:"repository,omitempty" json:"repository,omitempty" jsonschema:"description=Container image repository"`
+	Tag        string `yaml:"tag,omitempty" json:"tag,omitempty" jsonschema:"description=Container image tag"`
+}
+
+// BaseConfig contains common fields for all services.
+// Service-specific configs embed this via yaml:",inline".
+//
+// Design decisions (clean break from v1 flat layout):
+//   - `status` removed: runtime state does not belong in declarative config.
+//   - `hostname` / `uri` removed from base: derivable from cluster FQDN + service name;
+//     services that genuinely need a custom hostname declare it in their own config section.
+//   - `source` groups all GitOps source fields into a nested object.
+//   - `image` groups container image fields into a nested object.
+//   - `adoption_mode` constrained to a known enum.
 type BaseConfig struct {
-	Enabled      bool         `yaml:"enabled" json:"enabled"`
+	Enabled      bool         `yaml:"enabled" json:"enabled" jsonschema:"description=Whether this service is deployed"`
 	AdoptionMode AdoptionMode `yaml:"adoption_mode,omitempty" json:"adoption_mode,omitempty" jsonschema:"description=How Flux interacts with this service,enum=managed,enum=external,enum=sync,enum=deferred,enum=takeover,default=managed"`
-	Status       string       `yaml:"status,omitempty" json:"status,omitempty" jsonschema:"description=Service deployment status (pending/running/success/failed)"`
-	Namespace    string       `yaml:"namespace" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`
-	Hostname     string       `yaml:"hostname" json:"hostname,omitempty" jsonschema:"description=Hostname for HTTPRoute configuration"`
-
-	// Image configuration
-	ImageRepository string `yaml:"image_repository" json:"image_repository,omitempty" jsonschema:"description=Container image repository"`
-	ImageTag        string `yaml:"image_tag" json:"image_tag,omitempty" jsonschema:"description=Container image tag"`
-
-	// Version control fields (for GitOps managed services)
-	Release string `yaml:"release" json:"release,omitempty" jsonschema:"description=Release version"`
-	Branch  string `yaml:"branch" json:"branch,omitempty" jsonschema:"description=Git branch"`
-	Uri     string `yaml:"uri" json:"uri,omitempty" jsonschema:"description=Git repository URI"`
-
-	// GitOps source fields (for managed services)
-	GitOpsSourceRepo    string `yaml:"gitops_source_repo" json:"gitops_source_repo,omitempty" jsonschema:"description=GitOps source repository URL"`
-	GitOpsSourceRelease string `yaml:"gitops_source_release" json:"gitops_source_release,omitempty" jsonschema:"description=GitOps source release tag"`
-	GitOpsSourceBranch  string `yaml:"gitops_source_branch" json:"gitops_source_branch,omitempty" jsonschema:"description=GitOps source branch"`
+	Namespace    string       `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`
+	Source       ServiceSource `yaml:"source,omitempty" json:"source,omitempty" jsonschema:"description=GitOps source configuration"`
+	Image        ServiceImage  `yaml:"image,omitempty" json:"image,omitempty" jsonschema:"description=Container image configuration"`
 }
 
 // IsEnabled returns true if the service is enabled.
@@ -48,9 +56,10 @@ func (b BaseConfig) IsEnabled() bool {
 	return b.Enabled
 }
 
-// GetStatus returns the status of the service.
+// GetStatus is retained for interface compatibility but always returns empty.
+// Status is no longer stored in declarative config.
 func (b BaseConfig) GetStatus() string {
-	return b.Status
+	return ""
 }
 
 // GetAdoptionMode returns the adoption mode of the service.

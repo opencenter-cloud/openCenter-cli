@@ -1,7 +1,7 @@
 ---
 nodeSelector: {}
 image:
-  tag: {{ (index .OpenCenter.ManagedServices "alert-proxy").ImageTag | default "latest" }}
+  tag: {{ (index .OpenCenter.ManagedServices "alert-proxy").Image.Tag | default "latest" }}
 
 config:
   logging:

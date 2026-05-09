@@ -280,14 +280,13 @@ func TestHarborPlugin_Status(t *testing.T) {
 			config: &services.HarborConfig{
 				BaseConfig: services.BaseConfig{
 					Enabled: true,
-					Status:  "running",
 				},
 				ExternalURL:        "https://harbor.example.com",
 				StorageType:        "s3",
 				DatabaseType:       "external",
 				RegistryVolumeSize: 100,
 			},
-			wantState:    "running",
+			wantState:    "pending",
 			wantMsg:      "Harbor container registry",
 			checkDetails: true,
 		},

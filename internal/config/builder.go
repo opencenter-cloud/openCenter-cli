@@ -295,8 +295,6 @@ func (b *FluentConfigBuilder) WithService(name string, enabled bool) ConfigBuild
 			s.Enabled = enabled
 		case *services.VSphereCSIConfig:
 			s.Enabled = enabled
-		case *services.WeaveGitOpsConfig:
-			s.Enabled = enabled
 		case *services.AlertProxyConfig:
 			s.Enabled = enabled
 		case *services.DefaultServiceConfig:

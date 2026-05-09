@@ -18,12 +18,12 @@ import (
 	"reflect"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/registry"
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	"gopkg.in/yaml.v3"
 )
 
 // UnmarshalYAML implements custom YAML unmarshaling for ServiceMap.
 // It uses the service registry to determine the correct type for each service.
-// Requirements: 17.1, 17.2, 17.7
 func (sm *ServiceMap) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
 		return fmt.Errorf("expected mapping node for services, got %v", node.Kind)
@@ -40,13 +40,8 @@ func (sm *ServiceMap) UnmarshalYAML(node *yaml.Node) error {
 		// Look up the service type in the registry
 		serviceType := registry.GetServiceConfigType(serviceName)
 		if serviceType == nil {
-			// Service not registered, skip or use generic map
-			var genericConfig map[string]interface{}
-			if err := valueNode.Decode(&genericConfig); err != nil {
-				return fmt.Errorf("failed to decode service %s: %w", serviceName, err)
-			}
-			(*sm)[serviceName] = genericConfig
-			continue
+			// Unregistered service: decode into DefaultServiceConfig
+			serviceType = reflect.TypeOf(services.DefaultServiceConfig{})
 		}
 
 		// Create a new instance of the registered type
@@ -67,23 +62,4 @@ func (sm *ServiceMap) UnmarshalYAML(node *yaml.Node) error {
 // MarshalYAML implements custom YAML marshaling for ServiceMap.
 func (sm ServiceMap) MarshalYAML() (interface{}, error) {
 	return map[string]any(sm), nil
-}
-
-// BaseServiceConfig represents common fields shared by all services.
-// Individual service configurations should embed this struct.
-type BaseServiceConfig struct {
-	Enabled          bool              `yaml:"enabled" json:"enabled"`
-	Status           string            `yaml:"status,omitempty" json:"status,omitempty"`
-	Namespace        string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Hostname         string            `yaml:"hostname,omitempty" json:"hostname,omitempty"`
-	ImageRepository  string            `yaml:"image_repository,omitempty" json:"image_repository,omitempty"`
-	ImageTag         string            `yaml:"image_tag,omitempty" json:"image_tag,omitempty"`
-	Release          string            `yaml:"release,omitempty" json:"release,omitempty"`
-	Branch           string            `yaml:"branch,omitempty" json:"branch,omitempty"`
-	URI              string            `yaml:"uri,omitempty" json:"uri,omitempty"`
-	GitOpsSourceType string            `yaml:"gitops_source_type,omitempty" json:"gitops_source_type,omitempty"`
-	GitOpsSourceURL  string            `yaml:"gitops_source_url,omitempty" json:"gitops_source_url,omitempty"`
-	GitOpsSourceRef  string            `yaml:"gitops_source_ref,omitempty" json:"gitops_source_ref,omitempty"`
-	Labels           map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
-	Annotations      map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
 }

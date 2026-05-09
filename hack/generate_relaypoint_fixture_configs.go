@@ -364,15 +364,10 @@ func buildRelayPointConfig(spec clusterSpec) v2.Config {
 	}
 
 	if service, ok := cfg.OpenCenter.ManagedServices["alert-proxy"].(*services.AlertProxyConfig); ok {
-		service.Uri = "https://github.com/rackerlabs/alert-proxy.git"
-		service.Branch = "main"
-		service.ImageTag = "1761602071"
-		service.AlertManagerBaseUrl = "http://observability-kube-prometh-alertmanager.observability.svc.cluster.local:9093/api/v2/alerts"
+		service.Source.Branch = "main"
+		service.Image.Tag = "1761602071"
+		service.AlertManagerBaseURL = "http://observability-kube-prometh-alertmanager.observability.svc.cluster.local:9093/api/v2/alerts"
 		service.HTTPRouteFQDN = clusterFQDN
-	}
-
-	if service, ok := cfg.OpenCenter.Services["weave-gitops"].(*services.WeaveGitOpsConfig); ok {
-		service.Hostname = fmt.Sprintf("gitops.%s", clusterFQDN)
 	}
 
 	sortServiceMaps(cfg.OpenCenter.Services)

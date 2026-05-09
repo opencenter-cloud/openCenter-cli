@@ -318,14 +318,18 @@ func defaultConfig(name string) Config {
 			ManagedService: ServiceMap{
 				"alert-proxy": &services.AlertProxyConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:             false, // Disabled by default - requires device ID, service token, and account number
-						ImageRepository:     "ghcr.io/opencenter-cloud/alert-proxy",
-						ImageTag:            "latest",
-						GitOpsSourceRepo:    "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git",
-						GitOpsSourceRelease: "v0.1.0",
-						GitOpsSourceBranch:  "main",
+						Enabled: false, // Disabled by default - requires device ID, service token, and account number
+						Source: services.ServiceSource{
+							Repo:    "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git",
+							Release: "v0.1.0",
+							Branch:  "main",
+						},
+						Image: services.ServiceImage{
+							Repository: "ghcr.io/opencenter-cloud/alert-proxy",
+							Tag:        "latest",
+						},
 					},
-					AlertManagerBaseUrl: "",
+					AlertManagerBaseURL: "",
 					HTTPRouteFQDN:       fmt.Sprintf("https://alerts.%s.%s.k8s.opencenter.cloud", name, region),
 				},
 			},
@@ -362,17 +366,17 @@ func defaultConfig(name string) Config {
 				},
 				"headlamp": &services.HeadlampConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:  true, // Enabled by default for OpenStack provider
-						Hostname: fmt.Sprintf("dashboard.%s.%s.k8s.opencenter.cloud", name, region),
+						Enabled: true, // Enabled by default for OpenStack provider
 					},
+					Hostname:      fmt.Sprintf("dashboard.%s.%s.k8s.opencenter.cloud", name, region),
 					OIDCIssuerURL: fmt.Sprintf("https://auth.%s.%s.k8s.opencenter.cloud/realms/opencenter", name, region),
 					OIDCClientID:  "kubernetes",
 				},
 				"keycloak": &services.KeycloakConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:  true, // Enabled by default for OpenStack provider
-						Hostname: fmt.Sprintf("auth.%s.%s.k8s.opencenter.cloud", name, region),
+						Enabled: true, // Enabled by default for OpenStack provider
 					},
+					Hostname:    fmt.Sprintf("auth.%s.%s.k8s.opencenter.cloud", name, region),
 					Realm:       "opencenter",
 					ClientID:    "kubernetes",
 					FrontendURL: fmt.Sprintf("https://auth.%s.%s.k8s.opencenter.cloud", name, region),
@@ -446,15 +450,16 @@ func defaultConfig(name string) Config {
 				},
 				"vsphere-csi": &services.VSphereCSIConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:         false, // Disabled by default, only for VMware environments
-						ImageRepository: "registry.k8s.io/csi-vsphere",
-						ImageTag:        "v3.3.0",
+						Enabled: false, // Disabled by default, only for VMware environments
+						Image: services.ServiceImage{
+							Repository: "registry.k8s.io/csi-vsphere",
+							Tag:        "v3.3.0",
+						},
 					},
 				},
-				"weave-gitops": &services.WeaveGitOpsConfig{
+				"weave-gitops": &services.DefaultServiceConfig{
 					BaseConfig: services.BaseConfig{
-						Enabled:  false,
-						Hostname: fmt.Sprintf("gitops.%s.%s.k8s.opencenter.cloud", name, region),
+						Enabled: false,
 					},
 				},
 			},

@@ -147,8 +147,6 @@ func (p *WeaveGitOpsPlugin) Type() svc.ServiceType {
 }
 
 func (p *WeaveGitOpsPlugin) Validate(config interface{}) error {
-	// Validation is handled by validators
-	// This method is here to satisfy the ServicePlugin interface
 	return nil
 }
 
@@ -157,7 +155,7 @@ func (p *WeaveGitOpsPlugin) Render(ctx context.Context, config interface{}, work
 }
 
 func (p *WeaveGitOpsPlugin) Status(config interface{}) svc.ServiceStatus {
-	cfg, ok := config.(*services.WeaveGitOpsConfig)
+	cfg, ok := config.(*services.DefaultServiceConfig)
 	if !ok {
 		return svc.ServiceStatus{
 			State:   "failed",
@@ -172,14 +170,8 @@ func (p *WeaveGitOpsPlugin) Status(config interface{}) svc.ServiceStatus {
 		}
 	}
 
-	// Get status from config, default to "pending" if not set
-	state := cfg.GetStatus()
-	if state == "" {
-		state = "pending"
-	}
-
 	return svc.ServiceStatus{
-		State:   state,
+		State:   "pending",
 		Message: "Weave GitOps service",
 	}
 }
@@ -235,7 +227,7 @@ func (p *AlertProxyPlugin) Status(config interface{}) svc.ServiceStatus {
 		State:   state,
 		Message: "Alert proxy service",
 		Details: map[string]interface{}{
-			"alert_manager_base_url": cfg.AlertManagerBaseUrl,
+			"alert_manager_base_url": cfg.AlertManagerBaseURL,
 			"http_route_fqdn":        cfg.HTTPRouteFQDN,
 		},
 	}

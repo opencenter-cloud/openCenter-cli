@@ -463,9 +463,9 @@ func (se *SuggestionEngine) GetRelatedFields(field string) []string {
 			"opentofu.backend.local",
 			"opentofu.backend.s3",
 		},
-		"opencenter.services.loki.loki_storage_type": {
+		"opencenter.services.loki.storage_type": {
 			"opencenter.services.loki.swift_auth_url",
-			"opencenter.services.loki.loki_s3_region",
+			"opencenter.services.loki.s3_region",
 		},
 	}
 

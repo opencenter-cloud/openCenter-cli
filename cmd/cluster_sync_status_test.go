@@ -204,15 +204,11 @@ func TestUpdateServiceStatus(t *testing.T) {
 	cfg := &v2.Config{}
 	cfg.OpenCenter.Services = make(v2.ServiceMap)
 	cfg.OpenCenter.Services["test-service"] = &services.DefaultServiceConfig{
-		BaseConfig: services.BaseConfig{Enabled: true, Status: "unknown"},
+		BaseConfig: services.BaseConfig{Enabled: true},
 	}
 
+	// updateServiceStatus is now a no-op (status removed from config)
 	updateServiceStatus(cfg, "test-service", "success")
-
-	svc := cfg.OpenCenter.Services["test-service"].(*services.DefaultServiceConfig)
-	if svc.Status != "success" {
-		t.Errorf("expected status 'success', got %q", svc.Status)
-	}
 }
 
 func TestUpdateServiceStatusNonExistent(t *testing.T) {
@@ -234,7 +230,7 @@ func TestUpdateServiceStatusNilServices(t *testing.T) {
 func TestSyncServiceStatus(t *testing.T) {
 	// Test with a service config that has GetStatus method
 	serviceConfig := &services.DefaultServiceConfig{
-		BaseConfig: services.BaseConfig{Enabled: true, Status: "running"},
+		BaseConfig: services.BaseConfig{Enabled: true},
 	}
 
 	// This will fail to query the cluster (no kubeconfig), but should return the old status correctly
@@ -244,8 +240,9 @@ func TestSyncServiceStatus(t *testing.T) {
 		t.Errorf("expected name 'test-service', got %q", result.Name)
 	}
 
-	if result.OldStatus != "running" {
-		t.Errorf("expected old status 'running', got %q", result.OldStatus)
+	// OldStatus comes from GetStatus() which now always returns ""
+	if result.OldStatus != "" {
+		t.Errorf("expected old status '', got %q", result.OldStatus)
 	}
 
 	// New status should be "pending" since the cluster query will fail
@@ -298,12 +295,15 @@ func TestClusterSyncStatusUsesGlobalJSONOutputThroughClusterStatus(t *testing.T)
 	if err != nil {
 		t.Fatalf("load saved config: %v", err)
 	}
+	// Status is no longer persisted in config (runtime state only).
+	// Verify the service still exists and is enabled.
 	statusGetter, ok := cfg.OpenCenter.Services["fluxcd"].(interface{ GetStatus() string })
 	if !ok {
-		t.Fatalf("fluxcd service does not expose status: %#v", cfg.OpenCenter.Services["fluxcd"])
+		t.Fatalf("fluxcd service does not expose GetStatus: %#v", cfg.OpenCenter.Services["fluxcd"])
 	}
-	if statusGetter.GetStatus() != "success" {
-		t.Fatalf("saved fluxcd status = %q, want success", statusGetter.GetStatus())
+	// GetStatus() returns "" since status is no longer stored in config
+	if statusGetter.GetStatus() != "" {
+		t.Fatalf("saved fluxcd status = %q, want empty (status no longer persisted)", statusGetter.GetStatus())
 	}
 }
 
@@ -389,10 +389,11 @@ func TestClusterSyncStatusJSONDryRunDoesNotPersistThroughClusterStatus(t *testin
 	}
 	statusGetter, ok := cfg.OpenCenter.Services["fluxcd"].(interface{ GetStatus() string })
 	if !ok {
-		t.Fatalf("fluxcd service does not expose status: %#v", cfg.OpenCenter.Services["fluxcd"])
+		t.Fatalf("fluxcd service does not expose GetStatus: %#v", cfg.OpenCenter.Services["fluxcd"])
 	}
-	if statusGetter.GetStatus() != "unknown" {
-		t.Fatalf("saved fluxcd status = %q, want unknown", statusGetter.GetStatus())
+	// Status is no longer persisted — always returns ""
+	if statusGetter.GetStatus() != "" {
+		t.Fatalf("saved fluxcd status = %q, want empty (status no longer persisted)", statusGetter.GetStatus())
 	}
 }
 
@@ -414,7 +415,7 @@ func saveSyncStatusConfigForCommandTest(t *testing.T, dir, clusterName, status s
 		enabled = enabledOverride[0]
 	}
 	cfg.OpenCenter.Services["fluxcd"] = &services.DefaultServiceConfig{
-		BaseConfig: services.BaseConfig{Enabled: enabled, Status: status},
+		BaseConfig: services.BaseConfig{Enabled: enabled},
 	}
 
 	kubeconfigPath := filepath.Join(clusterPaths.GitOpsDir, "infrastructure", "clusters", clusterName, "kubeconfig.yaml")

@@ -341,7 +341,7 @@ func (r *readinessBuilder) validateLokiSecrets(cfg *Config) {
 	loki, _ := cfg.OpenCenter.Services["loki"].(*services.LokiConfig)
 	storageType := ""
 	if loki != nil {
-		storageType = strings.ToLower(strings.TrimSpace(firstNonEmptyReadiness(loki.StorageType, loki.LokiStorageType)))
+		storageType = strings.ToLower(strings.TrimSpace(loki.StorageType))
 	}
 	if storageType == "" && strings.EqualFold(cfg.OpenCenter.Infrastructure.Provider, "openstack") {
 		storageType = "swift"

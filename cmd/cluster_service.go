@@ -473,15 +473,15 @@ func newClusterServiceStatusCmd() *cobra.Command {
 	var cluster string
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "Display status of all services in the cluster configuration",
-		Long: `This command displays the status of all services (both standard and managed) 
-in a three-column format showing service name, enabled/disabled state, and deployment status.
+		Short: "Display state of all services in the cluster configuration",
+		Long: `Display all services (standard and managed) with their enabled/disabled state
+and adoption mode. For live deployment status, use 'opencenter cluster status --sync'.
 
 Examples:
-  # Show status of all services in the active cluster
+  # Show state of all services in the active cluster
   opencenter cluster service status
 
-  # Show status for a specific cluster
+  # Show state for a specific cluster
   opencenter cluster service status --cluster my-cluster`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from flag or active cluster
@@ -497,33 +497,27 @@ Examples:
 			}
 
 			// Print header
-			fmt.Fprintf(cmd.OutOrStdout(), "%-30s %-15s %-15s\n", "SERVICE NAME", "ENABLED", "STATUS")
-			fmt.Fprintf(cmd.OutOrStdout(), "%-30s %-15s %-15s\n", strings.Repeat("-", 30), strings.Repeat("-", 15), strings.Repeat("-", 15))
+			fmt.Fprintf(cmd.OutOrStdout(), "%-30s %-12s %-15s\n", "SERVICE NAME", "STATE", "ADOPTION MODE")
+			fmt.Fprintf(cmd.OutOrStdout(), "%-30s %-12s %-15s\n", strings.Repeat("-", 30), strings.Repeat("-", 12), strings.Repeat("-", 15))
 
 			// Print standard services
 			for name, svc := range cfg.OpenCenter.Services {
-				enabledStr := "disabled"
+				state := "disabled"
 				if isEnabled(svc) {
-					enabledStr = "enabled"
+					state = "enabled"
 				}
-				status := getStatus(svc)
-				if status == "" {
-					status = "-"
-				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%-30s %-15s %-15s\n", name, enabledStr, status)
+				mode := getAdoptionMode(svc)
+				fmt.Fprintf(cmd.OutOrStdout(), "%-30s %-12s %-15s\n", name, state, mode)
 			}
 
 			// Print managed services
 			for name, svc := range cfg.OpenCenter.ManagedServices {
-				enabledStr := "disabled"
+				state := "disabled"
 				if isEnabled(svc) {
-					enabledStr = "enabled"
+					state = "enabled"
 				}
-				status := getStatus(svc)
-				if status == "" {
-					status = "-"
-				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%-30s %-15s %-15s\n", name+" (managed)", enabledStr, status)
+				mode := getAdoptionMode(svc)
+				fmt.Fprintf(cmd.OutOrStdout(), "%-30s %-12s %-15s\n", name+" (managed)", state, mode)
 			}
 
 			return nil
@@ -564,9 +558,8 @@ Examples:
 			// Display common fields
 			fmt.Fprintln(cmd.OutOrStdout(), "Common Fields:")
 			fmt.Fprintln(cmd.OutOrStdout(), "  enabled (boolean) - Enable or disable this service")
-			fmt.Fprintln(cmd.OutOrStdout(), "  status (string) - Service deployment status (pending/running/success/failed)")
-			fmt.Fprintln(cmd.OutOrStdout(), "  release (string) - Release version or tag (mutually exclusive with branch)")
-			fmt.Fprintln(cmd.OutOrStdout(), "  branch (string) - Git branch (mutually exclusive with release)")
+			fmt.Fprintln(cmd.OutOrStdout(), "  adoption_mode (string) - How Flux interacts with this service (managed/external/sync/deferred/takeover)")
+			fmt.Fprintln(cmd.OutOrStdout(), "  namespace (string) - Kubernetes namespace for the service")
 			fmt.Fprintln(cmd.OutOrStdout(), "  uri (string) - Git repository URI")
 
 			if isManaged {
@@ -637,30 +630,30 @@ func getServiceOptions(serviceName string) []ServiceOption {
 		}
 	case "loki":
 		return []ServiceOption{
-			{Name: "loki_storage_type", Type: "string", Description: "Storage backend type (s3 or swift)", Required: false},
-			{Name: "loki_bucket_name", Type: "string", Description: "Storage bucket/container name", Required: true},
-			{Name: "loki_volume_size", Type: "integer", Description: "Persistent volume size in GB", Required: false},
-			{Name: "loki_storage_class", Type: "string", Description: "Storage class", Required: false},
+			{Name: "storage_type", Type: "string", Description: "Storage backend type (s3 or swift)", Required: false},
+			{Name: "bucket_name", Type: "string", Description: "Storage bucket/container name", Required: true},
+			{Name: "volume_size", Type: "integer", Description: "Persistent volume size in GB", Required: false},
+			{Name: "storage_class", Type: "string", Description: "Storage class", Required: false},
 			{Name: "swift_auth_url", Type: "string", Description: "Swift Keystone V3 authentication URL (for Swift storage)", Required: false},
 			{Name: "swift_region", Type: "string", Description: "Swift region name (for Swift storage)", Required: false},
 			{Name: "swift_auth_version", Type: "integer", Description: "Swift authentication version (default: 3)", Required: false},
 			{Name: "swift_application_credential_id", Type: "string", Description: "Swift application credential ID (recommended)", Required: false},
 			{Name: "swift_container_name", Type: "string", Description: "Swift container name", Required: false},
-			{Name: "loki_s3_endpoint", Type: "string", Description: "S3 endpoint URL (for S3 storage, e.g., MinIO)", Required: false},
-			{Name: "loki_s3_region", Type: "string", Description: "S3 region (for S3 storage)", Required: false},
-			{Name: "loki_s3_force_path_style", Type: "boolean", Description: "Force S3 path style (required for MinIO)", Required: false},
-			{Name: "loki_s3_insecure", Type: "boolean", Description: "Allow insecure S3 connections", Required: false},
+			{Name: "s3_endpoint", Type: "string", Description: "S3 endpoint URL (for S3 storage, e.g., MinIO)", Required: false},
+			{Name: "s3_region", Type: "string", Description: "S3 region (for S3 storage)", Required: false},
+			{Name: "s3_force_path_style", Type: "boolean", Description: "Force S3 path style (required for MinIO)", Required: false},
+			{Name: "s3_insecure", Type: "boolean", Description: "Allow insecure S3 connections", Required: false},
 		}
 	case "keycloak":
 		return []ServiceOption{
-			{Name: "keycloak_realm", Type: "string", Description: "Keycloak realm name", Required: false},
-			{Name: "keycloak_frontend_url", Type: "string", Description: "Keycloak frontend URL", Required: false},
-			{Name: "keycloak_client_id", Type: "string", Description: "Keycloak client ID", Required: false},
+			{Name: "realm", Type: "string", Description: "Keycloak realm name", Required: false},
+			{Name: "frontend_url", Type: "string", Description: "Keycloak frontend URL", Required: false},
+			{Name: "client_id", Type: "string", Description: "Keycloak client ID", Required: false},
 		}
 	case "headlamp":
 		return []ServiceOption{
-			{Name: "headlamp_oidc_issuer_url", Type: "string", Description: "Headlamp OIDC issuer URL", Required: false},
-			{Name: "headlamp_oidc_client_id", Type: "string", Description: "Headlamp OIDC client ID", Required: false},
+			{Name: "oidc_issuer_url", Type: "string", Description: "Headlamp OIDC issuer URL", Required: false},
+			{Name: "oidc_client_id", Type: "string", Description: "Headlamp OIDC client ID", Required: false},
 		}
 	case "kube-prometheus-stack":
 		return []ServiceOption{
@@ -673,8 +666,8 @@ func getServiceOptions(serviceName string) []ServiceOption {
 		}
 	case "velero":
 		return []ServiceOption{
-			{Name: "velero_backup_bucket", Type: "string", Description: "Velero backup bucket name", Required: false},
-			{Name: "velero_region", Type: "string", Description: "Velero backup region", Required: false},
+			{Name: "backup_bucket", Type: "string", Description: "Velero backup bucket name", Required: false},
+			{Name: "region", Type: "string", Description: "Velero backup region", Required: false},
 		}
 	case "alert-proxy":
 		return []ServiceOption{
@@ -683,7 +676,7 @@ func getServiceOptions(serviceName string) []ServiceOption {
 		}
 	case "calico":
 		return []ServiceOption{
-			{Name: "calico_kube_api_server", Type: "string", Description: "Calico Kubernetes API server address", Required: false},
+			{Name: "kube_api_server", Type: "string", Description: "Calico Kubernetes API server address", Required: false},
 		}
 	default:
 		return []ServiceOption{
@@ -793,21 +786,32 @@ func setEnabled(svc any, enabled bool) error {
 }
 
 // getStatus gets the Status field of a service using reflection
-func getStatus(svc any) string {
+// getAdoptionMode extracts the adoption mode from a service config using reflection.
+func getAdoptionMode(svc any) string {
 	val := reflect.ValueOf(svc)
-	if svcMap, ok := svc.(map[string]any); ok {
-		if status, ok := svcMap["status"].(string); ok {
-			return status
-		}
-	}
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
 	if val.Kind() == reflect.Struct {
-		statusField := val.FieldByName("Status")
-		if statusField.IsValid() && statusField.Kind() == reflect.String {
-			return statusField.String()
+		// Check BaseConfig.AdoptionMode
+		baseField := val.FieldByName("BaseConfig")
+		if baseField.IsValid() && baseField.Kind() == reflect.Struct {
+			modeField := baseField.FieldByName("AdoptionMode")
+			if modeField.IsValid() && modeField.Kind() == reflect.String {
+				mode := modeField.String()
+				if mode != "" {
+					return mode
+				}
+			}
+		}
+		// Direct field
+		modeField := val.FieldByName("AdoptionMode")
+		if modeField.IsValid() && modeField.Kind() == reflect.String {
+			mode := modeField.String()
+			if mode != "" {
+				return mode
+			}
 		}
 	}
-	return ""
+	return "managed"
 }

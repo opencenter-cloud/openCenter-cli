@@ -31,9 +31,9 @@ controller:
   replicaCount: 3
   snapshotter:
     image:
-      registry: {{ (index .OpenCenter.Services "vsphere-csi").ImageRepository | default "registry.k8s.io" }}
+      registry: {{ (index .OpenCenter.Services "vsphere-csi").Image.Repository | default "registry.k8s.io" }}
       repository: sig-storage/csi-snapshotter
-      tag: {{ (index .OpenCenter.Services "vsphere-csi").ImageTag | default "v8.2.0" }}
+      tag: {{ (index .OpenCenter.Services "vsphere-csi").Image.Tag | default "v8.2.0" }}
       pullPolicy: IfNotPresent
     args:
       - "--v=4"

@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 
@@ -237,15 +236,11 @@ func syncServiceStatus(ctx context.Context, kubeconfigPath, serviceName string, 
 		Name: serviceName,
 	}
 
-	// Get current status from config
+	// Get current status from config (no longer persisted — always empty)
 	if statusGetter, ok := serviceConfig.(interface{ GetStatus() string }); ok {
 		result.OldStatus = statusGetter.GetStatus()
-		if result.OldStatus == "" {
-			result.OldStatus = "unknown"
-		}
-	} else {
-		result.OldStatus = "unknown"
 	}
+	// OldStatus remains "" when status is not persisted in config
 
 	// Get namespace for the service
 	namespace := getServiceNamespace(serviceName, serviceConfig)
@@ -390,54 +385,14 @@ func parseFluxResourceStatus(jsonData []byte) (string, error) {
 	return "pending", nil
 }
 
-// updateServiceStatus updates the status field of a service in the config.
+// updateServiceStatus is a no-op retained for interface compatibility.
+// Status is no longer stored in declarative config; it should be tracked
+// externally (e.g., in a status file or cluster annotation).
 func updateServiceStatus(cfg *v2.Config, serviceName, status string) {
-	if cfg.OpenCenter.Services == nil {
-		return
-	}
-
-	serviceConfig, exists := cfg.OpenCenter.Services[serviceName]
-	if !exists {
-		return
-	}
-
-	// All service configs embed BaseConfig which has the Status field.
-	// Use reflection to find and set the Status field in the embedded BaseConfig.
-	setStatusViaReflection(serviceConfig, status)
 }
 
-// setStatusViaReflection sets the Status field on a service config using reflection.
-// It handles both direct BaseConfig and embedded BaseConfig in other structs.
+// setStatusViaReflection is deprecated — status removed from BaseConfig.
 func setStatusViaReflection(serviceConfig any, status string) {
-	val := reflect.ValueOf(serviceConfig)
-
-	// Dereference pointer if needed
-	if val.Kind() == reflect.Ptr {
-		if val.IsNil() {
-			return
-		}
-		val = val.Elem()
-	}
-
-	if val.Kind() != reflect.Struct {
-		return
-	}
-
-	// Try to find Status field directly
-	statusField := val.FieldByName("Status")
-	if statusField.IsValid() && statusField.CanSet() && statusField.Kind() == reflect.String {
-		statusField.SetString(status)
-		return
-	}
-
-	// Try to find BaseConfig embedded field and set Status on it
-	baseConfigField := val.FieldByName("BaseConfig")
-	if baseConfigField.IsValid() && baseConfigField.Kind() == reflect.Struct {
-		statusField = baseConfigField.FieldByName("Status")
-		if statusField.IsValid() && statusField.CanSet() && statusField.Kind() == reflect.String {
-			statusField.SetString(status)
-		}
-	}
 }
 
 // printSyncResults prints the sync results in human-readable format.

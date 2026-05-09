@@ -37,7 +37,6 @@ func TestServiceStatusReporting(t *testing.T) {
 			config: &services.VeleroConfig{
 				BaseConfig: services.BaseConfig{
 					Enabled: true,
-					Status:  "", // Empty status
 				},
 				BackupBucket: "my-bucket",
 			},
@@ -51,37 +50,34 @@ func TestServiceStatusReporting(t *testing.T) {
 			config: &services.VeleroConfig{
 				BaseConfig: services.BaseConfig{
 					Enabled: true,
-					Status:  "running",
 				},
 				BackupBucket: "my-bucket",
 			},
-			expectedState:     "running",
+			expectedState:     "pending",
 			expectedMsg:       "Velero",
 			shouldHaveDetails: true,
 		},
 		{
-			name:   "Enabled service with success status returns success",
+			name:   "Enabled Prometheus service defaults to pending",
 			plugin: NewPrometheusStackPlugin(),
 			config: &services.PrometheusStackConfig{
 				BaseConfig: services.BaseConfig{
 					Enabled: true,
-					Status:  "success",
 				},
 			},
-			expectedState:     "success",
+			expectedState:     "pending",
 			expectedMsg:       "Prometheus",
 			shouldHaveDetails: true,
 		},
 		{
-			name:   "Enabled service with failed status returns failed",
+			name:   "Enabled Loki service defaults to pending",
 			plugin: NewLokiPlugin(),
 			config: &services.LokiConfig{
 				BaseConfig: services.BaseConfig{
 					Enabled: true,
-					Status:  "failed",
 				},
 			},
-			expectedState:     "failed",
+			expectedState:     "pending",
 			expectedMsg:       "Loki",
 			shouldHaveDetails: true,
 		},
@@ -113,13 +109,12 @@ func TestServiceStatusReporting(t *testing.T) {
 			config: &services.KeycloakConfig{
 				BaseConfig: services.BaseConfig{
 					Enabled: true,
-					Status:  "running",
 				},
 				Realm:       "myrealm",
 				FrontendURL: "https://keycloak.example.com",
 				ClientID:    "myclient",
 			},
-			expectedState:     "running",
+			expectedState:     "pending",
 			expectedMsg:       "Keycloak",
 			shouldHaveDetails: true,
 		},
@@ -129,13 +124,12 @@ func TestServiceStatusReporting(t *testing.T) {
 			config: &services.LokiConfig{
 				BaseConfig: services.BaseConfig{
 					Enabled: true,
-					Status:  "running",
 				},
 				StorageType: "s3",
 				BucketName:  "loki-logs",
 				VolumeSize:  100,
 			},
-			expectedState:     "running",
+			expectedState:     "pending",
 			expectedMsg:       "Loki",
 			shouldHaveDetails: true,
 		},
@@ -219,7 +213,7 @@ func TestAllPluginsProvideStatus(t *testing.T) {
 		{
 			name:   "WeaveGitOps",
 			plugin: NewWeaveGitOpsPlugin(),
-			config: &services.WeaveGitOpsConfig{
+			config: &services.DefaultServiceConfig{
 				BaseConfig: services.BaseConfig{Enabled: true},
 			},
 		},
@@ -260,26 +254,20 @@ func TestAllPluginsProvideStatus(t *testing.T) {
 	}
 }
 
-// TestStatusStateTransitions tests that status correctly reflects different states
+// TestStatusStateTransitions tests that status defaults to pending when no runtime state is available.
+// Status is no longer stored in declarative config — it's determined at runtime via cluster queries.
 func TestStatusStateTransitions(t *testing.T) {
 	plugin := NewVeleroPlugin()
 
-	states := []string{"pending", "running", "success", "failed"}
-
-	for _, state := range states {
-		t.Run("State_"+state, func(t *testing.T) {
-			config := &services.VeleroConfig{
-				BaseConfig: services.BaseConfig{
-					Enabled: true,
-					Status:  state,
-				},
-				BackupBucket: "test-bucket",
-			}
-
-			status := plugin.Status(config)
-			assert.Equal(t, state, status.State, "Status should accurately reflect the configured state")
-		})
+	config := &services.VeleroConfig{
+		BaseConfig: services.BaseConfig{
+			Enabled: true,
+		},
+		BackupBucket: "test-bucket",
 	}
+
+	status := plugin.Status(config)
+	assert.Equal(t, "pending", status.State, "Enabled service without runtime state should report pending")
 }
 
 // TestStatusDetailsAccuracy tests that status details contain accurate configuration information
@@ -289,7 +277,6 @@ func TestStatusDetailsAccuracy(t *testing.T) {
 		config := &services.VeleroConfig{
 			BaseConfig: services.BaseConfig{
 				Enabled: true,
-				Status:  "running",
 			},
 			BackupBucket: "my-backup-bucket",
 			Region:       "us-east-1",
@@ -305,7 +292,6 @@ func TestStatusDetailsAccuracy(t *testing.T) {
 		config := &services.LokiConfig{
 			BaseConfig: services.BaseConfig{
 				Enabled: true,
-				Status:  "running",
 			},
 			StorageType: "s3",
 			BucketName:  "loki-storage",
@@ -323,7 +309,6 @@ func TestStatusDetailsAccuracy(t *testing.T) {
 		config := &services.PrometheusStackConfig{
 			BaseConfig: services.BaseConfig{
 				Enabled: true,
-				Status:  "running",
 			},
 			GrafanaVolumeSize:      50,
 			PrometheusVolumeSize:   100,

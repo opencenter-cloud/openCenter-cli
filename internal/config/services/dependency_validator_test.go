@@ -27,7 +27,7 @@ func TestDependencyValidator_ValidateDependencies(t *testing.T) {
 		{
 			name: "weave-gitops enabled without fluxcd",
 			services: map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: true},
 				},
 				"fluxcd": &DefaultServiceConfig{
@@ -41,7 +41,7 @@ func TestDependencyValidator_ValidateDependencies(t *testing.T) {
 		{
 			name: "weave-gitops enabled with fluxcd",
 			services: map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: true},
 				},
 				"fluxcd": &DefaultServiceConfig{
@@ -53,7 +53,7 @@ func TestDependencyValidator_ValidateDependencies(t *testing.T) {
 		{
 			name: "weave-gitops disabled without fluxcd",
 			services: map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: false},
 				},
 				"fluxcd": &DefaultServiceConfig{
@@ -97,7 +97,7 @@ func TestDependencyValidator_ValidateDependencies(t *testing.T) {
 		{
 			name: "multiple dependency violations",
 			services: map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: true},
 				},
 				"headlamp": &HeadlampConfig{
@@ -185,7 +185,7 @@ func TestDependencyValidator_ValidateDependencies(t *testing.T) {
 		{
 			name: "all services disabled",
 			services: map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: false},
 				},
 				"headlamp": &HeadlampConfig{
@@ -203,7 +203,7 @@ func TestDependencyValidator_ValidateDependencies(t *testing.T) {
 		{
 			name: "service not in map",
 			services: map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: true},
 				},
 				// fluxcd not in map at all
@@ -473,7 +473,7 @@ func TestIsServiceEnabled(t *testing.T) {
 		{
 			name: "service with embedded BaseConfig",
 			services: map[string]any{
-				"test": &WeaveGitOpsConfig{
+				"test": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: true},
 				},
 			},

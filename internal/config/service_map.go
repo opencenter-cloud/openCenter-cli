@@ -16,19 +16,16 @@ import (
 type ServiceMap map[string]any
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
-// It merges services from YAML with existing services in the map, preserving
-// services that aren't defined in the YAML (for default service population).
+// It uses the service registry to resolve typed structs per service name.
 func (sm *ServiceMap) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind != yaml.MappingNode {
 		return fmt.Errorf("expected map for Services, got %v", node.Kind)
 	}
 
-	// Initialize map if nil, but don't replace existing services
 	if *sm == nil {
 		*sm = make(ServiceMap)
 	}
 
-	// Iterate over keys and values from YAML
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]
 		valNode := node.Content[i+1]
@@ -41,10 +38,8 @@ func (sm *ServiceMap) UnmarshalYAML(node *yaml.Node) error {
 		// Look up registered type
 		configType := registry.GetServiceConfigType(serviceName)
 		if configType == nil {
-			// If not registered, use generic map or skip?
-			// Using DefaultServiceConfig as fallback for unknown services might be safer if we want to preserve them
-			// For now, let's use BaseConfig to at least capture enabled status
-			configType = reflect.TypeOf(services.BaseConfig{})
+			// Unregistered service: use DefaultServiceConfig as fallback
+			configType = reflect.TypeOf(services.DefaultServiceConfig{})
 		}
 
 		// Create a new instance of the config type
@@ -55,8 +50,6 @@ func (sm *ServiceMap) UnmarshalYAML(node *yaml.Node) error {
 			return fmt.Errorf("failed to decode config for service %s: %w", serviceName, err)
 		}
 
-		// Store in map, overwriting any existing service with the same name
-		// This allows YAML to override defaults while preserving services not in YAML
 		(*sm)[serviceName] = configPtr
 	}
 

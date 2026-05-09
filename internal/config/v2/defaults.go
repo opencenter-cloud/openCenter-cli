@@ -263,12 +263,9 @@ func NewV2Default(name, provider string) (*Config, error) {
 			},
 			ManagedServices: ServiceMap{
 				"alert-proxy": &services.AlertProxyConfig{
-					BaseConfig: services.BaseConfig{
-						Enabled:  false,
-						Hostname: fmt.Sprintf("alerts.%s", clusterFQDN),
-					},
-					AlertManagerBaseUrl: "",
-					HTTPRouteFQDN:       fmt.Sprintf("alerts.%s", clusterFQDN),
+					BaseConfig:      services.BaseConfig{Enabled: false},
+					HTTPRouteFQDN:   fmt.Sprintf("alerts.%s", clusterFQDN),
+					AlertManagerBaseURL: "",
 				},
 			},
 			Services: defaultServiceMap(clusterFQDN),
@@ -683,16 +680,12 @@ func defaultServiceMap(clusterFQDN string) ServiceMap {
 		"gateway":              &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 		"gateway-api":          &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 		"headlamp": &services.HeadlampConfig{
-			BaseConfig: services.BaseConfig{
-				Enabled:  true,
-				Hostname: fmt.Sprintf("dashboard.%s", clusterFQDN),
-			},
+			BaseConfig: services.BaseConfig{Enabled: true},
+			Hostname:   fmt.Sprintf("dashboard.%s", clusterFQDN),
 		},
 		"keycloak": &services.KeycloakConfig{
-			BaseConfig: services.BaseConfig{
-				Enabled:  true,
-				Hostname: fmt.Sprintf("auth.%s", clusterFQDN),
-			},
+			BaseConfig: services.BaseConfig{Enabled: true},
+			Hostname:   fmt.Sprintf("auth.%s", clusterFQDN),
 		},
 		// Required by keycloak (keycloak-postgres dependsOn postgres-operator-base).
 		"postgres-operator": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},
@@ -708,7 +701,7 @@ func defaultServiceMap(clusterFQDN string) ServiceMap {
 		"tempo":                 &services.TempoConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 		"velero":                &services.VeleroConfig{BaseConfig: services.BaseConfig{Enabled: true}},
 		// Present (disabled) so template conditionals can safely index the key.
-		"harbor":  &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
+		"harbor":  &services.HarborConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 		"metallb": &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false}},
 		// Required by keycloak (keycloak-operator is managed by OLM).
 		"olm":                      &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true}},

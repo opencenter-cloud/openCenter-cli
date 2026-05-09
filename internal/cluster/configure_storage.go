@@ -103,7 +103,7 @@ func (h *objectStorageCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers or
 	openstackCfg := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
 
 	if value := strings.TrimSpace(answers["storage.loki.type"]); value != "" {
-		changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.loki_storage_type", Label: "Loki storage backend", Value: value})
+		changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.storage_type", Label: "Loki storage backend", Value: value})
 	}
 	lokiType := strings.TrimSpace(answers["storage.loki.type"])
 	if lokiType == "" {
@@ -116,7 +116,7 @@ func (h *objectStorageCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers or
 		container := strings.TrimSpace(answers["storage.loki.swift_container"])
 		if container != "" && openstackCfg != nil {
 			changes.Patches = append(changes.Patches,
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.loki_bucket_name", Label: "Loki Swift container", Value: container},
+				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.bucket_name", Label: "Loki Swift container", Value: container},
 				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_auth_url", Label: "Loki Swift auth URL", Value: strings.TrimSpace(openstackCfg.AuthURL)},
 				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_region", Label: "Loki Swift region", Value: strings.TrimSpace(openstackCfg.Region)},
 				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_application_credential_id", Label: "Loki Swift application credential ID", Value: strings.TrimSpace(openstackCfg.ApplicationCredentialID)},
@@ -132,16 +132,16 @@ func (h *objectStorageCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers or
 		}
 	case "s3":
 		if value := strings.TrimSpace(answers["storage.loki.s3_bucket"]); value != "" {
-			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.loki_bucket_name", Label: "Loki S3 bucket", Value: value})
+			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.bucket_name", Label: "Loki S3 bucket", Value: value})
 		}
 		if value := strings.TrimSpace(answers["storage.loki.s3_endpoint"]); value != "" {
-			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.loki_s3_endpoint", Label: "Loki S3 endpoint", Value: value})
+			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.s3_endpoint", Label: "Loki S3 endpoint", Value: value})
 		}
 		if value := strings.TrimSpace(answers["storage.loki.s3_region"]); value != "" {
-			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.loki_s3_region", Label: "Loki S3 region", Value: value})
+			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.s3_region", Label: "Loki S3 region", Value: value})
 		}
 		if value, ok := answers["storage.loki.s3_force_path_style"]; ok {
-			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.loki_s3_force_path_style", Label: "Loki S3 path style", Value: normalizeBoolString(value)})
+			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.s3_force_path_style", Label: "Loki S3 path style", Value: normalizeBoolString(value)})
 		}
 		if value := strings.TrimSpace(answers["storage.loki.s3_access_key"]); value != "" {
 			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "secrets.loki.s3_access_key_id", Label: "Loki S3 access key", Value: value, Masked: true})

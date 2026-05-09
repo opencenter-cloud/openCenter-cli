@@ -38,7 +38,7 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 
 			// Build service map
 			services := map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: enableWeaveGitOps},
 				},
 				"fluxcd": &DefaultServiceConfig{
@@ -92,7 +92,7 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 
 			// Build service map with dependent services disabled
 			services := map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: false},
 				},
 				"fluxcd": &DefaultServiceConfig{
@@ -130,7 +130,7 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 
 			// Build service map with all services having same enabled state
 			services := map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: enableAll},
 				},
 				"fluxcd": &DefaultServiceConfig{
@@ -165,7 +165,7 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 
 			// Build service map without dependency services
 			services := map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: enableWeaveGitOps},
 				},
 				"headlamp": &HeadlampConfig{
@@ -232,7 +232,7 @@ func TestProperty_ServiceDependencyValidation(t *testing.T) {
 
 			// Build service map with dependencies missing
 			services := map[string]any{
-				"weave-gitops": &WeaveGitOpsConfig{
+				"weave-gitops": &DefaultServiceConfig{
 					BaseConfig: BaseConfig{Enabled: enableWeaveGitOps},
 				},
 				"fluxcd": &DefaultServiceConfig{

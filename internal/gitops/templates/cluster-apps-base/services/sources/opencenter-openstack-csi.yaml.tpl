@@ -7,9 +7,9 @@ metadata:
 spec:
   interval: 15m
   {{- $service := index .OpenCenter.Services "openstack-csi" }}
-  url: {{ $service.Uri | default .OpenCenter.GitOps.BaseRepo.URL }}
+  url: {{ $service.Source.Repo | default .OpenCenter.GitOps.BaseRepo.URL }}
   ref:
-    branch: {{ $service.Branch | default .OpenCenter.GitOps.Repository.Branch | default "main" }}
+    branch: {{ $service.Source.Branch | default .OpenCenter.GitOps.Repository.Branch | default "main" }}
 {{- if not (hasPrefix "https://" .OpenCenter.GitOps.BaseRepo.URL) }}
   secretRef:
     name: opencenter-base

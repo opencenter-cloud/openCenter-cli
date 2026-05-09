@@ -47,13 +47,12 @@ func TestPrometheusStackPlugin(t *testing.T) {
 		cfg := &services.PrometheusStackConfig{
 			BaseConfig: services.BaseConfig{
 				Enabled: true,
-				Status:  "running",
 			},
 			GrafanaVolumeSize: 10,
 		}
 
 		status := plugin.Status(cfg)
-		assert.Equal(t, "running", status.State)
+		assert.Equal(t, "pending", status.State)
 		assert.Contains(t, status.Message, "Prometheus")
 	})
 }
@@ -304,12 +303,11 @@ func TestDefaultServicePlugin(t *testing.T) {
 		cfg := &services.DefaultServiceConfig{
 			BaseConfig: services.BaseConfig{
 				Enabled: true,
-				Status:  "running",
 			},
 		}
 
 		status := plugin.Status(cfg)
-		assert.Equal(t, "running", status.State)
+		assert.Equal(t, "pending", status.State)
 		assert.Contains(t, status.Message, "test-service")
 	})
 }

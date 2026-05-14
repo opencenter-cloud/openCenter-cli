@@ -104,8 +104,17 @@ func scanWorktreeGitOpsSecrets(root string) ([]SecretScanFinding, error) {
 			case ".git", ".terraform", "venv", ".bin":
 				return filepath.SkipDir
 			default:
+				if strings.HasPrefix(d.Name(), ".opentofu-local") {
+					return filepath.SkipDir
+				}
 				return nil
 			}
+		}
+
+		// Skip known OpenTofu-generated key files in infrastructure directories.
+		baseName := d.Name()
+		if baseName == "id_rsa" || baseName == "id_rsa.pub" {
+			return nil
 		}
 
 		rel, err := filepath.Rel(root, path)

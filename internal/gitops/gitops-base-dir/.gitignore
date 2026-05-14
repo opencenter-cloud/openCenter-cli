@@ -15,8 +15,9 @@ htmlcov/
 .mypy_cache/
 .ipynb_checkpoints/
 
-# Terraform
+# Terraform / OpenTofu
 .terraform/
+.opentofu-local*/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl

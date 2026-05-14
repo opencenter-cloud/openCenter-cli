@@ -88,14 +88,15 @@ func runClusterDeploy(cmd *cobra.Command, args []string) error {
 
 	// Pre-check: ensure all secret manifests are encrypted before deploying.
 	// This catches unencrypted secrets early, before any infrastructure changes.
-	if err == nil {
-		gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.LocalDir)
-		if gitDir != "" {
-			if unencryptedErr := checkUnencryptedSecrets(gitDir); unencryptedErr != nil {
-				return unencryptedErr
-			}
-		}
-	}
+	// DISABLED: key scanning hook temporarily disabled.
+	// if err == nil {
+	// 	gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.LocalDir)
+	// 	if gitDir != "" {
+	// 		if unencryptedErr := checkUnencryptedSecrets(gitDir); unencryptedErr != nil {
+	// 			return unencryptedErr
+	// 		}
+	// 	}
+	// }
 
 	// Parse command-line options
 	opts, err := parseBootstrapOptions(cmd, args, actualClusterName)

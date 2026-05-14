@@ -54,7 +54,7 @@ func requireCommandPath(t *testing.T, root *cobra.Command, parts ...string) *cob
 func requireNoCommandPath(t *testing.T, root *cobra.Command, parts ...string) {
 	t.Helper()
 	cmd := findCommandPath(root, parts...)
-	if cmd != nil {
+	if cmd != nil && !cmd.Hidden {
 		t.Fatalf("expected command %q to be removed from the public tree", strings.Join(parts, " "))
 	}
 }
@@ -107,7 +107,6 @@ func TestGAClusterCommandSurface(t *testing.T) {
 		{"cluster", "update"},
 		{"cluster", "config"},
 		{"cluster", "sync-status"},
-		{"cluster", "validate-manifests"},
 		{"cluster", "check-keys"},
 		{"cluster", "rotate-keys"},
 		{"cluster", "revoke-key"},
@@ -131,7 +130,6 @@ func TestRemovedClusterCommandsAreRejectedAtRuntime(t *testing.T) {
 		{"cluster", "update"},
 		{"cluster", "config"},
 		{"cluster", "sync-status"},
-		{"cluster", "validate-manifests"},
 		{"cluster", "check-keys"},
 		{"cluster", "rotate-keys"},
 		{"cluster", "revoke-key"},

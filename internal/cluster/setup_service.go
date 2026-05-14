@@ -263,7 +263,7 @@ func (s *SetupService) snapshotFileModTimes(gitDir string) (map[string]int64, er
 		if err != nil {
 			return err
 		}
-		if info.IsDir() && skippedDirs[info.Name()] {
+		if info.IsDir() && (skippedDirs[info.Name()] || strings.HasPrefix(info.Name(), ".opentofu-local")) {
 			return filepath.SkipDir
 		}
 		if !info.IsDir() {
@@ -291,14 +291,13 @@ func (s *SetupService) countGeneratedFiles(gitDir string, before map[string]int6
 			return err
 		}
 
-		if info.IsDir() && skippedDirs[info.Name()] {
+		if info.IsDir() && (skippedDirs[info.Name()] || strings.HasPrefix(info.Name(), ".opentofu-local")) {
 			return filepath.SkipDir
 		}
 
 		if !info.IsDir() {
 			prevModTime, existed := before[path]
 			if !existed || info.ModTime().UnixNano() != prevModTime {
-				// File is new or was modified during this run.
 				count++
 			}
 		}

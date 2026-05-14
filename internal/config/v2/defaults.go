@@ -158,7 +158,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 				ClusterFQDN: clusterFQDN,
 				AdminEmail:  "admin@example.com",
 				Kubernetes: KubernetesConfig{
-					Version:        "1.36.0",
+					Version:        "1.35.4",
 					APIPort:        443,
 					KubeVIPEnabled: selectedProvider != "kind",
 					SubnetPods:     "10.42.0.0/16",

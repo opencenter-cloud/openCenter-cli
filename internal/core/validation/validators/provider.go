@@ -491,33 +491,8 @@ func (v *ProviderValidator) SetSupportedProviders(providers []string) {
 }
 
 // validateVMwareConfig validates VMware provider configuration.
-// VMware is treated as baremetal - requires pre-provisioned nodes.
+// VMware is treated as baremetal - requires pre-provisioned nodes in compute section.
 func (v *ProviderValidator) validateVMwareConfig(result *validation.ValidationResult, config map[string]interface{}) {
-	// VMware requires node definitions (treated as baremetal)
-	if nodesVal, ok := config["nodes"]; !ok || nodesVal == nil {
-		result.AddError("provider.vmware.nodes",
-			"nodes configuration is required for VMware provider",
-			"Provide a list of pre-provisioned VM nodes",
-			"Example: nodes: [{name: master-1, ip: 192.168.1.10, role: master}]")
-		return
-	}
-
-	// Validate nodes if present
-	if nodes, ok := config["nodes"].([]interface{}); ok {
-		if len(nodes) == 0 {
-			result.AddError("provider.vmware.nodes",
-				"at least one node is required for VMware provider",
-				"Add VM node definitions to the configuration")
-			return
-		}
-
-		for i, nodeVal := range nodes {
-			if node, ok := nodeVal.(map[string]interface{}); ok {
-				v.validateVMwareNode(result, node, i)
-			}
-		}
-	}
-
 	// Validate vCenter configuration (optional but recommended)
 	if vcenterVal, ok := config["vcenter_server"]; ok {
 		if vcenter, ok := vcenterVal.(string); ok && vcenter != "" {
@@ -553,55 +528,6 @@ func (v *ProviderValidator) validateVMwareConfig(result *validation.ValidationRe
 	}
 }
 
-// validateVMwareNode validates a single VMware VM node configuration.
-func (v *ProviderValidator) validateVMwareNode(result *validation.ValidationResult, node map[string]interface{}, index int) {
-	// Required fields for each node
-	requiredFields := []string{"name", "ip", "role"}
-
-	for _, field := range requiredFields {
-		if val, ok := node[field]; !ok || val == "" {
-			result.AddError(fmt.Sprintf("provider.vmware.nodes[%d].%s", index, field),
-				fmt.Sprintf("%s is required for VMware node", field),
-				fmt.Sprintf("Provide the %s value for node %d", field, index))
-		}
-	}
-
-	// Validate IP address
-	if ipVal, ok := node["ip"]; ok {
-		if ip, ok := ipVal.(string); ok && ip != "" {
-			if net.ParseIP(ip) == nil {
-				result.AddError(fmt.Sprintf("provider.vmware.nodes[%d].ip", index),
-					fmt.Sprintf("invalid IP address: %s", ip),
-					"Provide a valid IPv4 or IPv6 address",
-					"Example: 192.168.1.10 or 2001:db8::1")
-			}
-		}
-	}
-
-	// Validate role
-	if roleVal, ok := node["role"]; ok {
-		if role, ok := roleVal.(string); ok && role != "" {
-			if role != "master" && role != "worker" {
-				result.AddError(fmt.Sprintf("provider.vmware.nodes[%d].role", index),
-					fmt.Sprintf("invalid role: %s", role),
-					"Role must be either 'master' or 'worker'")
-			}
-		}
-	}
-
-	// Validate MAC address format if present
-	if macVal, ok := node["mac_address"]; ok {
-		if mac, ok := macVal.(string); ok && mac != "" {
-			// Simple MAC address validation (XX:XX:XX:XX:XX:XX format)
-			if !isValidMACAddress(mac) {
-				result.AddWarning(fmt.Sprintf("provider.vmware.nodes[%d].mac_address", index),
-					fmt.Sprintf("MAC address may not be valid: %s", mac),
-					"Use standard MAC address format",
-					"Example: 00:50:56:12:34:56")
-			}
-		}
-	}
-}
 
 // isValidMACAddress checks if a string is a valid MAC address.
 func isValidMACAddress(mac string) bool {

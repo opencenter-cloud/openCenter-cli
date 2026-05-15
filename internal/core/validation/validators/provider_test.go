@@ -781,68 +781,12 @@ func TestProviderValidator_VMware(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "missing nodes",
+			name: "empty vmware config",
 			config: map[string]interface{}{
 				"provider": "vmware",
 				"config":   map[string]interface{}{},
 			},
-			expectError: true,
-		},
-		{
-			name: "empty nodes list",
-			config: map[string]interface{}{
-				"provider": "vmware",
-				"config": map[string]interface{}{
-					"nodes": []interface{}{},
-				},
-			},
-			expectError: true,
-		},
-		{
-			name: "node missing required fields",
-			config: map[string]interface{}{
-				"provider": "vmware",
-				"config": map[string]interface{}{
-					"nodes": []interface{}{
-						map[string]interface{}{
-							"name": "node1",
-						},
-					},
-				},
-			},
-			expectError: true,
-		},
-		{
-			name: "node with invalid IP",
-			config: map[string]interface{}{
-				"provider": "vmware",
-				"config": map[string]interface{}{
-					"nodes": []interface{}{
-						map[string]interface{}{
-							"name": "node1",
-							"ip":   "invalid-ip",
-							"role": "master",
-						},
-					},
-				},
-			},
-			expectError: true,
-		},
-		{
-			name: "node with invalid role",
-			config: map[string]interface{}{
-				"provider": "vmware",
-				"config": map[string]interface{}{
-					"nodes": []interface{}{
-						map[string]interface{}{
-							"name": "node1",
-							"ip":   "192.168.1.10",
-							"role": "invalid",
-						},
-					},
-				},
-			},
-			expectError: true,
+			expectError: false,
 		},
 		{
 			name: "valid configuration",

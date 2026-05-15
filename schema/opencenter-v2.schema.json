@@ -1682,32 +1682,6 @@
                     "network": {
                       "type": "string"
                     },
-                    "nodes": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "ip": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "role": {
-                            "enum": [
-                              "master",
-                              "worker"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "name",
-                          "role"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
                     "template": {
                       "type": "string"
                     },

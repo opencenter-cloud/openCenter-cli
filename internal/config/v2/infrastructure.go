@@ -337,19 +337,11 @@ type AzureCloudConfig struct {
 
 // VMwareCloudConfig represents VMware-specific configuration.
 type VMwareCloudConfig struct {
-	VCenterServer string       `yaml:"vcenter_server" json:"vcenter_server" validate:"required,hostname|ip"`
-	Datacenter    string       `yaml:"datacenter" json:"datacenter" validate:"required"`
-	Cluster       string       `yaml:"cluster,omitempty" json:"cluster,omitempty"`
-	Datastore     string       `yaml:"datastore" json:"datastore" validate:"required"`
-	Network       string       `yaml:"network" json:"network" validate:"required"`
-	Template      string       `yaml:"template" json:"template" validate:"required"`
-	Folder        string       `yaml:"folder,omitempty" json:"folder,omitempty"`
-	Nodes         []VMwareNode `yaml:"nodes,omitempty" json:"nodes,omitempty"`
-}
-
-// VMwareNode describes a pre-provisioned vSphere VM assigned to the cluster.
-type VMwareNode struct {
-	Name string `yaml:"name" json:"name" validate:"required"`
-	IP   string `yaml:"ip,omitempty" json:"ip,omitempty"`
-	Role string `yaml:"role" json:"role" validate:"required,oneof=master worker"`
+	VCenterServer string `yaml:"vcenter_server" json:"vcenter_server" validate:"required,hostname|ip"`
+	Datacenter    string `yaml:"datacenter" json:"datacenter" validate:"required"`
+	Cluster       string `yaml:"cluster,omitempty" json:"cluster,omitempty"`
+	Datastore     string `yaml:"datastore" json:"datastore" validate:"required"`
+	Network       string `yaml:"network" json:"network" validate:"required"`
+	Template      string `yaml:"template" json:"template" validate:"required"`
+	Folder        string `yaml:"folder,omitempty" json:"folder,omitempty"`
 }

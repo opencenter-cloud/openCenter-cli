@@ -266,27 +266,29 @@ type vSphereSecret struct {
 }
 
 func desiredVMwareNodes(cfg v2.Config) []desiredVMNode {
-	if vmwareCfg := cfg.OpenCenter.Infrastructure.Cloud.VMware; vmwareCfg != nil && len(vmwareCfg.Nodes) > 0 {
-		nodes := make([]desiredVMNode, 0, len(vmwareCfg.Nodes))
-		for _, node := range vmwareCfg.Nodes {
-			nodes = append(nodes, desiredVMNode{
-				Name: node.Name,
-				Role: node.Role,
-			})
+	compute := cfg.OpenCenter.Infrastructure.Compute
+
+	if len(compute.MasterNodes) > 0 || len(compute.WorkerNodes) > 0 {
+		nodes := make([]desiredVMNode, 0, len(compute.MasterNodes)+len(compute.WorkerNodes))
+		for _, node := range compute.MasterNodes {
+			nodes = append(nodes, desiredVMNode{Name: node.Name, Role: "master"})
+		}
+		for _, node := range compute.WorkerNodes {
+			nodes = append(nodes, desiredVMNode{Name: node.Name, Role: "worker"})
 		}
 		return nodes
 	}
 
 	clusterName := cfg.ClusterName()
-	nodes := make([]desiredVMNode, 0, cfg.OpenCenter.Infrastructure.Compute.MasterCount+cfg.OpenCenter.Infrastructure.Compute.WorkerCount)
+	nodes := make([]desiredVMNode, 0, compute.MasterCount+compute.WorkerCount)
 
-	for i := 0; i < cfg.OpenCenter.Infrastructure.Compute.MasterCount; i++ {
+	for i := 0; i < compute.MasterCount; i++ {
 		nodes = append(nodes, desiredVMNode{
 			Name: fmt.Sprintf("%s-master-%d", clusterName, i+1),
 			Role: "master",
 		})
 	}
-	for i := 0; i < cfg.OpenCenter.Infrastructure.Compute.WorkerCount; i++ {
+	for i := 0; i < compute.WorkerCount; i++ {
 		nodes = append(nodes, desiredVMNode{
 			Name: fmt.Sprintf("%s-worker-%d", clusterName, i+1),
 			Role: "worker",

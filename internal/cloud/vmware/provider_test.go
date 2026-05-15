@@ -86,9 +86,11 @@ func TestProvider_GetCurrentState(t *testing.T) {
 	cfg.OpenCenter.Infrastructure.Cloud.VMware.Datacenter = datacenterName
 	cfg.OpenCenter.Infrastructure.Cloud.VMware.Datastore = datastoreName
 	cfg.OpenCenter.Infrastructure.Cloud.VMware.Network = networkName
-	cfg.OpenCenter.Infrastructure.Cloud.VMware.Nodes = []v2.VMwareNode{
-		{Name: vm1Name, Role: "master"},
-		{Name: vm2Name, Role: "worker"},
+	cfg.OpenCenter.Infrastructure.Compute.MasterNodes = []v2.StaticNode{
+		{Name: vm1Name, AccessIPv4: "10.0.0.1"},
+	}
+	cfg.OpenCenter.Infrastructure.Compute.WorkerNodes = []v2.StaticNode{
+		{Name: vm2Name, AccessIPv4: "10.0.0.2"},
 	}
 	if cfg.Secrets.ServiceSecrets == nil {
 		cfg.Secrets.ServiceSecrets = make(map[string]any)

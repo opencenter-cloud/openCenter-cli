@@ -67,33 +67,32 @@ locals {
   address_bastion                         = "{{ .OpenCenter.Infrastructure.Bastion.Address | default "localhost" }}"
   windows_dataplane                       = {{ if gt (.OpenCenter.Infrastructure.Compute.WorkerCountWindows | default 0) 0 }}"HNS"{{ else }}"Disabled"{{ end }}
   
-  # Pre-provisioned VMware VM nodes
-  {{- if .OpenCenter.Infrastructure.Cloud.VMware.Nodes }}
+  # Pre-provisioned VM nodes
+  {{- if .OpenCenter.Infrastructure.Compute.MasterNodes }}
   master_nodes = [
-  {{- range .OpenCenter.Infrastructure.Cloud.VMware.Nodes }}
-  {{- if eq .Role "master" }}
+  {{- range .OpenCenter.Infrastructure.Compute.MasterNodes }}
     {
-      id           = "{{ .Name }}"
+      id           = "{{ .ID }}"
       name         = "{{ .Name }}"
-      access_ip_v4 = "{{ .IP }}"
+      access_ip_v4 = "{{ .AccessIPv4 }}"
     },
-  {{- end }}
-  {{- end }}
-  ]
-
-  worker_nodes = [
-  {{- range .OpenCenter.Infrastructure.Cloud.VMware.Nodes }}
-  {{- if eq .Role "worker" }}
-    {
-      id           = "{{ .Name }}"
-      name         = "{{ .Name }}"
-      access_ip_v4 = "{{ .IP }}"
-    },
-  {{- end }}
   {{- end }}
   ]
   {{- else }}
   master_nodes = []
+  {{- end }}
+
+  {{- if .OpenCenter.Infrastructure.Compute.WorkerNodes }}
+  worker_nodes = [
+  {{- range .OpenCenter.Infrastructure.Compute.WorkerNodes }}
+    {
+      id           = "{{ .ID }}"
+      name         = "{{ .Name }}"
+      access_ip_v4 = "{{ .AccessIPv4 }}"
+    },
+  {{- end }}
+  ]
+  {{- else }}
   worker_nodes = []
   {{- end }}
 

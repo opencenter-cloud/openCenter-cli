@@ -44,17 +44,3 @@ func UpdateStatus(clusterName, stage, status string) error {
 
 	return nil
 }
-
-func resolveClusterConfigPath(ctx context.Context, mgr *ConfigurationManager, clusterName string) (string, error) {
-	cfg, err := mgr.Load(ctx, clusterName)
-	if err != nil {
-		return "", err
-	}
-
-	clusterPaths, err := mgr.pathResolver.Resolve(ctx, cfg.ClusterName(), cfg.Organization())
-	if err != nil {
-		return "", err
-	}
-
-	return clusterPaths.ConfigPath, nil
-}

@@ -28,7 +28,6 @@ import (
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
@@ -710,7 +709,7 @@ func setupPropertyTestManager(t *testing.T, tmpDir string, clusterName string) (
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 	// Create config loader
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 
 	// Create SOPS manager (with nil dependencies for unit tests)
 	// The mock encryptor will be injected at the manager level

@@ -20,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
@@ -125,10 +125,10 @@ func createAuditLogger() (*security.AuditLogger, error) {
 }
 
 // createConfigLoader creates a config loader instance
-func createConfigLoader() *config.ConfigIOHandler {
+func createConfigLoader() *v2.ConfigIOHandler {
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
-	return config.NewConfigIOHandler(fileSystem)
+	return v2.NewConfigIOHandler(fileSystem)
 }
 
 // getSecretsRegistryPath returns the path to the secrets registry directory

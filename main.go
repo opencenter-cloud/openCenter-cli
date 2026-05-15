@@ -21,6 +21,7 @@ import (
 
 	"github.com/opencenter-cloud/opencenter-cli/cmd"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
 )
 
@@ -64,7 +65,7 @@ func main() {
 		}
 
 		// Exit code 3 for missing cluster configuration
-		var cnfErr *config.ConfigNotFoundError
+		var cnfErr *v2.ConfigNotFoundError
 		if errors.As(err, &cnfErr) {
 			fmt.Fprintf(os.Stderr, "\nCheck available clusters with: opencenter cluster list\n")
 			fmt.Fprintf(os.Stderr, "Initialize a new cluster with: opencenter cluster init %s\n", cnfErr.ClusterName)

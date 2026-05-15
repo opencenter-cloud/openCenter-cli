@@ -76,7 +76,7 @@ func createDryRunClusterPaths(ctx context.Context, clusterName string) (*paths.C
 
 func saveDryRunConfig(
 	ctx context.Context,
-	configLoader *config.ConfigIOHandler,
+	configLoader *v2.ConfigIOHandler,
 	cfg *v2.Config,
 	clusterPaths *paths.ClusterPaths,
 	clusterName string,
@@ -588,7 +588,7 @@ AGE-SECRET-KEY-1TEST1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABC
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 	// Create config loader
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 
 	// Save config in the resolver-backed location and a legacy copy used by older discovery tests.
 	if err := saveDryRunConfig(ctx, configLoader, cfg, clusterPaths, clusterName); err != nil {
@@ -681,7 +681,7 @@ func setupDryRunRotationTest(t *testing.T, tmpDir string, clusterName string, se
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 	// Create config loader
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 
 	// Create SOPS manager
 	sopsManager := sops.NewSOPSManager()
@@ -797,7 +797,7 @@ func setupDryRunRevocationTest(t *testing.T, tmpDir string, clusterName string, 
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 	// Create config loader
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 
 	// Create SOPS manager
 	sopsManager := sops.NewSOPSManager()
@@ -882,7 +882,7 @@ AGE-SECRET-KEY-1TEST1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABC
 		fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 		// Create config loader
-		configLoader := config.NewConfigIOHandler(fileSystem)
+		configLoader := v2.NewConfigIOHandler(fileSystem)
 
 		if err := saveDryRunConfig(ctx, configLoader, cfg, clusterPaths, clusterName); err != nil {
 			return nil, fmt.Errorf("failed to save config for %s: %w", clusterName, err)
@@ -901,7 +901,7 @@ AGE-SECRET-KEY-1TEST1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABC
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 	// Create config loader
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 
 	// Create SOPS manager
 	sopsManager := sops.NewDefaultSOPSManager(nil, nil, logger)

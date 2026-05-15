@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
@@ -54,7 +54,7 @@ func setupTestRotator(t *testing.T) (*DefaultKeyRotator, *MockKeyRegistry, *Defa
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 	// Create config loader
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 
 	// Create SOPS manager
 	sopsManager := sops.NewDefaultSOPSManager(nil, nil, slog.Default())

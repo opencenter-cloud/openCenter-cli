@@ -30,7 +30,7 @@ import (
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
@@ -599,7 +599,7 @@ func TestAuditLogIntegration_SecretsManager(t *testing.T) {
 	// Create secrets manager with audit logger
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 	sopsManager := sops.NewDefaultSOPSManager(nil, nil, slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})))
 
 	manager := &DefaultSecretsManager{

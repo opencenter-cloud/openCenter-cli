@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	utilErrors "github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 )
 
@@ -34,13 +34,13 @@ func determineExitCode(err error) int {
 	}
 
 	// Exit code 3: missing cluster configuration
-	var cnfErr *config.ConfigNotFoundError
+	var cnfErr *v2.ConfigNotFoundError
 	if errors.As(err, &cnfErr) {
 		return 3
 	}
 
 	// Exit code 2: validation failure
-	if config.IsValidationError(err) {
+	if v2.IsValidationError(err) {
 		return 2
 	}
 
@@ -51,7 +51,7 @@ func determineExitCode(err error) int {
 // TestExitCode_ConfigNotFound verifies that ConfigNotFoundError maps to exit code 3.
 // Requirements: 17.1
 func TestExitCode_ConfigNotFound(t *testing.T) {
-	err := config.NewConfigNotFoundError("test-cluster", fmt.Errorf("no such directory"))
+	err := v2.NewConfigNotFoundError("test-cluster", fmt.Errorf("no such directory"))
 	got := determineExitCode(err)
 	if got != 3 {
 		t.Errorf("ConfigNotFoundError: expected exit code 3, got %d", got)
@@ -62,7 +62,7 @@ func TestExitCode_ConfigNotFound(t *testing.T) {
 // still maps to exit code 3 via errors.As unwrapping.
 // Requirements: 17.1
 func TestExitCode_WrappedConfigNotFound(t *testing.T) {
-	inner := config.NewConfigNotFoundError("prod-cluster", nil)
+	inner := v2.NewConfigNotFoundError("prod-cluster", nil)
 	wrapped := fmt.Errorf("command failed: %w", inner)
 	got := determineExitCode(wrapped)
 	if got != 3 {
@@ -73,7 +73,7 @@ func TestExitCode_WrappedConfigNotFound(t *testing.T) {
 // TestExitCode_ValidationFailure verifies that validation errors map to exit code 2.
 // Requirements: 17.2
 func TestExitCode_ValidationFailure(t *testing.T) {
-	err := config.NewValidationError("cluster.name", "cluster name cannot be empty", nil)
+	err := v2.NewValidationError("cluster.name", "cluster name cannot be empty", nil)
 	got := determineExitCode(err)
 	if got != 2 {
 		t.Errorf("validation error: expected exit code 2, got %d", got)
@@ -113,17 +113,17 @@ func TestExitCode_Consistency(t *testing.T) {
 		},
 		{
 			name:     "ConfigNotFoundError returns 3",
-			err:      config.NewConfigNotFoundError("missing-cluster", nil),
+			err:      v2.NewConfigNotFoundError("missing-cluster", nil),
 			wantCode: 3,
 		},
 		{
 			name:     "ConfigNotFoundError with cause returns 3",
-			err:      config.NewConfigNotFoundError("gone-cluster", fmt.Errorf("ENOENT")),
+			err:      v2.NewConfigNotFoundError("gone-cluster", fmt.Errorf("ENOENT")),
 			wantCode: 3,
 		},
 		{
 			name:     "wrapped ConfigNotFoundError returns 3",
-			err:      fmt.Errorf("load: %w", config.NewConfigNotFoundError("deep", nil)),
+			err:      fmt.Errorf("load: %w", v2.NewConfigNotFoundError("deep", nil)),
 			wantCode: 3,
 		},
 		{
@@ -136,7 +136,7 @@ func TestExitCode_Consistency(t *testing.T) {
 		},
 		{
 			name:     "NewValidationError helper returns 2",
-			err:      config.NewValidationError("provider", "invalid provider", nil),
+			err:      v2.NewValidationError("provider", "invalid provider", nil),
 			wantCode: 2,
 		},
 		{
@@ -185,7 +185,7 @@ func TestExitCode_Consistency(t *testing.T) {
 // Requirements: 17.1
 func TestExitCode_ConfigNotFoundPreservesClusterName(t *testing.T) {
 	clusterName := "my-important-cluster"
-	err := config.NewConfigNotFoundError(clusterName, nil)
+	err := v2.NewConfigNotFoundError(clusterName, nil)
 
 	// Verify exit code
 	if got := determineExitCode(err); got != 3 {
@@ -193,7 +193,7 @@ func TestExitCode_ConfigNotFoundPreservesClusterName(t *testing.T) {
 	}
 
 	// Verify cluster name is extractable (as main.go does for the help message)
-	var cnfErr *config.ConfigNotFoundError
+	var cnfErr *v2.ConfigNotFoundError
 	if !errors.As(err, &cnfErr) {
 		t.Fatal("errors.As failed to extract ConfigNotFoundError")
 	}
@@ -207,9 +207,9 @@ func TestExitCode_ConfigNotFoundPreservesClusterName(t *testing.T) {
 // Requirements: 17.1, 17.2
 func TestExitCode_MutualExclusivity(t *testing.T) {
 	// ConfigNotFoundError is not a StructuredError, so IsValidationError is false.
-	err := config.NewConfigNotFoundError("test", nil)
+	err := v2.NewConfigNotFoundError("test", nil)
 
-	if config.IsValidationError(err) {
+	if v2.IsValidationError(err) {
 		t.Error("ConfigNotFoundError should not be classified as a validation error")
 	}
 

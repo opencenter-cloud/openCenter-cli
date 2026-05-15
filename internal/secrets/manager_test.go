@@ -54,7 +54,7 @@ func setupTestManager(t *testing.T) (*DefaultSecretsManager, string, func()) {
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 	// Create config loader
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 
 	// Create SOPS manager (with nil dependencies for unit tests)
 	sopsManager := sops.NewDefaultSOPSManager(nil, nil, slog.Default())
@@ -118,7 +118,7 @@ func createTestConfig(clusterName string) *v2.Config {
 func TestNewDefaultSecretsManager(t *testing.T) {
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 	sopsManager := sops.NewDefaultSOPSManager(nil, nil, slog.Default())
 
 	t.Run("creates manager with provided logger", func(t *testing.T) {

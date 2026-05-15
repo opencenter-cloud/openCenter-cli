@@ -88,9 +88,9 @@ func NewInitServiceWithConfigMgr(
 
 		// Use the pathResolver's base directory
 		configurationMgr = config.NewConfigurationManagerWithDeps(
-			config.NewConfigIOHandler(fs),
+			v2.NewConfigIOHandler(fs),
 			validationEngine, // Use the validation engine from DI
-			config.NewConfigCache(),
+			v2.NewConfigCache(),
 			pathResolver,
 			fs,
 		)

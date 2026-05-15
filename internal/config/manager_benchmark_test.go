@@ -53,8 +53,8 @@ func setupBenchmarkManager(b *testing.B) (*ConfigurationManager, string, func())
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	pathResolver := paths.NewPathResolver(tmpDir)
 	validator := validation.NewValidationEngine()
-	cache := NewConfigCache()
-	loader := NewConfigIOHandler(fileSystem)
+	cache := v2.NewConfigCache()
+	loader := v2.NewConfigIOHandler(fileSystem)
 
 	manager := NewConfigurationManagerWithDeps(loader, validator, cache, pathResolver, fileSystem)
 

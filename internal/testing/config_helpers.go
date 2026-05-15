@@ -64,8 +64,8 @@ func SaveConfigWithPathResolver(t *testing.T, cfg v2.Config, pathResolver *paths
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	validator := validation.NewValidationEngine()
-	cache := config.NewConfigCache()
-	loader := config.NewConfigIOHandler(fileSystem)
+	cache := v2.NewConfigCache()
+	loader := v2.NewConfigIOHandler(fileSystem)
 
 	// Create manager with custom path resolver
 	manager := config.NewConfigurationManagerWithDeps(

@@ -54,7 +54,7 @@ func TestDocsDoNotUseRemovedGACommands(t *testing.T) {
 		filepath.Join(repoRoot, "cmd", "secrets_validate.go"),
 		filepath.Join(repoRoot, "cmd", "secrets_sops_helpers.go"),
 		filepath.Join(repoRoot, "internal", "barbican", "client.go"),
-		filepath.Join(repoRoot, "internal", "config", "errors.go"),
+		filepath.Join(repoRoot, "internal", "config", "v2", "errors.go"),
 		filepath.Join(repoRoot, "internal", "core", "validation", "validators", "sops_key.go"),
 		filepath.Join(repoRoot, "internal", "gitops", "gitops-base-dir", "README.md"),
 		filepath.Join(repoRoot, "internal", "secrets", "doc.go"),

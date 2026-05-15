@@ -35,7 +35,7 @@ import (
 // It provides secrets synchronization, drift detection, and validation
 // by coordinating between config files, SOPS encryption, and manifest generation.
 type DefaultSecretsManager struct {
-	configLoader *config.ConfigIOHandler
+	configLoader *v2.ConfigIOHandler
 	sopsManager  *sops.DefaultSOPSManager
 	auditLogger  AuditLogger
 	logger       *slog.Logger
@@ -64,7 +64,7 @@ type AuditLogger interface {
 // Returns:
 //   - *DefaultSecretsManager: A new secrets manager instance
 func NewDefaultSecretsManager(
-	configLoader *config.ConfigIOHandler,
+	configLoader *v2.ConfigIOHandler,
 	sopsManager *sops.DefaultSOPSManager,
 	auditLogger AuditLogger,
 	logger *slog.Logger,

@@ -28,7 +28,7 @@ import (
 
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
-	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
@@ -234,7 +234,7 @@ func setupRevocationTest(t *testing.T, tmpDir string, clusterName string, secret
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 
 	// Create config loader
-	configLoader := config.NewConfigIOHandler(fileSystem)
+	configLoader := v2.NewConfigIOHandler(fileSystem)
 
 	// Create secrets manager
 	secretsManager := &DefaultSecretsManager{

@@ -72,9 +72,9 @@ func NewConfigureServiceWithDeps(
 	}
 	if configurationMgr == nil {
 		configurationMgr = config.NewConfigurationManagerWithDeps(
-			config.NewConfigIOHandler(fileSystem),
+			v2.NewConfigIOHandler(fileSystem),
 			validationEngine,
-			config.NewConfigCache(),
+			v2.NewConfigCache(),
 			pathResolver,
 			fileSystem,
 		)

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation/validators"
@@ -22,8 +23,8 @@ func createTestSetupService(pathResolver *paths.PathResolver) *SetupService {
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 	fileSystem := fs.NewDefaultFileSystem(errorHandler)
 	validator := validation.NewValidationEngine()
-	cache := config.NewConfigCache()
-	loader := config.NewConfigIOHandler(fileSystem)
+	cache := v2.NewConfigCache()
+	loader := v2.NewConfigIOHandler(fileSystem)
 	configMgr := config.NewConfigurationManagerWithDeps(loader, validator, cache, pathResolver, fileSystem)
 
 	return NewSetupServiceWithConfigMgr(pathResolver, validator, configMgr)
@@ -293,8 +294,8 @@ func TestSetupService_OpenStackSetupDoesNotUseLegacyConfigValidator(t *testing.T
 	if err := validator.Register(validators.NewConfigValidator()); err != nil {
 		t.Fatalf("register config validator: %v", err)
 	}
-	cache := config.NewConfigCache()
-	loader := config.NewConfigIOHandler(fileSystem)
+	cache := v2.NewConfigCache()
+	loader := v2.NewConfigIOHandler(fileSystem)
 	configMgr := config.NewConfigurationManagerWithDeps(loader, validator, cache, pathResolver, fileSystem)
 
 	service := NewSetupServiceWithConfigMgr(pathResolver, validator, configMgr)

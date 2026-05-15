@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
+	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation/validators"
@@ -25,8 +26,8 @@ func createTestBootstrapService(pathResolver *paths.PathResolver) *BootstrapServ
 	validator := validation.NewValidationEngine()
 	configValidator := validators.NewConfigValidator()
 	validator.Register(configValidator)
-	cache := config.NewConfigCache()
-	loader := config.NewConfigIOHandler(fileSystem)
+	cache := v2.NewConfigCache()
+	loader := v2.NewConfigIOHandler(fileSystem)
 	configMgr := config.NewConfigurationManagerWithDeps(loader, validator, cache, pathResolver, fileSystem)
 
 	return NewBootstrapServiceWithConfigMgr(pathResolver, validator, configMgr, fileSystem)

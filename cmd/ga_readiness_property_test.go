@@ -230,8 +230,8 @@ func TestProperty_SetupProducesRequiredDirectoryStructure(t *testing.T) {
 
 		errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 		fileSystem := fs.NewDefaultFileSystem(errorHandler)
-		loader := config.NewConfigIOHandler(fileSystem)
-		cache := config.NewConfigCache()
+		loader := v2.NewConfigIOHandler(fileSystem)
+		cache := v2.NewConfigCache()
 		configMgr := config.NewConfigurationManagerWithDeps(loader, validationEngine, cache, pathResolver, fileSystem)
 
 		setupService := cluster.NewSetupServiceWithConfigMgr(pathResolver, validationEngine, configMgr)
@@ -347,8 +347,8 @@ func TestProperty_MissingConfigProducesConfigNotFoundError(t *testing.T) {
 		validationEngine := validation.NewValidationEngine()
 		errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
 		fileSystem := fs.NewDefaultFileSystem(errorHandler)
-		loader := config.NewConfigIOHandler(fileSystem)
-		cache := config.NewConfigCache()
+		loader := v2.NewConfigIOHandler(fileSystem)
+		cache := v2.NewConfigCache()
 		configMgr := config.NewConfigurationManagerWithDeps(loader, validationEngine, cache, pathResolver, fileSystem)
 
 		// Attempt to load a non-existent cluster — must return ConfigNotFoundError
@@ -359,7 +359,7 @@ func TestProperty_MissingConfigProducesConfigNotFoundError(t *testing.T) {
 		}
 
 		// Verify the error is a ConfigNotFoundError
-		var cnfErr *config.ConfigNotFoundError
+		var cnfErr *v2.ConfigNotFoundError
 		if !stderrors.As(err, &cnfErr) {
 			t.Logf("Load(%q) error is not ConfigNotFoundError: %T: %v", clusterName, err, err)
 			return false

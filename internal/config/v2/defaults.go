@@ -542,6 +542,24 @@ func applyProviderCloudDefaults(cfg *Config, availabilityZone string) {
 			Network:       defaultVMwareNetwork,
 			Template:      defaultVMwareTemplate,
 			Folder:        "/vm/opencenter",
+			Nodes: []VMwareNode{
+				{Name: "3dk8c01", IP: "10.249.68.11", Role: "master"},
+				{Name: "3dk8c02", IP: "10.249.68.12", Role: "master"},
+				{Name: "3dk8c03", IP: "10.249.68.13", Role: "master"},
+				{Name: "3dk8w01", IP: "10.249.68.14", Role: "worker"},
+				{Name: "3dk8w02", IP: "10.249.68.15", Role: "worker"},
+				{Name: "3dk8w03", IP: "10.249.68.16", Role: "worker"},
+			},
+		}
+		cfg.OpenCenter.Infrastructure.Compute.MasterNodes = []StaticNode{
+			{ID: "master-0", Name: "3dk8c01", AccessIPv4: "10.249.68.11"},
+			{ID: "master-1", Name: "3dk8c02", AccessIPv4: "10.249.68.12"},
+			{ID: "master-2", Name: "3dk8c03", AccessIPv4: "10.249.68.13"},
+		}
+		cfg.OpenCenter.Infrastructure.Compute.WorkerNodes = []StaticNode{
+			{ID: "worker-0", Name: "3dk8w01", AccessIPv4: "10.249.68.14"},
+			{ID: "worker-1", Name: "3dk8w02", AccessIPv4: "10.249.68.15"},
+			{ID: "worker-2", Name: "3dk8w03", AccessIPv4: "10.249.68.16"},
 		}
 		cfg.OpenCenter.Infrastructure.Bastion.Enabled = false
 	default:

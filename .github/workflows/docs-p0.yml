@@ -34,7 +34,7 @@ jobs:
 
       - name: Vale
         if: steps.changed.outputs.files != ''
-        uses: errata-ai/vale-action@v2
+        uses: errata-ai/vale-action@v3
         with:
           files: ${{ steps.changed.outputs.files }}
           fail_on_error: true

@@ -42,8 +42,6 @@ func (p *openstackBootstrapProvider) buildGitOpsPushStep(
 				commandPlan("git", "stash", "--include-untracked"),
 				commandPlan("git", "pull", "--rebase", "origin", "main"),
 				commandPlan("git", "stash", "pop"),
-				commandPlan("git", "add", "-A"),
-				commandPlan("git", "commit", "-m", "chore: bootstrap cluster gitops state"),
 				commandPlan("git", "push", "-u", "origin", "main"),
 			},
 			Environment: planEnv,
@@ -113,13 +111,6 @@ func (p *openstackBootstrapProvider) runGitOpsPush(ctx context.Context, cfg *v2.
 	if _, err := p.runner.Run(ctx, gitDir, env, "git", "stash", "pop"); err != nil {
 		return fmt.Errorf("git stash pop: %w", err)
 	}
-
-	// Stage all changes and commit before pushing
-	if _, err := p.runner.Run(ctx, gitDir, env, "git", "add", "-A"); err != nil {
-		return fmt.Errorf("git add: %w", err)
-	}
-	// Commit only if there are staged changes (--allow-empty is not used)
-	_, _ = p.runner.Run(ctx, gitDir, env, "git", "commit", "-m", "chore: bootstrap cluster gitops state")
 
 	// Push to remote using the authenticated origin URL
 	if _, err := p.runner.Run(ctx, gitDir, env, "git", "push", "-u", "origin", "main"); err != nil {

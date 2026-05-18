@@ -28,7 +28,6 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/logging"
-	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +51,6 @@ and re-run deploy to continue from the saved state.`,
 	cmd.Flags().Bool("debug", false, "print deploy step debug details before each step runs")
 	cmd.Flags().String("step", "", "run a single deploy step by ID")
 	cmd.Flags().String("from-step", "", "restart deploy from the specified step ID")
-	cmd.Flags().Bool("confirm-commit", false, "prompt for confirmation before auto-committing uncommitted changes")
 	cmd.Flags().Bool("break-lock", false, "force removal of an existing operation lock before deploying")
 
 	return cmd
@@ -134,10 +132,7 @@ func runClusterDeploy(cmd *cobra.Command, args []string) error {
 	// A dirty tree causes git pull --rebase to fail during the gitea-rebase step.
 	if !opts.DryRun {
 		if gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.LocalDir); gitDir != "" {
-			confirmCommit, _ := cmd.Flags().GetBool("confirm-commit")
-			if err := ensureCleanWorkingTree(ctx, cmd, gitDir, confirmCommit); err != nil {
-				return err
-			}
+			warnUncommittedChanges(ctx, cmd, gitDir)
 			// Verify the local repo's origin remote points to git_url so the
 			// gitea-rebase and gitops-push steps operate against the expected remote.
 			if gitURL := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.URL); gitURL != "" {
@@ -253,51 +248,19 @@ func printPostDeployNextSteps(cmd *cobra.Command, name string) {
 	fmt.Fprintln(cmd.OutOrStdout(), "  3. Push to remote:  git push")
 }
 
-// ensureCleanWorkingTree checks whether the GitOps directory has uncommitted
-// changes. If confirmCommit is true, the user is prompted before committing.
-// Otherwise, changes are auto-committed without prompting.
-// Returning an error aborts the bootstrap.
-func ensureCleanWorkingTree(ctx context.Context, cmd *cobra.Command, gitDir string, confirmCommit bool) error {
+// warnUncommittedChanges prints a warning if the GitOps directory has
+// uncommitted changes. It does not commit or abort — the user is responsible
+// for committing and pushing after deploy completes.
+func warnUncommittedChanges(ctx context.Context, cmd *cobra.Command, gitDir string) {
 	statusCmd := exec.CommandContext(ctx, "git", "-C", gitDir, "status", "--porcelain")
 	output, err := statusCmd.Output()
 	if err != nil {
-		// Not a git repo or git not available — skip the check silently.
-		return nil
+		return
 	}
 	if len(strings.TrimSpace(string(output))) == 0 {
-		return nil
+		return
 	}
-
-	fmt.Fprintf(cmd.OutOrStdout(), "The GitOps directory has uncommitted changes:\n%s\n", strings.TrimRight(string(output), "\n"))
-
-	// If --confirm-commit is set, prompt for confirmation
-	if confirmCommit {
-		testMode := os.Getenv("OPENCENTER_TEST_MODE") != ""
-		prompter := ui.GetPrompter(os.Stdin, cmd.OutOrStdout(), testMode)
-
-		confirmed, err := prompter.Confirm(ctx, "Commit all changes before continuing?")
-		if err != nil {
-			return fmt.Errorf("confirmation prompt failed: %w", err)
-		}
-		if !confirmed {
-			return fmt.Errorf("bootstrap aborted: uncommitted changes in %s\nPlease commit or stash your changes and retry", gitDir)
-		}
-	} else {
-		fmt.Fprintf(cmd.OutOrStdout(), "Auto-committing changes...\n")
-	}
-
-	addCmd := exec.CommandContext(ctx, "git", "-C", gitDir, "add", "-A")
-	if out, err := addCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git add failed: %s: %w", strings.TrimSpace(string(out)), err)
-	}
-
-	commitCmd := exec.CommandContext(ctx, "git", "-C", gitDir, "commit", "-m", "chore: auto-commit before bootstrap")
-	if out, err := commitCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git commit failed: %s: %w", strings.TrimSpace(string(out)), err)
-	}
-
-	fmt.Fprintf(cmd.OutOrStdout(), "Changes committed successfully.\n")
-	return nil
+	fmt.Fprintf(cmd.OutOrStdout(), "Warning: GitOps directory has uncommitted changes:\n%s\n", strings.TrimRight(string(output), "\n"))
 }
 
 // verifyOriginMatchesGitURL checks that the "origin" remote in gitDir points to

@@ -22,7 +22,6 @@ opencenter cluster deploy [name] [flags]
 
 ```
       --break-lock                 force removal of an existing operation lock before deploying
-      --confirm-commit             prompt for confirmation before auto-committing uncommitted changes
       --container-runtime string   container runtime for kind clusters (docker or podman)
       --debug                      print deploy step debug details before each step runs
       --from-step string           restart deploy from the specified step ID

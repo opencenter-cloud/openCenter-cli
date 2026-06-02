@@ -1,0 +1,183 @@
+= Renderer Contract
+:description: Defines renderer-owned vs. bootstrap-owned paths, supported lifecycle states, the rendering model inversion, and the relationship between overlay descriptors and ServicePluginManifest.
+:page-type: reference
+:category: contributing
+:audience: developers, platform engineers
+:tags: ["rendering", "contract", "lifecycle", "descriptors", "parity"]
+:id: rendering-contract
+
+*Purpose:* For developers and platform engineers, defines the exact boundaries between renderer-owned and bootstrap-owned paths, supported lifecycle states, the rendering model inversion from negative-list to positive-list, and the relationship between overlay descriptors and `ServicePluginManifest`.
+
+== 1. Renderer-Owned Paths
+
+The descriptor-driven renderer owns the following paths within each `applications/overlays/<cluster>/` tree. These paths are created, updated, and cleaned up exclusively by the renderer.
+
+|===
+| Path | Ownership | Notes
+
+| `kustomization.yaml` (root)
+| renderer
+| Conditionally includes `./customer-managed/fluxcd`
+
+| `services/`
+| renderer
+| All service subdirectories and aggregate files
+
+| `services/sources/`
+| renderer
+| GitRepository source manifests
+
+| `services/fluxcd/`
+| renderer
+| FluxCD Kustomization aggregates
+
+| `managed-services/`
+| renderer
+| All managed-service subdirectories and aggregates
+
+| `managed-services/sources/`
+| renderer
+| Managed-service source manifests
+
+| `managed-services/fluxcd/`
+| renderer
+| Managed-service FluxCD aggregates
+
+| `customer-managed/`
+| renderer
+| When `overlay_units.customer_managed.enabled` is true
+
+| `customer-managed/sources/`
+| renderer
+| GitRepository and optional Secret
+
+| `customer-managed/fluxcd/`
+| renderer
+| Customer-managed FluxCD Kustomizations
+
+| `.sops.yaml`
+| renderer
+| When `overlay_units.sops.enabled` is true
+|===
+
+== 2. Bootstrap-Owned Paths
+
+The following paths are owned by `flux bootstrap` and are outside the descriptor renderer's scope.
+
+|===
+| Path | Ownership | Notes
+
+| `flux-system/`
+| bootstrap
+| Created by `flux bootstrap git`
+
+| `flux-system/gotk-components.yaml`
+| bootstrap
+| FluxCD toolkit components
+
+| `flux-system/gotk-sync.yaml`
+| bootstrap
+| FluxCD sync configuration
+
+| `flux-system/kustomization.yaml`
+| bootstrap
+| FluxCD self-management
+|===
+
+The renderer does not create, modify, or validate files under `flux-system/`. Parity tests exclude `flux-system/` from comparison.
+
+== 3. Supported Lifecycle States
+
+=== Renderer parity state
+
+After `RenderClusterApps` completes, the overlay tree contains all renderer-owned paths. `flux-system/` may or may not exist. The root `kustomization.yaml` references `./flux-system` unconditionally because FluxCD requires it after bootstrap.
+
+In this state:
+
+* renderer-owned paths are present and valid
+* the overlay is not a valid standalone Kustomize target if `flux-system/` is absent
+* parity tests compare renderer-owned paths only
+
+=== Bootstrap-complete state
+
+After `flux bootstrap git` runs against the cluster, `flux-system/` exists and the full overlay is a valid Kustomize target that FluxCD can reconcile.
+
+In this state:
+
+* all paths (renderer-owned + bootstrap-owned) are present
+* the overlay is a valid, deployable Kustomize target
+* FluxCD reconciles the full tree
+
+=== Pre-bootstrap validity
+
+A root `kustomization.yaml` that references `./flux-system` before bootstrap creates an invalid Kustomize overlay. This is an accepted intermediate state, not a bug. The renderer produces this reference because FluxCD requires it post-bootstrap.
+
+Validation rules:
+
+* parity tests do not validate Kustomize build-ability of the full overlay
+* parity tests validate renderer-owned path completeness and content
+* integration tests that validate bootstrap-complete state are separate from parity tests
+
+== 4. Rendering Model Inversion
+
+=== Previous model (negative-list)
+
+The convention-based renderer walked the embedded filesystem and copied everything except files matched by `shouldSkipFile`. New files added to the embedded FS appeared in output automatically.
+
+Failure mode: "too much output" -- undeclared files appear in rendered output.
+
+=== Current model (positive-list)
+
+The descriptor-driven renderer renders only files declared in a descriptor. New files added to the embedded FS but not declared in a descriptor are silently excluded.
+
+Failure mode: "missing output" -- undeclared files silently disappear.
+
+=== Mitigation
+
+`validateDescriptorCoverage` in `descriptor_renderer.go` walks the entire embedded FS and fails if any file has zero descriptor owners or multiple owners. This validation runs before every render operation and in CI.
+
+This means:
+
+* adding a file to `templates/cluster-apps-base/` without a descriptor entry causes a build failure
+* removing a descriptor entry without removing the template file causes a build failure
+* the positive-list failure mode (silent file drops) is caught at validation time, not at render time
+
+== 5. Overlay Descriptors vs. ServicePluginManifest
+
+=== Overlay descriptors (authoritative for rendering topology)
+
+Location: `internal/services/descriptors/data/*.yaml`
+
+Overlay descriptors are the sole authority for:
+
+* which files the renderer produces for each service
+* conditional file inclusion/exclusion based on config values
+* aggregate target relationships (which aggregates a service contributes to)
+* renderer-owned path ownership (every embedded FS file must have exactly one descriptor owner)
+
+=== ServicePluginManifest (authoritative for service metadata)
+
+Location: `internal/services/plugin.go`
+
+`ServicePluginManifest` is the authority for:
+
+* service identity (name, version, type)
+* service dependencies
+* service configuration schema and defaults
+* service validation rules
+
+=== Relationship
+
+These are complementary, not competing. Overlay descriptors answer "what files does the renderer produce?" while `ServicePluginManifest` answers "what is this service and how is it configured?"
+
+The renderer does not consult `ServicePluginManifest` for file membership decisions. `ServicePluginManifest.Templates` and its `Condition` field are not used by the descriptor-driven renderer. They remain available for other purposes (documentation, tooling, future plugin systems) but do not influence rendering topology.
+
+== 6. Rollback Mechanism
+
+The descriptor-driven renderer is the active code path. The convention-based renderer (`shouldSkipFile` + embedded FS walk) remains in the codebase but is not called by `RenderClusterAppsAtomic`.
+
+Rollback strategy: fix-forward or git revert. There is no runtime feature flag to switch between renderers.
+
+Rationale: maintaining two parallel rendering paths with a runtime switch adds complexity and testing burden disproportionate to the risk. The descriptor coverage validation catches the most dangerous failure mode (missing files) at build time. Git revert provides a fast rollback path for any regression.
+
+If operational experience reveals that git revert is insufficient, a runtime feature flag can be added as a targeted response. This is a conscious deferral, not an oversight.

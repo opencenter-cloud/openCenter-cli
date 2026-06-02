@@ -1,0 +1,532 @@
+= Build System (Mise)
+:description: How the openCenter-cli build pipeline is wired through mise tasks and why mise was chosen over make.
+:page-type: concept
+:category: contributing
+:audience: developers
+
+*Purpose:* For developers, explains the mise-based build system and how tasks are organized.
+
+== Why Mise?
+
+openCenter-cli uses https://mise.jdx.dev/[Mise] instead of Make for several reasons:
+
+. *Tool version management* - Automatically installs correct Go, kubectl, kind, helm versions
+. *Cross-platform* - Works on macOS, Linux, and WSL2 without modification
+. *Task automation* - Replaces Make with more readable task definitions
+. *Environment management* - Handles environment variables and PATH configuration
+. *Developer experience* - Single command to set up entire development environment
+
+== Configuration File
+
+All build configuration is in `.mise.toml`:
+
+[,toml]
+----
+[tools]
+golang = "1.26.3"
+kubectl = "latest"
+kind = "latest"
+helm = "latest"
+
+[env]
+KIND_EXPERIMENTAL_PROVIDER = "podman"
+CONTAINER_RUNTIME = "podman"
+
+[tasks]
+# Task definitions
+build = '''#!/usr/bin/env bash
+...
+'''
+----
+
+== Tool Management
+
+=== Installed Tools
+
+Mise manages these tools:
+
+* *Go 1.26.3* - Primary language
+* *kubectl* - Kubernetes CLI
+* *kind* - Local Kubernetes clusters
+* *helm* - Kubernetes package manager
+
+=== Install Tools
+
+[,bash]
+----
+# Install all tools
+mise install
+
+# Install specific tool
+mise install go
+
+# Update tool
+mise install go@latest
+
+# List installed tools
+mise list
+----
+
+=== Tool Versions
+
+Tool versions are pinned in `.mise.toml` for reproducibility:
+
+[,toml]
+----
+[tools]
+golang = "1.26.3"  # Specific version
+kubectl = "latest" # Always latest
+----
+
+== Task System
+
+=== Task Categories
+
+Tasks are organized by function:
+
+*Build tasks:*
+
+* `build` - Build binary with version info
+* `build-linux` - Build for Linux
+* `build-all` - Build for all platforms
+* `release` - Build release binaries
+* `publish` - Generate release notes
+
+*Test tasks:*
+
+* `test` - Run unit tests
+* `godog` - Run BDD tests
+* `godog-wip` - Run WIP scenarios
+* `test-properties` - Run property tests
+* `test-security` - Run security tests
+* `test-integration` - Run integration tests
+
+*Code quality tasks:*
+
+* `fmt` - Format code with gofmt
+* `tidy` - Tidy Go modules
+* `upgrade-deps` - Upgrade dependencies
+
+*Schema tasks:*
+
+* `schema` - Generate JSON schema
+* `schema-gen` - Generate from Go structs
+* `schema-verify` - Comprehensive verification
+
+*Validation tasks:*
+
+* `validate` - Validate configuration
+* `preflight` - Run preflight checks
+
+*Documentation tasks:*
+
+* `docs-gen` - Generate CLI documentation
+
+*Cleanup tasks:*
+
+* `clean` - Remove build artifacts
+
+== Task Anatomy
+
+=== Simple Task
+
+Single command:
+
+[,toml]
+----
+[tasks]
+fmt = "gofmt -w ."
+----
+
+=== Multi-Step Task
+
+Array of commands:
+
+[,toml]
+----
+[tasks]
+test-all = [
+  "mise run test",
+  "mise run godog"
+]
+----
+
+=== Script Task
+
+Bash script with heredoc:
+
+[,toml]
+----
+[tasks]
+build = '''
+#!/usr/bin/env bash
+set -e
+
+GIT_COMMIT=$(git rev-parse HEAD)
+VERSION=${GIT_TAG:-"0.0.1"}
+
+go build -ldflags "-X main.version=${VERSION}" -o bin/opencenter
+
+echo "Built opencenter ${VERSION}"
+'''
+----
+
+=== Task with Arguments
+
+[,toml]
+----
+[tasks]
+release = '''
+#!/usr/bin/env bash
+set -e
+
+if [ -z "$1" ]; then
+  echo "Usage: mise run release <version>"
+  exit 1
+fi
+
+VERSION="$1"
+# ... build release
+'''
+----
+
+Usage: `mise run release v1.0.0`
+
+== Build Process
+
+=== Version Information
+
+Build injects version info via ldflags:
+
+[,bash]
+----
+GIT_COMMIT=$(git rev-parse HEAD)
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
+BUILD_DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+VERSION=${GIT_TAG:-"0.0.1"}
+
+go build -ldflags "\
+  -X main.version=${VERSION} \
+  -X main.gitCommit=${GIT_COMMIT} \
+  -X main.gitBranch=${GIT_BRANCH} \
+  -X main.gitTag=${GIT_TAG} \
+  -X main.buildDate=${BUILD_DATE}" \
+  -o bin/opencenter
+----
+
+Accessed in code:
+
+[,go]
+----
+var (
+    version   string
+    gitCommit string
+    gitBranch string
+    gitTag    string
+    buildDate string
+)
+
+func init() {
+    if version == "" {
+        version = "dev"
+    }
+}
+----
+
+=== Cross-Platform Builds
+
+Build for multiple platforms:
+
+[,bash]
+----
+# Linux AMD64
+GOOS=linux GOARCH=amd64 go build -o bin/opencenter-linux-amd64
+
+# Linux ARM64
+GOOS=linux GOARCH=arm64 go build -o bin/opencenter-linux-arm64
+
+# macOS Intel
+GOOS=darwin GOARCH=amd64 go build -o bin/opencenter-darwin-amd64
+
+# macOS Apple Silicon
+GOOS=darwin GOARCH=arm64 go build -o bin/opencenter-darwin-arm64
+----
+
+Run with: `mise run build-all`
+
+== Environment Variables
+
+=== Build-Time Variables
+
+Set in `.mise.toml` `[env]` section:
+
+[,toml]
+----
+[env]
+KIND_EXPERIMENTAL_PROVIDER = "podman"
+CONTAINER_RUNTIME = "podman"
+----
+
+=== Runtime Variables
+
+Override with environment:
+
+[,bash]
+----
+# Override config directory
+OPENCENTER_CONFIG_DIR=./testdata/config mise run test
+
+# Enable debug logging
+OPENCENTER_DEBUG=true mise run build
+----
+
+== Task Dependencies
+
+Tasks can depend on other tasks:
+
+[,toml]
+----
+[tasks]
+# Build before testing
+test-with-build = [
+  "mise run build",
+  "mise run test"
+]
+
+# Full verification
+verify = [
+  "mise run build",
+  "mise run fmt",
+  "mise run test",
+  "mise run godog",
+  "mise run schema-verify"
+]
+----
+
+== Custom Tasks
+
+=== Creating New Tasks
+
+Add to `.mise.toml`:
+
+[,toml]
+----
+[tasks]
+my-task = '''
+#!/usr/bin/env bash
+set -e
+
+echo "Running my custom task..."
+# Your commands here
+'''
+----
+
+=== Task Naming Conventions
+
+* Use kebab-case: `test-integration`, `build-linux`
+* Prefix related tasks: `gitea-setup`, `gitea-configure`
+* Use descriptive names: `export-aws-creds`, `unset-os-creds`
+
+=== Discovering Tasks
+
+[,bash]
+----
+# List all available tasks
+mise tasks
+
+# Show task details
+mise task show build
+----
+
+== Common Workflows
+
+=== Development Workflow
+
+[,bash]
+----
+# 1. Install tools
+mise install
+
+# 2. Build
+mise run build
+
+# 3. Test
+mise run test
+
+# 4. Format
+mise run fmt
+
+# 5. Tidy
+mise run tidy
+----
+
+=== Pre-Commit Workflow
+
+[,bash]
+----
+mise run build && \
+mise run fmt && \
+mise run test && \
+mise run godog
+----
+
+=== Schema Change Workflow
+
+[,bash]
+----
+# Comprehensive verification
+mise run schema-verify
+----
+
+=== Release Workflow
+
+[,bash]
+----
+# Build release binaries
+mise run release v1.0.0
+
+# Generate release notes
+mise run publish v1.0.0
+----
+
+== Task Execution
+
+=== Run Task
+
+[,bash]
+----
+# Run single task
+mise run build
+
+# Run with arguments
+mise run release v1.0.0
+
+# Run in specific directory
+cd openCenter-cli && mise run build
+----
+
+=== Task Output
+
+Tasks show:
+
+* Command being executed
+* Standard output
+* Standard error
+* Exit code
+
+=== Task Failures
+
+If a task fails:
+
+* Execution stops immediately
+* Error message displayed
+* Non-zero exit code returned
+
+== Debugging Tasks
+
+=== Verbose Output
+
+[,bash]
+----
+# Show commands being executed
+mise run -v build
+
+# Show all debug information
+mise run -vv build
+----
+
+=== Dry Run
+
+[,bash]
+----
+# Show what would be executed
+mise run --dry-run build
+----
+
+=== Task Source
+
+[,bash]
+----
+# Show task definition
+mise task show build
+----
+
+== Best Practices
+
+=== Do
+
+* *Use mise for all operations* - Never suggest raw commands
+* *Create tasks for new workflows* - Make operations discoverable
+* *Use descriptive names* - Clear what the task does
+* *Add error handling* - Use `set -e` in bash scripts
+* *Document complex tasks* - Add comments explaining purpose
+
+=== Don't
+
+* *Don't use raw commands* - Always wrap in mise tasks
+* *Don't hardcode paths* - Use environment variables
+* *Don't skip error checking* - Always check exit codes
+* *Don't create duplicate tasks* - Reuse existing tasks
+* *Don't use interactive commands* - Tasks should be scriptable
+
+== Troubleshooting
+
+=== Mise not found
+
+[,bash]
+----
+# Install mise
+curl https://mise.run | sh
+
+# Add to PATH
+export PATH="$HOME/.local/bin:$PATH"
+----
+
+=== Tool installation fails
+
+[,bash]
+----
+# Update mise
+mise self-update
+
+# Retry installation
+mise install --force
+----
+
+=== Task fails with "command not found"
+
+[,bash]
+----
+# Ensure tools are installed
+mise install
+
+# Check tool is in PATH
+mise which go
+----
+
+=== Task runs wrong version
+
+[,bash]
+----
+# Check active version
+mise current
+
+# Use mise-managed version
+mise exec -- go version
+----
+
+'''
+
+== Evidence
+
+This documentation is based on the following repository files:
+
+* Mise configuration: `.mise.toml:1-961` (complete file)
+* Tool versions: `.mise.toml:1-5` (tools section)
+* Environment variables: `.mise.toml:7-20` (env section)
+* Task definitions: `.mise.toml:23-961` (tasks section)
+* Build process: `.mise.toml:23-47` (build task)
+* Version injection: `.kiro/steering/tech.md:143-149`
+* Development guide: `.kiro/steering/tech.md:1-149`
+* Product overview: `.kiro/steering/product.md:23-28`

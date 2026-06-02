@@ -1,0 +1,413 @@
+= Service Enable/Disable Lifecycle
+:description: How services are enabled, disabled, rendered, and reconciled across cluster stages.
+:page-type: concept
+:category: contributing
+:audience: developers, platform engineers
+:tags: ["services", "lifecycle", "fluxcd", "gitops", "rendering"]
+:id: service-lifecycle
+
+*Purpose:* For developers and platform engineers, explains how service enable/disable flows through configuration, GitOps rendering, and FluxCD reconciliation, covering all cluster stages and edge cases.
+
+== Concepts
+
+A "service" in openCenter is a Kubernetes workload (Helm chart, Kustomization, or raw manifests) managed through the cluster configuration. Each service has an `enabled: bool` field in its config struct, inherited from `services.BaseConfig`. The enabled flag drives two things:
+
+. Whether the service's FluxCD manifests are rendered into the GitOps repository.
+. Whether FluxCD deploys (or prunes) the service in the target cluster.
+
+Services live in two maps inside `SimplifiedOpenCenter`:
+
+* `Services` (`ServiceMap`) -- platform services (cert-manager, kyverno, loki, etc.)
+* `ManagedService` (`ServiceMap`) -- customer/application services
+
+Both maps use polymorphic YAML unmarshaling via the service registry (`internal/config/registry`). Values are typed struct pointers (e.g., `*services.CertManagerConfig`), not raw maps.
+
+== Enable/Disable Command Flow
+
+----
+┌──────────────────────────────────────────────────────────┐
+│  opencenter cluster service enable <name> [--render]     │
+│  opencenter cluster service disable <name>               │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+                       ▼
+              ┌────────────────┐
+              │  Load config   │
+              │  (YAML file)   │
+              └───────┬────────┘
+                      │
+                      ▼
+              ┌────────────────┐
+              │  Registry      │  registry.GetServiceConfigType(name)
+              │  lookup        │  → typed struct (e.g. CertManagerConfig)
+              └───────┬────────┘
+                      │
+           ┌──────────┴──────────┐
+           │                     │
+           ▼                     ▼
+   ┌──────────────┐     ┌──────────────┐
+   │  enable:     │     │  disable:    │
+   │  Enabled=true│     │  Enabled=false│
+   │  + params    │     │              │
+   │  + secrets   │     │              │
+   │  + validate  │     │              │
+   └──────┬───────┘     └──────┬───────┘
+          │                    │
+          ▼                    ▼
+   ┌─────────────────────────────────┐
+   │  Save config to disk           │
+   │  (~/.config/opencenter/...)    │
+   └──────────────┬──────────────────┘
+                  │
+                  ▼
+          ┌───────────────┐
+          │  --render?    │──── no ──→ done (config-only change)
+          └───────┬───────┘
+                  │ yes
+                  ▼
+          ┌──────────────────────────────┐
+          │  Render manifests            │
+          │  enable  → RenderSingleService │
+          │  disable → RenderClusterApps │
+          └──────────────────────────────┘
+----
+
+Key implementation details:
+
+* `setEnabled()` uses reflection to set `BaseConfig.Enabled` on any service struct (`cmd/cluster_service.go:673`).
+* Enable and disable both validate the resulting service dependency state before saving.
+* Enable reuses an existing disabled service entry when present, preserving stored fields unless overridden with new flags.
+* `--render` is optional on both commands. Enable re-renders the changed service; disable re-renders the cluster apps overlay so stale manifests are removed.
+
+== Rendering: Config → GitOps Manifests
+
+Rendering translates the enabled/disabled state into files on disk. Two paths trigger rendering:
+
+|===
+| Trigger | Scope | Function
+
+| `cluster generate`
+| Full cluster
+| `gitops.RenderClusterApps()`
+
+| `cluster service enable --render`
+| Single service
+| `gitops.RenderSingleService()`
+
+| `cluster service disable --render`
+| Full cluster apps overlay
+| `gitops.RenderClusterApps()`
+|===
+
+=== Full Render (`cluster generate`)
+
+----
+┌─────────────────────────────────────────────────────────────┐
+│  cluster generate                                              │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+              ┌────────────────────┐
+              │  Load config       │
+              │  Validate          │
+              └────────┬───────────┘
+                       │
+                       ▼
+              ┌────────────────────┐
+              │  CopyBase()        │  base GitOps structure
+              └────────┬───────────┘
+                       │
+                       ▼
+              ┌────────────────────┐
+              │  RenderClusterApps │
+              └────────┬───────────┘
+                       │
+                       ▼
+         ┌─────────────────────────────┐
+         │  planClusterAppActions()    │
+         │                             │
+         │  For each descriptor:       │
+         │    isDescriptorEnabled()?   │
+         │      ├─ service field set?  │
+         │      │   → check Services   │
+         │      │     map + Enabled    │
+         │      ├─ managed_service?    │
+         │      │   → check Managed    │
+         │      │     Service map      │
+         │      └─ condition?          │
+         │          → evaluate         │
+         │            enabled_when     │
+         │                             │
+         │  Skip disabled descriptors  │
+         │  Expand enabled → actions   │
+         └─────────────┬───────────────┘
+                       │
+                       ▼
+         ┌─────────────────────────────┐
+         │  cleanupRendererOwnedOverlay│
+         │  Remove stale service dirs  │
+         │  Write new manifests        │
+         │  (atomic workspace)         │
+         └─────────────┬───────────────┘
+                       │
+                       ▼
+         ┌─────────────────────────────┐
+         │  RenderInfrastructureCluster│
+         │  Validate manifests         │
+         │  Git commit                 │
+         └─────────────────────────────┘
+----
+
+The descriptor registry (`internal/gitops/descriptorcfg`) maps each service to its template roots, output paths, and conditional rendering rules. `isDescriptorEnabled()` (`internal/gitops/descriptor_renderer.go:169`) checks the `Services` or `ManagedService` map and calls `IsServiceDisabled()` to inspect the `Enabled` field via reflection.
+
+=== Cleanup of Disabled Services
+
+Full overlay renders remove renderer-owned paths up front and then regenerate only the descriptor-owned output for services that remain enabled. This ensures disabled services do not leave stale manifests in the GitOps repo. Single-service renders rewrite the target service plus the aggregate files it owns.
+
+----
+applications/overlays/<cluster>/
+├── services/
+│   ├── sources/           ← GitRepository YAMLs (per-service)
+│   ├── fluxcd/            ← Kustomization YAMLs (per-service)
+│   ├── cert-manager/      ← enabled: present
+│   ├── kyverno/           ← enabled: present
+│   └── loki/              ← disabled: REMOVED by cleanup
+└── managed-services/
+    └── my-app/            ← disabled: REMOVED by cleanup
+----
+
+== Cluster Stage Paths
+
+The effect of enable/disable depends on where the cluster is in its lifecycle.
+
+=== Path A: Before Setup (No GitOps Repo)
+
+----
+enable/disable
+     │
+     ▼
+Config updated ──→ done
+----
+
+No GitOps repository exists yet. The config change is stored but has no immediate effect. The next `cluster generate` will generate manifests reflecting the current enabled state.
+
+When to use: initial cluster configuration, before any `cluster generate` has run.
+
+=== Path B: After Setup, Before Bootstrap (GitOps Repo Exists, No Running Cluster)
+
+----
+enable/disable
+     │
+     ▼
+Config updated
+     │
+     ▼
+cluster generate (or service)
+     │
+     ▼
+Manifests regenerated
+     │
+     ▼
+Git commit ──→ ready for bootstrap
+----
+
+The GitOps repo exists on disk but FluxCD is not running. Manifests need to be regenerated so the repo is consistent before bootstrap. Options:
+
+. `cluster service enable <name> --render` -- renders only the changed service.
+. `cluster service disable <name> --render` -- updates the overlay immediately after disabling.
+. `cluster generate --force` -- full re-render of all manifests.
+
+=== Path C: After Bootstrap (Running Cluster with FluxCD)
+
+----
+enable/disable
+     │
+     ▼
+Config updated
+     │
+     ▼
+Render manifests
+(setup --force, enable --render, or disable --render)
+     │
+     ▼
+Git commit + push
+     │
+     ▼
+FluxCD detects change
+(source-controller polls, default 15m)
+     │
+     ▼
+┌─────────────────────────────────────┐
+│  Kustomization reconciliation       │
+│                                     │
+│  Enable: new manifests applied      │
+│    → HelmRelease created            │
+│    → pods scheduled                 │
+│                                     │
+│  Disable: manifests removed         │
+│    → prune: true triggers deletion  │
+│    → HelmRelease removed            │
+│    → pods terminated                │
+└─────────────────────────────────────┘
+----
+
+FluxCD Kustomizations are generated with `prune: true`, which means removed manifests cause FluxCD to delete the corresponding cluster resources. This is how disabling a service leads to actual teardown.
+
+Verification after the reconciliation cycle:
+
+[,bash]
+----
+# Check FluxCD reconciliation status
+flux get kustomizations -n flux-system
+
+# Check if service HelmRelease was created/removed
+flux get helmreleases --all-namespaces
+
+# Force immediate reconciliation (skip the 15m wait)
+flux reconcile source git <source-name> -n flux-system
+----
+
+=== Path D: Service with Dependencies (Enable)
+
+Some services depend on others. For example, `weave-gitops` depends on `fluxcd`, and `headlamp` depends on `keycloak`. The dependency validator (`internal/config/services/dependency_validator.go`) checks the resulting service state before enable/disable changes are persisted.
+
+----
+enable service-with-dependency
+     │
+     ▼
+Validate dependencies
+     │
+     ├── dependency enabled? ──→ proceed
+     │
+     └── dependency missing/disabled?
+              │
+              ▼
+         Error: "service X requires Y to be enabled"
+----
+
+Dependencies are also expressed in FluxCD Kustomizations via `dependsOn` blocks. Even if validation is skipped, FluxCD will not reconcile a Kustomization until its dependencies are healthy.
+
+=== Path E: Service with Persistent Data (Disable)
+
+Disabling a service with persistent data (PVCs, CRDs, finalizers) requires care. FluxCD's `prune: true` removes the HelmRelease, but:
+
+* PVCs with `Retain` reclaim policy survive pod deletion.
+* CRDs are not removed by default (Helm does not delete CRDs on uninstall).
+* Finalizers on custom resources can block namespace deletion.
+
+----
+disable service-with-state
+     │
+     ▼
+Config updated + render + push
+     │
+     ▼
+FluxCD removes HelmRelease
+     │
+     ▼
+Helm uninstall runs
+     │
+     ├── PVCs: retained (reclaimPolicy: Retain)
+     ├── CRDs: retained (Helm convention)
+     └── Finalizers: may block if controller is gone
+----
+
+Operator action may be needed to clean up PVCs, CRDs, or stuck finalizers after disabling stateful services like loki, tempo, or velero.
+
+=== Path F: Re-enable a Previously Disabled Service
+
+----
+enable <name> --render
+     │
+     ▼
+Config updated (Enabled=true on the existing entry)
+     │
+     ▼
+Manifests regenerated
+     │
+     ▼
+Git commit + push
+     │
+     ▼
+FluxCD reconciles → service redeployed
+----
+
+If the service entry already exists with `enabled: false`, the command flips `Enabled` back to `true` on that stored config and preserves its existing fields. Use `--param` or `--secret` to override stored values during re-enable. The `--force` flag is only required when the service is already enabled and you want to re-run enable-time updates or rendering anyway.
+
+If PVCs from a previous deployment still exist, the re-enabled service may reattach to them, depending on the Helm chart's `existingClaim` configuration.
+
+=== Path G: Drift Detection
+
+`cluster drift detect` compares desired state (from config) against actual infrastructure resources. It does not currently inspect FluxCD, HelmRelease, or service-level Kubernetes resources, so a disabled service that is still running will not be reported there today.
+
+----
+cluster drift detect
+     │
+     ▼
+Build desired state from config
+     │
+     ▼
+Query actual cluster state
+     │
+     ▼
+Compare → report drift items with severity
+----
+
+== Implementation References
+
+|===
+| Component | File | Key function
+
+| Enable/disable commands
+| `cmd/cluster_service.go`
+| `newClusterServiceEnableCmd`, `newClusterServiceDisableCmd`
+
+| Reflection helpers
+| `cmd/cluster_service.go:658`
+| `isEnabled`, `setEnabled`, `getStatus`
+
+| Service registry
+| `internal/config/registry/registry.go`
+| `GetServiceConfigType`, `GetRegisteredServices`
+
+| Base config
+| `internal/config/services/base.go`
+| `BaseConfig.IsEnabled`, `BaseConfig.GetStatus`
+
+| Descriptor rendering
+| `internal/gitops/descriptor_renderer.go`
+| `planClusterAppActions`, `isDescriptorEnabled`
+
+| Single service render
+| `internal/gitops/copy.go`
+| `RenderSingleService`
+
+| Full render
+| `internal/gitops/copy.go`
+| `RenderClusterApps`, `cleanupRendererOwnedOverlay`
+
+| Disabled check
+| `internal/gitops/copy.go:482`
+| `IsServiceDisabled`
+
+| Dependency validation
+| `internal/config/services/dependency_validator.go`
+| `ValidateDependencies`
+
+| Setup orchestration
+| `internal/cluster/setup_service.go`
+| `generateGitOpsManifests`
+
+| Bootstrap (Kind)
+| `internal/cluster/kind_bootstrap_provider.go`
+| `BuildSteps`
+
+| Bootstrap (OpenStack)
+| `internal/cluster/openstack_bootstrap_provider.go`
+| `BuildSteps`
+|===
+
+== Known Gaps
+
+. No automated cleanup of PVCs or CRDs when a stateful service is disabled. Operators must handle this manually.
+. Drift detection does not yet cover service-level drift (e.g., "service disabled in config but HelmRelease still running"). It focuses on infrastructure resources.

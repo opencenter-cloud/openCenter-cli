@@ -1,0 +1,688 @@
+= Migrate Clusters
+:description: How to migrate clusters between providers, regions, or infrastructure with minimal downtime.
+:page-type: task
+:category: operations
+:audience: platform teams, operators
+:tags: ["migration", "velero", "backup", "provider"]
+:id: migrate-clusters
+
+*Purpose:* For platform teams, shows how to migrate clusters between providers, regions, or infrastructure with minimal downtime.
+
+This guide covers planning and executing cluster migrations using Velero for application migration and configuration updates for infrastructure changes.
+
+== Prerequisites
+
+* Source cluster (existing cluster to migrate from)
+* Target cluster (new cluster to migrate to)
+* Velero installed on both clusters
+* S3-compatible storage accessible from both clusters
+* Understanding of application dependencies
+
+== Task Summary
+
+Migrate applications and data from source cluster to target cluster, supporting scenarios like provider changes (OpenStack → VMware), region changes (us-east → us-west), or infrastructure upgrades.
+
+== Migration Scenarios
+
+=== Scenario 1: Provider Migration
+
+*Use case:* Migrate from OpenStack to VMware
+
+*Reason:* Cost optimization, infrastructure consolidation, compliance
+
+*Approach:* Create new cluster on VMware, migrate applications via Velero
+
+=== Scenario 2: Region Migration
+
+*Use case:* Migrate from us-east-1 to us-west-2
+
+*Reason:* Disaster recovery, latency optimization, data residency
+
+*Approach:* Create new cluster in target region, migrate applications via Velero
+
+=== Scenario 3: Infrastructure Upgrade
+
+*Use case:* Migrate to new infrastructure (new VMs, new network)
+
+*Reason:* Hardware refresh, network redesign, security improvements
+
+*Approach:* Create new cluster on new infrastructure, migrate applications via Velero
+
+=== Scenario 4: Kubernetes Version Migration
+
+*Use case:* Migrate to cluster with newer Kubernetes version
+
+*Reason:* Version upgrade with clean slate, avoid in-place upgrade risks
+
+*Approach:* Create new cluster with target version, migrate applications via Velero
+
+== Migration Planning
+
+=== 1. Assess Source Cluster
+
+Document source cluster configuration:
+
+[,bash]
+----
+# Source details
+kubectl cluster-info
+kubectl version
+
+# Node information
+kubectl get nodes -o wide
+
+# Workload inventory
+kubectl get deployments -A
+kubectl get statefulsets -A
+kubectl get daemonsets -A
+kubectl get services -A
+kubectl get ingresses -A
+kubectl get pvc -A
+
+# Configuration inventory
+kubectl get configmaps -A
+kubectl get secrets -A
+
+# Custom resources
+kubectl get crds
+----
+
+=== 2. Identify Dependencies
+
+Document application dependencies:
+
+* *External dependencies:* Databases, APIs, storage
+* *Internal dependencies:* Service-to-service communication
+* *Network dependencies:* Load balancers, DNS, firewalls
+* *Storage dependencies:* Persistent volumes, object storage
+* *Configuration dependencies:* ConfigMaps, Secrets
+
+=== 3. Plan Migration Order
+
+Determine migration order based on dependencies:
+
+----
+1. Stateless applications (no data loss risk)
+2. Stateful applications with external storage (database on RDS)
+3. Stateful applications with persistent volumes (database on PV)
+4. Critical applications (last, after testing)
+----
+
+=== 4. Plan Downtime Window
+
+Calculate required downtime:
+
+* *Zero-downtime migration:* Dual-run both clusters, switch traffic
+* *Minimal-downtime migration:* Quick cutover (5-15 minutes)
+* *Planned-downtime migration:* Full maintenance window (1-4 hours)
+
+=== 5. Prepare Target Cluster
+
+Create target cluster with openCenter:
+
+[,bash]
+----
+# Initialize target cluster configuration
+opencenter cluster init target-cluster \
+  --org my-company \
+  --type vmware  # Or target provider
+
+# Configure target cluster
+opencenter cluster edit target-cluster
+
+# Deploy target cluster
+opencenter cluster validate target-cluster
+opencenter cluster generate target-cluster
+opencenter cluster deploy target-cluster
+----
+
+== Migration Steps
+
+=== Phase 1: Prepare Source Cluster
+
+==== 1. Install Velero (if not already installed)
+
+[,bash]
+----
+# Verify Velero installation
+velero version
+
+# If not installed, enable in configuration
+opencenter cluster edit source-cluster
+
+# Enable Velero
+opencenter:
+  services:
+    velero:
+      enabled: true
+      s3_bucket: "migration-backups"
+      s3_region: "us-east-1"
+----
+
+==== 2. Create Full Backup
+
+[,bash]
+----
+# Create comprehensive backup
+velero backup create migration-backup-$(date +%Y%m%d) \
+  --snapshot-volumes=true \
+  --wait
+
+# Verify backup
+velero backup describe migration-backup-20260217 --details
+
+# Check backup in S3
+aws s3 ls s3://migration-backups/
+----
+
+==== 3. Document External Resources
+
+Document resources not in Kubernetes:
+
+[,bash]
+----
+# DNS records
+dig my-app.example.com
+
+# Load balancer IPs
+kubectl get svc -A -o wide | grep LoadBalancer
+
+# External databases
+# Document connection strings, credentials
+
+# External storage
+# Document S3 buckets, NFS mounts
+----
+
+=== Phase 2: Prepare Target Cluster
+
+==== 1. Install Velero on Target Cluster
+
+[,bash]
+----
+# Switch to target cluster
+export KUBECONFIG=~/target-cluster-gitops/infrastructure/clusters/target-cluster/kubeconfig.yaml
+
+# Verify Velero installation
+velero version
+
+# Configure same S3 bucket as source
+velero backup-location get
+
+# Expected: Same S3 bucket accessible
+----
+
+==== 2. Verify Backup Visibility
+
+[,bash]
+----
+# List backups from source cluster
+velero backup get
+
+# Expected: migration-backup-20260217 visible
+
+# If not visible, check backup location
+velero backup-location describe default
+----
+
+==== 3. Prepare Target Infrastructure
+
+[,bash]
+----
+# Create namespaces
+kubectl create namespace my-app
+
+# Create secrets (if not in backup)
+kubectl create secret generic db-credentials \
+  --from-literal=username=admin \
+  --from-literal=password=secret \
+  -n my-app
+
+# Create storage classes (if different)
+kubectl apply -f target-storage-class.yaml
+----
+
+=== Phase 3: Migrate Applications
+
+==== 1. Restore Applications to Target Cluster
+
+[,bash]
+----
+# Restore from backup
+velero restore create migration-restore \
+  --from-backup migration-backup-20260217 \
+  --wait
+
+# Watch restore progress
+velero restore describe migration-restore --details
+
+# Check for errors
+velero restore logs migration-restore
+----
+
+==== 2. Verify Application Deployment
+
+[,bash]
+----
+# Check pods
+kubectl get pods -A
+
+# Check services
+kubectl get services -A
+
+# Check persistent volumes
+kubectl get pvc -A
+kubectl get pv
+
+# Check ingresses
+kubectl get ingresses -A
+----
+
+==== 3. Update External References
+
+Update external resources to point to target cluster:
+
+[,bash]
+----
+# Update DNS records
+# Point my-app.example.com to new load balancer IP
+
+# Get new load balancer IP
+kubectl get svc -n my-app my-app-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+# Update DNS (example with Route53)
+aws route53 change-resource-record-sets \
+  --hosted-zone-id Z1234567890ABC \
+  --change-batch file://dns-update.json
+
+# Update firewall rules
+# Allow traffic from new cluster IPs
+
+# Update monitoring
+# Point monitoring to new cluster endpoints
+----
+
+=== Phase 4: Cutover
+
+==== Option A: Zero-Downtime Cutover (Dual-Run)
+
+[,bash]
+----
+# 1. Run both clusters in parallel
+# Source cluster: Existing traffic
+# Target cluster: Shadow traffic for testing
+
+# 2. Gradually shift traffic (canary deployment)
+# 10% traffic to target cluster
+# Monitor for issues
+# Increase to 50%, then 100%
+
+# 3. Decommission source cluster
+# After 24-48 hours of stable operation
+----
+
+==== Option B: Minimal-Downtime Cutover
+
+[,bash]
+----
+# 1. Announce maintenance window (5-15 minutes)
+
+# 2. Stop traffic to source cluster
+# Update DNS to point to maintenance page
+# Or scale source deployments to 0
+
+# 3. Create final backup
+velero backup create final-backup-$(date +%Y%m%d%H%M) --wait
+
+# 4. Restore to target cluster
+velero restore create final-restore --from-backup final-backup-20260217
+
+# 5. Verify target cluster
+# Run smoke tests
+# Check critical paths
+
+# 6. Switch traffic to target cluster
+# Update DNS to point to target cluster
+# Or update load balancer
+
+# 7. Monitor for issues
+# Watch logs, metrics, alerts
+----
+
+==== Option C: Planned-Downtime Cutover
+
+[,bash]
+----
+# 1. Announce maintenance window (1-4 hours)
+
+# 2. Stop source cluster
+kubectl scale deployment --all --replicas=0 -A
+
+# 3. Create final backup
+velero backup create final-backup-$(date +%Y%m%d%H%M) --wait
+
+# 4. Restore to target cluster
+velero restore create final-restore --from-backup final-backup-20260217
+
+# 5. Verify target cluster
+# Run full test suite
+# Verify all applications
+
+# 6. Switch traffic to target cluster
+# Update DNS
+# Update load balancers
+
+# 7. Resume operations
+# Announce completion
+----
+
+=== Phase 5: Post-Migration
+
+==== 1. Verify Target Cluster
+
+[,bash]
+----
+# Check all pods Running
+kubectl get pods -A | grep -v Running | grep -v Completed
+
+# Check all services accessible
+kubectl get services -A
+
+# Run application tests
+./run-tests.sh
+
+# Check monitoring
+# Verify Grafana dashboards
+# Verify Prometheus metrics
+# Verify Loki logs
+
+# Check backups
+velero backup get
+----
+
+==== 2. Monitor for Issues
+
+[,bash]
+----
+# Watch for errors
+kubectl get events -A --sort-by='.lastTimestamp' | tail -50
+
+# Check pod restarts
+kubectl get pods -A -o json | jq -r '.items[] | select(.status.containerStatuses[].restartCount > 0) | "\(.metadata.namespace)/\(.metadata.name): \(.status.containerStatuses[].restartCount)"'
+
+# Monitor resource usage
+kubectl top nodes
+kubectl top pods -A
+----
+
+==== 3. Update Documentation
+
+Update documentation with new cluster details:
+
+* Cluster endpoints
+* Load balancer IPs
+* DNS records
+* Access procedures
+* Monitoring dashboards
+* Backup locations
+
+==== 4. Decommission Source Cluster
+
+After stable operation (24-48 hours):
+
+[,bash]
+----
+# 1. Create final backup (for safety)
+velero backup create pre-decommission-backup --wait
+
+# 2. Destroy source cluster
+opencenter cluster destroy source-cluster
+
+# 3. Clean up infrastructure
+# Delete VMs, networks, storage
+# Remove DNS records
+# Remove firewall rules
+
+# 4. Archive configuration
+# Move source cluster config to archive
+mv ~/source-cluster-gitops ~/archive/source-cluster-gitops-$(date +%Y%m%d)
+----
+
+== Verification
+
+Complete post-migration verification:
+
+[,bash]
+----
+# 1. All applications running
+kubectl get deployments -A
+kubectl get statefulsets -A
+
+# 2. All services accessible
+curl https://my-app.example.com/health
+
+# 3. Data integrity
+# Run data validation tests
+./validate-data.sh
+
+# 4. Performance acceptable
+# Check response times
+# Check resource usage
+
+# 5. Monitoring working
+# Check Grafana dashboards
+# Check Prometheus alerts
+
+# 6. Backups working
+velero backup get
+velero schedule get
+
+# 7. No errors in logs
+kubectl logs -n my-app deployment/my-app --tail=100
+----
+
+== Troubleshooting
+
+=== Restore Fails on Target Cluster
+
+*Symptom:* Velero restore fails or incomplete
+
+*Diagnosis:*
+
+[,bash]
+----
+# Check restore status
+velero restore describe migration-restore --details
+
+# Check restore logs
+velero restore logs migration-restore
+
+# Common errors:
+# - Storage class not found
+# - Namespace already exists
+# - Resource conflicts
+----
+
+*Solution:*
+
+[,bash]
+----
+# Create missing storage class
+kubectl apply -f storage-class.yaml
+
+# Delete conflicting resources
+kubectl delete namespace my-app
+
+# Restore with namespace mapping
+velero restore create migration-restore-v2 \
+  --from-backup migration-backup-20260217 \
+  --namespace-mappings old-ns:new-ns
+
+# Restore with storage class mapping
+velero restore create migration-restore-v3 \
+  --from-backup migration-backup-20260217 \
+  --storage-class-mappings old-sc:new-sc
+----
+
+=== Persistent Volumes Not Restored
+
+*Symptom:* PVCs stuck in Pending
+
+*Diagnosis:*
+
+[,bash]
+----
+# Check PVC status
+kubectl get pvc -A
+
+# Check PV status
+kubectl get pv
+
+# Check storage class
+kubectl get storageclass
+----
+
+*Solution:*
+
+[,bash]
+----
+# Verify volume snapshot location
+velero snapshot-location get
+
+# Install volume snapshot plugin
+velero plugin add velero/velero-plugin-for-<provider>:v1.9.0
+
+# Restore PVs separately
+velero restore create pv-restore \
+  --from-backup migration-backup-20260217 \
+  --include-resources persistentvolumes,persistentvolumeclaims
+----
+
+=== DNS Not Resolving
+
+*Symptom:* Applications not accessible via DNS
+
+*Diagnosis:*
+
+[,bash]
+----
+# Check DNS records
+dig my-app.example.com
+
+# Check load balancer IP
+kubectl get svc -n my-app my-app-service
+
+# Check ingress
+kubectl get ingress -n my-app
+----
+
+*Solution:*
+
+[,bash]
+----
+# Update DNS records
+# Point to new load balancer IP
+
+# Verify DNS propagation
+dig my-app.example.com @8.8.8.8
+
+# Clear DNS cache
+# Wait for TTL expiration (typically 5-60 minutes)
+----
+
+=== Application Performance Issues
+
+*Symptom:* Slow response times after migration
+
+*Diagnosis:*
+
+[,bash]
+----
+# Check resource usage
+kubectl top nodes
+kubectl top pods -A
+
+# Check pod events
+kubectl get events -A --sort-by='.lastTimestamp'
+
+# Check application logs
+kubectl logs -n my-app deployment/my-app
+----
+
+*Solution:*
+
+[,bash]
+----
+# Scale up if resource constrained
+kubectl scale deployment my-app --replicas=5 -n my-app
+
+# Adjust resource requests/limits
+kubectl set resources deployment my-app \
+  --requests=cpu=500m,memory=512Mi \
+  --limits=cpu=1000m,memory=1Gi \
+  -n my-app
+
+# Check network latency
+# Verify target cluster is in correct region
+----
+
+== Migration Checklist
+
+*Pre-Migration:*
+
+* [ ] Document source cluster configuration
+* [ ] Identify application dependencies
+* [ ] Plan migration order
+* [ ] Create target cluster
+* [ ] Install Velero on both clusters
+* [ ] Create full backup of source cluster
+* [ ] Test restore on target cluster (dev/staging)
+
+*Migration:*
+
+* [ ] Announce maintenance window
+* [ ] Create final backup
+* [ ] Restore to target cluster
+* [ ] Verify applications on target cluster
+* [ ] Update DNS records
+* [ ] Update external references
+* [ ] Switch traffic to target cluster
+
+*Post-Migration:*
+
+* [ ] Verify all applications running
+* [ ] Monitor for issues (24-48 hours)
+* [ ] Update documentation
+* [ ] Decommission source cluster
+* [ ] Archive source cluster configuration
+
+== Best Practices
+
+. *Test migration in dev/staging:* Never migrate production first
+. *Create multiple backups:* Before and during migration
+. *Plan for rollback:* Have rollback procedure ready
+. *Minimize downtime:* Use zero-downtime or minimal-downtime approach
+. *Monitor closely:* Watch for issues during and after migration
+. *Document everything:* Record decisions, issues, solutions
+. *Communicate clearly:* Inform stakeholders of migration plan and status
+. *Verify thoroughly:* Run full test suite after migration
+. *Keep source cluster:* Don't decommission until stable (24-48 hours)
+. *Archive configuration:* Keep source cluster config for reference
+
+== Related Topics
+
+* xref:operations/backup-and-restore.adoc[Backup and Restore] - Backup procedures for migration
+* xref:getting-started/multi-cluster-setup.adoc[Multi-Cluster Management] - Manage multiple clusters
+* xref:concepts/provider-comparison.adoc[Provider Comparison] - Choose target provider
+* xref:concepts/configuration-lifecycle.adoc[Configuration Lifecycle] - Configuration management
+
+'''
+
+== Evidence
+
+This guide is based on:
+
+* Velero migration: Velero documentation
+* Cluster migration: Ecosystem.md migration considerations
+* Provider migration: Session 1 A5, Ecosystem.md provider comparison
+* Backup and restore: `internal/config/defaults.go:371-376`

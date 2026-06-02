@@ -1,0 +1,770 @@
+= Deploy Kubernetes on VMware vSphere
+:description: Step-by-step tutorial to deploy Kubernetes on pre-provisioned VMware vSphere VMs.
+:page-type: task
+:category: getting-started
+:audience: platform engineers, operators
+:tags: ["vmware", "vsphere", "tutorial", "deployment"]
+:id: vmware-deployment
+
+*Purpose:* For VMware users, shows how to deploy a Kubernetes cluster on pre-provisioned VMware VMs, covering prerequisites through validation.
+
+By the end of this tutorial, you'll have a production Kubernetes cluster running on VMware vSphere with platform services deployed via GitOps.
+
+*Time:* 60-75 minutes (including VM provisioning)
+
+== What You'll Build
+
+A production Kubernetes cluster with:
+
+* 3 control plane nodes (high availability)
+* 3 worker nodes (production capacity)
+* Calico CNI networking
+* vSphere CSI storage driver
+* MetalLB load balancer
+* 20+ platform services (cert-manager, Keycloak, monitoring, etc.)
+* FluxCD GitOps continuous delivery
+
+== Prerequisites
+
+Before starting, ensure you have:
+
+*VMware Infrastructure:*
+
+* VMware vSphere 7.0+ (vCenter Server)
+* vSphere credentials (username, password)
+* Datacenter, cluster, and datastore configured
+* VM network with DHCP or static IPs
+* 6 VMs provisioned (3 masters, 3 workers) with Ubuntu 24.04
+* SSH access to all VMs
+
+*VM Requirements (per node):*
+
+* *Control Plane:* 4 vCPU, 8 GB RAM, 40 GB disk
+* *Worker:* 4 vCPU, 16 GB RAM, 80 GB disk
+* *OS:* Ubuntu 24.04 LTS
+* *Network:* Static IP or DHCP reservation
+* *SSH:* SSH key authentication enabled
+
+*Local Tools:*
+
+* openCenter CLI installed
+* Git installed
+* SSH client
+* Text editor
+
+*Verify vSphere Access:*
+
+[,bash]
+----
+# Test SSH access to VMs
+ssh ubuntu@<master-1-ip>
+ssh ubuntu@<master-2-ip>
+ssh ubuntu@<master-3-ip>
+ssh ubuntu@<worker-1-ip>
+ssh ubuntu@<worker-2-ip>
+ssh ubuntu@<worker-3-ip>
+----
+
+If SSH works for all VMs, you're ready to proceed.
+
+== Step 1: Provision VMs in vSphere
+
+Provision 6 VMs using vSphere UI or Terraform:
+
+*Option A: vSphere UI*
+
+. Open vSphere Client
+. Right-click datacenter → New Virtual Machine
+. Create 6 VMs with specifications above
+. Install Ubuntu 24.04 on each VM
+. Configure network (static IPs recommended)
+. Enable SSH key authentication
+
+*Option B: Terraform (Recommended)*
+
+[,hcl]
+----
+# vmware-vms.tf
+terraform {
+  required_providers {
+    vsphere = {
+      source  = "hashicorp/vsphere"
+      version = "~> 2.0"
+    }
+  }
+}
+
+provider "vsphere" {
+  user           = var.vsphere_user
+  password       = var.vsphere_password
+  vsphere_server = var.vsphere_server
+  allow_unverified_ssl = true
+}
+
+data "vsphere_datacenter" "dc" {
+  name = "DC1"
+}
+
+data "vsphere_datastore" "datastore" {
+  name          = "datastore1"
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+data "vsphere_network" "network" {
+  name          = "VM Network"
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+data "vsphere_compute_cluster" "cluster" {
+  name          = "Cluster1"
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+data "vsphere_virtual_machine" "template" {
+  name          = "ubuntu-24.04-template"
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+# Control plane nodes
+resource "vsphere_virtual_machine" "master" {
+  count            = 3
+  name             = "prod-cluster-master-${count.index + 1}"
+  resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
+  datastore_id     = data.vsphere_datastore.datastore.id
+
+  num_cpus = 4
+  memory   = 8192
+
+  network_interface {
+    network_id = data.vsphere_network.network.id
+  }
+
+  disk {
+    label = "disk0"
+    size  = 40
+  }
+
+  clone {
+    template_uuid = data.vsphere_virtual_machine.template.id
+  }
+}
+
+# Worker nodes
+resource "vsphere_virtual_machine" "worker" {
+  count            = 3
+  name             = "prod-cluster-worker-${count.index + 1}"
+  resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
+  datastore_id     = data.vsphere_datastore.datastore.id
+
+  num_cpus = 4
+  memory   = 16384
+
+  network_interface {
+    network_id = data.vsphere_network.network.id
+  }
+
+  disk {
+    label = "disk0"
+    size  = 80
+  }
+
+  clone {
+    template_uuid = data.vsphere_virtual_machine.template.id
+  }
+}
+----
+
+[,bash]
+----
+# Deploy VMs
+terraform init
+terraform apply
+
+# Get VM IPs
+terraform output
+----
+
+*Record VM IPs:*
+
+----
+Master 1: 192.168.1.10
+Master 2: 192.168.1.11
+Master 3: 192.168.1.12
+Worker 1: 192.168.1.20
+Worker 2: 192.168.1.21
+Worker 3: 192.168.1.22
+----
+
+== Step 2: Initialize Cluster Configuration
+
+Create a new cluster configuration with VMware defaults:
+
+[,bash]
+----
+opencenter cluster init prod-cluster \
+  --org my-company \
+  --type vmware
+----
+
+*What happens:*
+
+* Creates configuration file at `~/.config/opencenter/clusters/my-company/.prod-cluster-config.yaml`
+* Applies VMware defaults (pre-provisioned VMs, vSphere CSI)
+* Generates SSH keys for cluster access
+* Generates SOPS Age keys for secrets encryption
+
+*Output:*
+
+----
+✓ Created cluster configuration: prod-cluster
+✓ Generated SSH keys: ~/.config/opencenter/clusters/my-company/secrets/ssh/prod-cluster-key
+✓ Generated SOPS Age keys: ~/.config/opencenter/clusters/my-company/secrets/age/prod-cluster-key.txt
+
+Configuration file: ~/.config/opencenter/clusters/my-company/.prod-cluster-config.yaml
+
+Next steps:
+1. Edit configuration file to add VM IPs and vSphere credentials
+2. Validate configuration: opencenter cluster validate prod-cluster
+3. Generate GitOps repository: opencenter cluster generate prod-cluster
+----
+
+== Step 3: Configure VM Inventory
+
+Edit the configuration file to add VM IPs:
+
+[,bash]
+----
+opencenter cluster edit prod-cluster
+----
+
+Update the VMware section:
+
+[,yaml]
+----
+opencenter:
+  infrastructure:
+    provider: vmware
+    vmware:
+      # vSphere credentials (for CSI driver)
+      vcenter_server: "vcenter.example.com"
+      username: "administrator@vsphere.local"
+      password: "your-password"  # Will be encrypted with SOPS
+      datacenter: "DC1"
+      datastore: "datastore1"
+
+      # VM inventory (pre-provisioned VMs)
+      masters:
+        - hostname: prod-cluster-master-1
+          ip: 192.168.1.10
+          ssh_user: ubuntu
+        - hostname: prod-cluster-master-2
+          ip: 192.168.1.11
+          ssh_user: ubuntu
+        - hostname: prod-cluster-master-3
+          ip: 192.168.1.12
+          ssh_user: ubuntu
+
+      workers:
+        - hostname: prod-cluster-worker-1
+          ip: 192.168.1.20
+          ssh_user: ubuntu
+        - hostname: prod-cluster-worker-2
+          ip: 192.168.1.21
+          ssh_user: ubuntu
+        - hostname: prod-cluster-worker-3
+          ip: 192.168.1.22
+          ssh_user: ubuntu
+----
+
+== Step 4: Configure Cluster Settings
+
+Configure Kubernetes and networking:
+
+[,yaml]
+----
+opencenter:
+  meta:
+    name: prod-cluster
+    environment: production
+    region: on-premises
+    organization: my-company
+
+  cluster:
+    # Kubernetes version
+    kubernetes:
+      version: "1.33.5"
+
+    # Node counts (must match VM inventory)
+    master_count: 3
+    worker_count: 3
+
+    # Networking
+    networking:
+      pod_subnet: "10.42.0.0/16"
+      service_subnet: "10.43.0.0/16"
+      cni_plugin: calico
+
+      # Load balancer (MetalLB for on-premises)
+      metallb:
+        enabled: true
+        ip_range: "192.168.1.100-192.168.1.150"  # Available IPs in your network
+
+    # Storage (vSphere CSI)
+    storage:
+      default_storage_class: "vsphere-csi-sc"
+----
+
+*MetalLB IP range:*
+
+* Choose IPs from your VM network that are not used by DHCP
+* Ensure IPs are routable from your network
+* Reserve at least 10-20 IPs for load balancer services
+
+== Step 5: Configure Platform Services
+
+Configure platform services:
+
+[,yaml]
+----
+opencenter:
+  services:
+    # Core services
+    cert-manager:
+      enabled: true
+
+    keycloak:
+      enabled: true
+      hostname: "auth.my-company.prod-cluster.example.com"
+      admin_password: "change-me-in-production"  # Will be encrypted
+
+    kube-prometheus-stack:
+      enabled: true
+      grafana_admin_password: "change-me-in-production"  # Will be encrypted
+
+    loki:
+      enabled: true
+      retention_days: 30
+
+    velero:
+      enabled: true
+      s3_bucket: "prod-cluster-backups"
+      s3_endpoint: "s3.example.com"  # Your S3-compatible storage
+
+    # vSphere CSI driver
+    vsphere-csi:
+      enabled: true
+      vcenter_server: "vcenter.example.com"
+      datacenter: "DC1"
+      datastore: "datastore1"
+
+    # Optional services
+    harbor:
+      enabled: true
+      hostname: "harbor.my-company.prod-cluster.example.com"
+      admin_password: "change-me-in-production"  # Will be encrypted
+
+    headlamp:
+      enabled: true
+      hostname: "dashboard.my-company.prod-cluster.example.com"
+----
+
+== Step 6: Validate Configuration
+
+Validate your configuration:
+
+[,bash]
+----
+opencenter cluster validate prod-cluster
+----
+
+*What's validated:*
+
+. Schema compliance (structure, types, formats)
+. Business rules (cross-field dependencies)
+. VMware constraints (VM inventory, vSphere credentials)
+. SSH connectivity (can reach all VMs)
+
+*Expected output:*
+
+----
+✓ Schema validation passed
+✓ Business rules validation passed
+✓ VMware validation passed
+  - All VMs are reachable via SSH
+  - vSphere credentials are valid
+  - Datacenter and datastore exist
+  - Node count matches VM inventory (6 VMs)
+
+Configuration is valid and ready for deployment.
+----
+
+*If validation fails:*
+
+* Verify SSH access to all VMs
+* Verify vSphere credentials
+* Verify VM IPs are correct
+* See <<troubleshooting,Troubleshooting>> section below
+
+== Step 7: Generate GitOps Repository
+
+Generate the complete GitOps repository structure:
+
+[,bash]
+----
+opencenter cluster generate prod-cluster
+----
+
+*What's generated:*
+
+----
+~/prod-cluster-gitops/
+├── .gitignore
+├── .sops.yaml
+├── README.md
+│
+├── applications/
+│   └── overlays/prod-cluster/
+│       ├── flux-system/           # FluxCD bootstrap
+│       ├── services/              # Platform services
+│       └── managed-services/      # Customer applications
+│
+└── infrastructure/
+    └── clusters/prod-cluster/
+        ├── inventory/             # Kubespray Ansible inventory
+        │   ├── inventory.yaml     # VM inventory
+        │   ├── group_vars/        # Ansible variables
+        │   └── credentials/       # Encrypted credentials
+        └── kubeconfig.yaml        # Generated after deployment
+----
+
+*Output:*
+
+----
+✓ Generated GitOps repository: ~/prod-cluster-gitops
+✓ Encrypted secrets with SOPS
+✓ Created Kubespray inventory
+✓ Created FluxCD manifests
+
+Next steps:
+1. Review generated files
+2. Initialize Git repository: cd ~/prod-cluster-gitops && git init
+3. Commit files: git add . && git commit -m "Initial cluster configuration"
+4. Push to Git: git remote add origin <your-repo-url> && git push -u origin main
+5. Bootstrap cluster: opencenter cluster deploy prod-cluster
+----
+
+== Step 8: Initialize Git Repository
+
+Initialize and push to Git:
+
+[,bash]
+----
+# Navigate to GitOps repository
+cd ~/prod-cluster-gitops
+
+# Initialize Git
+git init
+
+# Add all files
+git add .
+
+# Commit
+git commit -m "Initial prod-cluster configuration"
+
+# Add remote
+git remote add origin git@github.com:my-company/prod-cluster-gitops.git
+
+# Push to remote
+git push -u origin main
+----
+
+== Step 9: Bootstrap Cluster
+
+Deploy Kubernetes to the VMs (this takes 20-30 minutes):
+
+[,bash]
+----
+opencenter cluster deploy prod-cluster
+----
+
+*What happens:*
+
+----
+Phase 1: VM Preparation (5-10 minutes)
+  ✓ Verifying SSH access to all VMs
+  ✓ Installing dependencies (Python, Docker, etc.)
+  ✓ Configuring OS settings (swap, kernel modules)
+  ✓ Configuring firewall rules
+
+Phase 2: Kubernetes Deployment (10-15 minutes)
+  ✓ Configuring control plane nodes
+  ✓ Deploying etcd cluster
+  ✓ Deploying Kubernetes API server
+  ✓ Deploying Kubernetes controllers
+  ✓ Joining worker nodes
+  ✓ Installing Calico CNI
+  ✓ Installing vSphere CSI driver
+  ✓ Installing MetalLB
+
+Phase 3: GitOps Bootstrap (5-10 minutes)
+  ✓ Installing FluxCD controllers
+  ✓ Creating GitRepository sources
+  ✓ Deploying platform services
+  ✓ Waiting for services to be ready
+
+Cluster is ready!
+----
+
+*Monitor progress:*
+
+[,bash]
+----
+# In another terminal, watch Ansible progress
+tail -f ~/prod-cluster-gitops/infrastructure/clusters/prod-cluster/ansible.log
+
+# After Kubernetes is deployed, watch pods
+export KUBECONFIG=~/prod-cluster-gitops/infrastructure/clusters/prod-cluster/kubeconfig.yaml
+watch -n 5 'kubectl get pods -A'
+----
+
+== Step 10: Verify Cluster
+
+Verify the cluster is working:
+
+[,bash]
+----
+# Set kubeconfig
+export KUBECONFIG=~/prod-cluster-gitops/infrastructure/clusters/prod-cluster/kubeconfig.yaml
+
+# Check nodes
+kubectl get nodes
+
+# Expected output:
+# NAME                        STATUS   ROLES           AGE   VERSION
+# prod-cluster-master-1       Ready    control-plane   20m   v1.33.5
+# prod-cluster-master-2       Ready    control-plane   20m   v1.33.5
+# prod-cluster-master-3       Ready    control-plane   20m   v1.33.5
+# prod-cluster-worker-1       Ready    <none>          18m   v1.33.5
+# prod-cluster-worker-2       Ready    <none>          18m   v1.33.5
+# prod-cluster-worker-3       Ready    <none>          18m   v1.33.5
+
+# Check vSphere CSI driver
+kubectl get csidrivers
+
+# Expected output: csi.vsphere.vmware.com
+
+# Check storage classes
+kubectl get storageclasses
+
+# Expected output: vsphere-csi-sc (default)
+
+# Check platform services
+kubectl get helmreleases -A
+
+# Expected output: 20+ HelmReleases in Ready state
+
+# Check FluxCD reconciliation
+flux get kustomizations
+
+# Expected output: All Kustomizations in Ready state
+----
+
+*All checks passed?* Your cluster is ready for production workloads!
+
+== Step 11: Test vSphere Storage
+
+Test vSphere CSI storage:
+
+[,bash]
+----
+# Create PVC
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-pvc
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: vsphere-csi-sc
+EOF
+
+# Wait for PVC to be bound
+kubectl wait --for=jsonpath='{.status.phase}'=Bound pvc/test-pvc --timeout=60s
+
+# Check PVC
+kubectl get pvc test-pvc
+
+# Expected output: STATUS Bound
+
+# Check PV in vSphere
+# Open vSphere Client → Datastore → See new VMDK file
+----
+
+== Check Your Work
+
+Verify everything is working:
+
+* [ ] All 6 nodes are Ready
+* [ ] vSphere CSI driver is installed
+* [ ] Storage class is available
+* [ ] Test PVC is bound
+* [ ] All platform services are deployed (HelmReleases Ready)
+* [ ] FluxCD is reconciling (Kustomizations Ready)
+* [ ] MetalLB is assigning IPs to LoadBalancer services
+
+== Troubleshooting
+
+=== SSH Access Fails
+
+*Error:*
+
+----
+Error: Cannot SSH to VM 192.168.1.10
+----
+
+*Solution:*
+
+[,bash]
+----
+# Test SSH manually
+ssh ubuntu@192.168.1.10
+
+# If password prompt, add SSH key
+ssh-copy-id -i ~/.config/opencenter/clusters/my-company/secrets/ssh/prod-cluster-key.pub ubuntu@192.168.1.10
+
+# Verify SSH key authentication
+ssh -i ~/.config/opencenter/clusters/my-company/secrets/ssh/prod-cluster-key ubuntu@192.168.1.10
+----
+
+=== vSphere Credentials Invalid
+
+*Error:*
+
+----
+Error: vSphere authentication failed
+----
+
+*Solution:*
+
+[,bash]
+----
+# Test vSphere credentials manually
+govc about -u 'administrator@vsphere.local:password@vcenter.example.com'
+
+# If fails, verify:
+# 1. vCenter URL is correct
+# 2. Username is correct (include @vsphere.local)
+# 3. Password is correct
+# 4. User has sufficient permissions
+
+# Update configuration
+opencenter cluster edit prod-cluster
+----
+
+=== Kubespray Deployment Fails
+
+*Error:*
+
+----
+Error: Ansible playbook failed
+----
+
+*Solution:*
+
+[,bash]
+----
+# Check Ansible log
+tail -100 ~/prod-cluster-gitops/infrastructure/clusters/prod-cluster/ansible.log
+
+# Common causes:
+# 1. VM not reachable (check network)
+# 2. Insufficient resources (check VM specs)
+# 3. OS not supported (must be Ubuntu 24.04)
+
+# Retry deployment
+opencenter cluster deploy prod-cluster
+----
+
+=== vSphere CSI Not Working
+
+*Error:*
+
+----
+PVC stuck in Pending state
+----
+
+*Solution:*
+
+[,bash]
+----
+# Check CSI driver pods
+kubectl get pods -n vmware-system-csi
+
+# Check CSI driver logs
+kubectl logs -n vmware-system-csi deployment/vsphere-csi-controller
+
+# Common causes:
+# 1. vSphere credentials incorrect
+# 2. Datacenter/datastore not found
+# 3. Insufficient vSphere permissions
+
+# Verify vSphere configuration
+kubectl get secret vsphere-config-secret -n vmware-system-csi -o yaml
+----
+
+== Next Steps
+
+Now that you have a VMware cluster, explore these topics:
+
+*Deploy Applications:*
+
+* xref:operations/customize-services.adoc[Customize Services] - Configure platform services
+* xref:operations/manage-secrets.adoc[Manage Secrets] - Encrypt and rotate secrets
+
+*Cluster Management:*
+
+* xref:operations/add-worker-pools.adoc[Add Worker Pools] - Scale cluster capacity
+* xref:operations/backup-and-restore.adoc[Backup and Restore] - Configure disaster recovery
+* xref:operations/upgrade-kubernetes.adoc[Upgrade Kubernetes] - Upgrade cluster version
+
+*Multi-Cluster:*
+
+* xref:getting-started/multi-cluster-setup.adoc[Multi-Cluster Management] - Manage multiple clusters
+
+*Understanding:*
+
+* xref:concepts/gitops-workflow.adoc[GitOps Workflow] - How GitOps works
+* xref:concepts/provider-comparison.adoc[Provider Comparison] - Compare providers
+
+== What You Learned
+
+In this tutorial, you:
+
+* Provisioned VMs in VMware vSphere
+* Initialized a VMware cluster configuration
+* Configured VM inventory and vSphere credentials
+* Validated configuration and SSH connectivity
+* Generated a complete GitOps repository
+* Deployed Kubernetes to pre-provisioned VMs
+* Verified cluster health and vSphere CSI storage
+* Tested persistent volume provisioning
+
+You now have a production-ready Kubernetes cluster on VMware vSphere with GitOps continuous delivery!
+
+'''
+
+== Evidence
+
+This tutorial is based on:
+
+* VMware provider: `docs/providers/README.md:8`
+* VMware defaults: `internal/config/defaults.go:27-31`
+* Workflow validation: `tests/features/workflow.feature:1-73`
+* Bootstrap process: `cmd/cluster_bootstrap.go`
+* GitOps structure: `internal/gitops/`, Ecosystem.md
+* Service configuration: `internal/config/defaults.go:293-388`

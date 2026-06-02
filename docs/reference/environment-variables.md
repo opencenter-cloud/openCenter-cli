@@ -7,7 +7,6 @@ doc_type: reference
 audience: "all users"
 tags: [environment, variables, configuration, cli]
 ---
-
 # Environment Variables
 
 **Purpose:** For all users, provides complete reference of environment variables and configuration precedence.
@@ -17,20 +16,22 @@ This reference documents all environment variables recognized by openCenter CLI 
 ## Overview
 
 openCenter CLI uses environment variables for:
-- Configuration overrides
-- Credential management
-- Behavior customization
-- CI/CD integration
-- Runtime state location
+
+* Configuration overrides
+* Credential management
+* Behavior customization
+* CI/CD integration
+* Runtime state location
 
 **Configuration Precedence (highest to lowest):**
+
 1. Command-line flags (the set override mechanism, `--log-level`, etc.)
 2. Environment variables
 3. Cluster config file (`.<cluster>-config.yaml`)
 4. CLI config file (`~/.config/opencenter/config.yaml`)
 5. Built-in defaults
 
-For the full breakdown including directory resolution and provider credentials, see [Configuration Precedence](configuration-precedence.md).
+For the full breakdown including directory resolution and provider credentials, see [Configuration Precedence](reference/configuration-precedence.md).
 
 ## Core Environment Variables
 
@@ -41,15 +42,17 @@ Configuration directory location.
 **Default:** `~/.config/opencenter`
 
 **Usage:**
+
 ```bash
 export OPENCENTER_CONFIG_DIR=/custom/path
 opencenter cluster init my-cluster
 ```
 
 **What it affects:**
-- Default cluster configuration location when `OPENCENTER_CLUSTERS_DIR` and `paths.clustersDir` are unset
-- Default per-cluster secrets storage location when `OPENCENTER_CLUSTERS_DIR` and `paths.clustersDir` are unset
-- CLI defaults location
+
+* Default cluster configuration location when `OPENCENTER_CLUSTERS_DIR` and `paths.clustersDir` are unset
+* Default per-cluster secrets storage location when `OPENCENTER_CLUSTERS_DIR` and `paths.clustersDir` are unset
+* CLI defaults location
 
 ### OPENCENTER_CLUSTERS_DIR
 
@@ -58,6 +61,7 @@ Cluster storage directory location.
 **Default:** `${OPENCENTER_CONFIG_DIR:-~/.config/opencenter}/clusters`
 
 **Usage:**
+
 ```bash
 export OPENCENTER_CONFIG_DIR=/custom/opencenter-config
 export OPENCENTER_CLUSTERS_DIR=/data/opencenter-clusters
@@ -65,11 +69,13 @@ opencenter cluster list
 ```
 
 **What it affects:**
-- Organization and cluster configuration discovery
-- Per-cluster secrets storage
-- Generated per-cluster infrastructure and application paths
+
+* Organization and cluster configuration discovery
+* Per-cluster secrets storage
+* Generated per-cluster infrastructure and application paths
 
 **Example:**
+
 ```bash
 export OPENCENTER_CONFIG_DIR=/tmp/opencenter-config
 export OPENCENTER_CLUSTERS_DIR=/srv/opencenter-clusters
@@ -89,18 +95,21 @@ Runtime state directory location.
 **Default:** `${XDG_STATE_HOME:-~/.local/state}/opencenter`
 
 **Usage:**
+
 ```bash
 export OPENCENTER_STATE_DIR=/custom/state
 opencenter cluster deploy my-cluster
 ```
 
 **What it affects:**
-- Bootstrap resume state location
-- Default bootstrap log location
-- Audit log location
-- File lock location
+
+* Bootstrap resume state location
+* Default bootstrap log location
+* Audit log location
+* File lock location
 
 **Example:**
+
 ```bash
 export OPENCENTER_STATE_DIR=/tmp/opencenter-state
 opencenter cluster deploy dev-cluster
@@ -119,14 +128,16 @@ Plugins directory location.
 **Default:** `${OPENCENTER_CONFIG_DIR:-~/.config/opencenter}/plugins`
 
 **Usage:**
+
 ```bash
 export OPENCENTER_PLUGINS_DIR=/opt/opencenter/plugins
 opencenter plugins list
 ```
 
 **What it affects:**
-- External CLI plugin discovery
-- Default `paths.pluginsDir` value in the CLI config
+
+* External CLI plugin discovery
+* Default `paths.pluginsDir` value in the CLI config
 
 ### XDG_STATE_HOME
 
@@ -135,16 +146,19 @@ Base XDG state directory used when `OPENCENTER_STATE_DIR` is unset.
 **Default:** `~/.local/state`
 
 **Usage:**
+
 ```bash
 export XDG_STATE_HOME=/srv/state
 opencenter cluster deploy my-cluster
 ```
 
 **What it affects:**
-- Default base directory for openCenter runtime state
-- Expands to `${XDG_STATE_HOME}/opencenter`
+
+* Default base directory for openCenter runtime state
+* Expands to `${XDG_STATE_HOME}/opencenter`
 
 **Example:**
+
 ```bash
 # Use custom config directory
 export OPENCENTER_CONFIG_DIR=/tmp/opencenter
@@ -161,16 +175,19 @@ Active cluster name.
 **Default:** None (must be set or use `--cluster` flag)
 
 **Usage:**
+
 ```bash
 export OPENCENTER_CLUSTER=my-cluster
 opencenter cluster validate
 ```
 
 **What it affects:**
-- Default cluster for commands
-- Avoids need for `--cluster` flag
+
+* Default cluster for commands
+* Avoids need for `--cluster` flag
 
 **Example:**
+
 ```bash
 # Set active cluster
 export OPENCENTER_CLUSTER=prod-cluster
@@ -187,16 +204,19 @@ Active organization name.
 **Default:** None (must be set or use `--org` flag)
 
 **Usage:**
+
 ```bash
 export OPENCENTER_ORG=my-company
 opencenter cluster list
 ```
 
 **What it affects:**
-- Default organization for commands
-- Cluster lookup path
+
+* Default organization for commands
+* Cluster lookup path
 
 **Example:**
+
 ```bash
 # Set active organization
 export OPENCENTER_ORG=my-company
@@ -215,16 +235,19 @@ Logging verbosity level.
 **Allowed values:** `debug`, `info`, `warn`, `error`
 
 **Usage:**
+
 ```bash
 export OPENCENTER_LOG_LEVEL=debug
 opencenter cluster validate my-cluster
 ```
 
 **What it affects:**
-- Log output verbosity
-- Debug information visibility
+
+* Log output verbosity
+* Debug information visibility
 
 **Example:**
+
 ```bash
 # Enable debug logging
 export OPENCENTER_LOG_LEVEL=debug
@@ -242,14 +265,16 @@ Optional runtime selector for Kind when using non-default container engines.
 **Typical value:** `podman`
 
 **Usage:**
+
 ```bash
 export KIND_EXPERIMENTAL_PROVIDER=podman
 opencenter cluster deploy dev-cluster
 ```
 
 **What it affects:**
-- Kind bootstrap and destroy flows
-- Local developer and CI environments using Podman instead of Docker
+
+* Kind bootstrap and destroy flows
+* Local developer and CI environments using Podman instead of Docker
 
 **GA note:** This variable is relevant only for the local Kind provider.
 
@@ -260,14 +285,16 @@ Override GitOps repository root directory.
 **Default:** `${OPENCENTER_CLUSTERS_DIR}/gitops`
 
 **Usage:**
+
 ```bash
 export OPENCENTER_GITOPS_DIR=/data/gitops-repos
 opencenter cluster generate my-cluster
 ```
 
 **What it affects:**
-- Location where GitOps repositories are generated
-- Overrides `paths.gitopsDir` in CLI config
+
+* Location where GitOps repositories are generated
+* Overrides `paths.gitopsDir` in CLI config
 
 ### OPENCENTER_SECRETS_DIR
 
@@ -276,15 +303,17 @@ Override per-cluster secrets directory.
 **Default:** `${OPENCENTER_CLUSTERS_DIR}/secrets`
 
 **Usage:**
+
 ```bash
 export OPENCENTER_SECRETS_DIR=/secure/secrets
 opencenter secrets keys generate
 ```
 
 **What it affects:**
-- Age key storage location
-- SSH key storage location
-- SOPS configuration paths
+
+* Age key storage location
+* SSH key storage location
+* SOPS configuration paths
 
 ### OPENCENTER_SESSION_FILE
 
@@ -293,14 +322,16 @@ Path to session file for shell integration.
 **Default:** None (shell integration disabled)
 
 **Usage:**
+
 ```bash
 eval "$(opencenter shell-init)"
 opencenter cluster use my-cluster  # writes to session file
 ```
 
 **What it affects:**
-- Active cluster tracking in shell sessions
-- Used by `cluster use`, `cluster active`, and `shell-init` commands
+
+* Active cluster tracking in shell sessions
+* Used by `cluster use`, `cluster active`, and `shell-init` commands
 
 ### EDITOR / VISUAL
 
@@ -309,6 +340,7 @@ Preferred text editor for `cluster edit` and `settings edit` commands.
 **Default:** None (falls back to `vi`)
 
 **Usage:**
+
 ```bash
 export EDITOR=nvim
 opencenter cluster edit my-cluster
@@ -316,8 +348,9 @@ opencenter settings edit
 ```
 
 **What it affects:**
-- Editor launched by `cluster edit` and `settings edit`
-- `EDITOR` is checked first, then `VISUAL`
+
+* Editor launched by `cluster edit` and `settings edit`
+* `EDITOR` is checked first, then `VISUAL`
 
 ## Provider and Integration Environment Variables
 
@@ -330,16 +363,19 @@ OpenStack cloud profile name (from `clouds.yaml`).
 **Default:** None
 
 **Usage:**
+
 ```bash
 export OS_CLOUD=openstack
 opencenter cluster deploy my-cluster
 ```
 
 **What it affects:**
-- OpenStack authentication
-- Uses credentials from `~/.config/openstack/clouds.yaml`
+
+* OpenStack authentication
+* Uses credentials from `~/.config/openstack/clouds.yaml`
 
 **Example:**
+
 ```bash
 # Use specific cloud profile
 export OS_CLOUD=production-openstack
@@ -353,14 +389,16 @@ OpenStack authentication URL.
 **Default:** None (from configuration or clouds.yaml)
 
 **Usage:**
+
 ```bash
 export OS_AUTH_URL=https://identity.api.rackspacecloud.com/v3
 opencenter cluster deploy my-cluster
 ```
 
 **What it affects:**
-- OpenStack API endpoint
-- Overrides configuration file value
+
+* OpenStack API endpoint
+* Overrides configuration file value
 
 #### OS_USERNAME
 
@@ -369,6 +407,7 @@ OpenStack username.
 **Default:** None (from configuration or clouds.yaml)
 
 **Usage:**
+
 ```bash
 export OS_USERNAME=my-username
 opencenter cluster deploy my-cluster
@@ -381,6 +420,7 @@ OpenStack password.
 **Default:** None (from configuration or clouds.yaml)
 
 **Usage:**
+
 ```bash
 export OS_PASSWORD=my-password
 opencenter cluster deploy my-cluster
@@ -395,6 +435,7 @@ OpenStack project name.
 **Default:** None (from configuration or clouds.yaml)
 
 **Usage:**
+
 ```bash
 export OS_PROJECT_NAME=my-project
 opencenter cluster deploy my-cluster
@@ -407,6 +448,7 @@ OpenStack region name.
 **Default:** None (from configuration or clouds.yaml)
 
 **Usage:**
+
 ```bash
 export OS_REGION_NAME=sjc3
 opencenter cluster deploy my-cluster
@@ -421,6 +463,7 @@ vSphere server hostname.
 **Default:** None (from configuration)
 
 **Usage:**
+
 ```bash
 export VSPHERE_SERVER=vcenter.example.com
 opencenter cluster deploy my-cluster
@@ -433,6 +476,7 @@ vSphere username.
 **Default:** None (from configuration)
 
 **Usage:**
+
 ```bash
 export VSPHERE_USER=administrator@vsphere.local
 opencenter cluster deploy my-cluster
@@ -445,6 +489,7 @@ vSphere password.
 **Default:** None (from configuration)
 
 **Usage:**
+
 ```bash
 export VSPHERE_PASSWORD=my-password
 opencenter cluster deploy my-cluster
@@ -463,6 +508,7 @@ AWS access key ID.
 **Default:** None (from configuration or AWS credentials file)
 
 **Usage:**
+
 ```bash
 export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
 opencenter cluster validate my-cluster
@@ -475,6 +521,7 @@ AWS secret access key.
 **Default:** None (from configuration or AWS credentials file)
 
 **Usage:**
+
 ```bash
 export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 opencenter cluster validate my-cluster
@@ -489,6 +536,7 @@ AWS region.
 **Default:** None (from configuration)
 
 **Usage:**
+
 ```bash
 export AWS_REGION=us-east-1
 opencenter cluster validate my-cluster
@@ -503,16 +551,19 @@ SOPS Age private key for decryption.
 **Default:** None (from key file)
 
 **Usage:**
+
 ```bash
 export SOPS_AGE_KEY="AGE-SECRET-KEY-1..."
 opencenter secrets decrypt
 ```
 
 **What it affects:**
-- SOPS decryption operations
-- Secrets management commands
+
+* SOPS decryption operations
+* Secrets management commands
 
 **Example:**
+
 ```bash
 # Use Age key from environment
 export SOPS_AGE_KEY=$(cat ~/.config/opencenter/clusters/my-org/secrets/age/my-cluster-key.txt)
@@ -526,14 +577,16 @@ Path to SOPS Age key file.
 **Default:** `~/.config/opencenter/clusters/<org>/secrets/age/<cluster>-key.txt`
 
 **Usage:**
+
 ```bash
 export SOPS_AGE_KEY_FILE=/path/to/age-key.txt
 opencenter secrets decrypt
 ```
 
 **What it affects:**
-- SOPS key file location
-- Secrets management commands
+
+* SOPS key file location
+* Secrets management commands
 
 ## Kubernetes Environment Variables
 
@@ -544,17 +597,20 @@ Kubernetes configuration file path.
 **Default:** `~/.kube/config`
 
 **Usage:**
+
 ```bash
 export KUBECONFIG=~/my-cluster-gitops/infrastructure/clusters/my-cluster/kubeconfig.yaml
 kubectl get nodes
 ```
 
 **What it affects:**
-- kubectl commands
-- Kubernetes API access
-- Cluster operations
+
+* kubectl commands
+* Kubernetes API access
+* Cluster operations
 
 **Example:**
+
 ```bash
 # Use cluster-specific kubeconfig
 export KUBECONFIG=~/prod-cluster-gitops/infrastructure/clusters/prod-cluster/kubeconfig.yaml
@@ -573,6 +629,7 @@ Indicates running in CI environment.
 **Values:** `true` (set by CI platforms)
 
 **Usage:**
+
 ```bash
 # Automatically set by CI platforms
 # GitHub Actions: CI=true
@@ -581,9 +638,10 @@ Indicates running in CI environment.
 ```
 
 **What it affects:**
-- Output formatting (less interactive)
-- Error handling (fail fast)
-- Logging (more verbose)
+
+* Output formatting (less interactive)
+* Error handling (fail fast)
+* Logging (more verbose)
 
 ### GITHUB_ACTIONS
 
@@ -594,14 +652,16 @@ Indicates running in GitHub Actions.
 **Values:** `true` (set by GitHub Actions)
 
 **Usage:**
+
 ```bash
 # Automatically set by GitHub Actions
 # GITHUB_ACTIONS=true
 ```
 
 **What it affects:**
-- GitHub-specific output formatting
-- Annotations and warnings
+
+* GitHub-specific output formatting
+* Annotations and warnings
 
 ### GITLAB_CI
 
@@ -612,14 +672,16 @@ Indicates running in GitLab CI.
 **Values:** `true` (set by GitLab CI)
 
 **Usage:**
+
 ```bash
 # Automatically set by GitLab CI
 # GITLAB_CI=true
 ```
 
 **What it affects:**
-- GitLab-specific output formatting
-- Job logs and artifacts
+
+* GitLab-specific output formatting
+* Job logs and artifacts
 
 ## Configuration Precedence Examples
 
@@ -751,6 +813,7 @@ variables:
 **Symptom:** Environment variable has no effect
 
 **Diagnosis:**
+
 ```bash
 # Check variable is set
 echo $OPENCENTER_CONFIG_DIR
@@ -762,6 +825,7 @@ env | grep OPENCENTER
 ```
 
 **Solution:**
+
 ```bash
 # Ensure correct variable name
 export OPENCENTER_CONFIG_DIR=/custom/path  # Correct
@@ -783,6 +847,7 @@ echo $OPENCENTER_PLUGINS_DIR
 **Symptom:** Configuration value not as expected
 
 **Diagnosis:**
+
 ```bash
 # Inspect the effective cluster configuration
 opencenter cluster export my-cluster --output yaml
@@ -795,6 +860,7 @@ env | grep -E '(OPENCENTER|OS_|AWS_|VSPHERE_)'
 ```
 
 **Solution:**
+
 ```bash
 # Unset conflicting environment variables
 unset OPENCENTER_WORKER_COUNT
@@ -805,10 +871,10 @@ opencenter cluster init my-cluster cluster.worker_count=5
 
 ## Related Topics
 
-- [Configuration Schema](configuration-schema.md) - Complete field reference
-- [CLI Commands](cli-commands.md) - Command-line flags
-- [Integrate CI/CD](../how-to/integrate-ci-cd.md) - CI/CD integration
-- [Configuration Lifecycle](../explanation/configuration-lifecycle.md) - Configuration management
+* [Configuration Schema](reference/configuration-schema.md) - Complete field reference
+* [CLI Commands](reference/cli-commands.md) - Command-line flags
+* [Integrate CI/CD](operations/integrate-ci-cd.md) - CI/CD integration
+* [Configuration Lifecycle](concepts/configuration-lifecycle.md) - Configuration management
 
 ---
 
@@ -816,7 +882,7 @@ opencenter cluster init my-cluster cluster.worker_count=5
 
 This reference is based on:
 
-- Configuration precedence: `internal/config/manager.go`, Session 2 B0 section 3
-- Environment variables: `cmd/root.go`, `internal/config/`
-- Provider variables: OpenStack and VMware documentation; AWS-backed service integration references
-- SOPS variables: `internal/sops/manager.go`
+* Configuration precedence: `internal/config/manager.go`, Session 2 B0 section 3
+* Environment variables: `cmd/root.go`, `internal/config/`
+* Provider variables: OpenStack and VMware documentation; AWS-backed service integration references
+* SOPS variables: `internal/sops/manager.go`

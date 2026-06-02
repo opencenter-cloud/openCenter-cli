@@ -7,7 +7,6 @@ doc_type: reference
 audience: "developers, devops engineers"
 tags: [exit-codes, errors, automation, ci-cd]
 ---
-
 # Exit Codes
 
 **Purpose:** For automation users, provides complete reference of CLI exit codes for error handling in scripts and CI/CD pipelines.
@@ -19,10 +18,12 @@ This reference documents all exit codes returned by openCenter CLI commands.
 openCenter CLI uses standard Unix exit codes to indicate command success or failure. Exit codes enable automated error handling in scripts and CI/CD pipelines.
 
 **Convention:**
-- `0`: Success
-- `1-255`: Error (specific error indicated by code)
+
+* `0`: Success
+* `1-255`: Error (specific error indicated by code)
 
 **Usage in scripts:**
+
 ```bash
 #!/bin/bash
 opencenter cluster validate my-cluster
@@ -41,42 +42,48 @@ fi
 Command completed successfully.
 
 **Example:**
+
 ```bash
 opencenter cluster validate my-cluster
 echo $?  # Output: 0
 ```
 
 **When returned:**
-- Configuration validation passed
-- Cluster operation completed successfully
-- Command executed without errors
+
+* Configuration validation passed
+* Cluster operation completed successfully
+* Command executed without errors
 
 ### 1 - General Error
 
 General error or unspecified failure. This is the catch-all exit code for any error condition.
 
 **Example:**
+
 ```bash
 opencenter cluster validate invalid-cluster
 echo $?  # Output: 1
 ```
 
 **When returned:**
-- Configuration validation failed
-- Provider authentication failed
-- Network connectivity error
-- Missing dependencies
-- Invalid command syntax
-- Missing required arguments
-- Any unclassified error
 
-**Note:** Most error conditions currently return exit code 1. Use `--output json` on supported commands to get structured error details for programmatic handling.
+* Configuration validation failed
+* Provider authentication failed
+* Network connectivity error
+* Missing dependencies
+* Invalid command syntax
+* Missing required arguments
+* Any unclassified error
+
+**📌 NOTE**\
+Most error conditions currently return exit code 1. Use `--output json` on supported commands to get structured error details for programmatic handling.
 
 ### 3 - Configuration Not Found
 
 The specified cluster configuration does not exist.
 
 **Example:**
+
 ```bash
 opencenter cluster validate nonexistent-cluster
 echo $?  # Output: 3
@@ -85,10 +92,12 @@ echo $?  # Output: 3
 ```
 
 **When returned:**
-- Cluster name does not match any configuration file
-- Organization/cluster path does not exist
+
+* Cluster name does not match any configuration file
+* Organization/cluster path does not exist
 
 **Recovery:**
+
 ```bash
 # List available clusters
 opencenter cluster list
@@ -100,7 +109,7 @@ opencenter cluster init <name> --org <org>
 ## Exit Code Summary
 
 | Code | Meaning | Typical Cause |
-|------|---------|---------------|
+| --- | --- | --- |
 | 0 | Success | Command completed without error |
 | 1 | General error | Validation failure, provider error, network error, any unclassified error |
 | 3 | Config not found | Cluster configuration file does not exist |
@@ -168,7 +177,7 @@ RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     opencenter cluster deploy my-cluster
     EXIT_CODE=$?
-    
+
     if [ $EXIT_CODE -eq 0 ]; then
         echo "Cluster deployed successfully"
         exit 0
@@ -189,6 +198,7 @@ exit 1
 ### CI/CD Integration
 
 **GitHub Actions:**
+
 ```yaml
 - name: Validate cluster
   run: opencenter cluster validate my-cluster
@@ -200,6 +210,7 @@ exit 1
 ```
 
 **GitLab CI:**
+
 ```yaml
 validate:
   script:
@@ -214,6 +225,7 @@ deploy:
 ```
 
 **Jenkins:**
+
 ```groovy
 stage('Validate') {
     steps {
@@ -302,12 +314,12 @@ fi
 
 ## Best Practices
 
-1. **Always check exit codes:** Don't assume commands succeed
+1. **Always check exit codes:** Don’t assume commands succeed
 2. **Use set -e in scripts:** Exit on first error
 3. **Handle specific errors:** Different actions for different exit codes
 4. **Log exit codes:** Record exit codes for debugging
 5. **Retry transient errors:** Network errors (exit code 4) can be retried
-6. **Don't retry permanent errors:** Configuration errors (exit code 2) need fixing
+6. **Don’t retry permanent errors:** Configuration errors (exit code 2) need fixing
 7. **Document expected exit codes:** In scripts and CI/CD pipelines
 8. **Test error paths:** Verify error handling works correctly
 
@@ -318,6 +330,7 @@ fi
 **Symptom:** Command returns unexpected exit code
 
 **Diagnosis:**
+
 ```bash
 # Run command with verbose output
 opencenter cluster validate my-cluster --verbose
@@ -330,16 +343,18 @@ echo $?
 ```
 
 **Solution:**
-- Read error message carefully
-- Check command syntax
-- Verify configuration file
-- Check provider credentials
+
+* Read error message carefully
+* Check command syntax
+* Verify configuration file
+* Check provider credentials
 
 ### Exit Code 0 But Command Failed
 
-**Symptom:** Command returns 0 but didn't complete successfully
+**Symptom:** Command returns 0 but didn’t complete successfully
 
 **Diagnosis:**
+
 ```bash
 # Check command output
 opencenter cluster validate my-cluster | tee output.log
@@ -349,15 +364,17 @@ grep "Configuration is valid" output.log
 ```
 
 **Solution:**
-- Check command output for warnings
-- Verify expected behavior
-- Report bug if exit code incorrect
+
+* Check command output for warnings
+* Verify expected behavior
+* Report bug if exit code incorrect
 
 ### Script Exits Unexpectedly
 
 **Symptom:** Script exits without completing
 
 **Diagnosis:**
+
 ```bash
 # Run script with set -x for debugging
 bash -x script.sh
@@ -367,6 +384,7 @@ echo $?
 ```
 
 **Solution:**
+
 ```bash
 # Use set -e to exit on error
 set -e
@@ -380,9 +398,9 @@ opencenter cluster validate my-cluster || {
 
 ## Related Topics
 
-- [CLI Commands](cli-commands.md) - Complete command reference
-- [Integrate CI/CD](../how-to/integrate-ci-cd.md) - CI/CD integration
-- [Troubleshoot Deployment](../how-to/troubleshoot-deployment.md) - Debug errors
+* [CLI Commands](reference/cli-commands.md) - Complete command reference
+* [Integrate CI/CD](operations/integrate-ci-cd.md) - CI/CD integration
+* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Debug errors
 
 ---
 
@@ -390,7 +408,7 @@ opencenter cluster validate my-cluster || {
 
 This reference is based on:
 
-- Exit code conventions: Unix/Linux standards
-- CLI error handling: `cmd/` directory structure
-- Error types: `internal/config/validator.go`, `internal/cloud/`
-- CI/CD integration: Session 7 integrate-ci-cd.md
+* Exit code conventions: Unix/Linux standards
+* CLI error handling: `cmd/` directory structure
+* Error types: `internal/config/validator.go`, `internal/cloud/`
+* CI/CD integration: Session 7 integrate-ci-cd.md

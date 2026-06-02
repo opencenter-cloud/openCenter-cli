@@ -1,3 +1,14 @@
+---
+id: opencenter-cluster
+title: "Opencenter_Cluster"
+sidebar_label: Opencenter_Cluster
+description: Documentation for Opencenter_Cluster.
+doc_type: reference
+audience: "platform engineers"
+tags: [reference]
+---
+# Opencenter_Cluster
+
 ## opencenter cluster
 
 Manage cluster configurations
@@ -11,20 +22,21 @@ and managing cluster configurations. It supports organization-based multi-tenanc
 and integrates with GitOps workflows.
 
 Common Workflow:
-  1. Create a cluster config
-     opencenter cluster init prod --org acme
-  2. Complete provider-specific settings
-     opencenter cluster configure acme/prod
-  3. Validate config and prerequisites
-     opencenter cluster validate acme/prod
-     opencenter cluster doctor acme/prod
-  4. Generate GitOps assets
-     opencenter cluster generate acme/prod
-  5. Deploy the cluster
-     opencenter cluster deploy acme/prod
+
+1. Create a cluster config
+opencenter cluster init prod --org acme
+2. Complete provider-specific settings
+opencenter cluster configure acme/prod
+3. Validate config and prerequisites
+opencenter cluster validate acme/prod
+opencenter cluster doctor acme/prod
+4. Generate GitOps assets
+opencenter cluster generate acme/prod
+5. Deploy the cluster
+opencenter cluster deploy acme/prod
 
 Configuration files are stored in organization-based directories:
-  ~/.config/opencenter/clusters/<organization>/<cluster>/
+  ~/.config/opencenter/clusters/+++&lt;organization>+++/+++&lt;cluster>+++/+++&lt;/cluster>++++++&lt;/organization>+++
 
 ```
 opencenter cluster [flags]
@@ -60,29 +72,29 @@ opencenter cluster [flags]
 
 ### SEE ALSO
 
-* [opencenter](opencenter.md)	 - opencenter CLI manages cluster configurations and GitOps scaffolding
-* [opencenter cluster active](opencenter_cluster_active.md)	 - Show the active cluster
-* [opencenter cluster backup](opencenter_cluster_backup.md)	 - Manage cluster backups
-* [opencenter cluster configure](opencenter_cluster_configure.md)	 - Guided cluster configuration for supported providers
-* [opencenter cluster deploy](opencenter_cluster_deploy.md)	 - Deploy a cluster from its openCenter configuration
-* [opencenter cluster describe](opencenter_cluster_describe.md)	 - Describe cluster configuration, paths, locks, and state
-* [opencenter cluster destroy](opencenter_cluster_destroy.md)	 - Destroy a cluster
-* [opencenter cluster doctor](opencenter_cluster_doctor.md)	 - Check local tools, credentials, and provider readiness
-* [opencenter cluster drift](opencenter_cluster_drift.md)	 - Detect and reconcile infrastructure drift
-* [opencenter cluster edit](opencenter_cluster_edit.md)	 - Edit a cluster configuration in your preferred editor
-* [opencenter cluster env](opencenter_cluster_env.md)	 - Export cluster environment variables
-* [opencenter cluster export](opencenter_cluster_export.md)	 - Export effective cluster configuration
-* [opencenter cluster generate](opencenter_cluster_generate.md)	 - Generate the GitOps repository and rendered manifests
-* [opencenter cluster import](opencenter_cluster_import.md)	 - Import running clusters into openCenter config
-* [opencenter cluster init](opencenter_cluster_init.md)	 - Initialize a new cluster configuration (non-interactive)
-* [opencenter cluster list](opencenter_cluster_list.md)	 - List configured clusters
-* [opencenter cluster lock](opencenter_cluster_lock.md)	 - Lock a cluster to prevent modifications
-* [opencenter cluster normalize](opencenter_cluster_normalize.md)	 - Add missing default fields to a cluster configuration
-* [opencenter cluster service](opencenter_cluster_service.md)	 - Manage cluster services
-* [opencenter cluster set](opencenter_cluster_set.md)	 - Set fields in an existing cluster configuration
-* [opencenter cluster status](opencenter_cluster_status.md)	 - Show cluster status information
-* [opencenter cluster unlock](opencenter_cluster_unlock.md)	 - Unlock a cluster to allow modifications
-* [opencenter cluster use](opencenter_cluster_use.md)	 - Set the active cluster
-* [opencenter cluster validate](opencenter_cluster_validate.md)	 - Validate cluster configuration
+* [opencenter](reference/opencenter/opencenter.md)	 - opencenter CLI manages cluster configurations and GitOps scaffolding
+* [opencenter cluster active](reference/opencenter/opencenter_cluster_active.md)	 - Show the active cluster
+* [opencenter cluster backup](reference/opencenter/opencenter_cluster_backup.md)	 - Manage cluster backups
+* [opencenter cluster configure](reference/opencenter/opencenter_cluster_configure.md)	 - Guided cluster configuration for supported providers
+* [opencenter cluster deploy](reference/opencenter/opencenter_cluster_deploy.md)	 - Deploy a cluster from its openCenter configuration
+* [opencenter cluster describe](reference/opencenter/opencenter_cluster_describe.md)	 - Describe cluster configuration, paths, locks, and state
+* [opencenter cluster destroy](reference/opencenter/opencenter_cluster_destroy.md)	 - Destroy a cluster
+* [opencenter cluster doctor](reference/opencenter/opencenter_cluster_doctor.md)	 - Check local tools, credentials, and provider readiness
+* [opencenter cluster drift](reference/opencenter/opencenter_cluster_drift.md)	 - Detect and reconcile infrastructure drift
+* [opencenter cluster edit](reference/opencenter/opencenter_cluster_edit.md)	 - Edit a cluster configuration in your preferred editor
+* [opencenter cluster env](reference/opencenter/opencenter_cluster_env.md)	 - Export cluster environment variables
+* [opencenter cluster export](reference/opencenter/opencenter_cluster_export.md)	 - Export effective cluster configuration
+* [opencenter cluster generate](reference/opencenter/opencenter_cluster_generate.md)	 - Generate the GitOps repository and rendered manifests
+* [opencenter cluster import](reference/opencenter/opencenter_cluster_import.md)	 - Import running clusters into openCenter config
+* [opencenter cluster init](reference/opencenter/opencenter_cluster_init.md)	 - Initialize a new cluster configuration (non-interactive)
+* [opencenter cluster list](reference/opencenter/opencenter_cluster_list.md)	 - List configured clusters
+* [opencenter cluster lock](reference/opencenter/opencenter_cluster_lock.md)	 - Lock a cluster to prevent modifications
+* [opencenter cluster normalize](reference/opencenter/opencenter_cluster_normalize.md)	 - Add missing default fields to a cluster configuration
+* [opencenter cluster service](reference/opencenter/opencenter_cluster_service.md)	 - Manage cluster services
+* [opencenter cluster set](reference/opencenter/opencenter_cluster_set.md)	 - Set fields in an existing cluster configuration
+* [opencenter cluster status](reference/opencenter/opencenter_cluster_status.md)	 - Show cluster status information
+* [opencenter cluster unlock](reference/opencenter/opencenter_cluster_unlock.md)	 - Unlock a cluster to allow modifications
+* [opencenter cluster use](reference/opencenter/opencenter_cluster_use.md)	 - Set the active cluster
+* [opencenter cluster validate](reference/opencenter/opencenter_cluster_validate.md)	 - Validate cluster configuration
 
 ###### Auto generated by spf13/cobra on 28-Apr-2026

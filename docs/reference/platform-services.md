@@ -1,13 +1,12 @@
 ---
 id: platform-services
 title: "Platform Services Reference"
-sidebar_label: Platform Services
+sidebar_label: Platform Services Reference
 description: Complete reference of available platform services, versions, and configuration options.
 doc_type: reference
 audience: "operators, platform engineers"
 tags: [services, platform, helm, monitoring, security]
 ---
-
 # Platform Services Reference
 
 **Purpose:** Complete reference of available platform services, versions, and configuration options for quick lookup.
@@ -16,20 +15,20 @@ This reference documents all platform services that can be deployed with openCen
 
 ## Service Categories
 
-- **Networking:** CNI plugins, ingress, load balancing
-- **Security:** Certificate management, policy enforcement, identity
-- **Storage:** Persistent storage, CSI drivers, snapshots
-- **Observability:** Monitoring, logging, tracing
-- **GitOps:** Continuous delivery, source management
-- **Backup:** Disaster recovery, etcd backup
-- **Management:** Dashboards, operators, RBAC
+* **Networking:** CNI plugins, ingress, load balancing
+* **Security:** Certificate management, policy enforcement, identity
+* **Storage:** Persistent storage, CSI drivers, snapshots
+* **Observability:** Monitoring, logging, tracing
+* **GitOps:** Continuous delivery, source management
+* **Backup:** Disaster recovery, etcd backup
+* **Management:** Dashboards, operators, RBAC
 
 ## Networking Services
 
 ### calico
 
-**Category:** CNI Plugin  
-**Default:** Enabled  
+**Category:** CNI Plugin\
+**Default:** Enabled\
 **Description:** Calico CNI for pod networking with BGP support
 
 **Configuration:**
@@ -43,17 +42,18 @@ opencenter:
 ```
 
 **Features:**
-- VXLAN or IPIP encapsulation
-- BGP routing
-- Network policies
-- IPv4/IPv6 dual-stack
+
+* VXLAN or IPIP encapsulation
+* BGP routing
+* Network policies
+* IPv4/IPv6 dual-stack
 
 **Dependencies:** None
 
 ### gateway-api
 
-**Category:** Networking  
-**Default:** Enabled  
+**Category:** Networking\
+**Default:** Enabled\
 **Description:** Gateway API CRDs for modern ingress
 
 **Configuration:**
@@ -66,16 +66,17 @@ opencenter:
 ```
 
 **Features:**
-- HTTPRoute, TLSRoute, TCPRoute
-- Gateway class support
-- Role-based access
+
+* HTTPRoute, TLSRoute, TCPRoute
+* Gateway class support
+* Role-based access
 
 **Dependencies:** None
 
 ### gateway
 
-**Category:** Networking  
-**Default:** Enabled  
+**Category:** Networking\
+**Default:** Enabled\
 **Description:** Gateway API implementation (Envoy-based)
 
 **Configuration:**
@@ -88,9 +89,10 @@ opencenter:
 ```
 
 **Features:**
-- HTTP/HTTPS routing
-- TLS termination
-- Load balancing
+
+* HTTP/HTTPS routing
+* TLS termination
+* Load balancing
 
 **Dependencies:** gateway-api
 
@@ -98,8 +100,8 @@ opencenter:
 
 ### cert-manager
 
-**Category:** Security  
-**Default:** Enabled  
+**Category:** Security\
+**Default:** Enabled\
 **Description:** Automated TLS certificate management
 
 **Configuration:**
@@ -115,10 +117,11 @@ opencenter:
 ```
 
 **Features:**
-- Let's Encrypt integration
-- ACME protocol support
-- Certificate renewal
-- DNS-01 and HTTP-01 challenges
+
+* Let’s Encrypt integration
+* ACME protocol support
+* Certificate renewal
+* DNS-01 and HTTP-01 challenges
 
 **Dependencies:** None
 
@@ -133,8 +136,8 @@ secrets:
 
 ### keycloak
 
-**Category:** Security  
-**Default:** Enabled  
+**Category:** Security\
+**Default:** Enabled\
 **Description:** Identity and access management
 
 **Configuration:**
@@ -151,10 +154,11 @@ opencenter:
 ```
 
 **Features:**
-- OIDC provider
-- SAML support
-- User federation
-- Multi-factor authentication
+
+* OIDC provider
+* SAML support
+* User federation
+* Multi-factor authentication
 
 **Dependencies:** cert-manager, gateway-api, postgres-operator
 
@@ -169,8 +173,8 @@ secrets:
 
 ### kyverno
 
-**Category:** Security  
-**Default:** Enabled  
+**Category:** Security\
+**Default:** Enabled\
 **Description:** Kubernetes policy engine
 
 **Configuration:**
@@ -183,26 +187,28 @@ opencenter:
 ```
 
 **Features:**
-- Policy validation
-- Resource mutation
-- Policy generation
-- 17 default ClusterPolicies
+
+* Policy validation
+* Resource mutation
+* Policy generation
+* 17 default ClusterPolicies
 
 **Default Policies:**
-- disallow-privileged-containers
-- disallow-host-namespaces
-- disallow-host-path
-- require-run-as-nonroot
-- restrict-seccomp
-- restrict-volume-types
-- And 11 more
+
+* disallow-privileged-containers
+* disallow-host-namespaces
+* disallow-host-path
+* require-run-as-nonroot
+* restrict-seccomp
+* restrict-volume-types
+* And 11 more
 
 **Dependencies:** None
 
 ### rbac-manager
 
-**Category:** Security  
-**Default:** Enabled  
+**Category:** Security\
+**Default:** Enabled\
 **Description:** Declarative RBAC management
 
 **Configuration:**
@@ -215,10 +221,11 @@ opencenter:
 ```
 
 **Features:**
-- RBACDefinition CRD
-- Automatic RoleBinding creation
-- Keycloak integration
-- Group-based access
+
+* RBACDefinition CRD
+* Automatic RoleBinding creation
+* Keycloak integration
+* Group-based access
 
 **Dependencies:** keycloak (optional)
 
@@ -226,8 +233,8 @@ opencenter:
 
 ### openstack-csi
 
-**Category:** Storage  
-**Default:** Enabled (OpenStack only)  
+**Category:** Storage\
+**Default:** Enabled (OpenStack only)\
 **Description:** OpenStack Cinder CSI driver
 
 **Configuration:**
@@ -240,17 +247,18 @@ opencenter:
 ```
 
 **Features:**
-- Dynamic volume provisioning
-- Volume snapshots
-- Volume expansion
-- Multi-attach volumes
+
+* Dynamic volume provisioning
+* Volume snapshots
+* Volume expansion
+* Multi-attach volumes
 
 **Dependencies:** openstack-ccm
 
 ### vsphere-csi
 
-**Category:** Storage  
-**Default:** Disabled  
+**Category:** Storage\
+**Default:** Disabled\
 **Description:** VMware vSphere CSI driver
 
 **Configuration:**
@@ -265,10 +273,11 @@ opencenter:
 ```
 
 **Features:**
-- vSphere datastore integration
-- Volume snapshots
-- Storage policies
-- Topology awareness
+
+* vSphere datastore integration
+* Volume snapshots
+* Storage policies
+* Topology awareness
 
 **Dependencies:** None
 
@@ -287,8 +296,8 @@ secrets:
 
 ### external-snapshotter
 
-**Category:** Storage  
-**Default:** Enabled  
+**Category:** Storage\
+**Default:** Enabled\
 **Description:** Volume snapshot controller
 
 **Configuration:**
@@ -301,9 +310,10 @@ opencenter:
 ```
 
 **Features:**
-- VolumeSnapshot CRD
-- Snapshot scheduling
-- Snapshot restore
+
+* VolumeSnapshot CRD
+* Snapshot scheduling
+* Snapshot restore
 
 **Dependencies:** CSI driver (openstack-csi or vsphere-csi)
 
@@ -311,8 +321,8 @@ opencenter:
 
 ### kube-prometheus-stack
 
-**Category:** Observability  
-**Default:** Enabled  
+**Category:** Observability\
+**Default:** Enabled\
 **Description:** Complete monitoring solution
 
 **Configuration:**
@@ -331,17 +341,19 @@ opencenter:
 ```
 
 **Components:**
-- Prometheus (metrics)
-- Grafana (visualization)
-- Alertmanager (alerting)
-- Node exporter
-- Kube-state-metrics
+
+* Prometheus (metrics)
+* Grafana (visualization)
+* Alertmanager (alerting)
+* Node exporter
+* Kube-state-metrics
 
 **Features:**
-- Pre-configured dashboards
-- Alert rules
-- Service discovery
-- Long-term storage
+
+* Pre-configured dashboards
+* Alert rules
+* Service discovery
+* Long-term storage
 
 **Dependencies:** None
 
@@ -355,8 +367,8 @@ secrets:
 
 ### loki
 
-**Category:** Observability  
-**Default:** Enabled  
+**Category:** Observability\
+**Default:** Enabled\
 **Description:** Log aggregation system
 
 **Configuration:**
@@ -375,10 +387,11 @@ opencenter:
 ```
 
 **Features:**
-- S3-compatible storage
-- LogQL query language
-- Grafana integration
-- Multi-tenancy
+
+* S3-compatible storage
+* LogQL query language
+* Grafana integration
+* Multi-tenancy
 
 **Dependencies:** kube-prometheus-stack (for Grafana)
 
@@ -392,8 +405,8 @@ secrets:
 
 ### tempo
 
-**Category:** Observability  
-**Default:** Enabled  
+**Category:** Observability\
+**Default:** Enabled\
 **Description:** Distributed tracing backend
 
 **Configuration:**
@@ -414,10 +427,11 @@ opencenter:
 ```
 
 **Features:**
-- OpenTelemetry support
-- Jaeger compatibility
-- S3 storage backend
-- Grafana integration
+
+* OpenTelemetry support
+* Jaeger compatibility
+* S3 storage backend
+* Grafana integration
 
 **Dependencies:** kube-prometheus-stack (for Grafana)
 
@@ -434,8 +448,8 @@ secrets:
 
 ### fluxcd
 
-**Category:** GitOps  
-**Default:** Enabled  
+**Category:** GitOps\
+**Default:** Enabled\
 **Description:** GitOps continuous delivery
 
 **Configuration:**
@@ -448,23 +462,25 @@ opencenter:
 ```
 
 **Components:**
-- source-controller
-- kustomize-controller
-- helm-controller
-- notification-controller
+
+* source-controller
+* kustomize-controller
+* helm-controller
+* notification-controller
 
 **Features:**
-- Git repository sync
-- Helm release management
-- Kustomize support
-- SOPS decryption
+
+* Git repository sync
+* Helm release management
+* Kustomize support
+* SOPS decryption
 
 **Dependencies:** None
 
 ### sources
 
-**Category:** GitOps  
-**Default:** Enabled  
+**Category:** GitOps\
+**Default:** Enabled\
 **Description:** FluxCD GitRepository sources
 
 **Configuration:**
@@ -477,16 +493,17 @@ opencenter:
 ```
 
 **Features:**
-- GitRepository CRDs
-- SSH authentication
-- Branch/tag tracking
+
+* GitRepository CRDs
+* SSH authentication
+* Branch/tag tracking
 
 **Dependencies:** fluxcd
 
 ### weave-gitops
 
-**Category:** GitOps  
-**Default:** Disabled  
+**Category:** GitOps\
+**Default:** Disabled\
 **Description:** Weave GitOps UI
 
 **Configuration:**
@@ -500,10 +517,11 @@ opencenter:
 ```
 
 **Features:**
-- Web UI for FluxCD
-- Resource visualization
-- Reconciliation status
-- Application management
+
+* Web UI for FluxCD
+* Resource visualization
+* Reconciliation status
+* Application management
 
 **Dependencies:** fluxcd, cert-manager, gateway-api
 
@@ -520,8 +538,8 @@ secrets:
 
 ### velero
 
-**Category:** Backup  
-**Default:** Enabled  
+**Category:** Backup\
+**Default:** Enabled\
 **Description:** Backup and disaster recovery
 
 **Configuration:**
@@ -536,17 +554,18 @@ opencenter:
 ```
 
 **Features:**
-- Cluster backup
-- Namespace backup
-- Scheduled backups
-- Restore operations
+
+* Cluster backup
+* Namespace backup
+* Scheduled backups
+* Restore operations
 
 **Dependencies:** CSI driver (for volume snapshots)
 
 ### etcd-backup
 
-**Category:** Backup  
-**Default:** Enabled  
+**Category:** Backup\
+**Default:** Enabled\
 **Description:** Etcd backup to S3
 
 **Configuration:**
@@ -561,10 +580,11 @@ opencenter:
 ```
 
 **Features:**
-- Scheduled etcd snapshots
-- S3 storage
-- Encryption at rest
-- Retention policies
+
+* Scheduled etcd snapshots
+* S3 storage
+* Encryption at rest
+* Retention policies
 
 **Dependencies:** None
 
@@ -572,8 +592,8 @@ opencenter:
 
 ### headlamp
 
-**Category:** Management  
-**Default:** Enabled  
+**Category:** Management\
+**Default:** Enabled\
 **Description:** Kubernetes dashboard
 
 **Configuration:**
@@ -589,10 +609,11 @@ opencenter:
 ```
 
 **Features:**
-- Web-based UI
-- OIDC authentication
-- Resource management
-- Log viewing
+
+* Web-based UI
+* OIDC authentication
+* Resource management
+* Log viewing
 
 **Dependencies:** keycloak, cert-manager, gateway-api
 
@@ -606,8 +627,8 @@ secrets:
 
 ### olm
 
-**Category:** Management  
-**Default:** Enabled  
+**Category:** Management\
+**Default:** Enabled\
 **Description:** Operator Lifecycle Manager
 
 **Configuration:**
@@ -620,17 +641,18 @@ opencenter:
 ```
 
 **Features:**
-- Operator installation
-- Dependency resolution
-- Upgrade management
-- Catalog management
+
+* Operator installation
+* Dependency resolution
+* Upgrade management
+* Catalog management
 
 **Dependencies:** None
 
 ### postgres-operator
 
-**Category:** Management  
-**Default:** Enabled  
+**Category:** Management\
+**Default:** Enabled\
 **Description:** PostgreSQL operator
 
 **Configuration:**
@@ -643,10 +665,11 @@ opencenter:
 ```
 
 **Features:**
-- PostgreSQL cluster management
-- High availability
-- Backup and restore
-- Connection pooling
+
+* PostgreSQL cluster management
+* High availability
+* Backup and restore
+* Connection pooling
 
 **Dependencies:** None
 
@@ -654,8 +677,8 @@ opencenter:
 
 ### openstack-ccm
 
-**Category:** Cloud Provider  
-**Default:** Enabled (OpenStack only)  
+**Category:** Cloud Provider\
+**Default:** Enabled (OpenStack only)\
 **Description:** OpenStack cloud controller manager
 
 **Configuration:**
@@ -668,10 +691,11 @@ opencenter:
 ```
 
 **Features:**
-- Load balancer integration
-- Node lifecycle management
-- Route management
-- Service integration
+
+* Load balancer integration
+* Node lifecycle management
+* Route management
+* Service integration
 
 **Dependencies:** None
 
@@ -679,8 +703,8 @@ opencenter:
 
 ### alert-proxy
 
-**Category:** Managed Service  
-**Default:** Disabled  
+**Category:** Managed Service\
+**Default:** Disabled\
 **Description:** Alert forwarding to external systems
 
 **Configuration:**
@@ -697,9 +721,10 @@ opencenter:
 ```
 
 **Features:**
-- Alertmanager integration
-- External API forwarding
-- Alert transformation
+
+* Alertmanager integration
+* External API forwarding
+* Alert transformation
 
 **Dependencies:** kube-prometheus-stack
 
@@ -754,6 +779,7 @@ CSI driver (openstack-csi or vsphere-csi)
 Service versions are managed in openCenter-gitops-base repository. Versions are pinned for reproducibility.
 
 **Update Strategy:**
+
 1. Test new version in dev environment
 2. Update gitops-base repository
 3. Tag new release
@@ -761,7 +787,7 @@ Service versions are managed in openCenter-gitops-base repository. Versions are 
 
 ## Enabling/Disabling Services
 
-See [Customize Services](../how-to/customize-services.md) for detailed instructions.
+See [Customize Services](operations/customize-services.md) for detailed instructions.
 
 ---
 
@@ -769,8 +795,8 @@ See [Customize Services](../how-to/customize-services.md) for detailed instructi
 
 This reference is based on:
 
-- Service defaults: `internal/config/defaults.go:293-388`
-- Service base config: `internal/config/services/base.go:1-35`
-- Session 2 facts inventory: B0 section 6
-- Ecosystem services: Ecosystem.md infrastructure services
-- Session 1 architecture: A2
+* Service defaults: `internal/config/defaults.go:293-388`
+* Service base config: `internal/config/services/base.go:1-35`
+* Session 2 facts inventory: B0 section 6
+* Ecosystem services: Ecosystem.md infrastructure services
+* Session 1 architecture: A2

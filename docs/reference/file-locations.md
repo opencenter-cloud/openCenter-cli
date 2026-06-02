@@ -7,7 +7,6 @@ doc_type: reference
 audience: "all users"
 tags: [files, paths, locations, configuration]
 ---
-
 # File Locations
 
 **Purpose:** For all users, provides complete reference of configuration and data file locations used by openCenter CLI.
@@ -18,10 +17,10 @@ This reference documents the file and directory locations openCenter uses for co
 
 openCenter CLI separates persistent configuration from mutable runtime state:
 
-- **Configuration:** `~/.config/opencenter/`
-- **State:** `~/.local/state/opencenter/`
-- **Cache:** `~/.cache/opencenter/`
-- **GitOps repository output:** user-selected working tree
+* **Configuration:** `~/.config/opencenter/`
+* **State:** `~/.local/state/opencenter/`
+* **Cache:** `~/.cache/opencenter/`
+* **GitOps repository output:** user-selected working tree
 
 ## Configuration Directory
 
@@ -32,6 +31,7 @@ openCenter CLI separates persistent configuration from mutable runtime state:
 **Purpose:** Stores all openCenter configuration files.
 
 **Contents:**
+
 ```
 ~/.config/opencenter/
 ├── config.yaml              # CLI defaults
@@ -42,6 +42,7 @@ openCenter CLI separates persistent configuration from mutable runtime state:
 **Environment variables:** `OPENCENTER_CONFIG_DIR`, `OPENCENTER_CLUSTERS_DIR`, `OPENCENTER_PLUGINS_DIR`
 
 **Override:**
+
 ```bash
 export OPENCENTER_CONFIG_DIR=/custom/opencenter-config
 export OPENCENTER_CLUSTERS_DIR=/custom/opencenter-clusters
@@ -55,6 +56,7 @@ export OPENCENTER_PLUGINS_DIR=/custom/opencenter-plugins
 **Purpose:** User-level CLI defaults (applied to all clusters).
 
 **Example:**
+
 ```yaml
 # CLI defaults
 opencenter:
@@ -74,13 +76,15 @@ opencenter:
 **Purpose:** Cluster-specific configuration.
 
 **Example path:**
+
 ```
 ~/.config/opencenter/clusters/my-company/.prod-cluster-config.yaml
 ```
 
 **Pattern:**
-- Organization directory: `<organization>/`
-- Cluster config: `.<cluster>-config.yaml` (hidden file)
+
+* Organization directory: `<organization>/`
+* Cluster config: `.<cluster>-config.yaml` (hidden file)
 
 **Evidence:** `.kiro/steering/structure.md:118-128`, `tests/features/workflow.feature:19`
 
@@ -91,6 +95,7 @@ opencenter:
 **Purpose:** Organization-level configuration and secrets.
 
 **Contents:**
+
 ```
 ~/.config/opencenter/clusters/my-company/
 ├── .defaults.yaml           # Organization defaults
@@ -121,11 +126,13 @@ opencenter:
 **Purpose:** SOPS Age encryption keys for secrets management.
 
 **Example path:**
+
 ```
 ~/.config/opencenter/clusters/my-company/secrets/age/prod-cluster-key.txt
 ```
 
 **Format:**
+
 ```
 # created: 2026-02-17T10:00:00Z
 # public key: age1abc123...
@@ -143,14 +150,16 @@ AGE-SECRET-KEY-1ABC123...
 **Purpose:** SSH keys for cluster node access.
 
 **Example paths:**
+
 ```
 ~/.config/opencenter/clusters/my-company/secrets/ssh/prod-cluster-key
 ~/.config/opencenter/clusters/my-company/secrets/ssh/prod-cluster-key.pub
 ```
 
 **Permissions:**
-- Private key: `0600` (read/write for owner only)
-- Public key: `0644` (readable by all)
+
+* Private key: `0600` (read/write for owner only)
+* Public key: `0644` (readable by all)
 
 **Evidence:** `internal/config/defaults.go`, Session 2 B0 section 14
 
@@ -163,6 +172,7 @@ AGE-SECRET-KEY-1ABC123...
 **Purpose:** Generated GitOps repository with infrastructure and application manifests.
 
 **Structure:**
+
 ```
 ~/my-cluster-gitops/
 ├── .gitignore
@@ -191,6 +201,7 @@ AGE-SECRET-KEY-1ABC123...
 **Purpose:** Infrastructure provisioning and configuration.
 
 **Contents:**
+
 ```
 infrastructure/clusters/my-cluster/
 ├── main.tf                  # Terraform main configuration
@@ -215,6 +226,7 @@ infrastructure/clusters/my-cluster/
 **Purpose:** Kubernetes application manifests.
 
 **Contents:**
+
 ```
 applications/overlays/my-cluster/
 ├── kustomization.yaml       # Kustomize overlay
@@ -246,6 +258,7 @@ applications/overlays/my-cluster/
 **Purpose:** Temporary cache files for performance optimization.
 
 **Contents:**
+
 ```
 ~/.cache/opencenter/
 ├── provider-cache/          # Provider API response cache
@@ -254,6 +267,7 @@ applications/overlays/my-cluster/
 ```
 
 **Cleanup:**
+
 ```bash
 # Clear cache
 rm -rf ~/.cache/opencenter/
@@ -268,6 +282,7 @@ rm -rf ~/.cache/opencenter/
 **Purpose:** Cache provider API responses (images, flavors, networks).
 
 **Example:**
+
 ```
 ~/.cache/opencenter/provider-cache/
 ├── openstack-sjc3-images.json
@@ -286,6 +301,7 @@ rm -rf ~/.cache/opencenter/
 **Purpose:** Runtime artifacts that should not dirty the GitOps repository.
 
 **Contents:**
+
 ```
 ~/.local/state/opencenter/
 ├── audit/
@@ -301,8 +317,9 @@ rm -rf ~/.cache/opencenter/
 ```
 
 **Environment variables:**
-- `OPENCENTER_STATE_DIR`
-- `XDG_STATE_HOME` (fallback base when `OPENCENTER_STATE_DIR` is unset)
+
+* `OPENCENTER_STATE_DIR`
+* `XDG_STATE_HOME` (fallback base when `OPENCENTER_STATE_DIR` is unset)
 
 ### Bootstrap Resume State
 
@@ -311,9 +328,10 @@ rm -rf ~/.cache/opencenter/
 **Purpose:** Stores resumable bootstrap step state after a failed or interrupted bootstrap.
 
 **Behavior:**
-- Created during bootstrap when a resumable step is recorded
-- Deleted automatically after a successful bootstrap
-- Legacy repo-local state at `infrastructure/clusters/<cluster>/logs/bootstrap-state.json` is still read for compatibility during migration
+
+* Created during bootstrap when a resumable step is recorded
+* Deleted automatically after a successful bootstrap
+* Legacy repo-local state at `infrastructure/clusters/<cluster>/logs/bootstrap-state.json` is still read for compatibility during migration
 
 **Permissions:** `0600`
 
@@ -324,6 +342,7 @@ rm -rf ~/.cache/opencenter/
 **Purpose:** Per-run bootstrap logs written outside the GitOps repository.
 
 **Example:**
+
 ```
 ~/.local/state/opencenter/logs/bootstrap/my-company/prod-cluster/
 └── bootstrap-20260411T154500Z.log
@@ -343,7 +362,7 @@ rm -rf ~/.cache/opencenter/
 
 **Location:** `~/.config/opencenter/audit/audit.key`
 
-**Purpose:** 32-byte HMAC-SHA256 key used to sign audit log entries for tamper detection. Generated automatically on first audit write. See [Audit Signing Key](audit-key.md) for details.
+**Purpose:** 32-byte HMAC-SHA256 key used to sign audit log entries for tamper detection. Generated automatically on first audit write. See [Audit Signing Key](reference/audit-key.md) for details.
 
 **Permissions:** `0600`
 
@@ -362,6 +381,7 @@ rm -rf ~/.cache/opencenter/
 **Purpose:** CLI plugins and extensions.
 
 **Structure:**
+
 ```
 ~/.config/opencenter/plugins/
 ├── checksums.txt            # Optional sha256sum allowlist
@@ -373,7 +393,7 @@ rm -rf ~/.cache/opencenter/
 
 **Verification:** `checksums.txt`, when present, uses standard `sha256sum` formatting (`<sha256>  <filename>`, two spaces) and is matched by plugin basename. Unverified plugins emit a warning; mismatched checksums block execution.
 
-**See also:** [Create and Install a CLI Plugin](../how-to/create-install-cli-plugin.md)
+**See also:** [Create and Install a CLI Plugin](operations/create-install-cli-plugin.md)
 
 **Evidence:** `internal/plugins/`, `cmd/plugins.go`
 
@@ -388,6 +408,7 @@ rm -rf ~/.cache/opencenter/
 **Generated by:** Kubespray during cluster deployment
 
 **Usage:**
+
 ```bash
 export KUBECONFIG=~/my-cluster-gitops/infrastructure/clusters/my-cluster/kubeconfig.yaml
 kubectl get nodes
@@ -400,13 +421,14 @@ kubectl get nodes
 Supported location overrides:
 
 | Location | Environment Variable | Default |
-|----------|---------------------|---------|
+| --- | --- | --- |
 | Config directory | `OPENCENTER_CONFIG_DIR` | `~/.config/opencenter` |
 | Cluster directory | `OPENCENTER_CLUSTERS_DIR` | `${OPENCENTER_CONFIG_DIR:-~/.config/opencenter}/clusters` |
 | Plugins directory | `OPENCENTER_PLUGINS_DIR` | `${OPENCENTER_CONFIG_DIR:-~/.config/opencenter}/plugins` |
 | State directory | `OPENCENTER_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/opencenter` |
 
 **Example:**
+
 ```bash
 export OPENCENTER_CONFIG_DIR=/custom/config
 export OPENCENTER_CLUSTERS_DIR=/custom/clusters
@@ -419,7 +441,7 @@ export OPENCENTER_STATE_DIR=/custom/state
 ### Recommended Permissions
 
 | File Type | Permissions | Reason |
-|-----------|-------------|--------|
+| --- | --- | --- |
 | Configuration files | `0600` | Contains sensitive data |
 | SSH private keys | `0600` | Security requirement |
 | SSH public keys | `0644` | Can be shared |
@@ -469,9 +491,9 @@ tar -xzf opencenter-backup-20260217.tar.gz -C ~/
 
 ### Exclude from Backup
 
-- Cache directory: `~/.cache/opencenter/`
-- Temporary files: `/tmp/opencenter/`
-- Logs: `~/.local/share/opencenter/logs/`
+* Cache directory: `~/.cache/opencenter/`
+* Temporary files: `/tmp/opencenter/`
+* Logs: `~/.local/share/opencenter/logs/`
 
 ## Cleanup
 
@@ -490,9 +512,9 @@ find ~/.local/share/opencenter/logs/ -name "*.log.*" -mtime +7 -delete
 
 ### Do Not Delete
 
-- Configuration files: `~/.config/opencenter/clusters/`
-- Secrets: `~/.config/opencenter/clusters/*/secrets/`
-- GitOps repository: `~/my-cluster-gitops/`
+* Configuration files: `~/.config/opencenter/clusters/`
+* Secrets: `~/.config/opencenter/clusters/*/secrets/`
+* GitOps repository: `~/my-cluster-gitops/`
 
 ## Troubleshooting
 
@@ -501,6 +523,7 @@ find ~/.local/share/opencenter/logs/ -name "*.log.*" -mtime +7 -delete
 **Symptom:** `Error: Configuration file not found`
 
 **Diagnosis:**
+
 ```bash
 # Check configuration directory
 ls -la ~/.config/opencenter/clusters/my-org/
@@ -510,6 +533,7 @@ echo ~/.config/opencenter/clusters/my-org/.prod-cluster-config.yaml
 ```
 
 **Solution:**
+
 ```bash
 # Verify cluster name and organization
 opencenter cluster list
@@ -523,6 +547,7 @@ opencenter cluster init prod-cluster --org my-org
 **Symptom:** `Error: Permission denied`
 
 **Diagnosis:**
+
 ```bash
 # Check file permissions
 ls -l ~/.config/opencenter/clusters/my-org/.prod-cluster-config.yaml
@@ -532,6 +557,7 @@ ls -ld ~/.config/opencenter/clusters/my-org/
 ```
 
 **Solution:**
+
 ```bash
 # Fix file permissions
 chmod 600 ~/.config/opencenter/clusters/my-org/.prod-cluster-config.yaml
@@ -545,6 +571,7 @@ chmod 700 ~/.config/opencenter/clusters/my-org/
 **Symptom:** `Error: No space left on device`
 
 **Diagnosis:**
+
 ```bash
 # Check disk usage
 df -h ~/.config/opencenter/
@@ -553,6 +580,7 @@ df -h ~/.local/share/opencenter/
 ```
 
 **Solution:**
+
 ```bash
 # Clear cache
 rm -rf ~/.cache/opencenter/
@@ -566,10 +594,10 @@ find ~/.local/share/opencenter/backups/ -name "*.yaml" -mtime +30 -delete
 
 ## Related Topics
 
-- [Configuration Schema](configuration-schema.md) - Configuration file structure
-- [CLI Commands](cli-commands.md) - Command reference
-- [Environment Variables](environment-variables.md) - Environment variable reference
-- [Manage Secrets](../how-to/manage-secrets.md) - Secrets management
+* [Configuration Schema](reference/configuration-schema.md) - Configuration file structure
+* [CLI Commands](reference/cli-commands.md) - Command reference
+* [Environment Variables](reference/environment-variables.md) - Environment variable reference
+* [Manage Secrets](operations/manage-secrets.md) - Secrets management
 
 ---
 
@@ -577,8 +605,8 @@ find ~/.local/share/opencenter/backups/ -name "*.yaml" -mtime +30 -delete
 
 This reference is based on:
 
-- File locations: `.kiro/steering/structure.md:118-128`, Session 2 B0 section 14
-- Configuration path: `tests/features/workflow.feature:19`
-- GitOps structure: `internal/gitops/`, Session 2 B0 section 15, Ecosystem.md
-- Secrets management: `internal/sops/manager.go`, Session 1 A11
-- Plugin system: `internal/plugins/`, `cmd/plugins.go`
+* File locations: `.kiro/steering/structure.md:118-128`, Session 2 B0 section 14
+* Configuration path: `tests/features/workflow.feature:19`
+* GitOps structure: `internal/gitops/`, Session 2 B0 section 15, Ecosystem.md
+* Secrets management: `internal/sops/manager.go`, Session 1 A11
+* Plugin system: `internal/plugins/`, `cmd/plugins.go`

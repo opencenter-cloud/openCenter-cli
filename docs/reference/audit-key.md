@@ -1,13 +1,12 @@
 ---
 id: audit-key
 title: "Audit Signing Key"
-sidebar_label: Audit Key
+sidebar_label: Audit Signing Key
 description: Reference for the HMAC signing key used to protect CLI audit log integrity.
 doc_type: reference
 audience: "operators, security engineers"
 tags: [audit, security, hmac, integrity, signing-key]
 ---
-
 # Audit Signing Key
 
 **Purpose:** For operators and security engineers, documents the HMAC signing key that protects CLI audit log integrity, covering generation, storage, usage, and verification.
@@ -21,7 +20,7 @@ The key protects against post-hoc tampering of the audit trail. It does not encr
 ## Key Details
 
 | Property | Value |
-|----------|-------|
+| --- | --- |
 | Algorithm | HMAC-SHA256 |
 | Key size | 32 bytes (256 bits) |
 | Format | Raw binary |
@@ -45,7 +44,7 @@ The path is derived from the CLI config directory:
 
 If `OPENCENTER_CONFIG_DIR` is not set, the config directory defaults to `~/.config/opencenter`.
 
-Evidence: `internal/security/audit_logger.go` — `GetDefaultAuditSigningKeyPath()`, `loadOrCreateSigningKey()`
+Evidence: `internal/security/audit_logger.go` -- `GetDefaultAuditSigningKeyPath()`, `loadOrCreateSigningKey()`
 
 ## Generation
 
@@ -54,14 +53,14 @@ The key is created lazily on first audit log write. There is no separate `genera
 1. CLI attempts to read the key file at the expected path.
 2. If the file exists and contains exactly 32 bytes, the key is loaded.
 3. If the file does not exist, the CLI:
-   - Creates the parent directory (`audit/`) with `0700` permissions.
-   - Generates 32 cryptographically random bytes via `crypto/rand`.
-   - Writes the key file with `0600` permissions.
+   * Creates the parent directory (`audit/`) with `0700` permissions.
+   * Generates 32 cryptographically random bytes via `crypto/rand`.
+   * Writes the key file with `0600` permissions.
 4. If the file exists but has an unexpected length, the CLI returns an error.
 
-This means the key is generated during whichever CLI operation first triggers audit logging — typically `cluster init`.
+This means the key is generated during whichever CLI operation first triggers audit logging -- typically `cluster init`.
 
-Evidence: `internal/security/audit_logger.go` — `loadOrCreateSigningKey()`
+Evidence: `internal/security/audit_logger.go` -- `loadOrCreateSigningKey()`
 
 ## How Signing Works
 
@@ -71,16 +70,16 @@ Each `AuditEvent` is signed before it is written to the log. The signed payload 
 <timestamp>|<event_type>|<actor>|<resource>|<action>|<result>
 ```
 
-The CLI computes `HMAC-SHA256(signing_key, payload)` and stores the hex-encoded result in the event's `signature` field. The complete event (including signature) is then serialized as a single JSON line in the audit log.
+The CLI computes `HMAC-SHA256(signing_key, payload)` and stores the hex-encoded result in the event’s `signature` field. The complete event (including signature) is then serialized as a single JSON line in the audit log.
 
-Evidence: `internal/security/audit_logger.go` — `signEvent()`
+Evidence: `internal/security/audit_logger.go` -- `signEvent()`
 
 ## Signed Event Types
 
 The audit logger signs every event it records. Event types include:
 
 | Event Type | Trigger |
-|------------|---------|
+| --- | --- |
 | `key_generated` | Age or SSH key creation |
 | `key_accessed` | Key file read (success or failure) |
 | `key_rotated` | Age or SSH key rotation |
@@ -95,7 +94,7 @@ The audit logger signs every event it records. Event types include:
 | `input_rejected` | Malicious input blocked |
 | `template_validation_failed` | Template validation failure |
 
-Evidence: `internal/security/audit_logger.go` — `Log*()` methods
+Evidence: `internal/security/audit_logger.go` -- `Log*()` methods
 
 ## Integrity Verification
 
@@ -112,7 +111,7 @@ for each line in audit.log:
 
 A single invalid signature causes the verification to return an error with the count of tampered entries.
 
-Evidence: `internal/security/audit_logger.go` — `VerifyIntegrity()`, `verifySignature()`
+Evidence: `internal/security/audit_logger.go` -- `VerifyIntegrity()`, `verifySignature()`
 
 ## Audit Log Location
 
@@ -128,26 +127,26 @@ The log path follows the state directory precedence:
 2. CLI config `paths.stateDir`
 3. `${XDG_STATE_HOME:-~/.local/state}/opencenter`
 
-Evidence: `internal/security/audit_logger.go` — `GetDefaultAuditLogPath()`
+Evidence: `internal/security/audit_logger.go` -- `GetDefaultAuditLogPath()`
 
 ## Log Rotation
 
 | Setting | Value |
-|---------|-------|
+| --- | --- |
 | Max file size | 100 MB |
 | Retention | 30 days |
 | Rotated file pattern | `audit.log.<timestamp>` |
 
 When the log exceeds 100 MB, the current file is renamed with a timestamp suffix and a new file is created. Files older than 30 days are deleted during rotation.
 
-Evidence: `internal/security/audit_logger.go` — `MaxLogSize`, `LogRetentionDays`, `rotateLog()`, `cleanupOldLogs()`
+Evidence: `internal/security/audit_logger.go` -- `MaxLogSize`, `LogRetentionDays`, `rotateLog()`, `cleanupOldLogs()`
 
 ## Security Considerations
 
-- The key provides tamper detection, not tamper prevention. An attacker with access to both the key file and the log can re-sign modified entries.
-- The key is local to the machine. It is not shared across hosts and is not committed to any repository.
-- If the key is lost, existing log signatures cannot be verified. The CLI will generate a new key on next use, but old entries become unverifiable.
-- The key file should be included in workstation backups if audit log integrity verification is required for compliance.
+* The key provides tamper detection, not tamper prevention. An attacker with access to both the key file and the log can re-sign modified entries.
+* The key is local to the machine. It is not shared across hosts and is not committed to any repository.
+* If the key is lost, existing log signatures cannot be verified. The CLI will generate a new key on next use, but old entries become unverifiable.
+* The key file should be included in workstation backups if audit log integrity verification is required for compliance.
 
 ## Troubleshooting
 
@@ -178,6 +177,6 @@ Not possible. Without the original 32-byte key, HMAC signatures cannot be recomp
 
 ## Related Topics
 
-- [Security Model](../explanation/security-model.md) — Defense-in-depth architecture
-- [File Locations](file-locations.md) — All CLI file paths
-- [Environment Variables](environment-variables.md) — `OPENCENTER_CONFIG_DIR`, `OPENCENTER_STATE_DIR`
+* [Security Model](concepts/security-model.md) -- Defense-in-depth architecture
+* [File Locations](reference/file-locations.md) -- All CLI file paths
+* [Environment Variables](reference/environment-variables.md) -- `OPENCENTER_CONFIG_DIR`, `OPENCENTER_STATE_DIR`

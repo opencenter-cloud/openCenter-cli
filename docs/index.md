@@ -1,144 +1,113 @@
 ---
 id: index
 title: "openCenter CLI Documentation"
-sidebar_label: Home
-description: Documentation hub for the openCenter CLI cluster lifecycle management tool.
+sidebar_label: openCenter CLI Documentation
+description: Landing page for the openCenter CLI documentation, organised by lifecycle category.
 doc_type: reference
 audience: "all users"
 tags: [opencenter, cli, documentation, home]
 ---
-
 # openCenter CLI Documentation
 
-Welcome to the openCenter CLI documentation. openCenter is a command-line tool that transforms a single declarative YAML configuration into a production-ready Kubernetes cluster with GitOps management.
+**Purpose:** For all users, points to the openCenter CLI documentation organised by lifecycle category (getting started, operations, reference, concepts, contributing).
 
-## What is openCenter?
+openCenter is a command-line tool that turns a single declarative YAML file into a production-ready Kubernetes cluster with GitOps management. It standardises cluster deployment across OpenStack, VMware, Baremetal, and Kind, and ships configuration validation, secrets management, and FluxCD-ready repository generation.
 
-openCenter standardizes cluster deployment across multiple infrastructure providers (OpenStack, VMware, Baremetal, Kind), providing:
+## What openCenter does
 
-- **Configuration-First Workflow:** Single YAML file defines infrastructure, Kubernetes, services, and secrets
-- **Built-in Validation:** Schema validation, business rules, and provider-specific checks
-- **GitOps Native:** Automated FluxCD-ready repository generation with Kustomize overlays
-- **Secrets Management:** SOPS Age encryption for safe version control
-- **Platform Services:** 20+ pre-configured services (monitoring, logging, ingress, auth, storage)
+* **Configuration-first workflow.** One YAML file declares infrastructure, Kubernetes, services, and secrets.
+* **Built-in validation.** Schema, business-rule, and provider-specific checks run before any infrastructure is touched.
+* **GitOps native.** Generates a complete FluxCD repository with Kustomize overlays for cluster-specific overrides.
+* **Secrets management.** SOPS Age encryption keeps secrets safe in Git.
+* **Platform services.** 20+ pre-configured services (monitoring, logging, ingress, auth, storage, backup).
 
-## Quick Start
+## Quick start
 
-New to openCenter? Start here:
+* [Getting Started](getting-started/getting-started.md) -- create your first cluster in 10 minutes.
+* [CLI Commands Reference](reference/cli-commands.md) -- complete command tree.
+* [Configuration Schema](reference/configuration-schema.md) -- file structure and field reference.
+* [Glossary](glossary.md) -- terminology used throughout these docs.
 
-- **[Getting Started Tutorial](tutorials/getting-started.md)** - Create your first cluster in 10 minutes
-- **[CLI Commands Reference](reference/cli-commands.md)** - Quick command reference
-- **[Configuration Schema](reference/configuration-schema.md)** - Configuration file structure
-- **[Navigation Guide](_nav.md)** - Find the right documentation for your needs
+## Getting started
 
-## Documentation by Type
+Tutorial-style walkthroughs for first-time setup.
 
-### Tutorials (Learning-Oriented)
+* [Getting Started](getting-started/getting-started.md) -- end-to-end first cluster.
+* [OpenStack First Cluster](getting-started/openstack-first-cluster.md) -- deploy on OpenStack.
+* [Kind Local Development](getting-started/kind-local-development.md) -- local development cluster.
+* [VMware Deployment](getting-started/vmware-deployment.md) -- deploy on pre-provisioned vSphere VMs.
+* [Multi-Cluster Management](getting-started/multi-cluster-setup.md) -- manage several clusters.
 
-Step-by-step guides to help you learn openCenter:
+## Operations
 
-- **[Getting Started](tutorials/getting-started.md)** - Create your first cluster
-- **[OpenStack First Cluster](tutorials/openstack-first-cluster.md)** - Deploy on OpenStack
-- **[Kind Local Development](tutorials/kind-local-development.md)** - Local development setup
-- **[VMware Deployment](tutorials/vmware-deployment.md)** - Deploy on pre-provisioned VMs
-- **[Multi-Cluster Management](tutorials/multi-cluster-setup.md)** - Manage multiple clusters
+Task-oriented how-to guides for day-2 work.
 
-### How-To Guides (Task-Oriented)
+|     |     |
+| --- | --- |
+| Cluster creation | [Create a Kind cluster](operations/create-kind-cluster.md)<br> [Create an OpenStack cluster](operations/create-openstack-cluster.md)<br> [Deploy an OpenStack cluster](operations/deploy-openstack-cluster.md) |
+| Configuration | [Validate configuration](operations/validate-configuration.md)<br> [Customize services](operations/customize-services.md)<br> [Configure networking](operations/configure-networking.md) |
+| Secrets and bootstrap | [Manage secrets](operations/manage-secrets.md)<br> [Configure Flux bootstrap auth](operations/flux-bootstrap-methods.md) |
+| Day-2 operations | [Add worker pools](operations/add-worker-pools.md)<br> [Backup and restore](operations/backup-and-restore.md)<br> [Upgrade Kubernetes](operations/upgrade-kubernetes.md)<br> [Migrate clusters](operations/migrate-clusters.md) |
+| Integration and plugins | [Integrate CI/CD](operations/integrate-ci-cd.md)<br> [Create and install a CLI plugin](operations/create-install-cli-plugin.md) |
+| Troubleshooting | [Troubleshoot deployment](operations/troubleshoot-deployment.md) |
 
-Practical guides for specific tasks:
+## Providers
 
-- **[Validate Configuration](how-to/validate-configuration.md)** - Validate before deployment
-- **[Manage Secrets](how-to/manage-secrets.md)** - SOPS and secrets management
-- **[Customize Services](how-to/customize-services.md)** - Configure platform services
-- **[Configure Networking](how-to/configure-networking.md)** - CNI and network setup
-- **[Add Worker Pools](how-to/add-worker-pools.md)** - Additional worker node pools
-- **[Backup and Restore](how-to/backup-and-restore.md)** - Disaster recovery
-- **[Upgrade Kubernetes](how-to/upgrade-kubernetes.md)** - Safe version upgrades
-- **[Troubleshoot Deployment](how-to/troubleshoot-deployment.md)** - Common issues
-- **[Migrate Clusters](how-to/migrate-clusters.md)** - Provider/region migration
-- **[Integrate CI/CD](how-to/integrate-ci-cd.md)** - Pipeline integration
+Provider-specific guides.
 
-### Reference (Information-Oriented)
+* [Infrastructure Providers Overview](providers/README.md)
+* [VMware Provider Guide](providers/vmware.md)
+* [VMware Quick Start](providers/vmware-quick-start.md)
+* [VMware Terraform Template](providers/vmware-terraform-template.md)
 
-Technical specifications and detailed information:
+## Reference
 
-- **[CLI Commands](reference/cli-commands.md)** - Complete command reference
-- **[Configuration Schema](reference/configuration-schema.md)** - Configuration structure
-- **[Default Values](reference/default-values.md)** - Default configuration values
-- **[Platform Services](reference/platform-services.md)** - Available services
-- **[Providers](reference/providers.md)** - Infrastructure providers
-- **[Mise Tasks](reference/mise-tasks.md)** - Development tasks
-- **[Validation Rules](reference/validation-rules.md)** - Configuration constraints
-- **[Environment Variables](reference/environment-variables.md)** - Environment configuration
-- **[Exit Codes](reference/exit-codes.md)** - CLI exit codes
-- **[File Locations](reference/file-locations.md)** - Configuration paths
+Lookup material -- structured, complete, scan-friendly.
 
-### Explanation (Understanding-Oriented)
+|     |     |
+| --- | --- |
+| CLI and configuration | [CLI Commands](reference/cli-commands.md)<br> [Configuration Schema](reference/configuration-schema.md)<br> [Configuration Precedence](reference/configuration-precedence.md)<br> [Default Values](reference/default-values.md)<br> [Environment Variables](reference/environment-variables.md)<br> [Exit Codes](reference/exit-codes.md)<br> [File Locations](reference/file-locations.md) |
+| Platform and providers | [Platform Services](reference/platform-services.md)<br> [Providers](reference/providers.md)<br> [Validation Rules](reference/validation-rules.md) |
+| Security and tooling | [Audit Signing Key](reference/audit-key.md)<br> [Mise Tasks](reference/mise-tasks.md) |
 
-Conceptual explanations and background:
+## Concepts
 
-- **[Architecture](explanation/architecture.md)** - System design and decisions
-- **[GitOps Workflow](explanation/gitops-workflow.md)** - Repository structure
-- **[Security Model](explanation/security-model.md)** - Security architecture
-- **[Plugin Internal Services](explanation/plugin-internal-services.md)** - Service plugins, cert-manager behavior, and how to add a new service
-- **[Plugin External CLI](explanation/plugin-external-cli.md)** - Command plugin discovery and execution model
-- **[Provider Comparison](explanation/provider-comparison.md)** - Choosing providers
-- **[Configuration Lifecycle](explanation/configuration-lifecycle.md)** - Config management
+Background and rationale -- the "why" behind the design.
 
-## For Developers
+* [Architecture](concepts/architecture.md)
+* [Reference Architecture](concepts/reference-architecture.md)
+* [GitOps Workflow](concepts/gitops-workflow.md)
+* [Configuration Lifecycle](concepts/configuration-lifecycle.md)
+* [Security Model](concepts/security-model.md)
+* [Security Update Design](concepts/security-update-design.md)
+* [Services and Templates](concepts/services-templates.md)
+* [Drift Detection](concepts/drift-detection.md)
+* [Plugin Internal Services](concepts/plugin-internal-services.md)
+* [Plugin External CLI](concepts/plugin-external-cli.md)
+* [Provider Comparison](concepts/provider-comparison.md)
 
-- **[Contributing](dev/contributing.md)** - Contribution guidelines
-- **[Development Setup](dev/development-setup.md)** - Dev environment
-- **[Testing Guide](dev/testing-guide.md)** - Writing tests
-- **[Adding Providers](dev/adding-providers.md)** - New providers
-- **[Adding Services](dev/adding-services.md)** - New services
-- **[Code Structure](dev/code-structure.md)** - Codebase organization
-- **[Build System](dev/build-system.md)** - Mise-based builds
-- **[Release Process](dev/release-process.md)** - Creating releases
+## Contributing
 
-## Common Tasks
+Developer documentation for contributors and maintainers.
 
-### First-Time Setup
-1. [Install openCenter](tutorials/getting-started.md#installation)
-2. [Initialize your first cluster](tutorials/getting-started.md#initialize-cluster)
-3. [Validate configuration](how-to/validate-configuration.md)
-4. [Deploy cluster](tutorials/getting-started.md#deploy-cluster)
+* [Contributing Guide](contributing/contributing.md)
+* [Development Setup](contributing/development-setup.md)
+* [Code Structure](contributing/code-structure.md)
+* [Testing Guide](contributing/testing-guide.md)
+* [Adding Providers](contributing/adding-providers.md)
+* [Adding Services](contributing/adding-services.md)
+* [Build System](contributing/build-system.md)
+* [Release Process](contributing/release-process.md)
 
-### Day-2 Operations
-- [Add worker nodes](how-to/add-worker-pools.md)
-- [Upgrade Kubernetes version](how-to/upgrade-kubernetes.md)
-- [Rotate secrets](how-to/manage-secrets.md#rotate-keys)
-- [Backup etcd](how-to/backup-and-restore.md)
+## Release notes
 
-### Troubleshooting
-- [Validation errors](how-to/troubleshoot-deployment.md#validation-errors)
-- [Deployment failures](how-to/troubleshoot-deployment.md#deployment-failures)
-- [Network issues](how-to/troubleshoot-deployment.md#network-issues)
-- [Service failures](how-to/troubleshoot-deployment.md#service-failures)
+* [1.0.0-rc01](release/1.0.0-rc01.md)
 
-## Getting Help
+## Documentation framework
 
-- **GitHub Issues:** [Report bugs or request features](https://github.com/opencenter-cloud/openCenter-cli/issues)
-- **Documentation Issues:** Found a problem in the docs? [Open an issue](https://github.com/opencenter-cloud/openCenter-cli/issues/new)
+These docs follow the [Diátaxis framework](https://diataxis.fr/) but are organised by lifecycle category (getting-started, operations, reference, concepts, contributing) rather than by Diátaxis type. The Diátaxis type is recorded as `:page-type:` in each page’s attribute block.
 
-## Documentation Framework
+## Getting help
 
-This documentation follows the [Diátaxis framework](https://diataxis.fr/), organizing content into four types:
-
-- **Tutorials:** Learning-oriented, step-by-step guides for beginners
-- **How-To Guides:** Task-oriented, practical guides for specific goals
-- **Reference:** Information-oriented, technical specifications for lookup
-- **Explanation:** Understanding-oriented, conceptual background and rationale
-
-Each document has a single, clear purpose. If you need to learn, start with tutorials. If you need to accomplish a task, use how-to guides. If you need to look up details, check reference. If you need to understand concepts, read explanations.
-
----
-
-## Evidence
-
-This documentation hub is based on:
-
-- Existing README structure: `README.md:30-82`
-- Diátaxis documentation map: Session 2 B1
-- Product overview: `.kiro/steering/product.md:1-35`
-- Documentation framework: Diátaxis (https://diataxis.fr/)
+* [GitHub Issues](https://github.com/opencenter-cloud/openCenter-cli/issues) -- report bugs or request features.
+* [Open a docs issue](https://github.com/opencenter-cloud/openCenter-cli/issues/new) for documentation problems.

@@ -1,47 +1,46 @@
 ---
 id: vmware-terraform-template
 title: "VMware Terraform Template"
-sidebar_label: VMware Template
+sidebar_label: VMware Terraform Template
 description: Reference for the VMware-specific Terraform template used to generate cluster infrastructure.
 doc_type: reference
 audience: "platform engineers, operators"
 tags: [vmware, terraform, template, infrastructure]
 ---
-
 # VMware Terraform Template
 
 Documentation for the VMware-specific Terraform template (`main-vmware.tf.tpl`).
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Template Selection](#template-selection)
-- [Key Differences from Baremetal Template](#key-differences-from-baremetal-template)
-- [Template Structure](#template-structure)
-  - [Locals Block](#locals-block)
-  - [Node Filtering Logic](#node-filtering-logic)
-  - [Module Invocations](#module-invocations)
-- [Configuration Mapping](#configuration-mapping)
-  - [Input Configuration](#input-configuration)
-  - [Generated Terraform](#generated-terraform)
-- [Example Configurations](#example-configurations)
-  - [Example Platform k8s-qa](#example-platform-k8s-qa)
-  - [Example Sandbox k8s-sandbox](#example-sandbox-k8s-sandbox)
-- [VMware-Specific Features](#vmware-specific-features)
-  - [Network Interface Detection](#network-interface-detection)
-  - [VRRP Configuration](#vrrp-configuration)
-  - [SSH Key Path](#ssh-key-path)
-- [Template Variables](#template-variables)
-  - [Required Variables](#required-variables)
-  - [Optional Variables](#optional-variables)
-- [Validation](#validation)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-  - [Wrong Template Selected](#wrong-template-selected)
-  - [Nodes Not Appearing](#nodes-not-appearing)
-  - [Template Rendering Errors](#template-rendering-errors)
-- [Migration from Baremetal Template](#migration-from-baremetal-template)
-- [Related Documentation](#related-documentation)
+* [Overview](#overview)
+* [Template Selection](#template-selection)
+* [Key Differences from Baremetal Template](#key-differences-from-baremetal-template)
+* [Template Structure](#template-structure)
+  * [Locals Block](#locals-block)
+  * [Node Filtering Logic](#node-filtering-logic)
+  * [Module Invocations](#module-invocations)
+* [Configuration Mapping](#configuration-mapping)
+  * [Input Configuration](#input-configuration)
+  * [Generated Terraform](#generated-terraform)
+* [Example Configurations](#example-configurations)
+  * [Example Platform k8s-qa](#example-platform-k8s-qa)
+  * [Example Sandbox k8s-sandbox](#example-sandbox-k8s-sandbox)
+* [VMware-Specific Features](#vmware-specific-features)
+  * [Network Interface Detection](#network-interface-detection)
+  * [VRRP Configuration](#vrrp-configuration)
+  * [SSH Key Path](#ssh-key-path)
+* [Template Variables](#template-variables)
+  * [Required Variables](#required-variables)
+  * [Optional Variables](#optional-variables)
+* [Validation](#validation)
+* [Testing](#testing)
+* [Troubleshooting](#troubleshooting)
+  * [Wrong Template Selected](#wrong-template-selected)
+  * [Nodes Not Appearing](#nodes-not-appearing)
+  * [Template Rendering Errors](#template-rendering-errors)
+* [Migration from Baremetal Template](#migration-from-baremetal-template)
+* [Related Documentation](#related-documentation)
 
 ## Overview
 
@@ -65,7 +64,7 @@ default:
 ## Key Differences from Baremetal Template
 
 | Feature | Baremetal Template | VMware Template |
-|---------|-------------------|-----------------|
+| --- | --- | --- |
 | Node Source | `Infrastructure.Compute.MasterNodes` | `Infrastructure.Cloud.VMware.Nodes` |
 | Node Filtering | Pre-filtered by role | Filtered in template by `.Role` |
 | Network Config | Generic | VMware-specific (ens192 default) |
@@ -80,22 +79,22 @@ default:
 locals {
   # Cluster identification
   cluster_name = "{{ .OpenCenter.Cluster.ClusterName }}"
-  
+
   # Network configuration
   subnet_nodes    = "{{ .OpenCenter.Infrastructure.Cloud.VMware.Network }}"
   subnet_pods     = "{{ .OpenCenter.Cluster.Kubernetes.SubnetPods }}"
   subnet_services = "{{ .OpenCenter.Cluster.Kubernetes.SubnetServices }}"
-  
+
   # VMware-specific settings
   address_bastion = "{{ .OpenCenter.Infrastructure.Bastion.Address }}"
   cni_iface       = "ens192"  # VMware default interface
-  
+
   # Node definitions from VMware configuration
   master_nodes = [
     # Filtered from .OpenCenter.Infrastructure.Cloud.VMware.Nodes
     # where .Role == "master"
   ]
-  
+
   worker_nodes = [
     # Filtered from .OpenCenter.Infrastructure.Cloud.VMware.Nodes
     # where .Role == "worker"
@@ -157,7 +156,7 @@ opencenter:
 locals {
   cluster_name = "k8s-qa"
   subnet_nodes = "172.26.0.0/24"
-  
+
   master_nodes = [
     {
       id           = "k8s-qa-ord1-cp0"
@@ -165,7 +164,7 @@ locals {
       access_ip_v4 = "172.26.0.11"
     }
   ]
-  
+
   worker_nodes = [
     {
       id           = "k8s-qa-ord1-wn0"
@@ -181,6 +180,7 @@ locals {
 ### Example Platform k8s-qa
 
 Configuration:
+
 ```yaml
 provider: vmware
 nodes:
@@ -193,14 +193,16 @@ nodes:
 ```
 
 Generated:
-- 3 master nodes (172.26.0.11-13)
-- 3 worker nodes (172.26.0.14-16)
-- VRRP IP: 172.26.0.5
-- Public API: 198.51.100.164
+
+* 3 master nodes (172.26.0.11-13)
+* 3 worker nodes (172.26.0.14-16)
+* VRRP IP: 172.26.0.5
+* Public API: 198.51.100.164
 
 ### Example Sandbox k8s-sandbox
 
 Configuration:
+
 ```yaml
 provider: vmware
 nodes:
@@ -213,21 +215,24 @@ nodes:
 ```
 
 Generated:
-- 3 master nodes (192.168.12.20-22)
-- 3 worker nodes (192.168.12.23-25)
-- VRRP IP: 192.168.12.5
-- Bastion: 192.168.12.26
+
+* 3 master nodes (192.168.12.20-22)
+* 3 worker nodes (192.168.12.23-25)
+* VRRP IP: 192.168.12.5
+* Bastion: 192.168.12.26
 
 ## VMware-Specific Features
 
 ### Network Interface Detection
 
 Default interface for VMware VMs:
+
 ```hcl
 cni_iface = "ens192"  # Standard VMware virtual NIC
 ```
 
 Override in configuration:
+
 ```yaml
 opencenter:
   cluster:
@@ -240,6 +245,7 @@ opencenter:
 ### VRRP Configuration
 
 VMware clusters use VRRP for HA API endpoint:
+
 ```hcl
 vrrp_enabled = true
 vrrp_ip      = "172.26.0.5"  # Internal VIP
@@ -249,6 +255,7 @@ k8s_api_ip   = "108.166.24.164"  # External/public IP
 ### SSH Key Path
 
 VMware deployments use absolute SSH key paths:
+
 ```hcl
 ssh_key_path = "/etc/openCenter/example-platform/secrets/ssh/k8s-qa-svc01m-ord1"
 ```
@@ -257,27 +264,28 @@ ssh_key_path = "/etc/openCenter/example-platform/secrets/ssh/k8s-qa-svc01m-ord1"
 
 ### Required Variables
 
-- `OpenCenter.Cluster.ClusterName`
-- `OpenCenter.Infrastructure.Cloud.VMware.Nodes[]`
-  - `.Name` - Node hostname
-  - `.IP` - Node IP address
-  - `.Role` - "master" or "worker"
-- `OpenCenter.Infrastructure.Bastion.Address`
+* `OpenCenter.Cluster.ClusterName`
+* `OpenCenter.Infrastructure.Cloud.VMware.Nodes[]`
+  * `.Name` - Node hostname
+  * `.IP` - Node IP address
+  * `.Role` - "master" or "worker"
+* `OpenCenter.Infrastructure.Bastion.Address`
 
 ### Optional Variables
 
-- `OpenCenter.Infrastructure.Cloud.VMware.Network` - Node subnet (default: 172.26.0.0/24)
-- `OpenCenter.Infrastructure.K8sAPIIP` - Public API IP (default: VRRP IP)
-- `OpenCenter.Infrastructure.Networking.VRRPIP` - Internal VIP (default: .5 of subnet)
-- `OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.CNIIface` - Network interface (default: ens192)
+* `OpenCenter.Infrastructure.Cloud.VMware.Network` - Node subnet (default: 172.26.0.0/24)
+* `OpenCenter.Infrastructure.K8sAPIIP` - Public API IP (default: VRRP IP)
+* `OpenCenter.Infrastructure.Networking.VRRPIP` - Internal VIP (default: .5 of subnet)
+* `OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.CNIIface` - Network interface (default: ens192)
 
 ## Validation
 
 The template validates:
-- At least one master node exists
-- At least one worker node exists
-- All nodes have name, ip, and role
-- Roles are "master" or "worker"
+
+* At least one master node exists
+* At least one worker node exists
+* All nodes have name, ip, and role
+* Roles are "master" or "worker"
 
 Validation happens in `internal/core/validation/validators/provider.go`.
 
@@ -300,10 +308,11 @@ cat ~/.config/opencenter/clusters/myorg/test-vmware/gitops/infrastructure/cluste
 ```
 
 Expected main.tf structure:
-- `locals` block with node definitions
-- `module "kubespray-cluster"` invocation
-- `module "calico"` invocation (if Calico enabled)
-- No infrastructure provisioning modules
+
+* `locals` block with node definitions
+* `module "kubespray-cluster"` invocation
+* `module "calico"` invocation (if Calico enabled)
+* No infrastructure provisioning modules
 
 ## Troubleshooting
 
@@ -347,19 +356,20 @@ opencenter cluster generate test-vmware
 To migrate existing baremetal clusters to VMware template:
 
 1. Update provider:
+
    ```yaml
    infrastructure:
      provider: vmware  # was: baremetal
    ```
-
 2. Move node definitions:
+
    ```yaml
    # Old (baremetal)
    infrastructure:
      compute:
        master_nodes: [...]
        worker_nodes: [...]
-   
+
    # New (vmware)
    infrastructure:
      cloud:
@@ -368,8 +378,8 @@ To migrate existing baremetal clusters to VMware template:
            - {name: master-1, ip: 172.26.0.11, role: master}
            - {name: worker-1, ip: 172.26.0.14, role: worker}
    ```
-
 3. Add VMware metadata (optional):
+
    ```yaml
    cloud:
      vmware:
@@ -377,15 +387,15 @@ To migrate existing baremetal clusters to VMware template:
        datacenter: Datacenter1
        datastore: datastore1
    ```
-
 4. Re-run setup:
+
    ```bash
    opencenter cluster generate <cluster-name>
    ```
 
 ## Related Documentation
 
-- [VMware Provider Guide](./vmware.md)
-- [VMware Quick Start](./vmware-quick-start.md)
-- [Terraform Templates Overview](../infrastructure/terraform-templates.md)
-- [Template Customization](../advanced/template-customization.md)
+* [VMware Provider Guide](./vmware.md)
+* [VMware Quick Start](./vmware-quick-start.md)
+* [Terraform Templates Overview](providers/vmware.md)
+* [Template Customization](providers/vmware.md)

@@ -1,23 +1,22 @@
 ---
 id: cli-commands
 title: "CLI Commands Reference"
-sidebar_label: CLI Commands
+sidebar_label: CLI Commands Reference
 description: Complete reference of all openCenter CLI commands, flags, and options.
 doc_type: reference
 audience: "all users"
 tags: [cli, commands, flags, reference]
 ---
-
 # CLI Commands Reference
 
 **Purpose:** Complete reference of the shipped `opencenter` command tree, generated from the live Cobra command graph.
 
-Use `go run -tags tools ./cmd/docs` to refresh the generated inventory in [`docs/reference/opencenter`](/Users/victor.palma/projects/openCenter-cloud/openCenter-cli/docs/reference/opencenter).
+Run `go run -tags tools ./cmd/docs` to refresh the per-command pages under `docs/modules/ROOT/pages/reference/opencenter/`.
 
 ## Global Flags
 
 | Flag | Description |
-|------|-------------|
+| --- | --- |
 | `--config-dir` | Configuration directory override |
 | `--dry-run` | Print planned actions without executing them |
 | `--log-level` | Set log level: `debug`, `info`, `warn`, `error` |
@@ -44,7 +43,7 @@ opencenter cluster set prod-cluster \
 ## Root Commands
 
 | Command | Purpose |
-|---------|---------|
+| --- | --- |
 | `opencenter cluster` | Cluster lifecycle, validation, rendering, drift, services, backup, and import management |
 | `opencenter secrets` | Secret encryption, sync, validation, and key operations |
 | `opencenter settings` | CLI settings, defaults, and local IDE configuration |
@@ -58,7 +57,7 @@ opencenter cluster set prod-cluster \
 ### Lifecycle and Validation
 
 | Command |
-|---------|
+| --- |
 | `opencenter cluster active` |
 | `opencenter cluster configure` |
 | `opencenter cluster deploy` |
@@ -88,7 +87,7 @@ opencenter cluster set prod-cluster \
 ### Backup
 
 | Command |
-|---------|
+| --- |
 | `opencenter cluster backup create` |
 | `opencenter cluster backup delete` |
 | `opencenter cluster backup list` |
@@ -98,7 +97,7 @@ opencenter cluster set prod-cluster \
 ### Configuration
 
 | Command |
-|---------|
+| --- |
 | `opencenter cluster describe` |
 | `opencenter cluster edit` |
 | `opencenter cluster export` |
@@ -108,7 +107,7 @@ opencenter cluster set prod-cluster \
 ### Drift Detection
 
 | Command |
-|---------|
+| --- |
 | `opencenter cluster drift detect` |
 | `opencenter cluster drift reconcile` |
 | `opencenter cluster drift schedule` |
@@ -116,7 +115,7 @@ opencenter cluster set prod-cluster \
 ### Services
 
 | Command |
-|---------|
+| --- |
 | `opencenter cluster service disable` |
 | `opencenter cluster service enable` |
 | `opencenter cluster service options` |
@@ -125,7 +124,7 @@ opencenter cluster set prod-cluster \
 ## Settings Commands
 
 | Command |
-|---------|
+| --- |
 | `opencenter settings edit` |
 | `opencenter settings explain` |
 | `opencenter settings explain cluster-defaults` |
@@ -141,7 +140,7 @@ opencenter cluster set prod-cluster \
 ### Core Operations
 
 | Command |
-|---------|
+| --- |
 | `opencenter secrets decrypt` |
 | `opencenter secrets delete` |
 | `opencenter secrets describe` |
@@ -157,7 +156,7 @@ opencenter cluster set prod-cluster \
 ### Secret Keys
 
 | Command |
-|---------|
+| --- |
 | `opencenter secrets keys backup` |
 | `opencenter secrets keys check` |
 | `opencenter secrets keys generate` |
@@ -168,11 +167,11 @@ opencenter cluster set prod-cluster \
 ## Plugins Commands
 
 | Command |
-|---------|
+| --- |
 | `opencenter plugins list` |
 
 ## GA Notes
 
-- Canonical infrastructure provider names are `openstack`, `vmware`, `kind`, and `baremetal`.
-- `vsphere` remains accepted as a compatibility alias for existing configuration files, but documentation now uses `vmware`.
-- AWS-backed integrations such as Route53 and S3 credential flows remain supported where services use them, but AWS is not a GA infrastructure provider.
+* Canonical infrastructure provider names are `openstack`, `vmware`, `kind`, and `baremetal`.
+* `vsphere` remains accepted as a compatibility alias for existing configuration files, but documentation now uses `vmware`.
+* AWS-backed integrations such as Route53 and S3 credential flows remain supported where services use them, but AWS is not a GA infrastructure provider.

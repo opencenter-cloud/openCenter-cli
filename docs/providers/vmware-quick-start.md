@@ -1,23 +1,22 @@
 ---
 id: vmware-quick-start
 title: "VMware Provider Quick Start"
-sidebar_label: VMware Quick Start
+sidebar_label: VMware Provider Quick Start
 description: Quick reference for deploying openCenter clusters on VMware vSphere.
 doc_type: how-to
 audience: "platform engineers, operators"
 tags: [vmware, vsphere, quick-start, deployment]
 ---
-
 # VMware Provider Quick Start
 
 Quick reference for deploying openCenter clusters on VMware vSphere.
 
 ## Prerequisites
 
-- Pre-provisioned Ubuntu 24.04 VMs
-- Static IP addresses assigned
-- SSH access from bastion host
-- vCenter credentials (for CSI driver)
+* Pre-provisioned Ubuntu 24.04 VMs
+* Static IP addresses assigned
+* SSH access from bastion host
+* vCenter credentials (for CSI driver)
 
 ## Quick Setup
 
@@ -70,13 +69,15 @@ opencenter cluster deploy my-cluster
 ## Node Configuration
 
 Each node requires:
-- `name`: Hostname or FQDN
-- `ip`: Static IPv4 address
-- `role`: `master` or `worker`
+
+* `name`: Hostname or FQDN
+* `ip`: Static IPv4 address
+* `role`: `master` or `worker`
 
 Optional fields:
-- `uuid`: VM UUID from vCenter
-- `mac_address`: Primary NIC MAC address
+
+* `uuid`: VM UUID from vCenter
+* `mac_address`: Primary NIC MAC address
 
 ## vSphere CSI Driver
 
@@ -99,18 +100,21 @@ secrets:
 ## Common Issues
 
 ### SSH Connection Failed
+
 ```bash
 # Test connectivity
 ssh ubuntu@192.168.1.10 hostname
 ```
 
 ### Node Not Ready
+
 ```bash
 # Check kubelet
 ssh ubuntu@192.168.1.10 "systemctl status kubelet"
 ```
 
 ### Storage Not Working
+
 ```bash
 # Verify CSI driver
 kubectl get pods -n kube-system | grep vsphere-csi
@@ -119,7 +123,7 @@ kubectl get pods -n kube-system | grep vsphere-csi
 ## Key Differences from OpenStack
 
 | Feature | OpenStack | VMware |
-|---------|-----------|--------|
+| --- | --- | --- |
 | VM Provisioning | Automatic | Manual |
 | Terraform | Yes | No |
 | Node Scaling | Dynamic | Manual |
@@ -128,6 +132,6 @@ kubectl get pods -n kube-system | grep vsphere-csi
 
 ## Next Steps
 
-- [Full VMware Guide](./vmware.md)
-- [vSphere CSI Configuration](../services/vsphere-csi.md)
-- [Kubespray Deployment](../deployment/kubespray.md)
+* [Full VMware Guide](./vmware.md)
+* [vSphere CSI Configuration](reference/platform-services.md)
+* [Kubespray Deployment](getting-started/getting-started.md)

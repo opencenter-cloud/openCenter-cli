@@ -7,7 +7,6 @@ doc_type: reference
 audience: "all users"
 tags: [validation, rules, constraints, schema]
 ---
-
 # Validation Rules
 
 **Purpose:** For all users, provides complete reference of configuration validation rules and constraints enforced by openCenter.
@@ -31,13 +30,14 @@ openCenter uses multi-layered validation to catch errors early:
 
 Validates configuration structure, types, and formats against JSON schema.
 
-**What's validated:**
-- Field types (string, number, boolean, array, object)
-- Required fields
-- Field formats (email, URL, IP address, etc.)
-- Enum values
-- Min/max values
-- String patterns (regex)
+**What’s validated:**
+
+* Field types (string, number, boolean, array, object)
+* Required fields
+* Field formats (email, URL, IP address, etc.)
+* Enum values
+* Min/max values
+* String patterns (regex)
 
 **Example violations:**
 
@@ -58,11 +58,12 @@ opencenter:
 
 Validates cross-field dependencies and logical consistency.
 
-**What's validated:**
-- Cross-field dependencies
-- Logical consistency
-- Value ranges
-- Conditional requirements
+**What’s validated:**
+
+* Cross-field dependencies
+* Logical consistency
+* Value ranges
+* Conditional requirements
 
 **Example violations:**
 
@@ -86,10 +87,11 @@ opencenter:
 
 Validates provider-specific constraints.
 
-**What's validated:**
-- Provider resources exist (images, flavors, networks)
-- Provider quotas sufficient
-- Provider-specific requirements
+**What’s validated:**
+
+* Provider resources exist (images, flavors, networks)
+* Provider quotas sufficient
+* Provider-specific requirements
 
 **Example violations:**
 
@@ -111,10 +113,11 @@ opencenter:
 
 Validates API reachability and credentials.
 
-**What's validated:**
-- API endpoints reachable
-- Credentials valid
-- Permissions sufficient
+**What’s validated:**
+
+* API endpoints reachable
+* Credentials valid
+* Permissions sufficient
 
 **Example violations:**
 
@@ -141,7 +144,7 @@ opencenter:
 Fields that must be present:
 
 | Field | Required | Default |
-|-------|----------|---------|
+| --- | --- | --- |
 | `opencenter.meta.name` | Yes | - |
 | `opencenter.meta.organization` | Yes | - |
 | `opencenter.infrastructure.provider` | Yes | "openstack" |
@@ -154,7 +157,7 @@ Fields that must be present:
 Field type requirements:
 
 | Field | Type | Example |
-|-------|------|---------|
+| --- | --- | --- |
 | `opencenter.cluster.master_count` | integer | 3 |
 | `opencenter.cluster.worker_count` | integer | 2 |
 | `opencenter.cluster.kubernetes.version` | string | "1.33.5" |
@@ -168,7 +171,7 @@ Field type requirements:
 String format requirements:
 
 | Field | Format | Example |
-|-------|--------|---------|
+| --- | --- | --- |
 | `opencenter.infrastructure.openstack.auth_url` | URL | "https://..." |
 | `opencenter.cluster.networking.pod_subnet` | CIDR | "10.42.0.0/16" |
 | `opencenter.cluster.networking.service_subnet` | CIDR | "10.43.0.0/16" |
@@ -181,7 +184,7 @@ String format requirements:
 Fields with allowed values:
 
 | Field | Allowed Values |
-|-------|----------------|
+| --- | --- |
 | `opencenter.infrastructure.provider` | "openstack", "vmware", "kind", "aws", "baremetal" |
 | `opencenter.cluster.networking.cni_plugin` | "calico", "cilium", "kube-ovn" |
 | `opencenter.meta.environment` | "development", "staging", "production" |
@@ -193,7 +196,7 @@ Fields with allowed values:
 Numeric value ranges:
 
 | Field | Min | Max | Default |
-|-------|-----|-----|---------|
+| --- | --- | --- | --- |
 | `opencenter.cluster.master_count` | 1 | 10 | 3 |
 | `opencenter.cluster.worker_count` | 0 | 100 | 2 |
 | `opencenter.cluster.kubernetes.api_port` | 1 | 65535 | 443 |
@@ -205,7 +208,7 @@ Numeric value ranges:
 String pattern requirements (regex):
 
 | Field | Pattern | Example |
-|-------|---------|---------|
+| --- | --- | --- |
 | `opencenter.meta.name` | `^[a-z0-9-]+$` | "my-cluster" |
 | `opencenter.cluster.kubernetes.version` | `^\d+\.\d+\.\d+$` | "1.33.5" |
 
@@ -436,6 +439,7 @@ Configuration is invalid, deployment will fail.
 **Action:** Must fix before deployment.
 
 **Example:**
+
 ```
 Error: When use_octavia=false and vrrp_enabled=true, vrrp_ip must be set
 Location: opencenter.cluster.networking.vrrp_ip
@@ -449,6 +453,7 @@ Configuration is valid but not recommended.
 **Action:** Review and consider fixing.
 
 **Example:**
+
 ```
 Warning: Master count is even (4), odd number recommended for HA
 Location: opencenter.cluster.master_count
@@ -462,6 +467,7 @@ Informational message, no action required.
 **Action:** Informational only.
 
 **Example:**
+
 ```
 Info: Using default Kubernetes version 1.33.5
 Location: opencenter.cluster.kubernetes.version
@@ -486,6 +492,7 @@ opencenter cluster validate my-cluster
 ### Validation Output
 
 **Success:**
+
 ```
 ✓ Schema validation passed
 ✓ Business rules validation passed
@@ -495,6 +502,7 @@ Configuration is valid and ready for deployment.
 ```
 
 **Failure:**
+
 ```
 ✗ Schema validation failed
   Error: Invalid type for opencenter.cluster.worker_count
@@ -511,7 +519,8 @@ Configuration has 2 errors. Fix errors before deployment.
 
 ## Bypassing Validation
 
-**Warning:** Bypassing validation can lead to deployment failures.
+**⚠️ WARNING**\
+Bypassing validation can lead to deployment failures.
 
 ```bash
 # Skip validation (not recommended)
@@ -522,9 +531,10 @@ opencenter cluster validate my-cluster --skip-provider-validation
 ```
 
 **Use cases for bypassing:**
-- Testing configuration changes
-- Offline development (no provider API access)
-- Known false positives
+
+* Testing configuration changes
+* Offline development (no provider API access)
+* Known false positives
 
 ## Custom Validation Rules
 
@@ -536,7 +546,7 @@ type CustomValidator struct{}
 
 func (v *CustomValidator) Validate(config *config.Config) []ValidationError {
     var errors []ValidationError
-    
+
     // Custom validation logic
     if config.Cluster.WorkerCount > 50 {
         errors = append(errors, ValidationError{
@@ -545,7 +555,7 @@ func (v *CustomValidator) Validate(config *config.Config) []ValidationError {
             Severity: Warning,
         })
     }
-    
+
     return errors
 }
 ```
@@ -554,9 +564,9 @@ func (v *CustomValidator) Validate(config *config.Config) []ValidationError {
 
 ## Related Topics
 
-- [Validate Configuration](../how-to/validate-configuration.md) - Validation procedures
-- [Configuration Schema](configuration-schema.md) - Complete field reference
-- [Troubleshoot Deployment](../how-to/troubleshoot-deployment.md) - Fix validation errors
+* [Validate Configuration](operations/validate-configuration.md) - Validation procedures
+* [Configuration Schema](reference/configuration-schema.md) - Complete field reference
+* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Fix validation errors
 
 ---
 
@@ -564,9 +574,9 @@ func (v *CustomValidator) Validate(config *config.Config) []ValidationError {
 
 This reference is based on:
 
-- Validation layers: `.kiro/steering/product.md:10`, Session 1 A3
-- Schema validation: `schema/cluster.schema.json:1-2382`
-- Business rules: `tests/features/workflow.feature:38-43`, `internal/config/validator.go`
-- Provider validation: `internal/config/*_validator.go`
-- Service dependencies: Ecosystem.md
-- Custom validators: `internal/core/validation/`, Session 1 A6
+* Validation layers: `.kiro/steering/product.md:10`, Session 1 A3
+* Schema validation: `schema/cluster.schema.json:1-2382`
+* Business rules: `tests/features/workflow.feature:38-43`, `internal/config/validator.go`
+* Provider validation: `internal/config/*_validator.go`
+* Service dependencies: Ecosystem.md
+* Custom validators: `internal/core/validation/`, Session 1 A6

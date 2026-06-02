@@ -1,13 +1,12 @@
 ---
 id: default-values
 title: "Default Values Reference"
-sidebar_label: Default Values
+sidebar_label: Default Values Reference
 description: Complete reference of default configuration values used when initializing clusters.
 doc_type: reference
 audience: "all users"
 tags: [defaults, configuration, values, reference]
 ---
-
 # Default Values Reference
 
 **Purpose:** Complete reference of default configuration values by provider for quick lookup.
@@ -23,14 +22,14 @@ All new configurations use schema version 2.0.
 ## CLI Behavior Defaults
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `behavior.validation` | `"offline"` | Default `cluster validate` mode. Offline validation does not contact providers, Git remotes, Kubernetes APIs, or external services. |
 | `cluster_defaults.gitops_auth_method` | `"token"` | Default GitOps bootstrap auth shape for `cluster init`. `token` writes GitHub token auth with `token: "CHANGEME"`; `ssh` writes SSH key auth paths. |
 
 ## Cluster Metadata
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.meta.organization` | `"opencenter"` | Organization name |
 | `opencenter.meta.env` | `""` | Environment (empty by default) |
 | `opencenter.meta.region` | `"sjc3"` | Cloud region |
@@ -39,7 +38,7 @@ All new configurations use schema version 2.0.
 ## Infrastructure
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.infrastructure.provider` | `"openstack"` | Infrastructure provider |
 | `opencenter.infrastructure.ssh_user` | `"ubuntu"` | SSH user for nodes |
 | `opencenter.infrastructure.os_version` | `"24"` | Ubuntu version |
@@ -52,7 +51,7 @@ All new configurations use schema version 2.0.
 ## OpenStack Provider Defaults
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.infrastructure.cloud.openstack.region` | `"sjc3"` | OpenStack region |
 | `opencenter.infrastructure.cloud.openstack.insecure` | `false` | Skip TLS verification |
 | `opencenter.infrastructure.cloud.openstack.availability_zone` | `"az1"` | Availability zone |
@@ -68,7 +67,7 @@ All new configurations use schema version 2.0.
 ## Cluster Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.cluster.base_domain` | `"k8s.opencenter.cloud"` | Base domain |
 | `opencenter.cluster.cluster_fqdn` | `"<name>.<region>.k8s.opencenter.cloud"` | Cluster FQDN |
 | `opencenter.cluster.admin_email` | `""` | Administrator email |
@@ -77,7 +76,7 @@ All new configurations use schema version 2.0.
 ## Network Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.cluster.networking.ntp_servers` | `["time.<region>.rackspace.com", "time2.<region>.rackspace.com"]` | NTP servers |
 | `opencenter.cluster.networking.dns_nameservers` | `["8.8.8.8", "8.8.4.4"]` | DNS servers |
 | `opencenter.cluster.networking.security.os_hardening` | `true` | OS security hardening |
@@ -91,7 +90,7 @@ All new configurations use schema version 2.0.
 ## Kubernetes Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.cluster.kubernetes.version` | `"1.33.5"` | Kubernetes version |
 | `opencenter.cluster.kubernetes.kubespray_version` | `"v2.31.0"` | Kubespray version |
 | `opencenter.cluster.kubernetes.api_port` | `443` | API server port |
@@ -115,7 +114,7 @@ All new configurations use schema version 2.0.
 ### Calico (Default)
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.cluster.kubernetes.network_plugin.calico.enabled` | `true` | Enable Calico |
 | `opencenter.cluster.kubernetes.network_plugin.calico.version` | `"3.32.0"` | Bundled OpenStack Calico manifest version |
 | `opencenter.cluster.kubernetes.network_plugin.calico.install_method` | `"helm"` | Accepted OpenStack CNI install method value; Calico uses bundled eBPF manifests |
@@ -124,7 +123,7 @@ All new configurations use schema version 2.0.
 ### Cilium
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.cluster.kubernetes.network_plugin.cilium.enabled` | `false` | Enable Cilium |
 | `opencenter.cluster.kubernetes.network_plugin.cilium.install_method` | `"helm"` | OpenStack CNI install backend (`helm` or `kustomize-helm`) |
 | `opencenter.cluster.kubernetes.network_plugin.cilium.operator_enabled` | `true` | Enable operator |
@@ -133,7 +132,7 @@ All new configurations use schema version 2.0.
 ### Kube-OVN
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.cluster.kubernetes.network_plugin.kube-ovn.enabled` | `false` | Enable Kube-OVN |
 | `opencenter.cluster.kubernetes.network_plugin.kube-ovn.install_method` | `"helm"` | OpenStack CNI install backend (`helm` or `kustomize-helm`) |
 | `opencenter.cluster.kubernetes.network_plugin.kube-ovn.cilium_integration` | `true` | Cilium integration |
@@ -141,7 +140,7 @@ All new configurations use schema version 2.0.
 ## OIDC Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.cluster.kubernetes.oidc.enabled` | `false` | Enable OIDC |
 | `opencenter.cluster.kubernetes.oidc.kube_oidc_client_id` | `"kubernetes"` | OIDC client ID |
 | `opencenter.cluster.kubernetes.oidc.kube_oidc_username_claim` | `"sub"` | Username claim |
@@ -152,7 +151,7 @@ All new configurations use schema version 2.0.
 ## Identity OIDC Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.identity.oidc.enabled` | `true` | Enable service OIDC identity configuration |
 | `opencenter.identity.oidc.source` | `"internal"` | OIDC provider source (`internal` or `external`) |
 | `opencenter.identity.oidc.provider` | `"keycloak"` | OIDC provider implementation (`keycloak`, `entra`, or `generic`) |
@@ -160,14 +159,14 @@ All new configurations use schema version 2.0.
 ## Windows Workers
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.cluster.kubernetes.windows_workers.enabled` | `false` | Enable Windows workers |
 | `opencenter.cluster.kubernetes.windows_workers.windows_user` | `"Administrator"` | Windows user |
 
 ## GitOps Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.gitops.git_dir` | `"./testdata/test-git-repo-<name>"` | Git directory |
 | `opencenter.gitops.git_branch` | `"main"` | Git branch |
 | `opencenter.gitops.gitops_base_repo` | `"ssh://git@github.com/opencenter-cloud/opencenter-gitops-base.git"` | Base repo |
@@ -178,7 +177,7 @@ All new configurations use schema version 2.0.
 ## Storage Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opencenter.storage.default_storage_class` | `"csi-cinder-sc-delete"` | Default storage class |
 | `opencenter.storage.worker_volume_size` | `40` | Worker volume size (GB) |
 | `opencenter.storage.worker_volume_destination_type` | `"volume"` | Volume destination |
@@ -190,7 +189,7 @@ All new configurations use schema version 2.0.
 ### Enabled by Default (OpenStack)
 
 | Service | Enabled | Description |
-|---------|---------|-------------|
+| --- | --- | --- |
 | `calico` | `true` | CNI networking |
 | `cert-manager` | `true` | TLS certificate management |
 | `etcd-backup` | `true` | Etcd backup to S3 |
@@ -215,7 +214,7 @@ All new configurations use schema version 2.0.
 ### Disabled by Default
 
 | Service | Enabled | Description |
-|---------|---------|-------------|
+| --- | --- | --- |
 | `alert-proxy` | `false` | Alert forwarding (requires config) |
 | `vsphere-csi` | `false` | VMware CSI driver |
 | `weave-gitops` | `false` | Weave GitOps UI |
@@ -225,7 +224,7 @@ All new configurations use schema version 2.0.
 ### cert-manager
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `email` | `"mpk-support@rackspace.com"` |
 | `region` | `"us-east-1"` |
 | `letsencrypt_server` | `"https://acme-v02.api.letsencrypt.org/directory"` |
@@ -233,14 +232,14 @@ All new configurations use schema version 2.0.
 ### etcd-backup
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `s3_host` | `"https://swift.api.dfw3.rackspacecloud.com"` |
 | `s3_region` | `"DFW3"` |
 
 ### headlamp
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `hostname` | `"dashboard.<org>.<cluster>.<region>.k8s.opencenter.cloud"` |
 | `oidc_issuer_url` | `"https://auth.<org>.<cluster>.<region>.k8s.opencenter.cloud/realms/opencenter"` |
 | `oidc_client_id` | `"kubernetes"` |
@@ -248,7 +247,7 @@ All new configurations use schema version 2.0.
 ### keycloak
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `hostname` | `"auth.<org>.<cluster>.<region>.k8s.opencenter.cloud"` |
 | `realm` | `"opencenter"` |
 | `client_id` | `"kubernetes"` |
@@ -257,7 +256,7 @@ All new configurations use schema version 2.0.
 ### kube-prometheus-stack
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `prometheus_volume_size` | `50` (GB) |
 | `prometheus_storage_class` | `"csi-cinder-sc-delete"` |
 | `grafana_volume_size` | `10` (GB) |
@@ -268,7 +267,7 @@ All new configurations use schema version 2.0.
 ### loki
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `volume_size` | `20` (GB) |
 | `storage_class` | `"csi-cinder-sc-delete"` |
 | `bucket_name` | `"<cluster>-loki"` |
@@ -279,7 +278,7 @@ All new configurations use schema version 2.0.
 ### tempo
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `storage_type` | `"s3"` |
 | `bucket_name` | `"<cluster>-tempo"` |
 | `volume_size` | `10` (GB) |
@@ -292,14 +291,14 @@ All new configurations use schema version 2.0.
 ### velero
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `backup_bucket` | `"<cluster>-backups"` |
 | `region` | `"us-east-1"` |
 
 ### vsphere-csi
 
 | Field | Default |
-|-------|---------|
+| --- | --- |
 | `enabled` | `false` |
 | `image_repository` | `"registry.k8s.io/csi-vsphere"` |
 | `image_tag` | `"v3.3.0"` |
@@ -307,7 +306,7 @@ All new configurations use schema version 2.0.
 ## OpenTofu Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `opentofu.enabled` | `true` | Enable OpenTofu |
 | `opentofu.path` | `"opentofu"` | OpenTofu binary path |
 | `opentofu.backend.type` | `"local"` | Backend type |
@@ -316,50 +315,50 @@ All new configurations use schema version 2.0.
 ## Deployment Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `deployment.auto_deploy` | `true` | Auto-deploy on setup |
 
 ## Secrets Configuration
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `secrets.ssh_key.cypher` | `"ed25519"` | SSH key algorithm |
 
 ## Provider-Specific Defaults
 
 ### OpenStack
 
-- Default provider for new clusters
-- Includes OpenStack CCM and CSI drivers
-- Uses Cinder for persistent storage
-- Supports Octavia load balancers
-- Integrates with Designate DNS (optional)
+* Default provider for new clusters
+* Includes OpenStack CCM and CSI drivers
+* Uses Cinder for persistent storage
+* Supports Octavia load balancers
+* Integrates with Designate DNS (optional)
 
 ### VMware
 
-- Requires pre-provisioned VMs
-- Uses vSphere CSI driver
-- MetalLB for load balancing
-- No cloud controller manager
+* Requires pre-provisioned VMs
+* Uses vSphere CSI driver
+* MetalLB for load balancing
+* No cloud controller manager
 
 ### AWS
 
-- Experimental support
-- Uses AWS EBS CSI driver
-- AWS ELB for load balancing
-- AWS cloud controller manager
+* Experimental support
+* Uses AWS EBS CSI driver
+* AWS ELB for load balancing
+* AWS cloud controller manager
 
 ### Kind
 
-- Local development only
-- Single node or multi-node
-- No persistent storage by default
-- No load balancer
+* Local development only
+* Single node or multi-node
+* No persistent storage by default
+* No load balancer
 
 ## CLI Configuration Defaults
 
 | Field | Default | Description |
-|-------|---------|-------------|
+| --- | --- | --- |
 | `cluster_defaults.provider` | `"openstack"` | Default provider |
 | `cluster_defaults.region` | `"dfw3"` | Default region |
 | `cluster_defaults.environment` | `"dev"` | Default environment |
@@ -407,8 +406,8 @@ opencenter settings set cluster_defaults.gitops_auth_method ssh
 
 This reference is based on:
 
-- Configuration defaults: `internal/config/defaults.go:48-451`
-- Service defaults: `internal/config/defaults.go:293-388`
-- Network defaults: `internal/config/defaults.go:177-179`
-- Kubernetes defaults: `internal/config/defaults.go:197-212`
-- Session 2 facts inventory: B0 section 5
+* Configuration defaults: `internal/config/defaults.go:48-451`
+* Service defaults: `internal/config/defaults.go:293-388`
+* Network defaults: `internal/config/defaults.go:177-179`
+* Kubernetes defaults: `internal/config/defaults.go:197-212`
+* Session 2 facts inventory: B0 section 5

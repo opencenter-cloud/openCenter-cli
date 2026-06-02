@@ -40,7 +40,7 @@ $EDITOR ~/.config/opencenter/clusters/my-org/.my-cluster-config.yaml
 
 **Time to first cluster:** 10 minutes configuration + 30-50 minutes deployment
 
-See [Getting Started Tutorial](docs/tutorials/getting-started.md) for complete walkthrough.
+See [Getting Started](docs/modules/ROOT/pages/getting-started/getting-started.adoc) for the full walkthrough.
 
 ## Key Capabilities
 
@@ -91,7 +91,7 @@ secrets:
       - age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
 ```
 
-See [Configuration Schema Reference](docs/reference/configuration-schema.md) for complete structure.
+See [Configuration Schema Reference](docs/modules/ROOT/pages/reference/configuration-schema.adoc) for the complete structure.
 
 ## CLI Commands Quick Reference
 
@@ -166,76 +166,90 @@ opencenter shell-init                          # Output shell integration script
 opencenter --help                              # Show help
 ```
 
-See [CLI Commands Reference](docs/reference/cli-commands.md) for complete documentation with all flags.
+See [CLI Commands Reference](docs/modules/ROOT/pages/reference/cli-commands.adoc) for the full command tree.
 
 ## Documentation
 
-Comprehensive documentation organized by the [Diátaxis framework](https://diataxis.fr/):
+The published documentation is built from the AsciiDoc tree under
+`docs/modules/ROOT/pages/`, organised by lifecycle category. Each page records
+its Diátaxis type (`task`, `reference`, or `concept`) in its `:page-type:`
+attribute. Build the site locally with Antora — see
+[`docs/README.md`](docs/README.md).
 
-### 📚 [Tutorials](docs/tutorials/) (Learning-Oriented)
-- [Getting Started](docs/tutorials/getting-started.md) - Your first cluster in 10 minutes
-- [OpenStack First Cluster](docs/tutorials/openstack-first-cluster.md) - Deploy on OpenStack
-- [Kind Local Development](docs/tutorials/kind-local-development.md) - Local development setup
-- [VMware Deployment](docs/tutorials/vmware-deployment.md) - Deploy on pre-provisioned VMs
-- [Multi-Cluster Management](docs/tutorials/multi-cluster-setup.md) - Manage multiple clusters
+### 🚀 Getting Started
+- [Getting Started](docs/modules/ROOT/pages/getting-started/getting-started.adoc) — first cluster end-to-end
+- [Kind Local Development](docs/modules/ROOT/pages/getting-started/kind-local-development.adoc)
+- [OpenStack First Cluster](docs/modules/ROOT/pages/getting-started/openstack-first-cluster.adoc)
+- [VMware Deployment](docs/modules/ROOT/pages/getting-started/vmware-deployment.adoc)
+- [Multi-Cluster Setup](docs/modules/ROOT/pages/getting-started/multi-cluster-setup.adoc)
 
-### 🔧 [How-To Guides](docs/how-to/) (Task-Oriented)
-- [Validate Configuration](docs/how-to/validate-configuration.md) - Pre-deployment validation
-- [Manage Secrets](docs/how-to/manage-secrets.md) - SOPS encryption and key rotation
-- [Customize Services](docs/how-to/customize-services.md) - Configure platform services
-- [Add Worker Pools](docs/how-to/add-worker-pools.md) - Scale your cluster
-- [Backup and Restore](docs/how-to/backup-and-restore.md) - Disaster recovery
-- [Upgrade Kubernetes](docs/how-to/upgrade-kubernetes.md) - Safe version upgrades
-- [Troubleshoot Deployment](docs/how-to/troubleshoot-deployment.md) - Common issues and solutions
-- [Migrate Clusters](docs/how-to/migrate-clusters.md) - Provider/region migration
-- [Integrate CI/CD](docs/how-to/integrate-ci-cd.md) - Pipeline integration
-- [Create and Install a CLI Plugin](docs/how-to/create-install-cli-plugin.md) - External plugins
+### 🔧 Operations (How-To)
+- [Validate Configuration](docs/modules/ROOT/pages/operations/validate-configuration.adoc)
+- [Manage Secrets](docs/modules/ROOT/pages/operations/manage-secrets.adoc)
+- [Customize Services](docs/modules/ROOT/pages/operations/customize-services.adoc)
+- [Configure Networking](docs/modules/ROOT/pages/operations/configure-networking.adoc)
+- [Add Worker Pools](docs/modules/ROOT/pages/operations/add-worker-pools.adoc)
+- [Backup and Restore](docs/modules/ROOT/pages/operations/backup-and-restore.adoc)
+- [Upgrade Kubernetes](docs/modules/ROOT/pages/operations/upgrade-kubernetes.adoc)
+- [Migrate Clusters](docs/modules/ROOT/pages/operations/migrate-clusters.adoc)
+- [Troubleshoot Deployment](docs/modules/ROOT/pages/operations/troubleshoot-deployment.adoc)
+- [Integrate CI/CD](docs/modules/ROOT/pages/operations/integrate-ci-cd.adoc)
+- [Create and Install a CLI Plugin](docs/modules/ROOT/pages/operations/create-install-cli-plugin.adoc)
+- [Flux Bootstrap Methods](docs/modules/ROOT/pages/operations/flux-bootstrap-methods.adoc)
 
-### 📖 [Reference](docs/reference/) (Information-Oriented)
-- [CLI Commands](docs/reference/cli-commands.md) - Complete command reference
-- [Configuration Schema](docs/reference/configuration-schema.md) - Configuration file structure
-- [Default Values](docs/reference/default-values.md) - Default configuration values
-- [Platform Services](docs/reference/platform-services.md) - Available services and versions
-- [Providers](docs/reference/providers.md) - Infrastructure provider details
-- [Validation Rules](docs/reference/validation-rules.md) - Configuration constraints
-- [Environment Variables](docs/reference/environment-variables.md) - Environment configuration
-- [Exit Codes](docs/reference/exit-codes.md) - CLI exit codes and meanings
-- [File Locations](docs/reference/file-locations.md) - Configuration file paths
-- [Configuration Precedence](docs/reference/configuration-precedence.md) - Resolution order
-- [Mise Tasks](docs/reference/mise-tasks.md) - Development and build tasks
+### 📖 Reference
+- [CLI Commands](docs/modules/ROOT/pages/reference/cli-commands.adoc)
+- [Configuration Schema](docs/modules/ROOT/pages/reference/configuration-schema.adoc)
+- [Configuration Precedence](docs/modules/ROOT/pages/reference/configuration-precedence.adoc)
+- [Default Values](docs/modules/ROOT/pages/reference/default-values.adoc)
+- [Environment Variables](docs/modules/ROOT/pages/reference/environment-variables.adoc)
+- [Exit Codes](docs/modules/ROOT/pages/reference/exit-codes.adoc)
+- [File Locations](docs/modules/ROOT/pages/reference/file-locations.adoc)
+- [Validation Rules](docs/modules/ROOT/pages/reference/validation-rules.adoc)
+- [Platform Services](docs/modules/ROOT/pages/reference/platform-services.adoc)
+- [Providers](docs/modules/ROOT/pages/reference/providers.adoc)
+- [Audit Signing Key](docs/modules/ROOT/pages/reference/audit-key.adoc)
+- [Mise Tasks](docs/modules/ROOT/pages/reference/mise-tasks.adoc)
 
-### 💡 [Explanation](docs/explanation/) (Understanding-Oriented)
-- [Architecture](docs/explanation/architecture.md) - System design and decisions
-- [GitOps Workflow](docs/explanation/gitops-workflow.md) - Repository structure and reconciliation
-- [Security Model](docs/explanation/security-model.md) - Security architecture and controls
-- [Configuration Lifecycle](docs/explanation/configuration-lifecycle.md) - Configuration management
-- [Provider Comparison](docs/explanation/provider-comparison.md) - Choosing infrastructure providers
-- [Drift Detection](docs/explanation/drift-detection.md) - Configuration drift and reconciliation
-- [Services & Templates](docs/explanation/services-templates.md) - Service rendering system
-- [Plugin Internal Services](docs/explanation/plugin-internal-services.md) - Service plugin architecture
-- [Plugin External CLI](docs/explanation/plugin-external-cli.md) - Command plugin model
+### 🌐 Providers
+- [Providers Overview](docs/modules/ROOT/pages/providers/README.adoc)
+- [VMware Provider Guide](docs/modules/ROOT/pages/providers/vmware.adoc)
+- [VMware Quick Start](docs/modules/ROOT/pages/providers/vmware-quick-start.adoc)
+- [VMware Terraform Template](docs/modules/ROOT/pages/providers/vmware-terraform-template.adoc)
 
-### 🛠️ [Developer Documentation](docs/dev/)
-- [Contributing Guide](docs/dev/contributing.md) - Contribution guidelines
-- [Development Setup](docs/dev/development-setup.md) - Local development environment
-- [Testing Guide](docs/dev/testing-guide.md) - Writing and running tests
-- [Code Structure](docs/dev/code-structure.md) - Codebase organization
-- [Adding Providers](docs/dev/adding-providers.md) - Implement new infrastructure providers
-- [Adding Services](docs/dev/adding-services.md) - Add new platform services
-- [Build System](docs/dev/build-system.md) - Mise-based build and release
-- [Release Process](docs/dev/release-process.md) - Creating releases
+### 💡 Concepts (Explanation)
+- [Architecture](docs/modules/ROOT/pages/concepts/architecture.adoc)
+- [Reference Architecture](docs/modules/ROOT/pages/concepts/reference-architecture.adoc)
+- [GitOps Workflow](docs/modules/ROOT/pages/concepts/gitops-workflow.adoc)
+- [Configuration Lifecycle](docs/modules/ROOT/pages/concepts/configuration-lifecycle.adoc)
+- [Security Model](docs/modules/ROOT/pages/concepts/security-model.adoc)
+- [Services and Templates](docs/modules/ROOT/pages/concepts/services-templates.adoc)
+- [Drift Detection](docs/modules/ROOT/pages/concepts/drift-detection.adoc)
+- [Plugin Internal Services](docs/modules/ROOT/pages/concepts/plugin-internal-services.adoc)
+- [Plugin External CLI](docs/modules/ROOT/pages/concepts/plugin-external-cli.adoc)
+- [Provider Comparison](docs/modules/ROOT/pages/concepts/provider-comparison.adoc)
 
-### 🗺️ [Codemaps](docs/CODEMAPS/) (Architecture Maps)
-- [Index](docs/CODEMAPS/INDEX.md) - Package map and cross-references
-- [CLI Commands](docs/CODEMAPS/cli-commands.md) - Command tree and registration
-- [Config System](docs/CODEMAPS/config-system.md) - Loader pipeline and types
-- [GitOps Engine](docs/CODEMAPS/gitops-engine.md) - Generation pipeline
-- [Cluster Lifecycle](docs/CODEMAPS/cluster-lifecycle.md) - Lifecycle services
-- [Secrets Management](docs/CODEMAPS/secrets-management.md) - Secrets architecture
-- [Providers](docs/CODEMAPS/providers.md) - Cloud provider implementations
-- [DI Container](docs/CODEMAPS/di-container.md) - Dependency injection
+### 🛠️ Contributing
+- [Contributing Guide](docs/modules/ROOT/pages/contributing/contributing.adoc)
+- [Development Setup](docs/modules/ROOT/pages/contributing/development-setup.adoc)
+- [Code Structure](docs/modules/ROOT/pages/contributing/code-structure.adoc)
+- [Testing Guide](docs/modules/ROOT/pages/contributing/testing-guide.adoc)
+- [Adding Providers](docs/modules/ROOT/pages/contributing/adding-providers.adoc)
+- [Adding Services](docs/modules/ROOT/pages/contributing/adding-services.adoc)
+- [Build System](docs/modules/ROOT/pages/contributing/build-system.adoc)
+- [Release Process](docs/modules/ROOT/pages/contributing/release-process.adoc)
 
-**Start here:** [Documentation Home](docs/index.md) | [Navigation Guide](docs/_nav.md)
+### 🗺️ Codemaps (architecture maps, not part of the published site)
+- [Index](docs/CODEMAPS/INDEX.md)
+- [CLI Commands](docs/CODEMAPS/cli-commands.md)
+- [Config System](docs/CODEMAPS/config-system.md)
+- [GitOps Engine](docs/CODEMAPS/gitops-engine.md)
+- [Cluster Lifecycle](docs/CODEMAPS/cluster-lifecycle.md)
+- [Secrets Management](docs/CODEMAPS/secrets-management.md)
+- [Providers](docs/CODEMAPS/providers.md)
+- [DI Container](docs/CODEMAPS/di-container.md)
+
+**Start here:** [Documentation Home](docs/modules/ROOT/pages/index.adoc) · [Glossary](docs/modules/ROOT/pages/glossary.adoc) · [Docs README](docs/README.md)
 
 ## Development Workflow
 
@@ -295,7 +309,7 @@ opencenter cluster deploy dev-cluster
 mise run gitea-up
 ```
 
-See [Mise Tasks Reference](docs/reference/mise-tasks.md) for complete list.
+See [Mise Tasks Reference](docs/modules/ROOT/pages/reference/mise-tasks.adoc) for the complete list.
 
 Tagged releases are published by GitHub Actions. Use `mise run release` for local preflight builds, then push a `v*` tag to create the signed release artifacts.
 
@@ -334,13 +348,22 @@ openCenter-cli/
 │   ├── ui/               # Prompts, error formatting, guided flows
 │   ├── core/             # Shared: path resolution, validation engine
 │   └── util/             # Files, errors, crypto, security, metrics
-├── docs/                  # Documentation (Diátaxis)
-│   ├── CODEMAPS/         # Architecture maps (generated from code)
-│   ├── tutorials/        # Learning-oriented guides
-│   ├── how-to/           # Task-oriented guides
-│   ├── reference/        # Information-oriented specs
-│   ├── explanation/      # Understanding-oriented concepts
-│   └── dev/              # Developer documentation
+├── docs/                  # Documentation site (Antora source)
+│   ├── README.md          # Layout, build, and editing rules
+│   ├── antora.yml         # Antora component descriptor
+│   ├── local-playbook.yml # Local Antora build playbook
+│   ├── modules/ROOT/      # Canonical AsciiDoc tree (published)
+│   │   ├── nav.adoc       # Site navigation
+│   │   └── pages/         # Pages organised by lifecycle category
+│   │       ├── getting-started/  # Tutorials (page-type: task)
+│   │       ├── operations/       # How-to guides (page-type: task)
+│   │       ├── reference/        # Reference (page-type: reference)
+│   │       │   └── opencenter/   # Auto-generated Cobra command pages
+│   │       ├── concepts/         # Explanations (page-type: concept)
+│   │       ├── providers/        # Per-provider guides
+│   │       ├── contributing/     # Contributor docs
+│   │       └── release/          # Release notes
+│   └── CODEMAPS/          # Architecture maps (not part of the published site)
 ├── tests/                 # BDD tests (Godog)
 │   └── features/         # Gherkin feature files
 ├── schema/                # JSON schema definitions
@@ -350,7 +373,7 @@ openCenter-cli/
 └── main.go               # CLI entrypoint
 ```
 
-See [Code Structure](docs/dev/code-structure.md) and [Codemaps](docs/CODEMAPS/INDEX.md) for detailed explanation.
+See [Code Structure](docs/modules/ROOT/pages/contributing/code-structure.adoc) and [Codemaps](docs/CODEMAPS/INDEX.md) for the detailed explanation.
 
 ## Configuration File Locations
 
@@ -362,7 +385,7 @@ See [Code Structure](docs/dev/code-structure.md) and [Codemaps](docs/CODEMAPS/IN
 
 Override CLI configuration storage with `OPENCENTER_CONFIG_DIR` and cluster storage with `OPENCENTER_CLUSTERS_DIR`.
 
-See [File Locations Reference](docs/reference/file-locations.md) for complete paths.
+See [File Locations Reference](docs/modules/ROOT/pages/reference/file-locations.adoc) for the complete paths.
 
 ## Environment Variables
 
@@ -376,11 +399,11 @@ See [File Locations Reference](docs/reference/file-locations.md) for complete pa
 | `SOPS_AGE_RECIPIENTS` | Age public keys for encryption | |
 | `KUBECONFIG` | Kubernetes config file | `~/.kube/config` |
 
-See [Environment Variables Reference](docs/reference/environment-variables.md) for complete list.
+See [Environment Variables Reference](docs/modules/ROOT/pages/reference/environment-variables.adoc) for the complete list.
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](docs/dev/contributing.md) to get started.
+We welcome contributions. See the [Contributing Guide](docs/modules/ROOT/pages/contributing/contributing.adoc) to get started.
 
 ### Quick Contribution Workflow
 
@@ -397,7 +420,7 @@ We welcome contributions! Please see our [Contributing Guide](docs/dev/contribut
 - **Custom Validators:** Add validation rules in `internal/core/validation/`
 - **Plugins:** Create external plugins as `opencenter-<plugin>` executables
 
-See [Developer Documentation](docs/dev/) for detailed guides.
+See the [contributing pages](docs/modules/ROOT/pages/contributing/) for detailed guides.
 
 ## License
 

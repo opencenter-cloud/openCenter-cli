@@ -1,70 +1,72 @@
 ---
 id: vmware-provider-guide
 title: "VMware Provider Guide"
-sidebar_label: VMware Guide
+sidebar_label: VMware Provider Guide
 description: Complete guide for deploying openCenter clusters on VMware vSphere with pre-provisioned VMs.
 doc_type: how-to
 audience: "platform engineers, operators"
 tags: [vmware, vsphere, deployment, csi]
 ---
-
 # VMware Provider Guide
 
 Guide for deploying openCenter clusters on VMware vSphere infrastructure with pre-provisioned VMs.
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Prerequisites](#prerequisites)
-- [Architecture](#architecture)
-- [Configuration](#configuration)
-  - [Basic Configuration](#basic-configuration)
-  - [Node Configuration](#node-configuration)
-  - [vSphere Integration](#vsphere-integration)
-- [Deployment](#deployment)
-- [Storage](#storage)
-- [Networking](#networking)
-- [Limitations](#limitations)
-- [Troubleshooting](#troubleshooting)
+* [Overview](#overview)
+* [Prerequisites](#prerequisites)
+* [Architecture](#architecture)
+* [Configuration](#configuration)
+  * [Basic Configuration](#basic-configuration)
+  * [Node Configuration](#node-configuration)
+  * [vSphere Integration](#vsphere-integration)
+* [Deployment](#deployment)
+* [Storage](#storage)
+* [Networking](#networking)
+* [Limitations](#limitations)
+* [Troubleshooting](#troubleshooting)
 
 ## Overview
 
 The VMware provider enables openCenter cluster deployment on VMware vSphere infrastructure. VMs must be pre-provisioned - the provider treats VMware as baremetal, using Kubespray/Ansible to configure existing VMs rather than provisioning new ones.
 
 Key characteristics:
-- Requires pre-provisioned VMs with Ubuntu 24.04
-- Uses Kubespray deployment method (Ansible-based)
-- Supports vSphere CSI driver for persistent storage
-- No automatic VM lifecycle management
+
+* Requires pre-provisioned VMs with Ubuntu 24.04
+* Uses Kubespray deployment method (Ansible-based)
+* Supports vSphere CSI driver for persistent storage
+* No automatic VM lifecycle management
 
 ## Prerequisites
 
 ### Infrastructure Requirements
 
-- VMware vSphere 7.0 or later
-- Pre-provisioned Ubuntu 24.04 VMs (minimum 3 control plane + 2 worker nodes)
-- VMs must have network connectivity to each other
-- SSH access to all VMs from bastion/deployment host
-- vCenter credentials (for CSI driver integration)
+* VMware vSphere 7.0 or later
+* Pre-provisioned Ubuntu 24.04 VMs (minimum 3 control plane + 2 worker nodes)
+* VMs must have network connectivity to each other
+* SSH access to all VMs from bastion/deployment host
+* vCenter credentials (for CSI driver integration)
 
 ### VM Specifications
 
 Control plane nodes (minimum):
-- 4 vCPUs
-- 8 GB RAM
-- 40 GB disk
+
+* 4 vCPUs
+* 8 GB RAM
+* 40 GB disk
 
 Worker nodes (minimum):
-- 4 vCPUs
-- 16 GB RAM
-- 40 GB disk
+
+* 4 vCPUs
+* 16 GB RAM
+* 40 GB disk
 
 ### Network Requirements
 
-- Static IP addresses for all nodes
-- DNS resolution for all node hostnames
-- Bastion host with SSH access to all nodes
-- Firewall rules allowing Kubernetes traffic (6443, 2379-2380, 10250-10252)
+* Static IP addresses for all nodes
+* DNS resolution for all node hostnames
+* Bastion host with SSH access to all nodes
+* Firewall rules allowing Kubernetes traffic (6443, 2379-2380, 10250-10252)
 
 ## Architecture
 
@@ -178,8 +180,9 @@ nodes:
 ```
 
 Node roles:
-- `master`: Control plane node (runs etcd, API server, scheduler, controller)
-- `worker`: Worker node (runs application workloads)
+
+* `master`: Control plane node (runs etcd, API server, scheduler, controller)
+* `worker`: Worker node (runs application workloads)
 
 ### vSphere Integration
 
@@ -364,21 +367,21 @@ opencenter:
 
 ### No Automatic Provisioning
 
-- VMs must be pre-provisioned manually
-- No automatic scaling (MachineDeployments not supported)
-- Node lifecycle managed outside openCenter
+* VMs must be pre-provisioned manually
+* No automatic scaling (MachineDeployments not supported)
+* Node lifecycle managed outside openCenter
 
 ### Deployment Method
 
-- Only Kubespray deployment method supported
-- Talos deployment not supported (requires cloud-init integration)
-- Kamaji supported but requires manual worker node provisioning
+* Only Kubespray deployment method supported
+* Talos deployment not supported (requires cloud-init integration)
+* Kamaji supported but requires manual worker node provisioning
 
 ### Infrastructure Management
 
-- No Terraform/OpenTofu integration (opentofu.enabled: false)
-- VM configuration changes require manual intervention
-- No automated backup/restore of VMs
+* No Terraform/OpenTofu integration (opentofu.enabled: false)
+* VM configuration changes require manual intervention
+* No automated backup/restore of VMs
 
 ## Troubleshooting
 
@@ -450,7 +453,7 @@ ssh ubuntu@worker-1.example.com "ip addr show ens192"
 
 ## Related Documentation
 
-- [Kubespray Deployment Method](../deployment/kubespray.md)
-- [vSphere CSI Driver Configuration](../services/vsphere-csi.md)
-- [Baremetal Provider](./baremetal.md) (similar architecture)
-- [Storage Configuration](../storage/persistent-volumes.md)
+* [Kubespray Deployment Method](getting-started/getting-started.md)
+* [vSphere CSI Driver Configuration](reference/platform-services.md)
+* [Baremetal Provider](providers/README.md) (similar architecture)
+* [Storage Configuration](reference/platform-services.md)

@@ -1,13 +1,12 @@
 ---
 id: configuration-schema
 title: "Configuration Schema Reference"
-sidebar_label: Config Schema
+sidebar_label: Configuration Schema Reference
 description: Complete reference of cluster configuration file structure, fields, and validation rules.
 doc_type: reference
 audience: "all users"
 tags: [schema, configuration, yaml, fields]
 ---
-
 # Configuration Schema Reference
 
 **Purpose:** Complete reference of cluster configuration file structure, fields, and validation rules for quick lookup.
@@ -22,7 +21,8 @@ Current schema version: `2.0`
 schema_version: "2.0"
 ```
 
-**Note:** Only `schema_version: "2.0"` is supported. Any other schema version is invalid.
+**📌 NOTE**\
+Only `schema_version: "2.0"` is supported. Any other schema version is invalid.
 
 ## Top-Level Structure
 
@@ -55,9 +55,9 @@ opencenter:
 
 **Validation:**
 
-- `name`: 3-63 characters, lowercase alphanumeric and hyphens, must start/end with alphanumeric
-- `organization`: Same rules as name
-- `region`: Provider-specific region code
+* `name`: 3-63 characters, lowercase alphanumeric and hyphens, must start/end with alphanumeric
+* `organization`: Same rules as name
+* `region`: Provider-specific region code
 
 ### opencenter.secrets
 
@@ -143,9 +143,9 @@ opencenter:
 
 **Required Fields:**
 
-- `application_credential_id`
-- `application_credential_secret`
-- `floating_network_id`
+* `application_credential_id`
+* `application_credential_secret`
+* `floating_network_id`
 
 ### opencenter.infrastructure.cloud.aws
 
@@ -218,9 +218,9 @@ opencenter:
 
 **Validation:**
 
-- `vrrp_ip` required when `use_octavia=false` and `vrrp_enabled=true`
-- `subnet_nodes` must be valid CIDR notation
-- `dns_nameservers` must be valid IP addresses
+* `vrrp_ip` required when `use_octavia=false` and `vrrp_enabled=true`
+* `subnet_nodes` must be valid CIDR notation
+* `dns_nameservers` must be valid IP addresses
 
 ### opencenter.cluster.kubernetes
 
@@ -262,10 +262,10 @@ opencenter:
 
 **Validation:**
 
-- `version`: Semantic version format (e.g., "1.33.5")
-- `master_count`: 1-9
-- `worker_count`: 0-100
-- `subnet_pods` and `subnet_services` must not overlap
+* `version`: Semantic version format (e.g., "1.33.5")
+* `master_count`: 1-9
+* `worker_count`: 0-100
+* `subnet_pods` and `subnet_services` must not overlap
 
 ### opencenter.cluster.kubernetes.network_plugin
 
@@ -300,9 +300,9 @@ opencenter:
 
 **Validation:**
 
-- Only one CNI plugin can have `enabled: true`
-- For OpenStack, supported CNI `install_method` values are `helm` and `kustomize-helm`; `kubespray` is rejected with migration guidance.
-- For OpenStack, Calico uses bundled `v3.32.0` native `projectcalico.org/v3` CRDs and eBPF custom resources. Other Calico versions are rejected unless matching assets are added to the CLI.
+* Only one CNI plugin can have `enabled: true`
+* For OpenStack, supported CNI `install_method` values are `helm` and `kustomize-helm`; `kubespray` is rejected with migration guidance.
+* For OpenStack, Calico uses bundled `v3.32.0` native `projectcalico.org/v3` CRDs and eBPF custom resources. Other Calico versions are rejected unless matching assets are added to the CLI.
 
 ### opencenter.cluster.kubernetes.oidc
 
@@ -437,14 +437,14 @@ opencenter:
 
 All services support these fields:
 
-- `enabled` (bool): Enable/disable service
-- `namespace` (string): Kubernetes namespace
-- `hostname` (string): HTTPRoute hostname
-- `image_repository` (string): Container image repository
-- `image_tag` (string): Container image tag
-- `gitops_source_repo` (string): GitOps source repository
-- `gitops_source_release` (string): GitOps source release tag
-- `gitops_source_branch` (string): GitOps source branch
+* `enabled` (bool): Enable/disable service
+* `namespace` (string): Kubernetes namespace
+* `hostname` (string): HTTPRoute hostname
+* `image_repository` (string): Container image repository
+* `image_tag` (string): Container image tag
+* `gitops_source_repo` (string): GitOps source repository
+* `gitops_source_release` (string): GitOps source release tag
+* `gitops_source_branch` (string): GitOps source branch
 
 ## opentofu Section
 
@@ -549,26 +549,26 @@ secrets:
 
 ### Cross-Field Dependencies
 
-- `vrrp_ip` required when `use_octavia=false` and `vrrp_enabled=true`
-- Only one CNI plugin can be enabled
-- `subnet_pods` and `subnet_services` must not overlap
-- `subnet_nodes` must not overlap with pod or service subnets
+* `vrrp_ip` required when `use_octavia=false` and `vrrp_enabled=true`
+* Only one CNI plugin can be enabled
+* `subnet_pods` and `subnet_services` must not overlap
+* `subnet_nodes` must not overlap with pod or service subnets
 
 ### Format Validation
 
-- Email addresses: RFC 5322 format
-- Hostnames: RFC 1123 format
-- CIDR ranges: Valid IPv4 CIDR notation
-- UUIDs: RFC 4122 format (for OpenStack IDs)
-- Semantic versions: `major.minor.patch` format
+* Email addresses: RFC 5322 format
+* Hostnames: RFC 1123 format
+* CIDR ranges: Valid IPv4 CIDR notation
+* UUIDs: RFC 4122 format (for OpenStack IDs)
+* Semantic versions: `major.minor.patch` format
 
 ### Range Validation
 
-- `master_count`: 1-9
-- `worker_count`: 0-100
-- `worker_count_windows`: 0-50
-- `api_port`: 1-65535
-- Volume sizes: 10-1000 GB
+* `master_count`: 1-9
+* `worker_count`: 0-100
+* `worker_count_windows`: 0-50
+* `api_port`: 1-65535
+* Volume sizes: 10-1000 GB
 
 ## Configuration Precedence
 
@@ -587,8 +587,8 @@ See [Getting Started Tutorial](../tutorials/getting-started.md#step-3-configure-
 
 This reference is based on:
 
-- Schema definition: `schema/cluster.schema.json:1-2382`
-- Configuration defaults: `internal/config/defaults.go:48-451`
-- Configuration types: `internal/config/types.go`
-- Validation rules: `internal/config/validator.go`
-- Session 2 facts inventory: B0 sections 3, 5
+* Schema definition: `schema/cluster.schema.json:1-2382`
+* Configuration defaults: `internal/config/defaults.go:48-451`
+* Configuration types: `internal/config/types.go`
+* Validation rules: `internal/config/validator.go`
+* Session 2 facts inventory: B0 sections 3, 5

@@ -7,7 +7,6 @@ doc_type: reference
 audience: "developers"
 tags: [mise, tasks, build, development]
 ---
-
 # Mise Tasks
 
 **Purpose:** For developers, provides complete reference of available mise tasks for development, testing, and building.
@@ -23,7 +22,7 @@ Mise is the task automation tool for openCenter CLI. All development operations 
 ## Complete Task Inventory
 
 | Task | Category | Description |
-|------|----------|-------------|
+| --- | --- | --- |
 | `build` | Build | Build both CLI and local plugin (chains build-cli + build-local-plugin) |
 | `build-cli` | Build | Build the opencenter CLI binary with version info |
 | `build-local-plugin` | Build | Build the local workflow plugin (bin/opencenter-local) |
@@ -73,14 +72,16 @@ Mise is the task automation tool for openCenter CLI. All development operations 
 Build both the opencenter CLI and the local workflow plugin.
 
 **Usage:**
+
 ```bash
 mise run build
 ```
 
 **What it does:**
-- Runs `build-cli` then `build-local-plugin`
-- Compiles Go code with version information via ldflags
-- Creates binaries in `bin/`
+
+* Runs `build-cli` then `build-local-plugin`
+* Compiles Go code with version information via ldflags
+* Creates binaries in `bin/`
 
 **Output:** `bin/opencenter` + `bin/opencenter-local` (current platform)
 
@@ -91,14 +92,16 @@ mise run build
 Build binary for Linux platform.
 
 **Usage:**
+
 ```bash
 mise run build-linux
 ```
 
 **What it does:**
-- Cross-compiles for Linux amd64
-- Injects version information
-- Creates binary in `bin/opencenter-linux-amd64`
+
+* Cross-compiles for Linux amd64
+* Injects version information
+* Creates binary in `bin/opencenter-linux-amd64`
 
 **Output:** `bin/opencenter-linux-amd64`
 
@@ -109,20 +112,23 @@ mise run build-linux
 Build binaries for the supported release platforms.
 
 **Usage:**
+
 ```bash
 mise run build-all
 ```
 
 **What it does:**
-- Builds for Linux and macOS
-- Creates binaries for amd64 and arm64
-- Injects version information
+
+* Builds for Linux and macOS
+* Creates binaries for amd64 and arm64
+* Injects version information
 
 **Output:**
-- `bin/opencenter-linux-amd64`
-- `bin/opencenter-linux-arm64`
-- `bin/opencenter-darwin-amd64`
-- `bin/opencenter-darwin-arm64`
+
+* `bin/opencenter-linux-amd64`
+* `bin/opencenter-linux-arm64`
+* `bin/opencenter-darwin-amd64`
+* `bin/opencenter-darwin-arm64`
 
 For official releases, push a `v*` tag and let `.github/workflows/release.yml` publish the signed artifacts. Use `mise run release` only for local preflight builds.
 
@@ -135,67 +141,77 @@ For official releases, push a `v*` tag and let `.github/workflows/release.yml` p
 Run the deterministic GA test gate.
 
 **Usage:**
+
 ```bash
 mise run test
 ```
 
 **What it does:**
-- Runs the default CLI/config/cloud verification lane
-- Covers `./internal/config/...`, `./cmd/...`, and `./internal/cloud/...`
-- Excludes perf-tagged coverage
+
+* Runs the default CLI/config/cloud verification lane
+* Covers `./internal/config/...`, `./cmd/...`, and `./internal/cloud/...`
+* Excludes perf-tagged coverage
 
 ### property
 
 Run opt-in property-based coverage.
 
 **Usage:**
+
 ```bash
 mise run property
 ```
 
 **What it does:**
-- Runs tests selected by `-run "TestProperty"`
-- Keeps exploratory/property coverage separate from the default gate
+
+* Runs tests selected by `-run "TestProperty"`
+* Keeps exploratory/property coverage separate from the default gate
 
 ### integration
 
 Run the opt-in integration lane.
 
 **Usage:**
+
 ```bash
 mise run integration
 ```
 
 **What it does:**
-- Runs integration-oriented command and subsystem tests
-- Intended for deeper pre-release verification
+
+* Runs integration-oriented command and subsystem tests
+* Intended for deeper pre-release verification
 
 ### perf
 
 Run perf-tagged checks.
 
 **Usage:**
+
 ```bash
 mise run perf
 ```
 
 **What it does:**
-- Runs `perf` build-tag coverage such as memory-regression checks
-- Keeps noisy or long-running performance tests out of the default lane
+
+* Runs `perf` build-tag coverage such as memory-regression checks
+* Keeps noisy or long-running performance tests out of the default lane
 
 ### godog
 
 Run BDD tests (non-WIP scenarios).
 
 **Usage:**
+
 ```bash
 mise run godog
 ```
 
 **What it does:**
-- Runs Gherkin scenarios in `tests/features/`
-- Excludes scenarios tagged with `@wip`
-- Executes all production-ready scenarios
+
+* Runs Gherkin scenarios in `tests/features/`
+* Excludes scenarios tagged with `@wip`
+* Executes all production-ready scenarios
 
 **Evidence:** `.kiro/steering/tech.md:67`
 
@@ -204,14 +220,16 @@ mise run godog
 Run WIP (work-in-progress) BDD scenarios only.
 
 **Usage:**
+
 ```bash
 mise run godog-wip
 ```
 
 **What it does:**
-- Runs only scenarios tagged with `@wip`
-- Used during feature development
-- Excludes production scenarios
+
+* Runs only scenarios tagged with `@wip`
+* Used during feature development
+* Excludes production scenarios
 
 **Evidence:** `.kiro/steering/tech.md:70`
 
@@ -222,14 +240,16 @@ mise run godog-wip
 Format code with gofmt.
 
 **Usage:**
+
 ```bash
 mise run fmt
 ```
 
 **What it does:**
-- Runs `gofmt -w` on all Go files
-- Formats code to Go standards
-- Must be run before committing
+
+* Runs `gofmt -w` on all Go files
+* Formats code to Go standards
+* Must be run before committing
 
 **Evidence:** `.kiro/steering/tech.md:73`
 
@@ -238,14 +258,16 @@ mise run fmt
 Tidy Go module dependencies.
 
 **Usage:**
+
 ```bash
 mise run tidy
 ```
 
 **What it does:**
-- Runs `go mod tidy`
-- Removes unused dependencies
-- Updates `go.mod` and `go.sum`
+
+* Runs `go mod tidy`
+* Removes unused dependencies
+* Updates `go.mod` and `go.sum`
 
 **Evidence:** `.kiro/steering/tech.md:76`
 
@@ -254,14 +276,16 @@ mise run tidy
 Upgrade all dependencies to latest versions.
 
 **Usage:**
+
 ```bash
 mise run upgrade-deps
 ```
 
 **What it does:**
-- Updates all dependencies to latest compatible versions
-- Runs `go get -u ./...`
-- Updates `go.mod` and `go.sum`
+
+* Updates all dependencies to latest compatible versions
+* Runs `go get -u ./...`
+* Updates `go.mod` and `go.sum`
 
 **Evidence:** `.kiro/steering/tech.md:79`
 
@@ -272,14 +296,16 @@ mise run upgrade-deps
 Generate JSON schema from Go types.
 
 **Usage:**
+
 ```bash
 mise run schema
 ```
 
 **What it does:**
-- Generates `schema/cluster.schema.json`
-- Extracts schema from Go struct tags
-- Used for configuration validation
+
+* Generates `schema/cluster.schema.json`
+* Extracts schema from Go struct tags
+* Used for configuration validation
 
 **Evidence:** `.kiro/steering/tech.md:82`
 
@@ -288,15 +314,17 @@ mise run schema
 Comprehensive schema verification.
 
 **Usage:**
+
 ```bash
 mise run schema-verify
 ```
 
 **What it does:**
-- Validates schema structure
-- Checks schema completeness
-- Verifies schema examples
-- Tests schema against fixtures
+
+* Validates schema structure
+* Checks schema completeness
+* Verifies schema examples
+* Tests schema against fixtures
 
 **Evidence:** `.kiro/steering/tech.md:91`
 
@@ -307,14 +335,16 @@ mise run schema-verify
 Validate cluster configuration.
 
 **Usage:**
+
 ```bash
 mise run validate
 ```
 
 **What it does:**
-- Validates configuration files
-- Checks schema compliance
-- Verifies business rules
+
+* Validates configuration files
+* Checks schema compliance
+* Verifies business rules
 
 **Evidence:** `.kiro/steering/tech.md:85`
 
@@ -323,14 +353,16 @@ mise run validate
 Run preflight checks before deployment.
 
 **Usage:**
+
 ```bash
 mise run preflight
 ```
 
 **What it does:**
-- Checks system requirements
-- Verifies tool installations
-- Validates credentials
+
+* Checks system requirements
+* Verifies tool installations
+* Validates credentials
 
 **Evidence:** `.kiro/steering/tech.md:88`
 
@@ -341,14 +373,16 @@ mise run preflight
 Generate CLI documentation.
 
 **Usage:**
+
 ```bash
 mise run docs-gen
 ```
 
 **What it does:**
-- Generates command documentation
-- Creates markdown files for each command
-- Updates CLI reference docs
+
+* Generates command documentation
+* Creates markdown files for each command
+* Updates CLI reference docs
 
 **Evidence:** `.kiro/steering/tech.md:94`
 
@@ -359,14 +393,16 @@ mise run docs-gen
 Clean build artifacts.
 
 **Usage:**
+
 ```bash
 mise run clean
 ```
 
 **What it does:**
-- Removes `bin/` directory
-- Removes temporary files
-- Cleans build cache
+
+* Removes `bin/` directory
+* Removes temporary files
+* Cleans build cache
 
 **Evidence:** `.kiro/steering/tech.md:97`
 
@@ -579,10 +615,10 @@ mise --version
 
 ## Related Topics
 
-- [Development Setup](../dev/development-setup.md) - Set up development environment
-- [Testing Guide](../dev/testing-guide.md) - Write and run tests
-- [Build System](../dev/build-system.md) - Understand mise-based build system
-- [Contributing](../dev/contributing.md) - Contribute code
+* [Development Setup](contributing/development-setup.md) - Set up development environment
+* [Testing Guide](contributing/testing-guide.md) - Write and run tests
+* [Build System](contributing/build-system.md) - Understand mise-based build system
+* [Contributing](contributing/contributing.md) - Contribute code
 
 ---
 
@@ -590,7 +626,7 @@ mise --version
 
 This reference is based on:
 
-- Mise tasks: `.kiro/steering/tech.md:40-97`
-- Pre-commit workflow: `.kiro/steering/tech.md:103-118`
-- Task creation: `.kiro/steering/tech.md:120-135`
-- Build system: `.kiro/steering/product.md:23-28`
+* Mise tasks: `.kiro/steering/tech.md:40-97`
+* Pre-commit workflow: `.kiro/steering/tech.md:103-118`
+* Task creation: `.kiro/steering/tech.md:120-135`
+* Build system: `.kiro/steering/product.md:23-28`

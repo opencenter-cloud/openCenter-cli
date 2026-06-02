@@ -1,0 +1,59 @@
+---
+id: drift-detection
+title: "Infrastructure Drift Detection"
+sidebar_label: Infrastructure Drift Detection
+description: How openCenter detects and remediates differences between desired and actual infrastructure state.
+doc_type: explanation
+audience: "platform operators, architects"
+tags: [drift, infrastructure, reconciliation]
+---
+# Infrastructure Drift Detection
+
+**Purpose:** Explain what `opencenter cluster drift` checks today and where the support boundary stops.
+
+## What the Command Compares
+
+The drift workflow builds a desired infrastructure model from the cluster configuration and compares it with the provider’s live API state.
+
+Today that means:
+
+* **OpenStack**: servers, networks, security groups, load balancers, volumes, and floating IPs.
+* **VMware**: configured VM nodes, attached networks, and datastore-backed storage expectations.
+
+## Supported Providers
+
+| Provider | Status | Reconciliation |
+| --- | --- | --- |
+| OpenStack | Supported | Limited safe reconciliation for mutable items such as tags and security-group rules |
+| VMware | Supported | Detection only; remediation is manual |
+| Kind | Not applicable | No infrastructure drift backend |
+| Baremetal | Not applicable | No infrastructure drift backend |
+| AWS | Removed from GA drift registry | Not supported |
+
+## Typical Flow
+
+```bash
+# Detect drift
+opencenter cluster drift detect prod-cluster
+
+# Filter output by severity
+opencenter cluster drift detect prod-cluster --severity=critical
+
+# Preview any supported reconciliation
+opencenter cluster drift reconcile prod-cluster --dry-run
+```
+
+## VMware-Specific Behavior
+
+VMware drift detection uses the configured vCenter metadata plus `secrets.vsphere_csi` credentials to inspect:
+
+* the configured datacenter
+* the named VM nodes
+* the networks attached to those VMs
+* the datastores backing those VMs
+
+The command reports differences, but it does not mutate vSphere resources for you.
+
+## Why Kind and Baremetal Are Different
+
+Kind is a local lifecycle provider, not a cloud-resource backend. Baremetal relies on pre-provisioned hosts that openCenter does not create or own. In both cases, the infrastructure drift contract would be misleading, so those providers are intentionally excluded.

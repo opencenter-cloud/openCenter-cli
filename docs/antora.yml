@@ -1,5 +1,0 @@
-name: opencenter-cli
-title: openCenter CLI
-version: '1.0'
-nav:
-  - modules/ROOT/nav.adoc

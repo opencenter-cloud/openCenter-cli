@@ -648,10 +648,10 @@ kubectl set resources deployment my-app \
 
 ## Related Topics
 
-* [Backup and Restore](operations/backup-and-restore.md) - Backup procedures for migration
-* [Multi-Cluster Management](getting-started/multi-cluster-setup.md) - Manage multiple clusters
-* [Provider Comparison](concepts/provider-comparison.md) - Choose target provider
-* [Configuration Lifecycle](concepts/configuration-lifecycle.md) - Configuration management
+* [Backup and Restore](backup-and-restore.md) - Backup procedures for migration
+* [Multi-Cluster Management](../getting-started/multi-cluster-setup.md) - Manage multiple clusters
+* [Provider Comparison](../concepts/provider-comparison.md) - Choose target provider
+* [Configuration Lifecycle](../concepts/configuration-lifecycle.md) - Configuration management
 
 ---
 

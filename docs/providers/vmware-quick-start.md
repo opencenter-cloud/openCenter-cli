@@ -9,6 +9,8 @@ tags: [vmware, vsphere, quick-start, deployment]
 ---
 # VMware Provider Quick Start
 
+**Purpose:** For platform engineers, operators, shows how to deploying openCenter clusters on VMware vSphere.
+
 Quick reference for deploying openCenter clusters on VMware vSphere.
 
 ## Prerequisites
@@ -133,5 +135,5 @@ kubectl get pods -n kube-system | grep vsphere-csi
 ## Next Steps
 
 * [Full VMware Guide](./vmware.md)
-* [vSphere CSI Configuration](reference/platform-services.md)
-* [Kubespray Deployment](getting-started/getting-started.md)
+* [vSphere CSI Configuration](../reference/platform-services.md)
+* [Kubespray Deployment](../getting-started/getting-started.md)

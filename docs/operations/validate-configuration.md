@@ -391,10 +391,10 @@ Update credentials in configuration if expired.
 
 After successful validation:
 
-* [Setup GitOps Repository](../tutorials/getting-started.md#step-6-setup-gitops-repository)
-* [Bootstrap Cluster](../tutorials/getting-started.md#step-8-bootstrap-cluster)
-* [Customize Services](operations/customize-services.md)
-* [Configure Networking](operations/configure-networking.md)
+* [Setup GitOps Repository](../getting-started/getting-started.md#step-6-setup-gitops-repository)
+* [Bootstrap Cluster](../getting-started/getting-started.md#step-8-bootstrap-cluster)
+* [Customize Services](customize-services.md)
+* [Configure Networking](configure-networking.md)
 
 ---
 

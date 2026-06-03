@@ -787,7 +787,7 @@ Service versions are managed in openCenter-gitops-base repository. Versions are 
 
 ## Enabling/Disabling Services
 
-See [Customize Services](operations/customize-services.md) for detailed instructions.
+See [Customize Services](../operations/customize-services.md) for detailed instructions.
 
 ---
 

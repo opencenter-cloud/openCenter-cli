@@ -68,7 +68,7 @@ opencenter rmpk cluster sync openstack \
 
 The `--cloud` flag references an OpenStack cloud entry from your `clouds.yaml`. The `--yes` flag skips confirmation prompts.
 
-> `rmpk` is an [external CLI plugin](concepts/plugin-external-cli.md) discovered at runtime. It must be installed separately.
+> `rmpk` is an [external CLI plugin](../concepts/plugin-external-cli.md) discovered at runtime. It must be installed separately.
 
 ## 4. Set GitOps and secrets configuration
 
@@ -127,7 +127,7 @@ For provider connectivity checks (image IDs, flavor availability, quota limits),
 opencenter cluster validate --validation online
 ```
 
-Fix any reported errors before continuing. See [Validate Configuration](operations/validate-configuration.md) for error resolution guidance.
+Fix any reported errors before continuing. See [Validate Configuration](validate-configuration.md) for error resolution guidance.
 
 **Evidence:** `cmd/cluster_validate.go`, `internal/config/validator.go`
 
@@ -221,7 +221,7 @@ All nodes should report `Ready`, all Kustomizations should show `Ready: True`, a
 
 ## Troubleshooting
 
-**Validation fails:** Read the error messages -- they include the field path and expected value. Common issues: missing credentials, overlapping CIDRs, missing VRRP IP. See [Validate Configuration](operations/validate-configuration.md).
+**Validation fails:** Read the error messages -- they include the field path and expected value. Common issues: missing credentials, overlapping CIDRs, missing VRRP IP. See [Validate Configuration](validate-configuration.md).
 
 **Deploy step fails:** Check the bootstrap log printed at failure. Fix the issue and re-run `opencenter cluster deploy` to resume. Use `--debug` for step-level detail.
 
@@ -233,4 +233,4 @@ All nodes should report `Ready`, all Kustomizations should show `Ready: True`, a
 git -C <git_dir> remote set-url origin <correct-url>
 ```
 
-See [Troubleshoot Deployment](operations/troubleshoot-deployment.md) for additional scenarios.
+See [Troubleshoot Deployment](troubleshoot-deployment.md) for additional scenarios.

@@ -9,6 +9,8 @@ tags: [providers, openstack, vmware, kind, baremetal]
 ---
 # Infrastructure Providers
 
+**Purpose:** For platform engineers, operators, documents overview of supported infrastructure providers and their capabilities.
+
 openCenter’s GA infrastructure surface is intentionally narrow:
 
 * **OpenStack**: full infrastructure automation and the most complete production path.

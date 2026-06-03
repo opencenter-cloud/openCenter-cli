@@ -9,6 +9,8 @@ tags: [vmware, terraform, template, infrastructure]
 ---
 # VMware Terraform Template
 
+**Purpose:** For platform engineers, operators, documents the VMware-specific Terraform template used to generate cluster infrastructure.
+
 Documentation for the VMware-specific Terraform template (`main-vmware.tf.tpl`).
 
 ## Table of Contents
@@ -397,5 +399,5 @@ To migrate existing baremetal clusters to VMware template:
 
 * [VMware Provider Guide](./vmware.md)
 * [VMware Quick Start](./vmware-quick-start.md)
-* [Terraform Templates Overview](providers/vmware.md)
-* [Template Customization](providers/vmware.md)
+* [Terraform Templates Overview](vmware.md)
+* [Template Customization](vmware.md)

@@ -17,7 +17,7 @@ Before contributing, you need:
 
 * Git installed and configured
 * GitHub account with SSH key configured
-* Mise installed (see [Development Setup](contributing/development-setup.md))
+* Mise installed (see [Development Setup](development-setup.md))
 * Familiarity with Go and Kubernetes concepts
 
 ## Fork and Clone
@@ -111,7 +111,7 @@ Follow the coding standards defined in `.kiro/steering/tech.md`:
 
 ### Write Tests
 
-All behavior changes require tests. See [Testing Guide](contributing/testing-guide.md) for details.
+All behavior changes require tests. See [Testing Guide](testing-guide.md) for details.
 
 **Required tests:**
 
@@ -143,10 +143,10 @@ Documentation changes are required for:
 
 Update relevant files in `docs/`:
 
-* `docs/tutorials/` - Learning-oriented guides
-* `docs/how-to/` - Task-oriented guides
+* `docs/getting-started/` - Learning-oriented guides
+* `docs/operations/` - Task-oriented guides
 * `docs/reference/` - Information-oriented specs
-* `docs/explanation/` - Understanding-oriented concepts
+* `docs/concepts/` - Understanding-oriented concepts
 
 ## Pre-Commit Checklist
 
@@ -258,7 +258,7 @@ Adds support for AWS provider with EC2 provisioning.
 
 ## Documentation
 
-- Added `docs/tutorials/aws-deployment.md`
+- Added `docs/getting-started/aws-deployment.md`
 - Updated `docs/reference/providers.md`
 - Updated `docs/reference/configuration-schema.md`
 
@@ -291,7 +291,7 @@ git push origin feat/my-feature
 
 ### Adding a New Command
 
-See [Code Structure](contributing/code-structure.md) for details.
+See [Code Structure](code-structure.md) for details.
 
 1. Create `cmd/cluster_<action>.go`
 2. Implement `newCluster<Action>Cmd()` function
@@ -301,7 +301,7 @@ See [Code Structure](contributing/code-structure.md) for details.
 
 ### Adding a New Provider
 
-See [Adding Providers](contributing/adding-providers.md) for details.
+See [Adding Providers](adding-providers.md) for details.
 
 1. Create `internal/cloud/<provider>/` directory
 2. Implement preflight checks
@@ -311,7 +311,7 @@ See [Adding Providers](contributing/adding-providers.md) for details.
 
 ### Adding a New Service
 
-See [Adding Services](contributing/adding-services.md) for details.
+See [Adding Services](adding-services.md) for details.
 
 1. Add service to `internal/config/defaults.go`
 2. Create templates in `internal/gitops/gitops-base-dir/`

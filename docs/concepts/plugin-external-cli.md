@@ -23,7 +23,7 @@ It is file-based, not service-based:
 
 This mechanism is for adding commands, not for adding platform services such as cert-manager, Loki, Harbor, or Keycloak.
 
-If you want to add a cluster-managed service, use the internal service plugin path described in [Plugin Internal Services](concepts/plugin-internal-services.md).
+If you want to add a cluster-managed service, use the internal service plugin path described in [Plugin Internal Services](plugin-internal-services.md).
 
 ## Discovery Model
 
@@ -159,10 +159,10 @@ External plugins can be verified with a checksum allowlist:
 
 ## Related Reading
 
-* [Create and Install a CLI Plugin](operations/create-install-cli-plugin.md)
-* [Plugin Internal Services](concepts/plugin-internal-services.md)
-* [Code Structure](contributing/code-structure.md)
-* [CLI Commands](reference/cli-commands.md)
+* [Create and Install a CLI Plugin](../operations/create-install-cli-plugin.md)
+* [Plugin Internal Services](plugin-internal-services.md)
+* [Code Structure](../contributing/code-structure.md)
+* [CLI Commands](../reference/cli-commands.md)
 
 ## Evidence
 

@@ -398,9 +398,9 @@ opencenter cluster validate my-cluster || {
 
 ## Related Topics
 
-* [CLI Commands](reference/cli-commands.md) - Complete command reference
-* [Integrate CI/CD](operations/integrate-ci-cd.md) - CI/CD integration
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Debug errors
+* [CLI Commands](cli-commands.md) - Complete command reference
+* [Integrate CI/CD](../operations/integrate-ci-cd.md) - CI/CD integration
+* [Troubleshoot Deployment](../operations/troubleshoot-deployment.md) - Debug errors
 
 ---
 

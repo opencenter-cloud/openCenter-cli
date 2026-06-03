@@ -74,7 +74,7 @@ Move unreleased changes to new version section:
 Update version references in:
 
 * `README.md` - Installation instructions
-* `docs/tutorials/getting-started.md` - Version examples
+* `docs/getting-started/getting-started.md` - Version examples
 * `docs/reference/default-values.md` - Default versions
 
 ### Run Full Test Suite

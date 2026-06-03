@@ -783,11 +783,11 @@ velero restore create --from-backup pre-upgrade-backup
 
 ## Further Reading
 
-* [Architecture](concepts/architecture.md) - System design and components
-* [GitOps Workflow](concepts/gitops-workflow.md) - Repository structure and reconciliation
-* [Validate Configuration](operations/validate-configuration.md) - Validation procedures
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Fix deployment issues
-* [Configuration Schema](reference/configuration-schema.md) - Complete field reference
+* [Architecture](architecture.md) - System design and components
+* [GitOps Workflow](gitops-workflow.md) - Repository structure and reconciliation
+* [Validate Configuration](../operations/validate-configuration.md) - Validation procedures
+* [Troubleshoot Deployment](../operations/troubleshoot-deployment.md) - Fix deployment issues
+* [Configuration Schema](../reference/configuration-schema.md) - Complete field reference
 
 ---
 

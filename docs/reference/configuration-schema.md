@@ -579,7 +579,7 @@ secrets:
 
 ## Example Complete Configuration
 
-See [Getting Started Tutorial](../tutorials/getting-started.md#step-3-configure-your-cluster) for complete configuration examples.
+See [Getting Started Tutorial](../getting-started/getting-started.md#step-3-configure-your-cluster) for complete configuration examples.
 
 ---
 

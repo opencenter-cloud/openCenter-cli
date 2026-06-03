@@ -253,7 +253,7 @@ Evidence: `cmd/root.go` -- `PersistentPreRunE`
 
 ## Related Topics
 
-* [Environment Variables](reference/environment-variables.md) -- Full env var reference
-* [File Locations](reference/file-locations.md) -- All file paths
-* [Configuration Schema](reference/configuration-schema.md) -- Cluster config structure
-* [CLI Commands](reference/cli-commands.md) -- Flag reference per command
+* [Environment Variables](environment-variables.md) -- Full env var reference
+* [File Locations](file-locations.md) -- All file paths
+* [Configuration Schema](configuration-schema.md) -- Cluster config structure
+* [CLI Commands](cli-commands.md) -- Flag reference per command

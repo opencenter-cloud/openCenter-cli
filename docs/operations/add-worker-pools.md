@@ -634,10 +634,10 @@ tolerations:
 
 ## Related Topics
 
-* [Configure Networking](operations/configure-networking.md) - Network configuration for worker pools
-* [Upgrade Kubernetes](operations/upgrade-kubernetes.md) - Upgrade nodes in worker pools
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Debug node issues
-* [Configuration Schema](reference/configuration-schema.md) - Complete configuration reference
+* [Configure Networking](configure-networking.md) - Network configuration for worker pools
+* [Upgrade Kubernetes](upgrade-kubernetes.md) - Upgrade nodes in worker pools
+* [Troubleshoot Deployment](troubleshoot-deployment.md) - Debug node issues
+* [Configuration Schema](../reference/configuration-schema.md) - Complete configuration reference
 
 ---
 

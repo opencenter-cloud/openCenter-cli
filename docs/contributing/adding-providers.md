@@ -15,7 +15,7 @@ tags: [contributing]
 
 Before adding a provider, you need:
 
-* Development environment set up (see [Development Setup](contributing/development-setup.md))
+* Development environment set up (see [Development Setup](development-setup.md))
 * Understanding of the target provider’s API
 * Provider credentials for testing
 
@@ -482,7 +482,7 @@ opencenter:
 * xlarge: 16 vCPU, 32 GB RAM
 ```
 
-Create tutorial in `docs/tutorials/mycloud-deployment.md`:
+Create tutorial in `docs/getting-started/mycloud-deployment.md`:
 
 ```markdown
 # Deploy Cluster on MyCloud
@@ -605,7 +605,7 @@ Before submitting, verify:
 * [ ] Unit tests written for preflight and validation
 * [ ] BDD tests written for provider workflows
 * [ ] Provider documented in `docs/reference/providers.md`
-* [ ] Tutorial created in `docs/tutorials/<provider>-deployment.md`
+* [ ] Tutorial created in `docs/getting-started/<provider>-deployment.md`
 * [ ] All tests pass (`mise run test && mise run godog`)
 * [ ] Schema verification passes (`mise run schema-verify`)
 

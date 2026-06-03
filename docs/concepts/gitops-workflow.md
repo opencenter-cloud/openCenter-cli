@@ -696,10 +696,10 @@ flux logs --follow
 
 ## Further Reading
 
-* [Architecture](concepts/architecture.md) - System design and components
-* [Security Model](concepts/security-model.md) - Security architecture
-* [Manage Secrets](operations/manage-secrets.md) - SOPS and secrets management
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Fix reconciliation issues
+* [Architecture](architecture.md) - System design and components
+* [Security Model](security-model.md) - Security architecture
+* [Manage Secrets](../operations/manage-secrets.md) - SOPS and secrets management
+* [Troubleshoot Deployment](../operations/troubleshoot-deployment.md) - Fix reconciliation issues
 
 ---
 

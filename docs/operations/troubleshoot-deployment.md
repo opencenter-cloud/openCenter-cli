@@ -729,10 +729,10 @@ GitHub Issues: https://github.com/opencenter-cloud/openCenter-cli/issues
 
 ## Next Steps
 
-* [Validate Configuration](operations/validate-configuration.md) - Prevent issues before deployment
-* [Manage Secrets](operations/manage-secrets.md) - Fix SOPS-related issues
-* [Configure Networking](operations/configure-networking.md) - Fix network problems
-* [Getting Started Tutorial](getting-started/getting-started.md) - Review deployment steps
+* [Validate Configuration](validate-configuration.md) - Prevent issues before deployment
+* [Manage Secrets](manage-secrets.md) - Fix SOPS-related issues
+* [Configure Networking](configure-networking.md) - Fix network problems
+* [Getting Started Tutorial](../getting-started/getting-started.md) - Review deployment steps
 
 ---
 

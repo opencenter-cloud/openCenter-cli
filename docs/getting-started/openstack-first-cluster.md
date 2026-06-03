@@ -586,23 +586,23 @@ Now that you have a production cluster, explore these topics:
 
 **Deploy Applications:**
 
-* [Customize Services](operations/customize-services.md) - Configure platform services
-* [Manage Secrets](operations/manage-secrets.md) - Encrypt and rotate secrets
+* [Customize Services](../operations/customize-services.md) - Configure platform services
+* [Manage Secrets](../operations/manage-secrets.md) - Encrypt and rotate secrets
 
 **Cluster Management:**
 
-* [Add Worker Pools](operations/add-worker-pools.md) - Scale cluster capacity
-* [Backup and Restore](operations/backup-and-restore.md) - Configure disaster recovery
-* [Upgrade Kubernetes](operations/upgrade-kubernetes.md) - Upgrade cluster version
+* [Add Worker Pools](../operations/add-worker-pools.md) - Scale cluster capacity
+* [Backup and Restore](../operations/backup-and-restore.md) - Configure disaster recovery
+* [Upgrade Kubernetes](../operations/upgrade-kubernetes.md) - Upgrade cluster version
 
 **Multi-Cluster:**
 
-* [Multi-Cluster Management](getting-started/multi-cluster-setup.md) - Manage multiple clusters
+* [Multi-Cluster Management](multi-cluster-setup.md) - Manage multiple clusters
 
 **Understanding:**
 
-* [GitOps Workflow](concepts/gitops-workflow.md) - How GitOps works
-* [Security Model](concepts/security-model.md) - Security architecture
+* [GitOps Workflow](../concepts/gitops-workflow.md) - How GitOps works
+* [Security Model](../concepts/security-model.md) - Security architecture
 
 ## What You Learned
 

@@ -588,7 +588,7 @@ To make the "five configs produce five overlays" claim true, this design needs a
 4. Create and maintain the five per-cluster config fixtures as first-class test inputs.
 5. Document allowed canonicalization diffs so parity tests can distinguish intentional cleanup from regressions.
 
-The detailed problem statement and implementation plan for that work lives in [Service Rendering: Fixture Parity Plan](contributing/services-rendering-parity-plan.md).
+The detailed problem statement and implementation plan for that work lives in [Service Rendering: Fixture Parity Plan](services-rendering-parity-plan.md).
 
 ## Conclusion
 

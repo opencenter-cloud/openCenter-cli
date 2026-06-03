@@ -30,7 +30,7 @@ Examples include:
 
 This is different from the external CLI plugin mechanism. External CLI plugins add new commands such as `opencenter foo`; they do not participate in service config typing, service validation, or GitOps manifest generation.
 
-For that separate mechanism, see [Plugin External CLI](concepts/plugin-external-cli.md).
+For that separate mechanism, see [Plugin External CLI](plugin-external-cli.md).
 
 ## The Service Plugin Model
 
@@ -400,11 +400,11 @@ At minimum, add:
 
 ## Related Reading
 
-* [Plugin External CLI](concepts/plugin-external-cli.md)
-* [Service Templates](concepts/services-templates.md)
-* [Adding Services](contributing/adding-services.md)
-* [Code Structure](contributing/code-structure.md)
-* [GitOps Workflow](concepts/gitops-workflow.md)
+* [Plugin External CLI](plugin-external-cli.md)
+* [Service Templates](services-templates.md)
+* [Adding Services](../contributing/adding-services.md)
+* [Code Structure](../contributing/code-structure.md)
+* [GitOps Workflow](gitops-workflow.md)
 
 ## Evidence
 

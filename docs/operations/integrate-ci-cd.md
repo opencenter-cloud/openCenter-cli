@@ -688,10 +688,10 @@ opencenter cluster destroy $CLUSTER_NAME || true
 
 ## Related Topics
 
-* [Validate Configuration](operations/validate-configuration.md) - Configuration validation
-* [Multi-Cluster Management](getting-started/multi-cluster-setup.md) - Manage multiple clusters
-* [Configuration Lifecycle](concepts/configuration-lifecycle.md) - Configuration management
-* [CLI Commands](reference/cli-commands.md) - Complete CLI reference
+* [Validate Configuration](validate-configuration.md) - Configuration validation
+* [Multi-Cluster Management](../getting-started/multi-cluster-setup.md) - Manage multiple clusters
+* [Configuration Lifecycle](../concepts/configuration-lifecycle.md) - Configuration management
+* [CLI Commands](../reference/cli-commands.md) - Complete CLI reference
 
 ---
 

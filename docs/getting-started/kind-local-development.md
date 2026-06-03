@@ -632,23 +632,23 @@ Now that you have a local development cluster, explore these topics:
 
 **Development:**
 
-* [Customize Services](operations/customize-services.md) - Configure platform services
-* [Integrate CI/CD](operations/integrate-ci-cd.md) - Automate testing
+* [Customize Services](../operations/customize-services.md) - Configure platform services
+* [Integrate CI/CD](../operations/integrate-ci-cd.md) - Automate testing
 
 **Testing:**
 
-* [Validate Configuration](operations/validate-configuration.md) - Test configurations
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Debug issues
+* [Validate Configuration](../operations/validate-configuration.md) - Test configurations
+* [Troubleshoot Deployment](../operations/troubleshoot-deployment.md) - Debug issues
 
 **Production:**
 
-* [OpenStack First Cluster](getting-started/openstack-first-cluster.md) - Deploy to production
-* [VMware Deployment](getting-started/vmware-deployment.md) - Deploy to VMware
+* [OpenStack First Cluster](openstack-first-cluster.md) - Deploy to production
+* [VMware Deployment](vmware-deployment.md) - Deploy to VMware
 
 **Understanding:**
 
-* [Provider Comparison](concepts/provider-comparison.md) - Compare providers
-* [GitOps Workflow](concepts/gitops-workflow.md) - How GitOps works
+* [Provider Comparison](../concepts/provider-comparison.md) - Compare providers
+* [GitOps Workflow](../concepts/gitops-workflow.md) - How GitOps works
 
 ## What You Learned
 

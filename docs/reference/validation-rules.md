@@ -564,9 +564,9 @@ func (v *CustomValidator) Validate(config *config.Config) []ValidationError {
 
 ## Related Topics
 
-* [Validate Configuration](operations/validate-configuration.md) - Validation procedures
-* [Configuration Schema](reference/configuration-schema.md) - Complete field reference
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Fix validation errors
+* [Validate Configuration](../operations/validate-configuration.md) - Validation procedures
+* [Configuration Schema](configuration-schema.md) - Complete field reference
+* [Troubleshoot Deployment](../operations/troubleshoot-deployment.md) - Fix validation errors
 
 ---
 

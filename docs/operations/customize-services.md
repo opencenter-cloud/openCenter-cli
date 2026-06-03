@@ -555,9 +555,9 @@ kubectl describe pod <pod-name> -n <namespace>
 
 ## Next Steps
 
-* [Configure Networking](operations/configure-networking.md) - CNI and load balancer configuration
-* [Manage Secrets](operations/manage-secrets.md) - Encrypt service secrets
-* [Backup and Restore](operations/backup-and-restore.md) - Configure Velero backups
+* [Configure Networking](configure-networking.md) - CNI and load balancer configuration
+* [Manage Secrets](manage-secrets.md) - Encrypt service secrets
+* [Backup and Restore](backup-and-restore.md) - Configure Velero backups
 
 ---
 

@@ -386,10 +386,10 @@ export KIND_EXPERIMENTAL_PROVIDER=podman
 
 Now that your environment is set up:
 
-1. **Read the code structure** - [Code Structure](contributing/code-structure.md)
-2. **Learn the build system** - [Build System](contributing/build-system.md)
-3. **Write your first test** - [Testing Guide](contributing/testing-guide.md)
-4. **Make your first contribution** - [Contributing](contributing/contributing.md)
+1. **Read the code structure** - [Code Structure](code-structure.md)
+2. **Learn the build system** - [Build System](build-system.md)
+3. **Write your first test** - [Testing Guide](testing-guide.md)
+4. **Make your first contribution** - [Contributing](contributing.md)
 
 ## Common Development Tasks
 

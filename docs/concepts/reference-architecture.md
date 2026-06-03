@@ -377,7 +377,7 @@ opencenter:
 
 Use internal DNS and NTP servers when available. Public servers are acceptable for development but introduce an external dependency in production.
 
-**Evidence:** `docs/how-to/configure-networking.md`, `internal/config/types_cluster.go`
+**Evidence:** `docs/operations/configure-networking.md`, `internal/config/types_cluster.go`
 
 ## Add-ons and Preview Features
 
@@ -415,7 +415,7 @@ These services are production-supported and enabled by default:
 | Windows workers | Informational | Not a supported deployment target at GA |
 | Talos Linux | Preview | Immutable OS with disk encryption, WireGuard, vTPM |
 
-**Evidence:** `docs/reference/platform-services.md`, `docs/explanation/provider-comparison.md`
+**Evidence:** `docs/reference/platform-services.md`, `docs/concepts/provider-comparison.md`
 
 ## Container Image Reference
 
@@ -623,7 +623,7 @@ openCenter supports three CNI plugins. Only one can be active per cluster.
 | OVN | Cloud LB | OpenStack with OVN networking |
 | cloud-native | Provider LB | AWS (not GA for cluster provisioning, but usable for services) |
 
-**Evidence:** `internal/config/types_kubernetes.go` NetworkPlugin, `docs/how-to/configure-networking.md`
+**Evidence:** `internal/config/types_kubernetes.go` NetworkPlugin, `docs/operations/configure-networking.md`
 
 ## Deploy Ingress Resources
 
@@ -739,7 +739,7 @@ When `os_hardening: true`, Kubespray applies kernel-level security:
 
 For zero-trust or multi-tenant environments, Istio provides mTLS between all pods. This is not enabled by default because it adds operational complexity.
 
-**Evidence:** `internal/config/types_security.go`, `docs/explanation/security-model.md`
+**Evidence:** `internal/config/types_security.go`, `docs/concepts/security-model.md`
 
 ## Add Secret Management
 
@@ -780,7 +780,7 @@ opencenter secrets validate my-cluster                  # Detect configuration d
 opencenter secrets sync my-cluster                      # Synchronize secrets
 ```
 
-**Evidence:** `internal/sops/manager.go`, `docs/explanation/security-model.md`
+**Evidence:** `internal/sops/manager.go`, `docs/concepts/security-model.md`
 
 ## Workload Storage
 
@@ -868,7 +868,7 @@ applications/overlays/<cluster>/services/kyverno/custom-policies/
 
 Namespaces that need elevated privileges (e.g., `kube-system`, `flux-system`) are exempted at the Pod Security Admission level via `pod_security_exemptions` in the cluster configuration.
 
-**Evidence:** `docs/explanation/security-model.md`, `docs/reference/platform-services.md` kyverno
+**Evidence:** `docs/concepts/security-model.md`, `docs/reference/platform-services.md` kyverno
 
 ## Node and Pod Scalability
 
@@ -953,7 +953,7 @@ The Git repository is the recovery artifact. Protect it accordingly.
 
 For multi-region deployments, each region gets its own cluster with its own GitOps overlay. Shared configuration lives in `openCenter-gitops-base`. Region-specific overrides live in the cluster overlay.
 
-**Evidence:** `docs/how-to/backup-and-restore.md`, `docs/reference/platform-services.md` velero/etcd-backup
+**Evidence:** `docs/operations/backup-and-restore.md`, `docs/reference/platform-services.md` velero/etcd-backup
 
 ## Monitor and Collect Logs and Metrics
 
@@ -1066,7 +1066,7 @@ FluxCD handles application-level drift automatically by continuously reconciling
 | Backup | Automated via etcd-backup and Velero schedules |
 | Restore | `velero restore create --from-backup <name>` |
 
-**Evidence:** `docs/reference/cli-commands.md`, `docs/explanation/drift-detection.md`
+**Evidence:** `docs/reference/cli-commands.md`, `docs/concepts/drift-detection.md`
 
 ## Cost Management
 
@@ -1095,15 +1095,15 @@ Right-size nodes and storage based on observed utilization, not initial estimate
 
 ## Next Steps
 
-* [Getting Started Tutorial](getting-started/getting-started.md) -- Deploy your first cluster end-to-end
-* [Configuration Schema Reference](reference/configuration-schema.md) -- Complete field reference for the configuration file
-* [Provider Comparison](concepts/provider-comparison.md) -- Detailed trade-offs between OpenStack, VMware, bare metal, and Kind
-* [Security Model](concepts/security-model.md) -- Deep dive into the defense-in-depth security architecture
-* [GitOps Workflow](concepts/gitops-workflow.md) -- How FluxCD reconciliation works
-* [Configure Networking](operations/configure-networking.md) -- Step-by-step networking configuration
-* [Manage Secrets](operations/manage-secrets.md) -- SOPS encryption and key rotation
-* [Backup and Restore](operations/backup-and-restore.md) -- Disaster recovery procedures
-* [Customize Services](operations/customize-services.md) -- Enable, disable, and configure platform services
+* [Getting Started Tutorial](../getting-started/getting-started.md) -- Deploy your first cluster end-to-end
+* [Configuration Schema Reference](../reference/configuration-schema.md) -- Complete field reference for the configuration file
+* [Provider Comparison](provider-comparison.md) -- Detailed trade-offs between OpenStack, VMware, bare metal, and Kind
+* [Security Model](security-model.md) -- Deep dive into the defense-in-depth security architecture
+* [GitOps Workflow](gitops-workflow.md) -- How FluxCD reconciliation works
+* [Configure Networking](../operations/configure-networking.md) -- Step-by-step networking configuration
+* [Manage Secrets](../operations/manage-secrets.md) -- SOPS encryption and key rotation
+* [Backup and Restore](../operations/backup-and-restore.md) -- Disaster recovery procedures
+* [Customize Services](../operations/customize-services.md) -- Enable, disable, and configure platform services
 
 ## Related Resources
 
@@ -1125,8 +1125,8 @@ This document is based on:
 * Provider implementations: `internal/cloud/factory.go`
 * GitOps generation: `internal/gitops/generator.go`
 * SOPS management: `internal/sops/manager.go`
-* Existing documentation: `docs/explanation/architecture.md`, `docs/explanation/security-model.md`, `docs/explanation/gitops-workflow.md`, `docs/explanation/provider-comparison.md`
+* Existing documentation: `docs/concepts/architecture.md`, `docs/concepts/security-model.md`, `docs/concepts/gitops-workflow.md`, `docs/concepts/provider-comparison.md`
 * Platform services: `docs/reference/platform-services.md`
-* Networking guide: `docs/how-to/configure-networking.md`
-* Backup guide: `docs/how-to/backup-and-restore.md`
+* Networking guide: `docs/operations/configure-networking.md`
+* Backup guide: `docs/operations/backup-and-restore.md`
 * Ecosystem architecture: `.kiro/steering/ecosystem.md`

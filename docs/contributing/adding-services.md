@@ -13,7 +13,7 @@ tags: [services, rendering, gitops, auto-descriptor]
 
 ## Prerequisites
 
-* Development environment set up (see [Development Setup](contributing/development-setup.md))
+* Development environment set up (see [Development Setup](development-setup.md))
 * Service’s Helm chart already added to `openCenter-gitops-base` under `applications/base/services/<service>/`
 
 ## Quick Path: Standard Services (Auto-Descriptor)

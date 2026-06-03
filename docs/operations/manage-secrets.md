@@ -440,9 +440,9 @@ kubectl create secret generic sops-age \
 
 ## Next Steps
 
-* [Customize Services](operations/customize-services.md) - Configure platform services with encrypted secrets
-* [Backup and Restore](operations/backup-and-restore.md) - Include encryption keys in backups
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Fix SOPS-related issues
+* [Customize Services](customize-services.md) - Configure platform services with encrypted secrets
+* [Backup and Restore](backup-and-restore.md) - Include encryption keys in backups
+* [Troubleshoot Deployment](troubleshoot-deployment.md) - Fix SOPS-related issues
 
 ---
 

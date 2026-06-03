@@ -184,7 +184,7 @@ Key properties:
 
 ## Package Map
 
-For a complete architectural map of all packages, see [Codemaps Index](index.md).
+For a complete architectural map of all packages, see [Codemaps Index](../index.md).
 
 Key packages by responsibility:
 
@@ -509,10 +509,10 @@ Extend CLI with external plugins:
 
 ## Further Reading
 
-* [GitOps Workflow](concepts/gitops-workflow.md) - Repository structure and reconciliation
-* [Security Model](concepts/security-model.md) - Security architecture and controls
-* [Configuration Lifecycle](concepts/configuration-lifecycle.md) - Configuration management
-* [Provider Comparison](concepts/provider-comparison.md) - Choosing infrastructure providers
+* [GitOps Workflow](gitops-workflow.md) - Repository structure and reconciliation
+* [Security Model](security-model.md) - Security architecture and controls
+* [Configuration Lifecycle](configuration-lifecycle.md) - Configuration management
+* [Provider Comparison](provider-comparison.md) - Choosing infrastructure providers
 
 ---
 
@@ -520,4 +520,4 @@ Extend CLI with external plugins:
 
 **Last Updated:** 2026-05-11
 
-For detailed code-level architecture maps, see [Codemaps](index.md).
+For detailed code-level architecture maps, see [Codemaps](../index.md).

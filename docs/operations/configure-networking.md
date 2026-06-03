@@ -591,9 +591,9 @@ ping 10.0.0.11  # Should timeout
 
 ## Next Steps
 
-* [Customize Services](operations/customize-services.md) - Configure network-related services
-* [Add Worker Pools](operations/add-worker-pools.md) - Scale network capacity
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Fix network issues
+* [Customize Services](customize-services.md) - Configure network-related services
+* [Add Worker Pools](add-worker-pools.md) - Scale network capacity
+* [Troubleshoot Deployment](troubleshoot-deployment.md) - Fix network issues
 
 ---
 

@@ -540,7 +540,7 @@ require (
 * Drift detection
 * Input validation failures
 
-**Integrity:** Each log entry is signed with an HMAC-SHA256 key stored at `~/.config/opencenter/audit/audit.key`. The key is a 32-byte random value generated on first use. Signatures cover timestamp, event type, actor, resource, action, and result fields. See [Audit Signing Key](reference/audit-key.md) for the full reference.
+**Integrity:** Each log entry is signed with an HMAC-SHA256 key stored at `~/.config/opencenter/audit/audit.key`. The key is a 32-byte random value generated on first use. Signatures cover timestamp, event type, actor, resource, action, and result fields. See [Audit Signing Key](../reference/audit-key.md) for the full reference.
 
 **Retention:** 30 days, 100 MB max file size with automatic rotation.
 
@@ -709,10 +709,10 @@ kubectl logs -n kube-system kube-apiserver-<node>
 
 ## Further Reading
 
-* [Architecture](concepts/architecture.md) - System design and components
-* [GitOps Workflow](concepts/gitops-workflow.md) - Repository structure and reconciliation
-* [Manage Secrets](operations/manage-secrets.md) - SOPS and secrets management
-* [Customize Services](operations/customize-services.md) - Security service configuration
+* [Architecture](architecture.md) - System design and components
+* [GitOps Workflow](gitops-workflow.md) - Repository structure and reconciliation
+* [Manage Secrets](../operations/manage-secrets.md) - SOPS and secrets management
+* [Customize Services](../operations/customize-services.md) - Security service configuration
 
 ---
 

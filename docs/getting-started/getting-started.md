@@ -152,7 +152,7 @@ opencenter:
       enabled: true  # Log aggregation
 ```
 
-See [Platform Services Reference](reference/platform-services.md) for complete list.
+See [Platform Services Reference](../reference/platform-services.md) for complete list.
 
 ## Step 4: Select Your Cluster
 
@@ -373,10 +373,10 @@ Verify everything is working:
 
 Now that you have a working cluster, explore:
 
-* **_[Add Worker Pools](operations/add-worker-pools.md)_** - Scale your cluster
-* **_[Manage Secrets](operations/manage-secrets.md)_** - Rotate encryption keys
-* **_[Customize Services](operations/customize-services.md)_** - Configure platform services
-* **_[Deploy Applications](index.md)_** - Add your workloads
+* **_[Add Worker Pools](../operations/add-worker-pools.md)_** - Scale your cluster
+* **_[Manage Secrets](../operations/manage-secrets.md)_** - Rotate encryption keys
+* **_[Customize Services](../operations/customize-services.md)_** - Configure platform services
+* **_[Deploy Applications](../index.md)_** - Add your workloads
 
 ## Troubleshooting
 
@@ -390,7 +390,7 @@ Now that you have a working cluster, explore:
 * Invalid CIDR ranges or overlapping subnets
 * Provider-specific constraints not met
 
-See [Troubleshooting Guide](../how-to/troubleshoot-deployment.md#validation-errors) for details.
+See [Troubleshooting Guide](../operations/troubleshoot-deployment.md#validation-errors) for details.
 
 <mark>#</mark> Bootstrap Hangs
 
@@ -429,7 +429,7 @@ Common causes:
 * SOPS decryption failure (Age key not found)
 * Service configuration errors
 
-See [Troubleshooting Guide](operations/troubleshoot-deployment.md) for complete solutions.
+See [Troubleshooting Guide](../operations/troubleshoot-deployment.md) for complete solutions.
 
 ## Summary
 

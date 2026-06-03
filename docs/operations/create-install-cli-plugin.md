@@ -15,7 +15,7 @@ tags: [plugins, cli, extensions, checksum, installation]
 
 External CLI plugins extend `opencenter` with new top-level subcommands. A plugin is any executable named `opencenter-<name>` placed in a discovery location. This guide covers building, installing, and checksum-registering a plugin so it runs without warnings and is protected against tampering.
 
-For background on how the plugin mechanism works, see [Plugin External CLI](concepts/plugin-external-cli.md).
+For background on how the plugin mechanism works, see [Plugin External CLI](../concepts/plugin-external-cli.md).
 
 ## Prerequisites
 
@@ -207,10 +207,10 @@ Built-in commands always take precedence. Rename the plugin to avoid the collisi
 
 ## Related Reading
 
-* [Plugin External CLI](concepts/plugin-external-cli.md) -- how the discovery and execution model works
-* [Plugin Internal Services](concepts/plugin-internal-services.md) -- for adding platform services (cert-manager, Loki, etc.)
-* [File Locations](reference/file-locations.md) -- plugins directory and checksums.txt location
-* [CLI Commands](reference/cli-commands.md) -- `opencenter plugin list` reference
+* [Plugin External CLI](../concepts/plugin-external-cli.md) -- how the discovery and execution model works
+* [Plugin Internal Services](../concepts/plugin-internal-services.md) -- for adding platform services (cert-manager, Loki, etc.)
+* [File Locations](../reference/file-locations.md) -- plugins directory and checksums.txt location
+* [CLI Commands](../reference/cli-commands.md) -- `opencenter plugin list` reference
 
 ## Evidence
 

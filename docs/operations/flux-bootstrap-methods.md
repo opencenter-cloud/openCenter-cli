@@ -372,9 +372,9 @@ kubectl run -it --rm debug --image=alpine --restart=Never -- \
 
 ## Next Steps
 
-* [Manage Secrets](operations/manage-secrets.md) - Encrypt secrets with SOPS
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Fix bootstrap issues
-* [GitOps Workflow](concepts/gitops-workflow.md) - Understand reconciliation
+* [Manage Secrets](manage-secrets.md) - Encrypt secrets with SOPS
+* [Troubleshoot Deployment](troubleshoot-deployment.md) - Fix bootstrap issues
+* [GitOps Workflow](../concepts/gitops-workflow.md) - Understand reconciliation
 
 ---
 
@@ -386,5 +386,5 @@ This how-to guide is based on:
 * Bootstrap implementation: `internal/localdev/flux/service.go:51-160` (provider-specific bootstrap commands)
 * URL parsing: `internal/localdev/flux/service.go:162-230` (parseGitHubURL, parseGitLabURL, parseGitURL)
 * SSH key generation: `internal/sops/manager.go`
-* Security model: `docs/explanation/security-model.md:104-108`
+* Security model: `docs/concepts/security-model.md:104-108`
 * FluxCD documentation: https://fluxcd.io/docs/installation/bootstrap/

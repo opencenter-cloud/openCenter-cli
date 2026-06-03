@@ -518,10 +518,10 @@ velero restore create pv-restore \
 
 ## Related Topics
 
-* [Upgrade Kubernetes](operations/upgrade-kubernetes.md) - Backup before upgrades
-* [Migrate Clusters](operations/migrate-clusters.md) - Use backups for migration
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Restore from backup
-* [Platform Services](reference/platform-services.md) - etcd-backup and Velero configuration
+* [Upgrade Kubernetes](upgrade-kubernetes.md) - Backup before upgrades
+* [Migrate Clusters](migrate-clusters.md) - Use backups for migration
+* [Troubleshoot Deployment](troubleshoot-deployment.md) - Restore from backup
+* [Platform Services](../reference/platform-services.md) - etcd-backup and Velero configuration
 
 ---
 

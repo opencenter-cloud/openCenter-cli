@@ -37,7 +37,7 @@ Results before edits:
 
 * Removed the unreferenced `internal/util/template` package. No Go package imported it; active template rendering lives under `internal/gitops` and `internal/template`.
 * Trimmed `internal/util/files` to the atomic write helper still used by `internal/sops` and `internal/util/crypto`.
-* Updated `docs/explanation/architecture.md` so the template-engine evidence no longer points at the removed package.
+* Updated `docs/concepts/architecture.md` so the template-engine evidence no longer points at the removed package.
 
 ## Refactor Duplicate
 

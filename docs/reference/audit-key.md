@@ -177,6 +177,6 @@ Not possible. Without the original 32-byte key, HMAC signatures cannot be recomp
 
 ## Related Topics
 
-* [Security Model](concepts/security-model.md) -- Defense-in-depth architecture
-* [File Locations](reference/file-locations.md) -- All CLI file paths
-* [Environment Variables](reference/environment-variables.md) -- `OPENCENTER_CONFIG_DIR`, `OPENCENTER_STATE_DIR`
+* [Security Model](../concepts/security-model.md) -- Defense-in-depth architecture
+* [File Locations](file-locations.md) -- All CLI file paths
+* [Environment Variables](environment-variables.md) -- `OPENCENTER_CONFIG_DIR`, `OPENCENTER_STATE_DIR`

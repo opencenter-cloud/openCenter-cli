@@ -39,7 +39,7 @@ Before starting, ensure you have:
 
 **Knowledge:**
 
-* Completed [Getting Started](getting-started/getting-started.md) tutorial
+* Completed [Getting Started](getting-started.md) tutorial
 * Familiar with openCenter configuration
 * Basic Git knowledge
 
@@ -761,19 +761,19 @@ Now that you have a multi-cluster deployment, explore these topics:
 
 **Cluster Management:**
 
-* [Backup and Restore](operations/backup-and-restore.md) - Disaster recovery for all clusters
-* [Upgrade Kubernetes](operations/upgrade-kubernetes.md) - Upgrade all clusters
-* [Migrate Clusters](operations/migrate-clusters.md) - Migrate between providers
+* [Backup and Restore](../operations/backup-and-restore.md) - Disaster recovery for all clusters
+* [Upgrade Kubernetes](../operations/upgrade-kubernetes.md) - Upgrade all clusters
+* [Migrate Clusters](../operations/migrate-clusters.md) - Migrate between providers
 
 **Advanced Topics:**
 
-* [Integrate CI/CD](operations/integrate-ci-cd.md) - Automate deployments
-* [Configuration Lifecycle](concepts/configuration-lifecycle.md) - Configuration management
+* [Integrate CI/CD](../operations/integrate-ci-cd.md) - Automate deployments
+* [Configuration Lifecycle](../concepts/configuration-lifecycle.md) - Configuration management
 
 **Understanding:**
 
-* [Organization Model](concepts/architecture.md) - Multi-tenancy patterns
-* [GitOps Workflow](concepts/gitops-workflow.md) - How GitOps works
+* [Organization Model](../concepts/architecture.md) - Multi-tenancy patterns
+* [GitOps Workflow](../concepts/gitops-workflow.md) - How GitOps works
 
 ## What You Learned
 

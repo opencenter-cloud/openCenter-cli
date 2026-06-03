@@ -9,6 +9,8 @@ tags: [validation, cluster, config, v2, cli]
 ---
 # Cluster Validate Execution Flow
 
+**Purpose:** For developers, maintainers, explains what happens when `opencenter cluster validate` runs.
+
 This document describes the code path and validation layers used by:
 
 ```bash

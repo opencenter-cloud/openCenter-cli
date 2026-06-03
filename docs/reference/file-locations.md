@@ -362,7 +362,7 @@ rm -rf ~/.cache/opencenter/
 
 **Location:** `~/.config/opencenter/audit/audit.key`
 
-**Purpose:** 32-byte HMAC-SHA256 key used to sign audit log entries for tamper detection. Generated automatically on first audit write. See [Audit Signing Key](reference/audit-key.md) for details.
+**Purpose:** 32-byte HMAC-SHA256 key used to sign audit log entries for tamper detection. Generated automatically on first audit write. See [Audit Signing Key](audit-key.md) for details.
 
 **Permissions:** `0600`
 
@@ -393,7 +393,7 @@ rm -rf ~/.cache/opencenter/
 
 **Verification:** `checksums.txt`, when present, uses standard `sha256sum` formatting (`<sha256>  <filename>`, two spaces) and is matched by plugin basename. Unverified plugins emit a warning; mismatched checksums block execution.
 
-**See also:** [Create and Install a CLI Plugin](operations/create-install-cli-plugin.md)
+**See also:** [Create and Install a CLI Plugin](../operations/create-install-cli-plugin.md)
 
 **Evidence:** `internal/plugins/`, `cmd/plugins.go`
 
@@ -594,10 +594,10 @@ find ~/.local/share/opencenter/backups/ -name "*.yaml" -mtime +30 -delete
 
 ## Related Topics
 
-* [Configuration Schema](reference/configuration-schema.md) - Configuration file structure
-* [CLI Commands](reference/cli-commands.md) - Command reference
-* [Environment Variables](reference/environment-variables.md) - Environment variable reference
-* [Manage Secrets](operations/manage-secrets.md) - Secrets management
+* [Configuration Schema](configuration-schema.md) - Configuration file structure
+* [CLI Commands](cli-commands.md) - Command reference
+* [Environment Variables](environment-variables.md) - Environment variable reference
+* [Manage Secrets](../operations/manage-secrets.md) - Secrets management
 
 ---
 

@@ -9,6 +9,8 @@ tags: [vmware, vsphere, deployment, csi]
 ---
 # VMware Provider Guide
 
+**Purpose:** For platform engineers, operators, shows how to deploying openCenter clusters on VMware vSphere with pre-provisioned VMs.
+
 Guide for deploying openCenter clusters on VMware vSphere infrastructure with pre-provisioned VMs.
 
 ## Table of Contents
@@ -453,7 +455,7 @@ ssh ubuntu@worker-1.example.com "ip addr show ens192"
 
 ## Related Documentation
 
-* [Kubespray Deployment Method](getting-started/getting-started.md)
-* [vSphere CSI Driver Configuration](reference/platform-services.md)
-* [Baremetal Provider](providers/README.md) (similar architecture)
-* [Storage Configuration](reference/platform-services.md)
+* [Kubespray Deployment Method](../getting-started/getting-started.md)
+* [vSphere CSI Driver Configuration](../reference/platform-services.md)
+* [Baremetal Provider](README.md) (similar architecture)
+* [Storage Configuration](../reference/platform-services.md)

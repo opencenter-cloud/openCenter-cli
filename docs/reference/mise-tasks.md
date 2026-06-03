@@ -615,10 +615,10 @@ mise --version
 
 ## Related Topics
 
-* [Development Setup](contributing/development-setup.md) - Set up development environment
-* [Testing Guide](contributing/testing-guide.md) - Write and run tests
-* [Build System](contributing/build-system.md) - Understand mise-based build system
-* [Contributing](contributing/contributing.md) - Contribute code
+* [Development Setup](../contributing/development-setup.md) - Set up development environment
+* [Testing Guide](../contributing/testing-guide.md) - Write and run tests
+* [Build System](../contributing/build-system.md) - Understand mise-based build system
+* [Contributing](../contributing/contributing.md) - Contribute code
 
 ---
 

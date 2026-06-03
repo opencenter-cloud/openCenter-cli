@@ -11,7 +11,7 @@ tags: [cli, commands, flags, reference]
 
 **Purpose:** Complete reference of the shipped `opencenter` command tree, generated from the live Cobra command graph.
 
-Run `go run -tags tools ./cmd/docs` to refresh the per-command pages under `docs/modules/ROOT/pages/reference/opencenter/`.
+Run `go run -tags tools ./cmd/docs` to refresh the per-command pages under `docs/reference/opencenter/`.
 
 ## Global Flags
 

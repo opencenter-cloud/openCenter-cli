@@ -31,7 +31,7 @@ openCenter CLI uses environment variables for:
 4. CLI config file (`~/.config/opencenter/config.yaml`)
 5. Built-in defaults
 
-For the full breakdown including directory resolution and provider credentials, see [Configuration Precedence](reference/configuration-precedence.md).
+For the full breakdown including directory resolution and provider credentials, see [Configuration Precedence](configuration-precedence.md).
 
 ## Core Environment Variables
 
@@ -871,10 +871,10 @@ opencenter cluster init my-cluster cluster.worker_count=5
 
 ## Related Topics
 
-* [Configuration Schema](reference/configuration-schema.md) - Complete field reference
-* [CLI Commands](reference/cli-commands.md) - Command-line flags
-* [Integrate CI/CD](operations/integrate-ci-cd.md) - CI/CD integration
-* [Configuration Lifecycle](concepts/configuration-lifecycle.md) - Configuration management
+* [Configuration Schema](configuration-schema.md) - Complete field reference
+* [CLI Commands](cli-commands.md) - Command-line flags
+* [Integrate CI/CD](../operations/integrate-ci-cd.md) - CI/CD integration
+* [Configuration Lifecycle](../concepts/configuration-lifecycle.md) - Configuration management
 
 ---
 

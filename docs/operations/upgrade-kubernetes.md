@@ -16,7 +16,7 @@ This guide covers planning, testing, and executing Kubernetes version upgrades a
 ## Prerequisites
 
 * Existing openCenter cluster
-* Cluster backup (see [Backup and Restore](operations/backup-and-restore.md))
+* Cluster backup (see [Backup and Restore](backup-and-restore.md))
 * Access to cluster configuration
 * Understanding of Kubernetes version skew policy
 
@@ -573,10 +573,10 @@ kubectl scale deployment <name> --replicas=3
 
 ## Related Topics
 
-* [Backup and Restore](operations/backup-and-restore.md) - Backup before upgrade
-* [Troubleshoot Deployment](operations/troubleshoot-deployment.md) - Debug upgrade issues
-* [Configuration Lifecycle](concepts/configuration-lifecycle.md) - Configuration management
-* [Platform Services](reference/platform-services.md) - Service compatibility
+* [Backup and Restore](backup-and-restore.md) - Backup before upgrade
+* [Troubleshoot Deployment](troubleshoot-deployment.md) - Debug upgrade issues
+* [Configuration Lifecycle](../concepts/configuration-lifecycle.md) - Configuration management
+* [Platform Services](../reference/platform-services.md) - Service compatibility
 
 ---
 

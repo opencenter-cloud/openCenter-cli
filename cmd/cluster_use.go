@@ -414,8 +414,9 @@ func newClusterUseCmd() *cobra.Command {
 	var persistentSelection bool
 
 	cmd := &cobra.Command{
-		Use:   "use [name]",
-		Short: "Set the active cluster",
+		Use:     "use [name]",
+		Aliases: []string{"select"},
+		Short:   "Set the active cluster",
 		Long: `Set the active cluster and display comprehensive information including:
 - Cluster metadata (name, environment, region, status, organization)
 - GitOps repository paths and structure

@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
@@ -60,7 +59,6 @@ type ConfigurationManager struct {
 	cache        *ConfigCache
 	pathResolver *paths.PathResolver
 	fileSystem   fs.FileSystem
-	mu           sync.RWMutex
 }
 
 // NewConfigurationManagerWithDeps creates a ConfigurationManager with custom dependencies.
@@ -450,8 +448,6 @@ func (cm *ConfigurationManager) List(ctx context.Context) ([]string, error) {
 	return cm.ListWithOrganization(ctx, "")
 }
 
-// configFileSuffix is the naming convention for cluster configuration files.
-const configFileSuffix = "-config.yaml"
 
 // ListWithOrganization returns cluster names filtered by organization.
 //
@@ -599,18 +595,6 @@ func (cm *ConfigurationManager) discoverClustersInBlueprints(orgDir string) []st
 // cluster-state zone at <state>/<org>/<cluster>/<cluster>-config.yaml.
 // Returns the cluster name and true if the filename matches, or empty string
 // and false otherwise.
-func parseConfigFileName(filename string) (string, bool) {
-	if strings.HasPrefix(filename, ".") || !strings.HasSuffix(filename, configFileSuffix) {
-		return "", false
-	}
-
-	name := filename[:len(filename)-len(configFileSuffix)]
-	if name == "" {
-		return "", false
-	}
-
-	return name, true
-}
 
 // Delete removes a configuration file.
 //

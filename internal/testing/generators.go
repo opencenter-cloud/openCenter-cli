@@ -273,14 +273,6 @@ func (g *ConfigGenerator) randomKubernetesVersion() string {
 	return versions[g.rand.Intn(len(versions))]
 }
 
-func (g *ConfigGenerator) randomInt(min, max int) int {
-	return min + g.rand.Intn(max-min+1)
-}
-
-func (g *ConfigGenerator) randomBackendType() string {
-	backends := []string{"local", "s3", "gcs", "azurerm"}
-	return backends[g.rand.Intn(len(backends))]
-}
 
 func (g *ConfigGenerator) randomRegion() string {
 	regions := []string{"RegionOne", "RegionTwo", "us-east", "us-west", "eu-central"}
@@ -292,26 +284,10 @@ func (g *ConfigGenerator) randomAWSRegion() string {
 	return regions[g.rand.Intn(len(regions))]
 }
 
-func (g *ConfigGenerator) randomTenantName() string {
-	return fmt.Sprintf("tenant-%d", g.rand.Intn(1000))
-}
-
-func (g *ConfigGenerator) randomAgeRecipient() string {
-	// Generate a realistic-looking Age public key
-	chars := "abcdefghijklmnopqrstuvwxyz0123456789"
-	key := make([]byte, 58)
-	for i := range key {
-		key[i] = chars[g.rand.Intn(len(chars))]
-	}
-	return fmt.Sprintf("age1%s", string(key))
-}
-
 func (g *ConfigGenerator) randomCIDR(defaultCIDR string) string {
-	// For simplicity, return default or slightly modified CIDR
 	if g.randomBool() {
 		return defaultCIDR
 	}
-	// Generate a random /16 or /12 CIDR
 	return fmt.Sprintf("10.%d.0.0/%d", g.rand.Intn(256), 12+g.rand.Intn(5)*4)
 }
 
@@ -322,10 +298,6 @@ func (g *ConfigGenerator) randomDNSServers() []string {
 		{"9.9.9.9", "149.112.112.112"},
 	}
 	return servers[g.rand.Intn(len(servers))]
-}
-
-func (g *ConfigGenerator) randomSSHKey() string {
-	return fmt.Sprintf("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC%s user@host", g.randomString("", 64))
 }
 
 func (g *ConfigGenerator) randomGitRepository() string {
@@ -339,15 +311,6 @@ func (g *ConfigGenerator) randomBranch() string {
 
 func (g *ConfigGenerator) randomBool() bool {
 	return g.rand.Intn(2) == 1
-}
-
-func (g *ConfigGenerator) randomString(prefix string, length int) string {
-	chars := "abcdefghijklmnopqrstuvwxyz0123456789"
-	result := make([]byte, length)
-	for i := range result {
-		result[i] = chars[g.rand.Intn(len(chars))]
-	}
-	return prefix + string(result)
 }
 
 // TemplateDataGenerator provides methods for generating realistic template test data

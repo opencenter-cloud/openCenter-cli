@@ -381,16 +381,6 @@ func (p *EnhancedFlagParser) detectArrayType(flagName string) string {
 }
 
 // extractPath extracts the configuration path from a flag name
-func (p *EnhancedFlagParser) extractPath(flagName string) string {
-	// For JSON/YAML flags, extract the path part
-	if strings.HasPrefix(flagName, "json-set-") {
-		return strings.TrimPrefix(flagName, "json-set-")
-	}
-	if strings.HasPrefix(flagName, "yaml-set-") {
-		return strings.TrimPrefix(flagName, "yaml-set-")
-	}
-	return flagName
-}
 
 // extractVariableName extracts the variable name from a template flag
 func (p *EnhancedFlagParser) extractVariableName(flagName string) string {

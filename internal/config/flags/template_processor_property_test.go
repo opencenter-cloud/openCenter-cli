@@ -14,7 +14,6 @@
 package flags
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/leanovate/gopter"
@@ -332,22 +331,3 @@ func deepCopyValue(original interface{}) interface{} {
 	}
 }
 
-func containsTemplateVariables(value interface{}) bool {
-	switch v := value.(type) {
-	case string:
-		return strings.Contains(v, "{{") && strings.Contains(v, "}}")
-	case map[string]interface{}:
-		for key, val := range v {
-			if containsTemplateVariables(key) || containsTemplateVariables(val) {
-				return true
-			}
-		}
-	case []interface{}:
-		for _, val := range v {
-			if containsTemplateVariables(val) {
-				return true
-			}
-		}
-	}
-	return false
-}

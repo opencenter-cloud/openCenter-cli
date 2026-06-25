@@ -21,7 +21,6 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/util"
 	utilerrors "github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
-	"gopkg.in/yaml.v3"
 )
 
 type ConfigureOptions struct {
@@ -598,14 +597,3 @@ func joinedPromptIDs(prompts []orchestration.PromptSpec) string {
 	return strings.Join(ids, ",")
 }
 
-func cloneConfigMap(cfg *v2.Config) (map[string]any, error) {
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return nil, err
-	}
-	var configMap map[string]any
-	if err := yaml.Unmarshal(data, &configMap); err != nil {
-		return nil, err
-	}
-	return configMap, nil
-}

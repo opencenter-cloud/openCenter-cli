@@ -527,15 +527,6 @@ func validTestConfig() string {
 `
 }
 
-func invalidTestConfig() string {
-	return `opencenter:
-  cluster:
-    cluster_name: ""
-    cluster_fqdn: ""
-  infrastructure:
-    provider: invalid-provider
-`
-}
 
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsSubstring(s, substr))

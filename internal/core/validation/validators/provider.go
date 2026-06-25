@@ -530,18 +530,3 @@ func (v *ProviderValidator) validateVMwareConfig(result *validation.ValidationRe
 
 
 // isValidMACAddress checks if a string is a valid MAC address.
-func isValidMACAddress(mac string) bool {
-	// Simple validation for common MAC address formats
-	// Supports: XX:XX:XX:XX:XX:XX, XX-XX-XX-XX-XX-XX, XXXXXXXXXXXX
-	mac = strings.ReplaceAll(mac, ":", "")
-	mac = strings.ReplaceAll(mac, "-", "")
-	if len(mac) != 12 {
-		return false
-	}
-	for _, c := range mac {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return false
-		}
-	}
-	return true
-}

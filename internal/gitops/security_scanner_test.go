@@ -230,11 +230,3 @@ stringData:
 	assertFinding(t, findings, "stub-secret-changeme")
 }
 
-func assertNoFinding(t *testing.T, findings []SecretScanFinding, rule string) {
-	t.Helper()
-	for _, finding := range findings {
-		if finding.Rule == rule {
-			t.Fatalf("unexpected finding rule %q: %s", rule, finding.Message)
-		}
-	}
-}

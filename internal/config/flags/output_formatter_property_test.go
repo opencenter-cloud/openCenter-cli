@@ -16,7 +16,6 @@ package flags
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -270,23 +269,6 @@ func TestOutputFormatConsistency(t *testing.T) {
 }
 
 // genOutputConflicts generates random conflict data for output testing
-func genOutputConflicts() gopter.Gen {
-	return gen.SliceOf(
-		gen.Struct(reflect.TypeOf(ConfigConflict{}), map[string]gopter.Gen{
-			"Path": gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 }),
-			"Sources": gen.SliceOfN(2, gen.Struct(reflect.TypeOf(ConflictSource{}), map[string]gopter.Gen{
-				"Type":     gen.OneConstOf(SourceFile, SourceCLI),
-				"Path":     gen.AlphaString(),
-				"Priority": gen.IntRange(1, 10),
-				"Value":    gen.AlphaString(),
-			})),
-			"Resolution":    gen.AlphaString(),
-			"ResolvedValue": gen.AlphaString(),
-		}),
-	).SuchThat(func(conflicts []ConfigConflict) bool {
-		return len(conflicts) <= 5 // Limit size for performance
-	})
-}
 
 // extractConfigFromOutput extracts the configuration part from formatted output
 func extractConfigFromOutput(output string) string {

@@ -266,13 +266,6 @@ func genTestValue() gopter.Gen {
 	)
 }
 
-func genArrayIndexForManipulation() gopter.Gen {
-	return gen.IntRange(0, 10)
-}
-
-func genSmallArrayIndex() gopter.Gen {
-	return gen.IntRange(0, 3)
-}
 
 // Helper function for max (Go 1.21+ has this built-in)
 func max(a, b int) int {

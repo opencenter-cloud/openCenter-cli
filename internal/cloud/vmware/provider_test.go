@@ -22,9 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
-	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
-	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/cloud"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
@@ -154,12 +152,3 @@ func TestProvider_DetectDriftUsesSharedComparer(t *testing.T) {
 	assert.Equal(t, cloud.SeverityCritical, report.Drifts[0].Severity)
 }
 
-func objectName(ctx context.Context, client *govmomi.Client, ref types.ManagedObjectReference) (string, error) {
-	nameable, ok := object.NewReference(client.Client, ref).(interface {
-		ObjectName(context.Context) (string, error)
-	})
-	if !ok {
-		return "", nil
-	}
-	return nameable.ObjectName(ctx)
-}

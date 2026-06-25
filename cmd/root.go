@@ -233,23 +233,6 @@ func addGlobalFlags(cmd *cobra.Command) {
 }
 
 // parseGlobalFlags extracts global flags from the command.
-func parseGlobalFlags(cmd *cobra.Command) (*GlobalFlags, error) {
-	config, _ := cmd.Flags().GetString("config")
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	logLevel, _ := cmd.Flags().GetString("log-level")
-	set, _ := cmd.Flags().GetStringArray("set")
-	showActive, _ := cmd.Flags().GetBool("show-active")
-	breakLock, _ := cmd.Flags().GetBool("break-lock")
-
-	return &GlobalFlags{
-		Config:     config,
-		DryRun:     dryRun,
-		LogLevel:   logLevel,
-		Set:        set,
-		ShowActive: showActive,
-		BreakLock:  breakLock,
-	}, nil
-}
 
 // GetRootCmd returns the root cobra command.
 func GetRootCmd() *cobra.Command {

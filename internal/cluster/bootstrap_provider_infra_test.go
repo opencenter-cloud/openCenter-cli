@@ -401,15 +401,6 @@ func bootstrapStepIDs(steps []bootstrapStep) []string {
 	return ids
 }
 
-func assertRecordedCommand(t *testing.T, calls []recordedLifecycleCommand, name, args string) {
-	t.Helper()
-	for _, call := range calls {
-		if call.name == name && strings.Join(call.args, " ") == args {
-			return
-		}
-	}
-	t.Fatalf("expected command %s %s, got:\n%s", name, args, renderRecordedCommands(calls))
-}
 
 func assertRecordedCommandContains(t *testing.T, calls []recordedLifecycleCommand, name, argsSubstring string) {
 	t.Helper()
@@ -421,23 +412,6 @@ func assertRecordedCommandContains(t *testing.T, calls []recordedLifecycleComman
 	t.Fatalf("expected command %s containing %q, got:\n%s", name, argsSubstring, renderRecordedCommands(calls))
 }
 
-func assertNoRecordedCommandName(t *testing.T, calls []recordedLifecycleCommand, name string) {
-	t.Helper()
-	for _, call := range calls {
-		if call.name == name {
-			t.Fatalf("did not expect command %s, got:\n%s", name, renderRecordedCommands(calls))
-		}
-	}
-}
-
-func assertNoRecordedCommandContains(t *testing.T, calls []recordedLifecycleCommand, name, argsSubstring string) {
-	t.Helper()
-	for _, call := range calls {
-		if call.name == name && strings.Contains(strings.Join(call.args, " "), argsSubstring) {
-			t.Fatalf("did not expect command %s containing %q, got:\n%s", name, argsSubstring, renderRecordedCommands(calls))
-		}
-	}
-}
 
 func renderRecordedCommands(calls []recordedLifecycleCommand) string {
 	var b strings.Builder

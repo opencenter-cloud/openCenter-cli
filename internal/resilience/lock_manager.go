@@ -67,7 +67,6 @@ type LockState struct {
 type lockManager struct {
 	config  LockConfig
 	backend lockBackend
-	mu      sync.Mutex
 }
 
 // lockBackend is an internal interface for different lock implementations

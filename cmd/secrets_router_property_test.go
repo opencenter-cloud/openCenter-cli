@@ -17,21 +17,10 @@ import (
 	"testing"
 	"testing/quick"
 
-	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/secrets"
 	"github.com/spf13/cobra"
 )
 
-// Helper function to create a minimal valid config for testing
-func createTestConfig(backend string) *v2.Config {
-	return &v2.Config{
-		OpenCenter: v2.OpenCenterConfig{
-			Secrets: v2.OpenCenterSecrets{
-				Backend: backend,
-			},
-		},
-	}
-}
 
 // **Feature: secrets-cli-consolidation, Property 4: Keys subcommands have required flags**
 // **Validates: Requirements 6.6, 6.7**

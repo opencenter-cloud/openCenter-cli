@@ -1,8 +1,8 @@
 # openCenter CLI — Codemaps Index
 
-**Last Updated:** 2026-05-19  
+**Last Updated:** 2026-06-24  
 **Module:** `github.com/opencenter-cloud/opencenter-cli`  
-**Language:** Go 1.23+  
+**Language:** Go 1.26+  
 **Entry Point:** `main.go` → `cmd.ExecuteWithContext()`
 
 ## Architecture Overview
@@ -58,7 +58,6 @@ graph TD
 | `importer` | Live cluster import/scan | [Cluster Lifecycle](cluster-lifecycle.md) |
 | `localdev` | Local dev environment (Kind, Gitea, Flux) | [Providers](providers.md) |
 | `logging` | Structured logging (global logger, reconfiguration) | [DI Container](di-container.md) |
-| `observability` | Log shipping, migration helpers | [DI Container](di-container.md) |
 | `operations` | Drift detection, backup, disaster recovery | [Providers](providers.md) |
 | `plugins` | External CLI plugin discovery | [CLI Commands](cli-commands.md) |
 | `provision` | Embedded provisioning templates | [Cluster Lifecycle](cluster-lifecycle.md) |
@@ -80,4 +79,4 @@ graph TD
 - **File I/O**: `internal/util/fs.FileSystem` interface abstracts all disk operations for testability.
 - **Path Resolution**: `internal/core/paths.PathResolver` provides consistent cluster path resolution. `core/paths/identifier.go` handles cluster identifier parsing.
 - **Validation**: `internal/core/validation.ValidationEngine` is the shared validation framework with pluggable validators.
-- **Logging**: `internal/logging` provides the global structured logger with level/format reconfiguration. `internal/observability` adds log shipping (Loki, syslog).
+- **Logging**: `internal/logging` provides the global structured logger with level/format reconfiguration.

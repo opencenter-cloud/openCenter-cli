@@ -430,67 +430,6 @@ func RenderClusterApps(cfg v2.Config) error {
 
 // cleanupDisabledServices removes service directories that are not enabled in the configuration.
 // This ensures that when services are disabled or removed from config, their directories are cleaned up.
-func cleanupDisabledServices(targetDir string, cfg v2.Config) error {
-	// Clean up regular services
-	servicesDir := filepath.Join(targetDir, "services")
-	if _, err := os.Stat(servicesDir); err == nil {
-		entries, err := os.ReadDir(servicesDir)
-		if err != nil {
-			return fmt.Errorf("failed to read services directory: %w", err)
-		}
-
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-
-			serviceName := entry.Name()
-			// Skip special directories
-			if serviceName == "sources" || serviceName == "." || serviceName == ".." {
-				continue
-			}
-
-			// Check if service should be removed
-			if service, exists := cfg.OpenCenter.Services[serviceName]; !exists || IsServiceDisabled(service) {
-				serviceDir := filepath.Join(servicesDir, serviceName)
-				if err := os.RemoveAll(serviceDir); err != nil {
-					return fmt.Errorf("failed to remove disabled service directory %s: %w", serviceName, err)
-				}
-			}
-		}
-	}
-
-	// Clean up managed services
-	managedServicesDir := filepath.Join(targetDir, "managed-services")
-	if _, err := os.Stat(managedServicesDir); err == nil {
-		entries, err := os.ReadDir(managedServicesDir)
-		if err != nil {
-			return fmt.Errorf("failed to read managed-services directory: %w", err)
-		}
-
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-
-			serviceName := entry.Name()
-			// Skip special directories
-			if serviceName == "sources" || serviceName == "." || serviceName == ".." {
-				continue
-			}
-
-			// Check if managed service should be removed
-			if service, exists := managedServices(cfg)[serviceName]; !exists || IsServiceDisabled(service) {
-				serviceDir := filepath.Join(managedServicesDir, serviceName)
-				if err := os.RemoveAll(serviceDir); err != nil {
-					return fmt.Errorf("failed to remove disabled managed service directory %s: %w", serviceName, err)
-				}
-			}
-		}
-	}
-
-	return nil
-}
 
 // RenderInfrastructureCluster renders infrastructure-cluster-template to infrastructure/clusters/<cluster-name>/
 // This function processes all files in the infrastructure-cluster-template directory,

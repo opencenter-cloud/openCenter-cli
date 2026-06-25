@@ -707,14 +707,6 @@ func firstNonEmptyFormatter(values ...string) string {
 	return ""
 }
 
-func (s *ValidateService) formatDetails(result *ValidationResult) string {
-	var out strings.Builder
-	out.WriteString("\nValidation Details:\n")
-	out.WriteString(fmt.Sprintf("  Configuration: %s\n", formatStatus(result.ConfigValid)))
-	out.WriteString(fmt.Sprintf("  Connectivity:  %s\n", formatStatus(result.ConnectivityValid)))
-	out.WriteString(fmt.Sprintf("  Provider:      %s\n", formatStatus(result.ProviderValid)))
-	return out.String()
-}
 
 func (s *ValidateService) formatWarnings(warnings []string) string {
 	var out strings.Builder

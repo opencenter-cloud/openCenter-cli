@@ -446,11 +446,3 @@ func valueSet(value string) bool {
 	return !isMissingSecret(value)
 }
 
-func firstNonEmptyReadiness(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
-}

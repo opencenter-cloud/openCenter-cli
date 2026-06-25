@@ -15,7 +15,6 @@ package flags
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/leanovate/gopter"
@@ -220,37 +219,3 @@ func genArrayIndex() gopter.Gen {
 	return gen.IntRange(0, 99) // Keep reasonable range for testing
 }
 
-func genSimplePath() gopter.Gen {
-	// Generate simple paths without arrays for baseline testing
-	return gen.SliceOfN(2, genValidFieldName()).Map(func(fields []string) string {
-		return strings.Join(fields, ".")
-	})
-}
-
-func genBracketPath() gopter.Gen {
-	// Generate paths with bracket syntax
-	return gopter.CombineGens(
-		genValidFieldName(),
-		genArrayIndex(),
-		genValidFieldName(),
-	).Map(func(values []interface{}) string {
-		field := values[0].(string)
-		index := values[1].(int)
-		subfield := values[2].(string)
-		return fmt.Sprintf("%s[%d].%s", field, index, subfield)
-	})
-}
-
-func genDotPath() gopter.Gen {
-	// Generate paths with dot syntax for arrays
-	return gopter.CombineGens(
-		genValidFieldName(),
-		genArrayIndex(),
-		genValidFieldName(),
-	).Map(func(values []interface{}) string {
-		field := values[0].(string)
-		index := values[1].(int)
-		subfield := values[2].(string)
-		return fmt.Sprintf("%s.%d.%s", field, index, subfield)
-	})
-}

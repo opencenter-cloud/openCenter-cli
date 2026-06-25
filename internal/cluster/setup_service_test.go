@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
@@ -266,9 +265,6 @@ func TestSetupService_countGeneratedFiles(t *testing.T) {
 }
 
 // Helper function to check if a string contains a substring
-func setupContains(s, substr string) bool {
-	return strings.Contains(s, substr)
-}
 
 func TestSetupService_OpenStackSetupDoesNotUseLegacyConfigValidator(t *testing.T) {
 	tmpDir := t.TempDir()

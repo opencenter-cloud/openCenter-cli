@@ -427,9 +427,3 @@ func TestDefaultConfigurationMerger_PrecedenceOrdering(t *testing.T) {
 
 // Helper functions
 
-func createTestConfiguration(data map[string]interface{}, sourceType SourceType) Configuration {
-	return Configuration{
-		Data:    data,
-		Sources: []ConfigSource{{Type: sourceType, Path: "test"}},
-	}
-}

@@ -27,39 +27,6 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
 )
 
-// noOpAuditLogger is a no-op implementation of AuditLogger for CLI usage.
-// The CLI commands don't need persistent audit logging, so this provides
-// a simple implementation that satisfies the interface without doing anything.
-type noOpAuditLogger struct{}
-
-func (n *noOpAuditLogger) LogSecretsSync(ctx context.Context, actor, cluster string, filesCreated, filesUpdated, filesUnchanged int) error {
-	return nil
-}
-
-func (n *noOpAuditLogger) LogSecretsSyncFailed(ctx context.Context, actor, cluster, reason string) error {
-	return nil
-}
-
-func (n *noOpAuditLogger) LogDriftDetected(ctx context.Context, actor, cluster string, driftCount, missingCount, orphanedCount int) error {
-	return nil
-}
-
-func (n *noOpAuditLogger) LogSecretsValidated(ctx context.Context, actor, cluster string) error {
-	return nil
-}
-
-func (n *noOpAuditLogger) LogKeyRotated(ctx context.Context, actor, keyType, resource string) error {
-	return nil
-}
-
-func (n *noOpAuditLogger) LogKeyRevoked(ctx context.Context, actor, cluster, keyFingerprint, revokedUser string, filesReencrypted int) error {
-	return nil
-}
-
-func (n *noOpAuditLogger) LogKeyRevocationFailed(ctx context.Context, actor, cluster, keyFingerprint, reason string) error {
-	return nil
-}
-
 // sopsEncryptorAdapter adapts sops.DefaultSOPSManager to secrets.SOPSEncryptor interface
 type sopsEncryptorAdapter struct {
 	manager *sops.DefaultSOPSManager

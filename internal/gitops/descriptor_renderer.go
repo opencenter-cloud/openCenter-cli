@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -609,7 +608,3 @@ func cleanupSingleServiceOutputs(target string, serviceName string, isManaged bo
 	return nil
 }
 
-func isBoolValue(value any) bool {
-	rv := reflect.ValueOf(value)
-	return rv.IsValid() && rv.Kind() == reflect.Bool
-}

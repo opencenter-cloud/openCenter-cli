@@ -22,11 +22,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"filippo.io/age"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
-	"github.com/opencenter-cloud/opencenter-cli/internal/util/crypto"
 	"github.com/zalando/go-keyring"
 )
 
@@ -303,19 +301,6 @@ func genValidPassphrase() gopter.Gen {
 }
 
 // genAgeKeyPair generates a valid Age key pair
-func genAgeKeyPair() gopter.Gen {
-	return gen.Const(nil).Map(func(_ interface{}) *crypto.AgeKeyPair {
-		identity, err := age.GenerateX25519Identity()
-		if err != nil {
-			return nil
-		}
-		return &crypto.AgeKeyPair{
-			PrivateKey: identity.String(),
-			PublicKey:  identity.Recipient().String(),
-			Recipient:  identity.Recipient().String(),
-		}
-	})
-}
 
 // Feature: security-and-operational-remediation, Property 8: Key Backup Round-Trip
 // **Validates: Requirements 5.2, 5.3, 5.4**

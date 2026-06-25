@@ -207,125 +207,6 @@ func TestProperty_SecurityAndPrivacyProtection(t *testing.T) {
 }
 
 // genSensitiveDataMap generates a map with potentially sensitive data
-func genSensitiveDataMap() gopter.Gen {
-	return gen.MapOf(
-		genSensitiveFieldName(),
-		genSensitiveValue(),
-	).SuchThat(func(m map[string]string) bool {
-		return len(m) > 0 && len(m) <= 10
-	})
-}
-
-// genSensitiveFieldName generates field names that might be sensitive
-func genSensitiveFieldName() gopter.Gen {
-	sensitiveFields := []interface{}{
-		"password", "secret", "token", "key", "credential",
-		"api_key", "auth_token", "private_key", "access_token",
-		"database_password", "ssh_key", "age_key", "sops_key",
-	}
-
-	return gen.OneGenOf(
-		gen.OneConstOf(sensitiveFields...),
-		gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 && len(s) < 30 }),
-	)
-}
-
-// genSensitiveValue generates values that might be sensitive
-func genSensitiveValue() gopter.Gen {
-	return gen.OneGenOf(
-		// API keys
-		gen.RegexMatch("sk-[a-zA-Z0-9]{48}"),
-		gen.RegexMatch("pk-[a-zA-Z0-9]{48}"),
-		// AWS keys
-		gen.RegexMatch("AKIA[A-Z0-9]{16}"),
-		// Age keys
-		gen.RegexMatch("AGE-SECRET-KEY-[A-Z0-9]{59}"),
-		// Generic passwords
-		gen.AlphaString().SuchThat(func(s string) bool { return len(s) >= 8 && len(s) <= 64 }),
-		// Bearer tokens
-		gen.RegexMatch("Bearer [a-zA-Z0-9._-]{20,50}"),
-	)
-}
-
-// genTemplateVariableMap generates template variables
-func genTemplateVariableMap() gopter.Gen {
-	return gen.MapOf(
-		gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 && len(s) < 20 }),
-		gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 && len(s) < 100 }),
-	).SuchThat(func(m map[string]string) bool {
-		return len(m) > 0 && len(m) <= 5
-	})
-}
-
-// genStringMap generates a map with string values
-func genStringMap() gopter.Gen {
-	return gen.MapOf(
-		gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 && len(s) < 30 }),
-		gen.AlphaString().SuchThat(func(s string) bool { return len(s) >= 0 && len(s) < 100 }),
-	)
-}
-
-// genConfigurationMap generates configuration maps
-func genConfigurationMap() gopter.Gen {
-	return gen.MapOf(
-		gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 && len(s) < 30 }),
-		gen.OneGenOf(
-			gen.AlphaString(),
-			gen.Int(),
-			gen.Bool(),
-		),
-	)
-}
-
-// looksLikeCredential checks if a value looks like a credential based on patterns
-func looksLikeCredential(value string) bool {
-	if len(value) < 8 {
-		return false
-	}
-
-	// Check for common credential patterns
-	credentialPatterns := []string{
-		"sk-", "pk-", "AKIA", "AGE-SECRET-KEY", "Bearer ", "Basic ",
-	}
-
-	for _, pattern := range credentialPatterns {
-		if strings.HasPrefix(value, pattern) {
-			return true
-		}
-	}
-
-	// Check for high entropy (potential random keys/tokens)
-	if len(value) < 20 {
-		return false
-	}
-
-	// Simple entropy check: count unique characters
-	charMap := make(map[rune]bool)
-	for _, char := range value {
-		charMap[char] = true
-	}
-
-	// If more than 60% of characters are unique, consider it high entropy
-	uniqueRatio := float64(len(charMap)) / float64(len(value))
-	return uniqueRatio > 0.6
-}
-
-// containsSensitiveKeyword checks if a key contains sensitive keywords
-func containsSensitiveKeyword(key string) bool {
-	sensitiveKeywords := []string{
-		"password", "secret", "token", "key", "credential",
-		"api_key", "auth_token", "private_key", "access_token",
-	}
-
-	lowerKey := strings.ToLower(key)
-	for _, keyword := range sensitiveKeywords {
-		if strings.Contains(lowerKey, keyword) {
-			return true
-		}
-	}
-
-	return false
-}
 
 // containsSensitiveData checks if configuration contains sensitive data
 func containsSensitiveData(config map[string]interface{}) bool {
@@ -631,4 +512,20 @@ func TestSecurityIntegration_EndToEnd(t *testing.T) {
 			t.Error("API key should be masked in output")
 		}
 	}
+}
+
+func genTemplateVariableMap() gopter.Gen {
+	return gen.MapOf(
+		gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 && len(s) < 20 }),
+		gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 && len(s) < 100 }),
+	).SuchThat(func(m map[string]string) bool {
+		return len(m) > 0 && len(m) <= 5
+	})
+}
+
+func genStringMap() gopter.Gen {
+	return gen.MapOf(
+		gen.AlphaString().SuchThat(func(s string) bool { return len(s) > 0 && len(s) < 30 }),
+		gen.AlphaString().SuchThat(func(s string) bool { return len(s) >= 0 && len(s) < 100 }),
+	)
 }

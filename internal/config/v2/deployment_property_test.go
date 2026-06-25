@@ -14,7 +14,6 @@
 package v2
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/leanovate/gopter"
@@ -202,120 +201,6 @@ func genKamajiConfig() gopter.Gen {
 }
 
 // genClusterConfigForKamaji generates ClusterConfig with Kamaji constraints.
-func genClusterConfigForKamaji() gopter.Gen {
-	return gopter.CombineGens(
-		gen.OneConstOf("kamaji-cluster", "kamaji-dev", "kamaji-prod"),
-		gen.Const("example.com"),
-		gen.Const("admin@example.com"),
-		genKubernetesConfigForKamaji(),
-	).Map(func(parts []interface{}) ClusterConfig {
-		clusterName := parts[0].(string)
-		baseDomain := parts[1].(string)
-		return ClusterConfig{
-			ClusterName: clusterName,
-			BaseDomain:  baseDomain,
-			ClusterFQDN: clusterName + "." + baseDomain,
-			AdminEmail:  parts[2].(string),
-			Kubernetes:  parts[3].(KubernetesConfig),
-		}
-	})
-}
-
-// genKubernetesConfigForKamaji generates KubernetesConfig with kube_vip_enabled=false.
-func genKubernetesConfigForKamaji() gopter.Gen {
-	return gopter.CombineGens(
-		gen.OneConstOf("1.28.0", "1.29.0", "1.30.0"),
-		gen.IntRange(6443, 6443),
-		gen.Const("10.233.64.0/18"),
-		gen.Const("10.233.0.0/18"),
-	).Map(func(parts []interface{}) KubernetesConfig {
-		return KubernetesConfig{
-			Version:        parts[0].(string),
-			APIPort:        parts[1].(int),
-			KubeVIPEnabled: false, // Kamaji constraint
-			SubnetPods:     parts[2].(string),
-			SubnetServices: parts[3].(string),
-		}
-	})
-}
-
-// genInfrastructureConfigForKamaji generates InfrastructureConfig with Kamaji constraints.
-func genInfrastructureConfigForKamaji() gopter.Gen {
-	return gopter.CombineGens(
-		gen.OneConstOf("openstack", "aws", "gcp"),
-		genNetworkingConfigForKamaji(),
-		genComputeConfigForKamaji(),
-		genStorageConfig(),
-	).FlatMap(func(parts interface{}) gopter.Gen {
-		partsSlice := parts.([]interface{})
-		provider := partsSlice[0].(string)
-
-		return genCloudConfig(provider).Map(func(cloud CloudConfig) InfrastructureConfig {
-			return InfrastructureConfig{
-				Provider: provider,
-				SSH: SSHConfig{
-					AuthorizedKeys: []string{"ssh-rsa AAAAB3NzaC1yc2E..."},
-				},
-				OSVersion:  "24",
-				Networking: partsSlice[1].(NetworkingConfig),
-				Compute:    partsSlice[2].(ComputeConfig),
-				Storage:    partsSlice[3].(StorageConfig),
-				Cloud:      cloud,
-			}
-		})
-	}, reflect.TypeOf(InfrastructureConfig{}))
-}
-
-// genNetworkingConfigForKamaji generates NetworkingConfig with vrrp_enabled=false.
-func genNetworkingConfigForKamaji() gopter.Gen {
-	return gopter.CombineGens(
-		gen.Const("10.2.128.0/22"),
-		gen.Const("10.2.128.10"),
-		gen.Const("10.2.131.254"),
-		gen.OneConstOf("ovn", "octavia", "metallb"),
-		gen.Const("cluster.local"),
-	).Map(func(parts []interface{}) NetworkingConfig {
-		return NetworkingConfig{
-			SubnetNodes:          parts[0].(string),
-			AllocationPoolStart:  parts[1].(string),
-			AllocationPoolEnd:    parts[2].(string),
-			VRRPEnabled:          false, // Kamaji constraint
-			VRRPIP:               "",    // Kamaji constraint
-			LoadbalancerProvider: parts[3].(string),
-			DNSZoneName:          parts[4].(string),
-			DNSNameservers:       []string{"8.8.8.8", "8.8.4.4"},
-			NTPServers:           []string{"time.google.com"},
-		}
-	})
-}
-
-// genComputeConfigForKamaji generates ComputeConfig with master_count=0 and worker pools.
-func genComputeConfigForKamaji() gopter.Gen {
-	return gen.IntRange(1, 10).Map(func(workerCount int) ComputeConfig {
-		// Generate 1-3 worker pools
-		poolCount := 1 + (workerCount % 3)
-		pools := make([]WorkerPoolConfig, poolCount)
-		for i := range pools {
-			pools[i] = WorkerPoolConfig{
-				Name:   "pool-" + string(rune('a'+i)),
-				Count:  1 + (i % 5),
-				Flavor: "m1.large",
-				BootVolume: VolumeConfig{
-					Size: 100,
-					Type: "ssd",
-				},
-			}
-		}
-
-		return ComputeConfig{
-			FlavorMaster:                "m1.medium",
-			FlavorWorker:                "m1.large",
-			MasterCount:                 0, // Kamaji constraint
-			WorkerCount:                 workerCount,
-			AdditionalServerPoolsWorker: pools,
-		}
-	})
-}
 
 // genKamajiWorkerPool generates valid KamajiWorkerPool configurations.
 func genKamajiWorkerPool() gopter.Gen {

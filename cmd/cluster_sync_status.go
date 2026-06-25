@@ -392,9 +392,6 @@ func updateServiceStatus(cfg *v2.Config, serviceName, status string) {
 }
 
 // setStatusViaReflection is deprecated — status removed from BaseConfig.
-func setStatusViaReflection(serviceConfig any, status string) {
-}
-
 // printSyncResults prints the sync results in human-readable format.
 func printSyncResults(cmd *cobra.Command, result *SyncStatusResult, dryRun bool) {
 	if dryRun {

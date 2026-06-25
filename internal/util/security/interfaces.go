@@ -63,17 +63,4 @@ func (stf *SecureTempFile) Remove() error {
 	return os.Remove(stf.Path)
 }
 
-// CredentialValidator interface for validating credentials don't leak
-type CredentialValidator interface {
-	ValidateNoCredentialsInConfig(configPath string) error
-	ScanForCredentials(content string) []CredentialMatch
-}
 
-// CredentialMatch represents a potential credential found in content
-type CredentialMatch struct {
-	Type     string `json:"type"`
-	Line     int    `json:"line"`
-	Column   int    `json:"column"`
-	Context  string `json:"context"`
-	Severity string `json:"severity"`
-}

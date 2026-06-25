@@ -16,26 +16,10 @@ package config
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	configpersistence "github.com/opencenter-cloud/opencenter-cli/internal/config/persistence"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation/validators"
 )
-
-// globalManager is a singleton ConfigurationManager for backward compatibility
-var (
-	globalManager     *ConfigurationManager
-	globalManagerOnce sync.Once
-	globalManagerErr  error
-)
-
-// getGlobalManager returns the singleton ConfigurationManager instance
-func getGlobalManager() (*ConfigurationManager, error) {
-	globalManagerOnce.Do(func() {
-		globalManager, globalManagerErr = NewConfigurationManager()
-	})
-	return globalManager, globalManagerErr
-}
 
 // ResolveConfigDir resolves the configuration directory based on the OPENCENTER_CONFIG_DIR
 // environment variable. If the variable is not set, it falls back to the user's

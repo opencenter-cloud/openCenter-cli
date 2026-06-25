@@ -181,7 +181,7 @@ attribute. Build the site locally with Antora — see
 - [Kind Local Development](docs/modules/ROOT/pages/getting-started/kind-local-development.adoc)
 - [OpenStack First Cluster](docs/modules/ROOT/pages/getting-started/openstack-first-cluster.adoc)
 - [VMware Deployment](docs/modules/ROOT/pages/getting-started/vmware-deployment.adoc)
-- [Multi-Cluster Setup](docs/modules/ROOT/pages/getting-started/multi-cluster-setup.adoc)
+- [Multi-Cluster Deployment](docs/modules/ROOT/pages/getting-started/multi-cluster-setup.adoc)
 
 ### 🔧 Operations (How-To)
 - [Validate Configuration](docs/modules/ROOT/pages/operations/validate-configuration.adoc)

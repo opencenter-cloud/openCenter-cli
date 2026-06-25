@@ -98,13 +98,6 @@ Feature: Cluster use, listing, and inspection
     And the file "<<tmp>>/conf/.active" should match regex "^dev$"
     And stdout should contain "Active cluster set to dev"
 
-  @select @alias
-  Scenario: Selecting a cluster via 'select' alias with org/cluster format
-    When I run "opencenter cluster select dev --config-dir <<tmp>>/conf"
-    Then the exit code should be 0
-    And the file "<<tmp>>/conf/.active" should match regex "^dev$"
-    And stdout should contain "Active cluster set to dev"
-
   @select @interactive
   Scenario: Selecting a cluster interactively
     When I run interactively "opencenter cluster use --config-dir <<tmp>>/conf"

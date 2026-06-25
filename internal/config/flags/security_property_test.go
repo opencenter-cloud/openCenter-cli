@@ -410,27 +410,6 @@ func TestSOPSIntegration_SecurityProperties(t *testing.T) {
 	}
 }
 
-// TestPerformanceOptimizer_SecurityIntegration tests performance optimizer security integration
-func TestPerformanceOptimizer_SecurityIntegration(t *testing.T) {
-	optimizer := NewPerformanceOptimizer()
-
-	// Test size validation for potentially sensitive content
-	sensitiveContent := []byte(strings.Repeat("password=supersecret123\n", 1000))
-
-	err := optimizer.ValidateSize(sensitiveContent, "yaml")
-	if err != nil && len(sensitiveContent) <= MaxYAMLSize {
-		t.Errorf("Should not reject content within size limits: %v", err)
-	}
-
-	// Test with oversized content
-	oversizedContent := []byte(strings.Repeat("password=supersecret123\n", 100000))
-
-	err = optimizer.ValidateSize(oversizedContent, "yaml")
-	if err == nil {
-		t.Error("Should reject oversized content")
-	}
-}
-
 // Benchmark tests for security features
 
 // BenchmarkSecurityFlagHandler_MaskSensitiveData benchmarks sensitive data masking

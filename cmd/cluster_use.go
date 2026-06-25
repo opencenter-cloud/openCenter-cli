@@ -415,7 +415,7 @@ func newClusterUseCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "use [name]",
-		Aliases: []string{"select"},
+		Aliases: []string{},
 		Short:   "Set the active cluster",
 		Long: `Set the active cluster and display comprehensive information including:
 - Cluster metadata (name, environment, region, status, organization)

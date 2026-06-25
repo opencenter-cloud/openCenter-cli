@@ -70,19 +70,19 @@ The command requires:
   - A deployed cluster with accessible kubeconfig
   - FluxCD installed and managing services`,
 		Example: `  # Sync status for active cluster
-  opencenter cluster status --sync
+  opencenter cluster sync-status
 
   # Sync status for a specific cluster
-  opencenter cluster status my-cluster --sync
+  opencenter cluster sync-status my-cluster
 
   # Preview changes without saving (dry-run)
-  opencenter cluster status my-cluster --sync --dry-run
+  opencenter cluster sync-status my-cluster --dry-run
 
   # Output results as JSON
-  opencenter cluster status my-cluster --sync --output json`,
+  opencenter cluster sync-status my-cluster --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			identifier, err := resolveClusterNameForCommand(cmd, args, true)
+			identifier, err := resolveClusterName(args, true)
 			if err != nil {
 				return err
 			}
@@ -391,7 +391,6 @@ func parseFluxResourceStatus(jsonData []byte) (string, error) {
 func updateServiceStatus(cfg *v2.Config, serviceName, status string) {
 }
 
-// setStatusViaReflection is deprecated — status removed from BaseConfig.
 // printSyncResults prints the sync results in human-readable format.
 func printSyncResults(cmd *cobra.Command, result *SyncStatusResult, dryRun bool) {
 	if dryRun {

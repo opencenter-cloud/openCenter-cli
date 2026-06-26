@@ -9,6 +9,8 @@ tags: [services, platform, helm, monitoring, security]
 ---
 # Platform Services Reference
 
+> **⚠️ Deprecated:** This page is superseded by the per-service reference pages at [docs/reference/services/](services/index.md). Each service now has a dedicated page with complete configuration, secrets, dependencies, and verification steps. This file is retained for backward compatibility but will be removed in a future release.
+
 **Purpose:** Complete reference of available platform services, versions, and configuration options for quick lookup.
 
 This reference documents all platform services that can be deployed with openCenter clusters.

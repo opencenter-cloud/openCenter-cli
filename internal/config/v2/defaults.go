@@ -740,7 +740,7 @@ func defaultServiceMap(clusterFQDN string) ServiceMap {
 		"kube-prometheus-stack": &services.PrometheusStackConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "observability", SourceName: "opencenter-observability", OverrideValuesRendererKey: "kube-prometheus-stack"}},
 		"kyverno":               &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "kyverno", HasOverrideValues: boolPtr(false), KustomizationContent: "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n  - \"../base/kyverno/default-ruleset\"\n"}},
 		"loki":                  &services.LokiConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "observability", SourceName: "opencenter-observability", OverrideValuesRendererKey: "loki"}},
-		"openstack-ccm":         &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "kube-system", OverrideValuesRendererKey: "openstack-ccm"}},
+		"openstack-ccm":         &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "openstack-ccm", OverrideValuesRendererKey: "openstack-ccm"}},
 		"openstack-csi":         &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "kube-system", OverrideValuesRendererKey: "openstack-csi"}},
 		"tempo":                 &services.TempoConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "observability", SourceName: "opencenter-observability", OverrideValuesRendererKey: "tempo"}},
 		"velero":                &services.VeleroConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "velero", OverrideValuesRendererKey: "velero"}},

@@ -1831,7 +1831,6 @@
                       }
                     },
                     "required": [
-                      "count",
                       "flavor",
                       "name"
                     ],
@@ -1872,6 +1871,9 @@
                             "type": "string"
                           }
                         },
+                        "required": [
+                          "size"
+                        ],
                         "type": "object"
                       },
                       "count": {
@@ -1932,7 +1934,6 @@
                       }
                     },
                     "required": [
-                      "count",
                       "flavor",
                       "name"
                     ],

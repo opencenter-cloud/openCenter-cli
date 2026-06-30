@@ -602,3 +602,45 @@ func TestGatewayRendersHostnamesWithClusterFQDN(t *testing.T) {
 		t.Errorf("gateway.yaml must NOT contain truncated hostname %q (missing cluster name)", wrongAuthHostname)
 	}
 }
+
+func TestRenderClusterAppsOpenStackCCMNamespace(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("ccm-ns-test")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps() error = %v", err)
+	}
+
+	// The openstack-ccm kustomization must target the openstack-ccm namespace,
+	// not kube-system.
+	kustomizationPath := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "openstack-ccm")
+
+	// Find the kustomization file that references the namespace
+	entries, err := os.ReadDir(kustomizationPath)
+	if err != nil {
+		t.Fatalf("failed to read openstack-ccm overlay dir: %v", err)
+	}
+
+	var foundNamespace bool
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		content := mustReadFile(t, filepath.Join(kustomizationPath, entry.Name()))
+		if strings.Contains(content, "targetNamespace") {
+			if !strings.Contains(content, "targetNamespace: openstack-ccm") {
+				t.Errorf("expected targetNamespace: openstack-ccm in %s.\nGot:\n%s", entry.Name(), content)
+			}
+			foundNamespace = true
+		}
+	}
+
+	if !foundNamespace {
+		// Check the service config directly
+		svc := cfg.OpenCenter.Services["openstack-ccm"].(*configservices.DefaultServiceConfig)
+		if svc.Namespace != "openstack-ccm" {
+			t.Fatalf("expected openstack-ccm service namespace to be 'openstack-ccm', got %q", svc.Namespace)
+		}
+	}
+}

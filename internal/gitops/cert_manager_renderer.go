@@ -243,12 +243,13 @@ func derefValue(obj any) reflect.Value {
 }
 
 const awsSecretTemplate = `apiVersion: v1
-data:
-  access-key-id: {{ .AWSAccessKey }}
-  secret-access-key: {{ .AWSSecretAccessKey }}
 kind: Secret
 metadata:
   name: opencenter-aws-credentials-secret-{{ .Name }}
+type: Opaque
+stringData:
+  access-key-id: {{ .AWSAccessKey }}
+  secret-access-key: {{ .AWSSecretAccessKey }}
 `
 
 const cloudflareSecretTemplate = `apiVersion: v1

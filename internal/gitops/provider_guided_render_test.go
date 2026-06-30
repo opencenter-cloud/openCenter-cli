@@ -367,3 +367,189 @@ func TestRenderClusterAppsCertManagerValidationFailsOnMissingCloudflareToken(t *
 		t.Fatalf("expected Cloudflare token validation error, got: %v", err)
 	}
 }
+
+func TestRenderClusterAppsCertManagerAWSSecretUsesStringData(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("aws-stringdata")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+	cfg.OpenCenter.Cluster.ClusterFQDN = "aws-stringdata.example.com"
+
+	cfg.Secrets.CertManager.AWS = map[string]v2.CertManagerAWSCredential{
+		"main": {
+			Enabled:            true,
+			AWSAccessKey:       "AKIAIOSFODNN7EXAMPLE",
+			AWSSecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			Region:             "us-east-1",
+			DNSZones:           []string{"aws-stringdata.example.com"},
+		},
+	}
+
+	certManager := cfg.OpenCenter.Services["cert-manager"].(*configservices.CertManagerConfig)
+	certManager.Email = "ops@example.com"
+	certManager.Region = "us-east-1"
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps() error = %v", err)
+	}
+
+	base := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "cert-manager")
+	secret := mustReadFile(t, filepath.Join(base, "opencenter-aws-credentials-secret-main.yaml"))
+
+	// The secret MUST use stringData (plaintext) not data (base64-encoded).
+	// Kubernetes stringData accepts raw values; data requires base64 encoding.
+	// Using data with raw plaintext produces invalid secrets at apply time.
+	if !strings.Contains(secret, "stringData:") {
+		t.Fatalf("AWS credential secret must use 'stringData:' (not 'data:') for plaintext values.\nGot:\n%s", secret)
+	}
+	if strings.Contains(secret, "\ndata:\n") {
+		t.Fatalf("AWS credential secret must NOT use 'data:' field with plaintext values.\nGot:\n%s", secret)
+	}
+
+	// The secret should include type: Opaque (like the Cloudflare template does)
+	if !strings.Contains(secret, "type: Opaque") {
+		t.Fatalf("AWS credential secret should declare 'type: Opaque'.\nGot:\n%s", secret)
+	}
+
+	// Verify the credential values are present as-is (not base64-encoded)
+	if !strings.Contains(secret, "access-key-id: AKIAIOSFODNN7EXAMPLE") {
+		t.Fatalf("expected plaintext access key in stringData.\nGot:\n%s", secret)
+	}
+	if !strings.Contains(secret, "secret-access-key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY") {
+		t.Fatalf("expected plaintext secret key in stringData.\nGot:\n%s", secret)
+	}
+}
+
+func TestRenderClusterAppsCertManagerCloudflareSecretUsesStringData(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("cf-stringdata")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+	cfg.OpenCenter.Cluster.ClusterFQDN = "cf-stringdata.example.com"
+
+	cfg.Secrets.CertManager.Cloudflare = map[string]v2.CertManagerCloudflareCredential{
+		"main": {
+			Enabled:  true,
+			APIToken: "cf-api-token-value-12345",
+			DNSZones: []string{"cf-stringdata.example.com"},
+		},
+	}
+
+	certManager := cfg.OpenCenter.Services["cert-manager"].(*configservices.CertManagerConfig)
+	certManager.DNSProvider = "cloudflare"
+	certManager.Email = "ops@example.com"
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps() error = %v", err)
+	}
+
+	base := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "cert-manager")
+	secret := mustReadFile(t, filepath.Join(base, "opencenter-cloudflare-credentials-secret-main.yaml"))
+
+	// Cloudflare secret should also use stringData (it already does — this is a regression guard)
+	if !strings.Contains(secret, "stringData:") {
+		t.Fatalf("Cloudflare credential secret must use 'stringData:' for plaintext values.\nGot:\n%s", secret)
+	}
+	if strings.Contains(secret, "\ndata:\n") {
+		t.Fatalf("Cloudflare credential secret must NOT use 'data:' field with plaintext values.\nGot:\n%s", secret)
+	}
+	if !strings.Contains(secret, "type: Opaque") {
+		t.Fatalf("Cloudflare credential secret should declare 'type: Opaque'.\nGot:\n%s", secret)
+	}
+}
+
+func TestRenderClusterAppsCertManagerAWSIssuerHasSelectorAndRegion(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("issuer-selector")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+	cfg.OpenCenter.Cluster.ClusterFQDN = "issuer-selector.sjc3.k8s.opencenter.cloud"
+
+	cfg.Secrets.CertManager.AWS = map[string]v2.CertManagerAWSCredential{
+		"prod": {
+			Enabled:            true,
+			AWSAccessKey:       "AKIAEXAMPLE",
+			AWSSecretAccessKey: "secretExampleKey",
+			Region:             "us-east-1",
+			DNSZones:           []string{"issuer-selector.sjc3.k8s.opencenter.cloud"},
+		},
+	}
+
+	certManager := cfg.OpenCenter.Services["cert-manager"].(*configservices.CertManagerConfig)
+	certManager.Email = "mpk-support@rackspace.com"
+	certManager.Region = "us-east-1"
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps() error = %v", err)
+	}
+
+	base := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "cert-manager")
+	issuer := mustReadFile(t, filepath.Join(base, "letsencrypt-prod-issuer.yaml"))
+
+	// Must be a ClusterIssuer
+	if !strings.Contains(issuer, "kind: ClusterIssuer") {
+		t.Fatalf("expected ClusterIssuer kind.\nGot:\n%s", issuer)
+	}
+
+	// Must have route53 solver with a valid (non-empty) region
+	if !strings.Contains(issuer, "route53:") {
+		t.Fatalf("expected route53 solver block.\nGot:\n%s", issuer)
+	}
+	if !strings.Contains(issuer, "region: us-east-1") {
+		t.Fatalf("expected region 'us-east-1' in route53 solver.\nGot:\n%s", issuer)
+	}
+
+	// Must have a selector with dnsZones
+	if !strings.Contains(issuer, "selector:") {
+		t.Fatalf("expected 'selector:' block in issuer — cert-manager issuers without a selector match ALL certificates, which is unsafe in multi-tenant clusters.\nGot:\n%s", issuer)
+	}
+	if !strings.Contains(issuer, "dnsZones:") {
+		t.Fatalf("expected 'dnsZones:' under selector.\nGot:\n%s", issuer)
+	}
+	if !strings.Contains(issuer, "- issuer-selector.sjc3.k8s.opencenter.cloud") {
+		t.Fatalf("expected the configured DNS zone in the selector dnsZones list.\nGot:\n%s", issuer)
+	}
+
+	// Must reference the correct credential secret
+	if !strings.Contains(issuer, `name: "opencenter-aws-credentials-secret-prod"`) {
+		t.Fatalf("expected accessKeyIDSecretRef to reference the correct credential secret.\nGot:\n%s", issuer)
+	}
+}
+
+func TestRenderClusterAppsCertManagerAWSIssuerMultipleZones(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("multi-zone")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+	cfg.OpenCenter.Cluster.ClusterFQDN = "multi-zone.sjc3.k8s.opencenter.cloud"
+
+	cfg.Secrets.CertManager.AWS = map[string]v2.CertManagerAWSCredential{
+		"main": {
+			Enabled:            true,
+			AWSAccessKey:       "AKIAMULTIZONE",
+			AWSSecretAccessKey: "multiZoneSecret",
+			Region:             "eu-west-1",
+			DNSZones:           []string{"zone-a.example.com", "zone-b.example.com"},
+		},
+	}
+
+	certManager := cfg.OpenCenter.Services["cert-manager"].(*configservices.CertManagerConfig)
+	certManager.Email = "ops@example.com"
+	certManager.Region = "eu-west-1"
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps() error = %v", err)
+	}
+
+	base := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "cert-manager")
+	issuer := mustReadFile(t, filepath.Join(base, "letsencrypt-main-issuer.yaml"))
+
+	// Both DNS zones must be present in the selector
+	if !strings.Contains(issuer, "- zone-a.example.com") {
+		t.Fatalf("expected zone-a.example.com in selector dnsZones.\nGot:\n%s", issuer)
+	}
+	if !strings.Contains(issuer, "- zone-b.example.com") {
+		t.Fatalf("expected zone-b.example.com in selector dnsZones.\nGot:\n%s", issuer)
+	}
+
+	// Region must match credential-level region
+	if !strings.Contains(issuer, "region: eu-west-1") {
+		t.Fatalf("expected region 'eu-west-1'.\nGot:\n%s", issuer)
+	}
+}

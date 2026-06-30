@@ -319,7 +319,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 						Enabled:            false,
 						AWSAccessKey:       PlaceholderSecret,
 						AWSSecretAccessKey: PlaceholderSecret,
-						Region:             region,
+						Region:             "us-east-1",
 					},
 				},
 			},

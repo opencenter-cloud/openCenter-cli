@@ -644,3 +644,20 @@ func TestRenderClusterAppsOpenStackCCMNamespace(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderClusterAppsOpenStackCSINamespace(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("csi-ns-test")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps() error = %v", err)
+	}
+
+	// The openstack-csi kustomization must target the openstack-csi namespace,
+	// not kube-system.
+	svc := cfg.OpenCenter.Services["openstack-csi"].(*configservices.DefaultServiceConfig)
+	if svc.Namespace != "openstack-csi" {
+		t.Fatalf("expected openstack-csi service namespace to be 'openstack-csi', got %q", svc.Namespace)
+	}
+}

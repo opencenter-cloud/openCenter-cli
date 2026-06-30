@@ -661,3 +661,29 @@ func TestRenderClusterAppsOpenStackCSINamespace(t *testing.T) {
 		t.Fatalf("expected openstack-csi service namespace to be 'openstack-csi', got %q", svc.Namespace)
 	}
 }
+
+func TestRenderClusterAppsGatewayDependsOnEnvoyGatewayAPIBase(t *testing.T) {
+	cfg := newDefault("gw-dep-test")
+
+	svc := cfg.OpenCenter.Services["gateway"].(*configservices.DefaultServiceConfig)
+
+	// The gateway must depend on envoy-gateway-api-base (the base-stage kustomization
+	// name for the gateway-api service whose KustomizationName is "envoy-gateway-api").
+	// "gateway-api-base" doesn't exist as a Flux Kustomization name.
+	for _, dep := range svc.ExtraDependencies {
+		if dep == "gateway-api-base" {
+			t.Fatal("gateway service depends on 'gateway-api-base' but should depend on 'envoy-gateway-api-base' — 'gateway-api-base' does not exist as a Flux Kustomization")
+		}
+	}
+
+	found := false
+	for _, dep := range svc.ExtraDependencies {
+		if dep == "envoy-gateway-api-base" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected gateway service ExtraDependencies to contain 'envoy-gateway-api-base', got %v", svc.ExtraDependencies)
+	}
+}

@@ -124,6 +124,13 @@ opencenter cluster service disable <svc>       # Disable a platform service
 opencenter cluster service status              # Show all service states
 opencenter cluster service options <svc>       # Show service config options
 
+# Worker Pool Management
+opencenter cluster pool add <name>             # Add a worker pool
+opencenter cluster pool update <name>          # Update pool configuration
+opencenter cluster pool scale <name> --count=N # Scale pool node count
+opencenter cluster pool remove <name>          # Remove pool (requires count=0)
+opencenter cluster pool list                   # List all worker pools
+
 # Secrets Management
 opencenter secrets keys generate               # Generate Age key pair
 opencenter secrets keys rotate --type sops     # Rotate encryption keys
@@ -189,6 +196,7 @@ attribute. Build the site locally with Antora — see
 - [Customize Services](docs/modules/ROOT/pages/operations/customize-services.adoc)
 - [Configure Networking](docs/modules/ROOT/pages/operations/configure-networking.adoc)
 - [Add Worker Pools](docs/modules/ROOT/pages/operations/add-worker-pools.adoc)
+- [Manage Worker Pools](docs/operations/manage-worker-pools.md)
 - [Backup and Restore](docs/modules/ROOT/pages/operations/backup-and-restore.adoc)
 - [Upgrade Kubernetes](docs/modules/ROOT/pages/operations/upgrade-kubernetes.adoc)
 - [Migrate Clusters](docs/modules/ROOT/pages/operations/migrate-clusters.adoc)

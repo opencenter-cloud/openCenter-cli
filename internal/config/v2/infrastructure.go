@@ -161,6 +161,9 @@ type ComputeConfig struct {
 
 	// Additional worker pools
 	AdditionalServerPoolsWorker []WorkerPoolConfig `yaml:"additional_server_pools_worker,omitempty" json:"additional_server_pools_worker,omitempty"`
+
+	// Additional Windows worker pools
+	AdditionalServerPoolsWorkerWindows []WindowsWorkerPoolConfig `yaml:"additional_server_pools_worker_windows,omitempty" json:"additional_server_pools_worker_windows,omitempty"`
 }
 
 // StaticNode represents a pre-provisioned node for baremetal/vmware deployments.
@@ -174,13 +177,25 @@ type StaticNode struct {
 // Requirements: 9.5
 type WorkerPoolConfig struct {
 	Name              string            `yaml:"name" json:"name" validate:"required,dns1123"`
-	Count             int               `yaml:"count" json:"count" validate:"required,min=1"`
+	Count             int               `yaml:"count" json:"count" validate:"min=0"`
 	Flavor            string            `yaml:"flavor" json:"flavor" validate:"required"`
 	Image             string            `yaml:"image,omitempty" json:"image,omitempty"`
 	BootVolume        VolumeConfig      `yaml:"boot_volume,omitempty" json:"boot_volume,omitempty"`
 	AdditionalVolumes []VolumeConfig    `yaml:"additional_volumes,omitempty" json:"additional_volumes,omitempty"`
 	Labels            map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
 	Taints            []TaintConfig     `yaml:"taints,omitempty" json:"taints,omitempty"`
+}
+
+// WindowsWorkerPoolConfig represents an additional Windows worker pool.
+type WindowsWorkerPoolConfig struct {
+	Name                string            `yaml:"name" json:"name" validate:"required,dns1123"`
+	Count               int               `yaml:"count" json:"count" validate:"min=0"`
+	Flavor              string            `yaml:"flavor" json:"flavor" validate:"required"`
+	Image               string            `yaml:"image,omitempty" json:"image,omitempty"`
+	BootVolume          VolumeConfig      `yaml:"boot_volume,omitempty" json:"boot_volume,omitempty"`
+	ServerGroupAffinity string            `yaml:"server_group_affinity,omitempty" json:"server_group_affinity,omitempty" validate:"omitempty,oneof=affinity anti-affinity soft-affinity soft-anti-affinity"`
+	Labels              map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Taints              []TaintConfig     `yaml:"taints,omitempty" json:"taints,omitempty"`
 }
 
 // VolumeConfig represents volume configuration.

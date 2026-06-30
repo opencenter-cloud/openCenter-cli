@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -197,5 +198,159 @@ func TestSendDriftCallbackPostsJSON(t *testing.T) {
 	}
 	if len(received.Drifts) != 1 {
 		t.Fatalf("expected one drift item, got %d", len(received.Drifts))
+	}
+}
+
+func TestBuildDesiredState_MasterVolumeZero_SkipsMasterBootVolumes(t *testing.T) {
+	cfgPtr, err := v2.NewV2Default("vol-test", "openstack")
+	if err != nil {
+		t.Fatalf("NewV2Default() error = %v", err)
+	}
+	cfg := *cfgPtr
+	cfg.OpenCenter.Infrastructure.Compute.MasterCount = 3
+	cfg.OpenCenter.Infrastructure.Compute.WorkerCount = 2
+	cfg.OpenCenter.Infrastructure.Storage.MasterVolumeSize = 0
+	cfg.OpenCenter.Infrastructure.Storage.WorkerVolumeSize = 40
+
+	state := buildDesiredState(cfg)
+
+	require.Len(t, state.Servers, 5, "should have 3 masters + 2 workers")
+	require.Len(t, state.Volumes, 2, "master volumes should be skipped when MasterVolumeSize=0")
+
+	for _, vol := range state.Volumes {
+		if !contains(vol.Name, "worker") {
+			t.Errorf("expected only worker boot volumes, got %s", vol.Name)
+		}
+	}
+}
+
+func TestBuildDesiredState_WorkerVolumeZero_SkipsWorkerBootVolumes(t *testing.T) {
+	cfgPtr, err := v2.NewV2Default("vol-test", "openstack")
+	if err != nil {
+		t.Fatalf("NewV2Default() error = %v", err)
+	}
+	cfg := *cfgPtr
+	cfg.OpenCenter.Infrastructure.Compute.MasterCount = 3
+	cfg.OpenCenter.Infrastructure.Compute.WorkerCount = 2
+	cfg.OpenCenter.Infrastructure.Storage.MasterVolumeSize = 40
+	cfg.OpenCenter.Infrastructure.Storage.WorkerVolumeSize = 0
+
+	state := buildDesiredState(cfg)
+
+	require.Len(t, state.Servers, 5, "should have 3 masters + 2 workers")
+	require.Len(t, state.Volumes, 3, "worker volumes should be skipped when WorkerVolumeSize=0")
+
+	for _, vol := range state.Volumes {
+		if !contains(vol.Name, "master") {
+			t.Errorf("expected only master boot volumes, got %s", vol.Name)
+		}
+	}
+}
+
+func TestBuildDesiredState_BothVolumesZero_NoBootVolumes(t *testing.T) {
+	cfgPtr, err := v2.NewV2Default("vol-test", "openstack")
+	if err != nil {
+		t.Fatalf("NewV2Default() error = %v", err)
+	}
+	cfg := *cfgPtr
+	cfg.OpenCenter.Infrastructure.Compute.MasterCount = 3
+	cfg.OpenCenter.Infrastructure.Compute.WorkerCount = 2
+	cfg.OpenCenter.Infrastructure.Storage.MasterVolumeSize = 0
+	cfg.OpenCenter.Infrastructure.Storage.WorkerVolumeSize = 0
+
+	state := buildDesiredState(cfg)
+
+	require.Len(t, state.Servers, 5)
+	require.Empty(t, state.Volumes, "no boot volumes when both sizes are 0")
+}
+
+// contains checks if substr is in s (simple helper to avoid importing strings in test).
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStr(s, substr))
+}
+
+func containsStr(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+func TestBuildDesiredState_WindowsPoolsIncluded(t *testing.T) {
+	cfgPtr, err := v2.NewV2Default("test-cluster", "openstack")
+	if err != nil {
+		t.Fatalf("NewV2Default() error = %v", err)
+	}
+	cfg := *cfgPtr
+	cfg.OpenCenter.Infrastructure.Provider = "openstack"
+	cfg.OpenCenter.Infrastructure.Compute.MasterCount = 1
+	cfg.OpenCenter.Infrastructure.Compute.WorkerCount = 0
+	cfg.OpenCenter.Infrastructure.Storage.MasterVolumeSize = 40
+	cfg.OpenCenter.Infrastructure.Storage.WorkerVolumeSize = 0
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ImageID = "img-123"
+	cfg.OpenCenter.Infrastructure.Networking.LoadbalancerProvider = "octavia"
+	cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows = []v2.WindowsWorkerPoolConfig{
+		{Name: "win-pool", Count: 2, Flavor: "gp.0.8.32", BootVolume: v2.VolumeConfig{Size: 100}},
+	}
+
+	state := buildDesiredState(cfg)
+
+	// Expect 1 master + 2 windows workers = 3 servers
+	var winServers []cloud.Server
+	for _, s := range state.Servers {
+		if s.Tags["pool"] == "win-pool" {
+			winServers = append(winServers, s)
+		}
+	}
+	if len(winServers) != 2 {
+		t.Fatalf("expected 2 Windows pool servers, got %d", len(winServers))
+	}
+	if winServers[0].Flavor != "gp.0.8.32" {
+		t.Errorf("expected flavor gp.0.8.32, got %s", winServers[0].Flavor)
+	}
+	if winServers[0].Tags["os"] != "windows" {
+		t.Error("expected os=windows tag")
+	}
+
+	// Check boot volumes for Windows pool
+	var winVolumes []cloud.Volume
+	for _, vol := range state.Volumes {
+		if strings.Contains(vol.Name, "win-pool") {
+			winVolumes = append(winVolumes, vol)
+		}
+	}
+	if len(winVolumes) != 2 {
+		t.Fatalf("expected 2 Windows pool boot volumes, got %d", len(winVolumes))
+	}
+	if winVolumes[0].Size != 100 {
+		t.Errorf("expected boot volume size 100, got %d", winVolumes[0].Size)
+	}
+}
+
+func TestBuildDesiredState_WindowsPoolCountZero_NoServers(t *testing.T) {
+	cfgPtr, err := v2.NewV2Default("test-cluster", "openstack")
+	if err != nil {
+		t.Fatalf("NewV2Default() error = %v", err)
+	}
+	cfg := *cfgPtr
+	cfg.OpenCenter.Infrastructure.Provider = "openstack"
+	cfg.OpenCenter.Infrastructure.Compute.MasterCount = 1
+	cfg.OpenCenter.Infrastructure.Compute.WorkerCount = 0
+	cfg.OpenCenter.Infrastructure.Storage.MasterVolumeSize = 40
+	cfg.OpenCenter.Infrastructure.Storage.WorkerVolumeSize = 0
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ImageID = "img-123"
+	cfg.OpenCenter.Infrastructure.Networking.LoadbalancerProvider = "octavia"
+	cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows = []v2.WindowsWorkerPoolConfig{
+		{Name: "drained-pool", Count: 0, Flavor: "gp.0.4.16", BootVolume: v2.VolumeConfig{Size: 80}},
+	}
+
+	state := buildDesiredState(cfg)
+
+	for _, s := range state.Servers {
+		if s.Tags["pool"] == "drained-pool" {
+			t.Fatal("expected no servers for pool with count=0")
+		}
 	}
 }

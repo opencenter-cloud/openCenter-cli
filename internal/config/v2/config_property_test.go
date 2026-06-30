@@ -162,6 +162,11 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 				return false
 			}
 
+			// Master volume size must be >= 0 (0 means no boot-from-volume)
+			if storage.MasterVolumeSize < 0 {
+				return false
+			}
+
 			// Verify storage configuration doesn't leak into other domains
 			// (This is enforced by struct design)
 			return true
@@ -253,12 +258,14 @@ func genValidV2Config() gopter.Gen {
 		gen.IntRange(1, 3),
 		gen.IntRange(1, 10),
 		gen.IntRange(50, 200),
+		gen.IntRange(0, 200),
 	).Map(func(parts []interface{}) *Config {
 		provider := parts[0].(string)
 		cfg := newValidV2TestConfig(provider)
 		cfg.OpenCenter.Infrastructure.Compute.MasterCount = parts[1].(int)
 		cfg.OpenCenter.Infrastructure.Compute.WorkerCount = parts[2].(int)
 		cfg.OpenCenter.Infrastructure.Storage.WorkerVolumeSize = parts[3].(int)
+		cfg.OpenCenter.Infrastructure.Storage.MasterVolumeSize = parts[4].(int)
 		return cfg
 	})
 }

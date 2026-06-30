@@ -1783,7 +1783,7 @@
                         "type": "object"
                       },
                       "count": {
-                        "minimum": 1,
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "flavor": {
@@ -1800,6 +1800,107 @@
                       },
                       "name": {
                         "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+                        "type": "string"
+                      },
+                      "taints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "effect": {
+                              "enum": [
+                                "NoSchedule",
+                                "PreferNoSchedule",
+                                "NoExecute"
+                              ],
+                              "type": "string"
+                            },
+                            "key": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "effect",
+                            "key"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "flavor",
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "additional_server_pools_worker_windows": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "boot_volume": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "delete_on_termination": {
+                            "type": "boolean"
+                          },
+                          "destination_type": {
+                            "enum": [
+                              "volume",
+                              "local"
+                            ],
+                            "type": "string"
+                          },
+                          "size": {
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "source_type": {
+                            "enum": [
+                              "image",
+                              "volume",
+                              "snapshot"
+                            ],
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "count": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "flavor": {
+                        "type": "string"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "labels": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
+                      "name": {
+                        "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+                        "type": "string"
+                      },
+                      "server_group_affinity": {
+                        "enum": [
+                          "affinity",
+                          "anti-affinity",
+                          "soft-affinity",
+                          "soft-anti-affinity"
+                        ],
                         "type": "string"
                       },
                       "taints": {

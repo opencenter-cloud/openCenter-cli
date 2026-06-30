@@ -161,9 +161,39 @@ locals {
   windows_admin_password                  = ""
   worker_node_bfv_size_windows            = 100
   worker_node_bfv_type_windows            = "volume"
-  additional_server_pools_worker_windows  = []
+  additional_server_pools_worker_windows  = {{ if .OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows }}[{{ range $i, $pool := .OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows }}{{if $i}}, {{end}}{
+    name                                = "{{ $pool.Name }}"
+    worker_count                        = {{ $pool.Count }}
+    flavor_worker                       = "{{ $pool.Flavor }}"
+    node_worker                         = "{{ $pool.Name }}"
+    {{- if $pool.Image }}
+    image_id                            = "{{ $pool.Image }}"
+    {{- end }}
+    {{- if $pool.BootVolume.Size }}
+    worker_node_bfv_volume_size         = {{ $pool.BootVolume.Size }}
+    {{- end }}
+    {{- if $pool.BootVolume.Type }}
+    worker_node_bfv_volume_type         = "{{ $pool.BootVolume.Type }}"
+    {{- end }}
+    worker_node_bfv_delete_on_termination = {{ $pool.BootVolume.DeleteOnTermination }}
+  }{{ end }}]{{ else }}[]{{ end }}
   {{- else }}
-  additional_server_pools_worker_windows = []
+  additional_server_pools_worker_windows = {{ if .OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows }}[{{ range $i, $pool := .OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows }}{{if $i}}, {{end}}{
+    name                                = "{{ $pool.Name }}"
+    worker_count                        = {{ $pool.Count }}
+    flavor_worker                       = "{{ $pool.Flavor }}"
+    node_worker                         = "{{ $pool.Name }}"
+    {{- if $pool.Image }}
+    image_id                            = "{{ $pool.Image }}"
+    {{- end }}
+    {{- if $pool.BootVolume.Size }}
+    worker_node_bfv_volume_size         = {{ $pool.BootVolume.Size }}
+    {{- end }}
+    {{- if $pool.BootVolume.Type }}
+    worker_node_bfv_volume_type         = "{{ $pool.BootVolume.Type }}"
+    {{- end }}
+    worker_node_bfv_delete_on_termination = {{ $pool.BootVolume.DeleteOnTermination }}
+  }{{ end }}]{{ else }}[]{{ end }}
   {{- end }}
 
 {{- if eq (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}

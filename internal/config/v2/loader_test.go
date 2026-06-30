@@ -410,3 +410,250 @@ secrets:
 		})
 	}
 }
+
+// TestConfigLoader_MasterVolumeRoundTrip verifies all master and worker volume
+// fields survive load from YAML without loss.
+func TestConfigLoader_MasterVolumeRoundTrip(t *testing.T) {
+	registry := defaults.NewRegistry()
+	loader := NewConfigLoader(registry)
+
+	yaml := `
+schema_version: "2.0"
+opencenter:
+  meta:
+    name: vol-roundtrip
+    organization: test-org
+    env: dev
+    region: sjc3
+  cluster:
+    cluster_name: vol-roundtrip
+    base_domain: example.com
+    cluster_fqdn: vol-roundtrip.example.com
+    admin_email: admin@example.com
+    kubernetes:
+      version: "1.28.0"
+      api_port: 6443
+      subnet_pods: "10.233.64.0/18"
+      subnet_services: "10.233.0.0/18"
+  infrastructure:
+    provider: openstack
+    os_version: "24"
+    ssh:
+      authorized_keys:
+        - "ssh-rsa AAAAB3NzaC1yc2E..."
+    networking:
+      subnet_nodes: "10.2.128.0/22"
+      allocation_pool_start: "10.2.128.10"
+      allocation_pool_end: "10.2.131.254"
+      loadbalancer_provider: ovn
+      dns_zone_name: cluster.local
+      dns_nameservers: ["8.8.8.8"]
+      ntp_servers: ["time.google.com"]
+    compute:
+      flavor_master: m1.medium
+      flavor_worker: m1.large
+      master_count: 3
+      worker_count: 2
+    storage:
+      default_storage_class: standard
+      worker_volume_size: 100
+      worker_volume_destination_type: volume
+      worker_volume_source_type: image
+      worker_volume_type: ssd
+      worker_volume_delete_on_termination: true
+      master_volume_size: 80
+      master_volume_destination_type: volume
+      master_volume_source_type: image
+      master_volume_type: ssd
+      master_volume_delete_on_termination: false
+    cloud:
+      openstack:
+        auth_url: "https://identity.example.com/v3"
+        region: sjc3
+        project_id: test-project
+        image_id: img-123
+  gitops:
+    repository:
+      url: "ssh://git@github.com/example/repo.git"
+      branch: main
+    flux:
+      interval: "5m"
+      prune: true
+deployment:
+  method: kubespray
+opentofu:
+  backend:
+    type: local
+    local:
+      path: "/tmp/terraform.tfstate"
+secrets:
+  global: {}
+`
+	cfg, err := loader.LoadFromBytes([]byte(yaml))
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	s := cfg.OpenCenter.Infrastructure.Storage
+
+	// Worker volume fields
+	if s.WorkerVolumeSize != 100 {
+		t.Errorf("WorkerVolumeSize = %d, want 100", s.WorkerVolumeSize)
+	}
+	if s.WorkerVolumeDestinationType != "volume" {
+		t.Errorf("WorkerVolumeDestinationType = %q, want %q", s.WorkerVolumeDestinationType, "volume")
+	}
+	if s.WorkerVolumeSourceType != "image" {
+		t.Errorf("WorkerVolumeSourceType = %q, want %q", s.WorkerVolumeSourceType, "image")
+	}
+	if s.WorkerVolumeType != "ssd" {
+		t.Errorf("WorkerVolumeType = %q, want %q", s.WorkerVolumeType, "ssd")
+	}
+	if !s.WorkerVolumeDeleteOnTermination {
+		t.Error("WorkerVolumeDeleteOnTermination = false, want true")
+	}
+
+	// Master volume fields
+	if s.MasterVolumeSize != 80 {
+		t.Errorf("MasterVolumeSize = %d, want 80", s.MasterVolumeSize)
+	}
+	if s.MasterVolumeDestinationType != "volume" {
+		t.Errorf("MasterVolumeDestinationType = %q, want %q", s.MasterVolumeDestinationType, "volume")
+	}
+	if s.MasterVolumeSourceType != "image" {
+		t.Errorf("MasterVolumeSourceType = %q, want %q", s.MasterVolumeSourceType, "image")
+	}
+	if s.MasterVolumeType != "ssd" {
+		t.Errorf("MasterVolumeType = %q, want %q", s.MasterVolumeType, "ssd")
+	}
+	if s.MasterVolumeDeleteOnTermination {
+		t.Error("MasterVolumeDeleteOnTermination = true, want false")
+	}
+}
+
+// TestConfigLoader_WindowsWorkerPoolsRoundTrip verifies additional_server_pools_worker_windows
+// fields survive YAML load.
+func TestConfigLoader_WindowsWorkerPoolsRoundTrip(t *testing.T) {
+	registry := defaults.NewRegistry()
+	loader := NewConfigLoader(registry)
+
+	yaml := `
+schema_version: "2.0"
+opencenter:
+  meta:
+    name: win-pool-test
+    organization: test-org
+    env: dev
+    region: sjc3
+  cluster:
+    cluster_name: win-pool-test
+    base_domain: example.com
+    cluster_fqdn: win-pool-test.example.com
+    admin_email: admin@example.com
+    kubernetes:
+      version: "1.28.0"
+      api_port: 6443
+      subnet_pods: "10.233.64.0/18"
+      subnet_services: "10.233.0.0/18"
+  infrastructure:
+    provider: openstack
+    os_version: "24"
+    ssh:
+      authorized_keys:
+        - "ssh-rsa AAAAB3NzaC1yc2E..."
+    networking:
+      subnet_nodes: "10.2.128.0/22"
+      allocation_pool_start: "10.2.128.10"
+      allocation_pool_end: "10.2.131.254"
+      loadbalancer_provider: ovn
+      dns_zone_name: cluster.local
+      dns_nameservers: ["8.8.8.8"]
+      ntp_servers: ["time.google.com"]
+    compute:
+      flavor_master: m1.medium
+      flavor_worker: m1.large
+      master_count: 3
+      worker_count: 2
+      additional_server_pools_worker_windows:
+        - name: win-dotnet
+          count: 3
+          flavor: gp.0.4.16
+          image: win-2022-img
+          boot_volume:
+            size: 100
+            type: HA-Standard
+          server_group_affinity: anti-affinity
+          labels:
+            os: windows
+          taints:
+            - key: os
+              value: windows
+              effect: NoSchedule
+    storage:
+      default_storage_class: standard
+      worker_volume_size: 50
+      worker_volume_destination_type: volume
+      worker_volume_source_type: image
+      worker_volume_type: ssd
+    cloud:
+      openstack:
+        auth_url: "https://identity.example.com/v3"
+        region: sjc3
+        project_id: test-project
+        image_id: img-123
+  gitops:
+    repository:
+      url: "ssh://git@github.com/example/repo.git"
+      branch: main
+    flux:
+      interval: "5m"
+      prune: true
+deployment:
+  method: kubespray
+opentofu:
+  backend:
+    type: local
+    local:
+      path: "/tmp/terraform.tfstate"
+secrets:
+  global: {}
+`
+	cfg, err := loader.LoadFromBytes([]byte(yaml))
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	pools := cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows
+	if len(pools) != 1 {
+		t.Fatalf("Expected 1 Windows pool, got %d", len(pools))
+	}
+
+	p := pools[0]
+	if p.Name != "win-dotnet" {
+		t.Errorf("Name = %q, want %q", p.Name, "win-dotnet")
+	}
+	if p.Count != 3 {
+		t.Errorf("Count = %d, want 3", p.Count)
+	}
+	if p.Flavor != "gp.0.4.16" {
+		t.Errorf("Flavor = %q, want %q", p.Flavor, "gp.0.4.16")
+	}
+	if p.Image != "win-2022-img" {
+		t.Errorf("Image = %q, want %q", p.Image, "win-2022-img")
+	}
+	if p.BootVolume.Size != 100 {
+		t.Errorf("BootVolume.Size = %d, want 100", p.BootVolume.Size)
+	}
+	if p.BootVolume.Type != "HA-Standard" {
+		t.Errorf("BootVolume.Type = %q, want %q", p.BootVolume.Type, "HA-Standard")
+	}
+	if p.ServerGroupAffinity != "anti-affinity" {
+		t.Errorf("ServerGroupAffinity = %q, want %q", p.ServerGroupAffinity, "anti-affinity")
+	}
+	if p.Labels["os"] != "windows" {
+		t.Errorf("Labels[os] = %q, want %q", p.Labels["os"], "windows")
+	}
+	if len(p.Taints) != 1 || p.Taints[0].Key != "os" {
+		t.Errorf("Taints not loaded correctly: %+v", p.Taints)
+	}
+}

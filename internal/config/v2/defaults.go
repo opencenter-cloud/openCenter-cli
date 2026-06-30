@@ -440,6 +440,7 @@ func NewV2FullTemplate(name, provider string) (*Config, error) {
 			Labels: map[string]string{"accelerator": "gpu"},
 		},
 	}
+	cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows = []WindowsWorkerPoolConfig{}
 	cfg.OpenCenter.Infrastructure.Storage.AdditionalBlockDevices = []BlockDeviceConfig{
 		{
 			Name:                "logs",

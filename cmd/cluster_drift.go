@@ -613,6 +613,32 @@ func buildDesiredState(cfg v2.Config) *cloud.InfrastructureState {
 		}
 	}
 
+	// Additional Windows worker pools
+	for _, pool := range cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows {
+		for i := 0; i < pool.Count; i++ {
+			name := fmt.Sprintf("%s-%s-%d", clusterName, pool.Name, i+1)
+			state.Servers = append(state.Servers, cloud.Server{
+				Name:   name,
+				Flavor: pool.Flavor,
+				Status: "ACTIVE",
+				Tags: map[string]string{
+					"cluster": clusterName,
+					"role":    "worker",
+					"os":      "windows",
+					"pool":    pool.Name,
+				},
+			})
+			if pool.BootVolume.Size > 0 {
+				state.Volumes = append(state.Volumes, cloud.Volume{
+					Name:       fmt.Sprintf("%s-boot", name),
+					Size:       pool.BootVolume.Size,
+					Status:     "in-use",
+					AttachedTo: name,
+				})
+			}
+		}
+	}
+
 	switch provider {
 	case "openstack":
 		networkName := fmt.Sprintf("%s-network", clusterName)

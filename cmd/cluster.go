@@ -96,6 +96,7 @@ Configuration files are stored in organization-based directories:
 	cmd.AddCommand(newClusterTemplateCmd())
 	cmd.AddCommand(newClusterDestroyCmd())
 	cmd.AddCommand(newClusterServiceCmd())
+	cmd.AddCommand(newClusterPoolCmd())
 	cmd.AddCommand(newClusterDriftCmd())
 	cmd.AddCommand(newClusterBackupCmd())
 	cmd.AddCommand(newClusterLockCmd())

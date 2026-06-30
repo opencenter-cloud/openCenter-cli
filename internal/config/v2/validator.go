@@ -152,7 +152,59 @@ func (v *defaultValidator) ValidateBusinessRules(cfg *Config) error {
 		return err
 	}
 
-	// Placeholder for additional business rules validation
+	// Validate worker pool name uniqueness
+	if err := v.validatePoolNameUniqueness(cfg); err != nil {
+		return err
+	}
+
+	// Validate Windows image requirement
+	if err := v.validateWindowsPoolImage(cfg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validatePoolNameUniqueness ensures pool names are unique across Linux and Windows pools.
+func (v *defaultValidator) validatePoolNameUniqueness(cfg *Config) error {
+	seen := make(map[string]string)
+	for _, pool := range cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker {
+		if prev, exists := seen[pool.Name]; exists {
+			return fmt.Errorf("duplicate pool name %q (appears in both %s and linux pools)", pool.Name, prev)
+		}
+		seen[pool.Name] = "linux"
+	}
+	for _, pool := range cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows {
+		if prev, exists := seen[pool.Name]; exists {
+			return fmt.Errorf("duplicate pool name %q (appears in both %s and windows pools)", pool.Name, prev)
+		}
+		seen[pool.Name] = "windows"
+	}
+	return nil
+}
+
+// validateWindowsPoolImage ensures image_id_windows is set when any Windows pool has count > 0.
+func (v *defaultValidator) validateWindowsPoolImage(cfg *Config) error {
+	hasActiveWindowsPool := cfg.OpenCenter.Infrastructure.Compute.WorkerCountWindows > 0
+	for _, pool := range cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows {
+		if pool.Count > 0 && pool.Image == "" {
+			hasActiveWindowsPool = true
+			break
+		}
+	}
+	if !hasActiveWindowsPool {
+		return nil
+	}
+	if cfg.OpenCenter.Infrastructure.Cloud.OpenStack != nil {
+		if cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ImageIDWindows == "" {
+			// Check if all active Windows pools have per-pool images
+			for _, pool := range cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorkerWindows {
+				if pool.Count > 0 && pool.Image == "" {
+					return fmt.Errorf("infrastructure.cloud.openstack.image_id_windows is required when Windows pools with count > 0 do not specify a per-pool image")
+				}
+			}
+		}
+	}
 	return nil
 }
 

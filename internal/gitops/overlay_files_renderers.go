@@ -116,7 +116,7 @@ metadata:
   name: rmpk-gateway
   namespace: rackspace-system
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-{{ .OpenCenter.Cluster.ClusterName }}
+    cert-manager.io/cluster-issuer: letsencrypt-default
 spec:
   gatewayClassName: eg
   listeners:

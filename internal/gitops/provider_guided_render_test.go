@@ -687,3 +687,24 @@ func TestRenderClusterAppsGatewayDependsOnEnvoyGatewayAPIBase(t *testing.T) {
 		t.Fatalf("expected gateway service ExtraDependencies to contain 'envoy-gateway-api-base', got %v", svc.ExtraDependencies)
 	}
 }
+
+func TestGatewayClusterIssuerIsLetsencryptDefault(t *testing.T) {
+	cfg := newDefault("mycluster")
+	cfg.OpenCenter.Cluster.ClusterFQDN = "mycluster.dev1.sjc3.k8s.opencenter.cloud"
+
+	files, err := gatewayOverlayFilesRenderer(cfg)
+	if err != nil {
+		t.Fatalf("gatewayOverlayFilesRenderer() error = %v", err)
+	}
+
+	gateway := files["gateway.yaml"]
+
+	// The cluster-issuer annotation must reference letsencrypt-default,
+	// not letsencrypt-<cluster-name>.
+	if strings.Contains(gateway, "cluster-issuer: letsencrypt-mycluster") {
+		t.Fatalf("rmpk-gateway cluster-issuer should be 'letsencrypt-default', not 'letsencrypt-mycluster'.\nGot:\n%s", gateway)
+	}
+	if !strings.Contains(gateway, "cluster-issuer: letsencrypt-default") {
+		t.Fatalf("expected cluster-issuer annotation 'letsencrypt-default' in rmpk-gateway.\nGot:\n%s", gateway)
+	}
+}

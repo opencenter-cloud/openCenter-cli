@@ -553,3 +553,52 @@ func TestRenderClusterAppsCertManagerAWSIssuerMultipleZones(t *testing.T) {
 		t.Fatalf("expected region 'eu-west-1'.\nGot:\n%s", issuer)
 	}
 }
+
+func TestGatewayRendersHostnamesWithClusterFQDN(t *testing.T) {
+	cfg := newDefault("raxai")
+	// Set the ClusterFQDN as it would be for a real cluster
+	cfg.OpenCenter.Cluster.ClusterFQDN = "raxai.dev1.sjc3.k8s.opencenter.cloud"
+
+	// When ClusterFQDN changes, service hostnames that derive from it must update.
+	// This simulates the real scenario where a user configures their FQDN.
+	keycloakSvc := cfg.OpenCenter.Services["keycloak"].(*configservices.KeycloakConfig)
+	keycloakSvc.Hostname = "auth." + cfg.OpenCenter.Cluster.ClusterFQDN
+
+	headlampSvc := cfg.OpenCenter.Services["headlamp"].(*configservices.HeadlampConfig)
+	headlampSvc.Hostname = "dashboard." + cfg.OpenCenter.Cluster.ClusterFQDN
+
+	files, err := gatewayOverlayFilesRenderer(cfg)
+	if err != nil {
+		t.Fatalf("gatewayOverlayFilesRenderer() error = %v", err)
+	}
+
+	gateway, ok := files["gateway.yaml"]
+	if !ok {
+		t.Fatal("expected gateway.yaml to be rendered")
+	}
+
+	// All hostnames must include the full ClusterFQDN (with cluster name "raxai").
+	// They should be <service>.raxai.dev1.sjc3.k8s.opencenter.cloud
+	// NOT <service>.dev1.sjc3.k8s.opencenter.cloud (missing cluster name)
+	expectedHostnames := []string{
+		"auth.raxai.dev1.sjc3.k8s.opencenter.cloud",
+		"dashboard.raxai.dev1.sjc3.k8s.opencenter.cloud",
+		"gitops.raxai.dev1.sjc3.k8s.opencenter.cloud",
+		"prometheus.raxai.dev1.sjc3.k8s.opencenter.cloud",
+		"alertmanager.raxai.dev1.sjc3.k8s.opencenter.cloud",
+		"grafana.raxai.dev1.sjc3.k8s.opencenter.cloud",
+		"harbor.raxai.dev1.sjc3.k8s.opencenter.cloud",
+	}
+
+	for _, expected := range expectedHostnames {
+		if !strings.Contains(gateway, expected) {
+			t.Errorf("expected hostname %q in gateway.yaml but not found.\nGot:\n%s", expected, gateway)
+		}
+	}
+
+	// Verify that truncated FQDN (without cluster name) does NOT appear
+	wrongAuthHostname := "auth.dev1.sjc3.k8s.opencenter.cloud"
+	if strings.Contains(gateway, wrongAuthHostname) {
+		t.Errorf("gateway.yaml must NOT contain truncated hostname %q (missing cluster name)", wrongAuthHostname)
+	}
+}

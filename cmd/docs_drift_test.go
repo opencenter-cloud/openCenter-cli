@@ -86,7 +86,7 @@ func TestDocsDoNotUseRemovedGACommands(t *testing.T) {
 				return err
 			}
 			if d.IsDir() {
-				if filepath.ToSlash(mustRelPath(t, repoRoot, path)) == "docs/superpowers/plans" {
+				if filepath.ToSlash(mustRelPath(t, repoRoot, path)) == "docs/release" {
 					return filepath.SkipDir
 				}
 				return nil

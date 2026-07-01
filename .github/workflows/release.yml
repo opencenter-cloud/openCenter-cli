@@ -30,7 +30,7 @@ jobs:
             goarch: arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -61,7 +61,7 @@ jobs:
             -o "${OUTPUT}"
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: opencenter-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/opencenter-*
@@ -82,7 +82,7 @@ jobs:
             goarch: arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -104,7 +104,7 @@ jobs:
           go build -trimpath -o "${OUTPUT}" ./cmd/opencenter-local
 
       - name: Upload plugin artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: opencenter-local-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/opencenter-local-*
@@ -117,7 +117,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -126,7 +126,7 @@ jobs:
           cache: true
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true

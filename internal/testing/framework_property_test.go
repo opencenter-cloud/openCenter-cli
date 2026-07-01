@@ -273,9 +273,14 @@ func TestProperty_FrameworkIsolation(t *testing.T) {
 			config1 := fw1.CreateTestConfig(provider)
 			config2 := fw2.CreateTestConfig(provider)
 
-			// Verify configs are different (at least one field should differ)
+			// Verify configs are different (at least one field should differ).
+			// Check multiple fields to avoid false collisions from small value pools.
 			return config1.OpenCenter.Meta.Name != config2.OpenCenter.Meta.Name ||
-				config1.OpenCenter.Meta.Organization != config2.OpenCenter.Meta.Organization
+				config1.OpenCenter.Meta.Organization != config2.OpenCenter.Meta.Organization ||
+				config1.OpenCenter.Meta.Env != config2.OpenCenter.Meta.Env ||
+				config1.OpenCenter.Meta.Region != config2.OpenCenter.Meta.Region ||
+				config1.OpenCenter.Cluster.Kubernetes.Version != config2.OpenCenter.Cluster.Kubernetes.Version ||
+				config1.OpenCenter.GitOps.Repository.URL != config2.OpenCenter.GitOps.Repository.URL
 		},
 		gen.Int64(),
 		gen.Int64(),

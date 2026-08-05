@@ -1,0 +1,123 @@
+# Copy this into openCenter-cli-testDzoan as
+# .github/workflows/test-bench.yml
+#
+# This is the file that makes the Test Bench the backend for your CLI's CI. It
+# lives in the CLI repository, not here: GitHub runs a workflow from the
+# repository whose code changed, and the thing that changed is the CLI.
+#
+# What happens when you push to openCenter-cli-testDzoan:
+#
+#   your commit  ->  this workflow  ->  the Test Bench action  ->  a verdict
+#
+# and on main, with publish enabled, one step further:
+#
+#                ->  build the image  ->  open a PR on the GitOps repo
+#
+# The bench never merges that PR and never deploys. Review does the first and
+# Flux does the second.
+
+name: Test Bench
+
+on:
+  # Every pull request gets a verdict and nothing else. No image is pushed and
+  # no GitOps branch is created, because a pull request can come from a fork and
+  # a fork must not be able to reach a write credential.
+  pull_request:
+    branches: [main]
+
+  push:
+    branches: [main]
+
+  # The only path that can publish, and only when a person chooses to.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit of this repository to test
+        required: false
+        default: ""
+        type: string
+      environment_mode:
+        description: Test Bench environment
+        required: true
+        default: emulated
+        type: choice
+        options: [emulated, kind, real]
+      provider:
+        description: Provider to test
+        required: true
+        default: openstack
+        type: choice
+        options: [openstack, vmware, baremetal, kind]
+      publish:
+        description: Open a GitOps pull request when the run passes
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test this CLI build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      # Only for pushing the image to ghcr.io on a publishing run.
+      packages: write
+
+    steps:
+      # The whole of it. Everything the bench needs — building itself, building
+      # your CLI, running the stages, proposing the GitOps update — is inside
+      # the action.
+      - name: openCenter CLI Test Bench
+        id: bench
+        uses: Sherlock2019/opencenterclitest-ultra@main
+        with:
+          # This repository, at whichever ref triggered the run. github.sha
+          # rather than a branch name so a run always names the exact commit it
+          # tested.
+          opencenter_cli_repository: ${{ github.repository }}
+          opencenter_cli_ref: ${{ inputs.ref || github.sha }}
+
+          environment_mode: ${{ inputs.environment_mode || 'emulated' }}
+          provider: ${{ inputs.provider || 'openstack' }}
+
+          # Where a passing build gets recorded.
+          gitops_repository: git@github.com:Sherlock2019/opencenter-my-cluster-gitops.git
+          gitops_base_branch: main
+          gitops_kustomization_path: clusters/my-cluster/kustomization.yaml
+          gitops_image_repository: ghcr.io/sherlock2019/opencenter-cli-test-bench
+
+          # Publishing needs three things at once: a manual run, the box ticked,
+          # and a token. Any push or pull request gets a verdict only.
+          publish: >-
+            ${{ github.event_name == 'workflow_dispatch'
+                && inputs.publish == true }}
+          gitops_token: >-
+            ${{ github.event_name == 'workflow_dispatch'
+                && inputs.publish == true
+                && secrets.GITOPS_TOKEN || '' }}
+
+      - name: Report
+        if: always()
+        shell: bash
+        run: |
+          echo "result  : ${{ steps.bench.outputs.result }}"
+          echo "version : ${{ steps.bench.outputs.cli_version }}"
+          echo "passed  : ${{ steps.bench.outputs.passed }}"
+          echo "failed  : ${{ steps.bench.outputs.failed }}"
+          echo "image   : ${{ steps.bench.outputs.image }}"
+          echo "PR      : ${{ steps.bench.outputs.pull_request_url }}"
+
+          # The step above already fails the job on a failing run. This exists
+          # so the reason is legible in the log rather than only in an exit code.
+          if [[ "${{ steps.bench.outputs.result }}" == "fail" ]]; then
+            echo "::error::The Test Bench found ${{ steps.bench.outputs.failed }} failing command(s)."
+            exit 1
+          fi

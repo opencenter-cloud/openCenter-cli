@@ -19,13 +19,17 @@
 name: Test Bench
 
 on:
-  # Every pull request gets a verdict and nothing else. No image is pushed and
-  # no GitOps branch is created, because a pull request can come from a fork and
-  # a fork must not be able to reach a write credential.
-  pull_request:
-    branches: [main]
-
+  # Every commit on every branch, which is the point: you push, this runs.
+  #
+  # No `branches:` filter deliberately. With one, a commit on a feature branch
+  # did nothing at all and the bench only ever saw code that had already been
+  # merged — which is the wrong end of the cycle to find out the CLI is broken.
   push:
+
+  # Pull requests as well, so a request from a fork is still tested. A fork's
+  # run gets a verdict and nothing more: no image is pushed and no GitOps branch
+  # is created, because a fork must not be able to reach a write credential.
+  pull_request:
     branches: [main]
 
   # The only path that can publish, and only when a person chooses to.
@@ -77,7 +81,7 @@ jobs:
       # the action.
       - name: openCenter CLI Test Bench
         id: bench
-        uses: Sherlock2019/opencenterclitest-ultra@main
+        uses: Sherlock2019/opencenterclitest-Simple@main
         with:
           # This repository, at whichever ref triggered the run. github.sha
           # rather than a branch name so a run always names the exact commit it

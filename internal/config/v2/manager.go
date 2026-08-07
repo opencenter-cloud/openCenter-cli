@@ -575,8 +575,22 @@ func (cm *ConfigurationManager) discoverClustersInBlueprints(orgDir string) []st
 				continue
 			}
 			clusterName := entry.Name()
-			configPath := filepath.Join(orgDir, clusterName, clusterName+"-config.yaml")
-			if cm.fileSystem.Exists(configPath) || cm.fileSystem.Exists(filepath.Join(orgDir, clusterName)) {
+			// A cluster is a directory holding a configuration, not merely a
+			// directory.
+			//
+			// This used to accept `Exists(orgDir/clusterName)` as an alternative
+			// to finding the config file — but that is the directory already
+			// being iterated as entry.IsDir(), so it was always true and the
+			// config check never ran. Every leftover directory was reported as a
+			// cluster.
+			//
+			// It showed up after destroy: `cluster destroy --force
+			// --remove-files` removes <cluster>-config.yaml but leaves the
+			// backup Delete takes beside it, so the directory survived and
+			// `cluster list` went on reporting a cluster that no longer existed.
+			// Destroy exited 0 and the listing disagreed with it.
+			if cm.fileSystem.Exists(filepath.Join(orgDir, clusterName, clusterName+"-config.yaml")) ||
+				hasClusterConfig(filepath.Join(orgDir, clusterName)) {
 				seen[clusterName] = struct{}{}
 			}
 		}
@@ -587,6 +601,34 @@ func (cm *ConfigurationManager) discoverClustersInBlueprints(orgDir string) []st
 		clusters = append(clusters, name)
 	}
 	return clusters
+}
+
+// hasClusterConfig reports whether a directory holds a cluster configuration
+// under any name.
+//
+// The exact-name check above covers the ordinary case. This covers a directory
+// whose configuration does not match the directory name — a renamed cluster, or
+// one written under an earlier layout — so tightening the discovery does not
+// hide a cluster that really is there.
+//
+// Backups are excluded deliberately. Delete writes <name>-config.yaml.backup
+// before removing the original, so treating a backup as a configuration would
+// reinstate exactly the bug this replaced: a destroyed cluster still listed.
+func hasClusterConfig(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasSuffix(name, "-config.yaml") && !strings.HasSuffix(name, ".backup") {
+			return true
+		}
+	}
+	return false
 }
 
 // parseConfigFileName extracts the cluster name from a config file name

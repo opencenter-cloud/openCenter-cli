@@ -385,6 +385,30 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 }
 
 // updateConfigPaths updates configuration with resolved paths
+// seedServiceSecretPlaceholders writes CHANGEME for the service secrets that
+// readiness requires, for the services this configuration actually enables.
+//
+// Mirrors validateServiceSecrets in internal/config/v2/readiness.go. Only empty
+// fields are touched, so anything supplied through --config-file, a flag or a
+// later `cluster set` is left exactly as given.
+func seedServiceSecretPlaceholders(cfg *v2.Config, configMap map[string]any) {
+	seed := func(enabled bool, current *string, path ...string) {
+		if !enabled || *current != "" {
+			return
+		}
+		*current = v2.PlaceholderSecret
+		setNestedConfigValue(configMap, v2.PlaceholderSecret, path...)
+	}
+
+	keycloak := v2.ServiceEnabled(cfg, "keycloak")
+	seed(keycloak, &cfg.Secrets.Keycloak.AdminPassword,
+		"secrets", "keycloak", "admin_password")
+	seed(keycloak, &cfg.Secrets.Keycloak.ClientSecret,
+		"secrets", "keycloak", "client_secret")
+	seed(v2.ServiceEnabled(cfg, "kube-prometheus-stack"), &cfg.Secrets.Grafana.AdminPassword,
+		"secrets", "grafana", "admin_password")
+}
+
 func (s *InitService) updateConfigPaths(cfg *v2.Config, configMap map[string]any, clusterPaths *paths.ClusterPaths, opts InitOptions) {
 	cfg.OpenCenter.GitOps.Repository.LocalDir = clusterPaths.GitOpsDir
 	setNestedConfigValue(configMap, clusterPaths.GitOpsDir, "opencenter", "gitops", "repository", "local_dir")
@@ -445,6 +469,20 @@ func (s *InitService) updateConfigPaths(cfg *v2.Config, configMap map[string]any
 		cfg.OpenCenter.GitOps.Auth.SSH = nil
 		setNestedConfigValue(configMap, nil, "opencenter", "gitops", "auth", "ssh")
 	}
+
+	// Seed the same placeholder for every secret readiness will demand.
+	//
+	// The GitOps token already gets CHANGEME above, so a reader of the generated
+	// file can see there is a value to supply. The service secrets did not: when
+	// keycloak is enabled, readiness requires secrets.keycloak.admin_password and
+	// a fresh configuration simply had no such field — so `cluster validate`
+	// named a path that appeared nowhere in the file it was validating.
+	//
+	// This does not make a fresh cluster valid, and is not meant to. CHANGEME is
+	// rejected exactly as an empty value is; that refusal is the design, since a
+	// cluster with no admin password is not ready to deploy. What changes is that
+	// every field needing a value is visible in the file, in one form.
+	seedServiceSecretPlaceholders(cfg, configMap)
 
 	// Update SOPS key path
 	if opts.NoSOPSKeyGen &&

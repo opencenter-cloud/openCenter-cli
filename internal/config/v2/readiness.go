@@ -390,6 +390,16 @@ func serviceEnabled(cfg *Config, serviceName string) bool {
 	return serviceEnabledInMap(cfg.OpenCenter.Services, serviceName) || serviceEnabledInMap(cfg.OpenCenter.ManagedServices, serviceName)
 }
 
+// ServiceEnabled reports whether a configuration turns a service on.
+//
+// Exported so init can seed placeholders for exactly the secrets readiness will
+// go on to demand. A second copy of this rule elsewhere would drift, and the
+// drift would show up as init seeding a field nothing wants, or missing one
+// that is required.
+func ServiceEnabled(cfg *Config, serviceName string) bool {
+	return serviceEnabled(cfg, serviceName)
+}
+
 func serviceEnabledInMap(servicesMap ServiceMap, serviceName string) bool {
 	if svc, ok := servicesMap[serviceName]; ok {
 		if enabler, ok := svc.(interface{ IsEnabled() bool }); ok {

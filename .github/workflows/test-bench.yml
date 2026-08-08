@@ -1,14 +1,10 @@
-# .github/workflows/test-bench.yml
-#
-# Installed by the openCenter CLI Test Bench.
-# Every commit is tested. Nothing is deployed.
 name: Test Bench
 
 on:
   push:                 # every commit on every branch
-    paths-ignore: ['.github/workflows/**']
+    paths-ignore: ['.github/workflows/**', '.opencenter-e2e-trigger']
   pull_request:
-    paths-ignore: ['.github/workflows/**']
+    paths-ignore: ['.github/workflows/**', '.opencenter-e2e-trigger']
     branches: [main]
   workflow_dispatch:
     inputs:

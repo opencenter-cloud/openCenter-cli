@@ -1,14 +1,3 @@
-# .github/workflows/opencenter-e2e.yml
-#
-# Installed by the openCenter cluster lifecycle test bench.
-#
-# Every job below is a thin wrapper around one action, which builds this
-# repository at the commit that triggered the run and puts it through the
-# twenty-one-phase cluster lifecycle.
-#
-# The phases, assertions, evidence and cleanup live in that binary and
-# nowhere else. This file chooses when to run and what to keep —
-# deliberately not how to test.
 name: openCenter E2E
 
 on:
@@ -39,9 +28,9 @@ on:
         type: boolean
         default: false
   pull_request:
-    paths-ignore: ['.github/workflows/**']
+    paths-ignore: ['.github/workflows/**', '.opencenter-test-bench-trigger']
   push:
-    paths-ignore: ['.github/workflows/**']
+    paths-ignore: ['.github/workflows/**', '.opencenter-test-bench-trigger']
 
 permissions:
   contents: read

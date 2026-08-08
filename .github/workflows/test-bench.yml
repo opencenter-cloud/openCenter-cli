@@ -1,0 +1,39 @@
+name: Test Bench
+
+on:
+  push:                 # every commit on every branch
+    paths-ignore: ['.github/workflows/**', '.opencenter-e2e-trigger']
+  pull_request:
+    paths-ignore: ['.github/workflows/**', '.opencenter-e2e-trigger']
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Open a GitOps pull request when the run passes
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write       # pushing the image to ghcr.io
+
+concurrency:
+  group: test-bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: Sherlock2019/fullopenclitestbench@main
+        with:
+          mode: commands
+          gitops_repository: git@github.com:Sherlock2019/opencenter-my-cluster-gitops.git
+          gitops_kustomization_path: clusters/my-cluster/kustomization.yaml
+          publish: >-
+            ${{ github.event_name == 'workflow_dispatch'
+                && inputs.publish == true }}
+          gitops_token: ${{ secrets.GITOPS_TOKEN }}
+          gitops_ssh_key: ${{ secrets.GITOPS_SSH_KEY }}

@@ -39,7 +39,9 @@ on:
         type: boolean
         default: false
   pull_request:
+    paths-ignore: ['.github/workflows/**']
   push:
+    paths-ignore: ['.github/workflows/**']
 
 permissions:
   contents: read
@@ -64,6 +66,7 @@ jobs:
           - openstack-emulated
           - vmware-emulated
           - baremetal-emulated
+          - kind
     steps:
       # The repository under test, at the commit that triggered this run.
       - uses: actions/checkout@v7

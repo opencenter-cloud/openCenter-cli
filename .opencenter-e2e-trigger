@@ -1,5 +1,3 @@
-# openCenter test bench — trigger marker
-#
-# Touched by the run button so the push changes something.
+# openCenter test bench — lifecycle trigger marker
 
-last-reset: 2026-08-08T16:23:30Z
+last-triggered: 2026-08-08T16:23:55Z

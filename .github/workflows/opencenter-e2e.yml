@@ -1,0 +1,102 @@
+# .github/workflows/opencenter-e2e.yml
+#
+# Installed by the openCenter cluster lifecycle test bench.
+#
+# Every job below is a thin wrapper around one action, which builds this
+# repository at the commit that triggered the run and puts it through the
+# twenty-one-phase cluster lifecycle.
+#
+# The phases, assertions, evidence and cleanup live in that binary and
+# nowhere else. This file chooses when to run and what to keep —
+# deliberately not how to test.
+name: openCenter E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Which lifecycle to run
+        type: choice
+        default: configuration-only
+        options:
+          - configuration-only
+          - openstack-emulated
+          - vmware-emulated
+          - baremetal-emulated
+          - kind
+          - openstack-real
+          - vmware-real
+          - baremetal-real
+      runs_on:
+        description: >-
+          Runner for the jobs that reach infrastructure. A GitHub-hosted
+          runner cannot see a private OpenStack, a vCenter or a BMC, so
+          those need a self-hosted label here.
+        type: string
+        default: ubuntu-latest
+      destroy_after_test:
+        description: Destroy the environment when finished
+        type: boolean
+        default: false
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Pull requests get the profiles that create nothing: fast,
+  # credential-free, and safe on a fork. The expensive and privileged
+  # ones are deliberately absent — a pull request must never be able to
+  # spend money or reach real infrastructure.
+  safe:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - configuration-only
+          - openstack-emulated
+          - vmware-emulated
+          - baremetal-emulated
+    steps:
+      # The repository under test, at the commit that triggered this run.
+      - uses: actions/checkout@v4
+
+      - uses: Sherlock2019/fullopenclitestbench@main
+        with:
+          mode: lifecycle
+          profile: ${{ matrix.profile }}
+
+      # if: always() — the evidence from a failed run is the evidence
+      # that matters, and a conditional upload keeps only the runs
+      # nobody needs.
+      #
+      # The exclusions are not tidiness. `cluster init` generates a real
+      # SSH private key and a real age private key into the cluster's
+      # secrets tree, and that tree is inside the run directory — so
+      # uploading it whole would publish both as a downloadable artifact.
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.profile }}-${{ github.run_id }}
+          path: |
+            artifacts/
+            !artifacts/*/config/clusters/secrets/**
+            !artifacts/**/*.key
+            !artifacts/**/id_*
+          if-no-files-found: error
+
+      - name: Upload JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.profile }}-junit-${{ github.run_id }}
+          path: artifacts/*/junit/
+

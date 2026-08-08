@@ -1,5 +1,11 @@
 # openCenter test bench — trigger marker
 #
-# Touched by the run button so the push changes something.
+# This file exists so that pressing "Run GitHub Action test" produces a
+# commit that changes something. The workflows ignore pushes that only
+# touch .github/workflows, so a commit changing nothing at all would be
+# skipped and no run would start.
+#
+# It lives on automation/test-bench-trigger and is safe to delete with that branch.
+# Nothing reads it.
 
-last-reset: 2026-08-08T16:23:34Z
+last-triggered: 2026-08-08T16:27:15Z

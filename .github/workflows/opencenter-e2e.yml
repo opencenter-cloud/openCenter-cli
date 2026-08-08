@@ -1,0 +1,79 @@
+name: openCenter E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Which lifecycle to run
+        type: choice
+        default: configuration-only
+        options:
+          - configuration-only
+          - openstack-emulated
+          - vmware-emulated
+          - baremetal-emulated
+          - kind
+          - openstack-real
+          - vmware-real
+          - baremetal-real
+      runs_on:
+        description: >-
+          Runner for the jobs that reach infrastructure. A GitHub-hosted
+          runner cannot see a private OpenStack, a vCenter or a BMC, so
+          those need a self-hosted label here.
+        type: string
+        default: ubuntu-latest
+      destroy_after_test:
+        description: Destroy the environment when finished
+        type: boolean
+        default: false
+  pull_request:
+    paths-ignore: ['.github/workflows/**', '.opencenter-test-bench-trigger']
+  push:
+    paths-ignore: ['.github/workflows/**', '.opencenter-test-bench-trigger']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Pull requests get the profiles that create nothing: fast,
+  # credential-free, and safe on a fork. The expensive and privileged
+  # ones are deliberately absent — a pull request must never be able to
+  # spend money or reach real infrastructure.
+  safe:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - configuration-only
+          - openstack-emulated
+          - vmware-emulated
+          - baremetal-emulated
+          - kind
+    steps:
+      # The repository under test, at the commit that triggered this run.
+      - uses: actions/checkout@v7
+
+      - uses: Sherlock2019/fullopenclitestbench@main
+        with:
+          mode: lifecycle
+          profile: ${{ matrix.profile }}
+
+      # No upload step here on purpose. The action uploads its own
+      # evidence — run directory, JUnit and log — as
+      # opencenter-test-bench-<profile>-<run id>, with the cluster's
+      # secrets tree, *.key and id_* excluded: `cluster init` generates a
+      # real SSH private key and a real age private key in there, and
+      # uploading the directory whole would publish both as a
+      # downloadable artifact.
+      #
+      # Adding a second uploader here means guessing where the action
+      # keeps its run directory. That guess was artifacts/, the path the
+      # bench uses when run by hand, and it was wrong.
+

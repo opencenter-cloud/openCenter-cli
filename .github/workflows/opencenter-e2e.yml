@@ -73,30 +73,15 @@ jobs:
           mode: lifecycle
           profile: ${{ matrix.profile }}
 
-      # if: always() — the evidence from a failed run is the evidence
-      # that matters, and a conditional upload keeps only the runs
-      # nobody needs.
+      # No upload step here on purpose. The action uploads its own
+      # evidence — run directory, JUnit and log — as
+      # opencenter-test-bench-<profile>-<run id>, with the cluster's
+      # secrets tree, *.key and id_* excluded: `cluster init` generates a
+      # real SSH private key and a real age private key in there, and
+      # uploading the directory whole would publish both as a
+      # downloadable artifact.
       #
-      # The exclusions are not tidiness. `cluster init` generates a real
-      # SSH private key and a real age private key into the cluster's
-      # secrets tree, and that tree is inside the run directory — so
-      # uploading it whole would publish both as a downloadable artifact.
-      - name: Upload evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-${{ matrix.profile }}-${{ github.run_id }}
-          path: |
-            artifacts/
-            !artifacts/*/config/clusters/secrets/**
-            !artifacts/**/*.key
-            !artifacts/**/id_*
-          if-no-files-found: error
-
-      - name: Upload JUnit
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-${{ matrix.profile }}-junit-${{ github.run_id }}
-          path: artifacts/*/junit/
+      # Adding a second uploader here means guessing where the action
+      # keeps its run directory. That guess was artifacts/, the path the
+      # bench uses when run by hand, and it was wrong.
 

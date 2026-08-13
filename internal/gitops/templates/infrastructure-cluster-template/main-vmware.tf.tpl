@@ -64,7 +64,9 @@ locals {
   calico_nat_outgoing                     = {{ .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.NATOutgoing | default true }}
 
   # VMware-specific settings
-  address_bastion                         = "{{ .OpenCenter.Infrastructure.Bastion.Address | default "localhost" }}"
+  # Leave empty when no bastion is configured; the kubespray module skips the
+  # ProxyCommand hop and connects to nodes directly.
+  address_bastion                         = "{{ .OpenCenter.Infrastructure.Bastion.Address | default "" }}"
   windows_dataplane                       = {{ if gt (.OpenCenter.Infrastructure.Compute.WorkerCountWindows | default 0) 0 }}"HNS"{{ else }}"Disabled"{{ end }}
   
   # Pre-provisioned VM nodes

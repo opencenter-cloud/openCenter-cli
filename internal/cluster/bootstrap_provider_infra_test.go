@@ -243,6 +243,12 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 func TestOpenStackNetworkPluginInstallCalicoUsesHelmChart(t *testing.T) {
 	cfg, _, kubeconfigPath := openStackNetworkPluginTestConfig(t, "calico-demo")
 
+	// Pin an explicit version so the assertion below proves the value flows
+	// from the config through selection.Version to the helm --version flag,
+	// rather than passing because of defaultCalicoChartVersion.
+	const configuredCalicoVersion = "3.29.4"
+	cfg.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Version = configuredCalicoVersion
+
 	// Create the override values file at the expected path
 	clusterName := cfg.ClusterName()
 	valuesDir := filepath.Join(cfg.GitDir(), "applications", "overlays", clusterName, "services", "calico", "helm-values")
@@ -262,8 +268,10 @@ func TestOpenStackNetworkPluginInstallCalicoUsesHelmChart(t *testing.T) {
 		t.Fatalf("install step failed: %v", err)
 	}
 
+	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "apply --server-side -f https://raw.githubusercontent.com/projectcalico/calico/v"+configuredCalicoVersion+"/manifests/operator-crds.yaml")
 	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "repo add projectcalico https://docs.tigera.io/calico/charts")
-	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install calico projectcalico/tigera-operator --namespace tigera-operator --create-namespace -f "+valuesPath)
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "repo update projectcalico")
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install calico projectcalico/tigera-operator --version v"+configuredCalicoVersion+" --namespace tigera-operator --create-namespace -f "+valuesPath)
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n tigera-operator rollout status deployment/tigera-operator --timeout=5m")
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" wait --for=create tigerastatus/calico --timeout=5m")
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" wait --for=condition=Available tigerastatus/calico --timeout=10m")

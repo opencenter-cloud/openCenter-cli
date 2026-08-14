@@ -640,3 +640,59 @@ func TestRenderInfrastructureClusterKubeVipInterfaceEmptyByDefault(t *testing.T)
 		})
 	}
 }
+
+func TestRenderInfrastructureClusterRendersKubesprayNetworkYaml(t *testing.T) {
+	tests := []struct {
+		name         string
+		provider     string
+		wantAnsHost  bool
+	}{
+		{name: "baremetal", provider: "baremetal", wantAnsHost: true},
+		{name: "vmware", provider: "vmware", wantAnsHost: true},
+		{name: "openstack", provider: "openstack", wantAnsHost: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dst := t.TempDir()
+			cfg := mustNewGitOpsTestConfig("network-yaml-"+tc.provider, tc.provider)
+			cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+
+			if err := RenderInfrastructureCluster(cfg); err != nil {
+				t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
+			}
+
+			path := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "inventory", "group_vars", "all", "network.yml")
+			data, err := os.ReadFile(path)
+
+			if !tc.wantAnsHost {
+				// Non-baremetal/vmware providers may either skip the file or
+				// render it empty; both are acceptable so long as no
+				// ansible_host pin leaks through.
+				if err != nil && os.IsNotExist(err) {
+					return
+				}
+				if err != nil {
+					t.Fatalf("unexpected error reading network.yml: %v", err)
+				}
+				if strings.Contains(string(data), "ansible_host") {
+					t.Fatalf("rendered network.yml for %s should not pin ip to ansible_host\ncontent:\n%s", tc.provider, string(data))
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("failed to read rendered network.yml: %v", err)
+			}
+			content := string(data)
+			wantIP := `ip: "{{ ansible_host }}"`
+			wantAccessIP := `access_ip: "{{ ansible_host }}"`
+			if !strings.Contains(content, wantIP) {
+				t.Fatalf("rendered network.yml missing %q\ncontent:\n%s", wantIP, content)
+			}
+			if !strings.Contains(content, wantAccessIP) {
+				t.Fatalf("rendered network.yml missing %q\ncontent:\n%s", wantAccessIP, content)
+			}
+		})
+	}
+}

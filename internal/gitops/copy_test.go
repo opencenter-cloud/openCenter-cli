@@ -527,3 +527,79 @@ func TestCopyBaseRendersAllSourceAuthBlocksAndPreservesServiceRepo(t *testing.T)
 		t.Fatalf("keycloak-config source did not use the shared customer-repository block:\n%s", keycloakText)
 	}
 }
+
+
+func TestRenderInfrastructureClusterRendersKubeVipInterface(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider string
+	}{
+		{name: "baremetal", provider: "baremetal"},
+		{name: "vmware", provider: "vmware"},
+		{name: "openstack", provider: "openstack"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dst := t.TempDir()
+			cfg := mustNewGitOpsTestConfig("vip-interface-"+tc.name, tc.provider)
+			cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+			cfg.OpenCenter.Infrastructure.Networking.VIPInterface = "mgmt"
+
+			if err := RenderInfrastructureCluster(cfg); err != nil {
+				t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
+			}
+
+			mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
+			data, err := os.ReadFile(mainTF)
+			if err != nil {
+				t.Fatalf("failed to read rendered main.tf: %v", err)
+			}
+			content := string(data)
+
+			wantLocal := `kube_vip_interface                      = "mgmt"`
+			if !strings.Contains(content, wantLocal) {
+				t.Fatalf("rendered main.tf missing local kube_vip_interface assignment %q\ncontent:\n%s", wantLocal, content)
+			}
+			if !strings.Contains(content, "kube_vip_interface                      = local.kube_vip_interface") {
+				t.Fatalf("rendered main.tf missing kube_vip_interface module argument\ncontent:\n%s", content)
+			}
+		})
+	}
+}
+
+func TestRenderInfrastructureClusterKubeVipInterfaceEmptyByDefault(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider string
+	}{
+		{name: "baremetal", provider: "baremetal"},
+		{name: "vmware", provider: "vmware"},
+		{name: "openstack", provider: "openstack"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dst := t.TempDir()
+			cfg := mustNewGitOpsTestConfig("vip-interface-default-"+tc.name, tc.provider)
+			cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+			cfg.OpenCenter.Infrastructure.Networking.VIPInterface = ""
+
+			if err := RenderInfrastructureCluster(cfg); err != nil {
+				t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
+			}
+
+			mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
+			data, err := os.ReadFile(mainTF)
+			if err != nil {
+				t.Fatalf("failed to read rendered main.tf: %v", err)
+			}
+			content := string(data)
+
+			wantLocal := `kube_vip_interface                      = ""`
+			if !strings.Contains(content, wantLocal) {
+				t.Fatalf("rendered main.tf missing empty kube_vip_interface local %q\ncontent:\n%s", wantLocal, content)
+			}
+		})
+	}
+}

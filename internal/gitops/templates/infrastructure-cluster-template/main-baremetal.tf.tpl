@@ -57,9 +57,10 @@ locals {
   ######################
   # Baremetal-specific settings
   ######################
-  # Leave empty when no bastion is configured; the kubespray module skips the
-  # ProxyCommand hop and connects to nodes directly.
-  address_bastion                         = "{{ .OpenCenter.Infrastructure.Bastion.Address | default "" }}"
+  # opencenter.infrastructure.bastion.address defaults to an empty string
+  # when no bastion is configured. When empty the kubespray module skips
+  # the ProxyCommand hop and connects to nodes directly.
+  address_bastion                         = "{{ .OpenCenter.Infrastructure.Bastion.Address }}"
   k8s_api_ip                              = "{{ .OpenCenter.Infrastructure.K8sAPIIP | default "" }}" != "" ? "{{ .OpenCenter.Infrastructure.K8sAPIIP }}" : local.vrrp_ip
   windows_dataplane                       = {{ if gt (.OpenCenter.Infrastructure.Compute.WorkerCountWindows | default 0) 0 }}"HNS"{{ else }}"Disabled"{{ end }}
   vrrp_ip                                 = "{{ .OpenCenter.Infrastructure.Networking.VRRPIP | default "172.26.0.5" }}"

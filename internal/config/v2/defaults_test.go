@@ -249,3 +249,47 @@ func TestNewV2DefaultUsesTokenBaseRepoByDefault(t *testing.T) {
 		t.Fatalf("base repository URL = %q, want %q", got, DefaultGitBaseRepoURLHTTPS)
 	}
 }
+
+
+func TestNewV2DefaultBastionAddressIsEmpty(t *testing.T) {
+	for _, provider := range []string{"openstack", "baremetal", "vmware", "kind"} {
+		provider := provider
+		t.Run(provider, func(t *testing.T) {
+			cfg, err := NewV2Default("bastion-address-"+provider, provider)
+			if err != nil {
+				t.Fatalf("NewV2Default(%q) error = %v", provider, err)
+			}
+			if got := cfg.OpenCenter.Infrastructure.Bastion.Address; got != "" {
+				t.Fatalf("provider %q Bastion.Address = %q, want empty string", provider, got)
+			}
+		})
+	}
+}
+
+func TestBastionConfigYAMLRoundTripPreservesEmptyAddress(t *testing.T) {
+	tests := []struct {
+		name string
+		in   BastionConfig
+	}{
+		{name: "disabled and empty", in: BastionConfig{Enabled: false, Address: ""}},
+		{name: "enabled and empty", in: BastionConfig{Enabled: true, Address: ""}},
+		{name: "enabled with explicit address", in: BastionConfig{Enabled: true, Address: "bastion.example.com"}},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			data, err := yaml.Marshal(tc.in)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			var got BastionConfig
+			if err := yaml.Unmarshal(data, &got); err != nil {
+				t.Fatalf("unmarshal: %v\nyaml:\n%s", err, string(data))
+			}
+			if got.Address != tc.in.Address {
+				t.Fatalf("Address round-trip mismatch: got %q, want %q\nyaml:\n%s", got.Address, tc.in.Address, string(data))
+			}
+		})
+	}
+}

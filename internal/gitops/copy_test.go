@@ -527,3 +527,41 @@ func TestCopyBaseRendersAllSourceAuthBlocksAndPreservesServiceRepo(t *testing.T)
 		t.Fatalf("keycloak-config source did not use the shared customer-repository block:\n%s", keycloakText)
 	}
 }
+
+
+func TestRenderInfrastructureClusterRendersBastionAddressFromConfig(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider string
+		address  string
+		want     string
+	}{
+		{name: "baremetal empty address renders empty", provider: "baremetal", address: "", want: `address_bastion                         = ""`},
+		{name: "baremetal explicit address renders through", provider: "baremetal", address: "bastion.example.com", want: `address_bastion                         = "bastion.example.com"`},
+		{name: "vmware empty address renders empty", provider: "vmware", address: "", want: `address_bastion                         = ""`},
+		{name: "vmware explicit address renders through", provider: "vmware", address: "bastion.example.com", want: `address_bastion                         = "bastion.example.com"`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dst := t.TempDir()
+			cfg := mustNewGitOpsTestConfig("bastion-address-"+tc.provider+"-"+tc.address, tc.provider)
+			cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+			cfg.OpenCenter.Infrastructure.Bastion.Address = tc.address
+
+			if err := RenderInfrastructureCluster(cfg); err != nil {
+				t.Fatalf("RenderInfrastructureCluster returned error: %v", err)
+			}
+
+			mainTF := filepath.Join(dst, "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
+			data, err := os.ReadFile(mainTF)
+			if err != nil {
+				t.Fatalf("failed to read rendered main.tf: %v", err)
+			}
+			content := string(data)
+			if !strings.Contains(content, tc.want) {
+				t.Fatalf("rendered main.tf missing %q\ncontent:\n%s", tc.want, content)
+			}
+		})
+	}
+}

@@ -146,6 +146,9 @@ locals {
   {{- else }}
   {{- end }}
 
+  # Interface kube-vip binds the control-plane VIP to. When empty, kube-vip auto-detects.
+  kube_vip_interface                      = "{{ .OpenCenter.Infrastructure.Networking.VIPInterface | default "" }}"
+
   #Calico Settings
   cni_iface                               = "enp3s0"
   #Interface detection method for Calico nodeAddressAutodetectionV4. Can be "first-found", "interface", "cidr"
@@ -333,6 +336,7 @@ module "kubespray-cluster" {
 {{- end }}
   cluster_name                            = local.cluster_name
   cni_iface                               = local.cni_iface
+  kube_vip_interface                      = local.kube_vip_interface
   deploy_cluster                          = local.deploy_cluster
   dns_zone_name                           = local.dns_zone_name
 {{- if eq (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}

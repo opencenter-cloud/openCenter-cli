@@ -56,6 +56,9 @@ locals {
   kube_oidc_auth_enabled                 = false
   {{- end }}
 
+  # Interface kube-vip binds the control-plane VIP to. When empty, kube-vip auto-detects.
+  kube_vip_interface                      = "{{ .OpenCenter.Infrastructure.Networking.VIPInterface | default "" }}"
+
   # Calico CNI settings (default for VMware)
   cni_iface                               = "{{ .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.CNIIface | default "ens192" }}"
   calico_interface_autodetect             = "{{ .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.CalicoInterfaceAutodetect | default "interface" }}"
@@ -121,6 +124,7 @@ module "kubespray-cluster" {
   
   # Network configuration
   cni_iface                               = local.cni_iface
+  kube_vip_interface                      = local.kube_vip_interface
   subnet_nodes                            = local.subnet_nodes
   subnet_pods                             = local.subnet_pods
   subnet_services                         = local.subnet_services

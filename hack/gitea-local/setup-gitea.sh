@@ -56,7 +56,7 @@ echo "Using container runtime: $CONTAINER_RUNTIME"
 echo "Action: $ACTION"
 
 # Gitea configuration
-GITEA_IMAGE="docker.gitea.com/gitea:1.24.5"
+GITEA_IMAGE="docker.gitea.com/gitea:1.27.2"
 GITEA_DATA_DIR="$(pwd)/gitea" # Full path
 GITEA_HTTP_PORT="3000"
 GITEA_HTTPS_PORT="3001"

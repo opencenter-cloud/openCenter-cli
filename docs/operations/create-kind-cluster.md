@@ -143,7 +143,7 @@ The host’s routable IP (`172.16.0.146`) works from both contexts because Podma
 opencenter local gitea up
 ```
 
-Starts a disposable Gitea container (`docker.gitea.com/gitea:1.24.5`) and provisions a test user, API tokens, and a `test-repo` repository. State is written to `$OPENCENTER_CONFIG_DIR/local/` (typically `~/.config/opencenter/local/`).
+Starts a disposable Gitea container (`docker.gitea.com/gitea:1.27.2`) and provisions a test user, API tokens, and a `test-repo` repository. State is written to `$OPENCENTER_CONFIG_DIR/local/` (typically `~/.config/opencenter/local/`).
 
 Verify:
 

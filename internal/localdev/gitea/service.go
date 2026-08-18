@@ -22,7 +22,7 @@ import (
 
 const (
 	defaultContainerName = "gitea"
-	defaultImage         = "docker.gitea.com/gitea:1.24.5"
+	defaultImage         = "docker.gitea.com/gitea:1.27.2"
 	defaultAdminUser     = "admin"
 	defaultAdminPass     = "gitea"
 	defaultAdminEmail    = "admin@example.com"

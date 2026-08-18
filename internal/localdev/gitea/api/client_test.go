@@ -56,7 +56,7 @@ func TestClientVersionAndProvisioningFlow(t *testing.T) {
 		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			switch {
 			case req.Method == http.MethodGet && req.URL.Path == "/api/v1/version":
-				return jsonResponse(t, req, http.StatusOK, map[string]any{"version": "1.24.5"}), nil
+				return jsonResponse(t, req, http.StatusOK, map[string]any{"version": "1.27.2"}), nil
 			case req.Method == http.MethodPost && req.URL.Path == "/api/v1/users/admin/tokens":
 				username, password, ok := req.BasicAuth()
 				if !ok || username != "admin" || password != "gitea" {
@@ -110,8 +110,8 @@ func TestClientVersionAndProvisioningFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Version() error = %v", err)
 	}
-	if version != "1.24.5" {
-		t.Fatalf("version = %q, want 1.24.5", version)
+	if version != "1.27.2" {
+		t.Fatalf("version = %q, want 1.27.2", version)
 	}
 
 	adminToken, err := client.CreateTokenWithBasicAuth(context.Background(), "admin", "gitea", "admin-token")

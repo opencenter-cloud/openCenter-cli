@@ -25,6 +25,12 @@ const (
 	calicoHelmRepo            = "https://docs.tigera.io/calico/charts"
 	calicoHelmRepoName        = "projectcalico"
 	calicoHelmChart           = "projectcalico/tigera-operator"
+	// calicoOperatorCRDsURLFormat points at the operator.tigera.io/v1 CRDs
+	// bundle published in the Calico release. helm's own crds/ auto-install is
+	// unreliable for this chart (see projectcalico/calico#8234 / helm/helm#10585),
+	// so we apply this manifest first and then let helm render the operator +
+	// custom resources.
+	calicoOperatorCRDsURLFormat = "https://raw.githubusercontent.com/projectcalico/calico/%s/manifests/operator-crds.yaml"
 )
 
 type openStackNetworkPluginSelection struct {
@@ -114,9 +120,24 @@ func (p *openstackBootstrapProvider) installOpenStackNetworkPlugin(ctx context.C
 //
 //	<organization>/applications/overlays/<cluster>/services/calico/helm-values/override_values.yaml
 func (p *openstackBootstrapProvider) installOpenStackCalicoWithHelm(ctx context.Context, cfg *v2.Config, selection openStackNetworkPluginSelection, kubeconfigPath, tmpDir string, env map[string]string) error {
-	// Add the projectcalico Helm repository
+	// Apply the operator.tigera.io/v1 CRDs before running helm. helm's own
+	// crds/ auto-install is unreliable for the tigera-operator chart; without
+	// this step helm fails with "no matches for kind APIServer/Installation/
+	// Goldmane/Whisker ... ensure CRDs are installed first" when it tries to
+	// validate the CRs that live alongside the CRDs in the chart. Server-side
+	// apply avoids the annotation-size limit that plain apply hits on large
+	// CRD schemas.
+	crdsURL := fmt.Sprintf(calicoOperatorCRDsURLFormat, selection.Version)
+	if _, err := p.runner.Run(ctx, tmpDir, env, "kubectl", kubectlArgs(kubeconfigPath, "apply", "--server-side", "-f", crdsURL)...); err != nil {
+		return fmt.Errorf("apply Calico operator CRDs from %s: %w", crdsURL, err)
+	}
+
+	// Add the projectcalico Helm repository and refresh its cache.
 	if _, err := p.runner.Run(ctx, tmpDir, env, "helm", "repo", "add", calicoHelmRepoName, calicoHelmRepo); err != nil {
 		return fmt.Errorf("add Calico Helm repo: %w", err)
+	}
+	if _, err := p.runner.Run(ctx, tmpDir, env, "helm", "repo", "update", calicoHelmRepoName); err != nil {
+		return fmt.Errorf("update Calico Helm repo: %w", err)
 	}
 
 	// Resolve the override values file path from the GitOps repository
@@ -130,11 +151,14 @@ func (p *openstackBootstrapProvider) installOpenStackCalicoWithHelm(ctx context.
 		return fmt.Errorf("calico helm values file not found at %s: %w", valuesPath, err)
 	}
 
-	// Install/upgrade Calico using Helm
+	// Install/upgrade Calico using Helm. Passing --version pins the chart to
+	// the version resolved from the cluster config; without it helm would use
+	// whatever the local repo cache treats as latest.
 	if _, err := p.runner.Run(ctx, tmpDir, env, "helm",
 		"upgrade", "--install",
 		selection.ReleaseName,
 		calicoHelmChart,
+		"--version", selection.Version,
 		"--namespace", selection.Namespace,
 		"--create-namespace",
 		"-f", valuesPath,
@@ -342,8 +366,10 @@ func normalizeOpenStackNetworkPluginInstallMethod(method string) string {
 func openStackNetworkPluginPlanCommands(selection openStackNetworkPluginSelection, kubeconfigPath string) []BootstrapPlanCommand {
 	if selection.Name == "calico" {
 		commands := []BootstrapPlanCommand{
+			commandPlan("kubectl", kubectlArgs(kubeconfigPath, "apply", "--server-side", "-f", fmt.Sprintf(calicoOperatorCRDsURLFormat, selection.Version))...),
 			commandPlan("helm", "repo", "add", calicoHelmRepoName, calicoHelmRepo),
-			commandPlan("helm", "upgrade", "--install", selection.ReleaseName, calicoHelmChart, "--namespace", selection.Namespace, "--create-namespace", "-f", "<organization>/applications/overlays/<cluster>/services/calico/helm-values/override_values.yaml"),
+			commandPlan("helm", "repo", "update", calicoHelmRepoName),
+			commandPlan("helm", "upgrade", "--install", selection.ReleaseName, calicoHelmChart, "--version", selection.Version, "--namespace", selection.Namespace, "--create-namespace", "-f", "<organization>/applications/overlays/<cluster>/services/calico/helm-values/override_values.yaml"),
 		}
 		return append(commands, openStackNetworkPluginReadinessPlanCommands(selection, kubeconfigPath)...)
 	}

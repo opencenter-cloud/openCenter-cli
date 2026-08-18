@@ -1,5 +1,5 @@
 [tools]
-golang = "1.26.5"
+golang = "1.26.6"
 golangci-lint = "2.11.4"
 kubectl = "latest"
 kind = "latest"

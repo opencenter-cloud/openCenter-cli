@@ -235,7 +235,7 @@ func writeGiteaState(t *testing.T, stateDir string) *gitea.Status {
 
 	metadata := gitea.Metadata{
 		Runtime:       "podman",
-		Image:         "docker.gitea.com/gitea:1.24.5",
+		Image:         "docker.gitea.com/gitea:1.27.2",
 		ContainerName: "gitea",
 		HTTPPort:      3000,
 		HTTPSPort:     3001,

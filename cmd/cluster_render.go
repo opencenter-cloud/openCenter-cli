@@ -125,6 +125,11 @@ func renderAllServices(cfg *v2.Config, force bool, dryRun bool, cmd *cobra.Comma
 		return fmt.Errorf("failed to render infrastructure cluster: %w", err)
 	}
 
+	// Bridge flux-system to the services overlay
+	if err := gitops.RenderClusterFluxBridge(*cfg); err != nil {
+		return fmt.Errorf("failed to render cluster flux bridge: %w", err)
+	}
+
 	// Provision OpenTofu (renders main.tf and provider.tf)
 	if err := tofu.Provision(*cfg); err != nil {
 		return fmt.Errorf("failed to provision opentofu: %w", err)
@@ -173,6 +178,11 @@ func renderServicesOnly(cfg *v2.Config, force bool, dryRun bool, cmd *cobra.Comm
 	// Render cluster-specific applications
 	if err := gitops.RenderClusterApps(*cfg); err != nil {
 		return fmt.Errorf("failed to render cluster apps: %w", err)
+	}
+
+	// Bridge flux-system to the services overlay
+	if err := gitops.RenderClusterFluxBridge(*cfg); err != nil {
+		return fmt.Errorf("failed to render cluster flux bridge: %w", err)
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), "✓ All services rendered successfully (infrastructure skipped)")

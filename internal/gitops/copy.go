@@ -507,6 +507,68 @@ func RenderClusterApps(cfg v2.Config) error {
 // cleanupDisabledServices removes service directories that are not enabled in the configuration.
 // This ensures that when services are disabled or removed from config, their directories are cleaned up.
 
+// RenderClusterFluxBridge renders the bridge Flux Kustomization into
+// clusters/<cluster-name>/services.yaml. Flux's own `flux bootstrap` writes
+// clusters/<cluster-name>/flux-system/, but nothing there references the
+// per-service Flux Kustomizations under applications/overlays/<cluster-name>/
+// services/fluxcd. Without this bridge, Flux reconciles only its own
+// source-controller and stops.
+//
+// No top-level kustomization.yaml is emitted here - Flux's kustomize-controller
+// auto-generates a kustomization.yaml at reconcile time when none is present,
+// aggregating every YAML at the path (including files under flux-system/ and
+// this services.yaml).
+//
+// This function never touches clusters/<cluster-name>/flux-system/ (owned by
+// flux bootstrap).
+func RenderClusterFluxBridge(cfg v2.Config) error {
+	clusterName := cfg.ClusterName()
+	if clusterName == "" {
+		return fmt.Errorf("cluster name is empty")
+	}
+	gitDir := cfg.GitDir()
+	if gitDir == "" {
+		return fmt.Errorf("opencenter.gitops.repository.local_dir must be set")
+	}
+
+	target := filepath.Join(gitDir, "clusters", clusterName)
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		return err
+	}
+
+	tempDir := os.TempDir()
+	manager := NewWorkspaceManager(tempDir)
+	workspace, err := manager.CreateWorkspace(context.Background(), cfg)
+	if err != nil {
+		return fmt.Errorf("creating workspace: %w", err)
+	}
+	defer manager.CleanupWorkspace(context.Background(), workspace)
+
+	if err := RenderClusterFluxBridgeAtomic(cfg, workspace); err != nil {
+		return err
+	}
+
+	workspaceBridgeDir := filepath.Join(workspace.RootDir, "clusters", clusterName)
+	return copyWorkspaceToTarget(workspaceBridgeDir, target)
+}
+
+// RenderClusterFluxBridgeAtomic is the workspace-aware version of
+// RenderClusterFluxBridge. See RenderClusterFluxBridge for behaviour.
+func RenderClusterFluxBridgeAtomic(cfg v2.Config, workspace *GitOpsWorkspace) error {
+	clusterName := cfg.ClusterName()
+	if clusterName == "" {
+		return fmt.Errorf("cluster name is empty")
+	}
+	target := filepath.Join(workspace.RootDir, "clusters", clusterName)
+
+	src := filepath.ToSlash(filepath.Join("templates", "cluster-flux-bridge", "services.yaml.tpl"))
+	dst := filepath.Join(target, "services.yaml")
+	if err := renderTemplateAtomic(src, dst, cfg, workspace); err != nil {
+		return fmt.Errorf("render services.yaml: %w", err)
+	}
+	return nil
+}
+
 // RenderInfrastructureCluster renders infrastructure-cluster-template to infrastructure/clusters/<cluster-name>/
 // This function processes all files in the infrastructure-cluster-template directory,
 // renders .tmpl and .tpl files with the cluster configuration, and copies others as-is.

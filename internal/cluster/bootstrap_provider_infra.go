@@ -146,6 +146,7 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		steps = append(steps, fluxStep)
 		steps = append(steps, newBaseRepoSecretStep(cfg, opts.KubeconfigPath, p.runner))
 		steps = append(steps, newSopsAgeSecretStep(clusterPaths.SOPSKeyPath, opts.KubeconfigPath, p.runner))
+		steps = append(steps, newGrafanaAdminSecretStep(cfg, opts.KubeconfigPath, p.runner))
 	}
 
 	// No automatic git push — the user commits and pushes manually after deploy.

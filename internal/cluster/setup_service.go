@@ -202,6 +202,12 @@ func (s *SetupService) generateGitOpsManifests(ctx context.Context, cfg v2.Confi
 		return 0, fmt.Errorf("rendering infrastructure cluster: %w", err)
 	}
 
+	// Render the Flux bridge into clusters/<cluster>/ so `flux bootstrap`'s
+	// reconciliation path picks up the per-service overlays.
+	if err := gitops.RenderClusterFluxBridge(cfg); err != nil {
+		return 0, fmt.Errorf("rendering cluster flux bridge: %w", err)
+	}
+
 	if strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) != "kind" {
 		if err := tofu.Provision(cfg); err != nil {
 			return 0, fmt.Errorf("provisioning opentofu: %w", err)

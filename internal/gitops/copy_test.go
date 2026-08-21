@@ -696,3 +696,71 @@ func TestRenderInfrastructureClusterRendersKubesprayNetworkYaml(t *testing.T) {
 		})
 	}
 }
+
+
+func TestRenderClusterFluxBridgeCreatesBridgeFiles(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("bridge-test")
+	cfg.OpenCenter.Cluster.ClusterName = "bridge-test"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+
+	if err := RenderClusterFluxBridge(cfg); err != nil {
+		t.Fatalf("RenderClusterFluxBridge returned error: %v", err)
+	}
+
+	bridgeDir := filepath.Join(dst, "clusters", cfg.ClusterName())
+
+	// Only services.yaml is emitted. Flux's kustomize-controller
+	// auto-generates a top-level kustomization.yaml at reconcile time.
+	if _, err := os.Stat(filepath.Join(bridgeDir, "kustomization.yaml")); !os.IsNotExist(err) {
+		t.Fatalf("bridge unexpectedly emitted a kustomization.yaml at %s (err=%v)", bridgeDir, err)
+	}
+
+	services, err := os.ReadFile(filepath.Join(bridgeDir, "services.yaml"))
+	if err != nil {
+		t.Fatalf("read cluster services.yaml: %v", err)
+	}
+	sText := string(services)
+	wantPath := "./applications/overlays/" + cfg.ClusterName() + "/services/fluxcd"
+	for _, want := range []string{
+		"kind: Kustomization",
+		"apiVersion: kustomize.toolkit.fluxcd.io/v1",
+		"namespace: flux-system",
+		"name: services",
+		wantPath,
+	} {
+		if !strings.Contains(sText, want) {
+			t.Fatalf("cluster services.yaml missing %q\ncontent:\n%s", want, sText)
+		}
+	}
+}
+
+func TestRenderClusterFluxBridgePreservesFluxSystemDir(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("bridge-preserve")
+	cfg.OpenCenter.Cluster.ClusterName = "bridge-preserve"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+
+	// Simulate `flux bootstrap` having already run: write files under
+	// clusters/<cluster>/flux-system/ that the bridge render must not touch.
+	fluxSystemDir := filepath.Join(dst, "clusters", cfg.ClusterName(), "flux-system")
+	if err := os.MkdirAll(fluxSystemDir, 0o755); err != nil {
+		t.Fatalf("mkdir flux-system: %v", err)
+	}
+	sentinel := filepath.Join(fluxSystemDir, "gotk-components.yaml")
+	if err := os.WriteFile(sentinel, []byte("sentinel"), 0o600); err != nil {
+		t.Fatalf("write sentinel: %v", err)
+	}
+
+	if err := RenderClusterFluxBridge(cfg); err != nil {
+		t.Fatalf("RenderClusterFluxBridge returned error: %v", err)
+	}
+
+	got, err := os.ReadFile(sentinel)
+	if err != nil {
+		t.Fatalf("sentinel gotk-components.yaml was removed or altered: %v", err)
+	}
+	if string(got) != "sentinel" {
+		t.Fatalf("sentinel content changed: got %q", string(got))
+	}
+}

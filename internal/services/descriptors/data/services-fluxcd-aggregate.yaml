@@ -3,4 +3,5 @@ layer: services
 files:
   - template: services/fluxcd/kustomization.yaml.tpl
   - template: services/fluxcd/sources.yaml.tpl
+  - template: services/fluxcd/flux-monitoring.yaml.tpl
   - template: services/fluxcd/fluxcd-configs/podmonitor.yaml

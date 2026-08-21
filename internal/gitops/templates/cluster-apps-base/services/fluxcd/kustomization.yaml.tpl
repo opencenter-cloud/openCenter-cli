@@ -6,7 +6,10 @@ resources:
   - ./sources.yaml
 {{- end }}
 {{- if (index .OpenCenter.Services "kube-prometheus-stack").Enabled }}
-  - ./fluxcd-configs/podmonitor.yaml
+  # PodMonitor lives under ./fluxcd-configs/ and needs monitoring.coreos.com
+  # CRDs. Wrapped in flux-monitoring.yaml (Flux Kustomization) with dependsOn
+  # kube-prometheus-stack-base so it waits for the CRDs to be installed.
+  - ./flux-monitoring.yaml
   - ./observability-namespace.yaml
 {{- end }}
 

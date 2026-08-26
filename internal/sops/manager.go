@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -123,6 +124,19 @@ func (m *DefaultSOPSManager) encryptFiles(ctx context.Context, overlayPath strin
 		return &errors.StructuredError{
 			Type:    errors.SOPSError,
 			Message: "Cannot encrypt overlay with empty path",
+		}
+	}
+
+	if _, err := exec.LookPath("sops"); err != nil {
+		return &errors.StructuredError{
+			Type:    errors.SOPSError,
+			Message: "sops binary not found on PATH",
+			Cause:   err,
+			Suggestions: []string{
+				"Install sops (macOS: brew install sops; Linux: see https://github.com/getsops/sops/releases)",
+				"If using mise, add sops to .mise.toml and run 'mise install'",
+				"Verify PATH exposes sops: command -v sops",
+			},
 		}
 	}
 

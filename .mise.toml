@@ -6,6 +6,7 @@ kind = "latest"
 helm = "latest"
 "go:golang.org/x/vuln/cmd/govulncheck" = "latest"
 "aqua:gitleaks/gitleaks" = "latest"
+"aqua:getsops/sops" = "latest"
 
 [env]
 # Override the default config directory via environment for reproducible tests

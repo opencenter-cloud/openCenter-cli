@@ -364,6 +364,11 @@ func NewV2Default(name, provider string) (*Config, error) {
 				AccountServiceToken: PlaceholderSecret,
 				CoreAccountNumber:   PlaceholderSecret,
 			},
+			Harbor: HarborSecrets{
+				AdminPassword:    PlaceholderSecret,
+				RegistryPassword: PlaceholderSecret,
+				DatabasePassword: PlaceholderSecret,
+			},
 			WeaveGitOps: WeaveGitOpsSecrets{
 				Password: PlaceholderSecret,
 			},

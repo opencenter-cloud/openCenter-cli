@@ -109,6 +109,7 @@ type SecretsConfig struct {
 	Grafana        GrafanaSecrets     `yaml:"grafana,omitempty" json:"grafana,omitempty"`
 	Tempo          TempoSecrets       `yaml:"tempo,omitempty" json:"tempo,omitempty"`
 	AlertProxy     AlertProxySecrets  `yaml:"alert_proxy,omitempty" json:"alert_proxy,omitempty"`
+	Harbor         HarborSecrets      `yaml:"harbor,omitempty" json:"harbor,omitempty"`
 	VSphereCsi     VSphereCsiSecrets  `yaml:"vsphere_csi,omitempty" json:"vsphere_csi,omitempty"`
 	ServiceSecrets map[string]any     `yaml:"service_secrets,omitempty" json:"service_secrets,omitempty"`
 	SOPSConfig     SOPSConfig         `yaml:"sops,omitempty" json:"sops,omitempty"`
@@ -207,6 +208,12 @@ type AlertProxySecrets struct {
 	CoreDeviceId        string `yaml:"core_device_id,omitempty" json:"core_device_id,omitempty"`
 	AccountServiceToken string `yaml:"account_service_token,omitempty" json:"account_service_token,omitempty"`
 	CoreAccountNumber   string `yaml:"core_account_number,omitempty" json:"core_account_number,omitempty"`
+}
+
+type HarborSecrets struct {
+	AdminPassword    string `yaml:"admin_password,omitempty" json:"admin_password,omitempty"`
+	RegistryPassword string `yaml:"registry_password,omitempty" json:"registry_password,omitempty"`
+	DatabasePassword string `yaml:"database_password,omitempty" json:"database_password,omitempty"`
 }
 
 type VSphereCsiSecrets struct {

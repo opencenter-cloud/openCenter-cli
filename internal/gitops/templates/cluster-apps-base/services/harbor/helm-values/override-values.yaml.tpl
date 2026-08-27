@@ -29,7 +29,7 @@ persistence:
             v4auth: true
             secure: true
             rootdirectory: images
-harborAdminPassword: {{ $harbor.AdminPassword | default "PLACEHOLDER-HARBOR-ADMIN-PASSWORD" }}
+harborAdminPassword: {{ .Secrets.Harbor.AdminPassword | default "PLACEHOLDER-HARBOR-ADMIN-PASSWORD" }}
 metrics:
     enabled: true
     serviceMonitor:
@@ -47,12 +47,12 @@ registry:
     replicas: 1
     credentials:
         username: harbor-registry
-        password: PLACEHOLDER-HARBOR-REGISTRY-PASSWORD
+        password: {{ .Secrets.Harbor.RegistryPassword | default "PLACEHOLDER-HARBOR-REGISTRY-PASSWORD" }}
         htpasswdString: PLACEHOLDER-HARBOR-HTPASSWD
 trivy:
     replicas: 1
 database:
     internal:
-        password: PLACEHOLDER-HARBOR-DATABASE-PASSWORD
+        password: {{ .Secrets.Harbor.DatabasePassword | default "PLACEHOLDER-HARBOR-DATABASE-PASSWORD" }}
 exporter:
     replicas: 1

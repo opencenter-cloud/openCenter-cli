@@ -131,6 +131,25 @@ func TestMimirStatefulPVCSizesMeetCinderMinimum(t *testing.T) {
 	require.NotContains(t, values, "size: 1Gi", "mimir must not emit a 1Gi PVC (below Cinder minimum):\n%s", values)
 }
 
+// TestMimirBundledKafkaPVCSizeMeetsCinderMinimum verifies that when external
+// kafka-cluster is NOT enabled (so the chart's bundled Kafka broker stays
+// active), the override bumps its PVC size to 10Gi too. The chart default
+// (5Gi) is below Rackspace SJC3's Cinder minimum, same class of bug as
+// TestMimirStatefulPVCSizesMeetCinderMinimum but for the bundled Kafka
+// component specifically, which that test does not cover.
+func TestMimirBundledKafkaPVCSizeMeetsCinderMinimum(t *testing.T) {
+	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
+	require.NoError(t, err)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	require.True(t, ok)
+	mimir.Enabled = true
+	// kafka-cluster stays disabled (default) so the bundled Kafka is active.
+
+	values := readMimirOverrideValues(t, *cfg)
+	require.Contains(t, values, "kafka:\n    persistence:\n        size: 10Gi",
+		"mimir override must set the bundled Kafka PVC size to 10Gi (Cinder minimum):\n%s", values)
+}
+
 // TestMimirUsageStatsDisabled verifies the mimir override disables usage_stats
 // reporting. The chart's own config only sets usage_stats.installation_mode;
 // reporting itself stays enabled by default and every component crashes on

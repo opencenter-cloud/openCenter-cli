@@ -382,7 +382,15 @@ func TestInitService_createDefaultConfig(t *testing.T) {
 	}
 }
 
-func TestInitServiceApplyOverridesMigratesLegacySJC3CaseInsensitively(t *testing.T) {
+// TestInitServiceApplyOverridesPreservesExplicitSJC3Region guards against a
+// regression of a real bug: applyOverrides used to special-case the literal
+// string "sjc3" (case-insensitively) as if it were an unset/legacy
+// placeholder needing replacement by the CLI's configured default region.
+// That treated a genuine, explicitly-configured SJC3 region identically to an
+// actually-unset one, silently clobbering it (observed replacing "SJC3" with
+// "DFW3" on a real cluster's --config-file init). Only a truly empty region
+// may be filled from the default.
+func TestInitServiceApplyOverridesPreservesExplicitSJC3Region(t *testing.T) {
 	t.Setenv("OPENCENTER_CONFIG_DIR", t.TempDir())
 	pathResolver := paths.NewPathResolver(t.TempDir())
 	configManager, err := config.NewConfigManager("")
@@ -401,8 +409,98 @@ func TestInitServiceApplyOverridesMigratesLegacySJC3CaseInsensitively(t *testing
 	if err := initService.applyOverrides(cfg, configMap, InitOptions{}); err != nil {
 		t.Fatalf("applyOverrides() error = %v", err)
 	}
+	if cfg.OpenCenter.Meta.Region != "SJC3" {
+		t.Fatalf("Meta.Region = %q, want unchanged SJC3", cfg.OpenCenter.Meta.Region)
+	}
+}
+
+// TestInitServiceApplyOverridesFillsEmptyRegionFromDefault verifies a
+// genuinely empty region still gets filled from the CLI's configured
+// default — only the SJC3 special-case above was wrong, not the general
+// empty-region fallback.
+func TestInitServiceApplyOverridesFillsEmptyRegionFromDefault(t *testing.T) {
+	t.Setenv("OPENCENTER_CONFIG_DIR", t.TempDir())
+	pathResolver := paths.NewPathResolver(t.TempDir())
+	configManager, err := config.NewConfigManager("")
+	if err != nil {
+		t.Fatalf("NewConfigManager() error = %v", err)
+	}
+	initService := NewInitService(pathResolver, setupValidationEngine(t), configManager)
+	cfg := &v2.Config{}
+	cfg.OpenCenter.Meta.Region = ""
+	configMap := map[string]any{
+		"opencenter": map[string]any{
+			"meta": map[string]any{},
+		},
+	}
+
+	if err := initService.applyOverrides(cfg, configMap, InitOptions{}); err != nil {
+		t.Fatalf("applyOverrides() error = %v", err)
+	}
 	if cfg.OpenCenter.Meta.Region != "DFW3" {
-		t.Fatalf("migrated Meta.Region = %q, want DFW3", cfg.OpenCenter.Meta.Region)
+		t.Fatalf("Meta.Region = %q, want default DFW3", cfg.OpenCenter.Meta.Region)
+	}
+}
+
+// TestInitServiceApplyOverridesRequiresExplicitOrganization guards against a
+// real bug: applyOverrides used to overwrite Meta.Organization whenever
+// opts.Organization was non-empty, but Initialize() force-defaults
+// opts.Organization to "opencenter" before applyOverrides ever runs — so a
+// --config-file's own meta.organization was always clobbered, even when the
+// user never passed --org. Only an explicit organization (OrganizationExplicit)
+// may override an already-parsed config value.
+func TestInitServiceApplyOverridesRequiresExplicitOrganization(t *testing.T) {
+	t.Setenv("OPENCENTER_CONFIG_DIR", t.TempDir())
+	pathResolver := paths.NewPathResolver(t.TempDir())
+	configManager, err := config.NewConfigManager("")
+	if err != nil {
+		t.Fatalf("NewConfigManager() error = %v", err)
+	}
+	initService := NewInitService(pathResolver, setupValidationEngine(t), configManager)
+	cfg := &v2.Config{}
+	cfg.OpenCenter.Meta.Organization = "sjc3cli9-cluster-gitops"
+	configMap := map[string]any{
+		"opencenter": map[string]any{
+			"meta": map[string]any{},
+		},
+	}
+
+	// Organization is set (mirroring Initialize()'s forced default) but
+	// OrganizationExplicit is false: the config file's value must survive.
+	opts := InitOptions{Organization: "opencenter", OrganizationExplicit: false}
+	if err := initService.applyOverrides(cfg, configMap, opts); err != nil {
+		t.Fatalf("applyOverrides() error = %v", err)
+	}
+	if cfg.OpenCenter.Meta.Organization != "sjc3cli9-cluster-gitops" {
+		t.Fatalf("Meta.Organization = %q, want unchanged sjc3cli9-cluster-gitops", cfg.OpenCenter.Meta.Organization)
+	}
+}
+
+// TestInitServiceApplyOverridesHonorsExplicitOrganization verifies an
+// explicitly-provided --org still correctly overrides whatever the config
+// file parsed — only the non-explicit (defaulted) case must not clobber.
+func TestInitServiceApplyOverridesHonorsExplicitOrganization(t *testing.T) {
+	t.Setenv("OPENCENTER_CONFIG_DIR", t.TempDir())
+	pathResolver := paths.NewPathResolver(t.TempDir())
+	configManager, err := config.NewConfigManager("")
+	if err != nil {
+		t.Fatalf("NewConfigManager() error = %v", err)
+	}
+	initService := NewInitService(pathResolver, setupValidationEngine(t), configManager)
+	cfg := &v2.Config{}
+	cfg.OpenCenter.Meta.Organization = "sjc3cli9-cluster-gitops"
+	configMap := map[string]any{
+		"opencenter": map[string]any{
+			"meta": map[string]any{},
+		},
+	}
+
+	opts := InitOptions{Organization: "explicit-org", OrganizationExplicit: true}
+	if err := initService.applyOverrides(cfg, configMap, opts); err != nil {
+		t.Fatalf("applyOverrides() error = %v", err)
+	}
+	if cfg.OpenCenter.Meta.Organization != "explicit-org" {
+		t.Fatalf("Meta.Organization = %q, want explicit-org", cfg.OpenCenter.Meta.Organization)
 	}
 }
 

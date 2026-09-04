@@ -25,8 +25,14 @@ import (
 
 // InitOptions contains options for cluster initialization
 type InitOptions struct {
-	ClusterName           string
-	Organization          string
+	ClusterName  string
+	Organization string
+	// OrganizationExplicit is true when the caller explicitly provided an
+	// organization (via --org, an embedded "org/cluster" name, or the
+	// deprecated org flag), as opposed to Organization merely holding a
+	// resolved default. Only an explicit organization may override a value
+	// already present in a loaded --config-file.
+	OrganizationExplicit  bool
 	Provider              string
 	DeploymentMethod      string
 	ConfigFile            string
@@ -408,8 +414,16 @@ func (s *InitService) createDefaultConfig(opts InitOptions) (*v2.Config, map[str
 
 // applyOverrides applies configuration overrides from options
 func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, opts InitOptions) error {
-	// Apply organization
-	if opts.Organization != "" {
+	// Apply organization. Only an explicitly-provided organization (--org, an
+	// embedded "org/cluster" name, or the deprecated org flag) may override a
+	// value already parsed from --config-file; a merely-resolved default must
+	// not clobber it.
+	if opts.OrganizationExplicit {
+		cfg.OpenCenter.Meta.Organization = opts.Organization
+		setNestedConfigValue(configMap, opts.Organization, "opencenter", "meta", "organization")
+	} else if cfg.OpenCenter.Meta.Organization == "" {
+		// Nothing explicit and the config file left it unset: fall back to
+		// the resolved default rather than leaving it blank.
 		cfg.OpenCenter.Meta.Organization = opts.Organization
 		setNestedConfigValue(configMap, opts.Organization, "opencenter", "meta", "organization")
 	}
@@ -422,7 +436,7 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 
 	// Apply CLI config defaults
 	cliConfig := s.configManager.GetConfig()
-	if cfg.OpenCenter.Meta.Region == "" || strings.EqualFold(cfg.OpenCenter.Meta.Region, "sjc3") {
+	if cfg.OpenCenter.Meta.Region == "" {
 		if cliConfig.ClusterDefaults.Region != "" {
 			cfg.OpenCenter.Meta.Region = cliConfig.ClusterDefaults.Region
 			setNestedConfigValue(configMap, cliConfig.ClusterDefaults.Region, "opencenter", "meta", "region")

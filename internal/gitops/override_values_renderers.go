@@ -427,6 +427,18 @@ minio:
 # bundled demo Kafka broker (chart default is kafka.enabled: true).
 kafka:
     enabled: false
+{{- else }}
+# No external kafka-cluster, so the chart's own bundled Kafka broker stays
+# enabled. Its chart-default PVC size (5Gi) is below this region's Cinder
+# minimum (10Gi for the "Standard" volume type), same class of bug as the
+# ingester/store_gateway/compactor/alertmanager fix below. Unlike those
+# (Mimir's own components, which use persistentVolume.size), the bundled
+# Kafka is a vendored sub-chart using the persistence.size/storageClassName
+# convention instead.
+kafka:
+    persistence:
+        size: 10Gi
+        storageClassName: {{ $storageClass }}
 {{- end }}
 mimir:
     structuredConfig:

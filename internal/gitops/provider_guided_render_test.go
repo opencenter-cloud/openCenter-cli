@@ -180,8 +180,17 @@ func TestRenderMimirOverrideValues(t *testing.T) {
 	if strings.Contains(mimirValues, "backend: s3") || strings.Contains(mimirValues, "PLACEHOLDER") {
 		t.Fatalf("did not expect S3 or placeholder storage credentials in Mimir values:\n%s", mimirValues)
 	}
-	if strings.Contains(mimirValues, "ingest_storage:") || strings.Contains(mimirValues, "kafka:") {
+	// No external kafka-cluster, so there must be no Kafka ingest_storage wiring.
+	// (The chart's bundled Kafka broker stays enabled in this case and gets a PVC
+	// size override — see the bundled-Kafka assertion below — so we no longer
+	// assert the absence of any "kafka:" key, only the ingest_storage wiring.)
+	if strings.Contains(mimirValues, "ingest_storage:") {
 		t.Fatalf("did not expect Kafka ingest storage when kafka-cluster is disabled:\n%s", mimirValues)
+	}
+	// The bundled Kafka broker (active when external kafka-cluster is disabled)
+	// must get a >=10Gi PVC via the sub-chart's persistence.size key (Cinder min).
+	if !strings.Contains(mimirValues, "kafka:\n    persistence:\n        size: 10Gi") {
+		t.Fatalf("expected bundled Kafka PVC size override (persistence.size: 10Gi) when kafka-cluster is disabled:\n%s", mimirValues)
 	}
 
 	kafka := cfg.OpenCenter.Services["kafka-cluster"].(*configservices.DefaultServiceConfig)

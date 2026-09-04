@@ -214,6 +214,7 @@ func parseInitOptions(cmd *cobra.Command, args []string) (cluster.InitOptions, e
 	}
 
 	opts.SchemaVersion = "2.0"
+	opts.OrganizationExplicit = opts.Organization != ""
 
 	return opts, nil
 }

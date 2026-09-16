@@ -65,7 +65,7 @@ func TestBootstrapUsesHostIPURLAndReconciles(t *testing.T) {
 			// Bootstrap uses the host's routable IP — reachable from both
 			// the host (flux CLI clone) and inside the Kind cluster
 			// (source-controller reconciliation).
-			fmt.Sprintf("flux bootstrap git --url=%s --branch=main --path=applications/overlays/%s --token-auth --username=newuser --password=user-token --ca-file=%s", status.HostRepoURL, clusterName, status.CAPath): func(opts localdev.RunOptions) ([]byte, error) {
+			fmt.Sprintf("flux bootstrap git --url=%s --branch=main --path=clusters/%s --token-auth --username=newuser --password=user-token --ca-file=%s", status.HostRepoURL, clusterName, status.CAPath): func(opts localdev.RunOptions) ([]byte, error) {
 				if opts.Env["KUBECONFIG"] != clusterCtx.Paths.KubeconfigPath {
 					t.Fatalf("bootstrap KUBECONFIG = %q, want %q", opts.Env["KUBECONFIG"], clusterCtx.Paths.KubeconfigPath)
 				}
@@ -132,7 +132,7 @@ func TestBootstrapPrefersConfiguredGitURLAndTokenPath(t *testing.T) {
 			"git branch --show-current": func(opts localdev.RunOptions) ([]byte, error) {
 				return []byte("main"), nil
 			},
-			fmt.Sprintf("flux bootstrap git --url=%s --branch=main --path=applications/overlays/%s --token-auth --username=newuser --password=configured-user-token --ca-file=%s", configuredRepoURL, clusterName, status.CAPath): func(opts localdev.RunOptions) ([]byte, error) {
+			fmt.Sprintf("flux bootstrap git --url=%s --branch=main --path=clusters/%s --token-auth --username=newuser --password=configured-user-token --ca-file=%s", configuredRepoURL, clusterName, status.CAPath): func(opts localdev.RunOptions) ([]byte, error) {
 				if opts.Env["KUBECONFIG"] != clusterCtx.Paths.KubeconfigPath {
 					t.Fatalf("bootstrap KUBECONFIG = %q, want %q", opts.Env["KUBECONFIG"], clusterCtx.Paths.KubeconfigPath)
 				}
@@ -208,7 +208,7 @@ func TestBootstrapGitHubProviderSkipsGiteaAndOmitsPersonal(t *testing.T) {
 			"git branch --show-current": func(opts localdev.RunOptions) ([]byte, error) {
 				return []byte("main"), nil
 			},
-			fmt.Sprintf("flux bootstrap github --token-auth --owner=example-org --repository=gitops-repo --branch=main --path=applications/overlays/%s", clusterName): func(opts localdev.RunOptions) ([]byte, error) {
+			fmt.Sprintf("flux bootstrap github --token-auth --owner=example-org --repository=gitops-repo --branch=main --path=clusters/%s", clusterName): func(opts localdev.RunOptions) ([]byte, error) {
 				if opts.Env["GITHUB_TOKEN"] != "gh-token" {
 					t.Fatalf("GITHUB_TOKEN = %q, want gh-token", opts.Env["GITHUB_TOKEN"])
 				}
@@ -255,7 +255,7 @@ func TestBootstrapGitHubProviderPersonalAppendsFlag(t *testing.T) {
 			"git branch --show-current": func(opts localdev.RunOptions) ([]byte, error) {
 				return []byte("main"), nil
 			},
-			fmt.Sprintf("flux bootstrap github --token-auth --owner=someuser --repository=gitops-repo --branch=main --path=applications/overlays/%s --personal", clusterName): func(opts localdev.RunOptions) ([]byte, error) {
+			fmt.Sprintf("flux bootstrap github --token-auth --owner=someuser --repository=gitops-repo --branch=main --path=clusters/%s --personal", clusterName): func(opts localdev.RunOptions) ([]byte, error) {
 				return nil, nil
 			},
 		},

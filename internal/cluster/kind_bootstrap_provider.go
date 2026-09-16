@@ -154,7 +154,7 @@ func (p *kindBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths.C
 				Action:     fluxBootstrapDescription(gitProvider),
 				WorkingDir: gitDir,
 				Commands: []BootstrapPlanCommand{
-					commandPlan("flux", "bootstrap", "<provider-specific>", "--path=applications/overlays/"+cfg.ClusterName()),
+					commandPlan("flux", "bootstrap", "<provider-specific>", "--path=clusters/"+cfg.ClusterName()),
 				},
 				Environment: []BootstrapPlanEnv{{Name: "KUBECONFIG", Value: opts.KubeconfigPath}},
 				Writes:      []string{"Flux bootstrap manifests and commits in the GitOps repository", "Flux resources in the Kind cluster"},

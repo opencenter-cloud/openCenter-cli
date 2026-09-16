@@ -35,64 +35,24 @@ func (h *objectStorageCapabilityHandler) Prompts(cfg *v2.Config, providerCtx orc
 
 	if loki := enabledLokiConfig(cfg); loki != nil {
 		storageType := strings.TrimSpace(loki.StorageType)
-		if storageType == "" {
-			prompts = append(prompts, orchestration.PromptSpec{
-				ID:       "storage.loki.type",
-				Group:    configureGroupStorage,
-				Kind:     orchestration.PromptKindSelect,
-				Label:    "Loki storage backend",
-				Default:  h.defaultStorageProvider("loki", providerCtx),
-				Required: true,
-				Options: []orchestration.PromptOption{
-					{Value: "swift", Label: "Swift"},
-					{Value: "s3", Label: "S3"},
-				},
-			})
-		} else if storageType == "swift" {
-			if strings.TrimSpace(loki.SwiftContainerName) == "" || strings.TrimSpace(cfg.Secrets.Loki.SwiftApplicationCredentialSecret) == "" {
-				prompts = append(prompts,
-					orchestration.PromptSpec{ID: "storage.loki.swift_container", Group: configureGroupStorage, Kind: orchestration.PromptKindInput, Label: "Loki Swift container", Default: firstNonEmptyString(strings.TrimSpace(loki.SwiftContainerName), fmt.Sprintf("%s-loki", cfg.OpenCenter.Meta.Name)), Required: true},
-				)
-				if strings.TrimSpace(cfg.Secrets.Loki.SwiftApplicationCredentialSecret) == "" {
-					prompts = append(prompts,
-						orchestration.PromptSpec{ID: "storage.loki.swift_secret", Group: configureGroupStorage, Kind: orchestration.PromptKindSecret, Label: "Loki Swift application credential secret", Required: true},
-					)
-				}
-			}
-		} else if storageType == "s3" {
-			prompts = append(prompts, s3PromptsForLoki(cfg, loki)...)
+		// Platform bulk storage is S3-compatible only (Swift is no longer
+		// supported). Always drive the guided flow to the S3 prompts; a stored
+		// non-s3 storage_type is treated as unset and re-prompted as S3.
+		if storageType != "" && storageType != "s3" {
+			storageType = ""
 		}
+		prompts = append(prompts, s3PromptsForLoki(cfg, loki)...)
 	}
 
 	if tempo := enabledTempoConfig(cfg); tempo != nil {
 		storageType := strings.TrimSpace(tempo.StorageType)
-		if storageType == "" {
-			prompts = append(prompts, orchestration.PromptSpec{
-				ID:       "storage.tempo.type",
-				Group:    configureGroupStorage,
-				Kind:     orchestration.PromptKindSelect,
-				Label:    "Tempo storage backend",
-				Default:  h.defaultStorageProvider("tempo", providerCtx),
-				Required: true,
-				Options: []orchestration.PromptOption{
-					{Value: "swift", Label: "Swift"},
-					{Value: "s3", Label: "S3"},
-				},
-			})
-		} else if storageType == "swift" {
-			if strings.TrimSpace(tempo.SwiftContainerName) == "" || strings.TrimSpace(cfg.Secrets.Tempo.SwiftApplicationCredentialSecret) == "" {
-				prompts = append(prompts,
-					orchestration.PromptSpec{ID: "storage.tempo.swift_container", Group: configureGroupStorage, Kind: orchestration.PromptKindInput, Label: "Tempo Swift container", Default: firstNonEmptyString(strings.TrimSpace(tempo.SwiftContainerName), fmt.Sprintf("%s-tempo", cfg.OpenCenter.Meta.Name)), Required: true},
-				)
-				if strings.TrimSpace(cfg.Secrets.Tempo.SwiftApplicationCredentialSecret) == "" {
-					prompts = append(prompts,
-						orchestration.PromptSpec{ID: "storage.tempo.swift_secret", Group: configureGroupStorage, Kind: orchestration.PromptKindSecret, Label: "Tempo Swift application credential secret", Required: true},
-					)
-				}
-			}
-		} else if storageType == "s3" {
-			prompts = append(prompts, s3PromptsForTempo(cfg, tempo)...)
+		// Platform bulk storage is S3-compatible only (Swift is no longer
+		// supported). Always drive the guided flow to the S3 prompts; a stored
+		// non-s3 storage_type is treated as unset and re-prompted as S3.
+		if storageType != "" && storageType != "s3" {
+			storageType = ""
 		}
+		prompts = append(prompts, s3PromptsForTempo(cfg, tempo)...)
 	}
 
 	return prompts
@@ -102,34 +62,11 @@ func (h *objectStorageCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers or
 	changes := orchestration.ChangeSet{}
 	openstackCfg := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
 
-	if value := strings.TrimSpace(answers["storage.loki.type"]); value != "" {
-		changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.storage_type", Label: "Loki storage backend", Value: value})
-	}
-	lokiType := strings.TrimSpace(answers["storage.loki.type"])
-	if lokiType == "" {
-		if loki := enabledLokiConfig(cfg); loki != nil {
-			lokiType = strings.TrimSpace(loki.StorageType)
-		}
-	}
+	// Platform bulk storage is S3-compatible only; always record storage_type=s3.
+	changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.storage_type", Label: "Loki storage backend", Value: "s3"})
+	lokiType := "s3"
+	_ = openstackCfg
 	switch lokiType {
-	case "swift":
-		container := strings.TrimSpace(answers["storage.loki.swift_container"])
-		if container != "" && openstackCfg != nil {
-			changes.Patches = append(changes.Patches,
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.bucket_name", Label: "Loki Swift container", Value: container},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_auth_url", Label: "Loki Swift auth URL", Value: strings.TrimSpace(openstackCfg.AuthURL)},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_region", Label: "Loki Swift region", Value: strings.TrimSpace(openstackCfg.Region)},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_application_credential_id", Label: "Loki Swift application credential ID", Value: strings.TrimSpace(openstackCfg.ApplicationCredentialID)},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_container_name", Label: "Loki Swift container", Value: container},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_user_domain_name", Label: "Loki Swift user domain", Value: firstNonEmptyString(strings.TrimSpace(openstackCfg.UserDomainName), strings.TrimSpace(openstackCfg.Domain))},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.swift_domain_name", Label: "Loki Swift domain", Value: firstNonEmptyString(strings.TrimSpace(openstackCfg.DomainName), strings.TrimSpace(openstackCfg.Domain))},
-			)
-		}
-		if secret, ok := answers["storage.loki.swift_secret"]; ok && strings.TrimSpace(secret) != "" {
-			changes.Patches = append(changes.Patches,
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "secrets.loki.swift_application_credential_secret", Label: "Loki Swift secret", Value: strings.TrimSpace(secret), Masked: true},
-			)
-		}
 	case "s3":
 		if value := strings.TrimSpace(answers["storage.loki.s3_bucket"]); value != "" {
 			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.loki.bucket_name", Label: "Loki S3 bucket", Value: value})
@@ -151,34 +88,10 @@ func (h *objectStorageCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers or
 		}
 	}
 
-	if value := strings.TrimSpace(answers["storage.tempo.type"]); value != "" {
-		changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.storage_type", Label: "Tempo storage backend", Value: value})
-	}
-	tempoType := strings.TrimSpace(answers["storage.tempo.type"])
-	if tempoType == "" {
-		if tempo := enabledTempoConfig(cfg); tempo != nil {
-			tempoType = strings.TrimSpace(tempo.StorageType)
-		}
-	}
+	// Platform bulk storage is S3-compatible only; always record storage_type=s3.
+	changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.storage_type", Label: "Tempo storage backend", Value: "s3"})
+	tempoType := "s3"
 	switch tempoType {
-	case "swift":
-		container := strings.TrimSpace(answers["storage.tempo.swift_container"])
-		if container != "" && openstackCfg != nil {
-			changes.Patches = append(changes.Patches,
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.bucket_name", Label: "Tempo Swift container", Value: container},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.swift_auth_url", Label: "Tempo Swift auth URL", Value: strings.TrimSpace(openstackCfg.AuthURL)},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.swift_region", Label: "Tempo Swift region", Value: strings.TrimSpace(openstackCfg.Region)},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.swift_application_credential_id", Label: "Tempo Swift application credential ID", Value: strings.TrimSpace(openstackCfg.ApplicationCredentialID)},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.swift_container_name", Label: "Tempo Swift container", Value: container},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.swift_user_domain_name", Label: "Tempo Swift user domain", Value: firstNonEmptyString(strings.TrimSpace(openstackCfg.UserDomainName), strings.TrimSpace(openstackCfg.Domain))},
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.swift_domain_name", Label: "Tempo Swift domain", Value: firstNonEmptyString(strings.TrimSpace(openstackCfg.DomainName), strings.TrimSpace(openstackCfg.Domain))},
-			)
-		}
-		if secret, ok := answers["storage.tempo.swift_secret"]; ok && strings.TrimSpace(secret) != "" {
-			changes.Patches = append(changes.Patches,
-				orchestration.ConfigPatch{Group: configureGroupStorage, Path: "secrets.tempo.swift_application_credential_secret", Label: "Tempo Swift secret", Value: strings.TrimSpace(secret), Masked: true},
-			)
-		}
 	case "s3":
 		if value := strings.TrimSpace(answers["storage.tempo.s3_bucket"]); value != "" {
 			changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupStorage, Path: "opencenter.services.tempo.bucket_name", Label: "Tempo S3 bucket", Value: value})
@@ -201,18 +114,6 @@ func (h *objectStorageCapabilityHandler) ApplyAnswers(cfg *v2.Config, answers or
 	}
 
 	return changes, nil
-}
-
-func (h *objectStorageCapabilityHandler) defaultStorageProvider(service string, providerCtx orchestration.ProviderContext) string {
-	if h.registry == nil {
-		return "swift"
-	}
-	infraProvider := configservices.InfrastructureProvider(strings.ToLower(strings.TrimSpace(providerCtx.Provider)))
-	provider, err := h.registry.GetDefaultProvider(service, "storage", infraProvider)
-	if err != nil {
-		return "swift"
-	}
-	return string(provider)
 }
 
 func s3PromptsForLoki(cfg *v2.Config, loki *configservices.LokiConfig) []orchestration.PromptSpec {

@@ -231,7 +231,14 @@ func (s *Service) Bootstrap(ctx context.Context, clusterIdentifier string) (*Boo
 }
 
 func filepathForFlux(clusterName string) string {
-	return "applications/overlays/" + clusterName
+	// Bootstrap against clusters/<cluster>, matching the OpenStack reference.
+	// This is where `flux bootstrap` writes its own flux-system/ components and
+	// where the flux bridge (services.yaml) lives, so the kustomize-controller
+	// auto-aggregates flux-system into the applied set and does NOT prune its
+	// own controllers. Pointing --path at applications/overlays/<cluster> caused
+	// Flux to self-prune, because that directory's static kustomization.yaml
+	// intentionally omits ./flux-system.
+	return "clusters/" + clusterName
 }
 
 // parseGitHubURL extracts owner and repository from a GitHub URL.

@@ -240,9 +240,9 @@ type StorageConfig struct {
 // S3-compatible API. RustFS is intentionally a non-production validation
 // profile until its managed service implementation is available.
 type StorageProfileConfig struct {
-	Lifecycle             string `yaml:"lifecycle,omitempty" json:"lifecycle,omitempty" jsonschema:"description=Deployment support class,enum=production,enum=non-production,default=non-production"`
-	PVCProvider           string `yaml:"pvc_provider,omitempty" json:"pvc_provider,omitempty" jsonschema:"description=Persistent volume provider,enum=external,enum=longhorn,default=external"`
-	ObjectStorageProvider string `yaml:"object_storage_provider,omitempty" json:"object_storage_provider,omitempty" jsonschema:"description=Bulk object storage provider,enum=external-s3,enum=rustfs,default=external-s3"`
+	Lifecycle             string `yaml:"lifecycle,omitempty" json:"lifecycle,omitempty" validate:"omitempty,oneof=production non-production" jsonschema:"description=Deployment support class,enum=production,enum=non-production,default=non-production"`
+	PVCProvider           string `yaml:"pvc_provider,omitempty" json:"pvc_provider,omitempty" validate:"omitempty,oneof=external longhorn" jsonschema:"description=Persistent volume provider,enum=external,enum=longhorn,default=external"`
+	ObjectStorageProvider string `yaml:"object_storage_provider,omitempty" json:"object_storage_provider,omitempty" validate:"omitempty,oneof=external-s3 rustfs" jsonschema:"description=Bulk object storage provider,enum=external-s3,enum=rustfs,default=external-s3"`
 }
 
 // BlockDeviceConfig represents additional block device configuration.

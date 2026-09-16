@@ -204,8 +204,16 @@ func guidedCreateAnswers() map[string]string {
 		"dns.route53.region":                      "us-east-1",
 		"dns.route53.access_key":                  "AKIAGUIDEDTEST",
 		"dns.route53.secret_key":                  "guided-secret-key",
-		"storage.loki.swift_secret":               "loki-swift-secret",
-		"storage.tempo.swift_secret":              "tempo-swift-secret",
+		"storage.loki.s3_bucket":                  "guided-loki",
+		"storage.loki.s3_endpoint":                "https://s3.example.com",
+		"storage.loki.s3_region":                  "us-east-1",
+		"storage.loki.s3_access_key":              "loki-s3-access",
+		"storage.loki.s3_secret_key":              "loki-s3-secret",
+		"storage.tempo.s3_bucket":                 "guided-tempo",
+		"storage.tempo.s3_endpoint":               "https://s3.example.com",
+		"storage.tempo.s3_region":                 "us-east-1",
+		"storage.tempo.s3_access_key":             "tempo-s3-access",
+		"storage.tempo.s3_secret_key":             "tempo-s3-secret",
 		"review.confirm":                          "true",
 	}
 }

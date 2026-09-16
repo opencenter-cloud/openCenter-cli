@@ -2359,12 +2359,24 @@
                   "additionalProperties": false,
                   "properties": {
                     "lifecycle": {
+                      "enum": [
+                        "production",
+                        "non-production"
+                      ],
                       "type": "string"
                     },
                     "object_storage_provider": {
+                      "enum": [
+                        "external-s3",
+                        "rustfs"
+                      ],
                       "type": "string"
                     },
                     "pvc_provider": {
+                      "enum": [
+                        "external",
+                        "longhorn"
+                      ],
                       "type": "string"
                     }
                   },

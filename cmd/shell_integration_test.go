@@ -43,7 +43,12 @@ printf 'SET:%s\n' "${OPENCENTER_CLUSTER:-}"
 opencenter cluster use --clear >/dev/null
 printf 'CLEAR:%s\n' "${OPENCENTER_CLUSTER-unset}"
 `
-	cmd := exec.Command("bash", "-lc", script)
+	// Use a non-login shell (-c, not -lc): a login shell sources profile files
+	// that can re-prepend a real opencenter binary to PATH ahead of the fake
+	// one this test installs, which makes the test fail on machines/CI runners
+	// that have opencenter installed. -c keeps the test hermetic to the PATH
+	// set below.
+	cmd := exec.Command("bash", "-c", script)
 	cmd.Env = append(os.Environ(),
 		"HOME="+dir,
 		"PATH="+binDir+string(os.PathListSeparator)+os.Getenv("PATH"),

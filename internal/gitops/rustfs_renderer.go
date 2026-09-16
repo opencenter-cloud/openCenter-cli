@@ -168,11 +168,15 @@ spec:
       restartPolicy: OnFailure
       securityContext:
         runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: create-buckets
-          image: minio/mc:RELEASE.2025-03-12T17-29-24Z
+          # quay.io is used because Docker Hub's minio/mc now requires
+          # authentication (anonymous pulls are denied for all tags).
+          image: quay.io/minio/mc:RELEASE.2025-04-08T15-39-49Z
           command: ["/bin/sh", "-ec"]
           args:
             - |
@@ -180,6 +184,12 @@ spec:
               for bucket in {{ .LokiBucket }} {{ .TempoBucket }} {{ .MimirBucket }} {{ .VeleroBucket }} {{ .HarborBucket }} {{ .EtcdBackupBucket }}; do
                 mc mb --ignore-existing "rustfs/$bucket"
               done
+          env:
+            # mc writes its client config (aliases) to this directory. With
+            # readOnlyRootFilesystem the default ~/.mc is not writable, so point
+            # mc at a writable emptyDir volume.
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
           envFrom:
             - secretRef:
                 name: rustfs-credentials
@@ -188,6 +198,12 @@ spec:
             capabilities:
               drop: ["ALL"]
             readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: mc-config
+              mountPath: /tmp/.mc
+      volumes:
+        - name: mc-config
+          emptyDir: {}
 `
 
 const rustFSFluxTemplate = `---

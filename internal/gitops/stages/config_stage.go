@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
@@ -106,6 +108,46 @@ func (cs *ConfigStage) Execute(ctx context.Context, workspace *gitops.GitOpsWork
 	return nil
 }
 
+// renderClusterVarsConfigMap builds the cluster-vars ConfigMap consumed by Flux
+// postBuild.substituteFrom. Keys are the placeholder names and values are the
+// resolved cluster-config fields. Keys are sorted for deterministic output.
+func renderClusterVarsConfigMap(cfg v2.Config) string {
+	hs := cfg.OpenCenter.Cluster.HostnameSubstitution
+	vars := hs.GetVariables()
+	names := make([]string, 0, len(vars))
+	for name := range vars {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var data strings.Builder
+	for _, name := range names {
+		data.WriteString(fmt.Sprintf("  %s: %q\n", name, clusterVarValue(cfg, vars[name])))
+	}
+	return fmt.Sprintf(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: %s
+  namespace: flux-system
+data:
+%s`, hs.GetConfigMapName(), data.String())
+}
+
+// clusterVarValue resolves a cluster-config field name to its value for the
+// cluster-vars ConfigMap. Unknown fields resolve to "".
+func clusterVarValue(cfg v2.Config, field string) string {
+	switch field {
+	case "cluster_fqdn":
+		return cfg.OpenCenter.Cluster.ClusterFQDN
+	case "base_domain":
+		return cfg.OpenCenter.Cluster.BaseDomain
+	case "cluster_name":
+		return cfg.OpenCenter.Cluster.ClusterName
+	default:
+		return ""
+	}
+}
+
 // createDefaultConfigs creates default configuration files when no templates are available.
 func (cs *ConfigStage) createDefaultConfigs(ctx context.Context, workspace *gitops.GitOpsWorkspace) error {
 	clusterName := workspace.Config.ClusterName()
@@ -162,6 +204,11 @@ resources:
 	}
 
 	// Create cluster-specific application overlay kustomization
+	hs := workspace.Config.OpenCenter.Cluster.HostnameSubstitution
+	clusterVarsResource := ""
+	if hs.Enabled {
+		clusterVarsResource = "  - cluster-vars-configmap.yaml\n"
+	}
 	clusterAppsKustomization := fmt.Sprintf(`apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 metadata:
@@ -169,10 +216,20 @@ metadata:
   namespace: flux-system
 resources:
   - ../../base
-`, clusterName)
+%s`, clusterName, clusterVarsResource)
 
 	if err := writer.WriteFileString(clusterAppsPath, clusterAppsKustomization, 0o644); err != nil {
 		return fmt.Errorf("failed to write cluster applications kustomization: %w", err)
+	}
+
+	// Render the cluster-vars ConfigMap consumed by Flux postBuild.substituteFrom
+	// (OCTR-759). Only emitted when hostname substitution is enabled.
+	if hs.Enabled {
+		configMap := renderClusterVarsConfigMap(workspace.Config)
+		clusterVarsPath := filepath.Join(filepath.Dir(clusterAppsPath), "cluster-vars-configmap.yaml")
+		if err := writer.WriteFileString(clusterVarsPath, configMap, 0o644); err != nil {
+			return fmt.Errorf("failed to write cluster-vars ConfigMap: %w", err)
+		}
 	}
 
 	// Create Flux system kustomization

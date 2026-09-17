@@ -21,6 +21,55 @@ type ClusterConfig struct {
 	ClusterFQDN string           `yaml:"cluster_fqdn" json:"cluster_fqdn" validate:"required,fqdn"`
 	AdminEmail  string           `yaml:"admin_email" json:"admin_email" validate:"required,email"`
 	Kubernetes  KubernetesConfig `yaml:"kubernetes" json:"kubernetes" validate:"required"`
+
+	// HostnameSubstitution opts the generator into emitting Flux
+	// postBuild.substitute placeholders (e.g. ${CLUSTER_FQDN}) instead of
+	// literal hostnames. Off by default; when disabled the output is unchanged.
+	HostnameSubstitution HostnameSubstitutionConfig `yaml:"hostname_substitution,omitempty" json:"hostname_substitution,omitempty"`
+}
+
+// HostnameSubstitutionConfig controls Flux postBuild.substituteFrom rendering.
+// See OCTR-759. When Enabled is false the generator emits literal hostnames and
+// no cluster-vars ConfigMap, so output is byte-identical to prior releases.
+type HostnameSubstitutionConfig struct {
+	Enabled       bool              `yaml:"enabled,omitempty" json:"enabled,omitempty" jsonschema:"description=Emit Flux postBuild placeholders instead of literal hostnames; off by default"`
+	ConfigMapName string            `yaml:"configmap_name,omitempty" json:"configmap_name,omitempty" jsonschema:"description=Name of the cluster-vars ConfigMap rendered under clusters/<cluster>/,default=cluster-vars"`
+	Variables     map[string]string `yaml:"variables,omitempty" json:"variables,omitempty" jsonschema:"description=Placeholder name to cluster-config field mapping (e.g. CLUSTER_FQDN: cluster_fqdn)"`
+}
+
+// GetConfigMapName returns the configured ConfigMap name or the default.
+func (h HostnameSubstitutionConfig) GetConfigMapName() string {
+	if h.ConfigMapName == "" {
+		return "cluster-vars"
+	}
+	return h.ConfigMapName
+}
+
+// GetVariables returns the placeholder->field map, defaulting to the standard
+// CLUSTER_FQDN/BASE_DOMAIN/CLUSTER_NAME set when none is configured.
+func (h HostnameSubstitutionConfig) GetVariables() map[string]string {
+	if len(h.Variables) > 0 {
+		return h.Variables
+	}
+	return map[string]string{
+		"CLUSTER_FQDN": "cluster_fqdn",
+		"BASE_DOMAIN":  "base_domain",
+		"CLUSTER_NAME": "cluster_name",
+	}
+}
+
+// FQDNPlaceholder returns the ${VAR} token whose mapped field is cluster_fqdn,
+// or "" when substitution is disabled or no variable maps to cluster_fqdn.
+func (h HostnameSubstitutionConfig) FQDNPlaceholder() string {
+	if !h.Enabled {
+		return ""
+	}
+	for name, field := range h.GetVariables() {
+		if field == "cluster_fqdn" {
+			return "${" + name + "}"
+		}
+	}
+	return ""
 }
 
 // KubernetesConfig represents Kubernetes cluster configuration.

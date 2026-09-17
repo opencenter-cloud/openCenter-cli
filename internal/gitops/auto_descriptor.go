@@ -60,6 +60,10 @@ type autoServiceContext struct {
 	FluxInterval           string
 	Force                  bool
 	Suspend                bool
+	// PostBuildSubstituteFrom is a pre-rendered YAML block appended under a Flux
+	// Kustomization's spec when hostname substitution is enabled (OCTR-759).
+	// Empty when disabled, so output is unchanged.
+	PostBuildSubstituteFrom string
 }
 
 // planAutoServiceActions generates render actions for enabled services that lack
@@ -247,7 +251,33 @@ func buildAutoServiceContextWithArtifacts(serviceName string, base *services.Bas
 		FluxInterval:           interval,
 		Force:                  adoption.Force,
 		Suspend:                adoption.Suspend,
+		PostBuildSubstituteFrom: postBuildSubstituteFromBlock(cfg),
 	}
+}
+
+// postBuildSubstituteFromLines adapts the substituteFrom block for the
+// fmt-based postBase renderer: it appends a trailing newline so the block sits
+// on its own lines, or returns "" (no lines) when substitution is disabled.
+func postBuildSubstituteFromLines(block string) string {
+	if block == "" {
+		return ""
+	}
+	return block + "\n"
+}
+
+// postBuildSubstituteFromBlock renders the Flux spec.postBuild.substituteFrom
+// block referencing the cluster-vars ConfigMap, or "" when hostname
+// substitution is disabled (OCTR-759). The trailing newline is omitted so the
+// block slots cleanly under a Kustomization spec.
+func postBuildSubstituteFromBlock(cfg v2.Config) string {
+	hs := cfg.OpenCenter.Cluster.HostnameSubstitution
+	if !hs.Enabled {
+		return ""
+	}
+	return fmt.Sprintf(`  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: %s`, hs.GetConfigMapName())
 }
 
 func secretArtifactTargetMaterialized(cfg v2.Config, serviceName string, artifacts []secretartifacts.Artifact) bool {
@@ -498,12 +528,12 @@ spec:
   wait: true
   force: %t
   suspend: %t
-  commonMetadata:
+%s  commonMetadata:
     labels:
       app.kubernetes.io/part-of: %s
       app.kubernetes.io/managed-by: flux
       opencenter/managed-by: opencenter
-`, ctx.FluxInterval, ctx.SourceName, stage.Path, ctx.Namespace, ctx.Force, ctx.Suspend, ctx.ServiceName)
+`, ctx.FluxInterval, ctx.SourceName, stage.Path, ctx.Namespace, ctx.Force, ctx.Suspend, postBuildSubstituteFromLines(ctx.PostBuildSubstituteFrom), ctx.ServiceName)
 	return buf.String(), nil
 }
 
@@ -580,6 +610,9 @@ spec:
   wait: true
   force: {{ .Force }}
   suspend: {{ .Suspend }}
+{{- if .PostBuildSubstituteFrom }}
+{{ .PostBuildSubstituteFrom }}
+{{- end }}
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
@@ -624,6 +657,9 @@ spec:
   wait: true
   force: {{ .Force }}
   suspend: {{ .Suspend }}
+{{- if .PostBuildSubstituteFrom }}
+{{ .PostBuildSubstituteFrom }}
+{{- end }}
   commonMetadata:
     labels:
       app.kubernetes.io/part-of: {{ .ServiceName }}
@@ -661,6 +697,9 @@ spec:
   wait: true
   force: {{ .Force }}
   suspend: {{ .Suspend }}
+{{- if .PostBuildSubstituteFrom }}
+{{ .PostBuildSubstituteFrom }}
+{{- end }}
   commonMetadata:
     labels:
       app.kubernetes.io/part-of: {{ .ServiceName }}
@@ -696,6 +735,9 @@ spec:
   path: ./applications/overlays/{{ .ClusterName }}/services/{{ .ServiceName }}
   prune: true
   wait: true
+{{- if .PostBuildSubstituteFrom }}
+{{ .PostBuildSubstituteFrom }}
+{{- end }}
   commonMetadata:
     labels:
       app.kubernetes.io/part-of: {{ .ServiceName }}

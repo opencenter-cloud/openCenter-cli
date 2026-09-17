@@ -70,6 +70,10 @@ func longhornOverlayFilesRenderer(cfg v2.Config) (map[string]string, error) {
 
 func renderOverlayTemplate(tmpl string, cfg v2.Config) (string, error) {
 	funcMap := sprig.TxtFuncMap()
+	// fqdn returns the cluster FQDN for hostname interpolation: the literal
+	// cluster_fqdn value normally, or the Flux postBuild placeholder (e.g.
+	// ${CLUSTER_FQDN}) when hostname_substitution is enabled (OCTR-759).
+	funcMap["fqdn"] = clusterFQDNFunc(cfg)
 	t, err := template.New("overlay").Funcs(funcMap).Parse(tmpl)
 	if err != nil {
 		return "", err
@@ -79,6 +83,17 @@ func renderOverlayTemplate(tmpl string, cfg v2.Config) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// clusterFQDNFunc returns a template helper that yields the cluster FQDN as a
+// literal, or the Flux postBuild placeholder when hostname substitution is on.
+func clusterFQDNFunc(cfg v2.Config) func() string {
+	return func() string {
+		if p := cfg.OpenCenter.Cluster.HostnameSubstitution.FQDNPlaceholder(); p != "" {
+			return p
+		}
+		return cfg.OpenCenter.Cluster.ClusterFQDN
+	}
 }
 
 const gatewayNamespaceContent = `---
@@ -138,7 +153,7 @@ spec:
     - name: keycloak-https
       port: 443
       protocol: HTTPS
-      hostname: {{ (index .OpenCenter.Services "keycloak").Hostname | default (printf "auth.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "keycloak").Hostname | default (printf "auth.%s" fqdn) }}
       allowedRoutes:
         namespaces:
           from: All
@@ -152,7 +167,7 @@ spec:
             namespace: {{ $gw.TLSSecretNamespace }}
 {{- end }}
     - name: keycloak-http
-      hostname: {{ (index .OpenCenter.Services "keycloak").Hostname | default (printf "auth.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "keycloak").Hostname | default (printf "auth.%s" fqdn) }}
       protocol: HTTP
       port: 80
       allowedRoutes:
@@ -161,7 +176,7 @@ spec:
     - name: gitops-https
       port: 443
       protocol: HTTPS
-      hostname: {{ (index .OpenCenter.Services "gitops").Hostname | default (printf "gitops.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "gitops").Hostname | default (printf "gitops.%s" fqdn) }}
       allowedRoutes:
         namespaces:
           from: All
@@ -177,7 +192,7 @@ spec:
     - name: headlamp-https
       port: 443
       protocol: HTTPS
-      hostname: {{ (index .OpenCenter.Services "headlamp").Hostname | default (printf "headlamp.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "headlamp").Hostname | default (printf "headlamp.%s" fqdn) }}
       allowedRoutes:
         namespaces:
           from: All
@@ -193,7 +208,7 @@ spec:
     - name: prometheus-https
       port: 443
       protocol: HTTPS
-      hostname: {{ (index .OpenCenter.Services "kube-prometheus-stack").PrometheusHostname | default (printf "prometheus.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "kube-prometheus-stack").PrometheusHostname | default (printf "prometheus.%s" fqdn) }}
       allowedRoutes:
         namespaces:
           from: All
@@ -209,7 +224,7 @@ spec:
     - name: alertmanager-https
       port: 443
       protocol: HTTPS
-      hostname: {{ (index .OpenCenter.Services "kube-prometheus-stack").AlertmanagerHostname | default (printf "alertmanager.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "kube-prometheus-stack").AlertmanagerHostname | default (printf "alertmanager.%s" fqdn) }}
       allowedRoutes:
         namespaces:
           from: All
@@ -225,7 +240,7 @@ spec:
     - name: grafana-https
       port: 443
       protocol: HTTPS
-      hostname: {{ (index .OpenCenter.Services "kube-prometheus-stack").GrafanaHostname | default (index .OpenCenter.Services "kube-prometheus-stack").Hostname | default (printf "grafana.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "kube-prometheus-stack").GrafanaHostname | default (index .OpenCenter.Services "kube-prometheus-stack").Hostname | default (printf "grafana.%s" fqdn) }}
       allowedRoutes:
         namespaces:
           from: All
@@ -241,14 +256,14 @@ spec:
     - name: harbor-http
       protocol: HTTP
       port: 80
-      hostname: {{ (index .OpenCenter.Services "harbor").Hostname | default (printf "harbor.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "harbor").Hostname | default (printf "harbor.%s" fqdn) }}
       allowedRoutes:
         namespaces:
           from: All
     - name: harbor-https
       protocol: HTTPS
       port: 443
-      hostname: {{ (index .OpenCenter.Services "harbor").Hostname | default (printf "harbor.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "harbor").Hostname | default (printf "harbor.%s" fqdn) }}
       tls:
         mode: Terminate
         certificateRefs:
@@ -263,7 +278,7 @@ spec:
     - name: longhorn-https
       port: 443
       protocol: HTTPS
-      hostname: {{ (index .OpenCenter.Services "longhorn").Hostname | default (printf "longhorn.%s" .OpenCenter.Cluster.ClusterFQDN) }}
+      hostname: {{ (index .OpenCenter.Services "longhorn").Hostname | default (printf "longhorn.%s" fqdn) }}
       allowedRoutes:
         namespaces:
           from: All
@@ -286,7 +301,7 @@ metadata:
   namespace: longhorn-system
 spec:
   hostnames:
-  - {{ (index .OpenCenter.Services "longhorn").Hostname | default (printf "longhorn.%s" .OpenCenter.Cluster.ClusterFQDN) | quote }}
+  - {{ (index .OpenCenter.Services "longhorn").Hostname | default (printf "longhorn.%s" fqdn) | quote }}
   parentRefs:
   - group: gateway.networking.k8s.io
     kind: Gateway
@@ -314,7 +329,7 @@ metadata:
   namespace: observability
 spec:
   hostnames:
-    - {{ (index .OpenCenter.Services "kube-prometheus-stack").PrometheusHostname | default (printf "prometheus.%s" .OpenCenter.Cluster.ClusterFQDN) | quote }}
+    - {{ (index .OpenCenter.Services "kube-prometheus-stack").PrometheusHostname | default (printf "prometheus.%s" fqdn) | quote }}
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -341,7 +356,7 @@ metadata:
   namespace: observability
 spec:
   hostnames:
-    - {{ (index .OpenCenter.Services "kube-prometheus-stack").AlertmanagerHostname | default (printf "alertmanager.%s" .OpenCenter.Cluster.ClusterFQDN) | quote }}
+    - {{ (index .OpenCenter.Services "kube-prometheus-stack").AlertmanagerHostname | default (printf "alertmanager.%s" fqdn) | quote }}
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -368,7 +383,7 @@ metadata:
   namespace: observability
 spec:
   hostnames:
-    - {{ (index .OpenCenter.Services "kube-prometheus-stack").GrafanaHostname | default (index .OpenCenter.Services "kube-prometheus-stack").Hostname | default (printf "grafana.%s" .OpenCenter.Cluster.ClusterFQDN) | quote }}
+    - {{ (index .OpenCenter.Services "kube-prometheus-stack").GrafanaHostname | default (index .OpenCenter.Services "kube-prometheus-stack").Hostname | default (printf "grafana.%s" fqdn) | quote }}
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway

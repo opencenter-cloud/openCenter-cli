@@ -2847,6 +2847,24 @@
                     }
                   },
                   "type": "object"
+                },
+                "tls": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "per_listener_secrets": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "secret_namespace": {
+                      "type": "string"
+                    },
+                    "wildcard_secret_name": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
                 }
               },
               "type": "object"
@@ -4798,6 +4816,24 @@
                       "type": "string"
                     },
                     "repo": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "tls": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "per_listener_secrets": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "secret_namespace": {
+                      "type": "string"
+                    },
+                    "wildcard_secret_name": {
                       "type": "string"
                     }
                   },
@@ -6829,6 +6865,24 @@
                       "type": "string"
                     },
                     "repo": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "tls": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "per_listener_secrets": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "secret_namespace": {
+                      "type": "string"
+                    },
+                    "wildcard_secret_name": {
                       "type": "string"
                     }
                   },

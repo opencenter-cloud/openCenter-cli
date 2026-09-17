@@ -413,6 +413,7 @@ func validateMetalLBConfig(config *services.MetalLBConfig) error {
 
 	var problems []string
 	poolNames := make(map[string]struct{}, len(config.IPAddressPools))
+	defaultPools := make([]string, 0, 1)
 	for i, pool := range config.IPAddressPools {
 		path := fmt.Sprintf("services.metallb.ip_address_pools[%d]", i)
 		if pool.Name == "" {
@@ -424,6 +425,9 @@ func validateMetalLBConfig(config *services.MetalLBConfig) error {
 		} else {
 			poolNames[pool.Name] = struct{}{}
 		}
+		if pool.Default {
+			defaultPools = append(defaultPools, pool.Name)
+		}
 		if len(pool.Addresses) == 0 {
 			problems = append(problems, path+".addresses must contain at least one address")
 		}
@@ -432,6 +436,9 @@ func validateMetalLBConfig(config *services.MetalLBConfig) error {
 				problems = append(problems, fmt.Sprintf("%s.addresses[%d] %q is not a valid CIDR or IP range", path, j, address))
 			}
 		}
+	}
+	if len(defaultPools) > 1 {
+		problems = append(problems, fmt.Sprintf("services.metallb.ip_address_pools: at most one pool may set default: true, found %d (%s)", len(defaultPools), strings.Join(defaultPools, ", ")))
 	}
 
 	advertisementNames := make(map[string]struct{}, len(config.L2Advertisements))
@@ -445,6 +452,9 @@ func validateMetalLBConfig(config *services.MetalLBConfig) error {
 			problems = append(problems, fmt.Sprintf("%s.name %q is duplicated", path, advertisement.Name))
 		} else {
 			advertisementNames[advertisement.Name] = struct{}{}
+		}
+		if advertisement.Type != "" && advertisement.Type != services.L2AdvertisementType {
+			problems = append(problems, fmt.Sprintf("%s.type %q is not supported (only %q is supported today)", path, advertisement.Type, services.L2AdvertisementType))
 		}
 		seenInterfaces := make(map[string]struct{}, len(advertisement.Interfaces))
 		for j, iface := range advertisement.Interfaces {

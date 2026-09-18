@@ -49,6 +49,20 @@ type BaseConfig struct {
 	Namespace    string        `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`
 	Source       ServiceSource `yaml:"source,omitempty" json:"source,omitempty" jsonschema:"description=GitOps source configuration"`
 	Image        ServiceImage  `yaml:"image,omitempty" json:"image,omitempty" jsonschema:"description=Container image configuration"`
+	// AddressPool names the MetalLB IP address pool the service's Gateway
+	// listener exits through (OCTR-762). Empty means the cluster's default pool
+	// (metallb.DefaultPoolName()). Only consulted for user-facing services that
+	// own a CLI-generated Gateway listener (keycloak, harbor, longhorn,
+	// kube-prometheus-stack); ignored for services whose HTTPRoutes ship in the
+	// upstream base (gitops, headlamp, rackai-ui), which always stay on the
+	// default Gateway.
+	AddressPool string `yaml:"address_pool,omitempty" json:"address_pool,omitempty" jsonschema:"description=MetalLB IP address pool this service's Gateway listener exits through; empty uses the default pool"`
+}
+
+// GetAddressPool returns the configured MetalLB address pool name, or empty
+// when the service uses the cluster's default pool.
+func (b BaseConfig) GetAddressPool() string {
+	return b.AddressPool
 }
 
 // IsEnabled returns true if the service is enabled.

@@ -26,10 +26,12 @@ services:
         addresses:
           - 72.4.119.48/28
       - name: private-pool
+        default: true
         addresses:
           - 10.97.6.61/32
     l2_advertisements:
       - name: public-pool-l2
+        type: l2
         ip_address_pools:
           - public-pool
         interfaces:
@@ -45,10 +47,12 @@ The `services:` fragment above belongs in the cluster configuration under `openc
 | `ip_address_pools` | list | — | List of IP address pool definitions |
 | `ip_address_pools[].name` | string | — | Pool identifier |
 | `ip_address_pools[].addresses` | list of strings | — | IP ranges in `start-end` or CIDR format |
+| `ip_address_pools[].default` | bool | `false` | Mark this pool as the default other CLI features select when a service declares no explicit pool. At most one pool may set `default: true`; when none is marked, the first pool is treated as default |
 | `ip_address_pools[].auto_assign` | bool | `true` when omitted | Automatically assign IPs from this pool |
 | `ip_address_pools[].avoid_buggy_ips` | bool | `false` | Avoid `.0` and `.255` addresses |
 | `l2_advertisements` | list | — | Layer-2 advertisements to generate |
 | `l2_advertisements[].name` | string | — | Advertisement identifier |
+| `l2_advertisements[].type` | string | `l2` | Advertisement type. Only `l2` is supported today; BGP advertisements are a follow-up |
 | `l2_advertisements[].ip_address_pools` | list of strings | all pools when empty | Pools selected by the advertisement; an empty list selects all pools per MetalLB semantics |
 | `l2_advertisements[].interfaces` | list of strings | — | Node interfaces on which to advertise |
 

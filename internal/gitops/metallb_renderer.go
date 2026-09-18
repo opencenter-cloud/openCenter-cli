@@ -100,6 +100,9 @@ func metallbOverlayFilesRenderer(cfg v2.Config) (map[string]string, error) {
 	if len(service.L2Advertisements) > 0 {
 		documents := make([]any, 0, len(service.L2Advertisements))
 		for _, advertisement := range service.L2Advertisements {
+			if advertisement.GetType() != services.L2AdvertisementType {
+				continue
+			}
 			documents = append(documents, metallbL2AdvertisementManifest{
 				APIVersion: "metallb.io/v1beta1",
 				Kind:       "L2Advertisement",
@@ -112,6 +115,9 @@ func metallbOverlayFilesRenderer(cfg v2.Config) (map[string]string, error) {
 					Interfaces:     advertisement.Interfaces,
 				},
 			})
+		}
+		if len(documents) == 0 {
+			return files, nil
 		}
 		content, err := marshalMetalLBDocuments(documents)
 		if err != nil {

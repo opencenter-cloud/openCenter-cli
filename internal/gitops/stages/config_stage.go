@@ -161,7 +161,14 @@ resources:
 		return fmt.Errorf("failed to write applications kustomization: %w", err)
 	}
 
-	// Create cluster-specific application overlay kustomization
+	// Create cluster-specific application overlay kustomization.
+	//
+	// Note: the cluster-vars ConfigMap (OCTR-759) is intentionally NOT emitted
+	// here. This fallback overlay kustomization is overwritten by the
+	// template-based generate, and any ConfigMap written alongside it is pruned.
+	// The ConfigMap is instead rendered on the flux-reconciled path in
+	// RenderClusterFluxBridgeAtomic (clusters/<cluster>/), which is where Flux's
+	// postBuild.substituteFrom resolves it.
 	clusterAppsKustomization := fmt.Sprintf(`apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 metadata:

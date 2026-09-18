@@ -37,3 +37,23 @@ l2_advertisements:
 	require.NoError(t, yaml.Unmarshal(output, &roundTripped))
 	require.Equal(t, config, roundTripped)
 }
+
+func TestMetalLBDefaultPoolName(t *testing.T) {
+	t.Run("empty when no pools", func(t *testing.T) {
+		require.Equal(t, "", MetalLBConfig{}.DefaultPoolName())
+	})
+	t.Run("first pool when none marked default", func(t *testing.T) {
+		cfg := MetalLBConfig{IPAddressPools: []IPAddressPool{{Name: "public-pool"}, {Name: "private-pool"}}}
+		require.Equal(t, "public-pool", cfg.DefaultPoolName())
+	})
+	t.Run("explicit default wins over order", func(t *testing.T) {
+		cfg := MetalLBConfig{IPAddressPools: []IPAddressPool{{Name: "public-pool"}, {Name: "private-pool", Default: true}}}
+		require.Equal(t, "private-pool", cfg.DefaultPoolName())
+	})
+}
+
+func TestL2AdvertisementGetType(t *testing.T) {
+	require.Equal(t, "l2", L2Advertisement{}.GetType())
+	require.Equal(t, "l2", L2Advertisement{Type: "l2"}.GetType())
+	require.Equal(t, "bgp", L2Advertisement{Type: "bgp"}.GetType())
+}

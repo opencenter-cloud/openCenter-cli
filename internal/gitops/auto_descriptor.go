@@ -51,6 +51,7 @@ type autoServiceContext struct {
 	OverrideValues         string
 	OverrideValuesRenderer OverrideValuesRenderer
 	KustomizationContent   string
+	KustomizationRenderer  KustomizationRenderer
 	OverlayFilesRenderer   OverlayFilesRenderer
 	ClusterName            string
 	BaseRepoURL            string
@@ -60,6 +61,10 @@ type autoServiceContext struct {
 	FluxInterval           string
 	Force                  bool
 	Suspend                bool
+	// PostBuildSubstituteFrom is a pre-rendered YAML block appended under a Flux
+	// Kustomization's spec when hostname substitution is enabled (OCTR-759).
+	// Empty when disabled, so output is unchanged.
+	PostBuildSubstituteFrom string
 }
 
 // planAutoServiceActions generates render actions for enabled services that lack
@@ -93,6 +98,19 @@ func planAutoServiceActionsWithArtifacts(cfg v2.Config, registry *descriptorcfg.
 		}
 
 		ctx := buildAutoServiceContextWithArtifacts(serviceName, base, cfg, artifacts)
+		// Resolve a config-driven kustomization (OCTR-762 gateway) up front so
+		// both renderAutoServiceActions and the custom-seed decision below observe
+		// the same KustomizationContent. renderAutoServiceActions takes ctx by
+		// value, so resolving inside it would not be visible to
+		// appendCustomSeedAction here, which would then wrongly emit a custom/ seed
+		// for a verbatim-kustomization service.
+		if ctx.KustomizationRenderer != nil {
+			rendered, err := ctx.KustomizationRenderer(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("kustomization renderer for %q: %w", serviceName, err)
+			}
+			ctx.KustomizationContent = rendered
+		}
 		svcActions, err := renderAutoServiceActions(ctx, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("auto-render service %s: %w", serviceName, err)
@@ -238,6 +256,7 @@ func buildAutoServiceContextWithArtifacts(serviceName string, base *services.Bas
 		OverrideValues:         spec.OverrideValues,
 		OverrideValuesRenderer: spec.OverrideValuesRenderer,
 		KustomizationContent:   spec.KustomizationContent,
+		KustomizationRenderer:  spec.KustomizationRenderer,
 		OverlayFilesRenderer:   spec.OverlayFilesRenderer,
 		ClusterName:            cfg.ClusterName(),
 		BaseRepoURL:            baseRepoURL,
@@ -247,7 +266,33 @@ func buildAutoServiceContextWithArtifacts(serviceName string, base *services.Bas
 		FluxInterval:           interval,
 		Force:                  adoption.Force,
 		Suspend:                adoption.Suspend,
+		PostBuildSubstituteFrom: postBuildSubstituteFromBlock(cfg),
 	}
+}
+
+// postBuildSubstituteFromLines adapts the substituteFrom block for the
+// fmt-based postBase renderer: it appends a trailing newline so the block sits
+// on its own lines, or returns "" (no lines) when substitution is disabled.
+func postBuildSubstituteFromLines(block string) string {
+	if block == "" {
+		return ""
+	}
+	return block + "\n"
+}
+
+// postBuildSubstituteFromBlock renders the Flux spec.postBuild.substituteFrom
+// block referencing the cluster-vars ConfigMap, or "" when hostname
+// substitution is disabled (OCTR-759). The trailing newline is omitted so the
+// block slots cleanly under a Kustomization spec.
+func postBuildSubstituteFromBlock(cfg v2.Config) string {
+	hs := cfg.OpenCenter.Cluster.HostnameSubstitution
+	if !hs.Enabled {
+		return ""
+	}
+	return fmt.Sprintf(`  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: %s`, hs.GetConfigMapName())
 }
 
 func secretArtifactTargetMaterialized(cfg v2.Config, serviceName string, artifacts []secretartifacts.Artifact) bool {
@@ -353,6 +398,10 @@ func renderAutoServiceActions(ctx autoServiceContext, cfg v2.Config) ([]clusterA
 	if ctx.BaseOnly {
 		return actions, nil
 	}
+
+	// Note: a config-driven KustomizationRenderer (OCTR-762 gateway) is resolved
+	// by the caller into ctx.KustomizationContent before this runs, so the
+	// verbatim-kustomization branches below handle it uniformly.
 
 	// Generated overlay kustomizations include the user-owned custom layer.
 	// BaseOnly services have no overlay, and verbatim KustomizationContent services
@@ -498,12 +547,12 @@ spec:
   wait: true
   force: %t
   suspend: %t
-  commonMetadata:
+%s  commonMetadata:
     labels:
       app.kubernetes.io/part-of: %s
       app.kubernetes.io/managed-by: flux
       opencenter/managed-by: opencenter
-`, ctx.FluxInterval, ctx.SourceName, stage.Path, ctx.Namespace, ctx.Force, ctx.Suspend, ctx.ServiceName)
+`, ctx.FluxInterval, ctx.SourceName, stage.Path, ctx.Namespace, ctx.Force, ctx.Suspend, postBuildSubstituteFromLines(ctx.PostBuildSubstituteFrom), ctx.ServiceName)
 	return buf.String(), nil
 }
 
@@ -580,6 +629,9 @@ spec:
   wait: true
   force: {{ .Force }}
   suspend: {{ .Suspend }}
+{{- if .PostBuildSubstituteFrom }}
+{{ .PostBuildSubstituteFrom }}
+{{- end }}
   healthChecks:
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
@@ -624,6 +676,9 @@ spec:
   wait: true
   force: {{ .Force }}
   suspend: {{ .Suspend }}
+{{- if .PostBuildSubstituteFrom }}
+{{ .PostBuildSubstituteFrom }}
+{{- end }}
   commonMetadata:
     labels:
       app.kubernetes.io/part-of: {{ .ServiceName }}
@@ -661,6 +716,9 @@ spec:
   wait: true
   force: {{ .Force }}
   suspend: {{ .Suspend }}
+{{- if .PostBuildSubstituteFrom }}
+{{ .PostBuildSubstituteFrom }}
+{{- end }}
   commonMetadata:
     labels:
       app.kubernetes.io/part-of: {{ .ServiceName }}
@@ -696,6 +754,9 @@ spec:
   path: ./applications/overlays/{{ .ClusterName }}/services/{{ .ServiceName }}
   prune: true
   wait: true
+{{- if .PostBuildSubstituteFrom }}
+{{ .PostBuildSubstituteFrom }}
+{{- end }}
   commonMetadata:
     labels:
       app.kubernetes.io/part-of: {{ .ServiceName }}

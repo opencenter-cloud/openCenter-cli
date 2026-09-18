@@ -672,6 +672,24 @@
               "pattern": "^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?)*$",
               "type": "string"
             },
+            "hostname_substitution": {
+              "additionalProperties": false,
+              "properties": {
+                "configmap_name": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "variables": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
             "kubernetes": {
               "additionalProperties": false,
               "properties": {
@@ -2410,6 +2428,9 @@
             "alert-proxy": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2458,6 +2479,9 @@
             "calico": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2503,6 +2527,9 @@
             "cert-manager": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2584,6 +2611,9 @@
             "cilium": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2635,6 +2665,9 @@
             "etcd-backup": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2692,6 +2725,9 @@
             "external-snapshotter": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2734,6 +2770,9 @@
             "fluxcd": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2776,6 +2815,9 @@
             "gateway": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2847,6 +2889,24 @@
                     }
                   },
                   "type": "object"
+                },
+                "tls": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "per_listener_secrets": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "secret_namespace": {
+                      "type": "string"
+                    },
+                    "wildcard_secret_name": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
                 }
               },
               "type": "object"
@@ -2854,6 +2914,9 @@
             "gateway-api": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -2896,6 +2959,9 @@
             "harbor": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3001,6 +3067,9 @@
             "headlamp": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3052,6 +3121,9 @@
             "kafka-cluster": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3094,6 +3166,9 @@
             "keycloak": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3250,6 +3325,9 @@
             "kube-ovn": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3304,7 +3382,13 @@
             "kube-prometheus-stack": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
+                  "type": "string"
+                },
+                "alertmanager_hostname": {
                   "type": "string"
                 },
                 "alertmanager_storage_class": {
@@ -3315,6 +3399,9 @@
                 },
                 "enabled": {
                   "type": "boolean"
+                },
+                "grafana_hostname": {
+                  "type": "string"
                 },
                 "grafana_storage_class": {
                   "type": "string"
@@ -3338,6 +3425,9 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "type": "string"
+                },
+                "prometheus_hostname": {
                   "type": "string"
                 },
                 "prometheus_storage_class": {
@@ -3370,6 +3460,9 @@
             "kyverno": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3412,6 +3505,9 @@
             "loki": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3511,6 +3607,9 @@
             "longhorn": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3574,6 +3673,9 @@
             "metallb": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3608,6 +3710,9 @@
                       "avoid_buggy_ips": {
                         "type": "boolean"
                       },
+                      "default": {
+                        "type": "boolean"
+                      },
                       "name": {
                         "type": "string"
                       }
@@ -3633,6 +3738,9 @@
                         "type": "array"
                       },
                       "name": {
+                        "type": "string"
+                      },
+                      "type": {
                         "type": "string"
                       }
                     },
@@ -3664,6 +3772,9 @@
             "mimir": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3706,6 +3817,9 @@
             "olm": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3748,6 +3862,9 @@
             "openstack-ccm": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3790,6 +3907,9 @@
             "openstack-csi": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3832,6 +3952,9 @@
             "opentelemetry-kube-stack": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3910,6 +4033,9 @@
             "postgres-operator": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3952,6 +4078,9 @@
             "rbac-manager": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -3994,6 +4123,9 @@
             "sealed-secrets": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4036,6 +4168,9 @@
             "sources": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4078,6 +4213,9 @@
             "tempo": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4168,6 +4306,9 @@
             "velero": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4234,6 +4375,9 @@
             "vsphere-csi": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4300,6 +4444,9 @@
             "weave-gitops": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4350,6 +4497,9 @@
             "alert-proxy": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4398,6 +4548,9 @@
             "calico": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4443,6 +4596,9 @@
             "cert-manager": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4524,6 +4680,9 @@
             "cilium": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4575,6 +4734,9 @@
             "etcd-backup": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4632,6 +4794,9 @@
             "external-snapshotter": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4674,6 +4839,9 @@
             "fluxcd": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4716,6 +4884,9 @@
             "gateway": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4787,6 +4958,24 @@
                     }
                   },
                   "type": "object"
+                },
+                "tls": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "per_listener_secrets": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "secret_namespace": {
+                      "type": "string"
+                    },
+                    "wildcard_secret_name": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
                 }
               },
               "type": "object"
@@ -4794,6 +4983,9 @@
             "gateway-api": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4836,6 +5028,9 @@
             "harbor": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4941,6 +5136,9 @@
             "headlamp": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -4992,6 +5190,9 @@
             "kafka-cluster": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5034,6 +5235,9 @@
             "keycloak": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5190,6 +5394,9 @@
             "kube-ovn": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5244,7 +5451,13 @@
             "kube-prometheus-stack": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
+                  "type": "string"
+                },
+                "alertmanager_hostname": {
                   "type": "string"
                 },
                 "alertmanager_storage_class": {
@@ -5255,6 +5468,9 @@
                 },
                 "enabled": {
                   "type": "boolean"
+                },
+                "grafana_hostname": {
+                  "type": "string"
                 },
                 "grafana_storage_class": {
                   "type": "string"
@@ -5278,6 +5494,9 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "type": "string"
+                },
+                "prometheus_hostname": {
                   "type": "string"
                 },
                 "prometheus_storage_class": {
@@ -5310,6 +5529,9 @@
             "kyverno": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5352,6 +5574,9 @@
             "loki": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5451,6 +5676,9 @@
             "longhorn": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5514,6 +5742,9 @@
             "metallb": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5548,6 +5779,9 @@
                       "avoid_buggy_ips": {
                         "type": "boolean"
                       },
+                      "default": {
+                        "type": "boolean"
+                      },
                       "name": {
                         "type": "string"
                       }
@@ -5573,6 +5807,9 @@
                         "type": "array"
                       },
                       "name": {
+                        "type": "string"
+                      },
+                      "type": {
                         "type": "string"
                       }
                     },
@@ -5604,6 +5841,9 @@
             "mimir": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5646,6 +5886,9 @@
             "olm": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5688,6 +5931,9 @@
             "openstack-ccm": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5730,6 +5976,9 @@
             "openstack-csi": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5772,6 +6021,9 @@
             "opentelemetry-kube-stack": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5850,6 +6102,9 @@
             "postgres-operator": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5892,6 +6147,9 @@
             "rbac-manager": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5934,6 +6192,9 @@
             "sealed-secrets": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -5976,6 +6237,9 @@
             "sources": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6018,6 +6282,9 @@
             "tempo": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6108,6 +6375,9 @@
             "velero": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6174,6 +6444,9 @@
             "vsphere-csi": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6240,6 +6513,9 @@
             "weave-gitops": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6366,6 +6642,9 @@
             "alert-proxy": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6414,6 +6693,9 @@
             "calico": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6459,6 +6741,9 @@
             "cert-manager": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6540,6 +6825,9 @@
             "cilium": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6591,6 +6879,9 @@
             "etcd-backup": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6648,6 +6939,9 @@
             "external-snapshotter": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6690,6 +6984,9 @@
             "fluxcd": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6732,6 +7029,9 @@
             "gateway": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6803,6 +7103,24 @@
                     }
                   },
                   "type": "object"
+                },
+                "tls": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "per_listener_secrets": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "secret_namespace": {
+                      "type": "string"
+                    },
+                    "wildcard_secret_name": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
                 }
               },
               "type": "object"
@@ -6810,6 +7128,9 @@
             "gateway-api": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6852,6 +7173,9 @@
             "harbor": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -6957,6 +7281,9 @@
             "headlamp": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7008,6 +7335,9 @@
             "kafka-cluster": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7050,6 +7380,9 @@
             "keycloak": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7206,6 +7539,9 @@
             "kube-ovn": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7260,7 +7596,13 @@
             "kube-prometheus-stack": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
+                  "type": "string"
+                },
+                "alertmanager_hostname": {
                   "type": "string"
                 },
                 "alertmanager_storage_class": {
@@ -7271,6 +7613,9 @@
                 },
                 "enabled": {
                   "type": "boolean"
+                },
+                "grafana_hostname": {
+                  "type": "string"
                 },
                 "grafana_storage_class": {
                   "type": "string"
@@ -7294,6 +7639,9 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "type": "string"
+                },
+                "prometheus_hostname": {
                   "type": "string"
                 },
                 "prometheus_storage_class": {
@@ -7326,6 +7674,9 @@
             "kyverno": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7368,6 +7719,9 @@
             "loki": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7467,6 +7821,9 @@
             "longhorn": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7530,6 +7887,9 @@
             "metallb": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7564,6 +7924,9 @@
                       "avoid_buggy_ips": {
                         "type": "boolean"
                       },
+                      "default": {
+                        "type": "boolean"
+                      },
                       "name": {
                         "type": "string"
                       }
@@ -7589,6 +7952,9 @@
                         "type": "array"
                       },
                       "name": {
+                        "type": "string"
+                      },
+                      "type": {
                         "type": "string"
                       }
                     },
@@ -7620,6 +7986,9 @@
             "mimir": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7662,6 +8031,9 @@
             "olm": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7704,6 +8076,9 @@
             "openstack-ccm": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7746,6 +8121,9 @@
             "openstack-csi": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7788,6 +8166,9 @@
             "opentelemetry-kube-stack": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7866,6 +8247,9 @@
             "postgres-operator": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7908,6 +8292,9 @@
             "rbac-manager": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7950,6 +8337,9 @@
             "sealed-secrets": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -7992,6 +8382,9 @@
             "sources": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -8034,6 +8427,9 @@
             "tempo": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -8124,6 +8520,9 @@
             "velero": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -8190,6 +8589,9 @@
             "vsphere-csi": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },
@@ -8256,6 +8658,9 @@
             "weave-gitops": {
               "additionalProperties": false,
               "properties": {
+                "address_pool": {
+                  "type": "string"
+                },
                 "adoption_mode": {
                   "type": "string"
                 },

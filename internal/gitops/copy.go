@@ -656,7 +656,73 @@ func RenderClusterFluxBridgeAtomic(cfg v2.Config, workspace *GitOpsWorkspace) er
 	if err := renderTemplateAtomic(src, dst, cfg, workspace); err != nil {
 		return fmt.Errorf("render services.yaml: %w", err)
 	}
+
+	// OCTR-759: when hostname substitution is enabled, emit the cluster-vars
+	// ConfigMap here under clusters/<cluster>/ so it is reconciled by the
+	// flux-system root Kustomization (same reconciliation path as services.yaml)
+	// and lands in the flux-system namespace referenced by every
+	// postBuild.substituteFrom. The ConfigStage fallback render lives on the
+	// no-templates path and is pruned on the normal template-based generate, so
+	// the placeholders would otherwise have no source ConfigMap.
+	hs := cfg.OpenCenter.Cluster.HostnameSubstitution
+	if hs.Enabled {
+		cmDst := filepath.Join(target, "cluster-vars-configmap.yaml")
+		writer := NewAtomicWriter(workspace)
+		if err := writer.WriteFileString(
+			mustRel(workspace.RootDir, cmDst),
+			renderClusterVarsConfigMapYAML(cfg),
+			0o644,
+		); err != nil {
+			return fmt.Errorf("render cluster-vars ConfigMap: %w", err)
+		}
+	}
 	return nil
+}
+
+// renderClusterVarsConfigMapYAML builds the cluster-vars ConfigMap consumed by
+// Flux postBuild.substituteFrom (OCTR-759). Keys are the placeholder names and
+// values are the resolved cluster-config fields, sorted for deterministic
+// output. It is written into clusters/<cluster>/ so the flux-system root
+// Kustomization applies it into the flux-system namespace.
+func renderClusterVarsConfigMapYAML(cfg v2.Config) string {
+	hs := cfg.OpenCenter.Cluster.HostnameSubstitution
+	vars := hs.GetVariables()
+	names := make([]string, 0, len(vars))
+	for name := range vars {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var data strings.Builder
+	for _, name := range names {
+		field := vars[name]
+		var value string
+		switch field {
+		case "cluster_fqdn":
+			value = cfg.OpenCenter.Cluster.ClusterFQDN
+		case "base_domain":
+			value = cfg.OpenCenter.Cluster.BaseDomain
+		case "cluster_name":
+			value = cfg.OpenCenter.Cluster.ClusterName
+		}
+		data.WriteString(fmt.Sprintf("  %s: %q\n", name, value))
+	}
+	return fmt.Sprintf(`---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: %s
+  namespace: flux-system
+data:
+%s`, hs.GetConfigMapName(), data.String())
+}
+
+// mustRel returns the path relative to root, or the original path if that fails.
+func mustRel(root, p string) string {
+	if rel, err := filepath.Rel(root, p); err == nil {
+		return rel
+	}
+	return p
 }
 
 // RenderInfrastructureCluster renders infrastructure-cluster-template to infrastructure/clusters/<cluster-name>/

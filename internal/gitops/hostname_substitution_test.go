@@ -14,6 +14,8 @@
 package gitops
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -78,4 +80,47 @@ func TestHostnameSubstitutionConfigDefaults(t *testing.T) {
 
 	disabled := v2.HostnameSubstitutionConfig{Enabled: false}
 	require.Equal(t, "", disabled.FQDNPlaceholder())
+}
+
+// TestClusterFluxBridgeEmitsClusterVarsConfigMap guards against the regression
+// where the cluster-vars ConfigMap referenced by every Flux
+// postBuild.substituteFrom block was never emitted on the normal generate path
+// (it was only written by the ConfigStage no-templates fallback, which is
+// overwritten/pruned during a real template-based generate). Without the
+// ConfigMap, Flux cannot resolve ${CLUSTER_FQDN} and hostnames stay literal.
+// The bridge (clusters/<cluster>/) is the flux-system reconciliation root, so
+// the ConfigMap must be emitted there when substitution is enabled.
+func TestClusterFluxBridgeEmitsClusterVarsConfigMap(t *testing.T) {
+	root := t.TempDir()
+	cfg := hostnameSubTestConfig(true)
+	workspace := &GitOpsWorkspace{RootDir: root, TempDir: root, Config: cfg}
+
+	require.NoError(t, RenderClusterFluxBridgeAtomic(cfg, workspace))
+
+	cmPath := filepath.Join(root, "clusters", cfg.ClusterName(), "cluster-vars-configmap.yaml")
+	data, err := os.ReadFile(cmPath)
+	require.NoError(t, err, "cluster-vars ConfigMap must be emitted under clusters/<cluster>/ when hostname substitution is enabled")
+
+	content := string(data)
+	require.Contains(t, content, "kind: ConfigMap")
+	require.Contains(t, content, "name: cluster-vars")
+	require.Contains(t, content, "namespace: flux-system")
+	// Values must be the resolved cluster-config fields, not placeholders.
+	require.Contains(t, content, `CLUSTER_FQDN: "rackai-dev.rax.io"`)
+	require.Contains(t, content, `BASE_DOMAIN: "rax.io"`)
+	require.Contains(t, content, `CLUSTER_NAME: "rackai-dev"`)
+}
+
+// TestClusterFluxBridgeOmitsClusterVarsWhenDisabled confirms the disabled path
+// stays byte-identical: no cluster-vars ConfigMap is written.
+func TestClusterFluxBridgeOmitsClusterVarsWhenDisabled(t *testing.T) {
+	root := t.TempDir()
+	cfg := hostnameSubTestConfig(false)
+	workspace := &GitOpsWorkspace{RootDir: root, TempDir: root, Config: cfg}
+
+	require.NoError(t, RenderClusterFluxBridgeAtomic(cfg, workspace))
+
+	cmPath := filepath.Join(root, "clusters", cfg.ClusterName(), "cluster-vars-configmap.yaml")
+	_, err := os.Stat(cmPath)
+	require.True(t, os.IsNotExist(err), "cluster-vars ConfigMap must NOT be emitted when hostname substitution is disabled")
 }

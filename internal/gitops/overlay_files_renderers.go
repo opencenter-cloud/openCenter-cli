@@ -174,12 +174,20 @@ func gatewayDefaultIssuer(cfg v2.Config) string {
 
 // renderPoolEnvoyProxy renders the EnvoyProxy for a non-default pool group,
 // annotating the LoadBalancer Service Envoy creates with the MetalLB pool.
+//
+// The per-pool EnvoyProxy lives in the Gateway's namespace (rackspace-system),
+// NOT envoy-gateway-system, because a Gateway's spec.infrastructure.parametersRef
+// carries no namespace field and Envoy Gateway resolves it in the Gateway's own
+// namespace. (The default GatewayClass-level EnvoyProxy differs: it stays in
+// envoy-gateway-system because the GatewayClass parametersRef names that
+// namespace explicitly.) Emitting it elsewhere makes the Gateway report
+// Accepted=False "failed to find envoyproxy ..." and never program.
 func renderPoolEnvoyProxy(group gatewayPoolGroup) string {
 	return "apiVersion: gateway.envoyproxy.io/v1alpha1\n" +
 		"kind: EnvoyProxy\n" +
 		"metadata:\n" +
 		"  name: " + group.envoyProxyName + "\n" +
-		"  namespace: envoy-gateway-system\n" +
+		"  namespace: " + gatewayNamespace + "\n" +
 		"spec:\n" +
 		"  provider:\n" +
 		"    type: Kubernetes\n" +

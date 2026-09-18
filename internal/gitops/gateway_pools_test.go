@@ -298,6 +298,12 @@ func TestGatewayMultiPoolEmitsSecondGatewayAndEnvoyProxy(t *testing.T) {
 	require.Contains(t, envoy, "name: custom-proxy-config-harbor-pool")
 	require.Contains(t, envoy, "metallb.universe.tf/address-pool: harbor-pool")
 	require.Contains(t, envoy, "envoyService:")
+	// The per-pool EnvoyProxy must live in the Gateway's namespace so the
+	// Gateway's spec.infrastructure.parametersRef (which has no namespace field)
+	// resolves it. Emitting it in envoy-gateway-system leaves the Gateway
+	// Accepted=False and unprogrammed (verified on a live cluster, OCTR-762).
+	require.Contains(t, envoy, "namespace: rackspace-system")
+	require.NotContains(t, envoy, "namespace: envoy-gateway-system")
 
 	// The kustomization lists the new EnvoyProxy file.
 	kust, err := gatewayKustomizationRenderer(cfg)

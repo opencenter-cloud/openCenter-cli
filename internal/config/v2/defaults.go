@@ -571,6 +571,13 @@ func applyProviderCloudDefaults(cfg *Config, availabilityZone string) {
 			{ID: "worker-2", Name: "3dk8w03", AccessIPv4: "10.249.68.16"},
 		}
 		cfg.OpenCenter.Infrastructure.Bastion.Enabled = false
+	case "magnum":
+		// Magnum owns node images and networking through its cluster template.
+		// Keep only a prompt-ready cloud block here; credentials and the
+		// template are intentionally supplied by guided configuration.
+		cfg.OpenCenter.Infrastructure.Cloud.Magnum = &MagnumCloudConfig{
+			Region: cfg.OpenCenter.Meta.Region,
+		}
 	default:
 		cfg.OpenCenter.Infrastructure.Cloud = CloudConfig{}
 	}

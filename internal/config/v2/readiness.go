@@ -102,13 +102,15 @@ func (r *readinessBuilder) validateProvider(cfg *Config) {
 		r.validateGCPProvider(cfg)
 	case "azure":
 		r.validateAzureProvider(cfg)
+	case "magnum":
+		r.validateMagnumProvider(cfg)
 	case "vsphere":
 		// vSphere is deprecated in favor of vmware; accept silently.
 		return
 	case "":
 		r.addError(CategoryProvider, "opencenter.infrastructure.provider", "provider is required", "Set infrastructure.provider to a supported provider.")
 	default:
-		r.addError(CategoryProvider, "opencenter.infrastructure.provider", fmt.Sprintf("unsupported provider %q", provider), "Use one of: openstack, aws, gcp, azure, baremetal, vsphere, vmware, kind.")
+		r.addError(CategoryProvider, "opencenter.infrastructure.provider", fmt.Sprintf("unsupported provider %q", provider), "Use one of: openstack, aws, gcp, azure, baremetal, vsphere, vmware, kind, magnum.")
 	}
 }
 
@@ -454,6 +456,58 @@ func (r *readinessBuilder) validateAzureProvider(cfg *Config) {
 	if cloud.OpenStack != nil || cloud.AWS != nil || cloud.GCP != nil || cloud.VMware != nil {
 		r.addError(CategoryProvider, "opencenter.infrastructure.cloud",
 			"inactive provider cloud sections are configured alongside azure.",
+			"Remove cloud sections for providers that are not active.")
+	}
+}
+
+func (r *readinessBuilder) validateMagnumProvider(cfg *Config) {
+	cloud := cfg.OpenCenter.Infrastructure.Cloud
+	if cloud.Magnum == nil {
+		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum",
+			"magnum provider requires cloud.magnum configuration.",
+			"Add cloud.magnum with the Keystone endpoint, project_id, application credentials, and cluster_template.")
+		return
+	}
+
+	magnum := cloud.Magnum
+	r.requireNonPlaceholder(CategoryProvider, "opencenter.infrastructure.cloud.magnum.auth_url", magnum.AuthURL,
+		"Magnum Keystone auth_url is required.", "Set cloud.magnum.auth_url to the Keystone endpoint.")
+	if parsed, err := url.Parse(strings.TrimSpace(magnum.AuthURL)); strings.TrimSpace(magnum.AuthURL) != "" && (err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || (parsed.Scheme != "http" && parsed.Scheme != "https")) {
+		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.auth_url",
+			"Magnum auth_url must be a valid absolute HTTP(S) Keystone URL.",
+			"Use the full Keystone URL, for example https://keystone.example.com/v3.")
+	} else if parsed != nil && parsed.Scheme == "http" {
+		r.addWarning(CategoryProvider, "opencenter.infrastructure.cloud.magnum.auth_url",
+			"Magnum auth_url is using plain HTTP.", "Use HTTPS for Keystone endpoints when possible.")
+	}
+	r.requireNonPlaceholder(CategoryProvider, "opencenter.infrastructure.cloud.magnum.region", magnum.Region,
+		"Magnum region is required.", "Set cloud.magnum.region.")
+	r.requireNonPlaceholder(CategoryProvider, "opencenter.infrastructure.cloud.magnum.project_id", magnum.ProjectID,
+		"Magnum project_id is required.", "Set the Keystone project ID used by Magnum.")
+	r.requireNonPlaceholder(CategoryProvider, "opencenter.infrastructure.cloud.magnum.cluster_template", magnum.ClusterTemplate,
+		"Magnum cluster_template is required.", "Set the existing Magnum cluster template name or ID.")
+
+	hasAppCredID := valueSet(magnum.ApplicationCredentialID)
+	hasAppCredSecret := valueSet(magnum.ApplicationCredentialSecret)
+	if hasAppCredID != hasAppCredSecret {
+		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_id",
+			"Magnum application credential ID and secret must be set together.",
+			"Set both application_credential_id and application_credential_secret.")
+	}
+	if !hasAppCredID {
+		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_id",
+			"Magnum application credential ID is required for readiness validation.",
+			"Create a Keystone application credential and set its ID.")
+	}
+	if !hasAppCredSecret {
+		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_secret",
+			"Magnum application credential secret is required for readiness validation.",
+			"Set the Keystone application credential secret.")
+	}
+
+	if cloud.OpenStack != nil || cloud.AWS != nil || cloud.GCP != nil || cloud.Azure != nil || cloud.VMware != nil {
+		r.addError(CategoryProvider, "opencenter.infrastructure.cloud",
+			"inactive provider cloud sections are configured alongside magnum.",
 			"Remove cloud sections for providers that are not active.")
 	}
 }

@@ -208,6 +208,20 @@ func TestConfigValidatorWarnings(t *testing.T) {
 	}
 }
 
+func TestConfigValidatorAcceptsMagnumClusterDefault(t *testing.T) {
+	testenv.SetIsolatedCLIDirs(t)
+
+	config := DefaultCLIConfig()
+	config.ClusterDefaults.Provider = "magnum"
+	result := (&ConfigValidator{autoRepair: false}).ValidateWithResult(config)
+
+	for _, warning := range result.Warnings {
+		if warning.Field == "cluster_defaults.provider" {
+			t.Fatalf("Magnum cluster default should be allowlisted, got warning: %v", warning)
+		}
+	}
+}
+
 func TestConfigManagerSetGetValue(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()

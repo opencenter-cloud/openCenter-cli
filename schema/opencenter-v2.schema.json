@@ -1503,6 +1503,74 @@
                   ],
                   "type": "object"
                 },
+                "magnum": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "application_credential_id": {
+                      "type": "string",
+                      "x-opencenter-validation": [
+                        "required_with=ApplicationCredentialSecret"
+                      ]
+                    },
+                    "application_credential_secret": {
+                      "type": "string",
+                      "x-opencenter-validation": [
+                        "required_with=ApplicationCredentialID"
+                      ]
+                    },
+                    "auth_url": {
+                      "format": "uri",
+                      "type": "string"
+                    },
+                    "ca": {
+                      "type": "string"
+                    },
+                    "cluster_template": {
+                      "type": "string"
+                    },
+                    "create_timeout": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "domain": {
+                      "type": "string"
+                    },
+                    "insecure": {
+                      "type": "boolean"
+                    },
+                    "keypair": {
+                      "type": "string"
+                    },
+                    "labels": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "master_flavor_id": {
+                      "type": "string"
+                    },
+                    "master_lb_enabled": {
+                      "type": "boolean"
+                    },
+                    "node_flavor_id": {
+                      "type": "string"
+                    },
+                    "project_id": {
+                      "type": "string"
+                    },
+                    "region": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "auth_url",
+                    "cluster_template",
+                    "project_id",
+                    "region"
+                  ],
+                  "type": "object"
+                },
                 "openstack": {
                   "additionalProperties": false,
                   "properties": {
@@ -2267,7 +2335,8 @@
                 "baremetal",
                 "vsphere",
                 "vmware",
-                "kind"
+                "kind",
+                "magnum"
               ],
               "type": "string"
             },

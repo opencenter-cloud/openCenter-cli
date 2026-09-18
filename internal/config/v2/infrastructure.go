@@ -16,7 +16,7 @@ package v2
 // InfrastructureConfig represents provider-agnostic infrastructure with provider-specific extensions.
 // Requirements: 2.1, 3.1, 4.1, 9.1, 9.2
 type InfrastructureConfig struct {
-	Provider            string                   `yaml:"provider" json:"provider" validate:"required,oneof=openstack aws gcp azure baremetal vsphere vmware kind"`
+	Provider            string                   `yaml:"provider" json:"provider" validate:"required,oneof=openstack aws gcp azure baremetal vsphere vmware kind magnum"`
 	SSH                 SSHConfig                `yaml:"ssh" json:"ssh" validate:"required"`
 	OSVersion           string                   `yaml:"os_version" json:"os_version" validate:"required"`
 	ServerGroupAffinity []string                 `yaml:"server_group_affinity,omitempty" json:"server_group_affinity,omitempty"`
@@ -251,6 +251,7 @@ type CloudConfig struct {
 	GCP       *GCPCloudConfig       `yaml:"gcp,omitempty" json:"gcp,omitempty"`
 	Azure     *AzureCloudConfig     `yaml:"azure,omitempty" json:"azure,omitempty"`
 	VMware    *VMwareCloudConfig    `yaml:"vmware,omitempty" json:"vmware,omitempty"`
+	Magnum    *MagnumCloudConfig    `yaml:"magnum,omitempty" json:"magnum,omitempty"`
 }
 
 // OpenStackCloudConfig represents OpenStack-specific configuration.
@@ -286,6 +287,27 @@ type OpenStackCloudConfig struct {
 	CA                          string                     `yaml:"ca,omitempty" json:"ca,omitempty"`
 	Networking                  *OpenStackNetworkingConfig `yaml:"networking,omitempty" json:"networking,omitempty"`
 	Modules                     OpenStackModulesConfig     `yaml:"modules,omitempty" json:"modules,omitempty"`
+}
+
+// MagnumCloudConfig represents Magnum-specific OpenStack configuration.
+// Magnum cluster templates own image and network settings, so those values are
+// intentionally not duplicated here.
+type MagnumCloudConfig struct {
+	AuthURL                     string            `yaml:"auth_url" json:"auth_url" validate:"required,url"`
+	Region                      string            `yaml:"region" json:"region" validate:"required"`
+	ProjectID                   string            `yaml:"project_id" json:"project_id" validate:"required"`
+	ApplicationCredentialID     string            `yaml:"application_credential_id,omitempty" json:"application_credential_id,omitempty" validate:"required_with=ApplicationCredentialSecret"`
+	ApplicationCredentialSecret string            `yaml:"application_credential_secret,omitempty" json:"application_credential_secret,omitempty" validate:"required_with=ApplicationCredentialID"`
+	Insecure                    bool              `yaml:"insecure,omitempty" json:"insecure,omitempty"`
+	Domain                      string            `yaml:"domain,omitempty" json:"domain,omitempty"`
+	CA                          string            `yaml:"ca,omitempty" json:"ca,omitempty"`
+	ClusterTemplate             string            `yaml:"cluster_template" json:"cluster_template" validate:"required"`
+	Labels                      map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Keypair                     string            `yaml:"keypair,omitempty" json:"keypair,omitempty"`
+	MasterFlavorID              string            `yaml:"master_flavor_id,omitempty" json:"master_flavor_id,omitempty"`
+	NodeFlavorID                string            `yaml:"node_flavor_id,omitempty" json:"node_flavor_id,omitempty"`
+	CreateTimeout               int               `yaml:"create_timeout,omitempty" json:"create_timeout,omitempty" validate:"omitempty,min=0"`
+	MasterLBEnabled             *bool             `yaml:"master_lb_enabled,omitempty" json:"master_lb_enabled,omitempty"`
 }
 
 type OpenStackNetworkingConfig struct {

@@ -830,3 +830,49 @@ func TestProviderValidator_VMware(t *testing.T) {
 		})
 	}
 }
+
+func TestProviderValidator_Magnum(t *testing.T) {
+	validator := NewProviderValidator()
+	ctx := context.Background()
+
+	valid := map[string]interface{}{
+		"provider": "magnum",
+		"config": map[string]interface{}{
+			"auth_url":                      "https://keystone.example.com/v3",
+			"region":                        "RegionOne",
+			"project_id":                    "project-id",
+			"application_credential_id":     "application-credential-id",
+			"application_credential_secret": "application-credential-secret",
+			"cluster_template":              "kubernetes-template",
+		},
+	}
+
+	result, err := validator.Validate(ctx, valid)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.Valid {
+		t.Fatalf("valid Magnum configuration failed validation: %v", result.Errors)
+	}
+
+	for _, field := range []string{"application_credential_secret", "cluster_template"} {
+		invalid := map[string]interface{}{
+			"provider": "magnum",
+			"config": map[string]interface{}{
+				"auth_url":                  "https://keystone.example.com/v3",
+				"region":                    "RegionOne",
+				"project_id":                "project-id",
+				"application_credential_id": "application-credential-id",
+				"cluster_template":          "kubernetes-template",
+			},
+		}
+		delete(invalid["config"].(map[string]interface{}), field)
+		result, err = validator.Validate(ctx, invalid)
+		if err != nil {
+			t.Fatalf("unexpected error for missing %s: %v", field, err)
+		}
+		if result.Valid {
+			t.Fatalf("Magnum configuration missing %s unexpectedly passed", field)
+		}
+	}
+}

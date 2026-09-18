@@ -83,7 +83,7 @@ don't already exist, unless --no-keygen is specified.`,
 	}
 
 	cmd.Flags().String("org", "", "organization name (defaults to 'opencenter')")
-	cmd.Flags().String("type", "openstack", "cluster type: openstack, baremetal, kind, vmware")
+	cmd.Flags().String("type", "openstack", "cluster type: openstack, baremetal, kind, vmware, magnum")
 	cmd.Flags().String("config-file", "", "load configuration from file")
 	cmd.Flags().String("config", "", "load configuration from file")
 	_ = cmd.Flags().MarkHidden("config")

@@ -40,7 +40,7 @@ func TestGenerateValidationTagsForEditorHints(t *testing.T) {
 
 	provider := schemaAt(t, schema, "properties", "opencenter", "properties", "infrastructure", "properties", "provider")
 	providerEnum := stringSliceAt(t, provider, "enum")
-	for _, value := range []string{"openstack", "aws", "gcp", "azure", "baremetal", "vsphere", "vmware", "kind"} {
+	for _, value := range []string{"openstack", "aws", "gcp", "azure", "baremetal", "vsphere", "vmware", "kind", "magnum"} {
 		if !slices.Contains(providerEnum, value) {
 			t.Fatalf("provider enum missing %q: %v", value, providerEnum)
 		}

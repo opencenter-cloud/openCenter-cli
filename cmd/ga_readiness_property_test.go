@@ -47,7 +47,7 @@ import (
 // in the v2 InfrastructureConfig oneof tag passes validation on the Provider field.
 func TestProperty_V2AllDeclaredProvidersPassValidation(t *testing.T) {
 	// Providers declared in the v2 oneof tag on InfrastructureConfig.Provider
-	v2Providers := []string{"openstack", "aws", "gcp", "azure", "baremetal", "vsphere", "vmware", "kind"}
+	v2Providers := []string{"openstack", "aws", "gcp", "azure", "baremetal", "vsphere", "vmware", "kind", "magnum"}
 
 	validate := validator.New()
 
@@ -703,7 +703,8 @@ func TestProperty_LogLevelPrecedenceIntegration(t *testing.T) {
 //
 // For each planned provider (aws, gcp, azure), invoking checkProviderAvailability()
 // should return an error that contains the provider name and lists the currently
-// supported providers (openstack, vmware, kind). Supported providers should return nil.
+// supported providers (openstack, vmware, kind, baremetal, magnum). Supported
+// providers should return nil.
 //
 // **Validates: Requirements 8.5**
 
@@ -713,7 +714,8 @@ func TestProperty_LogLevelPrecedenceIntegration(t *testing.T) {
 // return nil.
 func TestProperty_PlannedProvidersRejectedWithAlternatives(t *testing.T) {
 	plannedProviders := []string{"aws", "gcp", "azure"}
-	supportedProviders := []string{"openstack", "vmware", "kind"}
+	supportedProviders := []string{"openstack", "vmware", "kind", "baremetal", "magnum"}
+	advertisedProviders := []string{"openstack", "vmware", "kind", "baremetal"}
 
 	f := func(index uint8) bool {
 		// Test planned providers are rejected
@@ -733,8 +735,8 @@ func TestProperty_PlannedProvidersRejectedWithAlternatives(t *testing.T) {
 			return false
 		}
 
-		// Error must list each supported provider as an alternative
-		for _, supported := range supportedProviders {
+		// Error must list each advertised supported provider as an alternative
+		for _, supported := range advertisedProviders {
 			if !strings.Contains(msg, supported) {
 				t.Logf("checkProviderAvailability(%q) error missing supported provider %q: %s",
 					planned, supported, msg)

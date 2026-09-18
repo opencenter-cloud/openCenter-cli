@@ -41,7 +41,7 @@ func (d *KubesprayDeployment) ValidateConfig(cfg *Config) error {
 // ValidateCompatibility validates Kubespray compatibility with infrastructure provider.
 func (d *KubesprayDeployment) ValidateCompatibility(provider string) error {
 	// Kubespray supports all providers
-	validProviders := []string{"openstack", "aws", "gcp", "azure", "baremetal", "vmware", "kind"}
+	validProviders := []string{"openstack", "aws", "gcp", "azure", "baremetal", "vmware", "kind", "magnum"}
 	provider = canonicalInfrastructureProvider(provider)
 	for _, p := range validProviders {
 		if provider == p {

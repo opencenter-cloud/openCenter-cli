@@ -566,6 +566,39 @@ func TestValidateReadinessAzureRequiresCloudSection(t *testing.T) {
 	assertIssue(t, report, SeverityError, CategoryProvider, "opencenter.infrastructure.cloud.azure")
 }
 
+func TestValidateReadinessMagnumUsesManagedCloudContract(t *testing.T) {
+	cfg := validReadinessConfig(t, "kind")
+	cfg.OpenCenter.Infrastructure.Provider = "magnum"
+	cfg.OpenCenter.Infrastructure.Cloud = CloudConfig{
+		Magnum: &MagnumCloudConfig{
+			AuthURL:                     "https://keystone.example.com/v3",
+			Region:                      "RegionOne",
+			ProjectID:                   "project-id",
+			ApplicationCredentialID:     "application-credential-id",
+			ApplicationCredentialSecret: "application-credential-secret",
+			ClusterTemplate:             "kubernetes-template",
+		},
+	}
+
+	report := ValidateReadiness(cfg)
+	for _, issue := range report.Issues {
+		if issue.Severity == SeverityError && issue.Category == CategoryProvider {
+			t.Fatalf("unexpected Magnum provider error: %s — %s", issue.Path, issue.Message)
+		}
+	}
+}
+
+func TestValidateReadinessMagnumRequiresCloudAndCredentials(t *testing.T) {
+	cfg := validReadinessConfig(t, "kind")
+	cfg.OpenCenter.Infrastructure.Provider = "magnum"
+	cfg.OpenCenter.Infrastructure.Cloud = CloudConfig{Magnum: &MagnumCloudConfig{}}
+
+	report := ValidateReadiness(cfg)
+	assertIssue(t, report, SeverityError, CategoryProvider, "opencenter.infrastructure.cloud.magnum.auth_url")
+	assertIssue(t, report, SeverityError, CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_id")
+	assertIssue(t, report, SeverityError, CategoryProvider, "opencenter.infrastructure.cloud.magnum.cluster_template")
+}
+
 func TestValidateReadinessKeycloakStrictHostnameSchedulingCapacity(t *testing.T) {
 	cfg := validReadinessConfig(t, "kind")
 	keycloak := cfg.OpenCenter.Services["keycloak"].(*services.KeycloakConfig)

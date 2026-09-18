@@ -429,6 +429,9 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 }
 
 func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("configuration is nil")
+	}
 	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 	if provider == "" {
 		provider = "openstack"
@@ -497,6 +500,10 @@ func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *pat
 
 	case "kind":
 		providerImpl := newKindBootstrapProvider(s.runner)
+		return providerImpl.BuildSteps(cfg, clusterPaths, opts)
+
+	case "magnum":
+		providerImpl := newMagnumBootstrapProvider(s.runner)
 		return providerImpl.BuildSteps(cfg, clusterPaths, opts)
 
 	case "vmware", "vsphere", "baremetal":
@@ -589,8 +596,9 @@ func (s *BootstrapService) deployCluster(ctx context.Context, cfg *v2.Config, cl
 		// Kind cluster is already deployed in provisionInfrastructure
 		return nil
 
-	case "openstack", "aws", "gcp", "azure", "vmware", "vsphere", "baremetal":
-		// Cloud/static providers deploy via Terraform in provisionInfrastructure
+	case "openstack", "aws", "gcp", "azure", "vmware", "vsphere", "baremetal", "magnum":
+		// Cloud/static providers deploy during infrastructure provisioning;
+		// Magnum performs the deployment through its API lifecycle steps.
 		return nil
 
 	default:
@@ -616,7 +624,7 @@ func (s *BootstrapService) waitForReady(ctx context.Context, cfg *v2.Config, tim
 	case "kind":
 		endpoint, err = s.waitForKindCluster(ctx, kubeconfigPath)
 
-	case "openstack", "aws", "gcp", "azure", "vmware", "vsphere", "baremetal":
+	case "openstack", "aws", "gcp", "azure", "vmware", "vsphere", "baremetal", "magnum":
 		endpoint, err = s.waitForCloudCluster(ctx, cfg, kubeconfigPath)
 
 	default:
@@ -699,6 +707,9 @@ func (s *BootstrapService) validateBootstrapConfig(cfg *v2.Config) error {
 	}
 	if provider == "kind" && cfg.OpenCenter.Infrastructure.Kind == nil {
 		return fmt.Errorf("opencenter.infrastructure.kind must be configured for the kind provider")
+	}
+	if provider == "magnum" && cfg.OpenCenter.Infrastructure.Cloud.Magnum == nil {
+		return fmt.Errorf("opencenter.infrastructure.cloud.magnum must be configured for the magnum provider")
 	}
 
 	return nil

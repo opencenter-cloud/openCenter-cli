@@ -107,12 +107,18 @@ func (s *DestroyService) SupportsInfraDestroy(cfg *v2.Config) bool {
 		return false
 	}
 
+	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
+	if provider == "magnum" {
+		// Provider selection is sufficient here. Configuration errors must be
+		// surfaced by DestroyInfrastructure rather than disabling removal.
+		return true
+	}
+
 	// Only providers with OpenTofu enabled support infrastructure destruction
 	if !cfg.OpenTofu.Enabled {
 		return false
 	}
 
-	provider := strings.ToLower(cfg.Provider())
 	switch provider {
 	case "openstack", "vmware":
 		return true
@@ -123,7 +129,7 @@ func (s *DestroyService) SupportsInfraDestroy(cfg *v2.Config) bool {
 
 // getDestroyProvider returns the appropriate destroy provider for the configuration.
 func (s *DestroyService) getDestroyProvider(cfg *v2.Config) (lifecycleDestroyProvider, error) {
-	provider := strings.ToLower(cfg.Provider())
+	provider := strings.ToLower(strings.TrimSpace(cfg.Provider()))
 
 	switch provider {
 	case "openstack":
@@ -131,6 +137,8 @@ func (s *DestroyService) getDestroyProvider(cfg *v2.Config) (lifecycleDestroyPro
 	case "vmware":
 		// VMware uses the same OpenTofu-based destroy pattern
 		return newOpenStackDestroyProvider(s.runner), nil
+	case "magnum":
+		return newMagnumDestroyProvider(cfg)
 	default:
 		return nil, fmt.Errorf("provider %q does not support infrastructure destruction via this service", provider)
 	}

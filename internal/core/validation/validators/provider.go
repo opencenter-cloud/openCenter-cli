@@ -47,6 +47,7 @@ func NewProviderValidator() *ProviderValidator {
 			"baremetal": true,
 			"vsphere":   true,
 			"vmware":    true,
+			"magnum":    true,
 		},
 	}
 }
@@ -84,7 +85,7 @@ func (v *ProviderValidator) Validate(ctx context.Context, value interface{}) (*v
 	if !ok {
 		result.AddError("provider", "provider name is required",
 			"Specify the cloud provider",
-			"Supported providers: openstack, aws, gcp, azure, baremetal, vsphere, vmware")
+			"Supported providers: openstack, aws, gcp, azure, baremetal, vsphere, vmware, magnum")
 		return result, nil
 	}
 
@@ -140,6 +141,8 @@ func (v *ProviderValidator) Validate(ctx context.Context, value interface{}) (*v
 		v.validateBaremetalConfig(result, config)
 	case "vmware":
 		v.validateVMwareConfig(result, config)
+	case "magnum":
+		v.validateMagnumConfig(result, config)
 	}
 
 	return result, nil
@@ -525,6 +528,41 @@ func (v *ProviderValidator) validateVMwareConfig(result *validation.ValidationRe
 				"datastore is empty",
 				"Provide the default datastore name for persistent volumes")
 		}
+	}
+}
+
+// validateMagnumConfig validates the managed Kubernetes provider contract.
+// Magnum cluster templates own the image and network choices, so this check
+// intentionally does not require OpenStack VM or networking fields.
+func (v *ProviderValidator) validateMagnumConfig(result *validation.ValidationResult, config map[string]interface{}) {
+	for _, field := range []string{"auth_url", "region", "project_id", "cluster_template"} {
+		value, ok := config[field].(string)
+		if !ok || strings.TrimSpace(value) == "" {
+			result.AddError(fmt.Sprintf("provider.magnum.%s", field),
+				fmt.Sprintf("%s is required for Magnum", field),
+				fmt.Sprintf("Provide the Magnum %s value", field))
+		}
+	}
+
+	if authURL, ok := config["auth_url"].(string); ok && strings.TrimSpace(authURL) != "" {
+		parsed, err := url.Parse(strings.TrimSpace(authURL))
+		if err != nil || parsed.Host == "" || parsed.User != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			result.AddError("provider.magnum.auth_url",
+				"auth_url must be an absolute HTTP(S) Keystone URL",
+				"Provide the full Keystone endpoint, for example https://keystone.example.com/v3")
+		} else if parsed.Scheme == "http" {
+			result.AddWarning("provider.magnum.auth_url", "auth_url uses insecure http protocol", "Use HTTPS for secure Keystone communication")
+		}
+	}
+
+	applicationCredentialID, idSet := config["application_credential_id"].(string)
+	applicationCredentialSecret, secretSet := config["application_credential_secret"].(string)
+	idSet = idSet && strings.TrimSpace(applicationCredentialID) != ""
+	secretSet = secretSet && strings.TrimSpace(applicationCredentialSecret) != ""
+	if !idSet || !secretSet {
+		result.AddError("provider.magnum.auth",
+			"Magnum application credential ID and secret are required",
+			"Provide both application_credential_id and application_credential_secret")
 	}
 }
 

@@ -351,6 +351,10 @@ func (v *defaultValidator) ValidateProvider(cfg *Config) error {
 		if cfg.OpenCenter.Infrastructure.Cloud.Azure == nil {
 			return fmt.Errorf("opencenter.infrastructure.cloud.azure must be configured for the azure provider")
 		}
+	case "magnum":
+		if err := validateMagnumCloudConfig(cfg.OpenCenter.Infrastructure.Cloud.Magnum); err != nil {
+			return err
+		}
 	case "baremetal":
 		// No provider-specific config block required for baremetal
 	case "":
@@ -359,6 +363,36 @@ func (v *defaultValidator) ValidateProvider(cfg *Config) error {
 		return fmt.Errorf("unsupported infrastructure provider: %s", provider)
 	}
 
+	return nil
+}
+
+// validateMagnumCloudConfig validates the credentials and cluster-template
+// contract used by the managed Magnum provider. Magnum cluster templates own
+// the VM image and network settings, so those OpenStack fields are not part of
+// this validation.
+func validateMagnumCloudConfig(config *MagnumCloudConfig) error {
+	if config == nil {
+		return fmt.Errorf("opencenter.infrastructure.cloud.magnum must be configured for the magnum provider")
+	}
+	if strings.TrimSpace(config.AuthURL) == "" {
+		return fmt.Errorf("opencenter.infrastructure.cloud.magnum.auth_url is required for Keystone authentication")
+	}
+	parsed, err := url.Parse(strings.TrimSpace(config.AuthURL))
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.User != nil {
+		return fmt.Errorf("opencenter.infrastructure.cloud.magnum.auth_url must be an absolute HTTP(S) Keystone URL")
+	}
+	if strings.TrimSpace(config.Region) == "" {
+		return fmt.Errorf("opencenter.infrastructure.cloud.magnum.region is required")
+	}
+	if strings.TrimSpace(config.ProjectID) == "" {
+		return fmt.Errorf("opencenter.infrastructure.cloud.magnum.project_id is required")
+	}
+	if isMissingSecret(config.ApplicationCredentialID) || isMissingSecret(config.ApplicationCredentialSecret) {
+		return fmt.Errorf("opencenter.infrastructure.cloud.magnum.application_credential_id and application_credential_secret are required")
+	}
+	if strings.TrimSpace(config.ClusterTemplate) == "" {
+		return fmt.Errorf("opencenter.infrastructure.cloud.magnum.cluster_template is required")
+	}
 	return nil
 }
 

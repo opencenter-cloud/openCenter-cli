@@ -1923,7 +1923,7 @@ func ValidateGitopsAuthMethod(method string) error {
 // validateDefaultsWithResult validates the defaults configuration.
 func (cv *ConfigValidator) validateClusterDefaultsWithResult(defaults *ClusterDefaultsConfig, result *ValidationResult) {
 	// Validate provider
-	validProviders := []string{"openstack", "aws", "azure", "gcp", "kind", "vmware", "baremetal"}
+	validProviders := []string{"openstack", "aws", "azure", "gcp", "kind", "vmware", "baremetal", "magnum"}
 	if defaults.Provider != "" && !contains(validProviders, defaults.Provider) {
 		result.Warnings = append(result.Warnings, &ConfigError{
 			Type:    "validation",

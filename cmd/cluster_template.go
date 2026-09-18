@@ -35,7 +35,7 @@ func newClusterTemplateCmd() *cobra.Command {
 This command creates a comprehensive YAML configuration file that includes:
 - All configuration sections (opencenter, opentofu, secrets, metadata)
 - All service configurations with their specific fields
-- All GA provider options (OpenStack, VMware, Kind, Baremetal)
+- All GA provider options (OpenStack, Magnum, VMware, Kind, Baremetal)
 - Inline documentation and examples
 - Default values for all fields
 
@@ -58,6 +58,9 @@ available option.`,
   # Generate template for specific provider
   opencenter cluster template --provider openstack --out openstack-template.yaml
 
+  # Generate a Magnum template
+  opencenter cluster template --provider magnum --out magnum-template.yaml
+
   # Generate with comments explaining each field
   opencenter cluster template --comments --out documented-config.yaml
 
@@ -70,7 +73,7 @@ available option.`,
 			minimal, _ := cmd.Flags().GetBool("minimal")
 
 			// Validate provider
-			validProviders := []string{"openstack", "kind", "baremetal", "vmware", "all"}
+			validProviders := []string{"openstack", "kind", "baremetal", "vmware", "magnum", "all"}
 			if provider != "" && provider != "all" {
 				valid := false
 				for _, p := range validProviders {
@@ -80,7 +83,7 @@ available option.`,
 					}
 				}
 				if !valid {
-					return fmt.Errorf("invalid provider '%s', must be one of: openstack, kind, baremetal, vmware, all", provider)
+					return fmt.Errorf("invalid provider '%s', must be one of: openstack, kind, baremetal, vmware, magnum, all", provider)
 				}
 			}
 
@@ -128,7 +131,7 @@ available option.`,
 	}
 
 	cmd.Flags().String("out", "", "output file path (default stdout)")
-	cmd.Flags().String("provider", "all", "generate template for specific provider (openstack, kind, baremetal, vmware, all)")
+	cmd.Flags().String("provider", "all", "generate template for specific provider (openstack, kind, baremetal, vmware, magnum, all)")
 	cmd.Flags().Bool("comments", false, "include inline comments explaining each field")
 	cmd.Flags().Bool("minimal", false, "generate minimal template with only required fields")
 
@@ -221,6 +224,9 @@ func generateCompleteTemplate(provider string) v2.Config {
 	case "vmware":
 		cfg.OpenCenter.Infrastructure.Provider = "vmware"
 		populateVMwareConfig(&cfg)
+	case "magnum":
+		cfg.OpenCenter.Infrastructure.Provider = "magnum"
+		populateMagnumConfig(&cfg)
 	case "all", "":
 		// Include all provider configurations
 		populateOpenStackConfig(&cfg)
@@ -237,6 +243,9 @@ func generateMinimalTemplate(provider string) v2.Config {
 	cfg.OpenCenter.Services = nil
 	cfg.OpenCenter.ManagedServices = nil
 	cfg.OpenCenter.LegacyManaged = nil
+	if provider == "magnum" {
+		populateMagnumConfig(&cfg)
+	}
 	return cfg
 }
 
@@ -250,6 +259,22 @@ func populateOpenStackConfig(cfg *v2.Config) {
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "app-credential-id"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "app-credential-secret"
 	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.FloatingIPPool = "PUBLICNET"
+}
+
+// populateMagnumConfig adds Magnum-specific configuration. Magnum cluster
+// templates own image and network choices, so no OpenStack configuration is
+// included alongside the Magnum credentials.
+func populateMagnumConfig(cfg *v2.Config) {
+	cfg.OpenCenter.Infrastructure.Cloud = v2.CloudConfig{
+		Magnum: &v2.MagnumCloudConfig{
+			AuthURL:                     "https://keystone.example.com/v3",
+			Region:                      "RegionOne",
+			ProjectID:                   "project-id-placeholder",
+			ApplicationCredentialID:     "application-credential-id-placeholder",
+			ApplicationCredentialSecret: "application-credential-secret-placeholder",
+			ClusterTemplate:             "magnum-cluster-template-placeholder",
+		},
+	}
 }
 
 // populateBaremetalConfig adds baremetal-specific configuration
@@ -451,7 +476,7 @@ func addInfrastructureComments(key, value *yaml.Node, provider string) {
 
 		switch subKey.Value {
 		case "provider":
-			subKey.LineComment = fmt.Sprintf("Cloud provider: %s (openstack, kind, baremetal, vmware)", provider)
+			subKey.LineComment = fmt.Sprintf("Cloud provider: %s (openstack, kind, baremetal, vmware, magnum)", provider)
 		case "ssh":
 			addSSHComments(subKey, subValue)
 		case "compute":
@@ -530,6 +555,38 @@ func addCloudComments(key, value *yaml.Node, provider string) {
 			addOpenStackComments(subKey, subValue)
 		case "vmware":
 			addVMwareComments(subKey, subValue)
+		case "magnum":
+			addMagnumComments(subKey, subValue)
+		}
+	}
+}
+
+// addMagnumComments adds comments for Magnum configuration.
+func addMagnumComments(key, value *yaml.Node) {
+	key.HeadComment = "Magnum managed Kubernetes provider configuration"
+
+	if value.Kind != yaml.MappingNode {
+		return
+	}
+
+	for i := 0; i < len(value.Content); i += 2 {
+		if i+1 >= len(value.Content) {
+			break
+		}
+		subKey := value.Content[i]
+		switch subKey.Value {
+		case "auth_url":
+			subKey.LineComment = "Keystone Identity API endpoint"
+		case "region":
+			subKey.LineComment = "OpenStack region used by Magnum"
+		case "project_id":
+			subKey.LineComment = "Keystone project ID"
+		case "application_credential_id":
+			subKey.LineComment = "Application credential ID"
+		case "application_credential_secret":
+			subKey.LineComment = "Application credential secret"
+		case "cluster_template":
+			subKey.LineComment = "Existing Magnum cluster template name or ID"
 		}
 	}
 }

@@ -58,6 +58,18 @@ func TestDestroyService_SupportsInfraDestroy(t *testing.T) {
 			want:     false,
 		},
 		{
+			name:     "magnum with tofu disabled",
+			provider: "magnum",
+			tofu:     false,
+			want:     true,
+		},
+		{
+			name:     "magnum with tofu enabled",
+			provider: "magnum",
+			tofu:     true,
+			want:     true,
+		},
+		{
 			name:     "unknown provider",
 			provider: "unknown",
 			tofu:     true,
@@ -70,6 +82,17 @@ func TestDestroyService_SupportsInfraDestroy(t *testing.T) {
 			cfg := &v2.Config{}
 			cfg.OpenCenter.Infrastructure.Provider = tt.provider
 			cfg.OpenTofu.Enabled = tt.tofu
+			if tt.provider == "magnum" {
+				cfg.OpenCenter.Cluster.ClusterName = "magnum-cluster"
+				cfg.OpenCenter.Infrastructure.Cloud.Magnum = &v2.MagnumCloudConfig{
+					AuthURL:                     "https://keystone.example.test/v3/",
+					Region:                      "RegionOne",
+					ProjectID:                   "project-id",
+					ApplicationCredentialID:     "application-id",
+					ApplicationCredentialSecret: "application-secret",
+					ClusterTemplate:             "kubernetes-template",
+				}
+			}
 
 			svc := NewDestroyService(&bytes.Buffer{})
 			got := svc.SupportsInfraDestroy(cfg)
@@ -85,6 +108,18 @@ func TestDestroyService_SupportsInfraDestroy_NilConfig(t *testing.T) {
 	svc := NewDestroyService(&bytes.Buffer{})
 	if svc.SupportsInfraDestroy(nil) {
 		t.Error("SupportsInfraDestroy(nil) should return false")
+	}
+}
+
+func TestDestroyService_MagnumInvalidConfigIsNotSilentlyUnsupported(t *testing.T) {
+	cfg := &v2.Config{}
+	cfg.OpenCenter.Infrastructure.Provider = "magnum"
+	svc := NewDestroyService(&bytes.Buffer{})
+	if !svc.SupportsInfraDestroy(cfg) {
+		t.Fatal("Magnum provider selection should report destroy support before config validation")
+	}
+	if _, err := svc.DestroyInfrastructure(nil, cfg, nil); err == nil {
+		t.Fatal("DestroyInfrastructure() should reject invalid Magnum configuration")
 	}
 }
 
@@ -110,6 +145,11 @@ func TestDestroyService_GetDestroyProvider(t *testing.T) {
 			wantError: true,
 		},
 		{
+			name:      "magnum provider",
+			provider:  "magnum",
+			wantError: false,
+		},
+		{
 			name:      "unknown provider",
 			provider:  "unknown",
 			wantError: true,
@@ -120,15 +160,35 @@ func TestDestroyService_GetDestroyProvider(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &v2.Config{}
 			cfg.OpenCenter.Infrastructure.Provider = tt.provider
+			if tt.provider == "magnum" {
+				cfg.OpenCenter.Cluster.ClusterName = "magnum-cluster"
+				cfg.OpenCenter.Infrastructure.Cloud.Magnum = &v2.MagnumCloudConfig{
+					AuthURL:                     "https://keystone.example.test/v3/",
+					Region:                      "RegionOne",
+					ProjectID:                   "project-id",
+					ApplicationCredentialID:     "application-id",
+					ApplicationCredentialSecret: "application-secret",
+					ClusterTemplate:             "kubernetes-template",
+				}
+			}
 
 			svc := NewDestroyService(&bytes.Buffer{})
-			_, err := svc.getDestroyProvider(cfg)
+			provider, err := svc.getDestroyProvider(cfg)
 
 			if tt.wantError && err == nil {
 				t.Error("expected error but got nil")
 			}
 			if !tt.wantError && err != nil {
 				t.Errorf("unexpected error: %v", err)
+			}
+			if !tt.wantError && tt.provider == "magnum" {
+				steps, buildErr := provider.BuildSteps(cfg, nil)
+				if buildErr != nil {
+					t.Fatalf("BuildSteps() error: %v", buildErr)
+				}
+				if len(steps) != 1 || steps[0].ID != "magnum-delete" {
+					t.Fatalf("Magnum destroy steps = %#v, want only magnum-delete", steps)
+				}
 			}
 		})
 	}

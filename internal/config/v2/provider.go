@@ -77,6 +77,9 @@ func (p *OpenStackProvider) ValidateConfig(cfg *InfrastructureConfig) error {
 	if cfg.Cloud.VMware != nil && !isEmptyVMwareConfig(cfg.Cloud.VMware) {
 		return fmt.Errorf("infrastructure.cloud.vmware must be empty when provider is openstack")
 	}
+	if cfg.Cloud.Magnum != nil && !isEmptyMagnumConfig(cfg.Cloud.Magnum) {
+		return fmt.Errorf("infrastructure.cloud.magnum must be empty when provider is openstack")
+	}
 
 	return nil
 }
@@ -128,6 +131,9 @@ func (p *AWSProvider) ValidateConfig(cfg *InfrastructureConfig) error {
 	}
 	if cfg.Cloud.VMware != nil && !isEmptyVMwareConfig(cfg.Cloud.VMware) {
 		return fmt.Errorf("infrastructure.cloud.vmware must be empty when provider is aws")
+	}
+	if cfg.Cloud.Magnum != nil && !isEmptyMagnumConfig(cfg.Cloud.Magnum) {
+		return fmt.Errorf("infrastructure.cloud.magnum must be empty when provider is aws")
 	}
 
 	return nil
@@ -183,6 +189,9 @@ func (p *GCPProvider) ValidateConfig(cfg *InfrastructureConfig) error {
 	}
 	if cfg.Cloud.VMware != nil && !isEmptyVMwareConfig(cfg.Cloud.VMware) {
 		return fmt.Errorf("infrastructure.cloud.vmware must be empty when provider is gcp")
+	}
+	if cfg.Cloud.Magnum != nil && !isEmptyMagnumConfig(cfg.Cloud.Magnum) {
+		return fmt.Errorf("infrastructure.cloud.magnum must be empty when provider is gcp")
 	}
 
 	return nil
@@ -242,6 +251,9 @@ func (p *AzureProvider) ValidateConfig(cfg *InfrastructureConfig) error {
 	if cfg.Cloud.VMware != nil && !isEmptyVMwareConfig(cfg.Cloud.VMware) {
 		return fmt.Errorf("infrastructure.cloud.vmware must be empty when provider is azure")
 	}
+	if cfg.Cloud.Magnum != nil && !isEmptyMagnumConfig(cfg.Cloud.Magnum) {
+		return fmt.Errorf("infrastructure.cloud.magnum must be empty when provider is azure")
+	}
 
 	return nil
 }
@@ -293,6 +305,9 @@ func (p *VMwareProvider) ValidateConfig(cfg *InfrastructureConfig) error {
 	if cfg.Cloud.Azure != nil && !isEmptyAzureConfig(cfg.Cloud.Azure) {
 		return fmt.Errorf("infrastructure.cloud.azure must be empty when provider is vmware")
 	}
+	if cfg.Cloud.Magnum != nil && !isEmptyMagnumConfig(cfg.Cloud.Magnum) {
+		return fmt.Errorf("infrastructure.cloud.magnum must be empty when provider is vmware")
+	}
 
 	return nil
 }
@@ -300,6 +315,61 @@ func (p *VMwareProvider) ValidateConfig(cfg *InfrastructureConfig) error {
 // GetProviderName returns the provider name.
 func (p *VMwareProvider) GetProviderName() string {
 	return "vmware"
+}
+
+// MagnumProvider implements provider validation for Magnum.
+type MagnumProvider struct{}
+
+// ValidateConfig validates Magnum-specific configuration.
+func (p *MagnumProvider) ValidateConfig(cfg *InfrastructureConfig) error {
+	if canonicalInfrastructureProvider(cfg.Provider) != "magnum" {
+		return fmt.Errorf("provider mismatch: expected magnum, got %s", cfg.Provider)
+	}
+
+	if cfg.Cloud.Magnum == nil {
+		return fmt.Errorf("infrastructure.cloud.magnum is required when provider is magnum")
+	}
+
+	magnum := cfg.Cloud.Magnum
+	if magnum.AuthURL == "" {
+		return fmt.Errorf("infrastructure.cloud.magnum.auth_url is required")
+	}
+	if magnum.Region == "" {
+		return fmt.Errorf("infrastructure.cloud.magnum.region is required")
+	}
+	if magnum.ProjectID == "" {
+		return fmt.Errorf("infrastructure.cloud.magnum.project_id is required")
+	}
+	if magnum.ClusterTemplate == "" {
+		return fmt.Errorf("infrastructure.cloud.magnum.cluster_template is required")
+	}
+	if (magnum.ApplicationCredentialID == "") != (magnum.ApplicationCredentialSecret == "") {
+		return fmt.Errorf("infrastructure.cloud.magnum.application_credential_id and application_credential_secret must be supplied together")
+	}
+
+	// Validate that only Magnum section is populated.
+	if cfg.Cloud.OpenStack != nil && !isEmptyOpenStackConfig(cfg.Cloud.OpenStack) {
+		return fmt.Errorf("infrastructure.cloud.openstack must be empty when provider is magnum")
+	}
+	if cfg.Cloud.AWS != nil && !isEmptyAWSConfig(cfg.Cloud.AWS) {
+		return fmt.Errorf("infrastructure.cloud.aws must be empty when provider is magnum")
+	}
+	if cfg.Cloud.GCP != nil && !isEmptyGCPConfig(cfg.Cloud.GCP) {
+		return fmt.Errorf("infrastructure.cloud.gcp must be empty when provider is magnum")
+	}
+	if cfg.Cloud.Azure != nil && !isEmptyAzureConfig(cfg.Cloud.Azure) {
+		return fmt.Errorf("infrastructure.cloud.azure must be empty when provider is magnum")
+	}
+	if cfg.Cloud.VMware != nil && !isEmptyVMwareConfig(cfg.Cloud.VMware) {
+		return fmt.Errorf("infrastructure.cloud.vmware must be empty when provider is magnum")
+	}
+
+	return nil
+}
+
+// GetProviderName returns the provider name.
+func (p *MagnumProvider) GetProviderName() string {
+	return "magnum"
 }
 
 // GetProvider returns the appropriate provider validator for the given provider name.
@@ -315,6 +385,8 @@ func GetProvider(providerName string) (Provider, error) {
 		return &AzureProvider{}, nil
 	case "vmware":
 		return &VMwareProvider{}, nil
+	case "magnum":
+		return &MagnumProvider{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", providerName)
 	}
@@ -323,21 +395,48 @@ func GetProvider(providerName string) (Provider, error) {
 // Helper functions to check if provider configs are empty
 
 func isEmptyOpenStackConfig(cfg *OpenStackCloudConfig) bool {
-	return cfg.AuthURL == "" && cfg.Region == "" && cfg.ProjectID == "" && cfg.ImageID == "" && cfg.NetworkID == ""
+	return cfg == nil ||
+		(cfg.AuthURL == "" && cfg.Region == "" && cfg.ProjectID == "" && cfg.ProjectName == "" &&
+			cfg.ApplicationCredentialID == "" && cfg.ApplicationCredentialSecret == "" && !cfg.Insecure &&
+			cfg.Domain == "" && cfg.DomainName == "" && cfg.TenantName == "" && cfg.UserDomainName == "" &&
+			cfg.ProjectDomainName == "" && cfg.ImageID == "" && cfg.ImageIDWindows == "" && cfg.ImageName == "" &&
+			cfg.AvailabilityZone == "" && cfg.NetworkID == "" && cfg.NetworkName == "" && cfg.SubnetID == "" &&
+			cfg.FloatingIPPool == "" && cfg.FloatingNetworkID == "" && cfg.ExternalNetworkName == "" &&
+			cfg.RouterExternalNetworkID == "" && cfg.DNSZoneName == "" && len(cfg.AvailabilityZones) == 0 &&
+			!cfg.UseOctavia && !cfg.UseDesignate && cfg.CA == "" && isEmptyOpenStackNetworkingConfig(cfg.Networking) &&
+			cfg.Modules.OpenstackNova.Source == "")
 }
 
 func isEmptyAWSConfig(cfg *AWSCloudConfig) bool {
-	return cfg.Region == "" && cfg.VPCID == "" && len(cfg.SubnetIDs) == 0 && cfg.AMIID == ""
+	return cfg == nil || (cfg.Region == "" && cfg.VPCID == "" && len(cfg.SubnetIDs) == 0 && cfg.AMIID == "" &&
+		len(cfg.AvailabilityZones) == 0 && cfg.KeyPairName == "" && len(cfg.SecurityGroupIDs) == 0)
 }
 
 func isEmptyGCPConfig(cfg *GCPCloudConfig) bool {
-	return cfg.Project == "" && cfg.Region == "" && cfg.Network == "" && cfg.Subnetwork == "" && cfg.ImageFamily == ""
+	return cfg == nil || (cfg.Project == "" && cfg.Region == "" && cfg.Zone == "" && cfg.Network == "" &&
+		cfg.Subnetwork == "" && cfg.ImageFamily == "" && len(cfg.AvailabilityZones) == 0)
 }
 
 func isEmptyAzureConfig(cfg *AzureCloudConfig) bool {
-	return cfg.SubscriptionID == "" && cfg.ResourceGroup == "" && cfg.Location == "" && cfg.VNetName == "" && cfg.SubnetName == "" && cfg.ImageReference == ""
+	return cfg == nil || (cfg.SubscriptionID == "" && cfg.ResourceGroup == "" && cfg.Location == "" &&
+		cfg.VNetName == "" && cfg.SubnetName == "" && cfg.ImageReference == "" && len(cfg.AvailabilityZones) == 0)
 }
 
 func isEmptyVMwareConfig(cfg *VMwareCloudConfig) bool {
-	return cfg.VCenterServer == "" && cfg.Datacenter == "" && cfg.Datastore == "" && cfg.Network == "" && cfg.Template == ""
+	return cfg == nil || (cfg.VCenterServer == "" && cfg.Datacenter == "" && cfg.Cluster == "" &&
+		cfg.Datastore == "" && cfg.Network == "" && cfg.Template == "" && cfg.Folder == "")
+}
+
+func isEmptyOpenStackNetworkingConfig(cfg *OpenStackNetworkingConfig) bool {
+	return cfg == nil || (cfg.FloatingIPPool == "" && cfg.FloatingNetworkID == "" && cfg.NetworkID == "" &&
+		cfg.RouterExternalNetworkID == "" && cfg.SubnetID == "" && len(cfg.K8sAPIPortACL) == 0 &&
+		cfg.Designate.DNSZoneName == "" && cfg.VLAN.ID == "" && cfg.VLAN.MTU == 0 && cfg.VLAN.Provider == "")
+}
+
+func isEmptyMagnumConfig(cfg *MagnumCloudConfig) bool {
+	return cfg == nil || (cfg.AuthURL == "" && cfg.Region == "" && cfg.ProjectID == "" &&
+		cfg.ApplicationCredentialID == "" && cfg.ApplicationCredentialSecret == "" && !cfg.Insecure &&
+		cfg.Domain == "" && cfg.CA == "" && cfg.ClusterTemplate == "" && len(cfg.Labels) == 0 &&
+		cfg.Keypair == "" && cfg.MasterFlavorID == "" && cfg.NodeFlavorID == "" && cfg.CreateTimeout == 0 &&
+		cfg.MasterLBEnabled == nil)
 }

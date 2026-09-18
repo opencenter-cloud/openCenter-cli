@@ -31,6 +31,14 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
 )
 
+func TestClusterInitTypeHelpMentionsMagnum(t *testing.T) {
+	cmd := newClusterInitCmd()
+	usage := cmd.Flags().Lookup("type").Usage
+	if !strings.Contains(usage, "magnum") {
+		t.Fatalf("type flag help does not mention magnum: %q", usage)
+	}
+}
+
 // TestClusterInitIntegration tests the full cluster init workflow
 func TestClusterInitIntegration(t *testing.T) {
 	// Set up temporary config directory

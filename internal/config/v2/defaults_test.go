@@ -84,6 +84,30 @@ func TestNewV2DefaultProviders(t *testing.T) {
 	}
 }
 
+func TestNewV2DefaultMagnumUsesIncompleteIsolatedCloud(t *testing.T) {
+	cfg, err := NewV2Default("guided-magnum", "magnum")
+	if err != nil {
+		t.Fatalf("NewV2Default() error = %v", err)
+	}
+
+	if cfg.OpenCenter.Infrastructure.Provider != "magnum" {
+		t.Fatalf("provider = %q, want magnum", cfg.OpenCenter.Infrastructure.Provider)
+	}
+	if cfg.OpenCenter.Infrastructure.Cloud.OpenStack != nil {
+		t.Fatal("Magnum defaults must not initialize cloud.openstack")
+	}
+	magnum := cfg.OpenCenter.Infrastructure.Cloud.Magnum
+	if magnum == nil {
+		t.Fatal("Magnum defaults must initialize cloud.magnum")
+	}
+	if magnum.Region != cfg.OpenCenter.Meta.Region {
+		t.Fatalf("Magnum region = %q, want metadata region %q", magnum.Region, cfg.OpenCenter.Meta.Region)
+	}
+	if magnum.ApplicationCredentialID != "" || magnum.ApplicationCredentialSecret != "" || magnum.ClusterTemplate != "" {
+		t.Fatalf("Magnum defaults must not contain credentials or a fake template: %#v", magnum)
+	}
+}
+
 func TestRenderFullTemplateYAMLRoundTrip(t *testing.T) {
 	loader := NewConfigLoader(registrydefaults.NewRegistry())
 

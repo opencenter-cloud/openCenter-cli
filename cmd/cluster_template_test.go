@@ -98,6 +98,70 @@ func TestAddConfigComments(t *testing.T) {
 	}
 }
 
+func TestClusterTemplateMagnumProvider(t *testing.T) {
+	for _, minimal := range []bool{false, true} {
+		name := "complete"
+		if minimal {
+			name = "minimal"
+		}
+
+		t.Run(name, func(t *testing.T) {
+			cmd := newClusterTemplateCmd()
+			var output strings.Builder
+			cmd.SetOut(&output)
+			args := []string{"--provider", "magnum"}
+			if minimal {
+				args = append(args, "--minimal")
+			}
+			cmd.SetArgs(args)
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("cluster template failed: %v", err)
+			}
+
+			var cfg v2.Config
+			if err := yaml.Unmarshal([]byte(output.String()), &cfg); err != nil {
+				t.Fatalf("generated template is not valid YAML: %v", err)
+			}
+			if cfg.OpenCenter.Infrastructure.Provider != "magnum" {
+				t.Fatalf("provider = %q, want magnum", cfg.OpenCenter.Infrastructure.Provider)
+			}
+			if cfg.OpenCenter.Infrastructure.Cloud.Magnum == nil {
+				t.Fatal("expected cloud.magnum configuration")
+			}
+			if cfg.OpenCenter.Infrastructure.Cloud.OpenStack != nil {
+				t.Fatal("expected cloud.openstack to be omitted for Magnum")
+			}
+
+			magnum := cfg.OpenCenter.Infrastructure.Cloud.Magnum
+			for field, value := range map[string]string{
+				"auth_url":                      magnum.AuthURL,
+				"region":                        magnum.Region,
+				"project_id":                    magnum.ProjectID,
+				"application_credential_id":     magnum.ApplicationCredentialID,
+				"application_credential_secret": magnum.ApplicationCredentialSecret,
+				"cluster_template":              magnum.ClusterTemplate,
+			} {
+				if strings.TrimSpace(value) == "" {
+					t.Errorf("cloud.magnum.%s is empty", field)
+				}
+			}
+		})
+	}
+}
+
+func TestClusterTemplateMagnumProviderValidationAndHelp(t *testing.T) {
+	cmd := newClusterTemplateCmd()
+	if usage := cmd.Flags().Lookup("provider").Usage; !strings.Contains(usage, "magnum") {
+		t.Fatalf("provider flag help does not mention magnum: %q", usage)
+	}
+
+	cmd.SetArgs([]string{"--provider", "unknown"})
+	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "magnum") {
+		t.Fatalf("invalid provider error = %v, want Magnum in supported list", err)
+	}
+}
+
 func TestAddConfigCommentsPreservesStructure(t *testing.T) {
 	// Generate a complete config
 	cfg := generateCompleteTemplate("openstack")

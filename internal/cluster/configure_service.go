@@ -82,6 +82,7 @@ func NewConfigureServiceWithDeps(
 	initService := NewInitServiceWithConfigMgr(pathResolver, validationEngine, configManager, configurationMgr, fileSystem)
 	if providers == nil {
 		providers = orchestration.NewProviderRegistry(
+			newMagnumConfigureOrchestrator(),
 			newOpenStackConfigureOrchestrator(openstackcloud.NewDiscoveryClient()),
 		)
 	}
@@ -339,9 +340,114 @@ func (s *ConfigureService) loadV2Config(path string) (*v2.Config, error) {
 	loader := v2.NewConfigLoader(configdefaults.NewRegistry())
 	cfg, err := loader.LoadFromFile(path)
 	if err != nil {
+		// `cluster init --type magnum` deliberately persists a prompt-ready,
+		// incomplete cloud.magnum block. Permit only that selected-provider
+		// shape through guided configuration; all other config loads remain
+		// strictly validated by the normal loader.
+		if guidedCfg, guidedErr := s.loadIncompleteMagnumConfig(path); guidedErr == nil {
+			return guidedCfg, nil
+		}
 		return nil, fmt.Errorf("load native v2 config: %w", err)
 	}
 	return cfg, nil
+}
+
+// loadIncompleteMagnumConfig loads only the narrow init-to-configure state.
+// Missing Magnum fields are filled with transient, non-secret values solely so
+// the regular loader can validate every unrelated field. The original cloud
+// block is restored before the config reaches prompts or persistence.
+func (s *ConfigureService) loadIncompleteMagnumConfig(path string) (*v2.Config, error) {
+	data, err := s.fileSystem.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	source, err := v2.DecodePublicConfig(data)
+	if err != nil || !strings.EqualFold(strings.TrimSpace(sourceProvider(source)), "magnum") {
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("incomplete guided configuration is supported only for the magnum provider")
+	}
+
+	original := source.OpenCenter.Infrastructure.Cloud.Magnum
+	if !magnumConfigIncomplete(original) {
+		return nil, fmt.Errorf("Magnum configuration is complete")
+	}
+	var restored *v2.MagnumCloudConfig
+	if original != nil {
+		copy := *original
+		restored = &copy
+	}
+
+	transient := &v2.MagnumCloudConfig{}
+	if original != nil {
+		*transient = *original
+	}
+	if strings.TrimSpace(transient.AuthURL) == "" {
+		transient.AuthURL = "https://configure-required.invalid/v3"
+	}
+	if strings.TrimSpace(transient.Region) == "" {
+		transient.Region = firstNonEmptyConfigureValue(source.OpenCenter.Meta.Region, "configure-required")
+	}
+	if strings.TrimSpace(transient.ProjectID) == "" {
+		transient.ProjectID = "configure-required"
+	}
+	if strings.TrimSpace(transient.ApplicationCredentialID) == "" {
+		transient.ApplicationCredentialID = "configure-required"
+	}
+	if strings.TrimSpace(transient.ApplicationCredentialSecret) == "" {
+		transient.ApplicationCredentialSecret = "configure-required"
+	}
+	if strings.TrimSpace(transient.ClusterTemplate) == "" {
+		transient.ClusterTemplate = "configure-required"
+	}
+	source.OpenCenter.Infrastructure.Cloud.Magnum = transient
+
+	patched, err := v2.MarshalPublicConfig(source)
+	if err != nil {
+		return nil, err
+	}
+	loaded, err := v2.NewConfigLoader(configdefaults.NewRegistry()).LoadFromBytes(patched)
+	if err != nil {
+		return nil, err
+	}
+	loaded.OpenCenter.Infrastructure.Cloud.Magnum = restored
+	return loaded, nil
+}
+
+func sourceProvider(cfg *v2.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	return cfg.OpenCenter.Infrastructure.Provider
+}
+
+func magnumConfigIncomplete(cfg *v2.MagnumCloudConfig) bool {
+	if cfg == nil {
+		return true
+	}
+	for _, value := range []string{
+		cfg.AuthURL,
+		cfg.Region,
+		cfg.ProjectID,
+		cfg.ApplicationCredentialID,
+		cfg.ApplicationCredentialSecret,
+		cfg.ClusterTemplate,
+	} {
+		if strings.TrimSpace(value) == "" {
+			return true
+		}
+	}
+	return false
+}
+
+func firstNonEmptyConfigureValue(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func applyChangeSet(cfg *v2.Config, changeSet orchestration.ChangeSet) error {

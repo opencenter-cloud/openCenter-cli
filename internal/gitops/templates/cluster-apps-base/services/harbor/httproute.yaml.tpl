@@ -5,7 +5,7 @@ metadata:
   name: harbor-redirect
 spec:
   parentRefs:
-    - name: rmpk-gateway
+    - name: {{ gatewayNameFor "harbor" }}
       sectionName: harbor-http
       namespace: rackspace-system
   hostnames:
@@ -23,7 +23,7 @@ metadata:
   name: harbor
 spec:
   parentRefs:
-    - name: rmpk-gateway
+    - name: {{ gatewayNameFor "harbor" }}
       sectionName: harbor-https
       namespace: rackspace-system
   hostnames:

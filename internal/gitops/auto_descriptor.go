@@ -51,6 +51,7 @@ type autoServiceContext struct {
 	OverrideValues         string
 	OverrideValuesRenderer OverrideValuesRenderer
 	KustomizationContent   string
+	KustomizationRenderer  KustomizationRenderer
 	OverlayFilesRenderer   OverlayFilesRenderer
 	ClusterName            string
 	BaseRepoURL            string
@@ -97,6 +98,19 @@ func planAutoServiceActionsWithArtifacts(cfg v2.Config, registry *descriptorcfg.
 		}
 
 		ctx := buildAutoServiceContextWithArtifacts(serviceName, base, cfg, artifacts)
+		// Resolve a config-driven kustomization (OCTR-762 gateway) up front so
+		// both renderAutoServiceActions and the custom-seed decision below observe
+		// the same KustomizationContent. renderAutoServiceActions takes ctx by
+		// value, so resolving inside it would not be visible to
+		// appendCustomSeedAction here, which would then wrongly emit a custom/ seed
+		// for a verbatim-kustomization service.
+		if ctx.KustomizationRenderer != nil {
+			rendered, err := ctx.KustomizationRenderer(cfg)
+			if err != nil {
+				return nil, fmt.Errorf("kustomization renderer for %q: %w", serviceName, err)
+			}
+			ctx.KustomizationContent = rendered
+		}
 		svcActions, err := renderAutoServiceActions(ctx, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("auto-render service %s: %w", serviceName, err)
@@ -242,6 +256,7 @@ func buildAutoServiceContextWithArtifacts(serviceName string, base *services.Bas
 		OverrideValues:         spec.OverrideValues,
 		OverrideValuesRenderer: spec.OverrideValuesRenderer,
 		KustomizationContent:   spec.KustomizationContent,
+		KustomizationRenderer:  spec.KustomizationRenderer,
 		OverlayFilesRenderer:   spec.OverlayFilesRenderer,
 		ClusterName:            cfg.ClusterName(),
 		BaseRepoURL:            baseRepoURL,
@@ -383,6 +398,10 @@ func renderAutoServiceActions(ctx autoServiceContext, cfg v2.Config) ([]clusterA
 	if ctx.BaseOnly {
 		return actions, nil
 	}
+
+	// Note: a config-driven KustomizationRenderer (OCTR-762 gateway) is resolved
+	// by the caller into ctx.KustomizationContent before this runs, so the
+	// verbatim-kustomization branches below handle it uniformly.
 
 	// Generated overlay kustomizations include the user-owned custom layer.
 	// BaseOnly services have no overlay, and verbatim KustomizationContent services

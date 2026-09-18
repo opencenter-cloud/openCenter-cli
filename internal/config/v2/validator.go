@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"sort"
 	"strings"
 
 	semver "github.com/Masterminds/semver/v3"
@@ -395,15 +396,72 @@ func (v *defaultValidator) ValidateServices(cfg *Config) error {
 			return err
 		}
 	}
-	if !isServiceEnabled(cfg, "metallb") {
-		return nil
+	metallbEnabled := isServiceEnabled(cfg, "metallb")
+	var metallbCfg *services.MetalLBConfig
+	if metallbEnabled {
+		mlb, ok := cfg.OpenCenter.Services["metallb"].(*services.MetalLBConfig)
+		if !ok {
+			return fmt.Errorf("metallb service has unexpected configuration type %T", cfg.OpenCenter.Services["metallb"])
+		}
+		metallbCfg = mlb
+		if err := validateMetalLBConfig(mlb); err != nil {
+			return err
+		}
 	}
 
-	service, ok := cfg.OpenCenter.Services["metallb"].(*services.MetalLBConfig)
-	if !ok {
-		return fmt.Errorf("metallb service has unexpected configuration type %T", cfg.OpenCenter.Services["metallb"])
+	// OCTR-762: validate per-service MetalLB address pool selection. Any service
+	// that names an address_pool must reference a pool declared in
+	// services.metallb.ip_address_pools, which in turn requires metallb enabled.
+	if err := validateServiceAddressPools(cfg, metallbEnabled, metallbCfg); err != nil {
+		return err
 	}
-	return validateMetalLBConfig(service)
+
+	return nil
+}
+
+// validateServiceAddressPools ensures every service's address_pool (if set)
+// refers to a real MetalLB pool. Reuses the pool-membership pattern from
+// validateMetalLBConfig's L2Advertisement check.
+func validateServiceAddressPools(cfg *Config, metallbEnabled bool, metallbCfg *services.MetalLBConfig) error {
+	poolNames := make(map[string]struct{})
+	if metallbCfg != nil {
+		for _, pool := range metallbCfg.IPAddressPools {
+			if pool.Name != "" {
+				poolNames[pool.Name] = struct{}{}
+			}
+		}
+	}
+
+	names := make([]string, 0, len(cfg.OpenCenter.Services))
+	for name := range cfg.OpenCenter.Services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var problems []string
+	for _, name := range names {
+		svc := cfg.OpenCenter.Services[name]
+		pooler, ok := svc.(interface{ GetAddressPool() string })
+		if !ok {
+			continue
+		}
+		pool := strings.TrimSpace(pooler.GetAddressPool())
+		if pool == "" {
+			continue
+		}
+		if !metallbEnabled {
+			problems = append(problems, fmt.Sprintf("opencenter.services.%s.address_pool %q requires the metallb service to be enabled with matching ip_address_pools", name, pool))
+			continue
+		}
+		if _, exists := poolNames[pool]; !exists {
+			problems = append(problems, fmt.Sprintf("opencenter.services.%s.address_pool %q is not defined in services.metallb.ip_address_pools", name, pool))
+		}
+	}
+
+	if len(problems) == 0 {
+		return nil
+	}
+	return fmt.Errorf("service address pool validation failed:\n  - %s", strings.Join(problems, "\n  - "))
 }
 
 func validateMetalLBConfig(config *services.MetalLBConfig) error {

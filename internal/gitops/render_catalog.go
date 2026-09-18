@@ -40,6 +40,7 @@ type RenderSpec struct {
 
 	OverrideValuesRenderer OverrideValuesRenderer
 	OverlayFilesRenderer   OverlayFilesRenderer
+	KustomizationRenderer  KustomizationRenderer
 }
 
 type postBaseStageSpec struct {
@@ -86,8 +87,13 @@ func newBuiltInRenderCatalog() RenderCatalog {
 			BasePath: "applications/base/services/gateway", SingleStage: true, HasOverrideValues: false,
 			ExtraDependencies:      []string{"envoy-gateway-api-base"},
 			GeneratedResourceFiles: []string{"namespace.yaml", "gateway-class.yaml", "gateway.yaml", "envoy-proxy-config.yaml"},
-			KustomizationContent:   "---\napiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n  - \"namespace.yaml\"\n  - \"gateway-class.yaml\"\n  - \"gateway.yaml\"\n  - \"envoy-proxy-config.yaml\"\n",
-			OverlayFilesRenderer:   gatewayOverlayFilesRenderer,
+			// KustomizationRenderer lists the base four files plus one
+			// envoy-proxy-config-<pool>.yaml per non-default MetalLB pool
+			// (OCTR-762). For the single-pool case it emits exactly the four
+			// files the previous static KustomizationContent listed, keeping
+			// output byte-identical.
+			KustomizationRenderer: gatewayKustomizationRenderer,
+			OverlayFilesRenderer:  gatewayOverlayFilesRenderer,
 		},
 		{
 			ServiceName: "gateway-api", DefaultNamespace: "envoy-gateway-system", HasOverrideValues: true,

@@ -206,6 +206,14 @@ func renderTemplateAtomic(path, dst string, cfg v2.Config, workspace *GitOpsWork
 		return false // Default to suspend=false (managed behavior)
 	}
 
+	// gatewayNameFor returns the Gateway resource name a service's HTTPRoutes
+	// must target under per-service MetalLB pool selection (OCTR-762). Used by
+	// the harbor and keycloak httproute.yaml.tpl files. Defaults to rmpk-gateway
+	// for services on the cluster's default pool.
+	funcMap["gatewayNameFor"] = func(serviceName string) string {
+		return gatewayNameForService(cfg, serviceName)
+	}
+
 	funcMap["managedAdoptionMode"] = func(serviceName string) string {
 		if service, exists := managedServices(cfg)[serviceName]; exists {
 			return string(GetAdoptionMode(service))

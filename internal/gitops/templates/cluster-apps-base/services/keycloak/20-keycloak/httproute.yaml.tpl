@@ -6,7 +6,7 @@ metadata:
   namespace: keycloak
 spec:
   parentRefs:
-    - name: rmpk-gateway
+    - name: {{ gatewayNameFor "keycloak" }}
       sectionName: keycloak-https
       namespace: rackspace-system
   hostnames:
@@ -27,7 +27,7 @@ metadata:
   namespace: keycloak
 spec:
   parentRefs:
-    - name: rmpk-gateway
+    - name: {{ gatewayNameFor "keycloak" }}
       namespace: rackspace-system
       sectionName: keycloak-http
   hostnames:

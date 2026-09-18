@@ -3376,6 +3376,9 @@
                 "adoption_mode": {
                   "type": "string"
                 },
+                "alertmanager_hostname": {
+                  "type": "string"
+                },
                 "alertmanager_storage_class": {
                   "type": "string"
                 },
@@ -3384,6 +3387,9 @@
                 },
                 "enabled": {
                   "type": "boolean"
+                },
+                "grafana_hostname": {
+                  "type": "string"
                 },
                 "grafana_storage_class": {
                   "type": "string"
@@ -3407,6 +3413,9 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "type": "string"
+                },
+                "prometheus_hostname": {
                   "type": "string"
                 },
                 "prometheus_storage_class": {
@@ -5316,6 +5325,9 @@
                 "adoption_mode": {
                   "type": "string"
                 },
+                "alertmanager_hostname": {
+                  "type": "string"
+                },
                 "alertmanager_storage_class": {
                   "type": "string"
                 },
@@ -5324,6 +5336,9 @@
                 },
                 "enabled": {
                   "type": "boolean"
+                },
+                "grafana_hostname": {
+                  "type": "string"
                 },
                 "grafana_storage_class": {
                   "type": "string"
@@ -5347,6 +5362,9 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "type": "string"
+                },
+                "prometheus_hostname": {
                   "type": "string"
                 },
                 "prometheus_storage_class": {
@@ -7332,6 +7350,9 @@
                 "adoption_mode": {
                   "type": "string"
                 },
+                "alertmanager_hostname": {
+                  "type": "string"
+                },
                 "alertmanager_storage_class": {
                   "type": "string"
                 },
@@ -7340,6 +7361,9 @@
                 },
                 "enabled": {
                   "type": "boolean"
+                },
+                "grafana_hostname": {
+                  "type": "string"
                 },
                 "grafana_storage_class": {
                   "type": "string"
@@ -7363,6 +7387,9 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "type": "string"
+                },
+                "prometheus_hostname": {
                   "type": "string"
                 },
                 "prometheus_storage_class": {

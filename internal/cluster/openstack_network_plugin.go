@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/logging"
 	"gopkg.in/yaml.v3"
 )
 
@@ -120,6 +121,21 @@ func (p *openstackBootstrapProvider) installOpenStackNetworkPlugin(ctx context.C
 //
 //	<organization>/applications/overlays/<cluster>/services/calico/helm-values/override_values.yaml
 func (p *openstackBootstrapProvider) installOpenStackCalicoWithHelm(ctx context.Context, cfg *v2.Config, selection openStackNetworkPluginSelection, kubeconfigPath, tmpDir string, env map[string]string) error {
+	// Idempotency guard: if Calico is already installed and healthy, skip the
+	// helm upgrade. On an existing cluster the tigera-operator owns fields on the
+	// Installation CR (notably .spec.calicoNetwork.ipPools), so re-running
+	// `helm upgrade` (which uses server-side apply) conflicts with the operator's
+	// field ownership and fails the whole deploy at this step. A re-deploy should
+	// not fight the operator for an already-converged CNI.
+	if out, err := p.runner.Run(ctx, tmpDir, env, "kubectl",
+		kubectlArgs(kubeconfigPath, "get", "tigerastatus/calico",
+			"-o", "jsonpath={.status.conditions[?(@.type=='Available')].status}")...); err == nil {
+		if strings.TrimSpace(string(out)) == "True" {
+			logging.Debugf("bootstrap: calico already Available; skipping helm install to avoid tigera-operator field-ownership conflict")
+			return nil
+		}
+	}
+
 	// Apply the operator.tigera.io/v1 CRDs before running helm. helm's own
 	// crds/ auto-install is unreliable for the tigera-operator chart; without
 	// this step helm fails with "no matches for kind APIServer/Installation/

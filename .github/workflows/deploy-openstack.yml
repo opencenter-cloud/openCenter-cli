@@ -1,0 +1,439 @@
+name: Deploy Disposable OpenStack Cluster (OCTR-762 E2E)
+
+# Manual-only end-to-end validation for per-service MetalLB pool selection
+# (OCTR-762) on a real OpenStack cluster in DFW3. Provisions VMs via
+# OpenTofu + kubespray, bootstraps Flux against a per-run GitHub repo, pushes
+# the generated multi-pool GitOps overlay, and asserts that each per-pool
+# Gateway programs with a LoadBalancer IP from the correct MetalLB pool.
+#
+# This is expensive (real VMs, ~60-75 min) and is NEVER triggered automatically.
+#
+# Required secrets (repo or org Actions secrets):
+#   OS_CLOUDS_YAML       Full clouds.yaml containing a `keystone-dfw3-appcred`
+#                        profile with auth_url/region/project + application
+#                        credential id+secret. Written to disk on the runner.
+#   GITOPS_GH_TOKEN      GitHub token (classic, repo scope) under the dgupt006
+#                        account, used to create/delete the per-run GitOps repo
+#                        and for Flux bootstrap.
+#   OS_IMAGE_ID          Ubuntu 24.04 image UUID in the tenant.
+#   OS_FLOATING_NETWORK_ID  External network UUID (PUBLICNET).
+# Optional overrides are exposed as workflow inputs below.
+
+on:
+  workflow_dispatch:
+    inputs:
+      cluster_name:
+        description: DNS-1123 cluster name; blank derives one from the run ID
+        required: false
+        type: string
+        default: ""
+      gitops_owner:
+        description: GitHub owner/org for the disposable GitOps repo
+        required: true
+        type: string
+        default: dgupt006
+      cleanup:
+        description: Destroy the cluster + delete the GitOps repo + cloud artifacts after the run
+        required: true
+        type: boolean
+        default: true
+      debug:
+        description: Enable verbose openCenter bootstrap diagnostics
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  SOPS_VERSION: 3.13.3
+  KUBECTL_VERSION: v1.35.4
+  FLUX_VERSION: v2.6.4
+  # OpenStack profile inside the supplied clouds.yaml.
+  OS_CLOUD: keystone-dfw3-appcred
+  # DFW3 subnet layout for the disposable cluster. The MetalLB pools carve out
+  # the tail of the node subnet; allocation_pool_end is pulled back to free them.
+  NODE_SUBNET: 10.2.128.0/22
+  ALLOC_POOL_START: 10.2.128.10
+  ALLOC_POOL_END: 10.2.131.230
+
+concurrency:
+  # The DFW3 tenant has a finite floating-IP / quota budget and leftover VMs are
+  # costly; never run two of these at once.
+  group: ${{ github.repository }}-deploy-openstack
+  cancel-in-progress: false
+
+jobs:
+  deploy-openstack:
+    runs-on: [self-hosted, self-hosted-dfw-flex]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Initialize runner-local environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_temp="${RUNNER_TEMP:?RUNNER_TEMP is empty}"
+          case "${runner_temp}" in *$'\n'*|*$'\r'*) echo "RUNNER_TEMP has a newline" >&2; exit 1;; esac
+
+          home_dir="${runner_temp}/opencenter-home"
+          config_dir="${runner_temp}/opencenter-config"
+          os_config="${runner_temp}/openstack"
+          go_cache="${runner_temp}/go-cache"
+          go_mod_cache="${runner_temp}/go-mod-cache"
+          mkdir -p "${home_dir}" "${config_dir}" "${os_config}" "${go_cache}" "${go_mod_cache}"
+
+          {
+            printf 'HOME=%s\n' "${home_dir}"
+            printf 'OPENCENTER_CONFIG_DIR=%s\n' "${config_dir}"
+            printf 'OS_CLIENT_CONFIG_FILE=%s\n' "${os_config}/clouds.yaml"
+            printf 'GOCACHE=%s\n' "${go_cache}"
+            printf 'GOMODCACHE=%s\n' "${go_mod_cache}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Set up Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Resolve and validate inputs
+        shell: bash
+        env:
+          CLUSTER_NAME_INPUT: ${{ inputs.cluster_name }}
+          GITOPS_OWNER_INPUT: ${{ inputs.gitops_owner }}
+          DEBUG_INPUT: ${{ inputs.debug }}
+        run: |
+          set -euo pipefail
+          requested="${CLUSTER_NAME_INPUT}"
+          requested="${requested#"${requested%%[![:space:]]*}"}"
+          requested="${requested%"${requested##*[![:space:]]}"}"
+          if [[ -z "${requested}" ]]; then
+            # OpenStack resource names get long; keep the derived name short.
+            cluster_name="octr762-${GITHUB_RUN_ID}"
+          else
+            [[ ${#requested} -le 40 && "${requested}" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]] || {
+              echo "cluster_name must be DNS-1123, <= 40 chars." >&2; exit 1; }
+            cluster_name="${requested}"
+          fi
+          [[ "${GITOPS_OWNER_INPUT}" =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ ]] || {
+            echo "gitops_owner invalid." >&2; exit 1; }
+          case "${DEBUG_INPUT}" in true|false) ;; *) echo "debug must be bool" >&2; exit 1;; esac
+
+          gitops_repo="${cluster_name}-gitops"
+          {
+            printf 'CLUSTER_NAME=%s\n' "${cluster_name}"
+            printf 'GITOPS_OWNER=%s\n' "${GITOPS_OWNER_INPUT}"
+            printf 'GITOPS_REPO=%s\n' "${gitops_repo}"
+            printf 'GITOPS_REPO_URL=https://github.com/%s/%s.git\n' "${GITOPS_OWNER_INPUT}" "${gitops_repo}"
+            printf 'DEBUG_INPUT=%s\n' "${DEBUG_INPUT}"
+            printf 'CLUSTER_CONFIG_CREATED=false\n'
+            printf 'GITOPS_REPO_CREATED=false\n'
+            printf 'INFRA_APPLIED=false\n'
+          } >> "${GITHUB_ENV}"
+          echo "Resolved cluster: ${cluster_name}; gitops repo: ${GITOPS_OWNER_INPUT}/${gitops_repo}"
+
+      - name: Install pinned tools (sops, kubectl, flux)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in curl sha256sum tar awk install openstack tofu git; do
+            command -v "$t" >/dev/null || { echo "Missing runner prerequisite: $t" >&2; exit 1; }
+          done
+          tool_bin="${RUNNER_TEMP}/bin"; mkdir -p "${tool_bin}"
+          echo "${tool_bin}" >> "${GITHUB_PATH}"
+          echo "${GITHUB_WORKSPACE}/bin" >> "${GITHUB_PATH}"
+
+          GOBIN="${tool_bin}" go install "github.com/getsops/sops/v3/cmd/sops@v${SOPS_VERSION}"
+
+          dl() { # url checksum_url out
+            local tmp="$3.dl" exp
+            curl -fsSL "$1" -o "$tmp"
+            exp="$(curl -fsSL "$2" | awk '{print $1; exit}')"
+            [[ "$exp" =~ ^[[:xdigit:]]{64}$ ]] || { echo "bad checksum for $3" >&2; rm -f "$tmp"; exit 1; }
+            printf '%s  %s\n' "$exp" "$tmp" | sha256sum -c -
+            mv "$tmp" "$3"
+          }
+          dl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
+             "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256" \
+             "${tool_bin}/kubectl"; chmod 0755 "${tool_bin}/kubectl"
+
+          flux_file="flux_${FLUX_VERSION#v}_linux_amd64.tar.gz"
+          curl -fsSL "https://github.com/fluxcd/flux2/releases/download/${FLUX_VERSION}/${flux_file}" -o "${RUNNER_TEMP}/${flux_file}"
+          curl -fsSL "https://github.com/fluxcd/flux2/releases/download/${FLUX_VERSION}/checksums.txt" -o "${RUNNER_TEMP}/flux-sums.txt"
+          exp="$(awk -v f="${flux_file}" '$2==f || $2=="*"f {print $1; exit}' "${RUNNER_TEMP}/flux-sums.txt")"
+          printf '%s  %s\n' "$exp" "${RUNNER_TEMP}/${flux_file}" | sha256sum -c -
+          mkdir -p "${RUNNER_TEMP}/flux"; tar -xzf "${RUNNER_TEMP}/${flux_file}" -C "${RUNNER_TEMP}/flux"
+          install -m 0755 "${RUNNER_TEMP}/flux/flux" "${tool_bin}/flux"
+
+          sops --version; kubectl version --client; flux --version; openstack --version; tofu version
+
+      - name: Write OpenStack clouds.yaml from secret
+        shell: bash
+        env:
+          OS_CLOUDS_YAML: ${{ secrets.OS_CLOUDS_YAML }}
+        run: |
+          set -euo pipefail
+          [[ -n "${OS_CLOUDS_YAML}" ]] || { echo "OS_CLOUDS_YAML secret is empty." >&2; exit 1; }
+          umask 077
+          printf '%s' "${OS_CLOUDS_YAML}" > "${OS_CLIENT_CONFIG_FILE}"
+          # Sanity: the expected profile must exist and authenticate.
+          openstack --os-cloud "${OS_CLOUD}" token issue -f value -c expires >/dev/null
+          echo "OpenStack auth OK for profile ${OS_CLOUD}"
+
+      - name: Build CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bin
+          go build -trimpath -o bin/opencenter .
+          opencenter version
+          opencenter --help >/dev/null
+
+      - name: Create disposable GitOps repo
+        shell: bash
+        env:
+          GITOPS_GH_TOKEN: ${{ secrets.GITOPS_GH_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ -n "${GITOPS_GH_TOKEN}" ]] || { echo "GITOPS_GH_TOKEN secret is empty." >&2; exit 1; }
+          # Refuse to touch a repo that already exists (avoid clobbering).
+          code="$(curl -fsS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: token ${GITOPS_GH_TOKEN}" \
+            "https://api.github.com/repos/${GITOPS_OWNER}/${GITOPS_REPO}" || true)"
+          if [[ "${code}" == "200" ]]; then
+            echo "Repo ${GITOPS_OWNER}/${GITOPS_REPO} already exists; refusing to reuse." >&2
+            exit 1
+          fi
+          # Create under the user account (owner == token account).
+          curl -fsS -X POST -H "Authorization: token ${GITOPS_GH_TOKEN}" \
+            https://api.github.com/user/repos \
+            -d "{\"name\":\"${GITOPS_REPO}\",\"private\":true,\"auto_init\":false,\"description\":\"Disposable OCTR-762 E2E GitOps repo (run ${GITHUB_RUN_ID})\"}" >/dev/null
+          echo "GITOPS_REPO_CREATED=true" >> "${GITHUB_ENV}"
+          echo "Created ${GITOPS_OWNER}/${GITOPS_REPO}"
+
+      - name: Init and configure multi-pool cluster
+        shell: bash
+        env:
+          GITOPS_GH_TOKEN: ${{ secrets.GITOPS_GH_TOKEN }}
+          OS_IMAGE_ID: ${{ secrets.OS_IMAGE_ID }}
+          OS_FLOATING_NETWORK_ID: ${{ secrets.OS_FLOATING_NETWORK_ID }}
+        run: |
+          set -euo pipefail
+          token_file="${RUNNER_TEMP}/gitops-token"; umask 077
+          printf '%s' "${GITOPS_GH_TOKEN}" > "${token_file}"
+
+          opencenter cluster init "${CLUSTER_NAME}" --org "${GITOPS_OWNER}" --type openstack --yes
+          echo "CLUSTER_CONFIG_CREATED=true" >> "${GITHUB_ENV}"
+
+          # OpenStack + GitOps wiring (creds come from the OS_CLOUD clouds.yaml profile;
+          # the CLI also records them in config for kubespray/flux rendering).
+          osc="opencenter.infrastructure.cloud.openstack"
+          opencenter cluster set "${CLUSTER_NAME}" \
+            "opencenter.gitops.repository.url=${GITOPS_REPO_URL}" \
+            "opencenter.gitops.auth.token.provider=github" \
+            "opencenter.gitops.auth.token.owner=${GITOPS_OWNER}" \
+            "opencenter.gitops.auth.token.token_file=${token_file}" \
+            "opencenter.gitops.auth.token.token=" \
+            "opencenter.infrastructure.networking.allocation_pool_end=${ALLOC_POOL_END}" \
+            "${osc}.image_id=${OS_IMAGE_ID}" \
+            "${osc}.floating_network_id=${OS_FLOATING_NETWORK_ID}" \
+            "${osc}.router_external_network_id=${OS_FLOATING_NETWORK_ID}"
+
+          # NOTE: the app-cred id/secret + auth_url/project are consumed from the
+          # OS_CLOUD profile at deploy time. If a given CLI build additionally
+          # requires them in config, set them here from parsed clouds.yaml.
+
+          # Multi-pool MetalLB + per-service address_pool (OCTR-762) applied via a
+          # config patch (cluster set cannot express nested list structures).
+          config_path="$(opencenter cluster describe "${CLUSTER_NAME}" --output json | \
+            (command -v jq >/dev/null && jq -r '.config_path // empty' || python3 -c 'import json,sys;print(json.load(sys.stdin).get("config_path",""))'))"
+          [[ -n "${config_path}" && -f "${config_path}" ]] || {
+            config_path="${OPENCENTER_CONFIG_DIR}/clusters/blueprints/${GITOPS_OWNER}/${CLUSTER_NAME}/${CLUSTER_NAME}-config.yaml"; }
+          [[ -f "${config_path}" ]] || { echo "cluster config not found: ${config_path}" >&2; exit 1; }
+          python3 - "${config_path}" <<'PY'
+          import sys, yaml
+          p = sys.argv[1]
+          with open(p) as f: cfg = yaml.safe_load(f)
+          svc = cfg["opencenter"]["services"]
+          svc["metallb"] = {
+              "enabled": True, "namespace": "metallb-system",
+              "ip_address_pools": [
+                  {"name": "default-pool", "addresses": ["10.2.131.231-10.2.131.232"], "default": True},
+                  {"name": "harbor-pool", "addresses": ["10.2.131.235-10.2.131.236"]},
+                  {"name": "longhorn-pool", "addresses": ["10.2.131.239-10.2.131.240"]},
+                  {"name": "monitoring-pool", "addresses": ["10.2.131.243-10.2.131.244"]},
+              ],
+              "l2_advertisements": [
+                  {"name": "default-l2", "type": "l2",
+                   "ip_address_pools": ["default-pool", "harbor-pool", "longhorn-pool", "monitoring-pool"]},
+              ],
+          }
+          svc.setdefault("longhorn", {})
+          svc["longhorn"].update({"enabled": True, "namespace": "longhorn-system", "address_pool": "longhorn-pool"})
+          svc.setdefault("kube-prometheus-stack", {})
+          svc["kube-prometheus-stack"].update({"enabled": True, "namespace": "observability", "address_pool": "monitoring-pool"})
+          # Keycloak intentionally left on the default pool to prove a movable
+          # service that stays put maps back to rmpk-gateway.
+          with open(p, "w") as f: yaml.safe_dump(cfg, f, sort_keys=False)
+          print("patched multi-pool config")
+          PY
+
+      - name: Validate and generate GitOps repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          opencenter cluster validate "${CLUSTER_NAME}"
+          opencenter cluster generate "${CLUSTER_NAME}" --force --gitops-auth=token
+
+      - name: Deploy the cluster (OpenTofu + kubespray + Flux bootstrap)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "INFRA_APPLIED=true" >> "${GITHUB_ENV}"
+          args=("${CLUSTER_NAME}" --yes)
+          [[ "${DEBUG_INPUT}" == true ]] && args+=(--debug)
+          opencenter cluster deploy "${args[@]}"
+
+      - name: Push generated overlay to the GitOps repo
+        shell: bash
+        env:
+          GITOPS_GH_TOKEN: ${{ secrets.GITOPS_GH_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Flux bootstrap only pushed clusters/<cluster>/flux-system. Push the
+          # generated overlay so Flux reconciles the multi-pool gateway.
+          # The generated tree lives at the CLI-reported git_dir (gitops.repository.local_dir),
+          # which may be an org-level dir - do NOT assume a per-cluster subdir.
+          gitdir="$(opencenter cluster describe "${CLUSTER_NAME}" --output json | \
+            (command -v jq >/dev/null && jq -r '.git_dir // empty' || python3 -c 'import json,sys;print(json.load(sys.stdin).get("git_dir",""))'))"
+          [[ -n "${gitdir}" && -d "${gitdir}" ]] || { echo "generated gitops dir missing: ${gitdir}" >&2; exit 1; }
+          work="${RUNNER_TEMP}/gitops-clone"; rm -rf "${work}"
+          auth_url="https://x-access-token:${GITOPS_GH_TOKEN}@github.com/${GITOPS_OWNER}/${GITOPS_REPO}.git"
+          git clone "${auth_url}" "${work}"
+          rsync -a --exclude '.git' "${gitdir}/" "${work}/"
+          git -C "${work}" add -A
+          git -C "${work}" -c user.email="ci@opencenter.local" -c user.name="octr762-e2e" \
+            commit -q -m "E2E: generated multi-pool overlay (run ${GITHUB_RUN_ID})" || echo "nothing to commit"
+          git -C "${work}" push origin HEAD:main
+          flux reconcile source git flux-system || true
+          flux reconcile kustomization gateway || true
+
+      - name: Workaround - label workers (pending OCTR-768 / base PR #20)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The gateway EnvoyProxy nodeSelector requires node-role.kubernetes.io/worker.
+          # Kubespray does not set it yet (OCTR-768). Label workers so gateways can program.
+          mapfile -t workers < <(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o name)
+          [[ ${#workers[@]} -gt 0 ]] || { echo "no worker nodes found" >&2; exit 1; }
+          kubectl label "${workers[@]}" node-role.kubernetes.io/worker=worker --overwrite
+
+      - name: Workaround - create wildcard TLS secret if configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          # HTTPS-only gateways will not program without their TLS secret. If the
+          # gateway config names a wildcard secret, create a self-signed one for
+          # the E2E run (validates LB IP assignment, not cert trust).
+          secret_name="$(kubectl get gateway -n rackspace-system -o jsonpath='{range .items[*]}{range .spec.listeners[*]}{.tls.certificateRefs[0].name}{"\n"}{end}{end}' 2>/dev/null | grep -v '^$' | sort -u | head -n1 || true)"
+          if [[ -n "${secret_name}" ]] && ! kubectl get secret "${secret_name}" -n rackspace-system >/dev/null 2>&1; then
+            # cluster_fqdn is not exposed by `describe --output json`; read it from
+            # the cluster config file (opencenter.cluster.cluster_fqdn).
+            cfg="$(opencenter cluster describe "${CLUSTER_NAME}" --output json | \
+              (command -v jq >/dev/null && jq -r '.config_path // empty' || python3 -c 'import json,sys;print(json.load(sys.stdin).get("config_path",""))'))"
+            fqdn="$(python3 -c 'import yaml,sys;print(yaml.safe_load(open(sys.argv[1]))["opencenter"]["cluster"].get("cluster_fqdn",""))' "${cfg}" 2>/dev/null || true)"
+            fqdn="${fqdn:-${CLUSTER_NAME}.dfw3.k8s.opencenter.cloud}"
+            tmp="${RUNNER_TEMP}/tls"; mkdir -p "${tmp}"
+            openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
+              -keyout "${tmp}/tls.key" -out "${tmp}/tls.crt" \
+              -subj "/CN=*.${fqdn}" -addext "subjectAltName=DNS:*.${fqdn}"
+            kubectl create secret tls "${secret_name}" -n rackspace-system \
+              --cert="${tmp}/tls.crt" --key="${tmp}/tls.key"
+            echo "created wildcard TLS secret ${secret_name}"
+          else
+            echo "wildcard TLS secret present or not needed"
+          fi
+
+      - name: Verify OCTR-762 - per-pool Gateways get correct pool IPs
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl wait --for=condition=Ready nodes --all --timeout=10m
+          echo "--- give Envoy Gateway time to program per-pool data planes ---"
+          for i in $(seq 1 30); do
+            not_ready="$(kubectl get gateway -n rackspace-system \
+              -o jsonpath='{range .items[*]}{.metadata.name}={range .status.conditions[?(@.type=="Programmed")]}{.status}{end}{"\n"}{end}' \
+              | grep -vc '=True' || true)"
+            [[ "${not_ready}" == "0" ]] && break
+            sleep 20
+          done
+          echo "--- Gateways ---"; kubectl get gateway -A
+          echo "--- MetalLB pools ---"; kubectl get ipaddresspools.metallb.io -n metallb-system
+          echo "--- Envoy LB services ---"
+          kubectl get svc -n envoy-gateway-system --field-selector spec.type=LoadBalancer \
+            -o custom-columns='NAME:.metadata.name,IP:.status.loadBalancer.ingress[0].ip,GW:.metadata.labels.gateway\.envoyproxy\.io/owning-gateway-name'
+
+          fail=0
+          assert_ip() { # gateway  expected-cidr-prefix
+            local gw="$1" prefix="$2" ip
+            ip="$(kubectl get gateway "$gw" -n rackspace-system -o jsonpath='{.status.addresses[0].value}')"
+            local prog
+            prog="$(kubectl get gateway "$gw" -n rackspace-system -o jsonpath='{range .status.conditions[?(@.type=="Programmed")]}{.status}{end}')"
+            if [[ "${prog}" != "True" ]]; then echo "FAIL: ${gw} not Programmed (${prog})"; fail=1; return; fi
+            if [[ "${ip}" != ${prefix}* ]]; then echo "FAIL: ${gw} IP ${ip} not in ${prefix}x"; fail=1; return; fi
+            echo "OK: ${gw} Programmed, IP ${ip} (pool ${prefix}x)"
+          }
+          assert_ip rmpk-gateway                 10.2.131.23
+          assert_ip rmpk-gateway-harbor-pool     10.2.131.235
+          assert_ip rmpk-gateway-longhorn-pool   10.2.131.239
+          assert_ip rmpk-gateway-monitoring-pool 10.2.131.243
+
+          echo "--- HTTPRoute attachment ---"
+          kubectl get httproute -A -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name} -> {range .spec.parentRefs[*]}{.name}({.sectionName}) {end}{"\n"}{end}'
+
+          [[ "${fail}" == "0" ]] || { echo "OCTR-762 verification FAILED" >&2; exit 1; }
+          echo "OCTR-762 verification PASSED"
+
+      - name: Diagnostics on failure
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          set +e
+          echo '--- nodes ---'; kubectl get nodes -o wide
+          echo '--- gateways ---'; kubectl get gateway -A -o wide
+          echo '--- gateway conditions ---'
+          for g in $(kubectl get gateway -n rackspace-system -o name 2>/dev/null); do
+            echo "== $g =="; kubectl get "$g" -n rackspace-system -o jsonpath='{range .status.conditions[*]}{.type}={.status} :: {.message}{"\n"}{end}'
+            kubectl get "$g" -n rackspace-system -o jsonpath='{range .status.listeners[*]}{.name}: {range .conditions[*]}{.type}={.status}({.reason}) {end}{"\n"}{end}'
+          done
+          echo '--- envoyproxy ---'; kubectl get envoyproxy -A
+          echo '--- envoy-gateway-system pods/svc ---'; kubectl get pods,svc -n envoy-gateway-system -o wide
+          echo '--- flux ---'; flux get sources git -n flux-system; flux get kustomizations -n flux-system
+          echo '--- events ---'; kubectl get events -A --sort-by=.lastTimestamp | tail -80
+
+      - name: Cleanup - destroy cluster, repo, and cloud artifacts
+        if: ${{ always() && inputs.cleanup }}
+        shell: bash
+        env:
+          GITOPS_GH_TOKEN: ${{ secrets.GITOPS_GH_TOKEN }}
+        run: |
+          set +e
+          if [[ "${CLUSTER_CONFIG_CREATED:-false}" == true ]]; then
+            echo "--- tofu destroy via CLI ---"
+            opencenter cluster destroy "${CLUSTER_NAME}" --force --remove-files
+          fi
+          # Belt-and-braces: sweep any VMs/network still tagged with the cluster name.
+          echo "--- residual OpenStack servers ---"
+          openstack --os-cloud "${OS_CLOUD}" server list -f value -c Name | grep -F "${CLUSTER_NAME}" \
+            && echo "WARNING: residual servers above may need manual deletion"
+          if [[ "${GITOPS_REPO_CREATED:-false}" == true ]]; then
+            echo "--- delete GitOps repo ---"
+            curl -fsS -X DELETE -H "Authorization: token ${GITOPS_GH_TOKEN}" \
+              "https://api.github.com/repos/${GITOPS_OWNER}/${GITOPS_REPO}" \
+              && echo "deleted ${GITOPS_OWNER}/${GITOPS_REPO}" \
+              || echo "WARNING: could not delete repo (token needs delete_repo scope)"
+          fi

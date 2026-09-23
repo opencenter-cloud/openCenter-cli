@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -134,8 +135,61 @@ func (p *Provider) ExportKubeconfig(ctx context.Context, clusterName, kubeconfig
 		return fmt.Errorf("create kubeconfig directory: %w", err)
 	}
 
-	_, err := p.runner.Run(ctx, env, "kind", "export", "kubeconfig", "--name", clusterName, "--kubeconfig", kubeconfigPath)
-	return err
+	if _, err := p.runner.Run(ctx, env, "kind", "export", "kubeconfig", "--name", clusterName, "--kubeconfig", kubeconfigPath); err != nil {
+		return err
+	}
+
+	// Under rootless Podman the API server's published port is bound inside the
+	// Podman network namespace and is NOT reachable on the host loopback, so the
+	// kind-exported kubeconfig (server: https://127.0.0.1:<port>) yields
+	// "dial tcp 127.0.0.1:6443: connection refused" from the host. The control-
+	// plane container is, however, directly reachable at its container IP on
+	// :6443 (the same pattern used for the local Gitea). kind already includes
+	// the control-plane container IP in the API server certificate SANs, so
+	// rewriting the kubeconfig server to that IP verifies cleanly. Docker
+	// publishes to the host loopback normally, so this rewrite only applies to
+	// Podman.
+	if ResolveRuntime(env["KIND_EXPERIMENTAL_PROVIDER"]) == "podman" {
+		if err := p.repointKubeconfigToContainerIP(ctx, clusterName, kubeconfigPath, env); err != nil {
+			return fmt.Errorf("repoint kubeconfig to container IP for podman: %w", err)
+		}
+	}
+	return nil
+}
+
+// repointKubeconfigToContainerIP rewrites the kubeconfig server URL to the
+// kind control-plane container's IP on port 6443, for runtimes (rootless
+// Podman) where the host-loopback-published API port is unreachable.
+func (p *Provider) repointKubeconfigToContainerIP(ctx context.Context, clusterName, kubeconfigPath string, env map[string]string) error {
+	container := clusterName + "-control-plane"
+	out, err := p.runner.Run(ctx, env, "podman", "inspect", "-f",
+		"{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", container)
+	if err != nil {
+		return fmt.Errorf("inspect kind control-plane container %s: %w", container, err)
+	}
+	var ip string
+	for _, field := range strings.Fields(string(out)) {
+		if candidate := strings.TrimSpace(field); candidate != "" {
+			ip = candidate
+			break
+		}
+	}
+	if ip == "" {
+		return fmt.Errorf("no container IP found for %s", container)
+	}
+
+	data, err := os.ReadFile(kubeconfigPath)
+	if err != nil {
+		return fmt.Errorf("read kubeconfig: %w", err)
+	}
+	// Replace the server line's host:port with the container IP on 6443. The
+	// kind-exported kubeconfig always uses a 127.0.0.1 (or 0.0.0.0) server URL.
+	re := regexp.MustCompile(`(?m)^(\s*server:\s*https://)[^\s]+`)
+	newData := re.ReplaceAll(data, []byte(fmt.Sprintf("${1}%s:6443", ip)))
+	if err := os.WriteFile(kubeconfigPath, newData, 0o600); err != nil {
+		return fmt.Errorf("write kubeconfig: %w", err)
+	}
+	return nil
 }
 
 func (p *Provider) WaitReady(ctx context.Context, kubeconfigPath string) (string, error) {

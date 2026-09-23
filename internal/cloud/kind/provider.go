@@ -3,6 +3,8 @@ package kind
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -139,57 +141,101 @@ func (p *Provider) ExportKubeconfig(ctx context.Context, clusterName, kubeconfig
 		return err
 	}
 
-	// Under rootless Podman the API server's published port is bound inside the
-	// Podman network namespace and is NOT reachable on the host loopback, so the
-	// kind-exported kubeconfig (server: https://127.0.0.1:<port>) yields
-	// "dial tcp 127.0.0.1:6443: connection refused" from the host. The control-
-	// plane container is, however, directly reachable at its container IP on
-	// :6443 (the same pattern used for the local Gitea). kind already includes
-	// the control-plane container IP in the API server certificate SANs, so
-	// rewriting the kubeconfig server to that IP verifies cleanly. Docker
-	// publishes to the host loopback normally, so this rewrite only applies to
-	// Podman.
-	if ResolveRuntime(env["KIND_EXPERIMENTAL_PROVIDER"]) == "podman" {
-		if err := p.repointKubeconfigToContainerIP(ctx, clusterName, kubeconfigPath, env); err != nil {
-			return fmt.Errorf("repoint kubeconfig to container IP for podman: %w", err)
-		}
-	}
+	// Under rootless Podman (including a docker->podman shim) the API server's
+	// published port is bound inside the Podman network namespace and is NOT
+	// reachable on the host loopback, so the kind-exported kubeconfig
+	// (server: https://127.0.0.1:<port>) yields
+	// "dial tcp 127.0.0.1:6443: connection refused" for kubectl and flux.
+	//
+	// We cannot key this off the declared runtime: the runner's `docker` is a
+	// Podman shim, so KIND_EXPERIMENTAL_PROVIDER reports "docker" while the real
+	// engine is Podman. Instead, probe whether the exported loopback endpoint is
+	// actually reachable; if not, repoint the kubeconfig server to the control-
+	// plane container's IP on :6443 (kind includes that IP in the API server
+	// cert SANs, so it verifies). On real Docker the loopback endpoint IS
+	// reachable, so this is a no-op there.
+	//
+	// Best-effort: repoint failures (unreadable kubeconfig, unresolvable IP) must
+	// not fail the export itself, since the exported kubeconfig is already valid
+	// on a normal Docker host.
+	p.repointKubeconfigIfLoopbackUnreachable(ctx, clusterName, kubeconfigPath, env)
 	return nil
 }
 
-// repointKubeconfigToContainerIP rewrites the kubeconfig server URL to the
-// kind control-plane container's IP on port 6443, for runtimes (rootless
-// Podman) where the host-loopback-published API port is unreachable.
-func (p *Provider) repointKubeconfigToContainerIP(ctx context.Context, clusterName, kubeconfigPath string, env map[string]string) error {
-	container := clusterName + "-control-plane"
-	out, err := p.runner.Run(ctx, env, "podman", "inspect", "-f",
-		"{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", container)
+// repointKubeconfigIfLoopbackUnreachable rewrites the kubeconfig server URL to
+// the kind control-plane container's IP on :6443 when the exported loopback
+// endpoint is not reachable (rootless Podman / docker-podman shim). No-op when
+// the loopback endpoint works (real Docker) or when the container IP cannot be
+// determined.
+func (p *Provider) repointKubeconfigIfLoopbackUnreachable(ctx context.Context, clusterName, kubeconfigPath string, env map[string]string) {
+	data, err := os.ReadFile(kubeconfigPath)
 	if err != nil {
-		return fmt.Errorf("inspect kind control-plane container %s: %w", container, err)
+		return // kubeconfig not present/readable; nothing to repoint
 	}
-	var ip string
-	for _, field := range strings.Fields(string(out)) {
-		if candidate := strings.TrimSpace(field); candidate != "" {
-			ip = candidate
+
+	serverRe := regexp.MustCompile(`(?m)^(\s*server:\s*)(https://\S+)`)
+	m := serverRe.FindSubmatch(data)
+	if m == nil {
+		return // no server line; nothing to do
+	}
+	currentServer := string(m[2])
+
+	// If the current endpoint is already reachable, leave it (real Docker case).
+	if p.endpointReachable(currentServer) {
+		return
+	}
+
+	// Determine the control-plane container IP via the active container engine.
+	// Try docker first (the shim), then podman, so this works regardless of
+	// which binary fronts the engine.
+	container := clusterName + "-control-plane"
+	ip := ""
+	for _, engine := range []string{"docker", "podman"} {
+		out, ierr := p.runner.Run(ctx, env, engine, "inspect", "-f",
+			"{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", container)
+		if ierr != nil {
+			continue
+		}
+		for _, field := range strings.Fields(string(out)) {
+			if candidate := strings.TrimSpace(field); candidate != "" {
+				ip = candidate
+				break
+			}
+		}
+		if ip != "" {
 			break
 		}
 	}
 	if ip == "" {
-		return fmt.Errorf("no container IP found for %s", container)
+		// Could not resolve a container IP; leave the kubeconfig unchanged rather
+		// than break the working (Docker) case.
+		return
 	}
 
-	data, err := os.ReadFile(kubeconfigPath)
+	newServer := fmt.Sprintf("https://%s:6443", ip)
+	newData := serverRe.ReplaceAll(data, []byte("${1}"+newServer))
+	_ = os.WriteFile(kubeconfigPath, newData, 0o600)
+}
+
+// endpointReachable reports whether a TLS TCP connection to the host:port of
+// the given https URL can be established quickly. It does not validate the
+// certificate — it only checks that something is listening (i.e. the loopback
+// publish works), which is enough to decide whether to repoint the kubeconfig.
+func (p *Provider) endpointReachable(serverURL string) bool {
+	u, err := url.Parse(serverURL)
 	if err != nil {
-		return fmt.Errorf("read kubeconfig: %w", err)
+		return false
 	}
-	// Replace the server line's host:port with the container IP on 6443. The
-	// kind-exported kubeconfig always uses a 127.0.0.1 (or 0.0.0.0) server URL.
-	re := regexp.MustCompile(`(?m)^(\s*server:\s*https://)[^\s]+`)
-	newData := re.ReplaceAll(data, []byte(fmt.Sprintf("${1}%s:6443", ip)))
-	if err := os.WriteFile(kubeconfigPath, newData, 0o600); err != nil {
-		return fmt.Errorf("write kubeconfig: %w", err)
+	host := u.Host
+	if host == "" {
+		return false
 	}
-	return nil
+	conn, err := net.DialTimeout("tcp", host, 3*time.Second)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
 }
 
 func (p *Provider) WaitReady(ctx context.Context, kubeconfigPath string) (string, error) {

@@ -355,64 +355,122 @@ func extractClusterNameFromConfig(configFile string) (string, error) {
 // It uses reflection to traverse the struct and set the value.
 func setField(obj any, path string, value string) error {
 	v := reflect.ValueOf(obj).Elem() // We expect a pointer to a struct
-	parts := strings.Split(path, ".")
+	return setFieldPath(v, strings.Split(path, "."), value, path)
+}
 
-	for i, part := range parts {
-		// Find field by yaml tag
-		field := util.FindField(v, part)
+// setFieldPath recursively follows a field path. Map entries are copied into
+// addressable values before traversal, then written back to the map so that
+// nested fields can be changed even though reflect map elements are not
+// addressable. Pointer entries retain their existing addressability and are
+// initialized when needed.
+func setFieldPath(v reflect.Value, parts []string, value, path string) error {
+	if len(parts) == 0 {
+		return nil
+	}
 
-		if !field.IsValid() {
-			// If field is not found, check if the current value is a map.
-			// If so, the 'part' might be a key in the map.
-			if v.Kind() == reflect.Map {
-				// This should be the last part of the path, representing the map key.
-				if i != len(parts)-1 {
-					return fmt.Errorf("setting nested fields in maps is not supported: %s", path)
-				}
-
-				// Ensure map key is a string
-				if v.Type().Key().Kind() != reflect.String {
-					return fmt.Errorf("map key type must be string for path-based setting, got %s", v.Type().Key().Kind())
-				}
-
-				// Get map value type, create a new value, and set it.
-				mapValueType := v.Type().Elem()
-				newValue := reflect.New(mapValueType).Elem()
-				if err := setReflectValue(newValue, value); err != nil {
-					return fmt.Errorf("failed to set map value for key '%s': %w", part, err)
-				}
-
-				// Set the key-value pair in the map.
-				v.SetMapIndex(reflect.ValueOf(part), newValue)
-				return nil
+	switch v.Kind() {
+	case reflect.Interface:
+		if v.IsNil() {
+			return fmt.Errorf("setting nested fields in maps is not supported: %s", path)
+		}
+		entry := reflect.New(v.Elem().Type()).Elem()
+		entry.Set(v.Elem())
+		if err := setFieldPath(entry, parts, value, path); err != nil {
+			return err
+		}
+		v.Set(entry)
+		return nil
+	case reflect.Ptr:
+		if v.IsNil() {
+			if !v.CanSet() {
+				return fmt.Errorf("cannot set field value")
 			}
-			return fmt.Errorf("field not found: '%s' in struct '%s'", part, v.Type().Name())
+			v.Set(reflect.New(v.Type().Elem()))
+		}
+		return setFieldPath(v.Elem(), parts, value, path)
+	case reflect.Map:
+		if v.IsNil() {
+			if !v.CanSet() {
+				return fmt.Errorf("cannot set field value")
+			}
+			v.Set(reflect.MakeMap(v.Type()))
+		}
+		if v.Type().Key().Kind() != reflect.String {
+			return fmt.Errorf("map key type must be string for path-based setting, got %s", v.Type().Key().Kind())
 		}
 
-		// If this is the last part of the path, set the field's value.
-		if i == len(parts)-1 {
+		key := reflect.New(v.Type().Key()).Elem()
+		key.SetString(parts[0])
+		if len(parts) == 1 {
+			mapValueType := v.Type().Elem()
+			newValue := reflect.New(mapValueType).Elem()
+			if err := setReflectValue(newValue, value); err != nil {
+				return fmt.Errorf("failed to set map value for key '%s': %w", parts[0], err)
+			}
+			v.SetMapIndex(key, newValue)
+			return nil
+		}
+
+		entry := v.MapIndex(key)
+		if !entry.IsValid() {
+			return fmt.Errorf("setting nested fields in maps is not supported: %s", path)
+		}
+		addressableEntry := reflect.New(entry.Type()).Elem()
+		addressableEntry.Set(entry)
+		if err := setFieldPath(addressableEntry, parts[1:], value, path); err != nil {
+			return err
+		}
+		v.SetMapIndex(key, addressableEntry)
+		return nil
+	case reflect.Struct:
+		field := findField(v, parts[0])
+		if !field.IsValid() {
+			return fmt.Errorf("field not found: '%s' in struct '%s'", parts[0], v.Type().Name())
+		}
+		if len(parts) == 1 {
 			return setFieldValue(field, value)
 		}
+		if field.Kind() != reflect.Struct && field.Kind() != reflect.Ptr && field.Kind() != reflect.Map && field.Kind() != reflect.Interface {
+			return fmt.Errorf("field '%s' is not a struct or map, cannot traverse further", parts[0])
+		}
+		return setFieldPath(field, parts[1:], value, path)
+	default:
+		return fmt.Errorf("field '%s' is not a struct or map, cannot traverse further", parts[0])
+	}
+}
 
-		// If not the last part, we need to traverse deeper.
-		// The field must be a struct, a pointer to a struct, or a map.
-		if field.Kind() == reflect.Struct {
-			v = field
-		} else if field.Kind() == reflect.Ptr && field.Type().Elem().Kind() == reflect.Struct {
-			if field.IsNil() {
-				field.Set(reflect.New(field.Type().Elem()))
+// findField also checks anonymous embedded structs, whose tagged fields are
+// promoted by Go but are not returned by util.FindField.
+func findField(v reflect.Value, name string) reflect.Value {
+	if field := util.FindField(v, name); field.IsValid() {
+		return field
+	}
+
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		if !t.Field(i).Anonymous {
+			continue
+		}
+		embedded := v.Field(i)
+		if embedded.Kind() == reflect.Ptr {
+			if embedded.Type().Elem().Kind() != reflect.Struct {
+				continue
 			}
-			v = field.Elem()
-		} else if field.Kind() == reflect.Map {
-			if field.IsNil() {
-				field.Set(reflect.MakeMap(field.Type()))
+			if embedded.IsNil() {
+				if !embedded.CanSet() {
+					continue
+				}
+				embedded.Set(reflect.New(embedded.Type().Elem()))
 			}
-			v = field
-		} else {
-			return fmt.Errorf("field '%s' is not a struct or map, cannot traverse further", part)
+			embedded = embedded.Elem()
+		}
+		if embedded.Kind() == reflect.Struct {
+			if field := findField(embedded, name); field.IsValid() {
+				return field
+			}
 		}
 	}
-	return nil
+	return reflect.Value{}
 }
 
 // setFieldValue sets a reflect.Value from a string, with type conversion.

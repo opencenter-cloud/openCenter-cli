@@ -116,7 +116,7 @@ func TestClusterSetUpdatesKindDisableDefaultCNIByPath(t *testing.T) {
 	}
 }
 
-func TestClusterSetRejectsNestedServiceFieldByPath(t *testing.T) {
+func TestClusterSetUpdatesNestedServiceFieldByPath(t *testing.T) {
 	dir := t.TempDir()
 	prepareCommandTestEnv(t, dir)
 
@@ -137,11 +137,8 @@ func TestClusterSetRejectsNestedServiceFieldByPath(t *testing.T) {
 	cmd.SetArgs([]string{"set-service-enabled", "opencenter.services.test-service.enabled=true"})
 
 	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected cluster set to reject nested service field")
-	}
-	if !strings.Contains(err.Error(), "setting nested fields in maps is not supported") {
-		t.Fatalf("expected nested map field rejection, got: %v\nstderr: %s", err, stderr.String())
+	if err != nil {
+		t.Fatalf("cluster set failed: %v\nstderr: %s", err, stderr.String())
 	}
 
 	resetCommandStateForTests()
@@ -154,8 +151,8 @@ func TestClusterSetRejectsNestedServiceFieldByPath(t *testing.T) {
 	if !ok {
 		t.Fatalf("test-service config type = %T, want *services.DefaultServiceConfig", updated.OpenCenter.Services["test-service"])
 	}
-	if service.Enabled {
-		t.Fatal("expected test-service to remain disabled after rejected cluster set")
+	if !service.Enabled {
+		t.Fatal("expected test-service to be enabled after cluster set")
 	}
 }
 

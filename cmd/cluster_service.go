@@ -928,8 +928,8 @@ func getServiceSecrets(serviceName string) []ServiceOption {
 			{Name: "admin_password", Type: "string", Description: "Harbor administrator password", Required: true},
 			{Name: "registry_password", Type: "string", Description: "Harbor registry password", Required: true},
 			{Name: "database_password", Type: "string", Description: "Harbor database password", Required: true},
-			{Name: "s3_access_key_id", Type: "string", Description: "Externally issued S3 access key ID for Harbor image storage", Required: true},
-			{Name: "s3_secret_access_key", Type: "string", Description: "Externally issued S3 secret access key for Harbor image storage", Required: true},
+			{Name: "s3_access_key_id", Type: "string", Description: "Externally issued S3 access key ID for Harbor image storage", Required: false},
+			{Name: "s3_secret_access_key", Type: "string", Description: "Externally issued S3 secret access key for Harbor image storage", Required: false},
 		}
 	case "velero":
 		return []ServiceOption{

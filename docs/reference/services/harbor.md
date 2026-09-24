@@ -15,6 +15,11 @@ tags: [registry, containers, harbor, services]
 
 Harbor is a container registry. Image storage can use S3-compatible object storage or the Harbor registry PVC filesystem.
 
+Filesystem storage is supported for production Harbor deployments, but it is not
+recommended for durable registry storage. Use S3-compatible object storage for
+durable registry data whenever possible; it remains the recommended production
+backend.
+
 With `storage_type: filesystem`, Harbor stores images on its registry PVC. This
 mode does not use S3 and does not require Harbor S3 credentials. The other
 Harbor PVCs (jobservice, database, Redis, and Trivy) remain configured as

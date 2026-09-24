@@ -63,6 +63,11 @@ func TestClusterServiceHarborSecretOptions(t *testing.T) {
 			t.Fatalf("Harbor secret options = %#v, missing %q", secrets, want)
 		}
 	}
+	for _, option := range secrets {
+		if (option.Name == "s3_access_key_id" || option.Name == "s3_secret_access_key") && option.Required {
+			t.Fatalf("Harbor S3 secret option %q is universally required; filesystem storage must not require it", option.Name)
+		}
+	}
 
 	cfg := &v2.SecretsConfig{}
 	if err := processSecrets([]string{

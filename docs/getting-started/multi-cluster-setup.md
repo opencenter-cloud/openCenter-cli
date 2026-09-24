@@ -272,6 +272,11 @@ opencenter cluster edit prod
 
 **Production-specific configuration:**
 
+For production Harbor deployments, filesystem storage is supported but is not
+recommended for durable registry storage. S3-compatible object storage remains
+the recommended backend; the example below keeps the Harbor configuration
+unchanged and does not select a storage backend.
+
 ```yaml
 opencenter:
   meta:

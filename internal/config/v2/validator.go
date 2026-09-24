@@ -149,7 +149,7 @@ func storagePolicyIssues(cfg *Config) []storagePolicyIssue {
 		}
 	}
 
-	for _, serviceName := range []string{"loki", "tempo", "velero", "harbor", "etcd-backup"} {
+	for _, serviceName := range []string{"loki", "tempo", "velero", "etcd-backup"} {
 		if !isServiceEnabled(cfg, serviceName) {
 			continue
 		}
@@ -161,12 +161,6 @@ func storagePolicyIssues(cfg *Config) []storagePolicyIssue {
 			continue
 		}
 		path := "opencenter.services." + serviceName + ".storage_type"
-		if storageType == "filesystem" && serviceName == "harbor" {
-			if EffectiveStorageProfile(cfg).Lifecycle == StorageLifecycleProduction {
-				add(path, "filesystem storage is supported for Harbor only in non-production environments.")
-			}
-			continue
-		}
 		if storageType == "none" && (serviceName == "loki" || serviceName == "velero" || serviceName == "etcd-backup") {
 			continue
 		}

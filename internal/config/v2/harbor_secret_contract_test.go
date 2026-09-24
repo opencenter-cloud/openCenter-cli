@@ -41,8 +41,8 @@ func TestHarborStorageValidationRejectsUnsupportedStorageAndEndpoint(t *testing.
 		t.Fatalf("Validate() error = %v, want non-production filesystem to be valid", err)
 	}
 	cfg.OpenCenter.Infrastructure.Storage.Profile.Lifecycle = StorageLifecycleProduction
-	if err := NewValidator().Validate(cfg); err == nil || !strings.Contains(err.Error(), "filesystem") {
-		t.Fatalf("Validate() error = %v, want production filesystem rejection", err)
+	if err := NewValidator().Validate(cfg); err != nil {
+		t.Fatalf("Validate() error = %v, want production filesystem to be valid", err)
 	}
 
 	harbor.StorageType = "s3"

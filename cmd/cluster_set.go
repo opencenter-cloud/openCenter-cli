@@ -50,14 +50,16 @@ Fields use native v2 dot notation, for example:
 				return fmt.Errorf("failed to load cluster %s: %w", name, err)
 			}
 
+			configAssignments := make([]configAssignment, 0, len(assignments))
 			for _, assignment := range assignments {
 				key, value, ok := strings.Cut(assignment, "=")
 				if !ok || strings.TrimSpace(key) == "" {
 					return fmt.Errorf("invalid assignment %q: expected path=value", assignment)
 				}
-				if err := setField(cfg, key, value); err != nil {
-					return fmt.Errorf("error setting config field %q: %w", key, err)
-				}
+				configAssignments = append(configAssignments, configAssignment{Path: key, Value: value})
+			}
+			if err := applyConfigAssignments(cfg, configAssignments); err != nil {
+				return fmt.Errorf("error setting config field: %w", err)
 			}
 
 			strict, _ := cmd.Flags().GetBool("strict")

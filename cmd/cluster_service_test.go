@@ -378,6 +378,59 @@ func TestClusterServiceEnable(t *testing.T) {
 	}
 }
 
+func TestClusterServiceEnableParamPersists(t *testing.T) {
+	clusterName := "service-param-persistence"
+	_, cleanup := setupServiceTestEnv(t, clusterName)
+	defer cleanup()
+
+	cmd := newClusterServiceEnableCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"cert-manager", "--force", `--param=email=admin@example.com`})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("enable cert-manager with parameter: %v", err)
+	}
+
+	cfg, err := loadConfig(context.Background(), clusterName)
+	if err != nil {
+		t.Fatalf("load persisted config: %v", err)
+	}
+	service, ok := cfg.OpenCenter.Services["cert-manager"].(*services.CertManagerConfig)
+	if !ok {
+		t.Fatalf("cert-manager config type = %T", cfg.OpenCenter.Services["cert-manager"])
+	}
+	if service.Email != "admin@example.com" {
+		t.Fatalf("persisted email = %q, want admin@example.com", service.Email)
+	}
+}
+
+func TestClusterServiceEnableParamPreservesJSONCommasAtCommandBoundary(t *testing.T) {
+	clusterName := "service-param-json-array"
+	_, cleanup := setupServiceTestEnv(t, clusterName)
+	defer cleanup()
+
+	jsonPools := `[{"name":"public","addresses":["192.0.2.10-192.0.2.20","198.51.100.10-198.51.100.20"]}]`
+	cmd := newClusterServiceEnableCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"metallb", "--force", "--param=ip_address_pools=" + jsonPools})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("enable metallb with JSON parameter: %v", err)
+	}
+
+	cfg, err := loadConfig(context.Background(), clusterName)
+	if err != nil {
+		t.Fatalf("load persisted config: %v", err)
+	}
+	service, ok := cfg.OpenCenter.Services["metallb"].(*services.MetalLBConfig)
+	if !ok {
+		t.Fatalf("metallb config type = %T", cfg.OpenCenter.Services["metallb"])
+	}
+	if len(service.IPAddressPools) != 1 || len(service.IPAddressPools[0].Addresses) != 2 {
+		t.Fatalf("persisted IP address pools = %#v", service.IPAddressPools)
+	}
+}
+
 func TestClusterServiceDisable(t *testing.T) {
 	originalEncryptor := encryptRenderedServiceOverrides
 	encryptRenderedServiceOverrides = fixtureSOPSOverrideEncryptor

@@ -188,7 +188,9 @@ Examples:
 		},
 	}
 	cmd.Flags().BoolVar(&isManaged, "managed", false, "Enable the service as a managed service")
-	cmd.Flags().StringSliceVar(&params, "param", []string{}, "Set a service parameter (e.g., --param key=value)")
+	// StringArrayVar deliberately preserves each value verbatim. StringSliceVar
+	// splits on commas, which corrupts JSON arrays and objects passed to --param.
+	cmd.Flags().StringArrayVar(&params, "param", []string{}, "Set a service parameter (e.g., --param key=value)")
 	cmd.Flags().StringSliceVar(&secrets, "secret", []string{}, "Set a service secret (e.g., --secret key=value)")
 	cmd.Flags().StringVar(&cluster, "cluster", "", "Specify the cluster name")
 	cmd.Flags().BoolVar(&force, "force", false, "Force re-enable an already enabled service to re-render configuration")
@@ -334,44 +336,19 @@ func validateServiceDependencies(serviceMap v2.ServiceMap) error {
 }
 
 func processParams(params []string, serviceCfg any) error {
-	v := reflect.ValueOf(serviceCfg)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-	paramMap := make(map[string]string)
+	assignments := make([]configAssignment, 0, len(params))
 	for _, p := range params {
 		parts := strings.SplitN(p, "=", 2)
 		if len(parts) != 2 {
 			return fmt.Errorf("invalid parameter format: '%s'. Expected key=value", p)
 		}
-		paramMap[parts[0]] = parts[1]
-	}
-	if v.Kind() == reflect.Map {
-		if v.IsNil() {
-			return fmt.Errorf("service config map cannot be nil")
+		if strings.TrimSpace(parts[0]) == "" {
+			return fmt.Errorf("invalid parameter format: '%s'. Parameter path cannot be empty", p)
 		}
-		for key, value := range paramMap {
-			v.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
-		}
-		return nil
+		assignments = append(assignments, configAssignment{Path: parts[0], Value: parts[1]})
 	}
-	if v.Kind() != reflect.Struct {
-		return fmt.Errorf("service config must be a struct or map, got %s", v.Kind())
-	}
-
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		jsonTag := strings.Split(field.Tag.Get("json"), ",")[0]
-		if val, ok := paramMap[jsonTag]; ok {
-			fieldVal := v.Field(i)
-			if !fieldVal.CanSet() {
-				continue
-			}
-			if err := setFieldValue(fieldVal, val); err != nil {
-				return fmt.Errorf("failed to set parameter '%s': %w", jsonTag, err)
-			}
-		}
+	if err := applyConfigAssignments(serviceCfg, assignments); err != nil {
+		return fmt.Errorf("failed to set service parameter: %w", err)
 	}
 	return nil
 }

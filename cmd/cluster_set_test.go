@@ -50,6 +50,29 @@ func TestClusterSetUpdatesExplicitField(t *testing.T) {
 	}
 }
 
+func TestClusterSetUpdatesNTPServersFromCommaDelimitedValue(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+
+	cfg, clusterPaths := saveKindConfigForCommandTest(t, dir, "set-ntp", "opencenter")
+	resolver := paths.NewPathResolver(filepath.Join(dir, "clusters"))
+	testhelpers.SaveConfigWithPathResolver(t, cfg, resolver)
+
+	cmd := newClusterSetCmd()
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"set-ntp", "opencenter.infrastructure.networking.ntp_servers=time-a.example,time-b.example"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("cluster set ntp_servers failed: %v", err)
+	}
+
+	updated := loadV2ConfigForTest(t, clusterPaths.ConfigPath)
+	got := updated.OpenCenter.Infrastructure.Networking.NTPServers
+	if want := []string{"time-a.example", "time-b.example"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("ntp_servers = %#v, want %#v", got, want)
+	}
+}
+
 func TestClusterSetDryRunDoesNotWrite(t *testing.T) {
 	dir := t.TempDir()
 	prepareCommandTestEnv(t, dir)
@@ -231,12 +254,12 @@ func TestClusterSetFailureAfterAssignmentDoesNotPersist(t *testing.T) {
 	cmd.SetArgs([]string{
 		"failed-set",
 		"opencenter.gitops.repository.url=ssh://git@github.com/acme/platform.git",
-		"opencenter.gitops.auth.token=not-null",
+		"opencenter.gitops.auth.token=not-json",
 	})
 
 	err = cmd.Execute()
-	if err == nil || !strings.Contains(err.Error(), "unsupported field type") {
-		t.Fatalf("expected non-null pointer assignment error, got: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "invalid JSON") {
+		t.Fatalf("expected invalid pointer JSON error, got: %v", err)
 	}
 
 	after, err := os.ReadFile(clusterPaths.ConfigPath)
@@ -325,16 +348,15 @@ func TestClusterSetStringNullRemainsLiteral(t *testing.T) {
 	}
 }
 
-func TestSetReflectValueRejectsNonNullPointer(t *testing.T) {
+func TestSetReflectValueAssignsNonNullPointer(t *testing.T) {
 	token := &v2.GitOpsTokenAuth{Provider: "github", Token: "original"}
-	before := *token
 
-	err := setReflectValue(reflect.ValueOf(&token).Elem(), "replacement")
-	if err == nil || !strings.Contains(err.Error(), "unsupported field type") {
-		t.Fatalf("expected unsupported field type error, got: %v", err)
+	err := setReflectValue(reflect.ValueOf(&token).Elem(), `{"provider":"github","token":"replacement"}`)
+	if err != nil {
+		t.Fatalf("expected pointer assignment to succeed, got: %v", err)
 	}
-	if *token != before {
-		t.Fatalf("non-null pointer assignment changed value: before=%#v after=%#v", before, *token)
+	if token.Token != "replacement" {
+		t.Fatalf("token = %#v, want replacement pointer value", token)
 	}
 }
 

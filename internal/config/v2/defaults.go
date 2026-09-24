@@ -299,7 +299,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 			},
 		},
 		OpenTofu: OpenTofuConfig{
-			Enabled: selectedProvider != "kind",
+			Enabled: selectedProvider != "kind" && selectedProvider != "magnum",
 			Path:    "",
 			Backend: BackendConfig{
 				Type: "local",
@@ -680,6 +680,25 @@ func applyProviderBehaviorDefaults(cfg *Config) {
 	case "baremetal":
 		cfg.OpenCenter.Infrastructure.Bastion.Enabled = false
 		// Disable OpenStack-specific services for baremetal provider
+		if svc, ok := cfg.OpenCenter.Services["openstack-ccm"]; ok {
+			if defaultSvc, ok := svc.(*services.DefaultServiceConfig); ok {
+				defaultSvc.Enabled = false
+			}
+		}
+		if svc, ok := cfg.OpenCenter.Services["openstack-csi"]; ok {
+			if defaultSvc, ok := svc.(*services.DefaultServiceConfig); ok {
+				defaultSvc.Enabled = false
+			}
+		}
+		if svc, ok := cfg.OpenCenter.Services["velero"]; ok {
+			if veleroSvc, ok := svc.(*services.VeleroConfig); ok {
+				veleroSvc.Enabled = false
+			}
+		}
+	case "magnum":
+		// Magnum owns cluster infrastructure through its cluster template, so
+		// OpenStack infrastructure services that require cloud.openstack are
+		// disabled unless explicitly enabled by the user.
 		if svc, ok := cfg.OpenCenter.Services["openstack-ccm"]; ok {
 			if defaultSvc, ok := svc.(*services.DefaultServiceConfig); ok {
 				defaultSvc.Enabled = false

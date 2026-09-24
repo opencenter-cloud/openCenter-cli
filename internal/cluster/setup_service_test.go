@@ -516,6 +516,51 @@ func TestSetupService_Setup_KindProviderRendersKindConfigOnly(t *testing.T) {
 	}
 }
 
+func TestSetupService_Setup_MagnumDoesNotGenerateOpenTofuArtifacts(t *testing.T) {
+	tmpDir := t.TempDir()
+	gitDir := filepath.Join(tmpDir, "gitops")
+	pathResolver := paths.NewPathResolver(tmpDir)
+	ctx := context.Background()
+	clusterName := "magnum-cluster"
+	organization := "opencenter"
+
+	if err := pathResolver.CreateClusterDirectories(ctx, clusterName, organization); err != nil {
+		t.Fatalf("failed to create cluster directories: %v", err)
+	}
+
+	cfg := mustNewClusterTestConfig(clusterName, "magnum")
+	cfg.OpenCenter.Meta.Organization = organization
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
+	// Keep this enabled deliberately so the test also proves that Magnum's
+	// generation path does not materialize OpenTofu based on the config flag.
+	cfg.OpenTofu.Enabled = true
+	cfg.OpenCenter.Infrastructure.Cloud.Magnum.AuthURL = "https://keystone.example.test/v3"
+	cfg.OpenCenter.Infrastructure.Cloud.Magnum.ProjectID = "project-id"
+	cfg.OpenCenter.Infrastructure.Cloud.Magnum.ApplicationCredentialID = "application-credential-id"
+	cfg.OpenCenter.Infrastructure.Cloud.Magnum.ApplicationCredentialSecret = "application-credential-secret"
+	cfg.OpenCenter.Infrastructure.Cloud.Magnum.ClusterTemplate = "kubernetes-template"
+	makeSetupConfigGenerationReady(&cfg)
+	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
+
+	service := createTestSetupService(pathResolver)
+	result, err := service.Setup(ctx, SetupOptions{
+		ClusterName:    clusterName,
+		Organization:   organization,
+		SkipValidation: true,
+	})
+	if err != nil {
+		t.Fatalf("Setup returned error: %v", err)
+	}
+	if result == nil || result.ManifestsCreated == 0 {
+		t.Fatalf("Setup result = %#v, want generated manifests", result)
+	}
+
+	clusterInfrastructureDir := filepath.Join(gitDir, "infrastructure", "clusters", clusterName)
+	if _, err := os.Stat(clusterInfrastructureDir); !os.IsNotExist(err) {
+		t.Fatalf("expected Magnum infrastructure directory to be absent, got %v", err)
+	}
+}
+
 func TestSetupService_Setup_MissingGitDir(t *testing.T) {
 	tmpDir := t.TempDir()
 

@@ -103,6 +103,9 @@ func TestNewV2DefaultMagnumUsesIncompleteIsolatedCloud(t *testing.T) {
 	if magnum.Region != cfg.OpenCenter.Meta.Region {
 		t.Fatalf("Magnum region = %q, want metadata region %q", magnum.Region, cfg.OpenCenter.Meta.Region)
 	}
+	if cfg.OpenTofu.Enabled {
+		t.Fatal("OpenTofu must be disabled for Magnum")
+	}
 	if magnum.ApplicationCredentialID != "" || magnum.ApplicationCredentialSecret != "" || magnum.ClusterTemplate != "" {
 		t.Fatalf("Magnum defaults must not contain credentials or a fake template: %#v", magnum)
 	}

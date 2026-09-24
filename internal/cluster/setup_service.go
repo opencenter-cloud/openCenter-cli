@@ -231,11 +231,12 @@ func (s *SetupService) generateGitOpsManifests(ctx context.Context, cfg v2.Confi
 func (s *SetupService) generateGitOpsManifestsWithPromotion(ctx context.Context, cfg v2.Config, clusterPaths *paths.ClusterPaths, dryRun, validateManifests bool, promoteOpts gitops.PromoteOptions) (*gitops.PromoteResult, int, error) {
 	generationOptions := gitops.StagedGenerationOptions{
 		Encrypt:               s.overlayEncryptor.EncryptServiceOverrideValues,
-		IncludeInfrastructure: true,
+		IncludeInfrastructure: strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) != "magnum",
 		IncludeFluxBridge:     true,
 		Promote:               promoteOpts,
 	}
-	if strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) != "kind" {
+	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
+	if provider != "kind" && provider != "magnum" {
 		generationOptions.Materialize = func(root string) error {
 			return tofu.ProvisionAt(cfg, root)
 		}

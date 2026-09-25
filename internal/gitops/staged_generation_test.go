@@ -121,39 +121,59 @@ func TestGenerateClusterTreeKeepsSiblingClusterOwnershipScoped(t *testing.T) {
 
 	firstOverlayRel := promotedTestPath(t, firstResult, "applications/overlays/"+first.ClusterName()+"/", "kustomization.yaml")
 	firstInfrastructureRel := promotedTestPath(t, firstResult, "infrastructure/clusters/"+first.ClusterName()+"/", "")
+	firstBridgeRel := promotedTestPath(t, firstResult, "clusters/"+first.ClusterName()+"/", "services.yaml")
 	secondOverlayRel := promotedTestPath(t, secondResult, "applications/overlays/"+second.ClusterName()+"/", "kustomization.yaml")
 	secondInfrastructureRel := promotedTestPath(t, secondResult, "infrastructure/clusters/"+second.ClusterName()+"/", "")
+	secondBridgeRel := promotedTestPath(t, secondResult, "clusters/"+second.ClusterName()+"/", "services.yaml")
 	firstOverlay := filepath.Join(repo, filepath.FromSlash(firstOverlayRel))
 	firstInfrastructure := filepath.Join(repo, filepath.FromSlash(firstInfrastructureRel))
 	secondOverlay := filepath.Join(repo, filepath.FromSlash(secondOverlayRel))
 	secondInfrastructure := filepath.Join(repo, filepath.FromSlash(secondInfrastructureRel))
+	firstBridge := filepath.Join(repo, filepath.FromSlash(firstBridgeRel))
+	secondBridge := filepath.Join(repo, filepath.FromSlash(secondBridgeRel))
 	secondOverlayOriginal := readTestFile(t, secondOverlay)
 	secondInfrastructureOriginal := readTestFile(t, secondInfrastructure)
+	secondBridgeOriginal := readTestFile(t, secondBridge)
 	writeTestFile(t, secondOverlay, "modified second overlay\n")
 	writeTestFile(t, secondInfrastructure, "modified second infrastructure\n")
+	writeTestFile(t, secondBridge, "modified second bridge\n")
 	if _, _, err := GenerateClusterTree(context.Background(), first, options); err != nil {
 		t.Fatalf("regenerating first cluster inspected second cluster: %v", err)
 	}
 	assertTestFileContent(t, secondOverlay, "modified second overlay\n")
 	assertTestFileContent(t, secondInfrastructure, "modified second infrastructure\n")
+	assertTestFileContent(t, secondBridge, "modified second bridge\n")
 
 	writeTestFile(t, secondOverlay, secondOverlayOriginal)
 	writeTestFile(t, secondInfrastructure, secondInfrastructureOriginal)
+	writeTestFile(t, secondBridge, secondBridgeOriginal)
 	writeTestFile(t, firstOverlay, "modified first overlay\n")
 	writeTestFile(t, firstInfrastructure, "modified first infrastructure\n")
+	writeTestFile(t, firstBridge, "modified first bridge\n")
 	if _, _, err := GenerateClusterTree(context.Background(), second, options); err != nil {
 		t.Fatalf("regenerating second cluster inspected first cluster: %v", err)
 	}
 	assertTestFileContent(t, firstOverlay, "modified first overlay\n")
 	assertTestFileContent(t, firstInfrastructure, "modified first infrastructure\n")
+	assertTestFileContent(t, firstBridge, "modified first bridge\n")
 
-	manifest, _, _, err := loadGeneratedTreeManifest(repo, second.ClusterName())
+	firstState, err := loadOwnershipState(repo, first.ClusterName())
 	if err != nil {
-		t.Fatalf("load persisted generated tree manifest: %v", err)
+		t.Fatalf("load first cluster ownership state: %v", err)
 	}
-	for _, path := range []string{firstOverlayRel, secondOverlayRel, firstInfrastructureRel, secondInfrastructureRel} {
-		if _, found := manifest.Files[path]; !found {
-			t.Fatalf("persisted manifest lost sibling ownership entry %q", path)
+	secondState, err := loadOwnershipState(repo, second.ClusterName())
+	if err != nil {
+		t.Fatalf("load second cluster ownership state: %v", err)
+	}
+	for _, check := range []struct {
+		state ownershipState
+		path  string
+	}{
+		{firstState, firstOverlayRel}, {firstState, firstInfrastructureRel},
+		{secondState, secondOverlayRel}, {secondState, secondInfrastructureRel},
+	} {
+		if _, found := check.state.cluster.FileRecords[check.path]; !found {
+			t.Fatalf("persisted cluster state lost ownership entry %q", check.path)
 		}
 	}
 }

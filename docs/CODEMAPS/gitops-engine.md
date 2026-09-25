@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-09-25
 id: gitops-engine-map
 title: "Explain the GitOps Generation Engine"
 sidebar_label: GitOps Engine
@@ -31,7 +31,9 @@ validated v2.Config
   -> manifest validation and generated-file count
 ```
 
-The application render is staged and promoted so the final GitOps target is not partially updated. Promotion is tracked in `internal/gitops/ownership.go`: a `.opencenter-generated.json` manifest at the overlay root records a sha256 hash per generator-owned path under `services/`, `managed-services/`, and `customer-managed/` (plus the top-level `kustomization.yaml` and `.sops.yaml`). Promotion diffs planned output against this manifest and the on-disk tree to classify each path as added, updated, unchanged, seeded (first-write only, e.g. a service's `custom/kustomization.yaml`), renamed, adopted, or pruned; a path with an on-disk hash that no longer matches the manifest is an ownership conflict and blocks promotion rather than being silently overwritten. Any `custom/` subdirectory inside a generator-owned root is never scanned as generator-owned and is excluded from the manifest, so promotion cannot prune or overwrite it.
+The application render is staged and promoted so the final GitOps target is not partially updated. Promotion is tracked in `internal/gitops/ownership.go` with repository-relative paths and separate version-2 ledgers. `.opencenter/ownership/clusters/<cluster>.json` records SHA-256 and mode records for the active cluster in `applications/overlays/<cluster>/`, `infrastructure/clusters/<cluster>/`, and `clusters/<cluster>/`; `clusters/<cluster>/flux-system/` is reserved for Flux bootstrap and excluded, while generated bridge files outside that directory remain owned. `.opencenter/ownership/global.json` records only the exact global allowlist (`.gitignore`, `README.md`, and the two repository `.gitkeep` files), never a recursive repository scope. Full-tree generation activates all applicable scopes and global files; applications-only and single-service promotion activate only the current application or service scope. Sibling cluster records are retained and neither inspected nor pruned by scoped updates.
+
+Promotion diffs planned output against the applicable ledgers and live tree to classify each path as added, updated, unchanged, seeded, renamed, adopted, or pruned. A path with an on-disk hash or mode that no longer matches its ledger entry is an ownership conflict and blocks promotion rather than being silently overwritten. `custom/` subdirectories are excluded from generator ownership: missing staged defaults can be seeded, but existing custom files are not overwritten or pruned. Hash-verified secret artifacts remain owned by secret synchronization rather than the generator. The old repository-root or current overlay `.opencenter-generated.json` manifest is rejected before mutation; it is not migrated implicitly. Dry-run runs the same preflight without writing, `Prune: false` reports retained candidates, and `AdoptGenerated` backs up and claims only an untracked planned collision. `Force` does not override ownership safety.
 
 ## Package ownership
 

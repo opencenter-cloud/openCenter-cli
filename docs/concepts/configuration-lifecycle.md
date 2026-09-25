@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-09-25
 id: configuration-lifecycle
 title: "Configuration Lifecycle"
 sidebar_label: Configuration Lifecycle
@@ -115,7 +115,9 @@ opencenter cluster generate my-cluster
 5. tofu.Provision                — non-Kind providers only
 ```
 
-Generated files under an overlay's `services/`, `managed-services/`, and `customer-managed/` paths are tracked by SHA-256 in `.opencenter-generated.json` at the overlay root (`internal/gitops/ownership.go`). Anything openCenter did not generate is left alone; put hand-authored manifests in a service's `custom/` directory, which promotion never touches. Use `opencenter cluster migrate-layout --custom --org <organization> --cluster <cluster> --apply` to move pre-existing hand-authored files into `custom/` before regenerating.
+Generated files are tracked by repository-relative SHA-256 and mode records in the version-2 ledger `.opencenter/ownership/clusters/<cluster>.json`; exact repository-wide generated files are recorded separately in version-2 `.opencenter/ownership/global.json`. The cluster ledger covers only the active cluster's explicit scopes — `applications/overlays/<cluster>/`, `infrastructure/clusters/<cluster>/`, and `clusters/<cluster>/` — with `clusters/<cluster>/flux-system/` reserved for Flux bootstrap and excluded. The generated bridge files beside that Flux directory remain in the cluster scope. The global ledger is an exact allowlist (`.gitignore`, `README.md`, and the two repository `.gitkeep` files), not a recursive root scope. Applications-only and single-service renders update and prune only their active scope, preserving sibling cluster records and unrelated state; they do not rewrite global ownership. Missing staged defaults may seed `custom/` files, but existing custom content and hash-verified secret-sync artifacts are outside generator ownership.
+
+The pre-v1 ownership transition is fail-fast: a repository-root or current overlay `.opencenter-generated.json` legacy manifest is rejected before mutation rather than migrated implicitly. Dry-run performs the same preflight without writing; prune-disabled runs report candidates and retain them; `--adopt-generated` is an explicit opt-in that can back up and claim only an untracked planned collision. Modified tracked files and unknown user-authored files remain protected, and `--force` never overrides ownership safety. Put hand-authored manifests in a service's `custom/` directory before regenerating.
 
 **Evidence:** `internal/cluster/setup_service.go`, `internal/gitops/ownership.go`, `cmd/cluster_migrate_layout.go`. See [GitOps Workflow](gitops-workflow.md) for the full rendering contract.
 

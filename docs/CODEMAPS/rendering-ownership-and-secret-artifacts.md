@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-09-25
 id: rendering-ownership-and-secret-artifacts
 title: "Explain Rendering Ownership and Secret Artifacts"
 sidebar_label: Rendering Ownership
@@ -53,7 +53,21 @@ The planner returns a sorted artifact list. The renderer may use artifact presen
 
 ## Write and promotion boundary
 
-Application output is written in a temporary workspace with atomic file operations. The renderer can encrypt temporary override values before promotion. `internal/gitops/ownership.go` performs promotion: it tracks every generator-owned path (`services/`, `managed-services/`, `customer-managed/`, plus the top-level `kustomization.yaml` and `.sops.yaml`) with a sha256 hash in a `.opencenter-generated.json` manifest at the overlay root. Promotion reports added, updated, unchanged, seeded, renamed, adopted, and pruned generator-owned paths; an on-disk file whose hash no longer matches the manifest is an ownership conflict and blocks promotion instead of being overwritten. `custom/` subdirectories inside generator-owned roots are excluded from the manifest and never scanned as generator-owned, so existing `custom/` content remains outside the generated ownership set. Unknown files found in a generator-owned path on first render (`bootstrap`) are left untouched with a warning; on later renders they block promotion until moved under `custom/` or migrated with `opencenter cluster migrate-layout`.
+Application output is written in a temporary workspace with atomic file operations. The renderer can encrypt temporary override values before promotion. `internal/gitops/ownership.go` performs promotion using repository-relative paths and two version-2 ownership ledgers:
+
+```text
+.opencenter/ownership/
+├── clusters/<cluster>.json   # that cluster's generated paths
+└── global.json               # exact repository-wide generated files
+```
+
+Each ledger records `version`, scope/identity, and per-file SHA-256 and mode records. The cluster ledger is identified by the active cluster and is limited to these explicit recursive scopes: `applications/overlays/<cluster>/`, `infrastructure/clusters/<cluster>/`, and `clusters/<cluster>/`. Flux bootstrap content under `clusters/<cluster>/flux-system/` is excluded; the generated bridge files directly under `clusters/<cluster>/` remain in the cluster boundary. The global ledger has repository identity and is an exact allowlist for `.gitignore`, `README.md`, `applications/overlays/.gitkeep`, and `infrastructure/clusters/.gitkeep`; it is not a recursive repository-wide scope. Every path loaded from either ledger is validated against these policy boundaries before promotion, so a manifest cannot grant authority over a sibling cluster or an unlisted global path.
+
+The full-tree promoter activates all applicable scopes and the global allowlist. Applications-only promotion activates only the active cluster's application overlay, and single-service promotion activates only that service's generated outputs (plus any explicitly planned companion outputs); these scoped paths do not load, write, or prune `global.json`. Sibling cluster records and out-of-scope files are neither inspected nor pruned by a scoped update. This is what permits a full → apps → service → full sequence without losing unrelated ownership records.
+
+`custom/` subdirectories inside generator-owned roots are excluded from the ledgers and live-tree scan. A staged default may seed a missing custom file, but existing custom content is not overwritten or pruned. Secret artifacts whose hash is recorded and still matches `internal/secretartifacts` state are owned by secret synchronization and are excluded from generator conflicts and pruning. Flux bootstrap files are likewise outside generator ownership.
+
+The pre-v1 breaking change is fail-fast: either the repository-root `.opencenter-generated.json` or the current cluster overlay's legacy `.opencenter-generated.json` causes promotion to stop before mutation. There is no implicit migration. Dry-run performs the same ownership preflight and reports classifications without writing. `Prune: false` reports prune candidates and retains them; `AdoptGenerated` permits adoption only for an untracked planned collision and creates a backup. A modified tracked file or an unknown user-authored file still blocks promotion. `Force` is retained for API compatibility and never overrides ownership safety.
 
 This boundary is important for changes: a new renderer must first declare ownership, then produce a plan, then pass action containment and coverage validation. It must not write directly into the final overlay or infer ownership from whatever files happen to exist there.
 

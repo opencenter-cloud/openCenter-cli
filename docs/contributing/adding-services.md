@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-09-25
 id: adding-services
 title: "Adding New Platform Services"
 sidebar_label: Adding New Platform Services
@@ -69,9 +69,9 @@ standard planner generates:
 * `services/fluxcd/my-service.yaml` (two-stage Kustomization)
 * `services/my-service/kustomization.yaml` (overlay with secretGenerator)
 * `services/my-service/helm-values/override-values.yaml` (placeholder)
-* `services/my-service/custom/` (user-owned, seeded once, never overwritten)
+* `services/my-service/custom/` (user-owned; missing defaults may be seeded once, existing files are never overwritten)
 * Entries in aggregate `kustomization.yaml` files
-* An entry per generated file in the overlay's `.opencenter-generated.json` manifest
+* A repository-relative SHA-256/mode ownership entry per generated file in the version-2 `.opencenter/ownership/clusters/<cluster>.json`
 
 ### Step 3: Regenerate Schema
 
@@ -109,7 +109,14 @@ Use this contract for a new service:
 4. Add those functions directly to the appropriate `RenderSpec` fields.
 5. Let the descriptor and render plan report the generator-owned output files.
    Put hand-authored manifests and values in the service overlay's user-owned
-   `custom/` directory; the generator never writes to or deletes that directory.
+   `custom/` directory; missing staged defaults may be seeded, but existing
+   custom files are never overwritten or pruned.
+
+### Ownership boundaries for new services
+
+Descriptor outputs must stay inside the active service or managed-service scope. Promotion records repository-relative SHA-256 and mode records in the current version-2 cluster ledger at `.opencenter/ownership/clusters/<cluster>.json`; only the small code-defined exact-file allowlist belongs in `.opencenter/ownership/global.json`. The active cluster boundary is `applications/overlays/<cluster>/`, `infrastructure/clusters/<cluster>/`, and `clusters/<cluster>/`; `clusters/<cluster>/flux-system/` is Flux bootstrap-owned, while the generated bridge files beside it remain in scope. Do not rely on a sibling cluster's files, a recursive repository-wide scope, or an existing file to establish authority. `custom/` content is user-owned after any missing default is seeded, and secret-sync-owned artifacts must remain excluded from generator ownership.
+
+The full, applications-only, and single-service promoters share these boundaries. Full-tree promotion may also update the exact global allowlist; scoped runs do not load or rewrite `global.json`, and they prune only the active scope, so a service change must not remove another service or cluster's records. The old root or current overlay `.opencenter-generated.json` manifest is a pre-v1 legacy format and causes fail-fast refusal before mutation; it is never migrated. Use dry-run to inspect the same ownership preflight without writing; `--adopt-generated` is an explicit opt-in only for an untracked planned collision and creates a backup during apply, while modified tracked files and unknown files still fail. `--force` does not override these ownership checks.
 
 A catalog entry uses the actual `RenderSpec` field names. Include only the
 fields needed by the service; unused renderer fields remain nil or empty:

@@ -98,10 +98,18 @@ func TestClusterMigrateCustomOwnershipAndCollisionStates(t *testing.T) {
 		modifiedData := []byte("kind: Modified\n")
 		mustWriteFile(t, generated, generatedData, 0o644)
 		mustWriteFile(t, modified, modifiedData, 0o644)
-		manifest := gitops.GeneratedManifest{Version: 1, Cluster: "prod", Files: map[string]string{
-			"services/metallb/generated.yaml": migrationHash(generatedData),
-			"services/metallb/modified.yaml":  migrationHash([]byte("kind: Original\n")),
-		}}
+		manifest := struct {
+			Version int               `json:"version"`
+			Cluster string            `json:"cluster"`
+			Files   map[string]string `json:"files"`
+		}{
+			Version: 1,
+			Cluster: "prod",
+			Files: map[string]string{
+				"services/metallb/generated.yaml": migrationHash(generatedData),
+				"services/metallb/modified.yaml":  migrationHash([]byte("kind: Original\n")),
+			},
+		}
 		manifestData, err := json.Marshal(manifest)
 		if err != nil {
 			t.Fatal(err)

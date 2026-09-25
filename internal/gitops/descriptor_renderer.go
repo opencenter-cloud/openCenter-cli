@@ -47,8 +47,8 @@ func loadClusterDescriptorRegistry() (*descriptorcfg.Registry, error) {
 
 func resolveClusterAppsTarget(workspace *GitOpsWorkspace, cfg v2.Config) (string, error) {
 	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return "", fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(clusterName); err != nil {
+		return "", err
 	}
 
 	resolver := paths.NewPathResolver(workspace.RootDir)

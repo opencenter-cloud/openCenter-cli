@@ -519,8 +519,8 @@ type OverlayEncryptor func(ctx context.Context, overlayPath string, cfg *v2.Conf
 // isolated workspace and classifies promotion with mutation disabled.
 func PlanClusterAppsPromotionWithOptions(cfg v2.Config, opts PromoteOptions) (*PromoteResult, error) {
 	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return nil, fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(clusterName); err != nil {
+		return nil, err
 	}
 	if cfg.GitDir() == "" {
 		return nil, fmt.Errorf("opencenter.gitops.repository.local_dir must be set")
@@ -567,8 +567,8 @@ func RenderClusterAppsWithEncryption(ctx context.Context, cfg v2.Config, encrypt
 
 func renderClusterAppsWithOptions(ctx context.Context, cfg v2.Config, encrypt OverlayEncryptor, opts PromoteOptions) (*PromoteResult, error) {
 	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return nil, fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(clusterName); err != nil {
+		return nil, err
 	}
 	target := filepath.Join(cfg.GitDir(), "applications", "overlays", clusterName)
 
@@ -623,8 +623,8 @@ func renderClusterAppsWithOptions(ctx context.Context, cfg v2.Config, encrypt Ov
 // flux bootstrap).
 func RenderClusterFluxBridge(cfg v2.Config) error {
 	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(clusterName); err != nil {
+		return err
 	}
 	gitDir := cfg.GitDir()
 	if gitDir == "" {
@@ -656,8 +656,8 @@ func RenderClusterFluxBridge(cfg v2.Config) error {
 // RenderClusterFluxBridge. See RenderClusterFluxBridge for behaviour.
 func RenderClusterFluxBridgeAtomic(cfg v2.Config, workspace *GitOpsWorkspace) error {
 	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(clusterName); err != nil {
+		return err
 	}
 	target := filepath.Join(workspace.RootDir, "clusters", clusterName)
 
@@ -741,8 +741,8 @@ func mustRel(root, p string) string {
 // It selects the appropriate main.tf template based on the infrastructure provider type.
 func RenderInfrastructureCluster(cfg v2.Config) error {
 	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(clusterName); err != nil {
+		return err
 	}
 
 	target := cfg.GitDir()
@@ -793,8 +793,8 @@ func RenderSingleServiceWithEncryption(ctx context.Context, cfg v2.Config, servi
 
 func renderSingleServiceWithOptions(ctx context.Context, cfg v2.Config, serviceName string, isManaged bool, encrypt OverlayEncryptor, opts PromoteOptions) (*PromoteResult, error) {
 	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return nil, fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(clusterName); err != nil {
+		return nil, err
 	}
 	actions, artifacts, err := planSingleServiceActionsWithArtifacts(cfg, serviceName, isManaged)
 	if err != nil {
@@ -990,8 +990,8 @@ func RenderClusterAppsAtomic(cfg v2.Config, workspace *GitOpsWorkspace) error {
 // are atomic and can be rolled back if needed.
 func RenderInfrastructureClusterAtomic(cfg v2.Config, workspace *GitOpsWorkspace) error {
 	clusterName := cfg.ClusterName()
-	if clusterName == "" {
-		return fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(clusterName); err != nil {
+		return err
 	}
 
 	target := filepath.Join(workspace.RootDir, "infrastructure", "clusters", clusterName)
@@ -1093,8 +1093,8 @@ func GenerateClusterTree(ctx context.Context, cfg v2.Config, opts StagedGenerati
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if cfg.ClusterName() == "" {
-		return nil, 0, fmt.Errorf("cluster name is empty")
+	if err := validateClusterName(cfg.ClusterName()); err != nil {
+		return nil, 0, err
 	}
 	if cfg.GitDir() == "" {
 		return nil, 0, fmt.Errorf("opencenter.gitops.repository.local_dir must be set")

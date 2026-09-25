@@ -14,6 +14,9 @@
 package gitops
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -33,6 +36,9 @@ func templateRenderer(tmpl string) OverrideValuesRenderer {
 		funcMap["kubePrometheusStack"] = func() (kubePrometheusStackRenderContract, error) {
 			return resolveKubePrometheusStackContract(cfg)
 		}
+		funcMap["mimirStorage"] = func() (mimirStorageTemplateData, error) {
+			return resolveMimirStorageTemplateData(cfg)
+		}
 		t, err := template.New("override-values").Funcs(funcMap).Parse(tmpl)
 		if err != nil {
 			return "", err
@@ -43,6 +49,206 @@ func templateRenderer(tmpl string) OverrideValuesRenderer {
 		}
 		return buf.String(), nil
 	}
+}
+
+type mimirStorageTemplateData struct {
+	Backend                string
+	BucketName             string
+	RulerBucketName        string
+	AlertmanagerBucketName string
+	S3Endpoint             string
+	S3Region               string
+	BucketLookupType       string
+	S3Insecure             bool
+	CredentialHash         string
+	SwiftAuthURL           string
+	SwiftRegion            string
+	SwiftAuthVersion       int
+	SwiftCredentialID      string
+	SwiftUsername          string
+	SwiftProjectName       string
+	SwiftProjectDomainName string
+	SwiftUserDomainName    string
+	SwiftDomainName        string
+	SwiftContainerName     string
+}
+
+func resolveMimirStorageTemplateData(cfg v2.Config) (mimirStorageTemplateData, error) {
+	mimir, _ := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	backend := ""
+	if mimir != nil {
+		backend = strings.ToLower(strings.TrimSpace(mimir.StorageType))
+	}
+	if backend != "s3" {
+		// Swift is the legacy Mimir backend. Keep it as the compatibility
+		// default when an older configuration omits the typed backend.
+		backend = "swift"
+	}
+	if backend == "swift" && strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) != "openstack" {
+		return mimirStorageTemplateData{}, fmt.Errorf("Mimir Swift renderer: resolved Swift storage is only supported on OpenStack infrastructure")
+	}
+
+	bucket := ""
+	if mimir != nil {
+		bucket = strings.TrimSpace(mimir.BucketName)
+	}
+	if bucket == "" {
+		bucket = fmt.Sprintf("%s-mimir", cfg.ClusterName())
+	}
+	rulerBucket := ""
+	if mimir != nil {
+		rulerBucket = strings.TrimSpace(mimir.RulerBucketName)
+	}
+	if rulerBucket == "" {
+		rulerBucket = bucket + "-ruler"
+	}
+	alertmanagerBucket := ""
+	if mimir != nil {
+		alertmanagerBucket = strings.TrimSpace(mimir.AlertmanagerBucketName)
+	}
+	if alertmanagerBucket == "" {
+		alertmanagerBucket = bucket + "-alertmanager"
+	}
+
+	accessKey, secretKey := cfg.GetMimirS3Credentials()
+	endpoint, region := "", ""
+	bucketLookupType := "auto"
+	var insecure bool
+	credentialHash := ""
+	swiftCredentialSecret := ""
+	swiftAuthURL, swiftRegion, swiftCredentialID := "", "", ""
+	swiftUsername, swiftProjectName, swiftProjectDomain := "", "", ""
+	swiftUserDomain, swiftDomain, swiftContainer := "", "", ""
+	swiftAuthVersion := 3
+	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
+	if mimir != nil {
+		if backend == "s3" {
+			var err error
+			endpoint, err = v2.MimirS3EndpointHost(mimir.S3Endpoint)
+			if err != nil {
+				return mimirStorageTemplateData{}, fmt.Errorf("Mimir S3 renderer: %w", err)
+			}
+		}
+		region = strings.TrimSpace(mimir.S3Region)
+		if mimir.S3ForcePathStyle {
+			bucketLookupType = "path"
+		}
+		insecure = mimir.S3Insecure
+		swiftAuthURL = strings.TrimSpace(mimir.SwiftAuthURL)
+		swiftRegion = strings.TrimSpace(mimir.SwiftRegion)
+		if mimir.SwiftAuthVersion > 0 {
+			swiftAuthVersion = mimir.SwiftAuthVersion
+		}
+		swiftCredentialID = strings.TrimSpace(mimir.SwiftApplicationCredentialID)
+		swiftUsername = strings.TrimSpace(mimir.SwiftUsername)
+		swiftProjectName = strings.TrimSpace(mimir.SwiftProjectName)
+		swiftProjectDomain = strings.TrimSpace(mimir.SwiftProjectDomainName)
+		swiftUserDomain = strings.TrimSpace(mimir.SwiftUserDomainName)
+		swiftDomain = strings.TrimSpace(mimir.SwiftDomainName)
+		swiftContainer = strings.TrimSpace(mimir.SwiftContainerName)
+	}
+	if openstack != nil {
+		if swiftAuthURL == "" {
+			swiftAuthURL = strings.TrimSpace(openstack.AuthURL)
+		}
+		if swiftRegion == "" {
+			swiftRegion = strings.TrimSpace(openstack.Region)
+		}
+		if swiftCredentialID == "" {
+			swiftCredentialID = cfg.GetMimirSwiftApplicationCredentialID()
+		}
+		if swiftProjectName == "" {
+			swiftProjectName = strings.TrimSpace(openstack.ProjectName)
+			if swiftProjectName == "" {
+				swiftProjectName = strings.TrimSpace(openstack.TenantName)
+			}
+		}
+		if swiftProjectDomain == "" {
+			swiftProjectDomain = strings.TrimSpace(openstack.ProjectDomainName)
+			if swiftProjectDomain == "" {
+				swiftProjectDomain = strings.TrimSpace(openstack.DomainName)
+			}
+			if swiftProjectDomain == "" {
+				swiftProjectDomain = strings.TrimSpace(openstack.Domain)
+			}
+		}
+		if swiftUserDomain == "" {
+			swiftUserDomain = strings.TrimSpace(openstack.UserDomainName)
+		}
+		if swiftDomain == "" {
+			swiftDomain = strings.TrimSpace(openstack.DomainName)
+			if swiftDomain == "" {
+				swiftDomain = strings.TrimSpace(openstack.Domain)
+			}
+		}
+	}
+	if swiftUserDomain == "" {
+		swiftUserDomain = swiftDomain
+	}
+	if swiftDomain == "" {
+		swiftDomain = swiftUserDomain
+	}
+	if swiftContainer == "" && mimir != nil {
+		swiftContainer = strings.TrimSpace(mimir.BucketName)
+	}
+	if swiftContainer == "" {
+		swiftContainer = fmt.Sprintf("%s-mimir", cfg.ClusterName())
+	}
+	if backend == "swift" {
+		resolvedID, resolvedSecret, err := cfg.ResolveMimirSwiftCredentials()
+		if err != nil {
+			return mimirStorageTemplateData{}, fmt.Errorf("Mimir Swift renderer: %w", err)
+		}
+		swiftCredentialID = resolvedID
+		swiftCredentialSecret = resolvedSecret
+	}
+	if backend == "s3" {
+		if strings.TrimSpace(accessKey) == "" || strings.EqualFold(strings.TrimSpace(accessKey), v2.PlaceholderSecret) {
+			return mimirStorageTemplateData{}, fmt.Errorf("Mimir S3 renderer: S3 access key is missing or still a placeholder")
+		}
+		if strings.TrimSpace(secretKey) == "" || strings.EqualFold(strings.TrimSpace(secretKey), v2.PlaceholderSecret) {
+			return mimirStorageTemplateData{}, fmt.Errorf("Mimir S3 renderer: S3 secret key is missing or still a placeholder")
+		}
+		credentialHash = credentialRotationHash(accessKey, secretKey)
+	} else {
+		idMissing := strings.TrimSpace(swiftCredentialID) == "" || strings.EqualFold(strings.TrimSpace(swiftCredentialID), v2.PlaceholderSecret)
+		secretMissing := strings.TrimSpace(swiftCredentialSecret) == "" || strings.EqualFold(strings.TrimSpace(swiftCredentialSecret), v2.PlaceholderSecret)
+		if idMissing != secretMissing {
+			return mimirStorageTemplateData{}, fmt.Errorf("Mimir Swift renderer: application credential ID and secret must be configured together")
+		}
+		credentialHash = credentialRotationHash(swiftCredentialID, swiftCredentialSecret)
+	}
+
+	return mimirStorageTemplateData{
+		Backend:                backend,
+		BucketName:             bucket,
+		RulerBucketName:        rulerBucket,
+		AlertmanagerBucketName: alertmanagerBucket,
+		S3Endpoint:             endpoint,
+		S3Region:               region,
+		BucketLookupType:       bucketLookupType,
+		S3Insecure:             insecure,
+		CredentialHash:         credentialHash,
+		SwiftAuthURL:           swiftAuthURL,
+		SwiftRegion:            swiftRegion,
+		SwiftAuthVersion:       swiftAuthVersion,
+		SwiftCredentialID:      swiftCredentialID,
+		SwiftUsername:          swiftUsername,
+		SwiftProjectName:       swiftProjectName,
+		SwiftProjectDomainName: swiftProjectDomain,
+		SwiftUserDomainName:    swiftUserDomain,
+		SwiftDomainName:        swiftDomain,
+		SwiftContainerName:     swiftContainer,
+	}, nil
+}
+
+func credentialRotationHash(values ...string) string {
+	hash := sha256.New()
+	for _, value := range values {
+		_, _ = hash.Write([]byte(value))
+		_, _ = hash.Write([]byte{0})
+	}
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // staticRenderer returns a renderer that always produces the same content.
@@ -441,10 +647,32 @@ storage:
 reportingEnabled: false
 `
 
-const mimirTemplate = `{{- $openstack := .OpenCenter.Infrastructure.Cloud.OpenStack -}}
+const mimirTemplate = `{{- $mimir := mimirStorage -}}
 {{- $storageClass := .OpenCenter.Infrastructure.Storage.DefaultStorageClass -}}
 global:
     dnsService: coredns
+    podAnnotations:
+        opencenter.io/mimir-credentials-hash: {{ $mimir.CredentialHash | quote }}
+{{- if eq $mimir.Backend "s3" }}
+    extraEnv:
+        - name: MIMIR_S3_ACCESS_KEY_ID
+          valueFrom:
+              secretKeyRef:
+                  name: opencenter-mimir-secret
+                  key: s3-access-key-id
+        - name: MIMIR_S3_SECRET_ACCESS_KEY
+          valueFrom:
+              secretKeyRef:
+                  name: opencenter-mimir-secret
+                  key: s3-secret-access-key
+{{- else }}
+    extraEnv:
+        - name: MIMIR_SWIFT_APPLICATION_CREDENTIAL_SECRET
+          valueFrom:
+              secretKeyRef:
+                  name: opencenter-mimir-secret
+                  key: swift-application-credential-secret
+{{- end }}
 minio:
     enabled: false
 {{- if (index .OpenCenter.Services "kafka-cluster").Enabled }}
@@ -475,16 +703,54 @@ mimir:
         usage_stats:
             enabled: false
         blocks_storage:
+{{- if eq $mimir.Backend "s3" }}
+            backend: s3
+            s3:
+                bucket_name: {{ $mimir.BucketName | quote }}
+                endpoint: {{ $mimir.S3Endpoint | quote }}
+                region: {{ $mimir.S3Region | default .OpenCenter.Meta.Region | quote }}
+                access_key_id: "${MIMIR_S3_ACCESS_KEY_ID}"
+                secret_access_key: "${MIMIR_S3_SECRET_ACCESS_KEY}"
+                bucket_lookup_type: {{ $mimir.BucketLookupType | quote }}
+                insecure: {{ $mimir.S3Insecure }}
+                http: {}
+        ruler_storage:
+            backend: s3
+            s3:
+                bucket_name: {{ $mimir.RulerBucketName | quote }}
+                endpoint: {{ $mimir.S3Endpoint | quote }}
+                region: {{ $mimir.S3Region | default .OpenCenter.Meta.Region | quote }}
+                access_key_id: "${MIMIR_S3_ACCESS_KEY_ID}"
+                secret_access_key: "${MIMIR_S3_SECRET_ACCESS_KEY}"
+                bucket_lookup_type: {{ $mimir.BucketLookupType | quote }}
+                insecure: {{ $mimir.S3Insecure }}
+                http: {}
+        alertmanager_storage:
+            backend: s3
+            s3:
+                bucket_name: {{ $mimir.AlertmanagerBucketName | quote }}
+                endpoint: {{ $mimir.S3Endpoint | quote }}
+                region: {{ $mimir.S3Region | default .OpenCenter.Meta.Region | quote }}
+                access_key_id: "${MIMIR_S3_ACCESS_KEY_ID}"
+                secret_access_key: "${MIMIR_S3_SECRET_ACCESS_KEY}"
+                bucket_lookup_type: {{ $mimir.BucketLookupType | quote }}
+                insecure: {{ $mimir.S3Insecure }}
+                http: {}
+{{- else }}
             backend: swift
             swift:
-                container_name: {{ .OpenCenter.Cluster.ClusterName }}-mimir
-                auth_version: 3
-                auth_url: {{ $openstack.AuthURL }}
-                region_name: {{ $openstack.Region | default .OpenCenter.Meta.Region }}
-                application_credential_id: {{ $openstack.ApplicationCredentialID }}
-                application_credential_secret: {{ .GetMimirSwiftApplicationCredentialSecret }}
-                user_domain_name: {{ $openstack.UserDomainName | default ($openstack.DomainName | default $openstack.Domain) }}
-                domain_name: {{ $openstack.DomainName | default $openstack.Domain }}
+                container_name: {{ $mimir.SwiftContainerName | quote }}
+                auth_version: {{ $mimir.SwiftAuthVersion }}
+                auth_url: {{ $mimir.SwiftAuthURL | quote }}
+                region_name: {{ $mimir.SwiftRegion | default .OpenCenter.Meta.Region | quote }}
+                application_credential_id: {{ $mimir.SwiftCredentialID | quote }}
+                application_credential_secret: "${MIMIR_SWIFT_APPLICATION_CREDENTIAL_SECRET}"
+                username: {{ $mimir.SwiftUsername | quote }}
+                project_name: {{ $mimir.SwiftProjectName | quote }}
+                project_domain_name: {{ $mimir.SwiftProjectDomainName | quote }}
+                user_domain_name: {{ $mimir.SwiftUserDomainName | quote }}
+                domain_name: {{ $mimir.SwiftDomainName | quote }}
+{{- end }}
 {{- if (index .OpenCenter.Services "kafka-cluster").Enabled }}
         ingest_storage:
             kafka:

@@ -95,6 +95,26 @@ var serviceSecretMappings = []ServiceSecretMapping{
 		},
 	},
 	{
+		Service: "mimir",
+		Requirements: []SecretRequirement{
+			{
+				SecretPath:  "secrets.mimir.swift_application_credential_secret",
+				Condition:   "storage_type=swift",
+				Description: "Swift application credential secret for Mimir storage",
+			},
+			{
+				SecretPath:  "secrets.mimir.s3_access_key_id",
+				Condition:   "storage_type=s3",
+				Description: "S3 access key for Mimir storage",
+			},
+			{
+				SecretPath:  "secrets.mimir.s3_secret_access_key",
+				Condition:   "storage_type=s3",
+				Description: "S3 secret key for Mimir storage",
+			},
+		},
+	},
+	{
 		Service: "tempo",
 		Requirements: []SecretRequirement{
 			{
@@ -230,6 +250,10 @@ func (v *SecretsValidator) isConditionMet(condition string, serviceConfig any) b
 			return cfg.DNSProvider == value
 		}
 	case *LokiConfig:
+		if field == "storage_type" {
+			return cfg.StorageType == value
+		}
+	case *MimirConfig:
 		if field == "storage_type" {
 			return cfg.StorageType == value
 		}

@@ -82,7 +82,34 @@ func (v *ServiceProviderValidator) ValidateServiceProviders(
 		}
 	}
 
+	// Mimir's legacy Swift backend depends on Keystone application credentials
+	// and is only supported when the cluster itself is OpenStack.
+	if mimir, ok := services["mimir"]; ok {
+		if cfg, ok := mimir.(*MimirConfig); ok && cfg.Enabled {
+			if err := v.validateMimirStorageProvider(cfg, infraProv); err != nil {
+				errors = append(errors, err)
+			}
+		}
+	}
+
 	return errors
+}
+
+func (v *ServiceProviderValidator) validateMimirStorageProvider(
+	cfg *MimirConfig,
+	infraProvider InfrastructureProvider,
+) error {
+	storageType := strings.ToLower(strings.TrimSpace(cfg.StorageType))
+	if storageType == "" {
+		storageType = "swift"
+	}
+	if storageType == "swift" && infraProvider != ProviderOpenStack {
+		return fmt.Errorf("mimir: resolved Swift storage is only supported on OpenStack infrastructure")
+	}
+	if storageType != "swift" && storageType != "s3" {
+		return fmt.Errorf("mimir: storage provider %q is unsupported; use s3 or swift", cfg.StorageType)
+	}
+	return nil
 }
 
 // validateCertManagerDNSProvider validates cert-manager DNS provider configuration

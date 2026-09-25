@@ -2,6 +2,7 @@ package gitops
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	configservices "github.com/opencenter-cloud/opencenter-cli/internal/config/services"
@@ -25,7 +26,7 @@ func readMimirOverrideValues(t *testing.T, cfg v2.Config) string {
 func TestMimirOverrideSetsCoreDNS(t *testing.T) {
 	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
 	require.NoError(t, err)
-	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
 	require.True(t, ok)
 	mimir.Enabled = true
 
@@ -40,7 +41,7 @@ func TestMimirOverrideSetsCoreDNS(t *testing.T) {
 func TestMimirDisablesBundledKafkaWhenExternalEnabled(t *testing.T) {
 	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
 	require.NoError(t, err)
-	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
 	require.True(t, ok)
 	mimir.Enabled = true
 	kafka, ok := cfg.OpenCenter.Services["kafka-cluster"].(*configservices.DefaultServiceConfig)
@@ -59,7 +60,7 @@ func TestMimirDisablesBundledKafkaWhenExternalEnabled(t *testing.T) {
 func TestMimirKeepsBundledKafkaWhenExternalDisabled(t *testing.T) {
 	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
 	require.NoError(t, err)
-	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
 	require.True(t, ok)
 	mimir.Enabled = true
 	// kafka-cluster stays disabled (default).
@@ -77,7 +78,7 @@ func TestMimirKeepsBundledKafkaWhenExternalDisabled(t *testing.T) {
 func TestMimirKafkaAddressUsesKafkaSystem(t *testing.T) {
 	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
 	require.NoError(t, err)
-	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
 	require.True(t, ok)
 	mimir.Enabled = true
 	kafka, ok := cfg.OpenCenter.Services["kafka-cluster"].(*configservices.DefaultServiceConfig)
@@ -95,7 +96,7 @@ func TestMimirKafkaAddressUsesKafkaSystem(t *testing.T) {
 func TestMimirKafkaAddressIgnoresConfiguredNamespace(t *testing.T) {
 	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
 	require.NoError(t, err)
-	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
 	require.True(t, ok)
 	mimir.Enabled = true
 	kafka, ok := cfg.OpenCenter.Services["kafka-cluster"].(*configservices.DefaultServiceConfig)
@@ -117,7 +118,7 @@ func TestMimirKafkaAddressIgnoresConfiguredNamespace(t *testing.T) {
 func TestMimirStatefulPVCSizesMeetCinderMinimum(t *testing.T) {
 	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
 	require.NoError(t, err)
-	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
 	require.True(t, ok)
 	mimir.Enabled = true
 
@@ -140,7 +141,7 @@ func TestMimirStatefulPVCSizesMeetCinderMinimum(t *testing.T) {
 func TestMimirBundledKafkaPVCSizeMeetsCinderMinimum(t *testing.T) {
 	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
 	require.NoError(t, err)
-	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
 	require.True(t, ok)
 	mimir.Enabled = true
 	// kafka-cluster stays disabled (default) so the bundled Kafka is active.
@@ -158,11 +159,35 @@ func TestMimirBundledKafkaPVCSizeMeetsCinderMinimum(t *testing.T) {
 func TestMimirUsageStatsDisabled(t *testing.T) {
 	cfg, err := v2.NewV2Default("k8s-mimir", "openstack")
 	require.NoError(t, err)
-	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.DefaultServiceConfig)
+	mimir, ok := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
 	require.True(t, ok)
 	mimir.Enabled = true
 
 	values := readMimirOverrideValues(t, *cfg)
 	require.Contains(t, values, "usage_stats:\n            enabled: false",
 		"mimir override must disable usage_stats reporting:\n%s", values)
+}
+
+func TestMimirCredentialEnvUsesGlobalValuesAndRollsOnRotation(t *testing.T) {
+	cfg, err := v2.NewV2Default("k8s-mimir-credentials", "openstack")
+	require.NoError(t, err)
+	mimir := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
+	mimir.Enabled = true
+	mimir.StorageType = "s3"
+	mimir.S3Endpoint = "https://s3.example"
+	cfg.Secrets.Mimir.S3AccessKeyID = "mimir-access"
+	cfg.Secrets.Mimir.S3SecretAccessKey = "mimir-secret"
+
+	values := readMimirOverrideValues(t, *cfg)
+	require.Contains(t, values, "global:\n    dnsService: coredns\n    podAnnotations:")
+	require.Contains(t, values, "    extraEnv:\n        - name: MIMIR_S3_ACCESS_KEY_ID")
+	require.NotContains(t, values, "mimir:\n    extraEnv:")
+	require.NotContains(t, values, "access_key_id: \"mimir-access\"")
+	require.NotContains(t, values, "secret_access_key: \"mimir-secret\"")
+
+	firstHash := values[strings.Index(values, "opencenter.io/mimir-credentials-hash:"):]
+	cfg.Secrets.Mimir.S3SecretAccessKey = "mimir-secret-rotated"
+	rotated := readMimirOverrideValues(t, *cfg)
+	rotatedHash := rotated[strings.Index(rotated, "opencenter.io/mimir-credentials-hash:"):]
+	require.NotEqual(t, firstHash, rotatedHash, "credential rotation must change the rendered pod template annotation")
 }

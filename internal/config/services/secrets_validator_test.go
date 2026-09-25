@@ -181,6 +181,57 @@ func TestSecretsValidator_ValidateRequiredSecrets_LokiS3(t *testing.T) {
 	}
 }
 
+func TestSecretsValidator_ValidateRequiredSecrets_MimirUsesCanonicalPaths(t *testing.T) {
+	validator := NewSecretsValidator()
+	service := &MimirConfig{BaseConfig: BaseConfig{Enabled: true}}
+
+	t.Run("legacy Swift secret", func(t *testing.T) {
+		service.StorageType = "swift"
+		secrets := map[string]any{
+			"secrets": map[string]any{
+				"mimir": map[string]any{
+					"swift_application_credential_secret": "swift-secret",
+				},
+			},
+		}
+		if errors := validator.ValidateRequiredSecrets(map[string]any{"mimir": service}, secrets); len(errors) != 0 {
+			t.Fatalf("canonical Mimir Swift secret was not accepted: %v", errors)
+		}
+	})
+
+	t.Run("S3 credentials", func(t *testing.T) {
+		service.StorageType = "s3"
+		secrets := map[string]any{
+			"secrets": map[string]any{
+				"mimir": map[string]any{
+					"s3_access_key_id":     "mimir-access",
+					"s3_secret_access_key": "mimir-secret",
+				},
+			},
+		}
+		if errors := validator.ValidateRequiredSecrets(map[string]any{"mimir": service}, secrets); len(errors) != 0 {
+			t.Fatalf("canonical Mimir S3 secrets were not accepted: %v", errors)
+		}
+	})
+
+	t.Run("missing S3 credentials report canonical paths", func(t *testing.T) {
+		service.StorageType = "s3"
+		errors := validator.ValidateRequiredSecrets(
+			map[string]any{"mimir": service},
+			map[string]any{"secrets": map[string]any{"mimir": map[string]any{}}},
+		)
+		if len(errors) != 2 {
+			t.Fatalf("missing Mimir S3 credentials produced %d errors, want 2: %v", len(errors), errors)
+		}
+		joined := strings.Join(errors, "\n")
+		for _, path := range []string{"secrets.mimir.s3_access_key_id", "secrets.mimir.s3_secret_access_key"} {
+			if !strings.Contains(joined, path) {
+				t.Errorf("missing Mimir error does not mention canonical path %q: %s", path, joined)
+			}
+		}
+	})
+}
+
 func TestSecretsValidator_ValidateRequiredSecrets_TempoSwift(t *testing.T) {
 	validator := NewSecretsValidator()
 

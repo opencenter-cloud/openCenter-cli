@@ -136,10 +136,10 @@ func TestHydrateBuiltInServiceConfigCoversStorageAndRepresentativeBuiltIns(t *te
 		},
 		{
 			name:     "mimir",
-			existing: &services.DefaultServiceConfig{},
+			existing: &services.MimirConfig{},
 			explicit: map[string]any{},
 			assertions: func(t *testing.T, value any) {
-				if got := value.(*services.DefaultServiceConfig).Namespace; got != "observability" {
+				if got := value.(*services.MimirConfig).Namespace; got != "observability" {
 					t.Fatalf("mimir namespace = %q", got)
 				}
 			},

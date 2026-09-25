@@ -62,6 +62,7 @@ func Plan(cfg *v2.Config) ([]Artifact, error) {
 	// only created an orphaned artifact.
 	fixed := []source{
 		{"cert-manager", certManagerPayload(cfg)}, {"loki", cfg.Secrets.Loki},
+		{"mimir", mimirPayload(cfg)},
 		{"headlamp", cfg.Secrets.Headlamp},
 		{"weave-gitops", cfg.Secrets.WeaveGitOps}, {"grafana", cfg.Secrets.Grafana},
 		{"tempo", cfg.Secrets.Tempo}, {"alert-proxy", cfg.Secrets.AlertProxy},
@@ -216,6 +217,31 @@ func harborPayload(cfg *v2.Config) any {
 		payload["s3_secret_access_key"] = cfg.Secrets.Harbor.S3SecretAccessKey
 	}
 	return payload
+}
+
+// mimirPayload contains only the credentials consumed by Mimir's effective
+// backend. The values renderer consumes this artifact through secretKeyRef;
+// neither backend is written into Helm values as plaintext.
+func mimirPayload(cfg *v2.Config) map[string]interface{} {
+	switch v2.ResolveObjectStorageBackend(cfg, "mimir") {
+	case "s3":
+		accessKey, secretKey := cfg.GetMimirS3AccessKey(), cfg.GetMimirS3SecretKey()
+		if strings.TrimSpace(accessKey) == "" && strings.TrimSpace(secretKey) == "" {
+			return nil
+		}
+		return map[string]interface{}{
+			"s3-access-key-id":     accessKey,
+			"s3-secret-access-key": secretKey,
+		}
+	case "swift":
+		_, secret, err := cfg.ResolveMimirSwiftCredentials()
+		if err != nil || strings.TrimSpace(secret) == "" {
+			return nil
+		}
+		return map[string]interface{}{"swift-application-credential-secret": secret}
+	default:
+		return nil
+	}
 }
 
 func veleroPayload(cfg *v2.Config) map[string]interface{} {

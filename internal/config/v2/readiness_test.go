@@ -170,6 +170,192 @@ func TestValidateReadinessLokiNoneSkipsObjectStorageChecks(t *testing.T) {
 	assertNoIssue(t, report, "secrets.loki.s3_secret_access_key")
 }
 
+func TestValidateReadinessMimirUsesBackendSpecificCredentials(t *testing.T) {
+	tests := []struct {
+		name       string
+		storage    string
+		wantIssues []string
+		noIssues   []string
+	}{
+		{
+			name:       "s3",
+			storage:    "s3",
+			wantIssues: []string{"opencenter.services.mimir.s3_endpoint", "secrets.mimir.s3_access_key_id", "secrets.mimir.s3_secret_access_key"},
+			noIssues:   []string{"secrets.mimir.swift_application_credential_secret"},
+		},
+		{
+			name:       "swift",
+			storage:    "swift",
+			wantIssues: []string{"secrets.mimir.swift_application_credential_secret"},
+			noIssues:   []string{"opencenter.services.mimir.s3_endpoint", "secrets.mimir.s3_access_key_id", "secrets.mimir.s3_secret_access_key"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := validReadinessConfig(t, "kind")
+			mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+			mimir.Enabled = true
+			mimir.StorageType = tt.storage
+			mimir.S3Endpoint = ""
+			cfg.Secrets.Mimir.S3AccessKeyID = ""
+			cfg.Secrets.Mimir.S3SecretAccessKey = ""
+			cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = ""
+
+			report := ValidateReadiness(cfg)
+			for _, path := range tt.wantIssues {
+				assertIssue(t, report, SeverityError, CategoryServices, path)
+			}
+			for _, path := range tt.noIssues {
+				assertNoIssue(t, report, path)
+			}
+		})
+	}
+}
+
+func TestResolveMimirSwiftCredentialsRequiresAtomicOverrides(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.Enabled = true
+	mimir.StorageType = "swift"
+	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
+	openstack.ApplicationCredentialID = "global-id"
+	openstack.ApplicationCredentialSecret = "global-secret"
+	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = ""
+
+	tests := []struct {
+		name       string
+		serviceID  string
+		serviceKey string
+		wantID     string
+		wantSecret string
+		wantErr    bool
+	}{
+		{name: "service ID only", serviceID: "service-id", wantErr: true},
+		{name: "service secret only", serviceKey: "service-secret", wantErr: true},
+		{name: "complete service pair", serviceID: "service-id", serviceKey: "service-secret", wantID: "service-id", wantSecret: "service-secret"},
+		{name: "complete global fallback", wantID: "global-id", wantSecret: "global-secret"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mimir.SwiftApplicationCredentialID = tt.serviceID
+			cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = tt.serviceKey
+			id, secret, err := cfg.ResolveMimirSwiftCredentials()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ResolveMimirSwiftCredentials() error = %v, wantErr %t", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if id != tt.wantID || secret != tt.wantSecret {
+				t.Fatalf("resolved credentials = (%q, %q), want (%q, %q)", id, secret, tt.wantID, tt.wantSecret)
+			}
+		})
+	}
+
+	// A partial global pair is rejected when no service-specific override is
+	// active; it must not be completed from any other credential source.
+	mimir.SwiftApplicationCredentialID = ""
+	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = ""
+	openstack.ApplicationCredentialSecret = ""
+	if _, _, err := cfg.ResolveMimirSwiftCredentials(); err == nil {
+		t.Fatal("ResolveMimirSwiftCredentials() accepted a partial global pair")
+	}
+}
+
+func TestMimirSwiftPartialOverrideFailsValidationAndReadiness(t *testing.T) {
+	cfg := validReadinessConfig(t, "openstack")
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.Enabled = true
+	mimir.StorageType = "swift"
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID = "global-id"
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret = "global-secret"
+	mimir.SwiftApplicationCredentialID = "service-id"
+	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = ""
+
+	report := ValidateReadiness(cfg)
+	assertIssue(t, report, SeverityError, CategoryServices, "opencenter.services.mimir.swift_application_credential_id")
+	if err := ValidateForDeployment(cfg); err == nil || !strings.Contains(err.Error(), "service-specific application credential") {
+		t.Fatalf("ValidateForDeployment() error = %v, want atomic Mimir Swift pairing error", err)
+	}
+}
+
+func TestValidateReadinessMimirBucketsDoNotConstrainTempo(t *testing.T) {
+	cfg := validReadinessConfig(t, "kind")
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.Enabled = true
+	mimir.StorageType = "s3"
+	mimir.BucketName = "x"
+
+	// This is intentionally an invalid Mimir blocks bucket, while the existing
+	// Tempo default is intentionally left untouched. OCTR-784 bucket rules must
+	// reject the former without changing established non-Mimir behavior.
+	report := ValidateReadiness(cfg)
+	assertIssue(t, report, SeverityError, CategoryServices, "opencenter.services.mimir.bucket_name")
+	assertNoIssue(t, report, "opencenter.services.tempo.bucket_name")
+
+	mimir.BucketName = "mimir-blocks"
+	mimir.RulerBucketName = "mimir-blocks"
+	report = ValidateReadiness(cfg)
+	assertIssue(t, report, SeverityError, CategoryServices, "opencenter.services.mimir.ruler_bucket_name")
+	assertNoIssue(t, report, "opencenter.services.tempo.bucket_name")
+}
+
+func TestValidateMimirS3EndpointContract(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{name: "root URL", value: "https://seaweedfs.example:8333", wantErr: false},
+		{name: "root slash", value: "http://s3.example/", wantErr: false},
+		{name: "path is unsupported", value: "http://seaweedfs.example:8333/s3", wantErr: true},
+		{name: "query is unsupported", value: "https://s3.example?bucket=x", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateMimirS3Endpoint(tt.value)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateMimirS3Endpoint(%q) error = %v, wantErr %t", tt.value, err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				host, err := MimirS3EndpointHost(tt.value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if host == "" || strings.Contains(host, "://") || strings.Contains(host, "/") {
+					t.Fatalf("MimirS3EndpointHost(%q) = %q, want host[:port]", tt.value, host)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateReadinessMimirManagedRustFSRequiresItsEffectiveBackendInputs(t *testing.T) {
+	cfg := validReadinessConfig(t, "kind")
+	cfg.OpenCenter.Infrastructure.Storage.Profile = StorageProfileConfig{
+		Lifecycle:             StorageLifecycleNonProduction,
+		PVCProvider:           StoragePVCProviderLonghorn,
+		ObjectStorageProvider: StorageObjectProviderRustFS,
+	}
+	cfg.OpenCenter.Services["longhorn"].(*services.LonghornConfig).Enabled = true
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.Enabled = true
+	mimir.StorageType = "s3"
+	mimir.S3Endpoint = ""
+	cfg.Secrets.Mimir.S3AccessKeyID = ""
+	cfg.Secrets.Mimir.S3SecretAccessKey = ""
+
+	report := ValidateReadiness(cfg)
+	for _, path := range []string{
+		"opencenter.services.mimir.s3_endpoint",
+		"secrets.mimir.s3_access_key_id",
+		"secrets.mimir.s3_secret_access_key",
+	} {
+		assertIssue(t, report, SeverityError, CategoryServices, path)
+	}
+}
+
 func TestValidateReadinessFilesystemAndNoneSkipObjectStorageChecks(t *testing.T) {
 	cfg := validReadinessConfig(t, "kind")
 	harbor := cfg.OpenCenter.Services["harbor"].(*services.HarborConfig)
@@ -295,6 +481,10 @@ func validReadinessConfig(t *testing.T, provider string) *Config {
 	cfg.Secrets.Tempo.AccessKey = "tempo-s3-access"
 	cfg.Secrets.Tempo.SecretKey = "tempo-s3-secret"
 	cfg.OpenCenter.Services["tempo"].(*services.TempoConfig).S3Endpoint = "https://tempo-s3.example"
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.S3Endpoint = "https://mimir-s3.example"
+	cfg.Secrets.Mimir.S3AccessKeyID = "mimir-s3-access"
+	cfg.Secrets.Mimir.S3SecretAccessKey = "mimir-s3-secret"
 	cfg.OpenCenter.Services["harbor"].(*services.HarborConfig).S3Endpoint = "https://harbor-s3.example"
 	cfg.OpenCenter.Services["velero"].(*services.VeleroConfig).S3Endpoint = "https://velero-s3.example"
 

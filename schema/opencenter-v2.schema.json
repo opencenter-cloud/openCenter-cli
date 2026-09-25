@@ -3909,6 +3909,12 @@
                 "adoption_mode": {
                   "type": "string"
                 },
+                "alertmanager_bucket_name": {
+                  "type": "string"
+                },
+                "bucket_name": {
+                  "type": "string"
+                },
                 "enabled": {
                   "type": "boolean"
                 },
@@ -3929,6 +3935,24 @@
                   "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
+                "ruler_bucket_name": {
+                  "type": "string"
+                },
+                "s3_credential_id": {
+                  "type": "string"
+                },
+                "s3_endpoint": {
+                  "type": "string"
+                },
+                "s3_force_path_style": {
+                  "type": "boolean"
+                },
+                "s3_insecure": {
+                  "type": "boolean"
+                },
+                "s3_region": {
+                  "type": "string"
+                },
                 "source": {
                   "additionalProperties": false,
                   "properties": {
@@ -3943,6 +3967,39 @@
                     }
                   },
                   "type": "object"
+                },
+                "storage_type": {
+                  "type": "string"
+                },
+                "swift_application_credential_id": {
+                  "type": "string"
+                },
+                "swift_auth_url": {
+                  "type": "string"
+                },
+                "swift_auth_version": {
+                  "type": "integer"
+                },
+                "swift_container_name": {
+                  "type": "string"
+                },
+                "swift_domain_name": {
+                  "type": "string"
+                },
+                "swift_project_domain_name": {
+                  "type": "string"
+                },
+                "swift_project_name": {
+                  "type": "string"
+                },
+                "swift_region": {
+                  "type": "string"
+                },
+                "swift_user_domain_name": {
+                  "type": "string"
+                },
+                "swift_username": {
+                  "type": "string"
                 }
               },
               "type": "object"
@@ -6051,6 +6108,12 @@
                 "adoption_mode": {
                   "type": "string"
                 },
+                "alertmanager_bucket_name": {
+                  "type": "string"
+                },
+                "bucket_name": {
+                  "type": "string"
+                },
                 "enabled": {
                   "type": "boolean"
                 },
@@ -6071,6 +6134,24 @@
                   "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
+                "ruler_bucket_name": {
+                  "type": "string"
+                },
+                "s3_credential_id": {
+                  "type": "string"
+                },
+                "s3_endpoint": {
+                  "type": "string"
+                },
+                "s3_force_path_style": {
+                  "type": "boolean"
+                },
+                "s3_insecure": {
+                  "type": "boolean"
+                },
+                "s3_region": {
+                  "type": "string"
+                },
                 "source": {
                   "additionalProperties": false,
                   "properties": {
@@ -6085,6 +6166,39 @@
                     }
                   },
                   "type": "object"
+                },
+                "storage_type": {
+                  "type": "string"
+                },
+                "swift_application_credential_id": {
+                  "type": "string"
+                },
+                "swift_auth_url": {
+                  "type": "string"
+                },
+                "swift_auth_version": {
+                  "type": "integer"
+                },
+                "swift_container_name": {
+                  "type": "string"
+                },
+                "swift_domain_name": {
+                  "type": "string"
+                },
+                "swift_project_domain_name": {
+                  "type": "string"
+                },
+                "swift_project_name": {
+                  "type": "string"
+                },
+                "swift_region": {
+                  "type": "string"
+                },
+                "swift_user_domain_name": {
+                  "type": "string"
+                },
+                "swift_username": {
+                  "type": "string"
                 }
               },
               "type": "object"
@@ -8269,6 +8383,12 @@
                 "adoption_mode": {
                   "type": "string"
                 },
+                "alertmanager_bucket_name": {
+                  "type": "string"
+                },
+                "bucket_name": {
+                  "type": "string"
+                },
                 "enabled": {
                   "type": "boolean"
                 },
@@ -8289,6 +8409,24 @@
                   "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
+                "ruler_bucket_name": {
+                  "type": "string"
+                },
+                "s3_credential_id": {
+                  "type": "string"
+                },
+                "s3_endpoint": {
+                  "type": "string"
+                },
+                "s3_force_path_style": {
+                  "type": "boolean"
+                },
+                "s3_insecure": {
+                  "type": "boolean"
+                },
+                "s3_region": {
+                  "type": "string"
+                },
                 "source": {
                   "additionalProperties": false,
                   "properties": {
@@ -8303,6 +8441,39 @@
                     }
                   },
                   "type": "object"
+                },
+                "storage_type": {
+                  "type": "string"
+                },
+                "swift_application_credential_id": {
+                  "type": "string"
+                },
+                "swift_auth_url": {
+                  "type": "string"
+                },
+                "swift_auth_version": {
+                  "type": "integer"
+                },
+                "swift_container_name": {
+                  "type": "string"
+                },
+                "swift_domain_name": {
+                  "type": "string"
+                },
+                "swift_project_domain_name": {
+                  "type": "string"
+                },
+                "swift_project_name": {
+                  "type": "string"
+                },
+                "swift_region": {
+                  "type": "string"
+                },
+                "swift_user_domain_name": {
+                  "type": "string"
+                },
+                "swift_username": {
+                  "type": "string"
                 }
               },
               "type": "object"
@@ -9317,6 +9488,12 @@
         "mimir": {
           "additionalProperties": false,
           "properties": {
+            "s3_access_key_id": {
+              "type": "string"
+            },
+            "s3_secret_access_key": {
+              "type": "string"
+            },
             "swift_application_credential_secret": {
               "type": "string"
             }

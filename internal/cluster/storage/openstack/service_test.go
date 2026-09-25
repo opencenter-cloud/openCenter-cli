@@ -20,6 +20,7 @@ type fakeAdapter struct {
 	preflightErr                                                               error
 	preflightS3Endpoint                                                        string
 	preflightCalls, containers, appCreates, appDeletes, ec2Creates, ec2Deletes int
+	containerNames                                                             []string
 	appUserID, ec2UserID, appDeleteUserID, ec2DeleteUserID                     string
 	app                                                                        cloudopenstack.AppCredential
 	ec2                                                                        cloudopenstack.EC2Credentials
@@ -35,8 +36,9 @@ func (f *fakeAdapter) Preflight(_ context.Context, _ string, explicitS3Endpoint 
 	}
 	return preflight, f.preflightErr
 }
-func (f *fakeAdapter) EnsureContainer(context.Context, cloudopenstack.ContainerRequest) error {
+func (f *fakeAdapter) EnsureContainer(_ context.Context, req cloudopenstack.ContainerRequest) error {
 	f.containers++
+	f.containerNames = append(f.containerNames, req.Name)
 	return nil
 }
 func (f *fakeAdapter) CreateAppCredential(_ context.Context, req cloudopenstack.AppCredentialRequest) (cloudopenstack.AppCredential, error) {
@@ -125,12 +127,187 @@ func TestValidateOptionsMappings(t *testing.T) {
 	for _, tc := range []struct {
 		service, backend string
 		wantErr          bool
-	}{{"loki", "swift", false}, {"loki", "s3", false}, {"loki", "none", false}, {"tempo", "swift", true}, {"tempo", "s3", false}, {"harbor", "s3", false}, {"harbor", "filesystem", false}, {"harbor", "swift", true}, {"etcd-backup", "s3", false}, {"etcd-backup", "none", false}, {"velero", "s3", false}, {"velero", "none", false}, {"velero", "swift", true}, {"other", "s3", true}} {
+	}{{"loki", "swift", false}, {"loki", "s3", false}, {"loki", "none", false}, {"tempo", "swift", true}, {"tempo", "s3", false}, {"mimir", "s3", false}, {"mimir", "swift", false}, {"harbor", "s3", false}, {"harbor", "filesystem", false}, {"harbor", "swift", true}, {"etcd-backup", "s3", false}, {"etcd-backup", "none", false}, {"velero", "s3", false}, {"velero", "none", false}, {"velero", "swift", true}, {"other", "s3", true}} {
 		err := ValidateOptions(Options{Service: tc.service, Backend: tc.backend, Cluster: "prod"})
 		if (err != nil) != tc.wantErr {
 			t.Errorf("%s=%s error=%v, wantErr=%v", tc.service, tc.backend, err, tc.wantErr)
 		}
 	}
+}
+
+func mimirStorageConfig(t *testing.T) *v2.Config {
+	t.Helper()
+	cfg := testConfig(t)
+	cfg.OpenCenter.Services["mimir"] = &services.MimirConfig{
+		BaseConfig:  services.BaseConfig{Enabled: true},
+		StorageType: "s3",
+	}
+	cfg.Secrets.Mimir = v2.MimirSecrets{}
+	return cfg
+}
+
+func TestPlanMimirS3UsesDedicatedCredentialPaths(t *testing.T) {
+	cfg := mimirStorageConfig(t)
+	planned, err := Plan(context.Background(), PlanInput{
+		Config:  cfg,
+		Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod"},
+		Adapter: testAdapter(),
+	})
+	require.NoError(t, err)
+	require.Equal(t, StatusPlanned, planned.Result.Status)
+	require.Contains(t, planned.Result.SecretPaths, "secrets.mimir.s3_access_key_id")
+	require.Contains(t, planned.Result.SecretPaths, "secrets.mimir.s3_secret_access_key")
+	mimir := planned.prospective.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	require.Equal(t, "s3", mimir.StorageType)
+	require.Equal(t, "prod-mimir", mimir.BucketName)
+	require.Equal(t, "prod-mimir-ruler", mimir.RulerBucketName)
+	require.Equal(t, "prod-mimir-alertmanager", mimir.AlertmanagerBucketName)
+	require.Equal(t, []string{"prod-mimir", "prod-mimir-ruler", "prod-mimir-alertmanager"}, planned.Result.Containers)
+	require.Equal(t, []string{"prod-mimir", "prod-mimir-ruler", "prod-mimir-alertmanager"}, []string{planned.Result.RemoteActions[0].Name, planned.Result.RemoteActions[1].Name, planned.Result.RemoteActions[2].Name})
+	require.Equal(t, "https://s3.example", mimir.S3Endpoint)
+	require.Equal(t, "RegionOne", mimir.S3Region)
+	require.True(t, mimir.S3ForcePathStyle)
+	require.False(t, mimir.S3Insecure)
+	require.Empty(t, planned.prospective.Secrets.Mimir.S3AccessKeyID)
+	require.Empty(t, planned.prospective.Secrets.Mimir.S3SecretAccessKey)
+}
+
+func TestPlanMimirS3RejectsPathEndpointBeforePreflight(t *testing.T) {
+	cfg := mimirStorageConfig(t)
+	adapter := testAdapter()
+	_, err := Plan(context.Background(), PlanInput{
+		Config:  cfg,
+		Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod", S3Endpoint: "https://s3.example/api"},
+		Adapter: adapter,
+	})
+	require.Error(t, err)
+	require.ErrorContains(t, err, "Mimir S3 endpoint must not contain a path")
+	require.Zero(t, adapter.preflightCalls)
+	require.Zero(t, adapter.containers)
+	require.Zero(t, adapter.appCreates)
+	require.Zero(t, adapter.ec2Creates)
+}
+
+func TestPlanMimirS3AcceptsHostRootEndpoint(t *testing.T) {
+	cfg := mimirStorageConfig(t)
+	adapter := testAdapter()
+	planned, err := Plan(context.Background(), PlanInput{
+		Config:  cfg,
+		Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod", S3Endpoint: "https://s3.example"},
+		Adapter: adapter,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "https://s3.example", adapter.preflightS3Endpoint)
+	require.Equal(t, "https://s3.example", planned.Result.S3Endpoint)
+}
+
+func TestPlanMimirS3UsesConfiguredBuckets(t *testing.T) {
+	cfg := mimirStorageConfig(t)
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.BucketName = "blocks-overridden"
+	mimir.RulerBucketName = "rules-overridden"
+	mimir.AlertmanagerBucketName = "alerts-overridden"
+
+	planned, err := Plan(context.Background(), PlanInput{
+		Config: cfg, Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod"}, Adapter: testAdapter(),
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"blocks-overridden", "rules-overridden", "alerts-overridden"}, planned.Result.Containers)
+	require.Equal(t, []string{"blocks-overridden", "rules-overridden", "alerts-overridden"}, []string{planned.Result.RemoteActions[0].Name, planned.Result.RemoteActions[1].Name, planned.Result.RemoteActions[2].Name})
+}
+
+func TestPlanMimirS3RejectsCoincidentBuckets(t *testing.T) {
+	cfg := mimirStorageConfig(t)
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.BucketName = "shared-mimir"
+	mimir.RulerBucketName = "shared-mimir"
+	mimir.AlertmanagerBucketName = "shared-mimir"
+
+	adapter := testAdapter()
+	planned, err := Plan(context.Background(), PlanInput{
+		Config: cfg, Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod"}, Adapter: adapter,
+	})
+	require.Error(t, err)
+	require.ErrorContains(t, err, "Mimir S3 bucket names must be distinct")
+	require.Empty(t, planned.Result.RemoteActions)
+	require.Zero(t, adapter.preflightCalls)
+}
+
+func TestApplyMimirS3RejectsCoincidentBucketsBeforeRemoteActions(t *testing.T) {
+	cfg := mimirStorageConfig(t)
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.BucketName = "shared-mimir"
+	mimir.RulerBucketName = "shared-mimir"
+	mimir.AlertmanagerBucketName = "shared-mimir"
+	raw, err := v2.MarshalPublicConfig(cfg)
+	require.NoError(t, err)
+
+	adapter := testAdapter()
+	fs := &fakeFS{data: raw}
+	result, err := Apply(context.Background(), ApplyInput{
+		ConfigPath: "/tmp/prod.yaml", RecoveryPath: "/tmp/prod.recovery", OriginalBytes: raw,
+		Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod"}, Adapter: adapter, FileSystem: fs,
+	})
+	require.Error(t, err)
+	require.Empty(t, result.RemoteActions)
+	require.Zero(t, adapter.preflightCalls)
+	require.Zero(t, adapter.containers)
+	require.Zero(t, adapter.appCreates)
+	require.Zero(t, adapter.ec2Creates)
+	require.Zero(t, adapter.appDeletes)
+	require.Zero(t, adapter.ec2Deletes)
+	require.False(t, fs.backup)
+	require.False(t, fs.atomic)
+	require.False(t, fs.recovery)
+}
+
+func TestApplyMimirS3EnsuresAllBucketsAndRecordsThemForRecovery(t *testing.T) {
+	cfg := mimirStorageConfig(t)
+	raw, err := v2.MarshalPublicConfig(cfg)
+	require.NoError(t, err)
+	fs := &fakeFS{data: raw}
+	adapter := testAdapter()
+	result, err := Apply(context.Background(), ApplyInput{
+		ConfigPath: "/tmp/prod.yaml", RecoveryPath: "/tmp/prod.recovery", OriginalBytes: raw,
+		Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod"}, Adapter: adapter, FileSystem: fs,
+	})
+	require.NoError(t, err)
+	require.Equal(t, StatusApplied, result.Status)
+	require.Equal(t, []string{"prod-mimir", "prod-mimir-ruler", "prod-mimir-alertmanager"}, adapter.containerNames)
+	require.NotEmpty(t, fs.recoveryJournals)
+	require.Equal(t, []string{"prod-mimir", "prod-mimir-ruler", "prod-mimir-alertmanager"}, fs.recoveryJournals[0].Containers)
+}
+
+func TestApplyMimirS3PersistsAndRotatesCredentials(t *testing.T) {
+	cfg := mimirStorageConfig(t)
+	raw, err := v2.MarshalPublicConfig(cfg)
+	require.NoError(t, err)
+	fs := &fakeFS{data: raw}
+	adapter := testAdapter()
+	result, err := Apply(context.Background(), ApplyInput{
+		ConfigPath: "/tmp/prod.yaml", RecoveryPath: "/tmp/prod.recovery", OriginalBytes: raw,
+		Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod"}, Adapter: adapter, FileSystem: fs,
+	})
+	require.NoError(t, err)
+	require.Equal(t, StatusApplied, result.Status)
+	require.Contains(t, string(fs.data), "access-1")
+	require.Contains(t, string(fs.data), "ec2-secret")
+
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.S3CredentialID = "old-ec2"
+	cfg.Secrets.Mimir.S3AccessKeyID, cfg.Secrets.Mimir.S3SecretAccessKey = "old-access", "old-secret"
+	raw, err = v2.MarshalPublicConfig(cfg)
+	require.NoError(t, err)
+	fs = &fakeFS{data: raw}
+	adapter = testAdapter()
+	result, err = Apply(context.Background(), ApplyInput{
+		ConfigPath: "/tmp/prod.yaml", RecoveryPath: "/tmp/prod.recovery", OriginalBytes: raw,
+		Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod", RotateCredentials: true}, Adapter: adapter, FileSystem: fs,
+	})
+	require.NoError(t, err)
+	require.Equal(t, StatusApplied, result.Status)
+	require.Equal(t, 1, adapter.ec2Creates)
+	require.Equal(t, 1, adapter.ec2Deletes)
 }
 
 func TestPlanNonRemoteStorageSkipsOpenStackProvisioning(t *testing.T) {

@@ -57,6 +57,7 @@ func ValidateReadiness(cfg *Config) ReadinessReport {
 	r.validateServiceSchedulingCapacity(cfg)
 	r.validateStorageProfile(cfg)
 	r.validateServiceSecrets(cfg)
+	r.validateS3Buckets(cfg)
 
 	return r.report
 }
@@ -804,10 +805,47 @@ func (r *readinessBuilder) validateTempoSecrets(cfg *Config) {
 }
 
 func (r *readinessBuilder) validateMimirSecrets(cfg *Config) {
-	if !serviceEnabled(cfg, "mimir") || UsesManagedObjectStorage(cfg) {
+	// Mimir has no managed RustFS credential source in the pinned chart
+	// contract. Always validate the effective Mimir backend, including when
+	// the cluster selects the managed object-storage profile.
+	if !serviceEnabled(cfg, "mimir") {
 		return
 	}
-	r.requireSecret("secrets.mimir.swift_application_credential_secret", cfg.GetMimirSwiftApplicationCredentialSecret(), "Mimir Swift blocks storage requires an application credential secret.")
+	backend := ResolveObjectStorageBackend(cfg, "mimir")
+	if backend == "swift" && strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) != "openstack" {
+		r.addError(CategoryProvider, "opencenter.services.mimir.storage_type", "Mimir's resolved Swift storage backend is only supported on OpenStack infrastructure.", "Set services.mimir.storage_type to s3 for non-OpenStack providers.")
+	}
+	switch backend {
+	case "swift":
+		credentialID, credentialSecret, pairErr := cfg.ResolveMimirSwiftCredentials()
+		if pairErr != nil {
+			r.addError(CategoryServices, "opencenter.services.mimir.swift_application_credential_id", pairErr.Error(), "Set both service-specific Mimir Swift credential fields, or clear both and configure the global OpenStack pair.")
+			break
+		}
+		if valueSet(credentialID) != valueSet(credentialSecret) {
+			r.addError(CategoryServices, "opencenter.services.mimir.swift_application_credential_id", "Mimir Swift application credential ID and secret must be set together.", "Set both the typed Mimir credential fields or both global OpenStack application credential values.")
+		}
+		if !valueSet(credentialID) {
+			r.addError(CategoryServices, "opencenter.services.mimir.swift_application_credential_id", "Mimir Swift blocks storage requires an application credential ID.", "Set swift_application_credential_id or the global OpenStack application credential ID.")
+		}
+		r.requireSecret("secrets.mimir.swift_application_credential_secret", credentialSecret, "Mimir Swift blocks storage requires an application credential secret.")
+	case "s3":
+		mimir, _ := configuredService(cfg, "mimir").(*services.MimirConfig)
+		if mimir == nil {
+			r.addError(CategoryServices, "opencenter.services.mimir", fmt.Sprintf("mimir has unexpected configuration type %T.", configuredService(cfg, "mimir")), "Use the canonical Mimir service configuration.")
+			return
+		}
+		r.requireMimirS3Endpoint("opencenter.services.mimir.s3_endpoint", mimir.S3Endpoint)
+		accessKey, secretKey := cfg.GetMimirS3Credentials()
+		r.requireSecret("secrets.mimir.s3_access_key_id", accessKey, "Mimir S3 storage requires an access key ID.")
+		r.requireSecret("secrets.mimir.s3_secret_access_key", secretKey, "Mimir S3 storage requires a secret access key.")
+	}
+}
+
+func (r *readinessBuilder) validateS3Buckets(cfg *Config) {
+	for _, issue := range s3BucketIssues(cfg) {
+		r.addError(CategoryServices, issue.path, issue.message, "Use a unique S3 bucket name that follows the S3 naming rules.")
+	}
 }
 
 func (r *readinessBuilder) validateHarborSecrets(cfg *Config) {
@@ -830,6 +868,12 @@ func (r *readinessBuilder) validateHarborSecrets(cfg *Config) {
 func (r *readinessBuilder) requireS3Endpoint(path, value, message string) {
 	if err := ValidateS3Endpoint(value); err != nil {
 		r.addError(CategoryServices, path, message, "Set a provider-specific absolute HTTP(S) S3 endpoint.")
+	}
+}
+
+func (r *readinessBuilder) requireMimirS3Endpoint(path, value string) {
+	if err := ValidateMimirS3Endpoint(value); err != nil {
+		r.addError(CategoryServices, path, "Mimir S3 storage requires an absolute HTTP(S) root endpoint without a path.", "Set the S3 endpoint URL to its root (for example https://s3.example.com); Mimir uses bucket_lookup_type: path for path-style addressing.")
 	}
 }
 

@@ -92,6 +92,77 @@ func TestPlanIncludesEtcdBackupAndVeleroWorkloadSecrets(t *testing.T) {
 	require.Equal(t, "[default]\naws_access_key_id=velero-access\naws_secret_access_key=velero-secret\n", velero.Payload["cloud"])
 }
 
+func TestPlanIncludesOnlyApplicableMimirS3Credentials(t *testing.T) {
+	cfg := &v2.Config{
+		OpenCenter: v2.OpenCenterConfig{Services: map[string]any{
+			"mimir": &services.MimirConfig{BaseConfig: services.BaseConfig{Enabled: true}, StorageType: "s3"},
+		}},
+		Secrets: v2.SecretsConfig{Mimir: v2.MimirSecrets{
+			SwiftApplicationCredentialSecret: "swift-secret",
+			S3AccessKeyID:                    `access: [mimir-prod]`,
+			S3SecretAccessKey:                `secret: "quoted # value"`,
+		}},
+	}
+
+	artifacts, err := Plan(cfg)
+	require.NoError(t, err)
+	require.Len(t, artifacts, 1)
+	require.Equal(t, "mimir", artifacts[0].TargetService)
+	require.Equal(t, `access: [mimir-prod]`, artifacts[0].Payload["s3-access-key-id"])
+	require.Equal(t, `secret: "quoted # value"`, artifacts[0].Payload["s3-secret-access-key"])
+	require.NotContains(t, artifacts[0].Payload, "swift-application-credential-secret")
+}
+
+func TestPlanIncludesOnlyApplicableMimirSwiftCredential(t *testing.T) {
+	cfg := &v2.Config{
+		OpenCenter: v2.OpenCenterConfig{Services: map[string]any{
+			"mimir": &services.MimirConfig{BaseConfig: services.BaseConfig{Enabled: true}, StorageType: "swift", SwiftApplicationCredentialID: "mimir-swift-id"},
+		}},
+		Secrets: v2.SecretsConfig{Mimir: v2.MimirSecrets{
+			SwiftApplicationCredentialSecret: "swift-secret",
+			S3AccessKeyID:                    "mimir-access",
+			S3SecretAccessKey:                "mimir-secret",
+		}},
+	}
+
+	artifacts, err := Plan(cfg)
+	require.NoError(t, err)
+	require.Len(t, artifacts, 1)
+	require.Equal(t, "mimir", artifacts[0].TargetService)
+	require.Equal(t, "swift-secret", artifacts[0].Payload["swift-application-credential-secret"])
+	require.NotContains(t, artifacts[0].Payload, "s3-access-key-id")
+	require.NotContains(t, artifacts[0].Payload, "s3-secret-access-key")
+}
+
+func TestPlanOmitsMimirSwiftArtifactForPartialCredentialOverrides(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		serviceID  string
+		serviceKey string
+	}{
+		{name: "service ID only", serviceID: "mimir-swift-id"},
+		{name: "service secret only", serviceKey: "mimir-swift-secret"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := &v2.Config{
+				OpenCenter: v2.OpenCenterConfig{Services: map[string]any{
+					"mimir": &services.MimirConfig{
+						BaseConfig:                   services.BaseConfig{Enabled: true},
+						StorageType:                  "swift",
+						SwiftApplicationCredentialID: test.serviceID,
+					},
+				}},
+				Secrets: v2.SecretsConfig{Mimir: v2.MimirSecrets{
+					SwiftApplicationCredentialSecret: test.serviceKey,
+				}},
+			}
+			artifacts, err := Plan(cfg)
+			require.NoError(t, err)
+			require.Empty(t, artifacts)
+		})
+	}
+}
+
 func TestPlanOmitsNoneStorageArtifacts(t *testing.T) {
 	cfg := &v2.Config{
 		OpenCenter: v2.OpenCenterConfig{Services: map[string]any{

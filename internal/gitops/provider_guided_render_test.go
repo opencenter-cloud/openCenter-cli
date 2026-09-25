@@ -8,6 +8,7 @@ import (
 
 	configservices "github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestRenderClusterAppsCertManagerCloudflare(t *testing.T) {
@@ -143,6 +144,8 @@ func TestRenderClusterAppsLokiUsesS3StorageContract(t *testing.T) {
 
 func TestRenderMimirOverrideValues(t *testing.T) {
 	cfg := newDefault("mimir-guided")
+	mimir := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
+	mimir.StorageType = "swift"
 	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
 	openstack.AuthURL = "https://identity.api.example.com/v3"
 	openstack.Region = "SJC3"
@@ -151,14 +154,18 @@ func TestRenderMimirOverrideValues(t *testing.T) {
 	openstack.Domain = "rackspace"
 	openstack.DomainName = "rackspace"
 	openstack.UserDomainName = "rackspace"
+	mimir.SwiftApplicationCredentialID = "mimir-swift-id"
 	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = "mimir-swift-secret"
 
 	mimirValues := renderOverrideValues(t, cfg, "mimir")
 	if !strings.Contains(mimirValues, "dnsService: coredns") {
 		t.Fatalf("expected global.dnsService: coredns in Mimir values:\n%s", mimirValues)
 	}
-	if !strings.Contains(mimirValues, "backend: swift") || !strings.Contains(mimirValues, "application_credential_secret: mimir-swift-secret") {
+	if !strings.Contains(mimirValues, "backend: swift") || !strings.Contains(mimirValues, "${MIMIR_SWIFT_APPLICATION_CREDENTIAL_SECRET}") {
 		t.Fatalf("expected configured Swift storage in Mimir values:\n%s", mimirValues)
+	}
+	if strings.Contains(mimirValues, "mimir-swift-secret") {
+		t.Fatalf("did not expect Swift credentials in Mimir values:\n%s", mimirValues)
 	}
 	if !strings.Contains(mimirValues, "minio:\n    enabled: false") {
 		t.Fatalf("expected bundled MinIO to be disabled in Mimir values:\n%s", mimirValues)
@@ -193,6 +200,139 @@ func TestRenderMimirOverrideValues(t *testing.T) {
 	}
 	if !strings.Contains(mimirValues, "kafka:\n    enabled: false") {
 		t.Fatalf("expected bundled Kafka disabled when external kafka-cluster is enabled:\n%s", mimirValues)
+	}
+}
+
+func TestRenderMimirSwiftTypedFieldsWinAndFallbackToOpenStack(t *testing.T) {
+	cfg := newDefault("mimir-swift-fields")
+	mimir := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
+	mimir.StorageType = "swift"
+	mimir.BucketName = "typed-mimir-container"
+	mimir.SwiftAuthURL = "https://typed-keystone.example/v3"
+	mimir.SwiftRegion = "typed-region"
+	mimir.SwiftAuthVersion = 3
+	mimir.SwiftApplicationCredentialID = "typed-credential-id"
+	mimir.SwiftUsername = "typed-user"
+	mimir.SwiftProjectName = "typed-project"
+	mimir.SwiftProjectDomainName = "typed-project-domain"
+	mimir.SwiftUserDomainName = "typed-user-domain"
+	mimir.SwiftDomainName = "typed-domain"
+	mimir.SwiftContainerName = "typed-swift-container"
+	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
+	openstack.AuthURL = "https://global-keystone.example/v3"
+	openstack.Region = "global-region"
+	openstack.ApplicationCredentialID = "global-credential-id"
+	openstack.ProjectName = "global-project"
+	openstack.ProjectDomainName = "global-project-domain"
+	openstack.UserDomainName = "global-user-domain"
+	openstack.DomainName = "global-domain"
+	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = "typed-swift-secret"
+
+	values := renderOverrideValues(t, cfg, "mimir")
+	for _, want := range []string{
+		`container_name: "typed-swift-container"`,
+		`auth_url: "https://typed-keystone.example/v3"`,
+		`region_name: "typed-region"`,
+		`application_credential_id: "typed-credential-id"`,
+		`username: "typed-user"`,
+		`project_name: "typed-project"`,
+		`project_domain_name: "typed-project-domain"`,
+		`user_domain_name: "typed-user-domain"`,
+		`domain_name: "typed-domain"`,
+	} {
+		if !strings.Contains(values, want) {
+			t.Fatalf("expected typed Mimir Swift value %q:\n%s", want, values)
+		}
+	}
+
+	mimir.SwiftAuthURL = ""
+	mimir.SwiftRegion = ""
+	mimir.SwiftApplicationCredentialID = ""
+	mimir.SwiftUsername = ""
+	mimir.SwiftProjectName = ""
+	mimir.SwiftProjectDomainName = ""
+	mimir.SwiftUserDomainName = ""
+	mimir.SwiftDomainName = ""
+	mimir.SwiftContainerName = ""
+	mimir.BucketName = ""
+	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = ""
+	openstack.ApplicationCredentialSecret = "global-swift-secret"
+	values = renderOverrideValues(t, cfg, "mimir")
+	for _, want := range []string{
+		`container_name: "mimir-swift-fields-mimir"`,
+		`auth_url: "https://global-keystone.example/v3"`,
+		`region_name: "global-region"`,
+		`application_credential_id: "global-credential-id"`,
+		`project_name: "global-project"`,
+		`project_domain_name: "global-project-domain"`,
+		`user_domain_name: "global-user-domain"`,
+		`domain_name: "global-domain"`,
+	} {
+		if !strings.Contains(values, want) {
+			t.Fatalf("expected global OpenStack fallback %q:\n%s", want, values)
+		}
+	}
+}
+
+func TestRenderMimirOverrideValuesS3SeaweedFS(t *testing.T) {
+	cfg := newDefault("mimir-seaweedfs-guided")
+	mimir := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
+	mimir.StorageType = "s3"
+	mimir.BucketName = "mimir-blocks"
+	mimir.S3Endpoint = "http://seaweedfs.s3.svc.cluster.local:8333"
+	mimir.S3Region = "SJC3"
+	mimir.S3ForcePathStyle = true
+	mimir.S3Insecure = true
+	accessKey := `access: [mimir-prod]`
+	secretKey := `secret: "quoted # value"`
+	cfg.Secrets.Mimir.S3AccessKeyID = accessKey
+	cfg.Secrets.Mimir.S3SecretAccessKey = secretKey
+
+	values := renderOverrideValues(t, cfg, "mimir")
+	var parsed map[string]any
+	if err := yaml.Unmarshal([]byte(values), &parsed); err != nil {
+		t.Fatalf("Mimir S3 values must remain valid YAML with YAML-sensitive credentials: %v\n%s", err, values)
+	}
+	for _, want := range []string{
+		"blocks_storage:\n            backend: s3",
+		"ruler_storage:\n            backend: s3",
+		"alertmanager_storage:\n            backend: s3",
+		"bucket_name: \"mimir-blocks\"",
+		"bucket_name: \"mimir-blocks-ruler\"",
+		"bucket_name: \"mimir-blocks-alertmanager\"",
+		"endpoint: \"seaweedfs.s3.svc.cluster.local:8333\"",
+		"region: \"SJC3\"",
+		"access_key_id: \"${MIMIR_S3_ACCESS_KEY_ID}\"",
+		"secret_access_key: \"${MIMIR_S3_SECRET_ACCESS_KEY}\"",
+		"bucket_lookup_type: \"path\"",
+		"insecure: true",
+		"http: {}",
+		"name: MIMIR_S3_ACCESS_KEY_ID",
+		"key: s3-access-key-id",
+	} {
+		if !strings.Contains(values, want) {
+			t.Fatalf("expected %q in Mimir S3 values:\n%s", want, values)
+		}
+	}
+	if strings.Contains(values, "backend: swift") || strings.Contains(values, "swift:") {
+		t.Fatalf("did not expect Swift rendering in Mimir S3 values:\n%s", values)
+	}
+	if strings.Contains(values, accessKey) || strings.Contains(values, secretKey) || strings.Contains(values, "force_path_style") {
+		t.Fatalf("did not expect plaintext credentials or the obsolete force_path_style key in Mimir values:\n%s", values)
+	}
+}
+
+func TestRenderMimirRejectsS3EndpointPath(t *testing.T) {
+	cfg := newDefault("mimir-invalid-endpoint-guided")
+	mimir := cfg.OpenCenter.Services["mimir"].(*configservices.MimirConfig)
+	mimir.StorageType = "s3"
+	mimir.S3Endpoint = "https://seaweedfs.s3.svc.cluster.local:8333/s3"
+	cfg.Secrets.Mimir.S3AccessKeyID = "mimir-access"
+	cfg.Secrets.Mimir.S3SecretAccessKey = "mimir-secret"
+
+	_, err := resolveMimirStorageTemplateData(cfg)
+	if err == nil || !strings.Contains(err.Error(), "must not contain a path") {
+		t.Fatalf("resolveMimirStorageTemplateData() error = %v, want unsupported endpoint path error", err)
 	}
 }
 

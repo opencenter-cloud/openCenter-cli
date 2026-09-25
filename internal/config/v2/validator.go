@@ -80,6 +80,10 @@ func ResolveObjectStorageBackend(cfg *Config, serviceName string) string {
 		if strings.EqualFold(strings.TrimSpace(service.StorageType), "none") {
 			return "none"
 		}
+	case *services.MimirConfig:
+		if storageType := strings.TrimSpace(service.StorageType); storageType == "" || strings.EqualFold(storageType, "swift") {
+			return "swift"
+		}
 	case *services.HarborConfig:
 		if strings.EqualFold(strings.TrimSpace(service.StorageType), "filesystem") {
 			return "filesystem"
@@ -133,28 +137,41 @@ func storagePolicyIssues(cfg *Config) []storagePolicyIssue {
 			add("opencenter.services.longhorn", "RustFS requires the openCenter-managed Longhorn service to be enabled.")
 		}
 	} else if profile.Lifecycle == StorageLifecycleProduction {
-		for _, serviceName := range []string{"loki", "tempo", "velero", "harbor", "etcd-backup"} {
+		for _, serviceName := range []string{"loki", "tempo", "velero", "harbor", "etcd-backup", "mimir"} {
 			if !isServiceEnabled(cfg, serviceName) {
 				continue
 			}
 			if storageBackendDoesNotUseObjectStorage(cfg, serviceName) {
 				continue
 			}
-			if err := ValidateS3Endpoint(externalS3Endpoint(cfg, serviceName)); err != nil {
+			if ResolveObjectStorageBackend(cfg, serviceName) != "s3" {
+				continue
+			}
+			validateEndpoint := ValidateS3Endpoint
+			if serviceName == "mimir" {
+				validateEndpoint = ValidateMimirS3Endpoint
+			}
+			if err := validateEndpoint(externalS3Endpoint(cfg, serviceName)); err != nil {
 				add("opencenter.services."+serviceName+".s3_endpoint", "external S3-compatible storage requires a configured absolute HTTP(S) endpoint.")
 			}
 		}
-		if isServiceEnabled(cfg, "mimir") {
-			add("opencenter.services.mimir", "Mimir cannot use the external S3 profile until its typed S3 configuration is implemented; keep Mimir disabled or use the managed RustFS profile during the migration.")
-		}
 	}
 
-	for _, serviceName := range []string{"loki", "tempo", "velero", "etcd-backup"} {
+	for _, serviceName := range []string{"loki", "tempo", "velero", "etcd-backup", "mimir"} {
 		if !isServiceEnabled(cfg, serviceName) {
 			continue
 		}
 		storageType := configuredBulkStorageType(cfg, serviceName)
 		if serviceName == "loki" && storageType == "none" {
+			continue
+		}
+		if serviceName == "mimir" && (storageType == "" || storageType == "swift") {
+			if err := cfg.ValidateMimirSwiftCredentialPair(); err != nil {
+				add("opencenter.services.mimir.swift_application_credential_id", err.Error())
+			}
+		}
+		if serviceName == "mimir" && storageType == "" && strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) != "openstack" {
+			add("opencenter.services.mimir.storage_type", "Mimir's resolved Swift storage backend is only supported on OpenStack infrastructure.")
 			continue
 		}
 		if storageType == "" || storageType == "s3" {
@@ -165,10 +182,97 @@ func storagePolicyIssues(cfg *Config) []storagePolicyIssue {
 			continue
 		}
 		if storageType == "swift" {
+			if serviceName == "mimir" {
+				if strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) != "openstack" {
+					add(path, "Mimir's resolved Swift storage backend is only supported on OpenStack infrastructure.")
+				}
+				// Mimir retains its legacy Swift backend for existing
+				// OpenStack deployments; its S3 backend is validated below.
+				continue
+			}
 			add(path, "Swift is no longer supported for platform bulk data; migrate to the S3-compatible storage profile.")
 			continue
 		}
 		add(path, fmt.Sprintf("storage_type %q is unsupported; platform bulk data must use S3-compatible storage.", storageType))
+	}
+
+	issues = append(issues, s3BucketIssues(cfg)...)
+	return issues
+}
+
+type effectiveS3Bucket struct {
+	path string
+	name string
+}
+
+// effectiveS3Buckets returns Mimir's S3 bucket names that the renderer will
+// actually use. Omitted ruler and alertmanager names are derived from the
+// effective blocks bucket and participate in validation and uniqueness checks.
+func effectiveS3Buckets(cfg *Config) []effectiveS3Bucket {
+	if cfg == nil {
+		return nil
+	}
+	cluster := cfg.ClusterName()
+	var buckets []effectiveS3Bucket
+	if service, ok := configuredService(cfg, "mimir").(*services.MimirConfig); ok && service != nil {
+		if !isServiceEnabled(cfg, "mimir") || ResolveObjectStorageBackend(cfg, "mimir") != "s3" {
+			return nil
+		}
+		base := strings.TrimSpace(service.BucketName)
+		if base == "" {
+			base = cluster + "-mimir"
+		}
+		buckets = append(buckets, effectiveS3Bucket{path: "opencenter.services.mimir.bucket_name", name: base})
+		ruler := strings.TrimSpace(service.RulerBucketName)
+		if ruler == "" {
+			ruler = base + "-ruler"
+		}
+		buckets = append(buckets, effectiveS3Bucket{path: "opencenter.services.mimir.ruler_bucket_name", name: ruler})
+		alertmanager := strings.TrimSpace(service.AlertmanagerBucketName)
+		if alertmanager == "" {
+			alertmanager = base + "-alertmanager"
+		}
+		buckets = append(buckets, effectiveS3Bucket{path: "opencenter.services.mimir.alertmanager_bucket_name", name: alertmanager})
+	}
+	return buckets
+}
+
+func validS3BucketName(name string) bool {
+	if len(name) < 3 || len(name) > 63 || net.ParseIP(name) != nil || strings.Contains(name, "..") {
+		return false
+	}
+	if !s3BucketAlphaNumeric(name[0]) {
+		return false
+	}
+	last := name[len(name)-1]
+	if !s3BucketAlphaNumeric(last) {
+		return false
+	}
+	for _, c := range name {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '.' && c != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+func s3BucketAlphaNumeric(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= '0' && c <= '9'
+}
+
+func s3BucketIssues(cfg *Config) []storagePolicyIssue {
+	buckets := effectiveS3Buckets(cfg)
+	var issues []storagePolicyIssue
+	seen := make(map[string]effectiveS3Bucket, len(buckets))
+	for _, bucket := range buckets {
+		if !validS3BucketName(bucket.name) {
+			issues = append(issues, storagePolicyIssue{path: bucket.path, message: fmt.Sprintf("S3 bucket name %q must be 3-63 characters of lowercase letters, numbers, dots, or hyphens, and start and end with a letter or number.", bucket.name)})
+		}
+		if previous, exists := seen[bucket.name]; exists {
+			issues = append(issues, storagePolicyIssue{path: bucket.path, message: fmt.Sprintf("S3 bucket name %q must be unique; it is also used by %s.", bucket.name, previous.path)})
+		} else {
+			seen[bucket.name] = bucket
+		}
 	}
 	return issues
 }
@@ -181,6 +285,8 @@ func storageBackendDoesNotUseObjectStorage(cfg *Config, serviceName string) bool
 func externalS3Endpoint(cfg *Config, serviceName string) string {
 	switch service := configuredService(cfg, serviceName).(type) {
 	case *services.LokiConfig:
+		return service.S3Endpoint
+	case *services.MimirConfig:
 		return service.S3Endpoint
 	case *services.TempoConfig:
 		return service.S3Endpoint
@@ -198,6 +304,8 @@ func externalS3Endpoint(cfg *Config, serviceName string) string {
 func configuredBulkStorageType(cfg *Config, serviceName string) string {
 	switch service := configuredService(cfg, serviceName).(type) {
 	case *services.LokiConfig:
+		return strings.ToLower(strings.TrimSpace(service.StorageType))
+	case *services.MimirConfig:
 		return strings.ToLower(strings.TrimSpace(service.StorageType))
 	case *services.TempoConfig:
 		return strings.ToLower(strings.TrimSpace(service.StorageType))
@@ -249,7 +357,8 @@ func configuredService(cfg *Config, serviceName string) any {
 }
 
 // ValidateS3Endpoint validates a concrete S3-compatible endpoint. A blank
-// endpoint is never a usable S3 configuration.
+// endpoint is never a usable S3 configuration. The public contract remains an
+// absolute URL because other consumers accept endpoint paths.
 func ValidateS3Endpoint(raw string) error {
 	endpoint := strings.TrimSpace(raw)
 	if endpoint == "" {
@@ -263,6 +372,34 @@ func ValidateS3Endpoint(raw string) error {
 		return fmt.Errorf("S3 endpoint must not be a Swift /v1/AUTH_* endpoint")
 	}
 	return nil
+}
+
+// ValidateMimirS3Endpoint validates Mimir's public S3 endpoint contract. Mimir
+// 6.0.3 accepts an absolute URL at the public configuration boundary, but its
+// S3 driver receives only host[:port]; a non-root path cannot be represented
+// safely and is rejected rather than silently discarded by the renderer.
+func ValidateMimirS3Endpoint(raw string) error {
+	if err := ValidateS3Endpoint(raw); err != nil {
+		return err
+	}
+	parsed, _ := url.Parse(strings.TrimSpace(raw))
+	if parsed.Path != "" && parsed.Path != "/" {
+		return fmt.Errorf("Mimir S3 endpoint must not contain a path; configure the absolute root endpoint and use bucket_lookup_type: path for path-style buckets")
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("Mimir S3 endpoint must not contain a query or fragment")
+	}
+	return nil
+}
+
+// MimirS3EndpointHost converts Mimir's public absolute endpoint into the
+// host[:port] form required by the pinned Mimir chart contract.
+func MimirS3EndpointHost(raw string) (string, error) {
+	if err := ValidateMimirS3Endpoint(raw); err != nil {
+		return "", err
+	}
+	parsed, _ := url.Parse(strings.TrimSpace(raw))
+	return parsed.Host, nil
 }
 
 // ValidateHarborConfig validates the public Harbor storage contract. The YAML
@@ -914,9 +1051,24 @@ func (v *defaultValidator) validatePlaceholderSecrets(cfg *Config) error {
 		}
 	}
 
-	// Mimir currently has a legacy Swift secret; managed RustFS defers generated credentials.
-	if !UsesManagedObjectStorage(cfg) && isServiceEnabled(cfg, "mimir") && isMissingSecret(cfg.GetMimirSwiftApplicationCredentialSecret()) {
-		placeholders = append(placeholders, "secrets.mimir.swift_application_credential_secret")
+	// Mimir supports both its legacy Swift backend and the typed S3 backend.
+	// Requirements are based on the effective Mimir backend, not the cluster
+	// storage profile; no managed RustFS credential source is available here.
+	if isServiceEnabled(cfg, "mimir") {
+		switch ResolveObjectStorageBackend(cfg, "mimir") {
+		case "swift":
+			if isMissingSecret(cfg.GetMimirSwiftApplicationCredentialSecret()) {
+				placeholders = append(placeholders, "secrets.mimir.swift_application_credential_secret")
+			}
+		case "s3":
+			accessKey, secretKey := cfg.GetMimirS3Credentials()
+			if isMissingSecret(accessKey) {
+				placeholders = append(placeholders, "secrets.mimir.s3_access_key_id")
+			}
+			if isMissingSecret(secretKey) {
+				placeholders = append(placeholders, "secrets.mimir.s3_secret_access_key")
+			}
+		}
 	}
 
 	// Harbor secrets
@@ -1000,7 +1152,7 @@ func isServiceEnabled(cfg *Config, serviceName string) bool {
 	if cfg == nil {
 		return false
 	}
-	return serviceEnabledInMap(cfg.OpenCenter.Services, serviceName)
+	return serviceEnabledInMap(cfg.OpenCenter.Services, serviceName) || serviceEnabledInMap(cfg.OpenCenter.ManagedServices, serviceName)
 }
 
 func missingHarborDeploymentSecretPaths(cfg *Config) []string {

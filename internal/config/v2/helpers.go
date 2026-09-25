@@ -1,7 +1,10 @@
 package v2
 
 import (
+	"fmt"
 	"strings"
+
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 )
 
 // ClusterName returns the cluster's canonical name.
@@ -141,12 +144,94 @@ func (c Config) GetLokiSwiftApplicationCredentialSecret() string {
 	return strings.TrimSpace(c.Secrets.Global.AWS.Application.SecretAccessKey)
 }
 
-// GetMimirSwiftApplicationCredentialSecret returns the Mimir Swift application credential secret.
+// ResolveMimirSwiftCredentials resolves the Mimir Swift application credential
+// pair atomically. A service-specific ID and secret must be supplied together;
+// otherwise both values must come from the global OpenStack pair.
+func (c Config) ResolveMimirSwiftCredentials() (string, string, error) {
+	serviceID, serviceSecret := "", ""
+	if service, ok := c.OpenCenter.Services["mimir"].(*services.MimirConfig); ok && service != nil {
+		serviceID = strings.TrimSpace(service.SwiftApplicationCredentialID)
+		serviceSecret = strings.TrimSpace(c.Secrets.Mimir.SwiftApplicationCredentialSecret)
+	}
+	serviceIDSet := credentialOverrideSet(serviceID)
+	serviceSecretSet := credentialOverrideSet(serviceSecret)
+	if serviceIDSet != serviceSecretSet {
+		return "", "", fmt.Errorf("Mimir Swift service-specific application credential ID and secret must be set together")
+	}
+	if serviceIDSet {
+		return serviceID, serviceSecret, nil
+	}
+
+	globalID, globalSecret := "", ""
+	if openstack := c.OpenCenter.Infrastructure.Cloud.OpenStack; openstack != nil {
+		globalID = strings.TrimSpace(openstack.ApplicationCredentialID)
+		globalSecret = strings.TrimSpace(openstack.ApplicationCredentialSecret)
+	}
+	if (globalID == "") != (globalSecret == "") {
+		return "", "", fmt.Errorf("global OpenStack application credential ID and secret must be set together")
+	}
+	if globalID != "" {
+		return globalID, globalSecret, nil
+	}
+	return "", "", nil
+}
+
+// ValidateMimirSwiftCredentialPair validates pairing without requiring the
+// credentials to be non-placeholder; placeholder checks remain deployment
+// readiness concerns.
+func (c Config) ValidateMimirSwiftCredentialPair() error {
+	_, _, err := c.ResolveMimirSwiftCredentials()
+	return err
+}
+
+func credentialOverrideSet(value string) bool {
+	return strings.TrimSpace(value) != "" && !strings.EqualFold(strings.TrimSpace(value), PlaceholderSecret)
+}
+
+// GetMimirSwiftApplicationCredentialSecret returns the resolved Mimir Swift
+// secret. Legacy global AWS fallback is retained only when no OpenStack pair or
+// service-specific override is present; partial pairs return an empty value so
+// CLI validation cannot combine credentials from different scopes.
 func (c Config) GetMimirSwiftApplicationCredentialSecret() string {
-	if value := strings.TrimSpace(c.Secrets.Mimir.SwiftApplicationCredentialSecret); value != "" {
-		return value
+	if mimirSwiftCredentialPairPartial(c) {
+		return ""
+	}
+	if _, secret, err := c.ResolveMimirSwiftCredentials(); err == nil && secret != "" {
+		return secret
 	}
 	return strings.TrimSpace(c.Secrets.Global.AWS.Application.SecretAccessKey)
+}
+
+// GetMimirSwiftApplicationCredentialID returns the resolved Mimir credential ID.
+func (c Config) GetMimirSwiftApplicationCredentialID() string {
+	if mimirSwiftCredentialPairPartial(c) {
+		return ""
+	}
+	if id, _, err := c.ResolveMimirSwiftCredentials(); err == nil && id != "" {
+		return id
+	}
+	return ""
+}
+
+func mimirSwiftCredentialPairPartial(c Config) bool {
+	serviceID, serviceSecret := "", ""
+	if service, ok := c.OpenCenter.Services["mimir"].(*services.MimirConfig); ok && service != nil {
+		serviceID = strings.TrimSpace(service.SwiftApplicationCredentialID)
+		serviceSecret = strings.TrimSpace(c.Secrets.Mimir.SwiftApplicationCredentialSecret)
+	}
+	if credentialOverrideSet(serviceID) != credentialOverrideSet(serviceSecret) {
+		return true
+	}
+	if credentialOverrideSet(serviceID) && credentialOverrideSet(serviceSecret) {
+		return false
+	}
+	openstack := c.OpenCenter.Infrastructure.Cloud.OpenStack
+	if openstack == nil {
+		return false
+	}
+	globalID := strings.TrimSpace(openstack.ApplicationCredentialID)
+	globalSecret := strings.TrimSpace(openstack.ApplicationCredentialSecret)
+	return (globalID == "") != (globalSecret == "")
 }
 
 // GetTempoSwiftApplicationCredentialSecret returns the Tempo Swift application credential secret.

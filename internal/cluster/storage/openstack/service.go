@@ -53,12 +53,13 @@ type RemoteAction struct {
 }
 
 type RecoveryState struct {
-	Path             string `json:"path" yaml:"path"`
-	CredentialType   string `json:"credential_type" yaml:"credential_type"`
-	S3Endpoint       string `json:"s3_endpoint,omitempty" yaml:"s3_endpoint,omitempty"`
-	Service          string `json:"service" yaml:"service"`
-	Backend          string `json:"backend" yaml:"backend"`
-	PersistenceState string `json:"persistence_state" yaml:"persistence_state"`
+	Path             string   `json:"path" yaml:"path"`
+	CredentialType   string   `json:"credential_type" yaml:"credential_type"`
+	S3Endpoint       string   `json:"s3_endpoint,omitempty" yaml:"s3_endpoint,omitempty"`
+	Containers       []string `json:"containers,omitempty" yaml:"containers,omitempty"`
+	Service          string   `json:"service" yaml:"service"`
+	Backend          string   `json:"backend" yaml:"backend"`
+	PersistenceState string   `json:"persistence_state" yaml:"persistence_state"`
 }
 
 // recoveryJournal is private durable state. CredentialID is intentionally not
@@ -75,6 +76,7 @@ type Result struct {
 	Service       string         `json:"service" yaml:"service"`
 	Backend       string         `json:"backend" yaml:"backend"`
 	Container     string         `json:"container" yaml:"container"`
+	Containers    []string       `json:"containers,omitempty" yaml:"containers,omitempty"`
 	S3Endpoint    string         `json:"s3_endpoint,omitempty" yaml:"s3_endpoint,omitempty"`
 	Changes       []ConfigChange `json:"changes" yaml:"changes"`
 	RemoteActions []RemoteAction `json:"remote_actions" yaml:"remote_actions"`
@@ -127,6 +129,16 @@ func restoreCredential(original, prospective *v2.Config, opts Options) {
 		prospective.Secrets.Velero = original.Secrets.Velero
 	case *services.HarborConfig:
 		prospective.Secrets.Harbor = original.Secrets.Harbor
+	case *services.MimirConfig:
+		newCfg := newService.(*services.MimirConfig)
+		if opts.Backend == "swift" {
+			newCfg.SwiftApplicationCredentialID = old.SwiftApplicationCredentialID
+			prospective.Secrets.Mimir.SwiftApplicationCredentialSecret = original.Secrets.Mimir.SwiftApplicationCredentialSecret
+		} else {
+			newCfg.S3CredentialID = old.S3CredentialID
+			prospective.Secrets.Mimir.S3AccessKeyID = original.Secrets.Mimir.S3AccessKeyID
+			prospective.Secrets.Mimir.S3SecretAccessKey = original.Secrets.Mimir.S3SecretAccessKey
+		}
 	}
 }
 
@@ -145,7 +157,7 @@ func ValidateOptions(opts Options) error {
 	// mode; Harbor also supports its local filesystem mode, while
 	// Velero and etcd-backup support an explicit no-object-storage mode.
 	allowed := map[string]map[string]bool{
-		"loki": {"swift": true, "s3": true, "none": true}, "tempo": {"s3": true},
+		"loki": {"swift": true, "s3": true, "none": true}, "tempo": {"s3": true}, "mimir": {"swift": true, "s3": true},
 		"harbor": {"s3": true, "filesystem": true}, "etcd-backup": {"s3": true, "none": true}, "velero": {"s3": true, "none": true},
 	}
 	if !allowed[opts.Service][opts.Backend] {
@@ -160,7 +172,7 @@ func ValidateOptions(opts Options) error {
 		}
 	}
 	if strings.TrimSpace(opts.S3Endpoint) != "" && !isNonRemoteBackend(opts.Service, opts.Backend) {
-		if err := validateS3Endpoint(opts.S3Endpoint); err != nil {
+		if err := validateS3EndpointForService(opts.Service, opts.Backend, opts.S3Endpoint); err != nil {
 			return err
 		}
 	}
@@ -179,6 +191,21 @@ func Plan(ctx context.Context, input PlanInput) (PlanOutput, error) {
 	serviceCfg, err := serviceConfig(input.Config, input.Options.Service)
 	if err != nil {
 		return PlanOutput{}, err
+	}
+	if input.Options.Service == "mimir" && input.Options.Backend == "s3" {
+		mimir, ok := serviceCfg.(*services.MimirConfig)
+		if !ok {
+			return PlanOutput{}, fmt.Errorf("service %q has no canonical Mimir configuration", input.Options.Service)
+		}
+		endpoint := strings.TrimSpace(input.Options.S3Endpoint)
+		if endpoint == "" {
+			endpoint = strings.TrimSpace(mimir.S3Endpoint)
+		}
+		if endpoint != "" {
+			if err := v2.ValidateMimirS3Endpoint(endpoint); err != nil {
+				return PlanOutput{}, fmt.Errorf("invalid Mimir S3 endpoint: %w", err)
+			}
+		}
 	}
 	if isNonRemoteBackend(input.Options.Service, input.Options.Backend) {
 		if input.Options.Backend == "filesystem" && v2.EffectiveStorageProfile(input.Config).Lifecycle == v2.StorageLifecycleProduction {
@@ -211,11 +238,29 @@ func Plan(ctx context.Context, input PlanInput) (PlanOutput, error) {
 		return PlanOutput{}, fmt.Errorf("storage adapter is required")
 	}
 	container := strings.TrimSpace(input.Options.Container)
+	if container == "" && input.Options.Service == "mimir" {
+		container = strings.TrimSpace(serviceCfg.(*services.MimirConfig).BucketName)
+	}
 	if container == "" {
 		container = defaultContainer(input.Config, input.Options.Service)
 	}
 	if err := validateContainerForBackend(container, input.Options.Backend); err != nil {
 		return PlanOutput{}, err
+	}
+	if input.Options.Service == "mimir" && input.Options.Backend == "s3" {
+		mimir, ok := serviceCfg.(*services.MimirConfig)
+		if !ok {
+			return PlanOutput{}, fmt.Errorf("service %q has no canonical Mimir configuration", input.Options.Service)
+		}
+		if err := validateMimirEffectiveBuckets(mimir, container); err != nil {
+			return PlanOutput{}, err
+		}
+	}
+	containers := effectiveContainers(input.Options.Service, input.Options.Backend, serviceCfg, container)
+	for _, name := range containers {
+		if err := validateContainerForBackend(name, input.Options.Backend); err != nil {
+			return PlanOutput{}, fmt.Errorf("invalid effective storage container %q: %w", name, err)
+		}
 	}
 	complete, partial := credentialState(input.Options.Service, input.Options.Backend, serviceCfg, input.Config.Secrets)
 	resolveOwner := !complete || input.Options.RotateCredentials
@@ -229,7 +274,7 @@ func Plan(ctx context.Context, input PlanInput) (PlanOutput, error) {
 	storageEndpoint := strings.TrimSpace(preflight.Endpoint)
 	if input.Options.Backend == "s3" {
 		storageEndpoint = strings.TrimSpace(preflight.S3Endpoint)
-		if err := validateS3Endpoint(storageEndpoint); err != nil {
+		if err := validateS3EndpointForService(input.Options.Service, input.Options.Backend, storageEndpoint); err != nil {
 			return PlanOutput{}, fmt.Errorf("OpenStack storage preflight returned invalid S3 endpoint: %w", err)
 		}
 	}
@@ -255,22 +300,25 @@ func Plan(ctx context.Context, input PlanInput) (PlanOutput, error) {
 		}
 	}
 	oldCred := existingCredentialIDForConfig(input.Config, input.Options)
-	result := Result{SchemaVersion: ResultSchemaVersion, Operation: "cluster.service.storage.plan", Status: StatusPlanned, Service: input.Options.Service, Backend: input.Options.Backend, Container: container, S3Endpoint: storageEndpoint, Changes: changes, SecretPaths: secretPaths}
-	result.RemoteActions = []RemoteAction{{Order: 1, Action: "ensure", Resource: "object-store-container", Name: container, Scope: "project"}}
+	result := Result{SchemaVersion: ResultSchemaVersion, Operation: "cluster.service.storage.plan", Status: StatusPlanned, Service: input.Options.Service, Backend: input.Options.Backend, Container: container, Containers: containers, S3Endpoint: storageEndpoint, Changes: changes, SecretPaths: secretPaths}
+	for order, name := range containers {
+		result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: order + 1, Action: "ensure", Resource: "object-store-container", Name: name, Scope: "project"})
+	}
+	nextOrder := len(result.RemoteActions) + 1
 	if partial && !input.Options.RotateCredentials {
 		result.Status = StatusBlocked
 		result.Warnings = append(result.Warnings, "credential pair is partial; use --rotate-credentials to replace it")
 		return PlanOutput{Result: result, prospective: prospective, Preflight: preflight}, nil
 	}
 	if complete && !input.Options.RotateCredentials {
-		result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: 2, Action: "reuse", Resource: credentialResource(input.Options.Backend), ID: publicCredentialID(input.Options.Service, oldCred), Scope: credentialScope(input.Options.Backend)})
+		result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: nextOrder, Action: "reuse", Resource: credentialResource(input.Options.Backend), ID: publicCredentialID(input.Options.Service, oldCred), Scope: credentialScope(input.Options.Backend)})
 	} else {
-		result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: 2, Action: "create", Resource: credentialResource(input.Options.Backend), Scope: credentialScope(input.Options.Backend)})
+		result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: nextOrder, Action: "create", Resource: credentialResource(input.Options.Backend), Scope: credentialScope(input.Options.Backend)})
 		if oldCred != "" {
-			result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: 4, Action: "revoke", Resource: credentialResource(input.Options.Backend), ID: publicCredentialID(input.Options.Service, oldCred), Scope: credentialScope(input.Options.Backend)})
+			result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: nextOrder + 2, Action: "revoke", Resource: credentialResource(input.Options.Backend), ID: publicCredentialID(input.Options.Service, oldCred), Scope: credentialScope(input.Options.Backend)})
 		}
 	}
-	result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: 3, Action: "persist", Resource: "typed-configuration", Scope: "local"})
+	result.RemoteActions = append(result.RemoteActions, RemoteAction{Order: nextOrder + 1, Action: "persist", Resource: "typed-configuration", Scope: "local"})
 	if len(changes) == 0 && complete && !input.Options.RotateCredentials {
 		result.Status = StatusNoOp
 	}
@@ -304,12 +352,14 @@ func Apply(ctx context.Context, input ApplyInput) (Result, error) {
 	if err := ctx.Err(); err != nil {
 		return Result{}, err
 	}
-	if len(result.RemoteActions) > 0 {
+	if len(result.Containers) > 0 {
 		if input.Adapter == nil {
 			return Result{}, fmt.Errorf("storage adapter is required")
 		}
-		if err := input.Adapter.EnsureContainer(ctx, cloudopenstack.ContainerRequest{Name: result.Container, Region: planned.Preflight.Region}); err != nil {
-			return Result{}, fmt.Errorf("ensure storage container: %w", redactError(err, cfg))
+		for _, container := range result.Containers {
+			if err := input.Adapter.EnsureContainer(ctx, cloudopenstack.ContainerRequest{Name: container, Region: planned.Preflight.Region}); err != nil {
+				return Result{}, fmt.Errorf("ensure storage container %q: %w", container, redactError(err, cfg))
+			}
 		}
 	}
 	if result.Status == StatusNoOp {
@@ -330,7 +380,7 @@ func Apply(ctx context.Context, input ApplyInput) (Result, error) {
 	var journal recoveryJournal
 	needsCredential := !complete || rotate
 	if needsCredential {
-		journal = recoveryJournal{RecoveryState: RecoveryState{Path: input.RecoveryPath, CredentialType: credentialType(input.Options.Backend), S3Endpoint: result.S3Endpoint, Service: result.Service, Backend: result.Backend, PersistenceState: "creation-pending"}}
+		journal = recoveryJournal{RecoveryState: RecoveryState{Path: input.RecoveryPath, CredentialType: credentialType(input.Options.Backend), S3Endpoint: result.S3Endpoint, Containers: append([]string(nil), result.Containers...), Service: result.Service, Backend: result.Backend, PersistenceState: "creation-pending"}}
 		if err := input.FileSystem.WriteRecovery(input.RecoveryPath, journal); err != nil {
 			return Result{}, fmt.Errorf("reserve recovery record: %w", redactError(err, cfg))
 		}
@@ -613,7 +663,7 @@ func serviceConfig(cfg *v2.Config, name string) (any, error) {
 		return nil, fmt.Errorf("service %q is not configured", name)
 	}
 	switch typed := value.(type) {
-	case *services.LokiConfig, *services.TempoConfig, *services.HarborConfig, *services.EtcdBackupConfig, *services.VeleroConfig:
+	case *services.LokiConfig, *services.TempoConfig, *services.MimirConfig, *services.HarborConfig, *services.EtcdBackupConfig, *services.VeleroConfig:
 		return typed, nil
 	default:
 		return nil, fmt.Errorf("service %q has no canonical typed configuration", name)
@@ -786,6 +836,49 @@ func patchService(service any, secrets *v2.SecretsConfig, opts Options, containe
 			setCredentialSecret("secrets.tempo.access_key", secrets.Tempo.AccessKey, "[generated]")
 			setCredentialSecret("secrets.tempo.secret_key", secrets.Tempo.SecretKey, "[generated]")
 		}
+	case *services.MimirConfig:
+		if backend == "swift" {
+			oldID = typed.SwiftApplicationCredentialID
+		} else {
+			oldID = typed.S3CredentialID
+		}
+		set("opencenter.services.mimir.storage_type", typed.StorageType, backend)
+		typed.StorageType = backend
+		set("opencenter.services.mimir.bucket_name", typed.BucketName, container)
+		typed.BucketName = container
+		if backend == "swift" {
+			authURL := preflight.AuthURL
+			if authURL == "" {
+				authURL = preflight.Endpoint
+			}
+			set("opencenter.services.mimir.swift_auth_url", typed.SwiftAuthURL, authURL)
+			typed.SwiftAuthURL = authURL
+			set("opencenter.services.mimir.swift_region", typed.SwiftRegion, preflight.Region)
+			typed.SwiftRegion = preflight.Region
+			set("opencenter.services.mimir.swift_container_name", typed.SwiftContainerName, container)
+			typed.SwiftContainerName = container
+			setCredential("opencenter.services.mimir.swift_application_credential_id", typed.SwiftApplicationCredentialID, "[generated]")
+			typed.SwiftApplicationCredentialID = "[generated]"
+			setCredentialSecret("secrets.mimir.swift_application_credential_secret", secrets.Mimir.SwiftApplicationCredentialSecret, "[generated]")
+		} else {
+			set("opencenter.services.mimir.s3_endpoint", typed.S3Endpoint, preflight.Endpoint)
+			typed.S3Endpoint = preflight.Endpoint
+			set("opencenter.services.mimir.s3_region", typed.S3Region, preflight.Region)
+			typed.S3Region = preflight.Region
+			set("opencenter.services.mimir.s3_force_path_style", fmt.Sprint(typed.S3ForcePathStyle), "true")
+			typed.S3ForcePathStyle = true
+			set("opencenter.services.mimir.s3_insecure", fmt.Sprint(typed.S3Insecure), fmt.Sprint(strings.HasPrefix(preflight.Endpoint, "http://")))
+			typed.S3Insecure = strings.HasPrefix(preflight.Endpoint, "http://")
+			buckets := mimirEffectiveBuckets(typed, container)
+			set("opencenter.services.mimir.ruler_bucket_name", typed.RulerBucketName, buckets[1])
+			typed.RulerBucketName = buckets[1]
+			set("opencenter.services.mimir.alertmanager_bucket_name", typed.AlertmanagerBucketName, buckets[2])
+			typed.AlertmanagerBucketName = buckets[2]
+			setCredential("opencenter.services.mimir.s3_credential_id", typed.S3CredentialID, "[generated]")
+			typed.S3CredentialID = "[generated]"
+			setCredentialSecret("secrets.mimir.s3_access_key_id", secrets.Mimir.S3AccessKeyID, "[generated]")
+			setCredentialSecret("secrets.mimir.s3_secret_access_key", secrets.Mimir.S3SecretAccessKey, "[generated]")
+		}
 	case *services.EtcdBackupConfig:
 		oldID = typed.S3CredentialID
 		set("opencenter.services.etcd-backup.storage_type", typed.StorageType, "s3")
@@ -858,6 +951,12 @@ func credentialState(service, backend string, cfg any, secrets v2.SecretsConfig)
 		} else {
 			access, secret = secrets.Tempo.AccessKey, secrets.Tempo.SecretKey
 		}
+	case "mimir":
+		if backend == "swift" {
+			secret = secrets.Mimir.SwiftApplicationCredentialSecret
+		} else {
+			access, secret = secrets.Mimir.S3AccessKeyID, secrets.Mimir.S3SecretAccessKey
+		}
 	case "etcd-backup":
 		access, secret = secrets.EtcdBackup.AccessKeyID, secrets.EtcdBackup.SecretAccessKey
 	case "velero":
@@ -898,6 +997,11 @@ func existingCredentialIDFromConfig(cfg any, backend string) string {
 			return s.SwiftApplicationCredentialID
 		}
 		return s.S3CredentialID
+	case *services.MimirConfig:
+		if backend == "swift" {
+			return s.SwiftApplicationCredentialID
+		}
+		return s.S3CredentialID
 	case *services.EtcdBackupConfig:
 		return s.S3CredentialID
 	case *services.VeleroConfig:
@@ -934,6 +1038,15 @@ func applyCredential(cfg *v2.Config, opts Options, id, access, secret string) {
 			s.S3CredentialID = id
 			cfg.Secrets.Tempo.AccessKey = access
 			cfg.Secrets.Tempo.SecretKey = secret
+		}
+	case *services.MimirConfig:
+		if opts.Backend == "swift" {
+			s.SwiftApplicationCredentialID = id
+			cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = secret
+		} else {
+			s.S3CredentialID = id
+			cfg.Secrets.Mimir.S3AccessKeyID = access
+			cfg.Secrets.Mimir.S3SecretAccessKey = secret
 		}
 	case *services.EtcdBackupConfig:
 		s.S3CredentialID = id
@@ -976,6 +1089,57 @@ func defaultContainer(cfg *v2.Config, service string) string {
 	}
 	return strings.Trim(cluster, "-") + "-" + service
 }
+
+// mimirEffectiveBuckets mirrors the values consumed by the Mimir S3
+// renderer. The blocks bucket is supplied by the storage operation, while the
+// two auxiliary stores retain configured overrides and otherwise derive from
+// that blocks bucket.
+func mimirEffectiveBuckets(cfg *services.MimirConfig, blocks string) [3]string {
+	blocks = strings.TrimSpace(blocks)
+	ruler := strings.TrimSpace(cfg.RulerBucketName)
+	if ruler == "" {
+		ruler = blocks + "-ruler"
+	}
+	alertmanager := strings.TrimSpace(cfg.AlertmanagerBucketName)
+	if alertmanager == "" {
+		alertmanager = blocks + "-alertmanager"
+	}
+	return [3]string{blocks, ruler, alertmanager}
+}
+
+func validateMimirEffectiveBuckets(cfg *services.MimirConfig, blocks string) error {
+	buckets := mimirEffectiveBuckets(cfg, blocks)
+	labels := [...]string{"blocks", "ruler", "alertmanager"}
+	for i := 0; i < len(buckets); i++ {
+		for j := i + 1; j < len(buckets); j++ {
+			if buckets[i] == buckets[j] {
+				return fmt.Errorf("Mimir S3 bucket names must be distinct: %s and %s both resolve to %q; set distinct bucket names", labels[i], labels[j], buckets[i])
+			}
+		}
+	}
+	return nil
+}
+
+func effectiveContainers(service, backend string, cfg any, container string) []string {
+	if service != "mimir" || backend != "s3" {
+		return []string{strings.TrimSpace(container)}
+	}
+	mimir, ok := cfg.(*services.MimirConfig)
+	if !ok {
+		return []string{strings.TrimSpace(container)}
+	}
+	buckets := mimirEffectiveBuckets(mimir, container)
+	result := make([]string, 0, len(buckets))
+	for _, bucket := range buckets {
+		bucket = strings.TrimSpace(bucket)
+		if bucket == "" {
+			continue
+		}
+		result = append(result, bucket)
+	}
+	return result
+}
+
 func validateContainerForBackend(name, backend string) error {
 	if backend == "s3" {
 		return validateS3Bucket(name)
@@ -1014,6 +1178,14 @@ func validateS3Endpoint(raw string) error {
 	}
 	return nil
 }
+
+func validateS3EndpointForService(service, backend, raw string) error {
+	if service == "mimir" && backend == "s3" {
+		return v2.ValidateMimirS3Endpoint(raw)
+	}
+	return validateS3Endpoint(raw)
+}
+
 func endpointHost(raw string) string {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil {
@@ -1080,6 +1252,7 @@ func redactError(err error, cfg *v2.Config, extra ...string) error {
 		values = append(values,
 			cfg.Secrets.Loki.SwiftApplicationCredentialSecret, cfg.Secrets.Loki.S3AccessKeyID, cfg.Secrets.Loki.S3SecretAccessKey,
 			cfg.Secrets.Tempo.SwiftApplicationCredentialSecret, cfg.Secrets.Tempo.AccessKey, cfg.Secrets.Tempo.SecretKey,
+			cfg.Secrets.Mimir.SwiftApplicationCredentialSecret, cfg.Secrets.Mimir.S3AccessKeyID, cfg.Secrets.Mimir.S3SecretAccessKey,
 			cfg.Secrets.EtcdBackup.AccessKeyID, cfg.Secrets.EtcdBackup.SecretAccessKey,
 			cfg.Secrets.Velero.AccessKeyID, cfg.Secrets.Velero.SecretAccessKey,
 			cfg.Secrets.Harbor.S3AccessKeyID, cfg.Secrets.Harbor.S3SecretAccessKey,

@@ -490,6 +490,7 @@ func processSecrets(secrets []string, serviceName string, secretsCfg *v2.Secrets
 	serviceToField := map[string]string{
 		"cert-manager": "CertManager",
 		"loki":         "Loki",
+		"mimir":        "Mimir",
 		"keycloak":     "Keycloak",
 		"headlamp":     "Headlamp",
 		"weave-gitops": "WeaveGitOps",
@@ -590,7 +591,7 @@ func validateServiceWithConfig(serviceName string, serviceCfg any, secretsCfg *v
 		}
 		return nil
 	}
-	if serviceName != "loki" && serviceName != "tempo" {
+	if serviceName != "loki" && serviceName != "mimir" && serviceName != "tempo" {
 		return validateServiceLegacy(serviceName, serviceCfg, secretsCfg)
 	}
 
@@ -605,6 +606,11 @@ func validateServiceWithConfig(serviceName string, serviceCfg any, secretsCfg *v
 			if backend == "" {
 				backend = "s3"
 			}
+		case *services.MimirConfig:
+			backend = strings.ToLower(strings.TrimSpace(typed.StorageType))
+			if backend == "" {
+				backend = "swift"
+			}
 		case *services.TempoConfig:
 			backend = strings.ToLower(strings.TrimSpace(typed.StorageType))
 			if backend == "" {
@@ -617,16 +623,41 @@ func validateServiceWithConfig(serviceName string, serviceCfg any, secretsCfg *v
 	case "none":
 		return nil
 	case "swift":
+		if serviceName == "mimir" {
+			secret := strings.TrimSpace(secretsCfg.Mimir.SwiftApplicationCredentialSecret)
+			if cfg != nil {
+				secret = cfg.GetMimirSwiftApplicationCredentialSecret()
+			}
+			if secret == "" {
+				return fmt.Errorf("service 'mimir' requires a configured Swift application credential secret (swift_application_credential_secret)")
+			}
+			return nil
+		}
 		return fmt.Errorf("unsupported storage backend swift for service '%s'; migrate to the S3-compatible storage profile", serviceName)
 	case "s3":
 		var endpoint, access, secret string
 		switch typed := serviceCfg.(type) {
 		case *services.LokiConfig:
 			endpoint, access, secret = typed.S3Endpoint, secretsCfg.Loki.S3AccessKeyID, secretsCfg.Loki.S3SecretAccessKey
+			if cfg != nil {
+				access, secret = cfg.GetLokiS3Credentials()
+			}
+		case *services.MimirConfig:
+			endpoint, access, secret = typed.S3Endpoint, secretsCfg.Mimir.S3AccessKeyID, secretsCfg.Mimir.S3SecretAccessKey
+			if cfg != nil {
+				access, secret = cfg.GetMimirS3Credentials()
+			}
 		case *services.TempoConfig:
 			endpoint, access, secret = typed.S3Endpoint, secretsCfg.Tempo.AccessKey, secretsCfg.Tempo.SecretKey
+			if cfg != nil {
+				access, secret = cfg.GetTempoS3Credentials()
+			}
 		}
-		if err := v2.ValidateS3Endpoint(endpoint); err != nil {
+		endpointValidator := v2.ValidateS3Endpoint
+		if serviceName == "mimir" {
+			endpointValidator = v2.ValidateMimirS3Endpoint
+		}
+		if err := endpointValidator(endpoint); err != nil {
 			return fmt.Errorf("service '%s' requires a configured S3 endpoint (s3_endpoint): %w", serviceName, err)
 		}
 		if (access == "") != (secret == "") {
@@ -814,6 +845,28 @@ func getServiceOptions(serviceName string) []ServiceOption {
 			{Name: "s3_force_path_style", Type: "boolean", Description: "Force S3 path style (required for MinIO)", Required: false},
 			{Name: "s3_insecure", Type: "boolean", Description: "Allow insecure S3 connections", Required: false},
 		}
+	case "mimir":
+		return []ServiceOption{
+			{Name: "storage_type", Type: "string", Description: "Storage backend type (s3 or legacy swift)", Required: false},
+			{Name: "bucket_name", Type: "string", Description: "Mimir blocks storage bucket/container name", Required: false},
+			{Name: "ruler_bucket_name", Type: "string", Description: "Optional Mimir ruler storage bucket/container name", Required: false},
+			{Name: "alertmanager_bucket_name", Type: "string", Description: "Optional Mimir alertmanager storage bucket/container name", Required: false},
+			{Name: "s3_endpoint", Type: "string", Description: "S3 endpoint URL", Required: false},
+			{Name: "s3_region", Type: "string", Description: "S3 region", Required: false},
+			{Name: "s3_credential_id", Type: "string", Description: "OpenStack EC2 credential ID", Required: false},
+			{Name: "s3_force_path_style", Type: "boolean", Description: "Force S3 path style", Required: false},
+			{Name: "s3_insecure", Type: "boolean", Description: "Allow insecure S3 connections", Required: false},
+			{Name: "swift_auth_url", Type: "string", Description: "Swift Keystone V3 authentication URL (for legacy Swift storage)", Required: false},
+			{Name: "swift_region", Type: "string", Description: "Swift region name (for legacy Swift storage)", Required: false},
+			{Name: "swift_auth_version", Type: "integer", Description: "Swift authentication version", Required: false},
+			{Name: "swift_application_credential_id", Type: "string", Description: "Swift application credential ID", Required: false},
+			{Name: "swift_container_name", Type: "string", Description: "Swift container name", Required: false},
+			{Name: "swift_username", Type: "string", Description: "Swift Keystone username", Required: false},
+			{Name: "swift_project_name", Type: "string", Description: "Swift Keystone project name", Required: false},
+			{Name: "swift_project_domain_name", Type: "string", Description: "Swift Keystone project domain name", Required: false},
+			{Name: "swift_user_domain_name", Type: "string", Description: "Swift user domain name", Required: false},
+			{Name: "swift_domain_name", Type: "string", Description: "Swift domain name", Required: false},
+		}
 	case "tempo":
 		return []ServiceOption{
 			{Name: "storage_type", Type: "string", Description: "Storage backend type (s3)", Required: false},
@@ -892,6 +945,12 @@ func getServiceSecrets(serviceName string) []ServiceOption {
 		return []ServiceOption{
 			{Name: "swift_application_credential_secret", Type: "string", Description: "Swift application credential secret (recommended for Swift)", Required: false},
 			{Name: "swift_password", Type: "string", Description: "Swift password (legacy, deprecated)", Required: false},
+			{Name: "s3_access_key_id", Type: "string", Description: "S3 access key ID (for S3 storage)", Required: false},
+			{Name: "s3_secret_access_key", Type: "string", Description: "S3 secret access key (for S3 storage)", Required: false},
+		}
+	case "mimir":
+		return []ServiceOption{
+			{Name: "swift_application_credential_secret", Type: "string", Description: "Swift application credential secret (legacy Swift storage)", Required: false},
 			{Name: "s3_access_key_id", Type: "string", Description: "S3 access key ID (for S3 storage)", Required: false},
 			{Name: "s3_secret_access_key", Type: "string", Description: "S3 secret access key (for S3 storage)", Required: false},
 		}

@@ -211,6 +211,29 @@ type HarborSecrets struct {
 
 type MimirSecrets struct {
 	SwiftApplicationCredentialSecret string `yaml:"swift_application_credential_secret,omitempty" json:"swift_application_credential_secret,omitempty" jsonschema:"secret=true,description=Swift application credential secret for Mimir blocks storage"`
+	S3AccessKeyID                    string `yaml:"s3_access_key_id,omitempty" json:"s3_access_key_id,omitempty" jsonschema:"secret=true,description=S3 access key ID for Mimir blocks storage"`
+	S3SecretAccessKey                string `yaml:"s3_secret_access_key,omitempty" json:"s3_secret_access_key,omitempty" jsonschema:"secret=true,description=S3 secret access key for Mimir blocks storage"`
+}
+
+// GetMimirS3Credentials resolves Mimir S3 credentials, falling back to the
+// cluster's application credentials for compatibility with other S3 services.
+func (c Config) GetMimirS3Credentials() (accessKey, secretKey string) {
+	if c.Secrets.Mimir.S3AccessKeyID != "" && c.Secrets.Mimir.S3SecretAccessKey != "" {
+		return c.Secrets.Mimir.S3AccessKeyID, c.Secrets.Mimir.S3SecretAccessKey
+	}
+	return c.GetAWSApplicationCredentials()
+}
+
+// GetMimirS3AccessKey returns the Mimir S3 access key for renderers.
+func (c Config) GetMimirS3AccessKey() string {
+	accessKey, _ := c.GetMimirS3Credentials()
+	return accessKey
+}
+
+// GetMimirS3SecretKey returns the Mimir S3 secret key for renderers.
+func (c Config) GetMimirS3SecretKey() string {
+	_, secretKey := c.GetMimirS3Credentials()
+	return secretKey
 }
 
 type TempoSecrets struct {

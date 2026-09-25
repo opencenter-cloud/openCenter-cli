@@ -354,6 +354,8 @@ func NewV2Default(name, provider string) (*Config, error) {
 			},
 			Mimir: MimirSecrets{
 				SwiftApplicationCredentialSecret: PlaceholderSecret,
+				S3AccessKeyID:                    PlaceholderSecret,
+				S3SecretAccessKey:                PlaceholderSecret,
 			},
 			Loki: LokiSecrets{
 				SwiftApplicationCredentialSecret: PlaceholderSecret,
@@ -850,7 +852,7 @@ func NewDefaultServiceConfig(serviceName, clusterFQDN string) (any, bool) {
 	case "longhorn":
 		return &services.LonghornConfig{BaseConfig: services.BaseConfig{Enabled: false, Namespace: "longhorn-system"}, Hostname: fmt.Sprintf("longhorn.%s", clusterFQDN)}, true
 	case "mimir":
-		return &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false, Namespace: "observability"}}, true
+		return &services.MimirConfig{BaseConfig: services.BaseConfig{Enabled: false, Namespace: "observability"}}, true
 	case "opentelemetry-kube-stack":
 		return &services.OpenTelemetryConfig{BaseConfig: services.BaseConfig{Enabled: false, Namespace: "observability"}}, true
 	case "sealed-secrets":

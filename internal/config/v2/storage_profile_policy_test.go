@@ -53,12 +53,30 @@ func TestStorageProfilePolicy(t *testing.T) {
 			issuePaths: []string{"opencenter.services.velero.s3_endpoint"},
 		},
 		{
-			name: "Mimir is blocked until typed S3 migration",
+			name: "typed Mimir S3 is valid in production",
 			configure: func(cfg *Config) {
 				cfg.OpenCenter.Infrastructure.Storage.Profile = StorageProfileConfig{Lifecycle: StorageLifecycleProduction, PVCProvider: StoragePVCProviderExternal, ObjectStorageProvider: StorageObjectProviderExternalS3}
-				cfg.OpenCenter.Services["mimir"].(*services.DefaultServiceConfig).Enabled = true
+				mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+				mimir.Enabled = true
+				mimir.StorageType = "s3"
+				mimir.S3Endpoint = "https://mimir-s3.example"
+				cfg.Secrets.Mimir.S3AccessKeyID = "mimir-access"
+				cfg.Secrets.Mimir.S3SecretAccessKey = "mimir-secret"
 			},
-			issuePaths: []string{"opencenter.services.mimir"},
+			issuePaths: nil,
+		},
+		{
+			name: "Mimir S3 rejects a non-root endpoint path",
+			configure: func(cfg *Config) {
+				cfg.OpenCenter.Infrastructure.Storage.Profile = StorageProfileConfig{Lifecycle: StorageLifecycleProduction, PVCProvider: StoragePVCProviderExternal, ObjectStorageProvider: StorageObjectProviderExternalS3}
+				mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+				mimir.Enabled = true
+				mimir.StorageType = "s3"
+				mimir.S3Endpoint = "https://seaweedfs.example:8333/s3"
+				cfg.Secrets.Mimir.S3AccessKeyID = "mimir-access"
+				cfg.Secrets.Mimir.S3SecretAccessKey = "mimir-secret"
+			},
+			issuePaths: []string{"opencenter.services.mimir.s3_endpoint"},
 		},
 		{
 			name: "Swift migration is explicit",
@@ -68,12 +86,15 @@ func TestStorageProfilePolicy(t *testing.T) {
 			issuePaths: []string{"opencenter.services.loki.storage_type"},
 		},
 		{
-			name: "non-production RustFS needs no external object credentials",
+			name: "managed RustFS still requires effective Mimir S3 inputs",
 			configure: func(cfg *Config) {
 				cfg.OpenCenter.Infrastructure.Storage.Profile = StorageProfileConfig{Lifecycle: StorageLifecycleNonProduction, PVCProvider: StoragePVCProviderLonghorn, ObjectStorageProvider: StorageObjectProviderRustFS}
 				cfg.OpenCenter.Services["longhorn"].(*services.LonghornConfig).Enabled = true
 				cfg.OpenCenter.Services["harbor"].(*services.HarborConfig).Enabled = true
-				cfg.OpenCenter.Services["mimir"].(*services.DefaultServiceConfig).Enabled = true
+				mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+				mimir.Enabled = true
+				mimir.StorageType = "s3"
+				mimir.S3Endpoint = ""
 				cfg.OpenCenter.Services["etcd-backup"].(*services.EtcdBackupConfig).Enabled = true
 				cfg.Secrets.Loki.S3AccessKeyID = ""
 				cfg.Secrets.Loki.S3SecretAccessKey = ""
@@ -82,8 +103,15 @@ func TestStorageProfilePolicy(t *testing.T) {
 				cfg.Secrets.Harbor.S3AccessKeyID = ""
 				cfg.Secrets.Harbor.S3SecretAccessKey = ""
 				cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = ""
+				cfg.Secrets.Mimir.S3AccessKeyID = ""
+				cfg.Secrets.Mimir.S3SecretAccessKey = ""
 				cfg.Secrets.EtcdBackup.AccessKeyID = ""
 				cfg.Secrets.EtcdBackup.SecretAccessKey = ""
+			},
+			issuePaths: []string{
+				"opencenter.services.mimir.s3_endpoint",
+				"secrets.mimir.s3_access_key_id",
+				"secrets.mimir.s3_secret_access_key",
 			},
 		},
 	}

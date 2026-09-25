@@ -1033,3 +1033,92 @@ func TestClusterServiceRenderOwnershipFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestMimirServiceOptionsAndSecrets(t *testing.T) {
+	serviceCfg, ok := newServiceConfig("mimir").(*services.MimirConfig)
+	if !ok {
+		t.Fatalf("new Mimir service config type = %T, want *services.MimirConfig", newServiceConfig("mimir"))
+	}
+	if err := processParams([]string{"storage_type=s3", "s3_endpoint=https://mimir-s3.example"}, serviceCfg); err != nil {
+		t.Fatalf("process Mimir parameters: %v", err)
+	}
+	if serviceCfg.StorageType != "s3" || serviceCfg.S3Endpoint != "https://mimir-s3.example" {
+		t.Fatalf("Mimir parameters = %#v", serviceCfg)
+	}
+
+	options := getServiceOptions("mimir")
+	optionNames := make(map[string]bool, len(options))
+	for _, option := range options {
+		optionNames[option.Name] = true
+	}
+	for _, name := range []string{"storage_type", "bucket_name", "s3_endpoint", "s3_region", "s3_force_path_style", "swift_application_credential_id", "swift_container_name"} {
+		if !optionNames[name] {
+			t.Errorf("Mimir options missing %q", name)
+		}
+	}
+
+	secrets := v2.SecretsConfig{}
+	if err := processSecrets([]string{
+		"swift_application_credential_secret=swift-secret",
+		"s3_access_key_id=mimir-access",
+		"s3_secret_access_key=mimir-secret",
+	}, "mimir", &secrets); err != nil {
+		t.Fatalf("process Mimir secrets: %v", err)
+	}
+	if got := secrets.Mimir.SwiftApplicationCredentialSecret; got != "swift-secret" {
+		t.Errorf("Mimir Swift secret = %q, want swift-secret", got)
+	}
+	if got := secrets.Mimir.S3AccessKeyID; got != "mimir-access" {
+		t.Errorf("Mimir S3 access key = %q, want mimir-access", got)
+	}
+	if got := secrets.Mimir.S3SecretAccessKey; got != "mimir-secret" {
+		t.Errorf("Mimir S3 secret key = %q, want mimir-secret", got)
+	}
+}
+
+func TestValidateMimirServiceUsesGlobalS3CredentialFallback(t *testing.T) {
+	mimir := &services.MimirConfig{
+		BaseConfig:  services.BaseConfig{Enabled: true},
+		StorageType: "s3",
+		S3Endpoint:  "https://mimir-s3.example",
+	}
+	cfg := &v2.Config{}
+	cfg.OpenCenter.Services = v2.ServiceMap{"mimir": mimir}
+	cfg.Secrets.Global.AWS.Application.AccessKey = "global-access"
+	cfg.Secrets.Global.AWS.Application.SecretAccessKey = "global-secret"
+
+	if err := validateServiceWithConfig("mimir", mimir, &cfg.Secrets, cfg); err != nil {
+		t.Fatalf("validate Mimir with global credential fallback: %v", err)
+	}
+}
+
+func TestValidateMimirServiceRejectsPartialSwiftOverride(t *testing.T) {
+	mimir := &services.MimirConfig{
+		BaseConfig:  services.BaseConfig{Enabled: true},
+		StorageType: "swift",
+	}
+	cfg := &v2.Config{}
+	cfg.OpenCenter.Services = v2.ServiceMap{"mimir": mimir}
+	cfg.OpenCenter.Infrastructure.Provider = "openstack"
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack = &v2.OpenStackCloudConfig{
+		ApplicationCredentialID:     "global-id",
+		ApplicationCredentialSecret: "global-secret",
+	}
+
+	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = "service-secret"
+	if err := validateServiceWithConfig("mimir", mimir, &cfg.Secrets, cfg); err == nil || !strings.Contains(err.Error(), "configured Swift application credential secret") {
+		t.Fatalf("validateServiceWithConfig() error = %v, want partial Swift override rejection", err)
+	}
+
+	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = ""
+	mimir.SwiftApplicationCredentialID = "service-id"
+	if err := validateServiceWithConfig("mimir", mimir, &cfg.Secrets, cfg); err == nil || !strings.Contains(err.Error(), "configured Swift application credential secret") {
+		t.Fatalf("validateServiceWithConfig() error = %v, want partial Swift override rejection", err)
+	}
+
+	mimir.SwiftApplicationCredentialID = ""
+	cfg.Secrets.Mimir.SwiftApplicationCredentialSecret = ""
+	if err := validateServiceWithConfig("mimir", mimir, &cfg.Secrets, cfg); err != nil {
+		t.Fatalf("validateServiceWithConfig() error = %v, want global pair fallback", err)
+	}
+}

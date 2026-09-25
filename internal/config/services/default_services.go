@@ -18,7 +18,6 @@ func init() {
 		"gateway-api",
 		"kafka-cluster",
 		"kyverno",
-		"mimir",
 		"olm",
 		"openstack-ccm",
 		"openstack-csi",

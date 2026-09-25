@@ -104,7 +104,13 @@ func planGeneratedTree(stageRoot, targetRoot, clusterName string, opts PromoteOp
 		manifest.Files = make(map[string]string)
 	}
 
-	roots, rootFiles := generatedTreeNamespaces(planned, seeds, manifest.Files)
+	// The generated-tree manifest is shared by all cluster generations in a
+	// repository. Only ownership entries in this invocation's cluster scope may
+	// participate in scanning and pruning; the complete manifest is retained so
+	// applying this plan cannot discard sibling-cluster ownership.
+	ownershipManifest := manifest
+	ownershipManifest.Files = filterGeneratedTreeManifest(manifest.Files, clusterName)
+	roots, rootFiles := generatedTreeNamespaces(planned, seeds, ownershipManifest.Files, clusterName)
 	existing, existingModes, scanWarnings, err := scanLiveGeneratedTree(targetRoot, roots, rootFiles)
 	if err != nil {
 		return nil, err
@@ -197,7 +203,7 @@ func planGeneratedTree(stageRoot, targetRoot, clusterName string, opts PromoteOp
 	}
 
 	prune := make([]string, 0)
-	for path := range manifest.Files {
+	for path := range ownershipManifest.Files {
 		if isGeneratedTreeCustomPath(path) {
 			continue
 		}
@@ -220,7 +226,7 @@ func planGeneratedTree(stageRoot, targetRoot, clusterName string, opts PromoteOp
 	}
 	renameSources := make(map[string]bool)
 	if opts.pruneEnabled() {
-		result.Renamed = detectSafeRenames(prune, result.Added, plannedBytes, existingBytes, manifest.Files)
+		result.Renamed = detectSafeRenames(prune, result.Added, plannedBytes, existingBytes, ownershipManifest.Files)
 		if len(result.Renamed) > 0 {
 			renameTargets := make(map[string]bool)
 			for _, rename := range result.Renamed {
@@ -581,16 +587,73 @@ func loadGeneratedTreeManifest(root, clusterName string) (GeneratedManifest, boo
 	return manifest, true, "", nil
 }
 
-func generatedTreeNamespaces(planned, seeds map[string]generatedTreeFile, manifest map[string]string) (map[string]bool, map[string]bool) {
+// filterGeneratedTreeManifest returns the ownership entries visible to one
+// cluster generation. Shared entries remain visible, while entries rooted in
+// another cluster's overlay, infrastructure, or Flux bridge are excluded
+// from both live scanning and prune planning.
+func filterGeneratedTreeManifest(files map[string]string, clusterName string) map[string]string {
+	filtered := make(map[string]string, len(files))
+	targetScopes := map[string]bool{
+		filepath.ToSlash(filepath.Join("applications", "overlays", clusterName)):   true,
+		filepath.ToSlash(filepath.Join("infrastructure", "clusters", clusterName)): true,
+		filepath.ToSlash(filepath.Join("clusters", clusterName)):                   true,
+	}
+	for path, hash := range files {
+		if scope, clusterSpecific := generatedTreeClusterScope(path); clusterSpecific && !targetScopes[scope] {
+			continue
+		}
+		filtered[path] = hash
+	}
+	return filtered
+}
+
+func generatedTreeClusterScope(path string) (string, bool) {
+	parts := strings.Split(filepath.ToSlash(filepath.Clean(path)), "/")
+	if len(parts) >= 3 &&
+		((parts[0] == "applications" && parts[1] == "overlays") ||
+			(parts[0] == "infrastructure" && parts[1] == "clusters")) {
+		return strings.Join(parts[:3], "/"), true
+	}
+	if len(parts) >= 2 && parts[0] == "clusters" {
+		return strings.Join(parts[:2], "/"), true
+	}
+	return "", false
+}
+
+// generatedTreeNamespaces returns recursive scopes for the live-tree scan and
+// exact paths for top-level files. The current cluster overlay is deliberately
+// a recursive scope, but shared scopes are derived from paths that are
+// actually planned, seeded, or recorded in the manifest. In particular, do
+// not use "applications" as a recursive scope: doing so would inspect every
+// cluster overlay while generating one cluster.
+func generatedTreeNamespaces(planned, seeds map[string]generatedTreeFile, manifest map[string]string, clusterName string) (map[string]bool, map[string]bool) {
 	roots := make(map[string]bool)
 	rootFiles := make(map[string]bool)
+	targetOverlay := filepath.ToSlash(filepath.Join("applications", "overlays", clusterName))
+	// The target overlay is always protected recursively, including when a
+	// particular render happens to produce no files beneath it.
+	roots[targetOverlay] = true
 	add := func(path string) {
-		parts := strings.Split(filepath.ToSlash(path), "/")
+		path = filepath.ToSlash(filepath.Clean(path))
+		if path == targetOverlay || strings.HasPrefix(path, targetOverlay+"/") {
+			roots[targetOverlay] = true
+			return
+		}
+		parts := strings.Split(path, "/")
 		if len(parts) == 1 {
 			rootFiles[path] = true
-		} else {
-			roots[parts[0]] = true
+			return
 		}
+		scope := strings.Join(parts[:len(parts)-1], "/")
+		// A shared file directly under a tree's cluster collection must remain
+		// an exact-file scope. None of these parents may become a recursive
+		// scope covering sibling clusters or overlays.
+		if scope == "applications" || scope == "applications/overlays" ||
+			scope == "infrastructure" || scope == "infrastructure/clusters" || scope == "clusters" {
+			rootFiles[path] = true
+			return
+		}
+		roots[scope] = true
 	}
 	for path := range planned {
 		add(path)
@@ -609,8 +672,17 @@ func isGeneratedTreeNamespace(path string, roots, rootFiles map[string]bool) boo
 	if rootFiles[path] || roots[path] {
 		return true
 	}
-	parts := strings.Split(path, "/")
-	return len(parts) > 1 && roots[parts[0]]
+	for scope := range roots {
+		if strings.HasPrefix(scope, path+"/") || strings.HasPrefix(path, scope+"/") {
+			return true
+		}
+	}
+	for file := range rootFiles {
+		if strings.HasPrefix(file, path+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func isGeneratedTreeCustomPath(path string) bool {

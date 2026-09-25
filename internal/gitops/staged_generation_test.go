@@ -85,6 +85,145 @@ func TestGenerateClusterTreeOwnershipConflictDoesNotMutateTarget(t *testing.T) {
 	}
 }
 
+func TestGenerateClusterTreeIgnoresSiblingOverlayDrift(t *testing.T) {
+	repo := t.TempDir()
+	cfg := newDefault("sibling-overlay-drift")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
+	options := StagedGenerationOptions{Promote: PromoteOptions{}}
+	if _, _, err := GenerateClusterTree(context.Background(), cfg, options); err != nil {
+		t.Fatalf("initial GenerateClusterTree() error = %v", err)
+	}
+	sibling := filepath.Join(repo, "applications", "overlays", "other-cluster", "user-authored.yaml")
+	writeTestFile(t, sibling, "leave me\n")
+	if _, _, err := GenerateClusterTree(context.Background(), cfg, options); err != nil {
+		t.Fatalf("GenerateClusterTree() rejected sibling overlay drift: %v", err)
+	}
+	if got, err := os.ReadFile(sibling); err != nil || string(got) != "leave me\n" {
+		t.Fatalf("sibling overlay file changed: %q, %v", got, err)
+	}
+}
+
+func TestGenerateClusterTreeKeepsSiblingClusterOwnershipScoped(t *testing.T) {
+	repo := t.TempDir()
+	first := newDefault("scoped-first")
+	first.OpenCenter.GitOps.Repository.LocalDir = repo
+	second := newDefault("scoped-second")
+	second.OpenCenter.GitOps.Repository.LocalDir = repo
+	options := StagedGenerationOptions{IncludeInfrastructure: true, IncludeFluxBridge: true}
+	firstResult, _, err := GenerateClusterTree(context.Background(), first, options)
+	if err != nil {
+		t.Fatalf("initial first-cluster generation error = %v", err)
+	}
+	secondResult, _, err := GenerateClusterTree(context.Background(), second, options)
+	if err != nil {
+		t.Fatalf("initial second-cluster generation error = %v", err)
+	}
+
+	firstOverlayRel := promotedTestPath(t, firstResult, "applications/overlays/"+first.ClusterName()+"/", "kustomization.yaml")
+	firstInfrastructureRel := promotedTestPath(t, firstResult, "infrastructure/clusters/"+first.ClusterName()+"/", "")
+	secondOverlayRel := promotedTestPath(t, secondResult, "applications/overlays/"+second.ClusterName()+"/", "kustomization.yaml")
+	secondInfrastructureRel := promotedTestPath(t, secondResult, "infrastructure/clusters/"+second.ClusterName()+"/", "")
+	firstOverlay := filepath.Join(repo, filepath.FromSlash(firstOverlayRel))
+	firstInfrastructure := filepath.Join(repo, filepath.FromSlash(firstInfrastructureRel))
+	secondOverlay := filepath.Join(repo, filepath.FromSlash(secondOverlayRel))
+	secondInfrastructure := filepath.Join(repo, filepath.FromSlash(secondInfrastructureRel))
+	secondOverlayOriginal := readTestFile(t, secondOverlay)
+	secondInfrastructureOriginal := readTestFile(t, secondInfrastructure)
+	writeTestFile(t, secondOverlay, "modified second overlay\n")
+	writeTestFile(t, secondInfrastructure, "modified second infrastructure\n")
+	if _, _, err := GenerateClusterTree(context.Background(), first, options); err != nil {
+		t.Fatalf("regenerating first cluster inspected second cluster: %v", err)
+	}
+	assertTestFileContent(t, secondOverlay, "modified second overlay\n")
+	assertTestFileContent(t, secondInfrastructure, "modified second infrastructure\n")
+
+	writeTestFile(t, secondOverlay, secondOverlayOriginal)
+	writeTestFile(t, secondInfrastructure, secondInfrastructureOriginal)
+	writeTestFile(t, firstOverlay, "modified first overlay\n")
+	writeTestFile(t, firstInfrastructure, "modified first infrastructure\n")
+	if _, _, err := GenerateClusterTree(context.Background(), second, options); err != nil {
+		t.Fatalf("regenerating second cluster inspected first cluster: %v", err)
+	}
+	assertTestFileContent(t, firstOverlay, "modified first overlay\n")
+	assertTestFileContent(t, firstInfrastructure, "modified first infrastructure\n")
+
+	manifest, _, _, err := loadGeneratedTreeManifest(repo, second.ClusterName())
+	if err != nil {
+		t.Fatalf("load persisted generated tree manifest: %v", err)
+	}
+	for _, path := range []string{firstOverlayRel, secondOverlayRel, firstInfrastructureRel, secondInfrastructureRel} {
+		if _, found := manifest.Files[path]; !found {
+			t.Fatalf("persisted manifest lost sibling ownership entry %q", path)
+		}
+	}
+}
+
+func promotedTestPath(t *testing.T, result *PromoteResult, prefix, suffix string) string {
+	t.Helper()
+	for _, path := range result.Added {
+		if strings.HasPrefix(path, prefix) && (suffix == "" || strings.HasSuffix(path, suffix)) {
+			return path
+		}
+	}
+	t.Fatalf("promotion did not add a path with prefix %q and suffix %q: %+v", prefix, suffix, result)
+	return ""
+}
+
+func TestGenerateClusterTreeRejectsTargetOverlayUnknownFile(t *testing.T) {
+	repo := t.TempDir()
+	cfg := newDefault("target-overlay-unknown")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
+	options := StagedGenerationOptions{}
+	if _, _, err := GenerateClusterTree(context.Background(), cfg, options); err != nil {
+		t.Fatalf("initial GenerateClusterTree() error = %v", err)
+	}
+	unknown := filepath.Join(repo, "applications", "overlays", cfg.ClusterName(), "user-authored.yaml")
+	writeTestFile(t, unknown, "unknown\n")
+	before := snapshotStagedGenerationTree(t, repo)
+	if _, _, err := GenerateClusterTree(context.Background(), cfg, options); err == nil || !strings.Contains(err.Error(), "user-authored.yaml") {
+		t.Fatalf("GenerateClusterTree() error = %v, want target overlay ownership conflict", err)
+	}
+	if after := snapshotStagedGenerationTree(t, repo); !mapsEqual(after, before) {
+		t.Fatalf("target overlay refusal mutated target: got=%v want=%v", after, before)
+	}
+}
+
+func assertTestFileContent(t *testing.T, path, want string) {
+	t.Helper()
+	got := readTestFile(t, path)
+	if got != want {
+		t.Fatalf("file %s = %q; want %q", path, got, want)
+	}
+}
+
+func readTestFile(t *testing.T, path string) string {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read file %s = %q, %v", path, got, err)
+	}
+	return string(got)
+}
+
+func TestGenerateClusterTreeRejectsSharedUnknownFile(t *testing.T) {
+	repo := t.TempDir()
+	cfg := newDefault("shared-unknown")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
+	options := StagedGenerationOptions{IncludeInfrastructure: true}
+	if _, _, err := GenerateClusterTree(context.Background(), cfg, options); err != nil {
+		t.Fatalf("initial GenerateClusterTree() error = %v", err)
+	}
+	unknown := filepath.Join(repo, "infrastructure", "clusters", cfg.ClusterName(), "shared-user-authored.tf")
+	writeTestFile(t, unknown, "unknown\n")
+	before := snapshotStagedGenerationTree(t, repo)
+	if _, _, err := GenerateClusterTree(context.Background(), cfg, options); err == nil || !strings.Contains(err.Error(), "shared-user-authored.tf") {
+		t.Fatalf("GenerateClusterTree() error = %v, want shared ownership conflict", err)
+	}
+	if after := snapshotStagedGenerationTree(t, repo); !mapsEqual(after, before) {
+		t.Fatalf("shared-file refusal mutated target: got=%v want=%v", after, before)
+	}
+}
+
 func TestGenerateClusterTreeValidatesAndEncryptsSingleStagedTree(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("single-staged-tree")

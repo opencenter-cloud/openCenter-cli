@@ -9,6 +9,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestLifecycleHookConstantsMatchProtocolValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		constant string
+		legacy   string
+	}{
+		{name: "pre install", constant: LifecycleHookPreInstall, legacy: "PreInstall"},
+		{name: "post install", constant: LifecycleHookPostInstall, legacy: "PostInstall"},
+		{name: "pre update", constant: LifecycleHookPreUpdate, legacy: "PreUpdate"},
+		{name: "post update", constant: LifecycleHookPostUpdate, legacy: "PostUpdate"},
+		{name: "pre remove", constant: LifecycleHookPreRemove, legacy: "PreRemove"},
+		{name: "post remove", constant: LifecycleHookPostRemove, legacy: "PostRemove"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.legacy, tt.constant)
+		})
+	}
+}
+
 // TestServiceDefinitionExecuteLifecycleHook tests individual lifecycle hook execution
 func TestServiceDefinitionExecuteLifecycleHook(t *testing.T) {
 	ctx := context.Background()

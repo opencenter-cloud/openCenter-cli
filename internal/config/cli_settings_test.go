@@ -516,11 +516,11 @@ func TestLoggingInitialization(t *testing.T) {
 	logger := logging.GetGlobalLogger()
 	if logger == nil {
 		t.Error("Global logger should not be nil after initialization")
-	}
-
-	// Test that log level is set correctly
-	if logger.Level.String() != "warning" {
-		t.Errorf("Expected log level 'warning', got '%s'", logger.Level.String())
+	} else {
+		// Test that log level is set correctly
+		if logger.Level.String() != "warning" {
+			t.Errorf("Expected log level 'warning', got '%s'", logger.Level.String())
+		}
 	}
 }
 

@@ -45,6 +45,7 @@ func TestConfigIOHandler_NewConfigIOHandler(t *testing.T) {
 
 	if loader == nil {
 		t.Fatal("expected non-nil loader")
+		return
 	}
 	if loader.fileSystem == nil {
 		t.Fatal("expected non-nil fileSystem")

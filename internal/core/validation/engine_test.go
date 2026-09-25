@@ -48,13 +48,14 @@ func (m *mockValidator) Validate(ctx context.Context, value interface{}) (*Valid
 func TestNewValidationEngine(t *testing.T) {
 	engine := NewValidationEngine()
 	if engine == nil {
-		t.Fatal("NewValidationEngine returned nil")
-	}
-	if engine.registry == nil {
-		t.Error("registry is nil")
-	}
-	if engine.suggestionEngine == nil {
-		t.Error("suggestionEngine is nil")
+		t.Error("NewValidationEngine returned nil")
+	} else {
+		if engine.registry == nil {
+			t.Error("registry is nil")
+		}
+		if engine.suggestionEngine == nil {
+			t.Error("suggestionEngine is nil")
+		}
 	}
 }
 

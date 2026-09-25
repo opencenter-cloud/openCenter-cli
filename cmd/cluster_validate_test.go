@@ -60,6 +60,7 @@ func TestValidateCommandV2Support(t *testing.T) {
 
 	if cmd == nil {
 		t.Fatal("validate command should not be nil")
+		return
 	}
 
 	if cmd.Use != "validate [name]" {

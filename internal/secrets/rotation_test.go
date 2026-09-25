@@ -368,15 +368,6 @@ func (m *MockKeyRegistry) ListKeys(ctx context.Context, cluster string) ([]KeyEn
 	return result, nil
 }
 
-func mockActivePrimary(entries []KeyEntry) (KeyEntry, bool) {
-	for _, entry := range entries {
-		if entry.Status == KeyStatusActive && entry.Primary {
-			return entry, true
-		}
-	}
-	return KeyEntry{}, false
-}
-
 func mockSelectKey(entries []KeyEntry, cluster string, keyType KeyType, primaryOnly bool) (*KeyEntry, error) {
 	var primaries []KeyEntry
 	for _, entry := range entries {

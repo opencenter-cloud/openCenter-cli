@@ -24,6 +24,7 @@ func TestSecretsKeysCmd_Structure(t *testing.T) {
 	// Verify command exists
 	if cmd == nil {
 		t.Fatal("NewSecretsKeysCmd() returned nil")
+		return
 	}
 
 	// Verify command name

@@ -70,7 +70,7 @@ func FormatAppliedDefaults(appliedDefaults map[string]DefaultSource) string {
 	sb.WriteString("Applied Defaults:\n")
 
 	for field, source := range appliedDefaults {
-		sb.WriteString(fmt.Sprintf("  %s: %s\n", field, source))
+		fmt.Fprintf(&sb, "  %s: %s\n", field, source)
 	}
 
 	return sb.String()

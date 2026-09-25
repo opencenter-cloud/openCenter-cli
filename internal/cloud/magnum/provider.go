@@ -355,7 +355,7 @@ func (p *Provider) WaitReady(ctx context.Context, idOrName string, interval time
 			return cluster, nil
 		case "CREATE_FAILED", "UPDATE_FAILED", "DELETE_FAILED":
 			p.forgetCreated(identifier)
-			return cluster, fmt.Errorf("Magnum cluster %q failed with status %s: %s", cluster.Name, cluster.Status, cluster.StatusReason)
+			return cluster, fmt.Errorf("magnum cluster %q failed with status %s: %s", cluster.Name, cluster.Status, cluster.StatusReason)
 		}
 
 		if err := waitInterval(ctx, interval); err != nil {
@@ -391,10 +391,10 @@ func (p *Provider) ExportKubeconfig(ctx context.Context, idOrName, path string) 
 		return err
 	}
 	if cluster.ID == "" {
-		return errors.New("Magnum cluster returned an empty ID")
+		return errors.New("magnum cluster returned an empty ID")
 	}
 	if strings.TrimSpace(cluster.APIAddress) == "" {
-		return errors.New("Magnum cluster has no API address")
+		return errors.New("magnum cluster has no API address")
 	}
 	if err := ctx.Err(); err != nil {
 		return err
@@ -414,7 +414,7 @@ func (p *Provider) ExportKubeconfig(ctx context.Context, idOrName, path string) 
 		return fmt.Errorf("create Magnum client certificate: %w", callErr)
 	}
 	if strings.TrimSpace(clientCertificate) == "" {
-		return errors.New("Magnum returned an empty client certificate")
+		return errors.New("magnum returned an empty client certificate")
 	}
 	if err := ctx.Err(); err != nil {
 		return err
@@ -427,7 +427,7 @@ func (p *Provider) ExportKubeconfig(ctx context.Context, idOrName, path string) 
 		return fmt.Errorf("get Magnum CA certificate: %w", callErr)
 	}
 	if strings.TrimSpace(caCertificate) == "" {
-		return errors.New("Magnum returned an empty CA certificate")
+		return errors.New("magnum returned an empty CA certificate")
 	}
 	configText, err := marshalKubeconfig(cluster, caCertificate, clientCertificate, privateKey)
 	if err != nil {
@@ -511,7 +511,7 @@ func (p *Provider) WaitDeleted(ctx context.Context, id string) error {
 			return err
 		}
 		if strings.EqualFold(strings.TrimSpace(cluster.Status), "DELETE_FAILED") {
-			return fmt.Errorf("Magnum cluster %q deletion failed: %s", cluster.Name, cluster.StatusReason)
+			return fmt.Errorf("magnum cluster %q deletion failed: %s", cluster.Name, cluster.StatusReason)
 		}
 
 		timer := time.NewTimer(defaultPollInterval)
@@ -539,14 +539,14 @@ func (p *Provider) getService(ctx context.Context) (Service, error) {
 	factory := p.serviceFactory
 	p.mu.Unlock()
 	if factory == nil {
-		return nil, errors.New("Magnum service is not configured")
+		return nil, errors.New("magnum service is not configured")
 	}
 	service, err := factory(nonNilContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 	if service == nil {
-		return nil, errors.New("Magnum service factory returned nil")
+		return nil, errors.New("magnum service factory returned nil")
 	}
 	return service, nil
 }
@@ -662,14 +662,14 @@ func (p *Provider) resolveIdentifier(ctx context.Context, service Service, ident
 
 func validateConfig(config Config) error {
 	if strings.TrimSpace(config.IdentityEndpoint) == "" {
-		return errors.New("Keystone identity endpoint is required")
+		return errors.New("keystone identity endpoint is required")
 	}
 	endpoint, err := url.Parse(config.IdentityEndpoint)
 	if err != nil || endpoint.Scheme == "" || endpoint.Host == "" {
-		return errors.New("Keystone identity endpoint must be a valid URL")
+		return errors.New("keystone identity endpoint must be a valid URL")
 	}
 	if strings.TrimSpace(config.Region) == "" {
-		return errors.New("Magnum region is required")
+		return errors.New("magnum region is required")
 	}
 	if strings.TrimSpace(config.TenantID) == "" {
 		return errors.New("project ID (TenantID) is required")
@@ -793,7 +793,7 @@ func looksLikeUUID(value string) bool {
 			}
 			continue
 		}
-		if !((character >= '0' && character <= '9') || (character >= 'a' && character <= 'f') || (character >= 'A' && character <= 'F')) {
+		if (character < '0' || character > '9') && (character < 'a' || character > 'f') && (character < 'A' || character > 'F') {
 			return false
 		}
 	}
@@ -912,7 +912,7 @@ func loadCAPool(path string) (*x509.CertPool, error) {
 func validateAuthenticatedProject(provider *gophercloud.ProviderClient, expected string) error {
 	result := provider.GetAuthResult()
 	if result == nil {
-		return errors.New("Keystone authentication returned no token result")
+		return errors.New("keystone authentication returned no token result")
 	}
 	actual, err := authenticatedProjectID(result)
 	if err != nil {

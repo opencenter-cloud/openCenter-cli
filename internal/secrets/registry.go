@@ -863,7 +863,7 @@ func canonicalAgeRecipient(entry KeyEntry) (string, error) {
 		recipient = strings.TrimSpace(entry.Fingerprint)
 	}
 	if recipient == "" {
-		return "", fmt.Errorf("Age key %q has no public key or fingerprint", entry.Fingerprint)
+		return "", fmt.Errorf("age key %q has no public key or fingerprint", entry.Fingerprint)
 	}
 	return recipient, nil
 }
@@ -887,24 +887,6 @@ func activeAgeRecipients(keys []KeyEntry) ([]string, error) {
 	return result, nil
 }
 
-func archivedAgeRecipients(keys []KeyEntry) ([]string, error) {
-	result := make([]string, 0)
-	seen := make(map[string]struct{})
-	for _, key := range keys {
-		if key.KeyType != KeyTypeAge || key.Status != KeyStatusArchived {
-			continue
-		}
-		recipient, err := canonicalAgeRecipient(key)
-		if err != nil {
-			return nil, err
-		}
-		if _, ok := seen[recipient]; !ok {
-			seen[recipient] = struct{}{}
-			result = append(result, recipient)
-		}
-	}
-	return result, nil
-}
 func selectKey(keys []KeyEntry, cluster string, keyType KeyType, primaryOnly bool) (*KeyEntry, error) {
 	var primaries []KeyEntry
 	for _, entry := range keys {
@@ -935,19 +917,6 @@ func selectKey(keys []KeyEntry, cluster string, keyType KeyType, primaryOnly boo
 	}
 	return nil, NewKeyNotFoundError(cluster, keyType, nil)
 }
-
-func findActivePrimary(keys []KeyEntry, cluster string, keyType KeyType) (KeyEntry, bool) {
-	for _, entry := range keys {
-		if entry.Cluster == cluster && entry.KeyType == keyType && entry.Status == KeyStatusActive && entry.Primary {
-			return entry, true
-		}
-	}
-	return KeyEntry{}, false
-}
-
-// normalizeRegistryPrimaries is retained for compatibility with legacy callers.
-// Primary selection is explicit; loading a registry must never infer a winner.
-func normalizeRegistryPrimaries(data *registryData) {}
 
 // calculateExpiration calculates the expiration date based on creation date and key type.
 func (r *DefaultKeyRegistry) calculateExpiration(createdAt time.Time, keyType KeyType, policy defaultExpirationPolicy) time.Time {

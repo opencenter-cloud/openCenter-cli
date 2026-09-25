@@ -767,10 +767,6 @@ func mustRelative(root, path string) string {
 	return filepath.ToSlash(rel)
 }
 
-func removeVerifiedFile(root, path string) error {
-	return removeVerifiedFileMatching(root, path, "")
-}
-
 func removeVerifiedFileMatching(root, path, expectedHash string) error {
 	rel, err := filepath.Rel(root, path)
 	if err != nil || !isGeneratorOwnedPath(filepath.ToSlash(rel)) {

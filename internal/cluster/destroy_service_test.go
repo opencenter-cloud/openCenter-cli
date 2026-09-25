@@ -15,6 +15,7 @@ package cluster
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
@@ -118,7 +119,7 @@ func TestDestroyService_MagnumInvalidConfigIsNotSilentlyUnsupported(t *testing.T
 	if !svc.SupportsInfraDestroy(cfg) {
 		t.Fatal("Magnum provider selection should report destroy support before config validation")
 	}
-	if _, err := svc.DestroyInfrastructure(nil, cfg, nil); err == nil {
+	if _, err := svc.DestroyInfrastructure(context.TODO(), cfg, nil); err == nil {
 		t.Fatal("DestroyInfrastructure() should reject invalid Magnum configuration")
 	}
 }

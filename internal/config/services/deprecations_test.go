@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -93,19 +92,6 @@ func TestDeprecatedRegistryMatchesCheckedInSchema(t *testing.T) {
 			t.Errorf("removed legacy key %q still occurs in checked-in schema", entry.Key)
 		}
 	}
-}
-
-func schemaMapAt(t *testing.T, root map[string]any, path ...string) map[string]any {
-	t.Helper()
-	current := root
-	for _, key := range path {
-		next, ok := current[key].(map[string]any)
-		if !ok {
-			t.Fatalf("schema path %q is missing or not an object", strings.Join(path, "."))
-		}
-		current = next
-	}
-	return current
 }
 
 func schemaContainsKey(node any, key string) bool {

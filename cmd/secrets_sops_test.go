@@ -434,6 +434,7 @@ func TestNewSOPSPathMatcherNoConfig(t *testing.T) {
 
 	if matcher == nil {
 		t.Error("Expected non-nil matcher")
+		return
 	}
 
 	if len(matcher.rules) != 0 {

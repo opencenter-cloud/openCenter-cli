@@ -258,11 +258,12 @@ func applySetFlagOverrides(cliConfig *CLIConfig, setFlags []string) error {
 
 		// Parse the value (try to detect type)
 		var parsedValue interface{}
-		if value == "true" {
+		switch value {
+		case "true":
 			parsedValue = true
-		} else if value == "false" {
+		case "false":
 			parsedValue = false
-		} else {
+		default:
 			// Try to parse as number
 			if intVal := tryParseInt(value); intVal != nil {
 				parsedValue = *intVal

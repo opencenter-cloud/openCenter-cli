@@ -119,6 +119,7 @@ func LoadConfig(t *testing.T, name string) v2.Config {
 
 	if cfg == nil {
 		t.Fatalf("configuration not found: %s", name)
+		return v2.Config{}
 	}
 
 	return *cfg

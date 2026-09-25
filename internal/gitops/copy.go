@@ -565,11 +565,6 @@ func RenderClusterAppsWithEncryption(ctx context.Context, cfg v2.Config, encrypt
 	return err
 }
 
-func renderClusterApps(ctx context.Context, cfg v2.Config, encrypt OverlayEncryptor) error {
-	_, err := renderClusterAppsWithOptions(ctx, cfg, encrypt, PromoteOptions{})
-	return err
-}
-
 func renderClusterAppsWithOptions(ctx context.Context, cfg v2.Config, encrypt OverlayEncryptor, opts PromoteOptions) (*PromoteResult, error) {
 	clusterName := cfg.ClusterName()
 	if clusterName == "" {
@@ -720,7 +715,7 @@ func renderClusterVarsConfigMapYAML(cfg v2.Config) string {
 		case "cluster_name":
 			value = cfg.OpenCenter.Cluster.ClusterName
 		}
-		data.WriteString(fmt.Sprintf("  %s: %q\n", name, value))
+		fmt.Fprintf(&data, "  %s: %q\n", name, value)
 	}
 	return fmt.Sprintf(`---
 apiVersion: v1
@@ -793,11 +788,6 @@ func RenderSingleServiceWithEncryptionResult(ctx context.Context, cfg v2.Config,
 // workspace and promotes its scoped outputs.
 func RenderSingleServiceWithEncryption(ctx context.Context, cfg v2.Config, serviceName string, isManaged bool, encrypt OverlayEncryptor) error {
 	_, err := RenderSingleServiceWithEncryptionResult(ctx, cfg, serviceName, isManaged, encrypt, PromoteOptions{})
-	return err
-}
-
-func renderSingleService(ctx context.Context, cfg v2.Config, serviceName string, isManaged bool, encrypt OverlayEncryptor) error {
-	_, err := renderSingleServiceWithOptions(ctx, cfg, serviceName, isManaged, encrypt, PromoteOptions{})
 	return err
 }
 

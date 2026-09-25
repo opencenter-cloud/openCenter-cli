@@ -62,21 +62,21 @@ func RenderSourceAuthBlock(params SourceAuthParams) string {
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("  # --- %s (active) ---\n", activeLabel))
-	b.WriteString(fmt.Sprintf("  url: %s\n", activeURL))
+	fmt.Fprintf(&b, "  # --- %s (active) ---\n", activeLabel)
+	fmt.Fprintf(&b, "  url: %s\n", activeURL)
 	b.WriteString("  ref:\n")
-	b.WriteString(fmt.Sprintf("    %s: \"%s\"\n", params.RefType, params.RefValue))
+	fmt.Fprintf(&b, "    %s: \"%s\"\n", params.RefType, params.RefValue)
 	if !params.Anonymous {
 		b.WriteString("  secretRef:\n")
-		b.WriteString(fmt.Sprintf("    name: %s\n", secretName))
+		fmt.Fprintf(&b, "    name: %s\n", secretName)
 	}
-	b.WriteString(fmt.Sprintf("  # --- %s (alternative) ---\n", alternativeLabel))
-	b.WriteString(fmt.Sprintf("  # url: %s\n", alternativeURL))
+	fmt.Fprintf(&b, "  # --- %s (alternative) ---\n", alternativeLabel)
+	fmt.Fprintf(&b, "  # url: %s\n", alternativeURL)
 	b.WriteString("  # ref:\n")
-	b.WriteString(fmt.Sprintf("  #   %s: \"%s\"", params.RefType, params.RefValue))
+	fmt.Fprintf(&b, "  #   %s: \"%s\"", params.RefType, params.RefValue)
 	if !params.Anonymous {
 		b.WriteString("\n  # secretRef:\n")
-		b.WriteString(fmt.Sprintf("  #   name: %s", secretName))
+		fmt.Fprintf(&b, "  #   name: %s", secretName)
 	}
 
 	return b.String()

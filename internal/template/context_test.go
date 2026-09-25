@@ -28,6 +28,7 @@ func TestNewRenderContext(t *testing.T) {
 
 	if ctx == nil {
 		t.Fatal("NewRenderContext returned nil")
+		return
 	}
 
 	if ctx.Data == nil {
@@ -224,6 +225,7 @@ func TestContextBuilder(t *testing.T) {
 
 	if builder == nil {
 		t.Fatal("NewContextBuilder returned nil")
+		return
 	}
 
 	if builder.context == nil {
@@ -264,6 +266,7 @@ func TestContextBuilderBuild(t *testing.T) {
 
 	if ctx == nil {
 		t.Fatal("build returned nil context")
+		return
 	}
 
 	if !ctx.Options.StrictMode {

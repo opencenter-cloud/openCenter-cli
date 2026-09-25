@@ -85,7 +85,7 @@ func ValidateForGeneration(cfg *Config) error {
 }
 
 func generationReportFromReadiness(readiness ReadinessReport) GenerationValidationReport {
-	return GenerationValidationReport{Valid: readiness.Valid, Issues: readiness.Issues}
+	return GenerationValidationReport(readiness)
 }
 
 func (r *GenerationValidationReport) addIssue(issue ValidationIssue) {

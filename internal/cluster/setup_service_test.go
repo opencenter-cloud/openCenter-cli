@@ -46,6 +46,7 @@ func TestNewSetupService(t *testing.T) {
 
 	if service == nil {
 		t.Fatal("NewSetupService returned nil")
+		return
 	}
 
 	if service.pathResolver == nil {
@@ -451,6 +452,7 @@ func TestSetupService_Setup(t *testing.T) {
 
 	if result == nil {
 		t.Fatal("Setup() returned nil result")
+		return
 	}
 
 	if result.GitOpsPath != gitDir {

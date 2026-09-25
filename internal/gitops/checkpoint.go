@@ -18,6 +18,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -65,7 +66,7 @@ func (w *GitOpsWorkspace) CreateCheckpoint(checkpointID string) (*WorkspaceCheck
 		}
 
 		// Skip temp directory and its contents
-		if path == w.TempDir || filepath.HasPrefix(path, w.TempDir) {
+		if isPathWithin(w.TempDir, path) {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -143,7 +144,7 @@ func (w *GitOpsWorkspace) RestoreCheckpoint(checkpointID string) error {
 		}
 
 		// Skip temp directory
-		if path == w.TempDir || filepath.HasPrefix(path, w.TempDir+string(filepath.Separator)) {
+		if isPathWithin(w.TempDir, path) {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -244,6 +245,17 @@ func (w *GitOpsWorkspace) GetCheckpoint(checkpointID string) (*WorkspaceCheckpoi
 	}
 
 	return &checkpoint, nil
+}
+
+// isPathWithin reports whether target is base or one of base's descendants.
+// filepath.Rel keeps similarly prefixed sibling paths outside the boundary.
+func isPathWithin(base, target string) bool {
+	relPath, err := filepath.Rel(base, target)
+	if err != nil || filepath.IsAbs(relPath) {
+		return false
+	}
+
+	return relPath != ".." && !strings.HasPrefix(relPath, ".."+string(filepath.Separator))
 }
 
 // copyFileContent copies the contents of a file from src to dst.

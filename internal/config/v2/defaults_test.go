@@ -99,6 +99,7 @@ func TestNewV2DefaultMagnumUsesIncompleteIsolatedCloud(t *testing.T) {
 	magnum := cfg.OpenCenter.Infrastructure.Cloud.Magnum
 	if magnum == nil {
 		t.Fatal("Magnum defaults must initialize cloud.magnum")
+		return
 	}
 	if magnum.Region != cfg.OpenCenter.Meta.Region {
 		t.Fatalf("Magnum region = %q, want metadata region %q", magnum.Region, cfg.OpenCenter.Meta.Region)

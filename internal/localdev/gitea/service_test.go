@@ -29,6 +29,7 @@ func TestWriteCertificatesIncludesLocalAndKindSANs(t *testing.T) {
 	block, _ := pem.Decode(data)
 	if block == nil {
 		t.Fatal("failed to decode server cert PEM")
+		return
 	}
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {

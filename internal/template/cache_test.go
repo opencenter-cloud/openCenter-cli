@@ -28,6 +28,7 @@ func TestNewInMemoryTemplateCache(t *testing.T) {
 
 	if cache == nil {
 		t.Fatal("NewInMemoryTemplateCache returned nil")
+		return
 	}
 
 	if cache.entries == nil {

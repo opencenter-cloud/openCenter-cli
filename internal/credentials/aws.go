@@ -43,54 +43,54 @@ func (c *AWSCredentials) ToEnvVarsForShell(shell string) string {
 	switch shell {
 	case "fish":
 		if c.AccessKeyID != "" {
-			output.WriteString(fmt.Sprintf("set -gx AWS_ACCESS_KEY_ID \"%s\"\n", c.AccessKeyID))
+			fmt.Fprintf(&output, "set -gx AWS_ACCESS_KEY_ID \"%s\"\n", c.AccessKeyID)
 		}
 		if c.SecretAccessKey != "" {
-			output.WriteString(fmt.Sprintf("set -gx AWS_SECRET_ACCESS_KEY \"%s\"\n", c.SecretAccessKey))
+			fmt.Fprintf(&output, "set -gx AWS_SECRET_ACCESS_KEY \"%s\"\n", c.SecretAccessKey)
 		}
 		if c.Region != "" {
-			output.WriteString(fmt.Sprintf("set -gx AWS_DEFAULT_REGION \"%s\"\n", c.Region))
+			fmt.Fprintf(&output, "set -gx AWS_DEFAULT_REGION \"%s\"\n", c.Region)
 		}
 		if c.Profile != "" {
-			output.WriteString(fmt.Sprintf("set -gx AWS_PROFILE \"%s\"\n", c.Profile))
+			fmt.Fprintf(&output, "set -gx AWS_PROFILE \"%s\"\n", c.Profile)
 		}
 		if c.SessionToken != "" {
-			output.WriteString(fmt.Sprintf("set -gx AWS_SESSION_TOKEN \"%s\"\n", c.SessionToken))
+			fmt.Fprintf(&output, "set -gx AWS_SESSION_TOKEN \"%s\"\n", c.SessionToken)
 		}
 
 	case "powershell":
 		if c.AccessKeyID != "" {
-			output.WriteString(fmt.Sprintf("$env:AWS_ACCESS_KEY_ID = \"%s\"\n", c.AccessKeyID))
+			fmt.Fprintf(&output, "$env:AWS_ACCESS_KEY_ID = \"%s\"\n", c.AccessKeyID)
 		}
 		if c.SecretAccessKey != "" {
-			output.WriteString(fmt.Sprintf("$env:AWS_SECRET_ACCESS_KEY = \"%s\"\n", c.SecretAccessKey))
+			fmt.Fprintf(&output, "$env:AWS_SECRET_ACCESS_KEY = \"%s\"\n", c.SecretAccessKey)
 		}
 		if c.Region != "" {
-			output.WriteString(fmt.Sprintf("$env:AWS_DEFAULT_REGION = \"%s\"\n", c.Region))
+			fmt.Fprintf(&output, "$env:AWS_DEFAULT_REGION = \"%s\"\n", c.Region)
 		}
 		if c.Profile != "" {
-			output.WriteString(fmt.Sprintf("$env:AWS_PROFILE = \"%s\"\n", c.Profile))
+			fmt.Fprintf(&output, "$env:AWS_PROFILE = \"%s\"\n", c.Profile)
 		}
 		if c.SessionToken != "" {
-			output.WriteString(fmt.Sprintf("$env:AWS_SESSION_TOKEN = \"%s\"\n", c.SessionToken))
+			fmt.Fprintf(&output, "$env:AWS_SESSION_TOKEN = \"%s\"\n", c.SessionToken)
 		}
 
 	default:
 		// Bash/Zsh syntax
 		if c.AccessKeyID != "" {
-			output.WriteString(fmt.Sprintf("export AWS_ACCESS_KEY_ID=\"%s\"\n", c.AccessKeyID))
+			fmt.Fprintf(&output, "export AWS_ACCESS_KEY_ID=\"%s\"\n", c.AccessKeyID)
 		}
 		if c.SecretAccessKey != "" {
-			output.WriteString(fmt.Sprintf("export AWS_SECRET_ACCESS_KEY=\"%s\"\n", c.SecretAccessKey))
+			fmt.Fprintf(&output, "export AWS_SECRET_ACCESS_KEY=\"%s\"\n", c.SecretAccessKey)
 		}
 		if c.Region != "" {
-			output.WriteString(fmt.Sprintf("export AWS_DEFAULT_REGION=\"%s\"\n", c.Region))
+			fmt.Fprintf(&output, "export AWS_DEFAULT_REGION=\"%s\"\n", c.Region)
 		}
 		if c.Profile != "" {
-			output.WriteString(fmt.Sprintf("export AWS_PROFILE=\"%s\"\n", c.Profile))
+			fmt.Fprintf(&output, "export AWS_PROFILE=\"%s\"\n", c.Profile)
 		}
 		if c.SessionToken != "" {
-			output.WriteString(fmt.Sprintf("export AWS_SESSION_TOKEN=\"%s\"\n", c.SessionToken))
+			fmt.Fprintf(&output, "export AWS_SESSION_TOKEN=\"%s\"\n", c.SessionToken)
 		}
 	}
 
@@ -136,19 +136,19 @@ func (c *AWSCredentials) ToTerraform() string {
 	output.WriteString("provider \"aws\" {\n")
 
 	if c.AccessKeyID != "" {
-		output.WriteString(fmt.Sprintf("  access_key = \"%s\"\n", c.AccessKeyID))
+		fmt.Fprintf(&output, "  access_key = \"%s\"\n", c.AccessKeyID)
 	}
 	if c.SecretAccessKey != "" {
-		output.WriteString(fmt.Sprintf("  secret_key = \"%s\"\n", c.SecretAccessKey))
+		fmt.Fprintf(&output, "  secret_key = \"%s\"\n", c.SecretAccessKey)
 	}
 	if c.Region != "" {
-		output.WriteString(fmt.Sprintf("  region     = \"%s\"\n", c.Region))
+		fmt.Fprintf(&output, "  region     = \"%s\"\n", c.Region)
 	}
 	if c.Profile != "" {
-		output.WriteString(fmt.Sprintf("  profile    = \"%s\"\n", c.Profile))
+		fmt.Fprintf(&output, "  profile    = \"%s\"\n", c.Profile)
 	}
 	if c.SessionToken != "" {
-		output.WriteString(fmt.Sprintf("  token      = \"%s\"\n", c.SessionToken))
+		fmt.Fprintf(&output, "  token      = \"%s\"\n", c.SessionToken)
 	}
 
 	output.WriteString("}")

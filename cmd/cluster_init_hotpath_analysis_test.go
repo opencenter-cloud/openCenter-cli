@@ -377,17 +377,17 @@ func saveAnalysisToFile(analysis *HotPathAnalysis, path string) error {
 	buf.WriteString(strings.Repeat("=", 80) + "\n")
 	buf.WriteString("CLUSTER INITIALIZATION HOT PATH ANALYSIS\n")
 	buf.WriteString(strings.Repeat("=", 80) + "\n")
-	buf.WriteString(fmt.Sprintf("\nTotal Duration: %v\n", analysis.TotalDuration))
+	fmt.Fprintf(&buf, "\nTotal Duration: %v\n", analysis.TotalDuration)
 
 	if len(analysis.CPUHotPaths) > 0 {
 		buf.WriteString("\n" + strings.Repeat("-", 80) + "\n")
 		buf.WriteString("CPU HOT PATHS (Top 10)\n")
 		buf.WriteString(strings.Repeat("-", 80) + "\n")
-		buf.WriteString(fmt.Sprintf("%-10s %-10s %-10s %-10s %s\n", "SELF", "SELF%", "CUM", "CUM%", "FUNCTION"))
+		fmt.Fprintf(&buf, "%-10s %-10s %-10s %-10s %s\n", "SELF", "SELF%", "CUM", "CUM%", "FUNCTION")
 		buf.WriteString(strings.Repeat("-", 80) + "\n")
 		for _, hp := range analysis.CPUHotPaths {
-			buf.WriteString(fmt.Sprintf("%-10s %-10.2f%% %-10s %-10.2f%% %s\n",
-				hp.SelfTime, hp.Percentage, hp.TotalTime, hp.Cumulative, hp.Function))
+			fmt.Fprintf(&buf, "%-10s %-10.2f%% %-10s %-10.2f%% %s\n",
+				hp.SelfTime, hp.Percentage, hp.TotalTime, hp.Cumulative, hp.Function)
 		}
 	}
 
@@ -395,11 +395,11 @@ func saveAnalysisToFile(analysis *HotPathAnalysis, path string) error {
 		buf.WriteString("\n" + strings.Repeat("-", 80) + "\n")
 		buf.WriteString("MEMORY HOT PATHS (Top 10 - In-Use Space)\n")
 		buf.WriteString(strings.Repeat("-", 80) + "\n")
-		buf.WriteString(fmt.Sprintf("%-10s %-10s %-10s %-10s %s\n", "SELF", "SELF%", "CUM", "CUM%", "FUNCTION"))
+		fmt.Fprintf(&buf, "%-10s %-10s %-10s %-10s %s\n", "SELF", "SELF%", "CUM", "CUM%", "FUNCTION")
 		buf.WriteString(strings.Repeat("-", 80) + "\n")
 		for _, hp := range analysis.MemoryHotPaths {
-			buf.WriteString(fmt.Sprintf("%-10s %-10.2f%% %-10s %-10.2f%% %s\n",
-				hp.SelfTime, hp.Percentage, hp.TotalTime, hp.Cumulative, hp.Function))
+			fmt.Fprintf(&buf, "%-10s %-10.2f%% %-10s %-10.2f%% %s\n",
+				hp.SelfTime, hp.Percentage, hp.TotalTime, hp.Cumulative, hp.Function)
 		}
 	}
 
@@ -407,11 +407,11 @@ func saveAnalysisToFile(analysis *HotPathAnalysis, path string) error {
 		buf.WriteString("\n" + strings.Repeat("-", 80) + "\n")
 		buf.WriteString("ALLOCATION HOT PATHS (Top 10 - Total Allocated)\n")
 		buf.WriteString(strings.Repeat("-", 80) + "\n")
-		buf.WriteString(fmt.Sprintf("%-10s %-10s %-10s %-10s %s\n", "SELF", "SELF%", "CUM", "CUM%", "FUNCTION"))
+		fmt.Fprintf(&buf, "%-10s %-10s %-10s %-10s %s\n", "SELF", "SELF%", "CUM", "CUM%", "FUNCTION")
 		buf.WriteString(strings.Repeat("-", 80) + "\n")
 		for _, hp := range analysis.AllocationHotPaths {
-			buf.WriteString(fmt.Sprintf("%-10s %-10.2f%% %-10s %-10.2f%% %s\n",
-				hp.SelfTime, hp.Percentage, hp.TotalTime, hp.Cumulative, hp.Function))
+			fmt.Fprintf(&buf, "%-10s %-10.2f%% %-10s %-10.2f%% %s\n",
+				hp.SelfTime, hp.Percentage, hp.TotalTime, hp.Cumulative, hp.Function)
 		}
 	}
 
@@ -421,7 +421,7 @@ func saveAnalysisToFile(analysis *HotPathAnalysis, path string) error {
 
 	findings := generateKeyFindings(analysis)
 	for i, finding := range findings {
-		buf.WriteString(fmt.Sprintf("%d. %s\n", i+1, finding))
+		fmt.Fprintf(&buf, "%d. %s\n", i+1, finding)
 	}
 
 	// Add recommendations
@@ -430,7 +430,7 @@ func saveAnalysisToFile(analysis *HotPathAnalysis, path string) error {
 	buf.WriteString(strings.Repeat("=", 80) + "\n")
 	recommendations := generateRecommendations(analysis)
 	for i, rec := range recommendations {
-		buf.WriteString(fmt.Sprintf("%d. %s\n", i+1, rec))
+		fmt.Fprintf(&buf, "%d. %s\n", i+1, rec)
 	}
 
 	return os.WriteFile(path, buf.Bytes(), 0o644)

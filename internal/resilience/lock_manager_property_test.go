@@ -546,7 +546,7 @@ func TestProperty_LockAcquisitionAndRelease(t *testing.T) {
 			}
 
 			// Release again (should not panic or error)
-			err = lm.Release(lock)
+			_ = lm.Release(lock)
 			// Some implementations may return an error, which is acceptable
 			// The important thing is it doesn't panic
 

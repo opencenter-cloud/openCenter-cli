@@ -30,6 +30,25 @@ import (
 	"github.com/leanovate/gopter/prop"
 )
 
+// auditContextKey keeps the context key package-local. The bridge preserves
+// compatibility with the logger's legacy string lookup without using a raw
+// string key at the call site.
+type auditContextKey string
+
+const correlationIDContextKey auditContextKey = "correlation_id"
+
+type auditLegacyContext struct {
+	context.Context
+	correlationID string
+}
+
+func (c auditLegacyContext) Value(key any) any {
+	if key == "correlation_id" {
+		return c.correlationID
+	}
+	return c.Context.Value(key)
+}
+
 // Feature: security-and-operational-remediation, Property 6: Audit Logging for Security Events
 // For any security-relevant event (key generation, key access, config modification, validation failure,
 // rejected input), the system SHALL create an audit log entry with timestamp, actor, resource, action,
@@ -646,7 +665,10 @@ func TestProperty_AuditLoggingForSecurityEvents(t *testing.T) {
 			defer logger.Close()
 
 			// Create context with correlation ID
-			ctx := context.WithValue(context.Background(), "correlation_id", correlationID)
+			ctx := context.WithValue(auditLegacyContext{
+				Context:       context.Background(),
+				correlationID: correlationID,
+			}, correlationIDContextKey, correlationID)
 
 			// Log an event
 			event := AuditEvent{

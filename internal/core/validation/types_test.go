@@ -191,19 +191,19 @@ func TestDefaultValidationOptions(t *testing.T) {
 	opts := DefaultValidationOptions()
 
 	if opts == nil {
-		t.Fatal("DefaultValidationOptions returned nil")
-	}
+		t.Error("DefaultValidationOptions returned nil")
+	} else {
+		if opts.StopOnFirstError {
+			t.Error("Expected StopOnFirstError to be false")
+		}
 
-	if opts.StopOnFirstError {
-		t.Error("Expected StopOnFirstError to be false")
-	}
+		if !opts.IncludeWarnings {
+			t.Error("Expected IncludeWarnings to be true")
+		}
 
-	if !opts.IncludeWarnings {
-		t.Error("Expected IncludeWarnings to be true")
-	}
-
-	if opts.Context == nil {
-		t.Error("Expected Context to be initialized")
+		if opts.Context == nil {
+			t.Error("Expected Context to be initialized")
+		}
 	}
 }
 
@@ -248,27 +248,27 @@ func TestValidationResult_ToError_SingleError(t *testing.T) {
 	// Check that it's a structured error
 	structErr, ok := err.(*structuredError)
 	if !ok {
-		t.Fatal("Expected *structuredError type")
-	}
+		t.Error("Expected *structuredError type")
+	} else {
+		if structErr.Type != "validation" {
+			t.Errorf("Expected type 'validation', got %q", structErr.Type)
+		}
 
-	if structErr.Type != "validation" {
-		t.Errorf("Expected type 'validation', got %q", structErr.Type)
-	}
+		if structErr.Field != "cluster.name" {
+			t.Errorf("Expected field 'cluster.name', got %q", structErr.Field)
+		}
 
-	if structErr.Field != "cluster.name" {
-		t.Errorf("Expected field 'cluster.name', got %q", structErr.Field)
-	}
+		if structErr.Message != "name is required" {
+			t.Errorf("Expected message 'name is required', got %q", structErr.Message)
+		}
 
-	if structErr.Message != "name is required" {
-		t.Errorf("Expected message 'name is required', got %q", structErr.Message)
-	}
+		if len(structErr.Suggestions) != 2 {
+			t.Errorf("Expected 2 suggestions, got %d", len(structErr.Suggestions))
+		}
 
-	if len(structErr.Suggestions) != 2 {
-		t.Errorf("Expected 2 suggestions, got %d", len(structErr.Suggestions))
-	}
-
-	if structErr.Retryable {
-		t.Error("Expected Retryable to be false")
+		if structErr.Retryable {
+			t.Error("Expected Retryable to be false")
+		}
 	}
 }
 
@@ -286,30 +286,30 @@ func TestValidationResult_ToError_MultipleErrors(t *testing.T) {
 	// Check that it's a structured error
 	structErr, ok := err.(*structuredError)
 	if !ok {
-		t.Fatal("Expected *structuredError type")
-	}
+		t.Error("Expected *structuredError type")
+	} else {
+		// Check aggregated message
+		expectedMsg := "cluster.name: name is required; cluster.region: invalid region; network.cidr: invalid CIDR format"
+		if structErr.Message != expectedMsg {
+			t.Errorf("Expected message %q, got %q", expectedMsg, structErr.Message)
+		}
 
-	// Check aggregated message
-	expectedMsg := "cluster.name: name is required; cluster.region: invalid region; network.cidr: invalid CIDR format"
-	if structErr.Message != expectedMsg {
-		t.Errorf("Expected message %q, got %q", expectedMsg, structErr.Message)
-	}
+		// Check that all suggestions are included
+		if len(structErr.Suggestions) != 3 {
+			t.Errorf("Expected 3 suggestions, got %d", len(structErr.Suggestions))
+		}
 
-	// Check that all suggestions are included
-	if len(structErr.Suggestions) != 3 {
-		t.Errorf("Expected 3 suggestions, got %d", len(structErr.Suggestions))
-	}
+		// Verify suggestions are present
+		expectedSuggestions := map[string]bool{
+			"Provide a cluster name":     true,
+			"Use us-east-1 or us-west-2": true,
+			"Use format: 10.0.0.0/16":    true,
+		}
 
-	// Verify suggestions are present
-	expectedSuggestions := map[string]bool{
-		"Provide a cluster name":     true,
-		"Use us-east-1 or us-west-2": true,
-		"Use format: 10.0.0.0/16":    true,
-	}
-
-	for _, suggestion := range structErr.Suggestions {
-		if !expectedSuggestions[suggestion] {
-			t.Errorf("Unexpected suggestion: %q", suggestion)
+		for _, suggestion := range structErr.Suggestions {
+			if !expectedSuggestions[suggestion] {
+				t.Errorf("Unexpected suggestion: %q", suggestion)
+			}
 		}
 	}
 }
@@ -326,24 +326,24 @@ func TestValidationResult_ToError_DuplicateSuggestions(t *testing.T) {
 
 	structErr, ok := err.(*structuredError)
 	if !ok {
-		t.Fatal("Expected *structuredError type")
-	}
-
-	// Check that duplicate suggestions are removed
-	suggestionCount := make(map[string]int)
-	for _, s := range structErr.Suggestions {
-		suggestionCount[s]++
-	}
-
-	for suggestion, count := range suggestionCount {
-		if count > 1 {
-			t.Errorf("Duplicate suggestion %q found %d times", suggestion, count)
+		t.Error("Expected *structuredError type")
+	} else {
+		// Check that duplicate suggestions are removed
+		suggestionCount := make(map[string]int)
+		for _, s := range structErr.Suggestions {
+			suggestionCount[s]++
 		}
-	}
 
-	// Should have 3 unique suggestions
-	if len(structErr.Suggestions) != 3 {
-		t.Errorf("Expected 3 unique suggestions, got %d", len(structErr.Suggestions))
+		for suggestion, count := range suggestionCount {
+			if count > 1 {
+				t.Errorf("Duplicate suggestion %q found %d times", suggestion, count)
+			}
+		}
+
+		// Should have 3 unique suggestions
+		if len(structErr.Suggestions) != 3 {
+			t.Errorf("Expected 3 unique suggestions, got %d", len(structErr.Suggestions))
+		}
 	}
 }
 
@@ -370,20 +370,20 @@ func TestValidationResult_ToError_WithContext(t *testing.T) {
 
 	structErr, ok := err.(*structuredError)
 	if !ok {
-		t.Fatal("Expected *structuredError type")
-	}
+		t.Error("Expected *structuredError type")
+	} else {
+		// Check context is preserved
+		if structErr.Context == nil {
+			t.Error("Expected context to be present")
+		} else {
+			if structErr.Context["validator"] != "cluster-name" {
+				t.Errorf("Expected validator 'cluster-name', got %v", structErr.Context["validator"])
+			}
 
-	// Check context is preserved
-	if structErr.Context == nil {
-		t.Fatal("Expected context to be present")
-	}
-
-	if structErr.Context["validator"] != "cluster-name" {
-		t.Errorf("Expected validator 'cluster-name', got %v", structErr.Context["validator"])
-	}
-
-	if structErr.Context["operation"] != "validate" {
-		t.Errorf("Expected operation 'validate', got %v", structErr.Context["operation"])
+			if structErr.Context["operation"] != "validate" {
+				t.Errorf("Expected operation 'validate', got %v", structErr.Context["operation"])
+			}
+		}
 	}
 }
 

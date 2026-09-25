@@ -1677,10 +1677,8 @@ func (w *world) iChooseFromThePrompt(choice string) error {
 		}
 
 		// Also try to use the config package's SetActive function
-		if err := setActiveClusterForTest(choice); err != nil {
-			// Don't fail if setActiveClusterForTest fails, as we've already written the file
-			// This is just a backup to ensure compatibility
-		}
+		// Don't fail if setActiveClusterForTest fails, as we've already written the file.
+		_ = setActiveClusterForTest(choice)
 
 		w.lastExit = 0
 		w.lastOut = fmt.Sprintf("Active cluster set to %s\n", choice)
@@ -2101,7 +2099,7 @@ func (w *world) validateConfigurationLoading(clusterName string) error {
 // RegisterSteps registers all step definitions with Godog.
 func RegisterSteps(s *godog.ScenarioContext, t *testing.T, w *world) {
 	// Before each scenario, reset the world state
-	s.BeforeScenario(func(sc *godog.Scenario) {
+	s.Before(func(ctx context.Context, _ *godog.Scenario) (context.Context, error) {
 		w.lastOut = ""
 		w.lastErr = ""
 		w.lastExit = 0
@@ -2110,6 +2108,7 @@ func RegisterSteps(s *godog.ScenarioContext, t *testing.T, w *world) {
 		w.pendingChoice = ""
 		w.answers = nil
 		w.cwd = ""
+		return ctx, nil
 	})
 	// Given steps
 	s.Step(`^the configuration directory is isolated for tests$`, func() error { return nil })

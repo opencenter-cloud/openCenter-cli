@@ -95,7 +95,7 @@ func applyHarborSecretPatch(cfg *v2.Config, payload []byte) error {
 		return err
 	}
 	if provided == 0 {
-		return fmt.Errorf("Harbor credentials payload must provide at least one supported field")
+		return fmt.Errorf("harbor credentials payload must provide at least one supported field")
 	}
 
 	cfg.Secrets.Harbor = candidate
@@ -111,6 +111,8 @@ func configSecretCatalog() []configSecretEntry {
 			Description: "cert-manager Route53 AWS credentials",
 			PayloadKind: configSecretObject,
 			Present: func(cfg *v2.Config) bool {
+				//lint:ignore SA1019 legacy flat cert-manager field is intentionally retained for migration compatibility.
+				//nolint:staticcheck // SA1019: preserve legacy cert-manager field compatibility.
 				return cfg.Secrets.CertManager.AWSAccessKey != "" || cfg.Secrets.CertManager.AWSSecretAccessKey != ""
 			},
 			Get: func(cfg *v2.Config) interface{} {

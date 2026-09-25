@@ -337,6 +337,8 @@ func buildRelayPointConfig(spec clusterSpec) v2.Config {
 	cfg.Secrets.Global.AWS.Infrastructure.SecretAccessKey = "PLACEHOLDER-AWS-INFRA-SECRET-KEY"
 	cfg.Secrets.Global.AWS.Application.AccessKey = "PLACEHOLDER-AWS-APP-ACCESS-KEY"
 	cfg.Secrets.Global.AWS.Application.SecretAccessKey = "PLACEHOLDER-AWS-APP-SECRET-KEY"
+	//lint:ignore SA1019 legacy flat cert-manager field is intentionally retained for migration compatibility.
+	//nolint:staticcheck // SA1019: preserve legacy cert-manager fixture compatibility.
 	cfg.Secrets.CertManager.AWSAccessKey = "PLACEHOLDER-CERT-MANAGER-AWS-ACCESS-KEY"
 	cfg.Secrets.CertManager.AWSSecretAccessKey = "PLACEHOLDER-CERT-MANAGER-AWS-SECRET-KEY"
 	cfg.Secrets.Grafana.AdminPassword = "PLACEHOLDER-GRAFANA-ADMIN-PASSWORD"

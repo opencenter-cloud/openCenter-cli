@@ -49,7 +49,7 @@ func (p *magnumDestroyProvider) BuildSteps(cfg *v2.Config, _ *DestroyInfraOption
 		return nil, fmt.Errorf("cluster name must be set for the magnum provider")
 	}
 	if p == nil || p.provider == nil {
-		return nil, fmt.Errorf("Magnum provider is not configured")
+		return nil, fmt.Errorf("magnum provider is not configured")
 	}
 	identityPath := p.identityPath
 	if identityPath == "" {
@@ -84,7 +84,7 @@ func (p *magnumDestroyProvider) deleteCluster(ctx context.Context, clusterName, 
 	}
 
 	if state.ClusterName != "" && state.ClusterName != clusterName {
-		return fmt.Errorf("Magnum identity state belongs to cluster %q, not %q", state.ClusterName, clusterName)
+		return fmt.Errorf("magnum identity state belongs to cluster %q, not %q", state.ClusterName, clusterName)
 	}
 	clusterID := state.ClusterID
 	if state.AttemptState == magnumCreateInFlight || (state.AttemptState == magnumCreateAccepted && !state.Observed) {
@@ -94,10 +94,10 @@ func (p *magnumDestroyProvider) deleteCluster(ctx context.Context, clusterName, 
 		}
 		visible, visibilityErr := p.provider.WaitVisible(deleteCtx, identifier, magnumReadyPollInterval)
 		if visibilityErr != nil {
-			return fmt.Errorf("Magnum cluster visibility required before destroy; identity state retained: %w", visibilityErr)
+			return fmt.Errorf("magnum cluster visibility required before destroy; identity state retained: %w", visibilityErr)
 		}
 		if !validMagnumClusterID(visible.ID) {
-			return fmt.Errorf("Magnum cluster visibility returned an invalid UUID; identity state retained")
+			return fmt.Errorf("magnum cluster visibility returned an invalid UUID; identity state retained")
 		}
 		state.ClusterID = visible.ID
 		state.ClusterName = clusterName

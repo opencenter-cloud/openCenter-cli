@@ -470,7 +470,7 @@ func TestGophercloudServiceUsesPreAuthenticatedOperationContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	baseProvider.Context = ctx
-	if service.client.ProviderClient.Context != ctx {
+	if service.client.Context != ctx {
 		t.Fatal("operation context was not attached before service use")
 	}
 	if service.client.ProviderClient != baseProvider {

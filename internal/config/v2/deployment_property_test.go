@@ -37,30 +37,21 @@ func TestProperty_KamajiDeploymentConstraints(t *testing.T) {
 
 	properties.Property("Kamaji requires master_count to be zero", prop.ForAll(
 		func(cfg *Config) bool {
-			if cfg.OpenCenter.Infrastructure.Compute.MasterCount != 0 {
-				return false
-			}
-			return true
+			return cfg.OpenCenter.Infrastructure.Compute.MasterCount == 0
 		},
 		genKamajiConfig(),
 	))
 
 	properties.Property("Kamaji requires vrrp_enabled to be false", prop.ForAll(
 		func(cfg *Config) bool {
-			if cfg.OpenCenter.Infrastructure.Networking.VRRPEnabled {
-				return false
-			}
-			return true
+			return !cfg.OpenCenter.Infrastructure.Networking.VRRPEnabled
 		},
 		genKamajiConfig(),
 	))
 
 	properties.Property("Kamaji requires kube_vip_enabled to be false", prop.ForAll(
 		func(cfg *Config) bool {
-			if cfg.OpenCenter.Cluster.Kubernetes.KubeVIPEnabled {
-				return false
-			}
-			return true
+			return !cfg.OpenCenter.Cluster.Kubernetes.KubeVIPEnabled
 		},
 		genKamajiConfig(),
 	))
@@ -79,10 +70,7 @@ func TestProperty_KamajiDeploymentConstraints(t *testing.T) {
 
 	properties.Property("Kamaji requires at least one worker pool", prop.ForAll(
 		func(cfg *Config) bool {
-			if len(cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker) < 1 {
-				return false
-			}
-			return true
+			return len(cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker) >= 1
 		},
 		genKamajiConfig(),
 	))

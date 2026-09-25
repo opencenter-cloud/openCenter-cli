@@ -127,15 +127,15 @@ func (a *DefaultErrorAggregator) GetSummary() string {
 	}
 
 	var summary strings.Builder
-	summary.WriteString(fmt.Sprintf("Found %d errors:\n", len(a.errors)))
+	fmt.Fprintf(&summary, "Found %d errors:\n", len(a.errors))
 
 	for errorType, errors := range errorsByType {
-		summary.WriteString(fmt.Sprintf("\n%s (%d):\n", strings.ToUpper(string(errorType)), len(errors)))
+		fmt.Fprintf(&summary, "\n%s (%d):\n", strings.ToUpper(string(errorType)), len(errors))
 		for i, err := range errors {
 			if i < 3 { // Show first 3 errors of each type
-				summary.WriteString(fmt.Sprintf("  - %s\n", err.Error()))
+				fmt.Fprintf(&summary, "  - %s\n", err.Error())
 			} else if i == 3 {
-				summary.WriteString(fmt.Sprintf("  ... and %d more\n", len(errors)-3))
+				fmt.Fprintf(&summary, "  ... and %d more\n", len(errors)-3)
 				break
 			}
 		}

@@ -32,21 +32,11 @@ var encryptRenderedServiceOverrides = func(ctx context.Context, overlayPath stri
 	return sops.NewSOPSManager().EncryptServiceOverrideValues(ctx, overlayPath, cfg)
 }
 
-func renderClusterAppsEncrypted(ctx context.Context, cfg v2.Config) error {
-	_, err := renderClusterAppsEncryptedResult(ctx, cfg, true, false)
-	return err
-}
-
 func renderClusterAppsEncryptedResult(ctx context.Context, cfg v2.Config, prune, adoptGenerated bool) (*gitops.PromoteResult, error) {
 	return gitops.RenderClusterAppsWithEncryptionResult(ctx, cfg, encryptRenderedServiceOverrides, gitops.PromoteOptions{
 		Prune:          &prune,
 		AdoptGenerated: adoptGenerated,
 	})
-}
-
-func renderSingleServiceEncrypted(ctx context.Context, cfg v2.Config, serviceName string, isManaged bool) error {
-	_, err := renderSingleServiceEncryptedResult(ctx, cfg, serviceName, isManaged, true, false)
-	return err
 }
 
 func renderSingleServiceEncryptedResult(ctx context.Context, cfg v2.Config, serviceName string, isManaged, prune, adoptGenerated bool) (*gitops.PromoteResult, error) {

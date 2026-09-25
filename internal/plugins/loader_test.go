@@ -39,6 +39,7 @@ func TestLoadExternalPlugins_AddsAndRunsExecutable(t *testing.T) {
 	}
 	if hello == nil {
 		t.Fatalf("expected plugin command 'hello' to be registered")
+		return
 	}
 
 	// Capture stdout
@@ -93,6 +94,7 @@ func TestLoadExternalPlugins_AcceptsLowercasePrefix(t *testing.T) {
 
 	if lower == nil {
 		t.Fatalf("expected lowercase plugin command to be registered")
+		return
 	}
 
 	if err := lower.RunE(lower, nil); err != nil {
@@ -173,6 +175,7 @@ func TestLoadExternalPlugins_RejectsChecksumMismatch(t *testing.T) {
 	}
 	if bad == nil {
 		t.Fatalf("expected plugin command 'bad' to be registered")
+		return
 	}
 
 	if err := bad.RunE(bad, nil); err == nil || !strings.Contains(err.Error(), "checksum mismatch") {

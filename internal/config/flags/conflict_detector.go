@@ -159,19 +159,19 @@ func (d *ConflictDetector) GetConflictReport() string {
 	}
 
 	var report strings.Builder
-	report.WriteString(fmt.Sprintf("Configuration conflicts detected (%d):\n\n", len(d.conflicts)))
+	fmt.Fprintf(&report, "Configuration conflicts detected (%d):\n\n", len(d.conflicts))
 
 	for i, conflict := range d.conflicts {
-		report.WriteString(fmt.Sprintf("%d. Path: %s\n", i+1, conflict.Path))
+		fmt.Fprintf(&report, "%d. Path: %s\n", i+1, conflict.Path)
 		report.WriteString("   Sources:\n")
 
 		for _, source := range conflict.Sources {
-			report.WriteString(fmt.Sprintf("   - %s '%s' (priority %d): %v\n",
-				source.Type, source.Path, source.Priority, source.Value))
+			fmt.Fprintf(&report, "   - %s '%s' (priority %d): %v\n",
+				source.Type, source.Path, source.Priority, source.Value)
 		}
 
-		report.WriteString(fmt.Sprintf("   Resolution: %s\n", conflict.Resolution))
-		report.WriteString(fmt.Sprintf("   Resolved Value: %v\n\n", conflict.ResolvedValue))
+		fmt.Fprintf(&report, "   Resolution: %s\n", conflict.Resolution)
+		fmt.Fprintf(&report, "   Resolved Value: %v\n\n", conflict.ResolvedValue)
 	}
 
 	return report.String()

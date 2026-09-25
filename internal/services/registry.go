@@ -61,22 +61,31 @@ type ServiceDefinition struct {
 	Metadata     ServiceMetadata
 }
 
+const (
+	LifecycleHookPreInstall  = "PreInstall"
+	LifecycleHookPostInstall = "PostInstall"
+	LifecycleHookPreUpdate   = "PreUpdate"
+	LifecycleHookPostUpdate  = "PostUpdate"
+	LifecycleHookPreRemove   = "PreRemove"
+	LifecycleHookPostRemove  = "PostRemove"
+)
+
 // ExecuteLifecycleHook executes a specific lifecycle hook if it's defined
 func (s *ServiceDefinition) ExecuteLifecycleHook(ctx context.Context, hook string, config interface{}) error {
 	var hookFunc func(context.Context, interface{}) error
 
 	switch hook {
-	case "PreInstall":
+	case LifecycleHookPreInstall:
 		hookFunc = s.Lifecycle.PreInstall
-	case "PostInstall":
+	case LifecycleHookPostInstall:
 		hookFunc = s.Lifecycle.PostInstall
-	case "PreUpdate":
+	case LifecycleHookPreUpdate:
 		hookFunc = s.Lifecycle.PreUpdate
-	case "PostUpdate":
+	case LifecycleHookPostUpdate:
 		hookFunc = s.Lifecycle.PostUpdate
-	case "PreRemove":
+	case LifecycleHookPreRemove:
 		hookFunc = s.Lifecycle.PreRemove
-	case "PostRemove":
+	case LifecycleHookPostRemove:
 		hookFunc = s.Lifecycle.PostRemove
 	default:
 		return fmt.Errorf("unknown lifecycle hook: %s", hook)
@@ -397,7 +406,7 @@ func (r *DefaultServiceRegistry) ExecuteLifecycleHooks(ctx context.Context, serv
 	}
 
 	// For removal hooks, execute in reverse order (remove dependents before dependencies)
-	if hook == "PreRemove" || hook == "PostRemove" {
+	if hook == LifecycleHookPreRemove || hook == LifecycleHookPostRemove {
 		for i := len(resolved) - 1; i >= 0; i-- {
 			if err := resolved[i].ExecuteLifecycleHook(ctx, hook, config); err != nil {
 				return err

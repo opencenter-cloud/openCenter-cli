@@ -182,12 +182,6 @@ func (cl *ConfigLoader) normalize(cfg *Config) error {
 		}
 	}
 
-	// Normalize deployment settings
-	if cfg.Deployment.AutoDeploy {
-		// Ensure deployment configuration is present
-		// This is a placeholder for future deployment config normalization
-	}
-
 	return nil
 }
 

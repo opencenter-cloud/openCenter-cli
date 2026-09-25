@@ -524,7 +524,7 @@ func TestEmergencyRevoke(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = revoker.EmergencyRevoke(ctx, cluster, fingerprint)
+		_, _ = revoker.EmergencyRevoke(ctx, cluster, fingerprint)
 
 		// Verify rotator was called (even if the overall operation fails)
 		assert.True(t, mockRotator.rotateAgeKeyCalled)

@@ -51,6 +51,7 @@ func TestAcquireLockWithPrompt_NoExistingLock(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("expected result, got nil")
+		return
 	}
 	if result.Lock == nil {
 		t.Fatal("expected lock, got nil")
@@ -105,6 +106,7 @@ func TestAcquireLockWithPrompt_WithBreakLockFlag(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("expected result, got nil")
+		return
 	}
 	if result.Lock == nil {
 		t.Fatal("expected lock, got nil")
@@ -172,6 +174,7 @@ func TestAcquireLockWithPrompt_WithoutBreakLockFlag_Confirmed(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("expected result, got nil")
+		return
 	}
 	if result.Lock == nil {
 		t.Fatal("expected lock, got nil")
@@ -235,6 +238,7 @@ func TestAcquireLockWithPrompt_ExpiredLock_AutoCleanup(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("expected result, got nil")
+		return
 	}
 	if result.Lock == nil {
 		t.Fatal("expected lock, got nil")

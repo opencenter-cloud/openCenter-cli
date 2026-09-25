@@ -82,12 +82,12 @@ func (f *DefaultOutputFormatter) formatNormal(config *Configuration, format Outp
 	var result strings.Builder
 
 	// Add header with metadata
-	result.WriteString(fmt.Sprintf("Configuration (processed at %s):\n", config.Metadata.ProcessedAt.Format("2006-01-02 15:04:05")))
+	fmt.Fprintf(&result, "Configuration (processed at %s):\n", config.Metadata.ProcessedAt.Format("2006-01-02 15:04:05"))
 
 	if len(config.Sources) > 0 {
 		result.WriteString("Sources:\n")
 		for _, source := range config.Sources {
-			result.WriteString(fmt.Sprintf("  - %s: %s (priority %d)\n", source.Type, source.Path, source.Priority))
+			fmt.Fprintf(&result, "  - %s: %s (priority %d)\n", source.Type, source.Path, source.Priority)
 		}
 		result.WriteString("\n")
 	}
@@ -114,7 +114,7 @@ func (f *DefaultOutputFormatter) formatDryRun(config *Configuration, format Outp
 	if len(config.Sources) > 0 {
 		result.WriteString("Configuration sources:\n")
 		for _, source := range config.Sources {
-			result.WriteString(fmt.Sprintf("  - %s: %s (priority %d)\n", source.Type, source.Path, source.Priority))
+			fmt.Fprintf(&result, "  - %s: %s (priority %d)\n", source.Type, source.Path, source.Priority)
 		}
 		result.WriteString("\n")
 	}
@@ -198,16 +198,16 @@ func (f *DefaultOutputFormatter) FormatDiff(original, updated *Configuration, mo
 	for _, change := range diff {
 		switch change.Type {
 		case DiffTypeAdded:
-			result.WriteString(fmt.Sprintf("+ %s: %v\n", change.Path, change.NewValue))
+			fmt.Fprintf(&result, "+ %s: %v\n", change.Path, change.NewValue)
 		case DiffTypeRemoved:
-			result.WriteString(fmt.Sprintf("- %s: %v\n", change.Path, change.OldValue))
+			fmt.Fprintf(&result, "- %s: %v\n", change.Path, change.OldValue)
 		case DiffTypeModified:
-			result.WriteString(fmt.Sprintf("~ %s: %v -> %v\n", change.Path, change.OldValue, change.NewValue))
+			fmt.Fprintf(&result, "~ %s: %v -> %v\n", change.Path, change.OldValue, change.NewValue)
 		}
 	}
 
 	if mode != OutputModeQuiet {
-		result.WriteString(fmt.Sprintf("\nSummary: %d changes\n", len(diff)))
+		fmt.Fprintf(&result, "\nSummary: %d changes\n", len(diff))
 	}
 
 	return result.String(), nil
@@ -312,25 +312,25 @@ func (f *DefaultOutputFormatter) FormatConflicts(conflicts []ConfigConflict, mod
 	var result strings.Builder
 
 	if mode != OutputModeQuiet {
-		result.WriteString(fmt.Sprintf("Configuration Conflicts (%d):\n", len(conflicts)))
+		fmt.Fprintf(&result, "Configuration Conflicts (%d):\n", len(conflicts))
 		result.WriteString("==============================\n\n")
 	}
 
 	for i, conflict := range conflicts {
 		if mode != OutputModeQuiet {
-			result.WriteString(fmt.Sprintf("%d. Path: %s\n", i+1, conflict.Path))
+			fmt.Fprintf(&result, "%d. Path: %s\n", i+1, conflict.Path)
 			result.WriteString("   Sources:\n")
 
 			for _, source := range conflict.Sources {
-				result.WriteString(fmt.Sprintf("   - %s '%s' (priority %d): %v\n",
-					source.Type, source.Path, source.Priority, source.Value))
+				fmt.Fprintf(&result, "   - %s '%s' (priority %d): %v\n",
+					source.Type, source.Path, source.Priority, source.Value)
 			}
 
-			result.WriteString(fmt.Sprintf("   Resolution: %s\n", conflict.Resolution))
-			result.WriteString(fmt.Sprintf("   Resolved Value: %v\n\n", conflict.ResolvedValue))
+			fmt.Fprintf(&result, "   Resolution: %s\n", conflict.Resolution)
+			fmt.Fprintf(&result, "   Resolved Value: %v\n\n", conflict.ResolvedValue)
 		} else {
 			// Quiet mode: just show path and resolved value
-			result.WriteString(fmt.Sprintf("%s: %v\n", conflict.Path, conflict.ResolvedValue))
+			fmt.Fprintf(&result, "%s: %v\n", conflict.Path, conflict.ResolvedValue)
 		}
 	}
 

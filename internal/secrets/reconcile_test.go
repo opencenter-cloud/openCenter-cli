@@ -119,7 +119,7 @@ func (r *duplicateReconcileRegistry) ListKeys(context.Context, string) ([]KeyEnt
 }
 
 func TestReconcileReportsDuplicateFingerprints(t *testing.T) {
-	reconciler, registry, manager, _, cleanup := setupReconcileTest(t, "reconcile-duplicates", "age1one")
+	_, registry, manager, _, cleanup := setupReconcileTest(t, "reconcile-duplicates", "age1one")
 	defer cleanup()
 	duplicateRegistry := &duplicateReconcileRegistry{
 		MockKeyRegistry: registry,
@@ -128,7 +128,7 @@ func TestReconcileReportsDuplicateFingerprints(t *testing.T) {
 			{Cluster: "reconcile-duplicates", KeyType: KeyTypeAge, Fingerprint: "age1duplicate", PublicKey: "age1duplicate", Status: KeyStatusArchived},
 		},
 	}
-	reconciler = NewDefaultKeyReconciler(duplicateRegistry, manager, nil)
+	reconciler := NewDefaultKeyReconciler(duplicateRegistry, manager, nil)
 	report, err := reconciler.Reconcile(context.Background(), "reconcile-duplicates", false)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"age1duplicate"}, report.DuplicateFingerprints)

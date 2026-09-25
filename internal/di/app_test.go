@@ -18,6 +18,7 @@ func TestNewApp(t *testing.T) {
 	}
 	if app == nil {
 		t.Fatal("NewApp() returned nil")
+		return
 	}
 	if app.PathResolver == nil || app.ValidationEngine == nil || app.ConfigManager == nil {
 		t.Fatal("NewApp() did not initialize core dependencies")

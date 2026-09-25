@@ -10,7 +10,7 @@ tags: [architecture, code-map, cli, packages, providers]
 ---
 # LLM Code Map
 
-This map is for humans and automated agents changing openCenter CLI. Read it before moving code across packages. For historical evidence, also read `docs/refactor-audit-report.md`, `docs/dead-code-removal-report.md`, `docs/deduplication-report.md`, and `docs/library-extraction-report.md`.
+This map is for humans and automated agents changing openCenter CLI. Read it before moving code across packages. For historical evidence, also read `docs/refactor-audit-report.md`, `dead-code-removal-report.md`, `deduplication-report.md`, and `docs/library-extraction-report.md`.
 
 ## Main entrypoints
 

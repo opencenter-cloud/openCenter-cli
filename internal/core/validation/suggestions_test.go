@@ -20,9 +20,8 @@ import (
 func TestNewSuggestionEngine(t *testing.T) {
 	engine := NewSuggestionEngine()
 	if engine == nil {
-		t.Fatal("NewSuggestionEngine returned nil")
-	}
-	if len(engine.rules) == 0 {
+		t.Error("NewSuggestionEngine returned nil")
+	} else if len(engine.rules) == 0 {
 		t.Error("expected default rules to be registered")
 	}
 }

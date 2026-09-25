@@ -405,6 +405,7 @@ func TestBootstrapService_OpenStackDryRunDoesNotUseLegacyConfigValidator(t *test
 	}
 	if result == nil {
 		t.Fatal("expected bootstrap result")
+		return
 	}
 	if result.InfrastructureProvisioned || result.ClusterDeployed || result.ClusterReady {
 		t.Fatalf("dry-run bootstrap should not mark provisioning complete: %#v", result)
@@ -526,6 +527,7 @@ func TestBootstrapService_DryRunKindGitHubProviderPlanSkipsGitea(t *testing.T) {
 	}
 	if fluxStep == nil {
 		t.Fatal("expected flux-bootstrap step in plan")
+		return
 	}
 	if strings.Contains(strings.ToLower(fluxStep.Action), "gitea") {
 		t.Fatalf("flux-bootstrap action should not mention gitea for github provider: %q", fluxStep.Action)
@@ -1160,6 +1162,7 @@ func TestBootstrapService_bootstrapState(t *testing.T) {
 
 		if state == nil {
 			t.Error("loadBootstrapState() returned nil state")
+			return
 		}
 
 		if len(state.Steps) != 0 {

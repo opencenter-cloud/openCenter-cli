@@ -126,9 +126,10 @@ func (r *DefaultKeyReconciler) Reconcile(ctx context.Context, cluster string, ap
 		if err != nil {
 			return report, fmt.Errorf("invalid Age key in registry: %w", err)
 		}
-		if key.Status == KeyStatusActive {
+		switch key.Status {
+		case KeyStatusActive:
 			activeRecipients[recipient] = struct{}{}
-		} else if key.Status == KeyStatusRevoked || key.Status == KeyStatusArchived {
+		case KeyStatusRevoked, KeyStatusArchived:
 			inactiveRecipients[recipient] = struct{}{}
 		}
 	}

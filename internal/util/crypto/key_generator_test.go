@@ -35,6 +35,7 @@ func TestAgeKeyGenerator_GenerateAgeKey(t *testing.T) {
 
 	if keyPair == nil {
 		t.Fatal("GenerateAgeKey() returned nil key pair")
+		return
 	}
 
 	// Test private key format
@@ -102,6 +103,7 @@ func TestAgeKeyGenerator_GenerateFallbackKey(t *testing.T) {
 
 	if keyPair == nil {
 		t.Fatal("GenerateFallbackKey() returned nil key pair")
+		return
 	}
 
 	// Should have same format as regular key generation
@@ -193,6 +195,7 @@ func TestParseAgeKey(t *testing.T) {
 
 	if parsedKeyPair == nil {
 		t.Fatal("ParseAgeKey() returned nil key pair")
+		return
 	}
 
 	// Verify the parsed key matches the original
@@ -248,6 +251,7 @@ func TestGenerateKeyWithTimestamp(t *testing.T) {
 
 	if keyPair == nil {
 		t.Fatal("Key pair should not be nil")
+		return
 	}
 
 	// Verify the key pair is valid

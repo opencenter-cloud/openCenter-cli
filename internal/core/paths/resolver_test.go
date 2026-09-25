@@ -65,6 +65,7 @@ func TestPathResolver_Resolve(t *testing.T) {
 			validate: func(t *testing.T, paths *ClusterPaths) {
 				if paths == nil {
 					t.Fatal("paths is nil")
+					return
 				}
 				expectedOrgDir := filepath.Join(tmpDir, "gitops", "test-org")
 				if paths.OrganizationDir != expectedOrgDir {
@@ -84,6 +85,7 @@ func TestPathResolver_Resolve(t *testing.T) {
 			validate: func(t *testing.T, paths *ClusterPaths) {
 				if paths == nil {
 					t.Fatal("paths is nil")
+					return
 				}
 				expectedOrgDir := filepath.Join(tmpDir, "gitops", "opencenter")
 				if paths.OrganizationDir != expectedOrgDir {
@@ -112,6 +114,7 @@ func TestPathResolver_Resolve(t *testing.T) {
 			validate: func(t *testing.T, paths *ClusterPaths) {
 				if paths == nil {
 					t.Fatal("paths is nil")
+					return
 				}
 				expectedOrgDir := filepath.Join(tmpDir, "gitops", "cfg-org")
 				if paths.OrganizationDir != expectedOrgDir {
@@ -182,6 +185,7 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 			validate: func(t *testing.T, paths *ClusterPaths) {
 				if paths == nil {
 					t.Fatal("paths is nil")
+					return
 				}
 				expectedOrgDir := filepath.Join(tmpDir, "gitops", "org1")
 				if paths.OrganizationDir != expectedOrgDir {
@@ -203,6 +207,7 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 			validate: func(t *testing.T, paths *ClusterPaths) {
 				if paths == nil {
 					t.Fatal("paths is nil")
+					return
 				}
 				// Should find in one of the organizations
 				// We can't guarantee which one due to directory iteration order
@@ -234,6 +239,7 @@ func TestPathResolver_ResolveWithFallback(t *testing.T) {
 			validate: func(t *testing.T, paths *ClusterPaths) {
 				if paths == nil {
 					t.Fatal("paths is nil")
+					return
 				}
 				expectedOrgDir := filepath.Join(tmpDir, "gitops", "fallback-cfg-org")
 				if paths.OrganizationDir != expectedOrgDir {

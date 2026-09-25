@@ -521,11 +521,6 @@ func descriptorEnableReason(d descriptorcfg.Descriptor, enabled bool) string {
 	return "disabled (unknown reason)"
 }
 
-func planSingleServiceActions(cfg v2.Config, serviceName string, isManaged bool) ([]clusterAppAction, error) {
-	actions, _, err := planSingleServiceActionsWithArtifacts(cfg, serviceName, isManaged)
-	return actions, err
-}
-
 func planSingleServiceActionsWithArtifacts(cfg v2.Config, serviceName string, isManaged bool) ([]clusterAppAction, []secretartifacts.Artifact, error) {
 	if err := validateOverlayUnitConfig(cfg); err != nil {
 		return nil, nil, err
@@ -770,35 +765,4 @@ func validateMaterializedSecretMembership(cfg v2.Config, actions []clusterAppAct
 		}
 	}
 	return nil
-}
-
-func validateSecretArtifactRenderability(cfg v2.Config, actions []clusterAppAction, artifacts []secretartifacts.Artifact) error {
-	for _, artifact := range artifacts {
-		if !artifactTargetEnabled(cfg, artifact.TargetService) {
-			continue
-		}
-		prefix := filepath.ToSlash(filepath.Dir(artifact.Path)) + "/"
-		found := false
-		for _, action := range actions {
-			if filepath.ToSlash(action.Output) == prefix+"kustomization.yaml" {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("secret artifact %q targets service %q, but that service has no renderable overlay", artifact.Path, artifact.TargetService)
-		}
-	}
-	return nil
-}
-
-func artifactTargetEnabled(cfg v2.Config, target string) bool {
-	if svc, ok := cfg.OpenCenter.Services[target]; ok {
-		return !IsServiceDisabled(svc)
-	}
-	managed := managedServices(cfg)
-	if svc, ok := managed[target]; ok {
-		return !IsServiceDisabled(svc)
-	}
-	return true
 }

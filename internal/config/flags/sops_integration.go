@@ -151,12 +151,12 @@ func (s *SOPSIntegration) CreateSOPSConfig(configPath, ageKeyPath string) error 
 	}
 
 	if ageKeyPath == "" {
-		return fmt.Errorf("Age key path cannot be empty")
+		return fmt.Errorf("age key path cannot be empty")
 	}
 
 	// Check if Age key exists
 	if _, err := os.Stat(ageKeyPath); os.IsNotExist(err) {
-		return fmt.Errorf("Age key file does not exist: %s", ageKeyPath)
+		return fmt.Errorf("age key file does not exist: %s", ageKeyPath)
 	}
 
 	// Read the Age public key

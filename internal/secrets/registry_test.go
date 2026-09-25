@@ -108,6 +108,7 @@ func (m *mockSOPSEncryptor) GetEncryptedContent(filePath string) (string, error)
 }
 func (m *mockSOPSEncryptor) DecryptFile(ctx context.Context, filePath string) ([]byte, error) {
 	if m.decryptError != nil {
+		return nil, m.decryptError
 	}
 
 	// Always try reading from disk first to handle file renames

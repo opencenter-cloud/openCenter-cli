@@ -785,22 +785,22 @@ func (s *ValidateService) FormatResultGrouped(result *ValidationResult, provider
 	for section, errs := range grouped {
 		sectionCounts[section] = len(errs)
 	}
-	out.WriteString(fmt.Sprintf("\n%d error(s), %d warning(s)\n", len(parsed), len(result.Warnings)))
+	fmt.Fprintf(&out, "\n%d error(s), %d warning(s)\n", len(parsed), len(result.Warnings))
 
 	// Grouped errors
 	if len(parsed) > 0 {
 		out.WriteString("\nErrors:\n")
 		for _, section := range sections {
 			errs := grouped[section]
-			out.WriteString(fmt.Sprintf("\n  %s: (%d)\n", section, len(errs)))
+			fmt.Fprintf(&out, "\n  %s: (%d)\n", section, len(errs))
 			for _, e := range errs {
 				if e.YAMLPath != "" {
-					out.WriteString(fmt.Sprintf("    ✗ %s — %s\n", e.YAMLPath, e.Message))
+					fmt.Fprintf(&out, "    ✗ %s — %s\n", e.YAMLPath, e.Message)
 				} else {
-					out.WriteString(fmt.Sprintf("    ✗ %s\n", e.Message))
+					fmt.Fprintf(&out, "    ✗ %s\n", e.Message)
 				}
 				if e.Suggestion != "" {
-					out.WriteString(fmt.Sprintf("      → %s\n", e.Suggestion))
+					fmt.Fprintf(&out, "      → %s\n", e.Suggestion)
 				}
 			}
 		}
@@ -815,7 +815,7 @@ func (s *ValidateService) FormatResultGrouped(result *ValidationResult, provider
 	if len(result.ActionItems) > 0 {
 		out.WriteString("\nAction Items:\n")
 		for i, item := range result.ActionItems {
-			out.WriteString(fmt.Sprintf("  %d. %s\n", i+1, item))
+			fmt.Fprintf(&out, "  %d. %s\n", i+1, item)
 		}
 	} else if len(result.Suggestions) > 0 {
 		out.WriteString("\nSuggestions:\n")
@@ -823,7 +823,7 @@ func (s *ValidateService) FormatResultGrouped(result *ValidationResult, provider
 		for _, suggestion := range result.Suggestions {
 			if suggestion != "" && !seen[suggestion] {
 				seen[suggestion] = true
-				out.WriteString(fmt.Sprintf("  → %s\n", suggestion))
+				fmt.Fprintf(&out, "  → %s\n", suggestion)
 			}
 		}
 	}
@@ -840,27 +840,27 @@ func (s *ValidateService) formatOperatorReport(result *ValidationResult) string 
 			if result.Target.Organization != "" && !strings.Contains(clusterName, "/") {
 				clusterName = result.Target.Organization + "/" + clusterName
 			}
-			out.WriteString(fmt.Sprintf("Cluster: %s\n", clusterName))
+			fmt.Fprintf(&out, "Cluster: %s\n", clusterName)
 		}
 		if result.Target.Organization != "" {
-			out.WriteString(fmt.Sprintf("Organization: %s\n", result.Target.Organization))
+			fmt.Fprintf(&out, "Organization: %s\n", result.Target.Organization)
 		}
 		if firstNonEmptyFormatter(result.Target.Provider, result.Provider) != "" {
-			out.WriteString(fmt.Sprintf("Provider: %s\n", firstNonEmptyFormatter(result.Target.Provider, result.Provider)))
+			fmt.Fprintf(&out, "Provider: %s\n", firstNonEmptyFormatter(result.Target.Provider, result.Provider))
 		}
 		if result.ValidationMode != "" {
-			out.WriteString(fmt.Sprintf("Validation mode: %s\n", result.ValidationMode))
+			fmt.Fprintf(&out, "Validation mode: %s\n", result.ValidationMode)
 		}
 	}
 
 	if result.CheckSummary.Total() > 0 {
-		out.WriteString(fmt.Sprintf("\nSummary: %s\n", validationSummaryWord(result.Valid)))
-		out.WriteString(fmt.Sprintf("Checks: %d passed, %d failed, %d warning, %d skipped\n",
+		fmt.Fprintf(&out, "\nSummary: %s\n", validationSummaryWord(result.Valid))
+		fmt.Fprintf(&out, "Checks: %d passed, %d failed, %d warning, %d skipped\n",
 			result.CheckSummary.Passed,
 			result.CheckSummary.Failed,
 			result.CheckSummary.Warnings,
 			result.CheckSummary.Skipped,
-		))
+		)
 	}
 
 	if len(result.ServiceReports) > 0 {
@@ -877,10 +877,10 @@ func (s *ValidateService) formatOperatorReport(result *ValidationResult) string 
 	if len(result.GitOpsReport.Checks) > 0 {
 		out.WriteString("\nGitOps:\n")
 		if result.GitOpsReport.RepositoryURL != "" {
-			out.WriteString(fmt.Sprintf("  Repository: %s\n", result.GitOpsReport.RepositoryURL))
+			fmt.Fprintf(&out, "  Repository: %s\n", result.GitOpsReport.RepositoryURL)
 		}
 		if result.GitOpsReport.LocalPath != "" {
-			out.WriteString(fmt.Sprintf("  Local path: %s\n", result.GitOpsReport.LocalPath))
+			fmt.Fprintf(&out, "  Local path: %s\n", result.GitOpsReport.LocalPath)
 		}
 		for _, check := range result.GitOpsReport.Checks {
 			line := fmt.Sprintf("  %s %s", checkStatusIcon(check.Status), check.Name)
@@ -943,7 +943,7 @@ func (s *ValidateService) formatWarnings(warnings []string) string {
 	var out strings.Builder
 	out.WriteString("\nWarnings:\n")
 	for _, w := range warnings {
-		out.WriteString(fmt.Sprintf("  ⚠ %s\n", w))
+		fmt.Fprintf(&out, "  ⚠ %s\n", w)
 	}
 	return out.String()
 }

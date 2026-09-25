@@ -451,14 +451,7 @@ func (c *DefaultTemplateComposer) validateOverlayCompatibility(baseTemplate, ove
 		}
 	}
 
-	// Check 3: Service compatibility - overlay services should be a subset or compatible with base services
-	if len(overlay.Services) > 0 && len(baseTemplate.Services) > 0 {
-		// Check if overlay services are compatible with base services
-		// For now, we allow any overlay services, but this could be made stricter
-		// based on specific service compatibility rules
-	}
-
-	// Check 4: Dependency validation - overlay dependencies should be met
+	// Check 3: Dependency validation - overlay dependencies should be met
 	if len(overlay.Dependencies) > 0 {
 		// Check if overlay dependencies are satisfied
 		// This would require checking against the registry or available templates

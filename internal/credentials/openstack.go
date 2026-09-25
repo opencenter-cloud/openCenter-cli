@@ -61,11 +61,11 @@ func (c *OpenStackCredentials) ToEnvVarsForShell(shell string) string {
 	for _, env := range c.shellEnvVars() {
 		switch shell {
 		case "fish":
-			output.WriteString(fmt.Sprintf("set -gx %s \"%s\"\n", env.name, env.value))
+			fmt.Fprintf(&output, "set -gx %s \"%s\"\n", env.name, env.value)
 		case "powershell":
-			output.WriteString(fmt.Sprintf("$env:%s = \"%s\"\n", env.name, env.value))
+			fmt.Fprintf(&output, "$env:%s = \"%s\"\n", env.name, env.value)
 		default:
-			output.WriteString(fmt.Sprintf("export %s=\"%s\"\n", env.name, env.value))
+			fmt.Fprintf(&output, "export %s=\"%s\"\n", env.name, env.value)
 		}
 	}
 
@@ -221,32 +221,32 @@ func (c *OpenStackCredentials) ToTerraform() string {
 	output.WriteString("provider \"openstack\" {\n")
 
 	if c.AuthURL != "" {
-		output.WriteString(fmt.Sprintf("  auth_url    = \"%s\"\n", c.AuthURL))
+		fmt.Fprintf(&output, "  auth_url    = \"%s\"\n", c.AuthURL)
 	}
 	if c.Region != "" {
-		output.WriteString(fmt.Sprintf("  region      = \"%s\"\n", c.Region))
+		fmt.Fprintf(&output, "  region      = \"%s\"\n", c.Region)
 	}
 
 	// Application credentials (preferred)
 	if c.ApplicationCredentialID != "" {
-		output.WriteString(fmt.Sprintf("  application_credential_id     = \"%s\"\n", c.ApplicationCredentialID))
+		fmt.Fprintf(&output, "  application_credential_id     = \"%s\"\n", c.ApplicationCredentialID)
 	}
 	if c.ApplicationCredentialSecret != "" {
-		output.WriteString(fmt.Sprintf("  application_credential_secret = \"%s\"\n", c.ApplicationCredentialSecret))
+		fmt.Fprintf(&output, "  application_credential_secret = \"%s\"\n", c.ApplicationCredentialSecret)
 	}
 
 	// Username/password authentication (fallback)
 	if c.Username != "" {
-		output.WriteString(fmt.Sprintf("  user_name   = \"%s\"\n", c.Username))
+		fmt.Fprintf(&output, "  user_name   = \"%s\"\n", c.Username)
 	}
 	if c.Password != "" {
-		output.WriteString(fmt.Sprintf("  password    = \"%s\"\n", c.Password))
+		fmt.Fprintf(&output, "  password    = \"%s\"\n", c.Password)
 	}
 	if c.TenantName != "" {
-		output.WriteString(fmt.Sprintf("  tenant_name = \"%s\"\n", c.TenantName))
+		fmt.Fprintf(&output, "  tenant_name = \"%s\"\n", c.TenantName)
 	}
 	if c.Domain != "" {
-		output.WriteString(fmt.Sprintf("  domain_name = \"%s\"\n", c.Domain))
+		fmt.Fprintf(&output, "  domain_name = \"%s\"\n", c.Domain)
 	}
 
 	if c.Insecure {
@@ -267,42 +267,42 @@ func (c *OpenStackCredentials) ToCloudsYAML() string {
 	output.WriteString("    auth:\n")
 
 	if c.AuthURL != "" {
-		output.WriteString(fmt.Sprintf("      auth_url: \"%s\"\n", c.AuthURL))
+		fmt.Fprintf(&output, "      auth_url: \"%s\"\n", c.AuthURL)
 	}
 
 	// Application credentials (preferred)
 	if c.ApplicationCredentialID != "" {
-		output.WriteString(fmt.Sprintf("      application_credential_id: \"%s\"\n", c.ApplicationCredentialID))
+		fmt.Fprintf(&output, "      application_credential_id: \"%s\"\n", c.ApplicationCredentialID)
 	}
 	if c.ApplicationCredentialSecret != "" {
-		output.WriteString(fmt.Sprintf("      application_credential_secret: \"%s\"\n", c.ApplicationCredentialSecret))
+		fmt.Fprintf(&output, "      application_credential_secret: \"%s\"\n", c.ApplicationCredentialSecret)
 	}
 
 	// Username/password authentication (fallback)
 	if c.Username != "" {
-		output.WriteString(fmt.Sprintf("      username: \"%s\"\n", c.Username))
+		fmt.Fprintf(&output, "      username: \"%s\"\n", c.Username)
 	}
 	if c.Password != "" {
-		output.WriteString(fmt.Sprintf("      password: \"%s\"\n", c.Password))
+		fmt.Fprintf(&output, "      password: \"%s\"\n", c.Password)
 	}
 	if c.ProjectName != "" {
-		output.WriteString(fmt.Sprintf("      project_name: \"%s\"\n", c.ProjectName))
+		fmt.Fprintf(&output, "      project_name: \"%s\"\n", c.ProjectName)
 	} else if c.TenantName != "" {
-		output.WriteString(fmt.Sprintf("      project_name: \"%s\"\n", c.TenantName))
+		fmt.Fprintf(&output, "      project_name: \"%s\"\n", c.TenantName)
 	}
 	if c.UserDomainName != "" {
-		output.WriteString(fmt.Sprintf("      user_domain_name: \"%s\"\n", c.UserDomainName))
+		fmt.Fprintf(&output, "      user_domain_name: \"%s\"\n", c.UserDomainName)
 	} else if c.Domain != "" {
-		output.WriteString(fmt.Sprintf("      user_domain_name: \"%s\"\n", c.Domain))
+		fmt.Fprintf(&output, "      user_domain_name: \"%s\"\n", c.Domain)
 	}
 	if c.ProjectDomainName != "" {
-		output.WriteString(fmt.Sprintf("      project_domain_name: \"%s\"\n", c.ProjectDomainName))
+		fmt.Fprintf(&output, "      project_domain_name: \"%s\"\n", c.ProjectDomainName)
 	} else if c.Domain != "" {
-		output.WriteString(fmt.Sprintf("      project_domain_name: \"%s\"\n", c.Domain))
+		fmt.Fprintf(&output, "      project_domain_name: \"%s\"\n", c.Domain)
 	}
 
 	if c.Region != "" {
-		output.WriteString(fmt.Sprintf("    region_name: \"%s\"\n", c.Region))
+		fmt.Fprintf(&output, "    region_name: \"%s\"\n", c.Region)
 	}
 
 	output.WriteString("    interface: public\n")

@@ -100,7 +100,7 @@ func (o *magnumConfigureOrchestrator) ApplyAnswers(cfg *v2.Config, answers orche
 
 	if value := strings.TrimSpace(answers["magnum.create_timeout"]); value != "" {
 		if err := validatePositiveInt(value); err != nil {
-			return orchestration.ChangeSet{}, fmt.Errorf("Create timeout: %w", err)
+			return orchestration.ChangeSet{}, fmt.Errorf("create timeout: %w", err)
 		}
 		changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupProvider, Path: "opencenter.infrastructure.cloud.magnum.create_timeout", Label: "Create timeout", Value: value})
 	}

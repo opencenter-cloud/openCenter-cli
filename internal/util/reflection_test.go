@@ -254,7 +254,7 @@ func TestFindField_TagParsing(t *testing.T) {
 		Field1 string `yaml:"field1,omitempty,flow" json:"field1,omitempty"`
 		Field2 string `yaml:"field2" json:"field2,string"`
 		Field3 string `yaml:",inline" json:",inline"`
-		Field4 string `yaml:"field4," json:"field4,"`
+		Field4 string `yaml:"field4," json:"field4"`
 	}
 
 	testStruct := TagTestStruct{

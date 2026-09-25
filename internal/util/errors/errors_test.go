@@ -24,6 +24,39 @@ import (
 	"testing"
 )
 
+// testContextKey keeps context keys package-local. The bridge preserves
+// compatibility with the error package's legacy string lookups without using
+// raw string keys at the call sites.
+type testContextKey string
+
+const (
+	requestIDContextKey     testContextKey = "request_id"
+	userIDContextKey        testContextKey = "user_id"
+	operationContextKey     testContextKey = "operation"
+	correlationIDContextKey testContextKey = "correlation_id"
+)
+
+type legacyTestContext struct {
+	context.Context
+	values map[string]any
+}
+
+func (c legacyTestContext) Value(key any) any {
+	if key, ok := key.(string); ok {
+		if value, exists := c.values[key]; exists {
+			return value
+		}
+	}
+	return c.Context.Value(key)
+}
+
+func withTestContextValue(ctx context.Context, key testContextKey, value any) context.Context {
+	return context.WithValue(legacyTestContext{
+		Context: ctx,
+		values:  map[string]any{string(key): value},
+	}, key, value)
+}
+
 // TestErrorTypes verifies all error types are properly defined
 func TestErrorTypes(t *testing.T) {
 	tests := []struct {
@@ -210,6 +243,7 @@ func TestDefaultErrorHandler(t *testing.T) {
 		result := handler.HandleError(err)
 		if result == nil {
 			t.Fatal("HandleError should return structured error")
+			return
 		}
 		if result.Type != ValidationError {
 			t.Errorf("HandleError type = %v, want %v", result.Type, ValidationError)
@@ -525,7 +559,7 @@ func TestDefaultErrorWrapper(t *testing.T) {
 	})
 
 	t.Run("WrapErrorWithContext", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), "request_id", "12345")
+		ctx := withTestContextValue(context.Background(), requestIDContextKey, "12345")
 		err := errors.New("test error")
 		wrapped := wrapper.WrapErrorWithContext(ctx, err, "context")
 
@@ -544,7 +578,7 @@ func TestDefaultErrorWrapper(t *testing.T) {
 	})
 
 	t.Run("WrapErrorWithContext with structured error", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), "user_id", "user123")
+		ctx := withTestContextValue(context.Background(), userIDContextKey, "user123")
 		err := &StructuredError{Type: ConfigError, Message: "config error"}
 		wrapped := wrapper.WrapErrorWithContext(ctx, err, "additional context")
 
@@ -1482,7 +1516,7 @@ func TestErrorWrapperEdgeCases(t *testing.T) {
 
 	t.Run("WrapErrorWithContext with nil context", func(t *testing.T) {
 		err := errors.New("test error")
-		wrapped := wrapper.WrapErrorWithContext(nil, err, "context")
+		wrapped := wrapper.WrapErrorWithContext(context.TODO(), err, "context")
 
 		if wrapped == nil {
 			t.Fatal("should wrap error even with nil context")
@@ -1860,9 +1894,9 @@ func TestMultiFieldAggregatorToErrorMultiple(t *testing.T) {
 func TestWrapErrorWithContextWithContextValues(t *testing.T) {
 	wrapper := NewDefaultErrorWrapper()
 
-	ctx := context.WithValue(context.Background(), "request_id", "req-123")
-	ctx = context.WithValue(ctx, "user_id", "user-456")
-	ctx = context.WithValue(ctx, "operation", "test_op")
+	ctx := withTestContextValue(context.Background(), requestIDContextKey, "req-123")
+	ctx = withTestContextValue(ctx, userIDContextKey, "user-456")
+	ctx = withTestContextValue(ctx, operationContextKey, "test_op")
 
 	err := &StructuredError{
 		Type:    ValidationError,

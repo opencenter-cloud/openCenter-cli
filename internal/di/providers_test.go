@@ -14,6 +14,7 @@
 package di
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -66,7 +67,7 @@ func TestProvideValidationEngine(t *testing.T) {
 	// Verify validators are registered
 	validators := []string{"cluster-name", "config", "file", "security"}
 	for _, name := range validators {
-		result, err := engine.Validate(nil, name, "test-value")
+		result, err := engine.Validate(context.TODO(), name, "test-value")
 		// We expect validation to run (may pass or fail depending on value)
 		// but should not error due to missing validator
 		if err != nil && err.Error() == "validator not found: "+name {

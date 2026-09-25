@@ -14,7 +14,6 @@
 package flags
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -151,7 +150,7 @@ func TestYAMLFlagHandler_ParseYAMLFile(t *testing.T) {
 	handler := NewYAMLFlagHandler()
 
 	// Create a temporary YAML file
-	tmpDir, err := ioutil.TempDir("", "yaml_test")
+	tmpDir, err := os.MkdirTemp("", "yaml_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -168,7 +167,7 @@ infrastructure:
 `
 
 	tmpFile := filepath.Join(tmpDir, "test.yaml")
-	if err := ioutil.WriteFile(tmpFile, []byte(yamlContent), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(yamlContent), 0644); err != nil {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
 

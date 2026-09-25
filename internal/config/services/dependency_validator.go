@@ -107,9 +107,7 @@ func (v *DependencyValidator) ValidateHeadlampOIDC(services map[string]any) []st
 
 	// If OIDC is configured, ensure keycloak is enabled
 	if hasOIDC && !isServiceEnabled(services, "keycloak") {
-		errors = append(errors, fmt.Sprintf(
-			"service 'headlamp' has OIDC configured but requires 'keycloak' to be enabled for authentication",
-		))
+		errors = append(errors, "service 'headlamp' has OIDC configured but requires 'keycloak' to be enabled for authentication")
 	}
 
 	return errors

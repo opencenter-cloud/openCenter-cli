@@ -245,7 +245,7 @@ func Plan(ctx context.Context, input PlanInput) (PlanOutput, error) {
 	if err != nil {
 		return PlanOutput{}, err
 	}
-	changes, secretPaths, _, oldCred := patchService(prospectiveService, &prospective.Secrets, input.Options, container, preflight, complete && !input.Options.RotateCredentials)
+	changes, secretPaths, _, _ := patchService(prospectiveService, &prospective.Secrets, input.Options, container, preflight, complete && !input.Options.RotateCredentials)
 	if complete && !input.Options.RotateCredentials {
 		restoreCredential(input.Config, prospective, input.Options)
 	}
@@ -254,7 +254,7 @@ func Plan(ctx context.Context, input PlanInput) (PlanOutput, error) {
 			return PlanOutput{}, fmt.Errorf("validate prospective Harbor configuration: %w", err)
 		}
 	}
-	oldCred = existingCredentialIDForConfig(input.Config, input.Options)
+	oldCred := existingCredentialIDForConfig(input.Config, input.Options)
 	result := Result{SchemaVersion: ResultSchemaVersion, Operation: "cluster.service.storage.plan", Status: StatusPlanned, Service: input.Options.Service, Backend: input.Options.Backend, Container: container, S3Endpoint: storageEndpoint, Changes: changes, SecretPaths: secretPaths}
 	result.RemoteActions = []RemoteAction{{Order: 1, Action: "ensure", Resource: "object-store-container", Name: container, Scope: "project"}}
 	if partial && !input.Options.RotateCredentials {
@@ -487,10 +487,11 @@ func (OSFileSystem) CheckRecoveryPath(path string) error {
 		return err
 	}
 	name := f.Name()
-	if err := f.Sync(); err == nil {
-		err = f.Close()
-	} else {
-		_ = f.Close()
+	if syncErr := f.Sync(); syncErr != nil {
+		err = syncErr
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
 	}
 	if removeErr := os.Remove(name); err == nil {
 		err = removeErr
@@ -868,7 +869,7 @@ func credentialState(service, backend string, cfg any, secrets v2.SecretsConfig)
 	if service == "harbor" && backend == "s3" {
 		accessPresent := usableCredentialValue(access)
 		secretPresent := usableCredentialValue(secret)
-		return accessPresent && secretPresent, (accessPresent || secretPresent) && !(accessPresent && secretPresent)
+		return accessPresent && secretPresent, (accessPresent || secretPresent) && (!accessPresent || !secretPresent)
 	}
 	if backend == "swift" {
 		complete = id != "" && secret != ""
@@ -884,13 +885,6 @@ func hasCompleteCredential(cfg *v2.Config, opts Options) (bool, bool) {
 	svc, _ := serviceConfig(cfg, opts.Service)
 	complete, _ := credentialState(opts.Service, opts.Backend, svc, cfg.Secrets)
 	return complete, opts.RotateCredentials
-}
-func existingCredentialID(cfg *v2.Config, opts Options) string {
-	if opts.Service == "harbor" && opts.Backend == "s3" {
-		return cfg.Secrets.Harbor.S3AccessKeyID
-	}
-	svc, _ := serviceConfig(cfg, opts.Service)
-	return existingCredentialIDFromConfig(svc, opts.Backend)
 }
 func existingCredentialIDFromConfig(cfg any, backend string) string {
 	switch s := cfg.(type) {
@@ -1003,7 +997,7 @@ func validateS3Bucket(name string) error {
 			return fmt.Errorf("invalid S3 bucket name")
 		}
 		for _, r := range part {
-			if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
+			if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
 				return fmt.Errorf("invalid S3 bucket name")
 			}
 		}

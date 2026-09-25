@@ -592,10 +592,10 @@ func (r *PathResolver) validateClusterName(name string) error {
 
 	// Check format (alphanumeric, hyphens, underscores)
 	for i, c := range name {
-		if !((c >= 'a' && c <= 'z') ||
-			(c >= 'A' && c <= 'Z') ||
-			(c >= '0' && c <= '9') ||
-			c == '-' || c == '_') {
+		if (c < 'a' || c > 'z') &&
+			(c < 'A' || c > 'Z') &&
+			(c < '0' || c > '9') &&
+			c != '-' && c != '_' {
 			return fmt.Errorf("name contains invalid character at position %d: %c", i, c)
 		}
 	}

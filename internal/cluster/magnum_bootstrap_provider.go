@@ -189,10 +189,10 @@ func (p *magnumBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths
 				} else if state.AttemptState == magnumCreateAccepted && !state.Observed {
 					visible, visibilityErr := provider.WaitVisible(waitCtx, state.ClusterID, interval)
 					if visibilityErr != nil {
-						return fmt.Errorf("Magnum create recovery required before readiness: %w", visibilityErr)
+						return fmt.Errorf("magnum create recovery required before readiness: %w", visibilityErr)
 					}
 					if !validMagnumClusterID(visible.ID) {
-						return fmt.Errorf("Magnum create recovery required before readiness: observed an invalid cluster UUID")
+						return fmt.Errorf("magnum create recovery required before readiness: observed an invalid cluster UUID")
 					}
 					state.ClusterID = visible.ID
 					state.Observed = true
@@ -201,7 +201,7 @@ func (p *magnumBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths
 					}
 				}
 				if state.ClusterID == "" || state.AttemptState != magnumCreateAccepted {
-					return fmt.Errorf("Magnum cluster identity is missing; run magnum-create first")
+					return fmt.Errorf("magnum cluster identity is missing; run magnum-create first")
 				}
 				clusterID := state.ClusterID
 				if _, err := provider.WaitReady(waitCtx, clusterID, interval); err != nil {
@@ -231,7 +231,7 @@ func (p *magnumBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths
 					return err
 				}
 				if state.ClusterID == "" || state.AttemptState != magnumCreateAccepted {
-					return fmt.Errorf("Magnum cluster identity is missing; run magnum-create first")
+					return fmt.Errorf("magnum cluster identity is missing; run magnum-create first")
 				}
 				if err := provider.ExportKubeconfig(ctx, state.ClusterID, kubeconfigPath); err != nil {
 					return fmt.Errorf("export Magnum kubeconfig: %w", err)
@@ -306,35 +306,27 @@ func loadMagnumIdentityState(path string) (magnumIdentityState, error) {
 		return magnumIdentityState{}, fmt.Errorf("unsupported Magnum identity state version %d", state.Version)
 	}
 	if strings.TrimSpace(state.AttemptAt) == "" {
-		return magnumIdentityState{}, fmt.Errorf("Magnum identity state is missing create attempt time")
+		return magnumIdentityState{}, fmt.Errorf("magnum identity state is missing create attempt time")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, state.AttemptAt); err != nil {
-		return magnumIdentityState{}, fmt.Errorf("Magnum identity state has invalid create attempt time: %w", err)
+		return magnumIdentityState{}, fmt.Errorf("magnum identity state has invalid create attempt time: %w", err)
 	}
 	switch state.AttemptState {
 	case magnumCreateInFlight:
 		if state.ClusterID != "" || state.Observed || strings.TrimSpace(state.ClusterName) == "" {
-			return magnumIdentityState{}, fmt.Errorf("Magnum identity state has invalid in-flight create attempt")
+			return magnumIdentityState{}, fmt.Errorf("magnum identity state has invalid in-flight create attempt")
 		}
 	case magnumCreateAccepted:
 		if strings.TrimSpace(state.ClusterName) == "" {
-			return magnumIdentityState{}, fmt.Errorf("Magnum identity state is missing cluster name")
+			return magnumIdentityState{}, fmt.Errorf("magnum identity state is missing cluster name")
 		}
 		if !validMagnumClusterID(state.ClusterID) {
-			return magnumIdentityState{}, fmt.Errorf("Magnum identity state contains an invalid cluster UUID")
+			return magnumIdentityState{}, fmt.Errorf("magnum identity state contains an invalid cluster UUID")
 		}
 	default:
-		return magnumIdentityState{}, fmt.Errorf("Magnum identity state has unsupported attempt state %q", state.AttemptState)
+		return magnumIdentityState{}, fmt.Errorf("magnum identity state has unsupported attempt state %q", state.AttemptState)
 	}
 	return state, nil
-}
-
-func loadMagnumClusterID(path string) (string, error) {
-	state, err := loadMagnumIdentityState(path)
-	if err != nil {
-		return "", err
-	}
-	return state.ClusterID, nil
 }
 
 func invalidateMagnumBootstrapState(cfg *v2.Config) error {
@@ -407,32 +399,32 @@ func validateMagnumIdentityState(state magnumIdentityState) (magnumIdentityState
 		return magnumIdentityState{}, fmt.Errorf("unsupported Magnum identity state version %d", state.Version)
 	}
 	if strings.TrimSpace(state.AttemptAt) == "" {
-		return magnumIdentityState{}, fmt.Errorf("Magnum identity state is missing create attempt time")
+		return magnumIdentityState{}, fmt.Errorf("magnum identity state is missing create attempt time")
 	}
 	switch state.AttemptState {
 	case magnumCreateInFlight:
 		if strings.TrimSpace(state.ClusterName) == "" || state.ClusterID != "" || state.Observed {
-			return magnumIdentityState{}, fmt.Errorf("Magnum identity state has invalid in-flight create attempt")
+			return magnumIdentityState{}, fmt.Errorf("magnum identity state has invalid in-flight create attempt")
 		}
 	case magnumCreateAccepted:
 		if strings.TrimSpace(state.ClusterName) == "" {
-			return magnumIdentityState{}, fmt.Errorf("Magnum identity state is missing cluster name")
+			return magnumIdentityState{}, fmt.Errorf("magnum identity state is missing cluster name")
 		}
 		if !validMagnumClusterID(state.ClusterID) {
-			return magnumIdentityState{}, fmt.Errorf("Magnum identity state contains an invalid cluster UUID")
+			return magnumIdentityState{}, fmt.Errorf("magnum identity state contains an invalid cluster UUID")
 		}
 	default:
-		return magnumIdentityState{}, fmt.Errorf("Magnum identity state has unsupported attempt state %q", state.AttemptState)
+		return magnumIdentityState{}, fmt.Errorf("magnum identity state has unsupported attempt state %q", state.AttemptState)
 	}
 	return state, nil
 }
 
 func recoverMagnumCreate(ctx context.Context, provider *magnumprovider.Provider, path string, state *magnumIdentityState, clusterName string, timeout, pollInterval time.Duration) error {
 	if state == nil {
-		return fmt.Errorf("Magnum create recovery requires identity state")
+		return fmt.Errorf("magnum create recovery requires identity state")
 	}
 	if state.ClusterName != "" && state.ClusterName != clusterName {
-		return fmt.Errorf("Magnum create recovery requires manual review: state cluster name %q does not match %q", state.ClusterName, clusterName)
+		return fmt.Errorf("magnum create recovery requires manual review: state cluster name %q does not match %q", state.ClusterName, clusterName)
 	}
 	if timeout <= 0 {
 		timeout = defaultReadyTimeout
@@ -452,10 +444,10 @@ func recoverMagnumCreateVisible(ctx context.Context, provider *magnumprovider.Pr
 	}
 	visible, err := provider.WaitVisible(ctx, identifier, pollInterval)
 	if err != nil {
-		return fmt.Errorf("Magnum create recovery required: cluster %q was not observed within %s: %w", clusterName, timeout, err)
+		return fmt.Errorf("magnum create recovery required: cluster %q was not observed within %s: %w", clusterName, timeout, err)
 	}
 	if !validMagnumClusterID(visible.ID) {
-		return fmt.Errorf("Magnum create recovery required: observed cluster %q returned an invalid UUID", clusterName)
+		return fmt.Errorf("magnum create recovery required: observed cluster %q returned an invalid UUID", clusterName)
 	}
 	state.ClusterID = visible.ID
 	state.ClusterName = clusterName
@@ -486,7 +478,7 @@ func validMagnumClusterID(value string) bool {
 			}
 			continue
 		}
-		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') && (r < 'A' || r > 'F') {
 			return false
 		}
 	}

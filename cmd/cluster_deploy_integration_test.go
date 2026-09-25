@@ -193,6 +193,7 @@ func TestClusterDeployServiceIntegration(t *testing.T) {
 	// Verify result
 	if result == nil {
 		t.Fatal("result is nil")
+		return
 	}
 
 	// In dry-run mode, infrastructure should not be provisioned

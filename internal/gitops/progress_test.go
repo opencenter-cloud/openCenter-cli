@@ -170,6 +170,17 @@ func TestProgressReporter_Callback(t *testing.T) {
 	})
 }
 
+func TestProgressReporter_LegacyStageNameOutput(t *testing.T) {
+	reporter := NewProgressReporter(ProgressReporterOptions{
+		Writer:    &bytes.Buffer{},
+		UseColors: false,
+	})
+
+	if got, want := reporter.formatStageName("go's-stage"), "Go'S Stage"; got != want {
+		t.Errorf("formatStageName() = %q, want %q", got, want)
+	}
+}
+
 func TestProgressReporter_ProgressBar(t *testing.T) {
 	t.Run("progress bar shows correct fill level", func(t *testing.T) {
 		buf := &bytes.Buffer{}

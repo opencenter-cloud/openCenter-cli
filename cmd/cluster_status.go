@@ -422,8 +422,8 @@ func displayLifecycleValue(value string) string {
 }
 
 func nextStepsForCluster(clusterName, stage, status string) []string {
-	switch {
-	case stage == "" || stage == v2.StageInit:
+	switch stage {
+	case "", v2.StageInit:
 		if status == v2.StatusFailed {
 			return []string{
 				fmt.Sprintf("Review the cluster config and rerun 'opencenter cluster init %s --force' if needed", clusterName),
@@ -433,7 +433,7 @@ func nextStepsForCluster(clusterName, stage, status string) []string {
 			fmt.Sprintf("Run 'opencenter cluster generate %s' to generate the GitOps repository", clusterName),
 			fmt.Sprintf("Run 'opencenter cluster validate %s' to validate configuration", clusterName),
 		}
-	case stage == v2.StageSetup:
+	case v2.StageSetup:
 		if status == v2.StatusRunning {
 			return []string{
 				fmt.Sprintf("Wait for 'opencenter cluster generate %s' to finish", clusterName),
@@ -447,7 +447,7 @@ func nextStepsForCluster(clusterName, stage, status string) []string {
 		return []string{
 			fmt.Sprintf("Run 'opencenter cluster deploy %s' to provision the cluster", clusterName),
 		}
-	case stage == v2.StageBootstrap:
+	case v2.StageBootstrap:
 		if status == v2.StatusRunning {
 			return []string{
 				fmt.Sprintf("Wait for 'opencenter cluster deploy %s' to finish", clusterName),

@@ -183,7 +183,7 @@ resources:
 	}
 
 	// Create Flux system kustomization
-	fluxKustomization := fmt.Sprintf(`apiVersion: kustomize.config.k8s.io/v1beta1
+	fluxKustomization := `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 metadata:
   name: flux-system
@@ -191,7 +191,7 @@ metadata:
 resources:
   - gotk-components.yaml
   - gotk-sync.yaml
-`)
+`
 
 	if err := writer.WriteFileString(".flux-system/kustomization.yaml", fluxKustomization, 0o644); err != nil {
 		return fmt.Errorf("failed to write flux system kustomization: %w", err)

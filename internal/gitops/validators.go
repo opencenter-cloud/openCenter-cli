@@ -542,10 +542,7 @@ func (v *ManifestValidator) hasProperdependsOnIndentation(content string) bool {
 	for {
 		var document yaml.Node
 		if err := decoder.Decode(&document); err != nil {
-			if err == io.EOF {
-				return true
-			}
-			return false
+			return err == io.EOF
 		}
 		if len(document.Content) == 0 {
 			continue

@@ -229,12 +229,6 @@ func (vs *ValidationStage) validateOrganizationStructure(workspace *gitops.GitOp
 		}
 	}
 
-	// Check for .opencenter marker file
-	if !workspace.Exists(".opencenter") {
-		// This is a warning, not an error - marker file may be created later
-		// Just log it for now
-	}
-
 	return nil
 }
 

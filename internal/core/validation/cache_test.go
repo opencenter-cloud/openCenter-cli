@@ -37,15 +37,15 @@ func TestValidationCache_GetSet(t *testing.T) {
 	// Cache hit - should return result
 	got := cache.Get("test-validator", "test-data")
 	if got == nil {
-		t.Fatal("Expected cache hit, got nil")
-	}
+		t.Error("Expected cache hit, got nil")
+	} else {
+		if got.Valid != result.Valid {
+			t.Errorf("Expected Valid=%v, got %v", result.Valid, got.Valid)
+		}
 
-	if got.Valid != result.Valid {
-		t.Errorf("Expected Valid=%v, got %v", result.Valid, got.Valid)
-	}
-
-	if len(got.Errors) != len(result.Errors) {
-		t.Errorf("Expected %d errors, got %d", len(result.Errors), len(got.Errors))
+		if len(got.Errors) != len(result.Errors) {
+			t.Errorf("Expected %d errors, got %d", len(result.Errors), len(got.Errors))
+		}
 	}
 }
 
@@ -64,12 +64,16 @@ func TestValidationCache_DifferentData(t *testing.T) {
 
 	// Verify different data produces different cache entries
 	got1 := cache.Get("test-validator", "data1")
-	if got1 == nil || len(got1.Errors) == 0 || got1.Errors[0].Field != "field1" {
+	if got1 == nil {
+		t.Error("Expected result1 for data1, got nil")
+	} else if len(got1.Errors) == 0 || got1.Errors[0].Field != "field1" {
 		t.Error("Expected result1 for data1")
 	}
 
 	got2 := cache.Get("test-validator", "data2")
-	if got2 == nil || len(got2.Errors) == 0 || got2.Errors[0].Field != "field2" {
+	if got2 == nil {
+		t.Error("Expected result2 for data2, got nil")
+	} else if len(got2.Errors) == 0 || got2.Errors[0].Field != "field2" {
 		t.Error("Expected result2 for data2")
 	}
 }

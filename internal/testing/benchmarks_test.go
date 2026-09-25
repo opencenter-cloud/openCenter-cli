@@ -31,6 +31,7 @@ func TestNewBenchmarkFramework(t *testing.T) {
 
 	if fw == nil {
 		t.Fatal("expected non-nil benchmark framework")
+		return
 	}
 
 	if fw.ThresholdMultiplier != 1.5 {
@@ -335,9 +336,9 @@ func TestRunBenchmarkSuite(t *testing.T) {
 		},
 	}
 
-	// Verify suite is not nil
-	if suite == nil {
-		t.Error("expected non-nil suite")
+	// A map literal is always non-nil; verify the suite contains both entries.
+	if len(suite) != 2 {
+		t.Errorf("expected two benchmark functions, got %d", len(suite))
 	}
 
 	// Verify framework can accept suite

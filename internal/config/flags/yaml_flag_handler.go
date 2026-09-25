@@ -15,7 +15,6 @@ package flags
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -132,7 +131,7 @@ func (h *YAMLFlagHandler) loadYAMLFile(filename string) (interface{}, error) {
 	}
 
 	// Read the file
-	data, err := ioutil.ReadFile(absPath)
+	data, err := os.ReadFile(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read YAML file: %w", err)
 	}

@@ -13,6 +13,7 @@ func TestClusterExportCommandShape(t *testing.T) {
 
 	if cmd == nil {
 		t.Fatal("export command should not be nil")
+		return
 	}
 	if cmd.Use != "export [name]" {
 		t.Fatalf("Use = %q, want %q", cmd.Use, "export [name]")

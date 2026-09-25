@@ -497,7 +497,7 @@ func TestGenerateRandomString(t *testing.T) {
 
 	// Test that strings are alphanumeric
 	for _, c := range str1 {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			t.Errorf("generateRandomString returned non-hex character: %c", c)
 		}
 	}

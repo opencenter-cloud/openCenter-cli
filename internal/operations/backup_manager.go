@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/argon2"
@@ -225,7 +226,7 @@ func (bm *backupManager) ListBackups(cluster string) ([]*Backup, error) {
 			continue
 		}
 		// Match backup files for this cluster
-		if cluster != "" && !filepath.HasPrefix(name, cluster+"-") {
+		if cluster != "" && !strings.HasPrefix(name, cluster+"-") {
 			continue
 		}
 

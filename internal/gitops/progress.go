@@ -176,6 +176,8 @@ func (pr *ProgressReporter) formatStageName(stage string) string {
 	// Convert stage names to human-readable format
 	name := strings.ReplaceAll(stage, "-", " ")
 	name = strings.ReplaceAll(name, "_", " ")
+	//lint:ignore SA1019 strings.Title preserves legacy stage labels for compatibility.
+	//nolint:staticcheck // SA1019: preserve legacy stage label formatting behavior.
 	name = strings.Title(name)
 
 	if pr.useColors {
@@ -260,9 +262,10 @@ func (spr *SimpleProgressReporter) Callback() ProgressCallback {
 		spr.mu.Lock()
 		defer spr.mu.Unlock()
 
-		if progress == 0 {
+		switch progress {
+		case 0:
 			fmt.Fprintf(spr.writer, "Starting: %s\n", stage)
-		} else if progress == 100 {
+		case 100:
 			fmt.Fprintf(spr.writer, "Completed: %s\n", stage)
 		}
 	}

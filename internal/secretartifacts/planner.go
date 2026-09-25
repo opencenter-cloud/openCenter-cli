@@ -240,6 +240,8 @@ func veleroPayload(cfg *v2.Config) map[string]interface{} {
 // that failed dry-run.
 func certManagerPayload(cfg *v2.Config) map[string]interface{} {
 	payload := map[string]interface{}{}
+	//lint:ignore SA1019 legacy flat cert-manager field is intentionally retained for migration compatibility.
+	//nolint:staticcheck // SA1019: preserve legacy cert-manager payload compatibility.
 	if v := strings.TrimSpace(cfg.Secrets.CertManager.AWSAccessKey); v != "" {
 		payload["aws_access_key"] = v
 	}

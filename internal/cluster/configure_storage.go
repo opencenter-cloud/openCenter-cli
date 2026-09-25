@@ -35,7 +35,8 @@ func (h *objectStorageCapabilityHandler) Prompts(cfg *v2.Config, providerCtx orc
 
 	if loki := enabledLokiConfig(cfg); loki != nil {
 		storageType := strings.TrimSpace(loki.StorageType)
-		if storageType == "" {
+		switch storageType {
+		case "":
 			prompts = append(prompts, orchestration.PromptSpec{
 				ID:       "storage.loki.type",
 				Group:    configureGroupStorage,
@@ -48,7 +49,7 @@ func (h *objectStorageCapabilityHandler) Prompts(cfg *v2.Config, providerCtx orc
 					{Value: "s3", Label: "S3"},
 				},
 			})
-		} else if storageType == "swift" {
+		case "swift":
 			if strings.TrimSpace(loki.SwiftContainerName) == "" || strings.TrimSpace(cfg.Secrets.Loki.SwiftApplicationCredentialSecret) == "" {
 				prompts = append(prompts,
 					orchestration.PromptSpec{ID: "storage.loki.swift_container", Group: configureGroupStorage, Kind: orchestration.PromptKindInput, Label: "Loki Swift container", Default: firstNonEmptyString(strings.TrimSpace(loki.SwiftContainerName), fmt.Sprintf("%s-loki", cfg.OpenCenter.Meta.Name)), Required: true},
@@ -59,14 +60,15 @@ func (h *objectStorageCapabilityHandler) Prompts(cfg *v2.Config, providerCtx orc
 					)
 				}
 			}
-		} else if storageType == "s3" {
+		case "s3":
 			prompts = append(prompts, s3PromptsForLoki(cfg, loki)...)
 		}
 	}
 
 	if tempo := enabledTempoConfig(cfg); tempo != nil {
 		storageType := strings.TrimSpace(tempo.StorageType)
-		if storageType == "" {
+		switch storageType {
+		case "":
 			prompts = append(prompts, orchestration.PromptSpec{
 				ID:       "storage.tempo.type",
 				Group:    configureGroupStorage,
@@ -79,7 +81,7 @@ func (h *objectStorageCapabilityHandler) Prompts(cfg *v2.Config, providerCtx orc
 					{Value: "s3", Label: "S3"},
 				},
 			})
-		} else if storageType == "swift" {
+		case "swift":
 			if strings.TrimSpace(tempo.SwiftContainerName) == "" || strings.TrimSpace(cfg.Secrets.Tempo.SwiftApplicationCredentialSecret) == "" {
 				prompts = append(prompts,
 					orchestration.PromptSpec{ID: "storage.tempo.swift_container", Group: configureGroupStorage, Kind: orchestration.PromptKindInput, Label: "Tempo Swift container", Default: firstNonEmptyString(strings.TrimSpace(tempo.SwiftContainerName), fmt.Sprintf("%s-tempo", cfg.OpenCenter.Meta.Name)), Required: true},
@@ -90,34 +92,37 @@ func (h *objectStorageCapabilityHandler) Prompts(cfg *v2.Config, providerCtx orc
 					)
 				}
 			}
-		} else if storageType == "s3" {
+		case "s3":
 			prompts = append(prompts, s3PromptsForTempo(cfg, tempo)...)
 		}
 	}
 
 	if harbor := enabledHarborConfig(cfg); harbor != nil {
 		storageType := strings.TrimSpace(harbor.StorageType)
-		if storageType == "" {
+		switch storageType {
+		case "":
 			prompts = append(prompts, orchestration.PromptSpec{ID: "storage.harbor.type", Group: configureGroupStorage, Kind: orchestration.PromptKindSelect, Label: "Harbor storage backend", Default: "s3", Required: true, Options: []orchestration.PromptOption{{Value: "filesystem", Label: "Filesystem"}, {Value: "s3", Label: "S3"}}})
-		} else if storageType == "s3" {
+		case "s3":
 			prompts = append(prompts, harborS3Prompts(cfg, harbor)...)
 		}
 	}
 
 	if velero := enabledVeleroConfig(cfg); velero != nil {
 		storageType := strings.TrimSpace(velero.StorageType)
-		if storageType == "" {
+		switch storageType {
+		case "":
 			prompts = append(prompts, orchestration.PromptSpec{ID: "storage.velero.type", Group: configureGroupStorage, Kind: orchestration.PromptKindSelect, Label: "Velero storage backend", Default: "none", Required: true, Options: []orchestration.PromptOption{{Value: "none", Label: "None"}, {Value: "s3", Label: "S3"}}})
-		} else if storageType == "s3" {
+		case "s3":
 			prompts = append(prompts, veleroS3Prompts(cfg, velero)...)
 		}
 	}
 
 	if etcdBackup := enabledEtcdBackupConfig(cfg); etcdBackup != nil {
 		storageType := strings.TrimSpace(etcdBackup.StorageType)
-		if storageType == "" {
+		switch storageType {
+		case "":
 			prompts = append(prompts, orchestration.PromptSpec{ID: "storage.etcd-backup.type", Group: configureGroupStorage, Kind: orchestration.PromptKindSelect, Label: "etcd-backup storage backend", Default: "s3", Required: true, Options: []orchestration.PromptOption{{Value: "none", Label: "None"}, {Value: "s3", Label: "S3"}}})
-		} else if storageType == "s3" {
+		case "s3":
 			prompts = append(prompts, etcdBackupS3Prompts(cfg, etcdBackup)...)
 		}
 	}

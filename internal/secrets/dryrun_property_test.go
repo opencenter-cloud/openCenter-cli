@@ -939,6 +939,8 @@ func createDryRunTestConfig(clusterName string, tmpDir string, secrets map[strin
 		switch i % 3 {
 		case 0:
 			if key == "aws_access_key" || key == "key_one" {
+				//lint:ignore SA1019 legacy flat cert-manager field is intentionally retained for migration compatibility.
+				//nolint:staticcheck // SA1019: preserve legacy cert-manager test compatibility.
 				certManagerSecrets.AWSAccessKey = value
 			} else {
 				certManagerSecrets.AWSSecretAccessKey = value

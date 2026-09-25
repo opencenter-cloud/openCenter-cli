@@ -265,25 +265,25 @@ func (c *CLIIntegration) applyFlags(parsed *ParsedFlags, configStruct interface{
 func (c *CLIIntegration) formatValidationErrors(result *ValidationResult) error {
 	var errorMsg strings.Builder
 
-	errorMsg.WriteString(fmt.Sprintf("Configuration validation failed (%d errors", result.Summary.TotalErrors))
+	fmt.Fprintf(&errorMsg, "Configuration validation failed (%d errors", result.Summary.TotalErrors)
 	if result.Summary.TotalWarnings > 0 {
-		errorMsg.WriteString(fmt.Sprintf(", %d warnings", result.Summary.TotalWarnings))
+		fmt.Fprintf(&errorMsg, ", %d warnings", result.Summary.TotalWarnings)
 	}
 	errorMsg.WriteString("):\n\n")
 
 	for _, err := range result.Errors {
-		errorMsg.WriteString(fmt.Sprintf("Error: %s", err.Message))
+		fmt.Fprintf(&errorMsg, "Error: %s", err.Message)
 		if err.Path != "" {
-			errorMsg.WriteString(fmt.Sprintf(" (path: %s)", err.Path))
+			fmt.Fprintf(&errorMsg, " (path: %s)", err.Path)
 		}
 		errorMsg.WriteString("\n")
 
 		if err.Suggestion != "" {
-			errorMsg.WriteString(fmt.Sprintf("  Suggestion: %s\n", err.Suggestion))
+			fmt.Fprintf(&errorMsg, "  Suggestion: %s\n", err.Suggestion)
 		}
 
 		if err.Example != "" {
-			errorMsg.WriteString(fmt.Sprintf("  Example: %s\n", err.Example))
+			fmt.Fprintf(&errorMsg, "  Example: %s\n", err.Example)
 		}
 
 		errorMsg.WriteString("\n")
@@ -292,9 +292,9 @@ func (c *CLIIntegration) formatValidationErrors(result *ValidationResult) error 
 	if len(result.Warnings) > 0 {
 		errorMsg.WriteString("Warnings:\n")
 		for _, warning := range result.Warnings {
-			errorMsg.WriteString(fmt.Sprintf("Warning: %s", warning.Message))
+			fmt.Fprintf(&errorMsg, "Warning: %s", warning.Message)
 			if warning.Path != "" {
-				errorMsg.WriteString(fmt.Sprintf(" (path: %s)", warning.Path))
+				fmt.Fprintf(&errorMsg, " (path: %s)", warning.Path)
 			}
 			errorMsg.WriteString("\n")
 		}

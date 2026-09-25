@@ -287,10 +287,8 @@ func (fb *fileLockBackend) acquire(ctx context.Context, resource string, owner s
 		owner, now.Format(time.RFC3339), expiresAt.Format(time.RFC3339), ttl)
 
 	// Add custom metadata
-	if metadata != nil {
-		for key, value := range metadata {
-			metadataStr += fmt.Sprintf("%s=%s\n", key, value)
-		}
+	for key, value := range metadata {
+		metadataStr += fmt.Sprintf("%s=%s\n", key, value)
 	}
 
 	if _, err := file.WriteAt([]byte(metadataStr), 0); err != nil {

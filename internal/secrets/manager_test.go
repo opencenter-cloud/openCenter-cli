@@ -98,6 +98,7 @@ func createTestConfig(clusterName string) *v2.Config {
 	cfg.OpenCenter.GitOps.Repository.LocalDir = "/tmp/test-repo"
 	cfg.Secrets.SopsAgeKeyFile = "~/.config/sops/age/test-key.txt"
 	cfg.Secrets.CertManager = v2.CertManagerSecrets{
+		//lint:ignore SA1019 legacy flat cert-manager field is intentionally retained for migration compatibility.
 		AWSAccessKey:       "AKIAIOSFODNN7EXAMPLE",
 		AWSSecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
 	}
@@ -171,6 +172,7 @@ func TestExtractSecretsFromConfig(t *testing.T) {
 		cfg := &v2.Config{
 			Secrets: v2.SecretsConfig{
 				CertManager: v2.CertManagerSecrets{
+					//lint:ignore SA1019 legacy flat cert-manager field is intentionally retained for migration compatibility.
 					AWSAccessKey: "test-key",
 				},
 			},

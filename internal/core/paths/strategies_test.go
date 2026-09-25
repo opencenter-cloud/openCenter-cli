@@ -620,23 +620,26 @@ func TestOrgBasedStrategy_PathStructure(t *testing.T) {
 		t.Errorf("OrganizationDir = %s, want %s", paths.OrganizationDir, expectedOrgDir)
 	}
 
-	// Verify ClusterDir is under infrastructure/clusters
-	if !filepath.HasPrefix(paths.ClusterDir, filepath.Join(expectedOrgDir, "infrastructure", "clusters")) {
-		t.Errorf("ClusterDir %s is not under infrastructure/clusters", paths.ClusterDir)
+	// Verify ClusterDir follows the organization-based layout.
+	expectedClusterDir := filepath.Join(expectedOrgDir, "infrastructure", "clusters", clusterName)
+	if paths.ClusterDir != expectedClusterDir {
+		t.Errorf("ClusterDir = %s, want %s", paths.ClusterDir, expectedClusterDir)
 	}
 
-	// Verify ApplicationsDir is under applications/overlays
-	if !filepath.HasPrefix(paths.ApplicationsDir, filepath.Join(expectedOrgDir, "applications", "overlays")) {
-		t.Errorf("ApplicationsDir %s is not under applications/overlays", paths.ApplicationsDir)
+	// Verify ApplicationsDir follows the organization-based layout.
+	expectedApplicationsDir := filepath.Join(expectedOrgDir, "applications", "overlays", clusterName)
+	if paths.ApplicationsDir != expectedApplicationsDir {
+		t.Errorf("ApplicationsDir = %s, want %s", paths.ApplicationsDir, expectedApplicationsDir)
 	}
 
 	expectedSecretsRoot := filepath.Join(tmpDir, "secrets", organization, clusterName)
-	if !filepath.HasPrefix(paths.SecretsDir, expectedSecretsRoot) {
-		t.Errorf("SecretsDir %s is not under secure secrets directory", paths.SecretsDir)
+	if paths.SecretsDir != expectedSecretsRoot {
+		t.Errorf("SecretsDir = %s, want %s", paths.SecretsDir, expectedSecretsRoot)
 	}
 
-	// Verify SOPSKeyPath is under secrets/age/keys
-	if !filepath.HasPrefix(paths.SOPSKeyPath, filepath.Join(expectedSecretsRoot, "age", "keys")) {
-		t.Errorf("SOPSKeyPath %s is not under secrets/age/keys", paths.SOPSKeyPath)
+	// Verify SOPSKeyPath follows the organization-based layout.
+	expectedSOPSKeyPath := filepath.Join(expectedSecretsRoot, "age", "keys", clusterName+"-key.txt")
+	if paths.SOPSKeyPath != expectedSOPSKeyPath {
+		t.Errorf("SOPSKeyPath = %s, want %s", paths.SOPSKeyPath, expectedSOPSKeyPath)
 	}
 }

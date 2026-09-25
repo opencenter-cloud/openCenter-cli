@@ -63,10 +63,8 @@ func TestConfigurationManager_Integration(t *testing.T) {
 		}
 
 		if config == nil {
-			t.Fatal("Config is nil")
-		}
-
-		if config.ClusterName() != clusterName {
+			t.Error("Config is nil")
+		} else if config.ClusterName() != clusterName {
 			t.Errorf("Expected cluster name %s, got %s", clusterName, config.ClusterName())
 		}
 	})

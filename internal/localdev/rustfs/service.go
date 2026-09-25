@@ -978,48 +978,6 @@ func (s *Service) stopAndRemove(ctx context.Context, exists bool) error {
 	return nil
 }
 
-func (s *Service) containerExists(ctx context.Context) (bool, error) {
-	_, err := s.executor.Run(ctx, localdev.RunOptions{Name: s.commandRuntime(), Args: []string{"inspect", s.settings.ContainerName}})
-	if err != nil {
-		lower := strings.ToLower(err.Error())
-		if strings.Contains(lower, "no such") || strings.Contains(lower, "not found") {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func (s *Service) containerRunning(ctx context.Context) (bool, error) {
-	output, err := s.executor.Run(ctx, localdev.RunOptions{Name: s.commandRuntime(), Args: []string{"inspect", "--format", "{{.State.Running}}", s.settings.ContainerName}})
-	if err != nil {
-		return false, err
-	}
-	return strings.TrimSpace(string(output)) == "true", nil
-}
-
-func (s *Service) containerNetworks(ctx context.Context) ([]string, error) {
-	output, err := s.executor.Run(ctx, localdev.RunOptions{Name: s.commandRuntime(), Args: []string{"inspect", "--format", "{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{\"\\n\"}}{{end}}", s.settings.ContainerName}})
-	if err != nil {
-		return nil, err
-	}
-	var networks []string
-	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-		if line = strings.TrimSpace(line); line != "" {
-			networks = append(networks, line)
-		}
-	}
-	return networks, nil
-}
-
-func (s *Service) kindIP(ctx context.Context) (string, error) {
-	output, err := s.executor.Run(ctx, localdev.RunOptions{Name: s.commandRuntime(), Args: []string{"inspect", "--format", fmt.Sprintf("{{with index .NetworkSettings.Networks %q}}{{.IPAddress}}{{end}}", s.settings.KindNetwork), s.settings.ContainerName}})
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(output)), nil
-}
-
 func (s *Service) metadata() Metadata {
 	return Metadata{
 		Runtime:        s.settings.Runtime,

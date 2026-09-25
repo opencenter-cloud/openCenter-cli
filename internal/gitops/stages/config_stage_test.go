@@ -537,6 +537,7 @@ func TestConfigStage_DryRun(t *testing.T) {
 			// Verify plan
 			if plan == nil {
 				t.Fatal("expected plan to be non-nil")
+				return
 			}
 
 			if plan.Name != "config" {

@@ -906,6 +906,7 @@ func TestInitService_NewInitService(t *testing.T) {
 
 	if service == nil {
 		t.Fatal("NewInitService returned nil")
+		return
 	}
 
 	if service.pathResolver == nil {

@@ -21,10 +21,8 @@ import (
 func TestNewRegistry(t *testing.T) {
 	registry := NewRegistry()
 	if registry == nil {
-		t.Fatal("NewRegistry returned nil")
-	}
-
-	if registry.validators == nil {
+		t.Error("NewRegistry returned nil")
+	} else if registry.validators == nil {
 		t.Error("registry.validators is nil")
 	}
 }
@@ -146,9 +144,7 @@ func TestRegistry_Get(t *testing.T) {
 	retrieved := registry.Get("test")
 	if retrieved == nil {
 		t.Error("Get returned nil for registered validator")
-	}
-
-	if retrieved.Name() != "test" {
+	} else if retrieved.Name() != "test" {
 		t.Errorf("Expected name %q, got %q", "test", retrieved.Name())
 	}
 }

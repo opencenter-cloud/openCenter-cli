@@ -164,7 +164,7 @@ func (e *DefaultEncryptor) EncryptFile(ctx context.Context, filePath string, con
 		if os.Getenv("SOPS_AGE_KEY_FILE") == "" {
 			suggestions = append(suggestions,
 				"SOPS_AGE_KEY_FILE is not set. Export it before running:",
-				fmt.Sprintf("  export SOPS_AGE_KEY_FILE=<path-to-age-key>"),
+				"  export SOPS_AGE_KEY_FILE=<path-to-age-key>",
 				"Or activate the cluster environment first:",
 				fmt.Sprintf("  eval $(opencenter cluster env %s)", filepath.Base(filepath.Dir(filepath.Dir(filePath)))),
 			)

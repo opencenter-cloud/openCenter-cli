@@ -119,7 +119,7 @@ func TestProperty_ReflectionEngineTypeSafety(t *testing.T) {
 			config := &TestReflectionConfig{}
 
 			// Set value in nested pointer struct (should auto-initialize pointer)
-			path := fmt.Sprintf("nestedPtr.data")
+			path := "nestedPtr.data"
 			if err := engine.SetField(config, path, value); err != nil {
 				return false
 			}
@@ -179,17 +179,17 @@ func TestProperty_ReflectionEngineTypeSafety(t *testing.T) {
 			config := &TestReflectionConfig{}
 
 			// Set different types in interface{} slice
-			stringPath := fmt.Sprintf("interfaceSlice[0]")
+			stringPath := "interfaceSlice[0]"
 			if err := engine.SetField(config, stringPath, stringValue); err != nil {
 				return false
 			}
 
-			intPath := fmt.Sprintf("interfaceSlice[1]")
+			intPath := "interfaceSlice[1]"
 			if err := engine.SetField(config, intPath, fmt.Sprintf("%d", intValue)); err != nil {
 				return false
 			}
 
-			boolPath := fmt.Sprintf("interfaceSlice[2]")
+			boolPath := "interfaceSlice[2]"
 			if err := engine.SetField(config, boolPath, fmt.Sprintf("%t", boolValue)); err != nil {
 				return false
 			}

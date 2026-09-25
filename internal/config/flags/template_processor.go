@@ -305,6 +305,8 @@ func (p *DefaultTemplateProcessor) registerBuiltinFunctions() {
 	// String manipulation functions
 	p.functions["upper"] = strings.ToUpper
 	p.functions["lower"] = strings.ToLower
+	//lint:ignore SA1019 strings.Title preserves legacy title casing in template output for compatibility.
+	//nolint:staticcheck // SA1019: preserve legacy template title casing behavior.
 	p.functions["title"] = strings.Title
 	p.functions["trim"] = strings.TrimSpace
 

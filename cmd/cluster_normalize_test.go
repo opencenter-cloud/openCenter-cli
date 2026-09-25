@@ -18,6 +18,7 @@ func TestClusterNormalizeCommandShape(t *testing.T) {
 
 	if cmd == nil {
 		t.Fatal("normalize command should not be nil")
+		return
 	}
 	if cmd.Use != "normalize [name]" {
 		t.Fatalf("Use = %q, want %q", cmd.Use, "normalize [name]")

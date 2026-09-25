@@ -228,7 +228,7 @@ func TestOutputFormatConsistency(t *testing.T) {
 						{Type: SourceFile, Path: "file.yaml", Priority: 1, Value: fmt.Sprintf("value%d", i)},
 						{Type: SourceCLI, Path: "cli", Priority: 2, Value: fmt.Sprintf("newvalue%d", i)},
 					},
-					Resolution:    fmt.Sprintf("Resolved using CLI (priority 2)"),
+					Resolution:    "Resolved using CLI (priority 2)",
 					ResolvedValue: fmt.Sprintf("newvalue%d", i),
 				}
 			}

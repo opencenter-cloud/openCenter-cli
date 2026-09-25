@@ -286,6 +286,23 @@ func TestDefaultTemplateProcessor_BuiltinFunctions(t *testing.T) {
 	}
 }
 
+func TestDefaultTemplateProcessor_TitlePreservesLegacyOutput(t *testing.T) {
+	processor := NewDefaultTemplateProcessor()
+	config := &Configuration{Data: map[string]interface{}{
+		"name": "{{.NAME | title}}",
+	}}
+
+	if err := processor.ProcessTemplates(config, map[string]string{
+		"NAME": "go's gopher",
+	}); err != nil {
+		t.Fatalf("ProcessTemplates() unexpected error: %v", err)
+	}
+
+	if got, want := config.Data["name"], "Go'S Gopher"; got != want {
+		t.Errorf("title template output = %v, want %q", got, want)
+	}
+}
+
 func TestDefaultTemplateProcessor_ValidateTemplates(t *testing.T) {
 	processor := NewDefaultTemplateProcessor()
 

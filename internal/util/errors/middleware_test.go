@@ -358,7 +358,7 @@ func TestErrorMiddleware_ContextPropagation(t *testing.T) {
 	middleware := NewErrorMiddlewareWithoutMasking(logger)
 
 	t.Run("correlation ID propagation", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), "correlation_id", "test-123")
+		ctx := withTestContextValue(context.Background(), correlationIDContextKey, "test-123")
 
 		err := middleware.HandleError(ctx, "test_op", fmt.Errorf("test error"))
 

@@ -571,15 +571,15 @@ func (s *ValidateService) FormatResult(result *ValidationResult) string {
 
 		// Show validation details
 		output.WriteString("\nValidation Details:\n")
-		output.WriteString(fmt.Sprintf("  Configuration: %s\n", formatStatus(result.ConfigValid)))
-		output.WriteString(fmt.Sprintf("  Connectivity:  %s\n", formatStatus(result.ConnectivityValid)))
-		output.WriteString(fmt.Sprintf("  Provider:      %s\n", formatStatus(result.ProviderValid)))
+		fmt.Fprintf(&output, "  Configuration: %s\n", formatStatus(result.ConfigValid))
+		fmt.Fprintf(&output, "  Connectivity:  %s\n", formatStatus(result.ConnectivityValid))
+		fmt.Fprintf(&output, "  Provider:      %s\n", formatStatus(result.ProviderValid))
 
 		// Show warnings if any
 		if len(result.Warnings) > 0 {
 			output.WriteString("\nWarnings:\n")
 			for _, warning := range result.Warnings {
-				output.WriteString(fmt.Sprintf("  ⚠ %s\n", warning))
+				fmt.Fprintf(&output, "  ⚠ %s\n", warning)
 			}
 		}
 
@@ -591,15 +591,15 @@ func (s *ValidateService) FormatResult(result *ValidationResult) string {
 
 	// Show validation details
 	output.WriteString("\nValidation Details:\n")
-	output.WriteString(fmt.Sprintf("  Configuration: %s\n", formatStatus(result.ConfigValid)))
-	output.WriteString(fmt.Sprintf("  Connectivity:  %s\n", formatStatus(result.ConnectivityValid)))
-	output.WriteString(fmt.Sprintf("  Provider:      %s\n", formatStatus(result.ProviderValid)))
+	fmt.Fprintf(&output, "  Configuration: %s\n", formatStatus(result.ConfigValid))
+	fmt.Fprintf(&output, "  Connectivity:  %s\n", formatStatus(result.ConnectivityValid))
+	fmt.Fprintf(&output, "  Provider:      %s\n", formatStatus(result.ProviderValid))
 
 	// Show errors
 	if len(result.Errors) > 0 {
 		output.WriteString("\nErrors:\n")
 		for _, err := range result.Errors {
-			output.WriteString(fmt.Sprintf("  ✗ %s\n", err))
+			fmt.Fprintf(&output, "  ✗ %s\n", err)
 		}
 	}
 
@@ -607,7 +607,7 @@ func (s *ValidateService) FormatResult(result *ValidationResult) string {
 	if len(result.Warnings) > 0 {
 		output.WriteString("\nWarnings:\n")
 		for _, warning := range result.Warnings {
-			output.WriteString(fmt.Sprintf("  ⚠ %s\n", warning))
+			fmt.Fprintf(&output, "  ⚠ %s\n", warning)
 		}
 	}
 
@@ -619,7 +619,7 @@ func (s *ValidateService) FormatResult(result *ValidationResult) string {
 		for _, suggestion := range result.Suggestions {
 			if suggestion != "" && !seen[suggestion] {
 				seen[suggestion] = true
-				output.WriteString(fmt.Sprintf("  → %s\n", suggestion))
+				fmt.Fprintf(&output, "  → %s\n", suggestion)
 			}
 		}
 	}

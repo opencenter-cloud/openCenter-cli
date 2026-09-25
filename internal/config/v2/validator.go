@@ -274,24 +274,24 @@ func ValidateHarborConfig(config *services.HarborConfig) error {
 
 func validateHarborConfig(config *services.HarborConfig, requireS3Endpoint bool) error {
 	if config == nil {
-		return fmt.Errorf("Harbor configuration must not be nil")
+		return fmt.Errorf("harbor configuration must not be nil")
 	}
 	storageType := strings.ToLower(strings.TrimSpace(config.StorageType))
 	if storageType != "" && storageType != "s3" && storageType != "filesystem" {
-		return fmt.Errorf("Harbor storage_type %q is unsupported; only s3 or filesystem is supported", config.StorageType)
+		return fmt.Errorf("harbor storage_type %q is unsupported; only s3 or filesystem is supported", config.StorageType)
 	}
 	endpoint := strings.TrimSpace(config.S3Endpoint)
 	if endpoint == "" {
 		if config.Enabled && requireS3Endpoint && storageType != "filesystem" {
-			return fmt.Errorf("Harbor s3_endpoint is required when Harbor is enabled")
+			return fmt.Errorf("harbor s3_endpoint is required when Harbor is enabled")
 		}
 	} else {
 		parsed, err := url.Parse(endpoint)
 		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil {
-			return fmt.Errorf("Harbor s3_endpoint must be an absolute HTTP(S) URL")
+			return fmt.Errorf("harbor s3_endpoint must be an absolute HTTP(S) URL")
 		}
 		if strings.Contains(strings.ToUpper(parsed.Path), "/V1/AUTH_") {
-			return fmt.Errorf("Harbor s3_endpoint must not be a Swift /v1/AUTH_* endpoint")
+			return fmt.Errorf("harbor s3_endpoint must not be a Swift /v1/AUTH_* endpoint")
 		}
 	}
 	for name, size := range map[string]int{
@@ -302,7 +302,7 @@ func validateHarborConfig(config *services.HarborConfig, requireS3Endpoint bool)
 		"trivy":      config.TrivyVolumeSize,
 	} {
 		if size <= 0 {
-			return fmt.Errorf("Harbor %s PVC size must be greater than zero", name)
+			return fmt.Errorf("harbor %s PVC size must be greater than zero", name)
 		}
 	}
 	return nil
@@ -776,7 +776,7 @@ func isRFC1123DNSSubdomain(value string) bool {
 			return false
 		}
 		for _, c := range label {
-			if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+			if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' {
 				return false
 			}
 		}

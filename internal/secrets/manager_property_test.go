@@ -741,6 +741,7 @@ func createPropertyTestConfig(clusterName string, tmpDir string, certManager Cer
 	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "test-repo")
 	cfg.Secrets.SopsAgeKeyFile = filepath.Join(tmpDir, "age-key.txt")
 	cfg.Secrets.CertManager = v2.CertManagerSecrets{
+		//lint:ignore SA1019 legacy flat cert-manager field is intentionally retained for migration compatibility.
 		AWSAccessKey:       certManager.AWSAccessKey,
 		AWSSecretAccessKey: certManager.AWSSecretAccessKey,
 	}
@@ -874,11 +875,6 @@ func TestProperty_DriftDetectionAccuracy(t *testing.T) {
 				}
 				manifestKey := strings.ReplaceAll(k, "_", "-")
 				manifestSecrets[manifestKey] = v
-			}
-
-			// If we only had one secret, we need at least one in manifest
-			if len(manifestSecrets) == 0 && len(configSecrets) == 1 {
-				// This is the case we want to test - config has secret, manifest doesn't
 			}
 
 			// Detect drift

@@ -408,7 +408,6 @@ func parseReadme(path string) (string, map[string]readmeClusterInfo) {
 
 		if matches := readmeClusterHeader.FindStringSubmatch(line); len(matches) == 2 {
 			currentCluster = strings.TrimSpace(matches[1])
-			info[currentCluster] = info[currentCluster]
 			continue
 		}
 

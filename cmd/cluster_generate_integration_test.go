@@ -87,6 +87,7 @@ func TestClusterGenerateIntegration(t *testing.T) {
 
 	if result == nil {
 		t.Fatal("setup result is nil")
+		return
 	}
 
 	// Verify GitOps directory was created
@@ -438,6 +439,7 @@ func TestClusterGenerateServiceIntegration(t *testing.T) {
 
 	if result == nil {
 		t.Fatal("setup result is nil")
+		return
 	}
 
 	// Verify result contains expected data

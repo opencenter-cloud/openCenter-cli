@@ -371,7 +371,7 @@ func (s *ConfigureService) loadIncompleteMagnumConfig(path string) (*v2.Config, 
 
 	original := source.OpenCenter.Infrastructure.Cloud.Magnum
 	if !magnumConfigIncomplete(original) {
-		return nil, fmt.Errorf("Magnum configuration is complete")
+		return nil, fmt.Errorf("magnum configuration is complete")
 	}
 	var restored *v2.MagnumCloudConfig
 	if original != nil {

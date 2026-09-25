@@ -221,10 +221,3 @@ func gatewayPoolGroups(cfg v2.Config) []gatewayPoolGroup {
 	}
 	return groups
 }
-
-// isMultiPool reports whether services span more than one pool, i.e. at least
-// one non-default Gateway must be emitted. When false the output stays
-// byte-identical to the pre-OCTR-762 single Gateway.
-func isMultiPool(cfg v2.Config) bool {
-	return len(gatewayPoolGroups(cfg)) > 1
-}

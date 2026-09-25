@@ -658,10 +658,10 @@ func (s *InitService) saveConfig(ctx context.Context, cfg *v2.Config, configPath
 // buildResultMessage builds a user-friendly result message
 func (s *InitService) buildResultMessage(clusterPaths *paths.ClusterPaths, organization, gitDir string, keysGenerated bool) string {
 	var msg strings.Builder
-	msg.WriteString(fmt.Sprintf("Created cluster configuration in organization '%s' at '%s'\n", organization, clusterPaths.ConfigPath))
-	msg.WriteString(fmt.Sprintf("GitOps repository root: %s\n", gitDir))
+	fmt.Fprintf(&msg, "Created cluster configuration in organization '%s' at '%s'\n", organization, clusterPaths.ConfigPath)
+	fmt.Fprintf(&msg, "GitOps repository root: %s\n", gitDir)
 	if keysGenerated {
-		msg.WriteString(fmt.Sprintf("SOPS key location: %s\n", clusterPaths.SOPSKeyPath))
+		fmt.Fprintf(&msg, "SOPS key location: %s\n", clusterPaths.SOPSKeyPath)
 	}
 
 	// Surface which cluster_defaults were used from config.yaml

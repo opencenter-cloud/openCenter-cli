@@ -65,9 +65,11 @@ func TestClusterConfigureGuidedCreatesOpenStackCluster(t *testing.T) {
 	openstackCfg := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
 	if openstackCfg == nil {
 		t.Fatal("expected openstack cloud config to be present")
+		return
 	}
 	if openstackCfg.Networking == nil {
 		t.Fatal("expected openstack networking compatibility block to be present")
+		return
 	}
 	if openstackCfg.NetworkID != "net-123" || openstackCfg.Networking.NetworkID != "net-123" {
 		t.Fatalf("expected synced network id, got top-level=%q nested=%q", openstackCfg.NetworkID, openstackCfg.Networking.NetworkID)

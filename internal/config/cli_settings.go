@@ -688,23 +688,23 @@ func (cm *ConfigManager) GetValidationSummary() string {
 	}
 
 	if len(result.Errors) > 0 {
-		summary.WriteString(fmt.Sprintf("\nErrors (%d):\n", len(result.Errors)))
+		fmt.Fprintf(&summary, "\nErrors (%d):\n", len(result.Errors))
 		for _, err := range result.Errors {
-			summary.WriteString(fmt.Sprintf("  - %s\n", err.Error()))
+			fmt.Fprintf(&summary, "  - %s\n", err.Error())
 		}
 	}
 
 	if len(result.Warnings) > 0 {
-		summary.WriteString(fmt.Sprintf("\nWarnings (%d):\n", len(result.Warnings)))
+		fmt.Fprintf(&summary, "\nWarnings (%d):\n", len(result.Warnings))
 		for _, warning := range result.Warnings {
-			summary.WriteString(fmt.Sprintf("  - %s\n", warning.Error()))
+			fmt.Fprintf(&summary, "  - %s\n", warning.Error())
 		}
 	}
 
 	if len(result.Repaired) > 0 {
-		summary.WriteString(fmt.Sprintf("\nAuto-repaired (%d):\n", len(result.Repaired)))
+		fmt.Fprintf(&summary, "\nAuto-repaired (%d):\n", len(result.Repaired))
 		for _, repaired := range result.Repaired {
-			summary.WriteString(fmt.Sprintf("  - %s\n", repaired.Error()))
+			fmt.Fprintf(&summary, "  - %s\n", repaired.Error())
 		}
 	}
 

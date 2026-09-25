@@ -55,11 +55,7 @@ func TestProperty_ConfigurationStructureInvariants(t *testing.T) {
 
 			// Check that VRRP IP doesn't appear in cloud provider configs (except as reference)
 			cloudVal := reflect.ValueOf(cfg.OpenCenter.Infrastructure.Cloud)
-			if containsVRRPIPInStruct(cloudVal, vrrpIP, "infrastructure.networking.vrrp_ip") {
-				return false
-			}
-
-			return true
+			return !containsVRRPIPInStruct(cloudVal, vrrpIP, "infrastructure.networking.vrrp_ip")
 		},
 		genValidV2Config(),
 	))

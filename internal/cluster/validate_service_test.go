@@ -272,6 +272,7 @@ func TestValidateService_OfflineSkipsOpenStackDiscovery(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("Validate() returned nil result")
+		return
 	}
 	if fake.called {
 		t.Fatal("offline validation must not call OpenStack discovery")
@@ -550,6 +551,7 @@ func TestNewValidateService(t *testing.T) {
 
 	if service == nil {
 		t.Fatal("NewValidateService returned nil")
+		return
 	}
 
 	if service.pathResolver == nil {

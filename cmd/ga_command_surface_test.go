@@ -35,6 +35,7 @@ func requireCommandPath(t *testing.T, root *cobra.Command, parts ...string) *cob
 	cmd := findCommandPath(root, parts...)
 	if cmd == nil {
 		t.Fatalf("expected command %q to exist", strings.Join(parts, " "))
+		return nil
 	}
 	if cmd.Hidden {
 		t.Fatalf("expected command %q to be public, but it is hidden", strings.Join(parts, " "))

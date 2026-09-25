@@ -168,7 +168,7 @@ func authenticatedProjectScope(provider *gophercloud.ProviderClient) (string, st
 			return "", "", "", fmt.Errorf("extract Keystone v3 project: %w", err)
 		}
 		if project == nil {
-			return "", "", "", fmt.Errorf("Keystone v3 token has no project scope")
+			return "", "", "", fmt.Errorf("keystone v3 token has no project scope")
 		}
 		return project.ID, project.Name, project.Domain.Name, nil
 	case tokens3.GetResult:
@@ -177,7 +177,7 @@ func authenticatedProjectScope(provider *gophercloud.ProviderClient) (string, st
 			return "", "", "", fmt.Errorf("extract Keystone v3 project: %w", err)
 		}
 		if project == nil {
-			return "", "", "", fmt.Errorf("Keystone v3 token has no project scope")
+			return "", "", "", fmt.Errorf("keystone v3 token has no project scope")
 		}
 		return project.ID, project.Name, project.Domain.Name, nil
 	case tokens.CreateResult:
@@ -186,7 +186,7 @@ func authenticatedProjectScope(provider *gophercloud.ProviderClient) (string, st
 			return "", "", "", fmt.Errorf("extract Keystone v2 project: %w", err)
 		}
 		if token == nil {
-			return "", "", "", fmt.Errorf("Keystone v2 token has no project scope")
+			return "", "", "", fmt.Errorf("keystone v2 token has no project scope")
 		}
 		return token.Tenant.ID, token.Tenant.Name, "", nil
 	default:
@@ -221,10 +221,10 @@ func authenticatedUserID(provider *gophercloud.ProviderClient) (string, error) {
 		return "", fmt.Errorf("extract Keystone v3 token user: %w", err)
 	}
 	if user == nil {
-		return "", fmt.Errorf("Keystone v3 token user is absent")
+		return "", fmt.Errorf("keystone v3 token user is absent")
 	}
 	if strings.TrimSpace(user.ID) == "" {
-		return "", fmt.Errorf("Keystone v3 token user ID is blank")
+		return "", fmt.Errorf("keystone v3 token user ID is blank")
 	}
 	return strings.TrimSpace(user.ID), nil
 }

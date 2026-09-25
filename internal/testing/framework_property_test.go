@@ -14,6 +14,7 @@
 package testing
 
 import (
+	"context"
 	"testing"
 
 	"github.com/leanovate/gopter"
@@ -198,7 +199,7 @@ func TestProperty_MockImplementationConsistency(t *testing.T) {
 
 			// Make multiple render calls
 			for i := 0; i < callCount; i++ {
-				_, _ = mock.Render(nil, "test.tmpl", nil)
+				_, _ = mock.Render(context.TODO(), "test.tmpl", nil)
 			}
 
 			// Verify call count matches

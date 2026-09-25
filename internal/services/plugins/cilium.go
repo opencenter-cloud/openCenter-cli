@@ -44,15 +44,9 @@ func NewCiliumPlugin() svc.ServicePlugin {
 
 // validate implements cilium specific validation
 func (p *CiliumPlugin) validate(config interface{}) error {
-	cfg, ok := config.(*services.CiliumConfig)
+	_, ok := config.(*services.CiliumConfig)
 	if !ok {
 		return fmt.Errorf("invalid config type for cilium: expected *CiliumConfig")
-	}
-
-	// Basic validation
-	if cfg.IsEnabled() {
-		// Add any cilium-specific validation here
-		// Currently validation is handled by the enhanced validator
 	}
 
 	return nil

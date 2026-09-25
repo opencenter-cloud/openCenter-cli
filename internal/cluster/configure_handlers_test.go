@@ -17,6 +17,7 @@ func TestDNSCapabilityHandlerDesignateNeedsNoAdditionalSecrets(t *testing.T) {
 	certManager := certManagerConfig(cfg)
 	if certManager == nil {
 		t.Fatal("expected cert-manager config")
+		return
 	}
 	certManager.DNSProvider = string(configservices.DNSProviderDesignate)
 

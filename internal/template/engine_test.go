@@ -28,6 +28,7 @@ func TestNewGoTemplateEngine(t *testing.T) {
 
 	if engine == nil {
 		t.Fatal("NewGoTemplateEngine returned nil")
+		return
 	}
 
 	if engine.funcMap == nil {

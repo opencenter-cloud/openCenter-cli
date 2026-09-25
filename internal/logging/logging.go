@@ -47,13 +47,13 @@ type YAMLFormatter struct{}
 // Format formats the log entry as YAML.
 func (f *YAMLFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var output strings.Builder
-	output.WriteString(fmt.Sprintf("timestamp: %s\n", entry.Time.Format("2006-01-02T15:04:05.000Z07:00")))
-	output.WriteString(fmt.Sprintf("level: %s\n", entry.Level.String()))
-	output.WriteString(fmt.Sprintf("message: %q\n", entry.Message))
+	fmt.Fprintf(&output, "timestamp: %s\n", entry.Time.Format("2006-01-02T15:04:05.000Z07:00"))
+	fmt.Fprintf(&output, "level: %s\n", entry.Level.String())
+	fmt.Fprintf(&output, "message: %q\n", entry.Message)
 	if len(entry.Data) > 0 {
 		output.WriteString("fields:\n")
 		for key, value := range entry.Data {
-			output.WriteString(fmt.Sprintf("  %s: %v\n", key, value))
+			fmt.Fprintf(&output, "  %s: %v\n", key, value)
 		}
 	}
 	output.WriteString("---\n")

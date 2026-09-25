@@ -204,11 +204,12 @@ func (m *DefaultSecretsManager) SyncSecrets(ctx context.Context, opts SyncOption
 				journal.record(before, fullPath, record.Hash, false)
 			}
 		}
-		if outcome == syncCreated {
+		switch outcome {
+		case syncCreated:
 			result.Created = append(result.Created, fullPath)
-		} else if outcome == syncUpdated {
+		case syncUpdated:
 			result.Updated = append(result.Updated, fullPath)
-		} else {
+		default:
 			result.Unchanged = append(result.Unchanged, fullPath)
 		}
 	}
@@ -747,46 +748,6 @@ func (m *DefaultSecretsManager) extractSecretsFromConfig(cfg *v2.Config) (map[st
 	return secretsMap, nil
 }
 
-func normalizeServiceSecrets(rawSecrets any) (map[string]interface{}, error) {
-	if rawSecrets == nil {
-		return nil, nil
-	}
-
-	if serviceSecrets, ok := rawSecrets.(map[string]any); ok {
-		return filterNonEmptySecrets(serviceSecrets), nil
-	}
-
-	data, err := yaml.Marshal(rawSecrets)
-	if err != nil {
-		return nil, err
-	}
-
-	serviceSecrets := make(map[string]any)
-	if err := yaml.Unmarshal(data, &serviceSecrets); err != nil {
-		return nil, err
-	}
-
-	return filterNonEmptySecrets(serviceSecrets), nil
-}
-
-func filterNonEmptySecrets(serviceSecrets map[string]any) map[string]interface{} {
-	filtered := make(map[string]interface{})
-	for key, value := range serviceSecrets {
-		switch typed := value.(type) {
-		case string:
-			if strings.TrimSpace(typed) != "" {
-				filtered[key] = typed
-			}
-		case nil:
-			continue
-		default:
-			filtered[key] = value
-		}
-	}
-
-	return filtered
-}
-
 // mapSecretsToManifests maps config secrets to their corresponding manifest file paths.
 // It returns a map of service names to manifest paths, optionally filtered by the services list.
 func (m *DefaultSecretsManager) mapSecretsToManifests(
@@ -935,8 +896,6 @@ func (m *DefaultSecretsManager) loadArtifactState(overlayPath string) (map[strin
 	}
 	return paths, nil
 }
-
-func safeOwnedArtifactPath(relative string) bool { return secretartifacts.SafeArtifactPath(relative) }
 
 func statePathMatchesFilter(relative string, filters []string) bool {
 	if len(filters) == 0 {
@@ -1213,10 +1172,6 @@ func removeRolledBackTargets(paths []string, rolledBack map[string]struct{}) []s
 	return remaining
 }
 
-func (m *DefaultSecretsManager) reconcileArtifactStateWithRecords(overlayPath string, previous map[string]secretartifacts.OwnershipArtifact, artifacts []secretartifacts.Artifact, filters []string, successful map[string]secretartifacts.OwnershipArtifact, result *SyncResult, dryRun bool) {
-	m.reconcileArtifactStateWithRecordsAndJournal(overlayPath, previous, artifacts, filters, successful, result, dryRun, &secretMutationJournal{})
-}
-
 // reconcileArtifactState is a compatibility helper for older package tests.
 // Production synchronization uses reconcileArtifactStateWithRecords.
 func (m *DefaultSecretsManager) reconcileArtifactState(overlayPath string, previous map[string]bool, artifacts []secretartifacts.Artifact, filters []string, successful map[string]bool, result *SyncResult, dryRun bool) {
@@ -1367,7 +1322,7 @@ func (m *DefaultSecretsManager) getAgeKeyPath(cfg *v2.Config) (string, error) {
 		return "", NewKeyNotFoundError(
 			cfg.ClusterName(),
 			KeyTypeAge,
-			fmt.Errorf("Age key file not found at %s", keyPath),
+			fmt.Errorf("age key file not found at %s", keyPath),
 		)
 	}
 
@@ -1983,7 +1938,7 @@ func (m *DefaultSecretsManager) getAgeKeyPathFromPublicKey(publicKey string) (st
 		}
 	}
 
-	return "", fmt.Errorf("Age key file not found for public key: %s", publicKey)
+	return "", fmt.Errorf("age key file not found for public key: %s (Age key file not found)", publicKey)
 }
 
 // getActor retrieves the actor (user) from context or returns a default value.

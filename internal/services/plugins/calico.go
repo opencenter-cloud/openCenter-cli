@@ -44,15 +44,9 @@ func NewCalicoPlugin() svc.ServicePlugin {
 
 // validate implements calico specific validation
 func (p *CalicoPlugin) validate(config interface{}) error {
-	cfg, ok := config.(*services.CalicoConfig)
+	_, ok := config.(*services.CalicoConfig)
 	if !ok {
 		return fmt.Errorf("invalid config type for calico: expected *CalicoConfig")
-	}
-
-	// Basic validation
-	if cfg.IsEnabled() {
-		// Add any calico-specific validation here
-		// Currently validation is handled by the enhanced validator
 	}
 
 	return nil

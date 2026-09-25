@@ -346,9 +346,7 @@ func (m *DefaultConfigurationMerger) mergeArrays(target, source []interface{}) (
 		result := make([]interface{}, maxLen)
 
 		// Copy target elements
-		for i, v := range target {
-			result[i] = v
-		}
+		copy(result, target)
 
 		// Override with source elements
 		for i, v := range source {

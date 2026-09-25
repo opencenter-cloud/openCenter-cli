@@ -343,6 +343,13 @@ func registerSchemaValidations(v *validator.Validate) error {
 		return err
 	}
 
+	if err := v.RegisterValidation("dns1123label", func(fl validator.FieldLevel) bool {
+		value := fl.Field().String()
+		return value == "" || isRFC1123DNSLabel(value)
+	}); err != nil {
+		return err
+	}
+
 	if err := v.RegisterValidation("semver", func(fl validator.FieldLevel) bool {
 		value := strings.TrimSpace(fl.Field().String())
 		if value == "" {
@@ -350,6 +357,13 @@ func registerSchemaValidations(v *validator.Validate) error {
 		}
 		_, err := semver.NewVersion(value)
 		return err == nil
+	}); err != nil {
+		return err
+	}
+
+	if err := v.RegisterValidation("helmrelease", func(fl validator.FieldLevel) bool {
+		value := fl.Field().String()
+		return value == "" || services.ValidPrometheusStackReleaseName(value)
 	}); err != nil {
 		return err
 	}
@@ -611,6 +625,15 @@ func (v *defaultValidator) ValidateServices(cfg *Config) error {
 	if cfg == nil {
 		return nil
 	}
+	if service := configuredService(cfg, "kube-prometheus-stack"); service != nil {
+		stack, ok := service.(*services.PrometheusStackConfig)
+		if !ok {
+			return fmt.Errorf("kube-prometheus-stack service has unexpected configuration type %T", service)
+		}
+		if err := services.ValidatePrometheusStackConfig(stack); err != nil {
+			return fmt.Errorf("opencenter.services.kube-prometheus-stack: %w", err)
+		}
+	}
 	if service := configuredService(cfg, "velero"); service != nil {
 		_, ok := service.(*services.VeleroConfig)
 		if !ok {
@@ -779,6 +802,18 @@ func isRFC1123DNSSubdomain(value string) bool {
 			if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' {
 				return false
 			}
+		}
+	}
+	return true
+}
+
+func isRFC1123DNSLabel(value string) bool {
+	if len(value) == 0 || len(value) > 63 || value[0] == '-' || value[len(value)-1] == '-' {
+		return false
+	}
+	for _, c := range value {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' {
+			return false
 		}
 	}
 	return true

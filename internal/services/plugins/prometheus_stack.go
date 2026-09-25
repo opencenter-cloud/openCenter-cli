@@ -49,6 +49,10 @@ func (p *PrometheusStackPlugin) validate(config interface{}) error {
 		return fmt.Errorf("invalid config type for kube-prometheus-stack: expected *PrometheusStackConfig")
 	}
 
+	if err := services.ValidatePrometheusStackConfig(cfg); err != nil {
+		return err
+	}
+
 	// Basic validation
 	if cfg.GrafanaVolumeSize < 0 {
 		return fmt.Errorf("grafana_volume_size must be non-negative")

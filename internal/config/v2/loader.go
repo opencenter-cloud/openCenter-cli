@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/defaults"
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/fs"
 )
@@ -149,6 +150,17 @@ func (cl *ConfigLoader) normalize(cfg *Config) error {
 
 	if len(cfg.OpenCenter.ManagedServices) == 0 && len(cfg.OpenCenter.LegacyManaged) > 0 {
 		cfg.OpenCenter.ManagedServices = cfg.OpenCenter.LegacyManaged
+	}
+
+	// release_name was added after the original Prometheus stack config shape.
+	// Hydrate both service maps so legacy configs retain their existing
+	// namespace while receiving the chart-compatible release-name default.
+	for _, serviceMap := range []ServiceMap{cfg.OpenCenter.Services, cfg.OpenCenter.ManagedServices} {
+		if service, ok := serviceMap["kube-prometheus-stack"]; ok {
+			if stack, ok := service.(*services.PrometheusStackConfig); ok {
+				stack.ApplyDefaults()
+			}
+		}
 	}
 
 	if cfg.Secrets.SOPSConfig.AgeKeyFile == "" && cfg.Secrets.SopsAgeKeyFile != "" {

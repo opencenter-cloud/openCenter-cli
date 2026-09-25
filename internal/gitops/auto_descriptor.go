@@ -31,36 +31,37 @@ import (
 
 // autoServiceContext holds the data passed to generic service templates.
 type autoServiceContext struct {
-	ServiceName            string
-	Namespace              string
-	SourceName             string
-	EmitSource             bool
-	BasePath               string
-	SingleStage            bool
-	BaseOnly               bool
-	PostBaseStages         []postBaseStageSpec
-	OmitTargetNamespace    bool
-	PrivilegedNamespace    bool
-	KustomizationName      string
-	HasOverrideValues      bool
-	NamespaceStage         bool
-	EnterpriseRegistry     bool
-	GeneratedResourceFiles []string
-	ExtraDependencies      []string
-	OverrideDependsOn      []string
-	OverrideValues         string
-	OverrideValuesRenderer OverrideValuesRenderer
-	KustomizationContent   string
-	KustomizationRenderer  KustomizationRenderer
-	OverlayFilesRenderer   OverlayFilesRenderer
-	ClusterName            string
-	BaseRepoURL            string
-	RepoBranch             string
-	RepoTag                string
-	GitopsAuthMethod       string
-	FluxInterval           string
-	Force                  bool
-	Suspend                bool
+	ServiceName                      string
+	Namespace                        string
+	SourceName                       string
+	EmitSource                       bool
+	BasePath                         string
+	SingleStage                      bool
+	BaseOnly                         bool
+	PostBaseStages                   []postBaseStageSpec
+	OmitTargetNamespace              bool
+	PrivilegedNamespace              bool
+	KustomizationName                string
+	HasOverrideValues                bool
+	NamespaceStage                   bool
+	EnterpriseRegistry               bool
+	GeneratedResourceFiles           []string
+	ExtraDependencies                []string
+	OverrideDependsOn                []string
+	OverrideValues                   string
+	OverrideValuesRenderer           OverrideValuesRenderer
+	KustomizationContent             string
+	KustomizationRenderer            KustomizationRenderer
+	BaseKustomizationPatchesRenderer func() (string, error)
+	OverlayFilesRenderer             OverlayFilesRenderer
+	ClusterName                      string
+	BaseRepoURL                      string
+	RepoBranch                       string
+	RepoTag                          string
+	GitopsAuthMethod                 string
+	FluxInterval                     string
+	Force                            bool
+	Suspend                          bool
 	// PostBuildSubstituteFrom is a pre-rendered YAML block appended under a Flux
 	// Kustomization's spec when hostname substitution is enabled (OCTR-759).
 	// Empty when disabled, so output is unchanged.
@@ -234,39 +235,47 @@ func buildAutoServiceContextWithArtifacts(serviceName string, base *services.Bas
 	if namespace == "" {
 		namespace = spec.DefaultNamespace
 	}
+	var baseKustomizationPatchesRenderer func() (string, error)
+	if spec.BaseKustomizationPatchesRenderer != nil {
+		renderer := spec.BaseKustomizationPatchesRenderer
+		baseKustomizationPatchesRenderer = func() (string, error) {
+			return renderer(cfg)
+		}
+	}
 
 	return autoServiceContext{
-		ServiceName:            serviceName,
-		Namespace:              namespace,
-		SourceName:             spec.SourceName,
-		BasePath:               spec.BasePath,
-		EmitSource:             spec.EmitSource,
-		SingleStage:            spec.SingleStage,
-		BaseOnly:               spec.BaseOnly,
-		PostBaseStages:         append([]postBaseStageSpec{}, spec.PostBaseStages...),
-		OmitTargetNamespace:    spec.OmitTargetNamespace,
-		PrivilegedNamespace:    spec.PrivilegedNamespace,
-		KustomizationName:      kustomizationName(serviceName, spec.KustomizationName),
-		HasOverrideValues:      spec.HasOverrideValues,
-		NamespaceStage:         spec.NamespaceStage,
-		EnterpriseRegistry:     spec.EnterpriseRegistry,
-		GeneratedResourceFiles: generatedResourceFiles,
-		ExtraDependencies:      extraDeps,
-		OverrideDependsOn:      append([]string{}, spec.OverrideDependsOn...),
-		OverrideValues:         spec.OverrideValues,
-		OverrideValuesRenderer: spec.OverrideValuesRenderer,
-		KustomizationContent:   spec.KustomizationContent,
-		KustomizationRenderer:  spec.KustomizationRenderer,
-		OverlayFilesRenderer:   spec.OverlayFilesRenderer,
-		ClusterName:            cfg.ClusterName(),
-		BaseRepoURL:            baseRepoURL,
-		RepoBranch:             branch,
-		RepoTag:                repoTag,
-		GitopsAuthMethod:       cfg.OpenCenter.GitOps.ResolvedAuthMethod,
-		FluxInterval:           interval,
-		Force:                  adoption.Force,
-		Suspend:                adoption.Suspend,
-		PostBuildSubstituteFrom: postBuildSubstituteFromBlock(cfg),
+		ServiceName:                      serviceName,
+		Namespace:                        namespace,
+		SourceName:                       spec.SourceName,
+		BasePath:                         spec.BasePath,
+		EmitSource:                       spec.EmitSource,
+		SingleStage:                      spec.SingleStage,
+		BaseOnly:                         spec.BaseOnly,
+		PostBaseStages:                   append([]postBaseStageSpec{}, spec.PostBaseStages...),
+		OmitTargetNamespace:              spec.OmitTargetNamespace,
+		PrivilegedNamespace:              spec.PrivilegedNamespace,
+		KustomizationName:                kustomizationName(serviceName, spec.KustomizationName),
+		HasOverrideValues:                spec.HasOverrideValues,
+		NamespaceStage:                   spec.NamespaceStage,
+		EnterpriseRegistry:               spec.EnterpriseRegistry,
+		GeneratedResourceFiles:           generatedResourceFiles,
+		ExtraDependencies:                extraDeps,
+		OverrideDependsOn:                append([]string{}, spec.OverrideDependsOn...),
+		OverrideValues:                   spec.OverrideValues,
+		OverrideValuesRenderer:           spec.OverrideValuesRenderer,
+		KustomizationContent:             spec.KustomizationContent,
+		KustomizationRenderer:            spec.KustomizationRenderer,
+		BaseKustomizationPatchesRenderer: baseKustomizationPatchesRenderer,
+		OverlayFilesRenderer:             spec.OverlayFilesRenderer,
+		ClusterName:                      cfg.ClusterName(),
+		BaseRepoURL:                      baseRepoURL,
+		RepoBranch:                       branch,
+		RepoTag:                          repoTag,
+		GitopsAuthMethod:                 cfg.OpenCenter.GitOps.ResolvedAuthMethod,
+		FluxInterval:                     interval,
+		Force:                            adoption.Force,
+		Suspend:                          adoption.Suspend,
+		PostBuildSubstituteFrom:          postBuildSubstituteFromBlock(cfg),
 	}
 }
 
@@ -577,6 +586,12 @@ func renderInlineAutoTemplate(tmplStr string, ctx autoServiceContext) (string, e
 		params.Anonymous = true
 		return RenderSourceAuthBlock(params), nil
 	}
+	funcMap["baseKustomizationPatches"] = func() (string, error) {
+		if ctx.BaseKustomizationPatchesRenderer == nil {
+			return "", nil
+		}
+		return ctx.BaseKustomizationPatchesRenderer()
+	}
 	t, err := template.New("auto").Funcs(funcMap).Parse(tmplStr)
 	if err != nil {
 		return "", err
@@ -629,6 +644,9 @@ spec:
   wait: true
   force: {{ .Force }}
   suspend: {{ .Suspend }}
+{{- if .BaseKustomizationPatchesRenderer }}
+{{ baseKustomizationPatches }}
+{{- end }}
 {{- if .PostBuildSubstituteFrom }}
 {{ .PostBuildSubstituteFrom }}
 {{- end }}

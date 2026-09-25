@@ -306,6 +306,11 @@ func applyValidation(schema map[string]any, tag string) {
 			schema["pattern"] = `^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$`
 		case token == "semver":
 			schema["pattern"] = `^v?[0-9]+(\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?$`
+		case token == "helmrelease":
+			schema["pattern"] = `^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$`
+		case token == "dns1123label":
+			schema["pattern"] = `^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$`
+			schema["maxLength"] = 63
 		case token == "dns1123":
 			schema["pattern"] = `^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?)*$`
 			schema["maxLength"] = 253

@@ -38,9 +38,10 @@ type RenderSpec struct {
 	OverrideValues          string
 	KustomizationContent    string
 
-	OverrideValuesRenderer OverrideValuesRenderer
-	OverlayFilesRenderer   OverlayFilesRenderer
-	KustomizationRenderer  KustomizationRenderer
+	OverrideValuesRenderer           OverrideValuesRenderer
+	OverlayFilesRenderer             OverlayFilesRenderer
+	KustomizationRenderer            KustomizationRenderer
+	BaseKustomizationPatchesRenderer FluxKustomizationPatchesRenderer
 }
 
 type postBaseStageSpec struct {
@@ -126,8 +127,10 @@ func newBuiltInRenderCatalog() RenderCatalog {
 			ServiceName: "kube-prometheus-stack", DefaultNamespace: "observability", HasOverrideValues: true,
 			SourceName: "opencenter-observability", SourceGroup: "observability", BasePath: "applications/base/services/observability/kube-prometheus-stack",
 			ExtraDependencies: []string{"observability-namespace", "kube-prometheus-stack-override"}, OverrideDependsOn: []string{"sources", "envoy-gateway-api-base"},
-			GeneratedResourceFiles: []string{"prometheus-http-route.yaml", "alertmanager-http-route.yaml", "grafana-http-route.yaml"},
-			OverrideValuesRenderer: templateRenderer(kubePrometheusStackTemplate), OverlayFilesRenderer: kubePrometheusStackOverlayFilesRenderer,
+			GeneratedResourceFiles:           []string{"prometheus-http-route.yaml", "alertmanager-http-route.yaml", "grafana-http-route.yaml"},
+			OverrideValuesRenderer:           templateRenderer(kubePrometheusStackTemplate),
+			OverlayFilesRenderer:             kubePrometheusStackOverlayFilesRenderer,
+			BaseKustomizationPatchesRenderer: kubePrometheusStackBaseKustomizationPatchesRenderer,
 		},
 		{
 			ServiceName: "kyverno", DefaultNamespace: "kyverno",

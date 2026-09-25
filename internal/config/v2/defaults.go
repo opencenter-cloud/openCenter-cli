@@ -816,7 +816,10 @@ func NewDefaultServiceConfig(serviceName, clusterFQDN string) (any, bool) {
 	case "sources":
 		return &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "flux-system"}}, true
 	case "kube-prometheus-stack":
-		return &services.PrometheusStackConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "observability"}}, true
+		return &services.PrometheusStackConfig{
+			BaseConfig:  services.BaseConfig{Enabled: true, Namespace: services.DefaultPrometheusStackNamespace},
+			ReleaseName: services.DefaultPrometheusStackReleaseName,
+		}, true
 	case "kyverno":
 		return &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "kyverno"}}, true
 	case "loki":

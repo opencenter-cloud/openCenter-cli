@@ -28,6 +28,42 @@ func TestPrometheusStackPlugin(t *testing.T) {
 
 		err := plugin.Validate(cfg)
 		assert.NoError(t, err)
+		assert.Equal(t, services.DefaultPrometheusStackReleaseName, cfg.ReleaseName)
+	})
+
+	t.Run("Validate invalid release name", func(t *testing.T) {
+		cfg := &services.PrometheusStackConfig{
+			BaseConfig:  services.BaseConfig{Enabled: true},
+			ReleaseName: "Invalid.Release",
+		}
+
+		err := plugin.Validate(cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "release_name")
+	})
+
+	t.Run("Validate release name exceeding chart-safe base fullname", func(t *testing.T) {
+		cfg := &services.PrometheusStackConfig{
+			BaseConfig:  services.BaseConfig{Enabled: true},
+			ReleaseName: "abcdefghijklmnopqrstuvwxyzx",
+		}
+
+		err := plugin.Validate(cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "at most 26")
+	})
+
+	t.Run("Validate invalid namespace", func(t *testing.T) {
+		cfg := &services.PrometheusStackConfig{
+			BaseConfig: services.BaseConfig{
+				Enabled:   true,
+				Namespace: "Monitoring.Namespace",
+			},
+		}
+
+		err := plugin.Validate(cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "namespace")
 	})
 
 	t.Run("Validate negative volume size", func(t *testing.T) {

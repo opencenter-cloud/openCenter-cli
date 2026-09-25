@@ -46,7 +46,7 @@ type ServiceImage struct {
 type BaseConfig struct {
 	Enabled      bool          `yaml:"enabled" json:"enabled" jsonschema:"description=Whether this service is deployed"`
 	AdoptionMode AdoptionMode  `yaml:"adoption_mode,omitempty" json:"adoption_mode,omitempty" jsonschema:"description=How Flux interacts with this service,enum=managed,enum=external,enum=sync,enum=deferred,enum=takeover,default=managed"`
-	Namespace    string        `yaml:"namespace,omitempty" json:"namespace,omitempty" jsonschema:"description=Kubernetes namespace for the service"`
+	Namespace    string        `yaml:"namespace,omitempty" json:"namespace,omitempty" validate:"omitempty,max=63,dns1123label" jsonschema:"description=Kubernetes namespace for the service"`
 	Source       ServiceSource `yaml:"source,omitempty" json:"source,omitempty" jsonschema:"description=GitOps source configuration"`
 	Image        ServiceImage  `yaml:"image,omitempty" json:"image,omitempty" jsonschema:"description=Container image configuration"`
 	// AddressPool names the MetalLB IP address pool the service's Gateway

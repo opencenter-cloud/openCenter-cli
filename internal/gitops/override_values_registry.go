@@ -14,3 +14,9 @@ type OverlayFilesRenderer func(cfg v2.Config) (map[string]string, error)
 // KustomizationContent, letting a service list a config-dependent set of
 // resources (e.g. per-pool EnvoyProxy files for OCTR-762).
 type KustomizationRenderer func(cfg v2.Config) (string, error)
+
+// FluxKustomizationPatchesRenderer produces an inline patches block for a
+// generated Flux Kustomization. It is used for patches that must be applied to
+// the source tree during that Kustomization's reconciliation, before a later
+// service overlay is reconciled.
+type FluxKustomizationPatchesRenderer func(cfg v2.Config) (string, error)

@@ -115,6 +115,30 @@ func TestGenerateServiceMapIncludesRegisteredServicesAndAllowsCustomServices(t *
 	}
 }
 
+func TestGeneratePrometheusStackReleaseNameContract(t *testing.T) {
+	schema := generatedSchemaMap(t)
+	releaseName := schemaAt(t, schema, "properties", "opencenter", "properties", "services", "properties", "kube-prometheus-stack", "properties", "release_name")
+
+	if got := releaseName["maxLength"]; got != float64(26) {
+		t.Fatalf("release_name maxLength = %v, want 26", got)
+	}
+	if got := releaseName["pattern"]; got != `^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$` {
+		t.Fatalf("release_name pattern = %v, want Helm-compatible release pattern", got)
+	}
+}
+
+func TestGeneratePrometheusStackNamespaceContract(t *testing.T) {
+	schema := generatedSchemaMap(t)
+	namespace := schemaAt(t, schema, "properties", "opencenter", "properties", "services", "properties", "kube-prometheus-stack", "properties", "namespace")
+
+	if got := namespace["maxLength"]; got != float64(63) {
+		t.Fatalf("namespace maxLength = %v, want 63", got)
+	}
+	if got := namespace["pattern"]; got != `^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$` {
+		t.Fatalf("namespace pattern = %v, want DNS-1123 label pattern", got)
+	}
+}
+
 func TestGenerateOmitsRemovedServiceRenderMetadata(t *testing.T) {
 	schema := generatedSchemaMap(t)
 	for _, key := range []string{

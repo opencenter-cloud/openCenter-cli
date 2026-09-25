@@ -30,6 +30,9 @@ func templateRenderer(tmpl string) OverrideValuesRenderer {
 			return v2.ResolveObjectStorageBackend(&cfg, serviceName)
 		}
 		funcMap["fqdn"] = clusterFQDNFunc(cfg)
+		funcMap["kubePrometheusStack"] = func() (kubePrometheusStackRenderContract, error) {
+			return resolveKubePrometheusStackContract(cfg)
+		}
 		t, err := template.New("override-values").Funcs(funcMap).Parse(tmpl)
 		if err != nil {
 			return "", err
@@ -668,10 +671,15 @@ exporter:
 `
 
 const kubePrometheusStackTemplate = `---
-{{- $kps := index .OpenCenter.Services "kube-prometheus-stack" -}}
+{{ $kps := index .OpenCenter.Services "kube-prometheus-stack" -}}
+{{- $contract := kubePrometheusStack -}}
 {{- $defaultSC := .OpenCenter.Infrastructure.Storage.DefaultStorageClass -}}
 {{- $webhookURL := $kps.WebhookURL | trim -}}
+fullnameOverride: {{ $contract.ReleaseName }}
 alertmanager:
+  enabled: true
+  service:
+    enabled: true
   alertmanagerSpec:
     externalUrl: https://{{ $kps.AlertmanagerHostname | default (printf "alertmanager.%s" fqdn) }}
     # Pin the PVC storage class (see prometheusSpec.storageSpec note).
@@ -723,6 +731,9 @@ alertmanager:
           - url: http://rackspace-alert-proxy.rackspace.svc.cluster.local/alert/process
             send_resolved: true
 prometheus:
+  enabled: true
+  service:
+    enabled: true
   prometheusSpec:
     externalUrl: https://{{ $kps.PrometheusHostname | default (printf "prometheus.%s" fqdn) }}
     externalLabels:
@@ -737,6 +748,11 @@ prometheus:
         spec:
           storageClassName: {{ $kps.PrometheusStorageClass | default $defaultSC }}
 grafana:
+  enabled: true
+  service:
+    enabled: true
+  # Grafana has its own fullname helper, so pin its override explicitly too.
+  fullnameOverride: {{ $contract.GrafanaServiceName }}
   # Grafana's PVC (when persistence is enabled) must likewise pin its class.
   persistence:
     storageClassName: {{ $kps.GrafanaStorageClass | default $defaultSC }}

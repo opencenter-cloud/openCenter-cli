@@ -2540,6 +2540,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -2588,6 +2590,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -2669,6 +2673,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "region": {
@@ -2723,6 +2729,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "operator_enabled": {
@@ -2771,6 +2779,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_bucket_name": {
@@ -2834,6 +2844,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -2879,6 +2891,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -2960,6 +2974,8 @@
                   "type": "array"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3023,6 +3039,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3100,6 +3118,8 @@
                   "type": "integer"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "redis_volume_size": {
@@ -3180,6 +3200,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "oidc_client_id": {
@@ -3231,6 +3253,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3342,6 +3366,8 @@
                   "type": "integer"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "realm": {
@@ -3444,6 +3470,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3513,6 +3541,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "prometheus_hostname": {
@@ -3523,6 +3553,11 @@
                 },
                 "prometheus_volume_size": {
                   "type": "integer"
+                },
+                "release_name": {
+                  "maxLength": 26,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
+                  "type": "string"
                 },
                 "source": {
                   "additionalProperties": false,
@@ -3570,6 +3605,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3618,6 +3655,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_credential_id": {
@@ -3732,6 +3771,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3837,6 +3878,8 @@
                   "type": "array"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3882,6 +3925,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3927,6 +3972,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -3972,6 +4019,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4017,6 +4066,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4092,6 +4143,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "processors": {
@@ -4143,6 +4196,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4188,6 +4243,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4233,6 +4290,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4278,6 +4337,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4326,6 +4387,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_credential_id": {
@@ -4419,6 +4482,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "region": {
@@ -4485,6 +4550,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4554,6 +4621,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4613,6 +4682,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4661,6 +4732,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4742,6 +4815,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "region": {
@@ -4796,6 +4871,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "operator_enabled": {
@@ -4844,6 +4921,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_bucket_name": {
@@ -4907,6 +4986,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -4952,6 +5033,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -5033,6 +5116,8 @@
                   "type": "array"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -5096,6 +5181,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -5173,6 +5260,8 @@
                   "type": "integer"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "redis_volume_size": {
@@ -5253,6 +5342,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "oidc_client_id": {
@@ -5304,6 +5395,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -5415,6 +5508,8 @@
                   "type": "integer"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "realm": {
@@ -5517,6 +5612,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -5586,6 +5683,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "prometheus_hostname": {
@@ -5596,6 +5695,11 @@
                 },
                 "prometheus_volume_size": {
                   "type": "integer"
+                },
+                "release_name": {
+                  "maxLength": 26,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
+                  "type": "string"
                 },
                 "source": {
                   "additionalProperties": false,
@@ -5643,6 +5747,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -5691,6 +5797,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_credential_id": {
@@ -5805,6 +5913,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -5910,6 +6020,8 @@
                   "type": "array"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -5955,6 +6067,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6000,6 +6114,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6045,6 +6161,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6090,6 +6208,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6165,6 +6285,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "processors": {
@@ -6216,6 +6338,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6261,6 +6385,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6306,6 +6432,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6351,6 +6479,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6399,6 +6529,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_credential_id": {
@@ -6492,6 +6624,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "region": {
@@ -6558,6 +6692,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6627,6 +6763,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6762,6 +6900,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6810,6 +6950,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -6891,6 +7033,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "region": {
@@ -6945,6 +7089,8 @@
                   "type": "string"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "operator_enabled": {
@@ -6993,6 +7139,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_bucket_name": {
@@ -7056,6 +7204,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -7101,6 +7251,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -7182,6 +7334,8 @@
                   "type": "array"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -7245,6 +7399,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -7322,6 +7478,8 @@
                   "type": "integer"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "redis_volume_size": {
@@ -7402,6 +7560,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "oidc_client_id": {
@@ -7453,6 +7613,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -7564,6 +7726,8 @@
                   "type": "integer"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "realm": {
@@ -7666,6 +7830,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -7735,6 +7901,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "prometheus_hostname": {
@@ -7745,6 +7913,11 @@
                 },
                 "prometheus_volume_size": {
                   "type": "integer"
+                },
+                "release_name": {
+                  "maxLength": 26,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
+                  "type": "string"
                 },
                 "source": {
                   "additionalProperties": false,
@@ -7792,6 +7965,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -7840,6 +8015,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_credential_id": {
@@ -7954,6 +8131,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8059,6 +8238,8 @@
                   "type": "array"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8104,6 +8285,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8149,6 +8332,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8194,6 +8379,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8239,6 +8426,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8314,6 +8503,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "processors": {
@@ -8365,6 +8556,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8410,6 +8603,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8455,6 +8650,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8500,6 +8697,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8548,6 +8747,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "s3_credential_id": {
@@ -8641,6 +8842,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "region": {
@@ -8707,6 +8910,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {
@@ -8776,6 +8981,8 @@
                   "type": "object"
                 },
                 "namespace": {
+                  "maxLength": 63,
+                  "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$",
                   "type": "string"
                 },
                 "source": {

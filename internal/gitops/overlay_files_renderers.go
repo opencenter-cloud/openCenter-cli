@@ -250,6 +250,9 @@ func renderOverlayTemplate(tmpl string, cfg v2.Config) (string, error) {
 	funcMap["gatewayNameFor"] = func(serviceName string) string {
 		return gatewayNameForService(cfg, serviceName)
 	}
+	funcMap["kubePrometheusStack"] = func() (kubePrometheusStackRenderContract, error) {
+		return resolveKubePrometheusStackContract(cfg)
+	}
 	t, err := template.New("overlay").Funcs(funcMap).Parse(tmpl)
 	if err != nil {
 		return "", err
@@ -324,10 +327,10 @@ spec:
 // resolution ((gw).TLSSecretFor / (gw).TLSSecretNamespace) works without a
 // per-block variable declaration that would perturb whitespace.
 var gatewayListenerTemplates = map[string]string{
-	"keycloak-https": gatewayListenerKeycloakHTTPS,
-	"keycloak-http":  gatewayListenerKeycloakHTTP,
-	"gitops-https":   gatewayListenerGitopsHTTPS,
-	"headlamp-https": gatewayListenerHeadlampHTTPS,
+	"keycloak-https":     gatewayListenerKeycloakHTTPS,
+	"keycloak-http":      gatewayListenerKeycloakHTTP,
+	"gitops-https":       gatewayListenerGitopsHTTPS,
+	"headlamp-https":     gatewayListenerHeadlampHTTPS,
 	"prometheus-https":   gatewayListenerPrometheusHTTPS,
 	"alertmanager-https": gatewayListenerAlertmanagerHTTPS,
 	"grafana-https":      gatewayListenerGrafanaHTTPS,
@@ -530,7 +533,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: prometheus-gateway-route
-  namespace: observability
+  namespace: {{ (kubePrometheusStack).Namespace }}
 spec:
   hostnames:
     - {{ (index .OpenCenter.Services "kube-prometheus-stack").PrometheusHostname | default (printf "prometheus.%s" fqdn) | quote }}
@@ -548,7 +551,7 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
-          name: kube-prometheus-stack-prometheus
+          name: {{ (kubePrometheusStack).PrometheusServiceName }}
           port: 9090
 `
 
@@ -557,7 +560,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: alertmanager-gateway-route
-  namespace: observability
+  namespace: {{ (kubePrometheusStack).Namespace }}
 spec:
   hostnames:
     - {{ (index .OpenCenter.Services "kube-prometheus-stack").AlertmanagerHostname | default (printf "alertmanager.%s" fqdn) | quote }}
@@ -575,7 +578,7 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
-          name: kube-prometheus-stack-alertmanager
+          name: {{ (kubePrometheusStack).AlertmanagerServiceName }}
           port: 9093
 `
 
@@ -584,7 +587,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: grafana-gateway-route
-  namespace: observability
+  namespace: {{ (kubePrometheusStack).Namespace }}
 spec:
   hostnames:
     - {{ (index .OpenCenter.Services "kube-prometheus-stack").GrafanaHostname | default (index .OpenCenter.Services "kube-prometheus-stack").Hostname | default (printf "grafana.%s" fqdn) | quote }}
@@ -602,6 +605,6 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
-          name: kube-prometheus-stack-grafana
+          name: {{ (kubePrometheusStack).GrafanaServiceName }}
           port: 80
 `

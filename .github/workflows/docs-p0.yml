@@ -19,6 +19,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up mise
+        uses: jdx/mise-action@v2
+        with:
+          version: 2026.9.18
+          install: true
+          cache: true
+
       - name: Fetch pull request base
         if: github.event_name == 'pull_request'
         shell: bash

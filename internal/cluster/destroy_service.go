@@ -32,6 +32,9 @@ type DestroyService struct {
 type DestroyOptions struct {
 	// AutoApprove skips the tofu destroy confirmation prompt.
 	AutoApprove bool
+	// DeleteVolumes deletes CSI-provisioned Cinder volumes after infrastructure
+	// destruction. When false, orphaned volumes are only reported.
+	DeleteVolumes bool
 }
 
 // DestroyResult contains the result of a destroy operation.
@@ -77,7 +80,8 @@ func (s *DestroyService) DestroyInfrastructure(ctx context.Context, cfg *v2.Conf
 	}
 
 	infraOpts := &DestroyInfraOptions{
-		AutoApprove: opts != nil && opts.AutoApprove,
+		AutoApprove:   opts != nil && opts.AutoApprove,
+		DeleteVolumes: opts != nil && opts.DeleteVolumes,
 	}
 
 	steps, err := provider.BuildSteps(cfg, infraOpts)
@@ -133,10 +137,10 @@ func (s *DestroyService) getDestroyProvider(cfg *v2.Config) (lifecycleDestroyPro
 
 	switch provider {
 	case "openstack":
-		return newOpenStackDestroyProvider(s.runner), nil
+		return newOpenStackDestroyProvider(s.runner, s.output), nil
 	case "vmware":
 		// VMware uses the same OpenTofu-based destroy pattern
-		return newOpenStackDestroyProvider(s.runner), nil
+		return newOpenStackDestroyProvider(s.runner, s.output), nil
 	case "magnum":
 		return newMagnumDestroyProvider(cfg)
 	default:

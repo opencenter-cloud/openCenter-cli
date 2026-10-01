@@ -35,4 +35,7 @@ type lifecycleDestroyProvider interface {
 type DestroyInfraOptions struct {
 	// AutoApprove skips the tofu destroy confirmation prompt.
 	AutoApprove bool
+	// DeleteVolumes deletes CSI-provisioned Cinder volumes after infrastructure
+	// destruction. When false, orphaned volumes are only reported.
+	DeleteVolumes bool
 }

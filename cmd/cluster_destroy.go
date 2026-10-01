@@ -36,6 +36,7 @@ func newClusterDestroyCmd() *cobra.Command {
 		force              bool
 		removeFiles        bool
 		skipInfrastructure bool
+		deleteVolumes      bool
 	)
 
 	cmd := &cobra.Command{
@@ -137,7 +138,7 @@ to automatically break any existing lock without prompting.`,
 
 			// Destroy infrastructure (unless skipped)
 			if !skipInfrastructure {
-				if err := destroyClusterInfrastructure(ctx, cmd, cfg); err != nil {
+				if err := destroyClusterInfrastructure(ctx, cmd, cfg, deleteVolumes); err != nil {
 					return err
 				}
 			} else {
@@ -159,12 +160,13 @@ to automatically break any existing lock without prompting.`,
 	cmd.Flags().BoolVar(&force, "force", false, "Skip confirmation prompt")
 	cmd.Flags().BoolVar(&removeFiles, "remove-files", false, "Remove local configuration and GitOps files after infrastructure destruction")
 	cmd.Flags().BoolVar(&skipInfrastructure, "skip-infrastructure", false, "Skip infrastructure destruction (only remove local files when combined with --remove-files)")
+	cmd.Flags().BoolVar(&deleteVolumes, "delete-volumes", false, "Delete CSI-provisioned Cinder volumes left orphaned after infrastructure destruction (OpenStack only)")
 
 	return cmd
 }
 
 // destroyClusterInfrastructure handles infrastructure destruction based on provider type.
-func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v2.Config) error {
+func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v2.Config, deleteVolumes bool) error {
 	provider := strings.ToLower(cfg.Provider())
 
 	// Handle Kind clusters
@@ -182,7 +184,8 @@ func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v
 	if destroyService.SupportsInfraDestroy(&cfg) {
 		fmt.Fprintf(cmd.OutOrStdout(), "Destroying infrastructure via OpenTofu...\n")
 		result, err := destroyService.DestroyInfrastructure(ctx, &cfg, &cluster.DestroyOptions{
-			AutoApprove: true,
+			AutoApprove:   true,
+			DeleteVolumes: deleteVolumes,
 		})
 		if err != nil {
 			return fmt.Errorf("infrastructure destruction failed: %w", err)

@@ -4,7 +4,7 @@ id: destroy-openstack-cluster
 title: Destroy an OpenStack cluster
 sidebar_label: Destroy an OpenStack cluster
 description: How to safely tear down an OpenStack cluster and clean up orphaned CSI Cinder volumes to avoid quota exhaustion.
-doc_type: operations
+doc_type: how-to
 audience: "platform engineers"
 tags: [operations, openstack, destroy, storage]
 ---

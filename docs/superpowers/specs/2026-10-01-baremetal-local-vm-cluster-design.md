@@ -162,6 +162,39 @@ normalize → network-plugin install. Resumable if a step fails (re-run
 - Repo stays otherwise clean; the cluster config lives in
   `~/.config/opencenter/clusters/...`, not the repo.
 
+## `baremetal-test-vms.sh` enhancements (2026-10-02)
+
+After the first end-to-end run, the script was hardened so the three biggest
+time sinks (interface naming, silent cloud-init, silent seed-ISO) fail fast and
+loudly instead of 30 minutes into kubespray. New subcommands and behavior:
+
+| Subcommand | Purpose |
+|---|---|
+| `doctor` | Print the resolved layout (IPs, MACs, workdir, image, seed tool, SSH keys) before any action. Cheap way to catch config typos. |
+| `check` / `verify` | Assert deploy preconditions: SSH reachable, `cloud-init status --wait` done, interface named `eth0` (or `OC_VM_ETHERNAME`) with the pinned IP, master-1 → worker-1 ping, VIP free. Exits non-zero on any failure. |
+| `reboot [node]` | Reboot all VMs (or one named node) via the `--connect` URI. |
+| `print-merge` | Emit the `opencenter.infrastructure.*` overlay fields (as `cluster set` args + JSON node lists) to merge onto the init-generated config. The intended path. |
+| `print-config` | Legacy YAML fragment (kept for reference; now clearly marked "NOT schema-valid"). |
+
+Behavior changes:
+- **Interface naming:** the cloud-init seed now writes a udev rule
+  (`/etc/udev/rules.d/70-eth0.rules`) at first boot that names the VM's NIC
+  `eth0` (matched by its pinned MAC). This keeps kube-vip / kubespray
+  interface assumptions true without a post-boot reboot. Configurable via
+  `OC_VM_ETHERNAME` (default `eth0`).
+- **Readiness probe:** `up` now waits for SSH **and** `cloud-init status --wait`
+  to succeed (not just port 22 open), in parallel across all nodes, with a
+  configurable `OC_VM_SSH_TIMEOUT` (default 300 s).
+- **Seed self-check:** after building each seed ISO, `make_seed` verifies it
+  contains a non-empty `user-data` (via `isoinfo` when available, else a read-only
+  loop mount). A silent mis-provision (the mkisofs basename bug) now fails
+  loudly at build time. Degrades to a warning when neither tool is available.
+- **SSH key auto-detect:** `OC_SSH_PUBKEY` defaults to the first readable of
+  `~/.ssh/id_ed25519.pub`, `id_rsa.pub`, `id_ecdsa.pub` (most hosts generate
+  ed25519 now). `OC_SSH_PRIVATE_KEY` defaults to the pub path minus `.pub`.
+- **Cleanup:** `--purge-net` also removes the stale `virbr-ocbm` host bridge if
+  it lingers after the network is gone (a stale bridge can confuse a fresh `up`).
+
 ## What we intentionally do NOT do
 
 - Change k8s/kubespray versions from init defaults (k8s 1.35.4, kubespray

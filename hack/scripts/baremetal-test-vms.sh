@@ -275,7 +275,15 @@ EOF
     case "$tool" in
         cloud-localds) cloud-localds "$seed" "$userdata" "$metadata" >/dev/null ;;
         genisoimage|mkisofs)
-            "$tool" -output "$seed" -volid cidata -joliet -rock "$userdata" "$metadata" >/dev/null 2>&1 ;;
+            # cloud-init reads "user-data" and "meta-data" from the cidata volume.
+            # mkisofs/genisoimage name ISO files by the source basename, so stage the
+            # temp files under those exact names first (mktemp names would be ignored).
+            local staged; staged="$(mktemp -d)"
+            cp "$userdata" "${staged}/user-data"
+            cp "$metadata" "${staged}/meta-data"
+            "$tool" -output "$seed" -volid cidata -joliet -rock "${staged}/user-data" "${staged}/meta-data" >/dev/null 2>&1
+            rm -rf "$staged"
+            ;;
     esac
     rm -f "$userdata" "$metadata"
     echo "$seed"

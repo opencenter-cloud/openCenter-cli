@@ -66,6 +66,11 @@ type fluxBootstrapParams struct {
 	// Path is the cluster path within the repository.
 	Path string
 
+	// Hostname is the git server hostname (including port for self-hosted
+	// servers), derived from the repository URL. Empty for hosted providers
+	// (flux defaults to the provider's public host).
+	Hostname string
+
 	// TokenFile is the path to the file containing the access token.
 	TokenFile string
 }
@@ -98,6 +103,13 @@ func resolveFluxBootstrapParams(cfg *v2.Config) (*fluxBootstrapParams, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing repository URL %q: %w", repoURL, err)
 	}
+
+	// Derive the git server hostname from the repository URL so self-hosted
+	// servers (e.g. a local Gitea at https://10.0.0.5:3000) are used instead of
+	// the provider's public default (gitea.com). For SSH "git@host:..." URLs
+	// flux takes the host via --ssh-hostname, which is handled separately; we
+	// only set the HTTPS hostname here.
+	hostname := fluxGitHostname(repoURL)
 
 	// Owner from token config takes precedence over URL-derived owner.
 	if configOwner := strings.TrimSpace(cfg.OpenCenter.GitOps.Auth.Token.Owner); configOwner != "" {
@@ -134,8 +146,29 @@ func resolveFluxBootstrapParams(cfg *v2.Config) (*fluxBootstrapParams, error) {
 		Repository: repo,
 		Branch:     branch,
 		Path:       bootstrapPath,
+		Hostname:   hostname,
 		TokenFile:  tokenFile,
 	}, nil
+}
+
+// fluxGitHostname extracts the host (including port, when present) from a git
+// URL that uses an explicit scheme (https://, ssh://, http://). It returns an
+// empty string for SSH scp-style URLs ("git@host:owner/repo.git"), whose host
+// is conveyed to flux through --ssh-hostname instead of --hostname.
+//
+// It uses parsed.Host (not Hostname) so a self-hosted server on a non-default
+// port (e.g. https://10.0.0.5:3000) keeps the port, which flux's --hostname
+// flag accepts as "host:port".
+func fluxGitHostname(repoURL string) string {
+	repoURL = strings.TrimSpace(repoURL)
+	if strings.HasPrefix(repoURL, "git@") {
+		return ""
+	}
+	parsed, err := url.Parse(repoURL)
+	if err != nil || parsed.Scheme == "" {
+		return ""
+	}
+	return parsed.Host
 }
 
 // runFluxBootstrap executes the flux bootstrap command for the configured
@@ -153,44 +186,18 @@ func (p *openstackBootstrapProvider) runFluxBootstrap(ctx context.Context, cfg *
 
 	env := buildBootstrapEnvironment(kubeconfigPath)
 
-	var fluxArgs []string
+	fluxArgs, ok := fluxBootstrapArgs(params)
+	if !ok {
+		return fmt.Errorf("unsupported git provider: %q", params.Provider)
+	}
 
 	switch params.Provider {
 	case "github":
-		fluxArgs = []string{
-			"bootstrap", "github",
-			"--token-auth",
-			"--owner=" + params.Owner,
-			"--repository=" + params.Repository,
-			"--branch=" + params.Branch,
-			"--path=" + params.Path,
-		}
 		env["GITHUB_TOKEN"] = token
-
 	case "gitea":
-		fluxArgs = []string{
-			"bootstrap", "gitea",
-			"--token-auth",
-			"--owner=" + params.Owner,
-			"--repository=" + params.Repository,
-			"--branch=" + params.Branch,
-			"--path=" + params.Path,
-		}
 		env["GITEA_TOKEN"] = token
-
 	case "gitlab":
-		fluxArgs = []string{
-			"bootstrap", "gitlab",
-			"--token-auth",
-			"--owner=" + params.Owner,
-			"--repository=" + params.Repository,
-			"--branch=" + params.Branch,
-			"--path=" + params.Path,
-		}
 		env["GITLAB_TOKEN"] = token
-
-	default:
-		return fmt.Errorf("unsupported git provider: %q", params.Provider)
 	}
 
 	gitDir := cfg.GitDir()
@@ -289,35 +296,35 @@ func splitFluxOwnerRepo(pathPart string) (owner, repo string, err error) {
 
 // fluxBootstrapPlanCommands returns the planned commands for the dry-run output.
 func fluxBootstrapPlanCommands(params *fluxBootstrapParams) []BootstrapPlanCommand {
-	switch params.Provider {
-	case "github":
-		return []BootstrapPlanCommand{commandPlan("flux",
-			"bootstrap", "github",
-			"--token-auth",
-			"--owner="+params.Owner,
-			"--repository="+params.Repository,
-			"--branch="+params.Branch,
-			"--path="+params.Path,
-		)}
-	case "gitea":
-		return []BootstrapPlanCommand{commandPlan("flux",
-			"bootstrap", "gitea",
-			"--token-auth",
-			"--owner="+params.Owner,
-			"--repository="+params.Repository,
-			"--branch="+params.Branch,
-			"--path="+params.Path,
-		)}
-	case "gitlab":
-		return []BootstrapPlanCommand{commandPlan("flux",
-			"bootstrap", "gitlab",
-			"--token-auth",
-			"--owner="+params.Owner,
-			"--repository="+params.Repository,
-			"--branch="+params.Branch,
-			"--path="+params.Path,
-		)}
-	default:
+	args, ok := fluxBootstrapArgs(params)
+	if !ok {
 		return nil
 	}
+	return []BootstrapPlanCommand{commandPlan("flux", args...)}
+}
+
+// fluxBootstrapArgs returns the shared flux bootstrap argument list for a set
+// of params, kept in sync between the plan display and the actual run.
+func fluxBootstrapArgs(params *fluxBootstrapParams) ([]string, bool) {
+	var args []string
+	switch params.Provider {
+	case "github":
+		args = []string{"bootstrap", "github", "--token-auth"}
+	case "gitea", "gitlab":
+		args = []string{"bootstrap", params.Provider, "--token-auth"}
+	default:
+		return nil, false
+	}
+	args = append(args,
+		"--owner="+params.Owner,
+		"--repository="+params.Repository,
+		"--branch="+params.Branch,
+		"--path="+params.Path,
+	)
+	// Self-hosted servers need the hostname; hosted providers (and scp-style
+	// SSH URLs) leave it empty and flux falls back to its default.
+	if params.Hostname != "" {
+		args = append(args, "--hostname="+params.Hostname)
+	}
+	return args, true
 }

@@ -47,6 +47,62 @@ func TestResolveFluxBootstrapParams_Gitea(t *testing.T) {
 	assert.Equal(t, "infra", params.Repository)
 	assert.Equal(t, "develop", params.Branch)
 	assert.Equal(t, "clusters/dev-cluster", params.Path)
+	assert.Equal(t, "gitea.example.com", params.Hostname)
+}
+
+func TestResolveFluxBootstrapParams_SelfHostedGiteaWithPort(t *testing.T) {
+	cfg := &v2.Config{}
+	cfg.OpenCenter.Cluster.ClusterName = "oc-baremetal"
+	cfg.OpenCenter.GitOps.Repository.URL = "https://192.168.123.1:3001/newuser/test-repo.git"
+	cfg.OpenCenter.GitOps.Repository.Branch = "main"
+	cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{
+		Provider:  "gitea",
+		TokenFile: "/tmp/gitea-token",
+	}
+
+	params, err := resolveFluxBootstrapParams(cfg)
+	require.NoError(t, err)
+	assert.Equal(t, "newuser", params.Owner)
+	assert.Equal(t, "test-repo", params.Repository)
+	// Self-hosted host with port must be derived (host:port) so flux targets
+	// the local Gitea instead of the default gitea.com.
+	assert.Equal(t, "192.168.123.1:3001", params.Hostname)
+}
+
+func TestResolveFluxBootstrapParams_SSHGiteaNoHostname(t *testing.T) {
+	cfg := &v2.Config{}
+	cfg.OpenCenter.Cluster.ClusterName = "test"
+	cfg.OpenCenter.GitOps.Repository.URL = "git@gitea.example.com:team/infra.git"
+	cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{
+		Provider:  "gitea",
+		TokenFile: "/tmp/gitea-token",
+	}
+
+	params, err := resolveFluxBootstrapParams(cfg)
+	require.NoError(t, err)
+	// scp-style SSH URLs convey the host via --ssh-hostname, not --hostname.
+	assert.Empty(t, params.Hostname)
+}
+
+func TestFluxGitHostname(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{"https", "https://gitea.example.com/team/infra.git", "gitea.example.com"},
+		{"https with port", "https://192.168.123.1:3001/newuser/test-repo.git", "192.168.123.1:3001"},
+		{"http with port", "http://git.local:8080/org/repo.git", "git.local:8080"},
+		{"ssh scheme with port", "ssh://git@gitlab.example.com:2222/group/repo.git", "gitlab.example.com:2222"},
+		{"scp-style ssh", "git@github.com:my-org/my-repo.git", ""},
+		{"empty", "", ""},
+		{"garbage", "not a url", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, fluxGitHostname(tt.url))
+		})
+	}
 }
 
 func TestResolveFluxBootstrapParams_GitLab(t *testing.T) {
@@ -305,6 +361,7 @@ func TestFluxBootstrapPlanCommands_Gitea(t *testing.T) {
 		Repository: "infra",
 		Branch:     "develop",
 		Path:       "clusters/dev",
+		Hostname:   "192.168.123.1",
 	}
 
 	commands := fluxBootstrapPlanCommands(params)
@@ -314,6 +371,24 @@ func TestFluxBootstrapPlanCommands_Gitea(t *testing.T) {
 	assert.Contains(t, commands[0].Args, "gitea")
 	assert.Contains(t, commands[0].Args, "--token-auth")
 	assert.Contains(t, commands[0].Args, "--owner=team")
+	// Self-hosted Gitea must pass --hostname so flux targets the local server
+	// instead of the default gitea.com.
+	assert.Contains(t, commands[0].Args, "--hostname=192.168.123.1")
+}
+
+func TestFluxBootstrapPlanCommands_GiteaNoHostname(t *testing.T) {
+	params := &fluxBootstrapParams{
+		Provider:   "gitea",
+		Owner:      "team",
+		Repository: "infra",
+		Branch:     "develop",
+		Path:       "clusters/dev",
+		// Hostname intentionally empty (hosted gitea.com)
+	}
+
+	commands := fluxBootstrapPlanCommands(params)
+	require.Len(t, commands, 1)
+	assert.NotContains(t, commands[0].Args, "--hostname")
 }
 
 func TestFluxBootstrapPlanCommands_GitLab(t *testing.T) {

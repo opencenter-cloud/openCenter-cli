@@ -45,6 +45,9 @@ nodes, so you can exercise `opencenter cluster deploy` end to end on a single
 Linux libvirt host. The VMs are plain SSH-reachable hosts with your public key
 and passwordless sudo; the deploy then SSHes in and runs kubespray.
 
+**Full guide** (subcommands, every env var, how to wire into a cluster deploy,
+troubleshooting, teardown): [`baremetal-test-vms.md`](./baremetal-test-vms.md).
+
 Requires a Linux host with `libvirt-daemon-system`, `virtinst`, `qemu-utils`,
 `cloud-image-utils` (or `genisoimage`), and `curl`. It does **not** run on
 macOS (no native KVM).
@@ -52,23 +55,30 @@ macOS (no native KVM).
 Typical loop:
 
 ```bash
-# 1. Create the network + 6 VMs (3 control-plane, 3 workers) and wait for SSH.
+# 0. Sanity-check the resolved layout before touching anything.
+hack/scripts/baremetal-test-vms.sh doctor
+
+# 1. Create the network + 6 VMs (3 control-plane, 3 workers) and wait for SSH
+#    + cloud-init (in parallel).
 hack/scripts/baremetal-test-vms.sh up
 
-# 2. Emit the matching baremetal infrastructure config and merge it into your
-#    cluster config, then deploy.
-hack/scripts/baremetal-test-vms.sh print-config
+# 2. Prove the environment is deploy-ready (interface name, reachability, VIP).
+#    Exits non-zero if anything is wrong.
+hack/scripts/baremetal-test-vms.sh check
 
-# 3. Inspect state / shell into a node.
+# 3. Overlay the VM-specific fields onto an init-generated cluster config,
+#    then deploy (see the guide for the exact CLI commands).
+hack/scripts/baremetal-test-vms.sh print-merge
+
+# 4. Inspect state / shell into a node.
 hack/scripts/baremetal-test-vms.sh status
 hack/scripts/baremetal-test-vms.sh ssh master-1
 
-# 4. Tear everything down when finished.
+# 5. Tear everything down when finished.
 hack/scripts/baremetal-test-vms.sh cleanup --all -y
 ```
 
-Resources are tunable with environment variables (full list in the script
-header), e.g.:
+Resources are tunable with environment variables (full list in the guide), e.g.:
 
 ```bash
 OC_VM_COUNT=6 OC_VM_MASTERS=3 \
@@ -84,7 +94,7 @@ OC_VM_MASTERS_MEMORY_MB=4096 OC_VM_WORKERS_MEMORY_MB=8192 \
 idempotent, and discovers resources from libvirt rather than a state file, so a
 half-finished `up` is still fully cleaned. Flags:
 
-- `--purge-net` also removes the libvirt network.
+- `--purge-net` also removes the libvirt network and the stale `virbr-ocbm` bridge.
 - `--purge-cache` also deletes the cached base cloud image.
 - `--all` removes everything `up` created (VMs + disks + network + cache).
 - `--dry-run` lists what would be removed and changes nothing.

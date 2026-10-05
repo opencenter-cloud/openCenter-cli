@@ -31,7 +31,10 @@ const (
 	defaultGitURLPlaceholder          = "ssh://git@example.com/opencenter/cluster-config.git"
 	defaultHTTPSGitURLPlaceholder     = "https://github.com/opencenter/cluster-config.git"
 	defaultGitBaseRepoURL             = "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git"
-	defaultGitBaseRepoRelease         = "2026.01"
+	// Base repo (gitops-base) tracks the 2026.03-rc branch. Release is left empty
+	// so the branch is used (a pinned release tag would otherwise win over branch).
+	defaultGitBaseRepoRelease         = ""
+	defaultGitBaseRepoBranch          = "2026.03-rc"
 	defaultGitopsAuthMethod           = "token"
 	defaultDefaultStorageClass        = "standard"
 	defaultWorkerVolumeType           = "Performance"
@@ -264,7 +267,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 				BaseRepo: GitOpsBaseRepo{
 					URL:     defaultGitBaseRepoURL,
 					Release: defaultGitBaseRepoRelease,
-					Branch:  defaultGitBranch,
+					Branch:  defaultGitBaseRepoBranch,
 				},
 				Auth: GitOpsAuth{},
 				Flux: GitOpsFluxConfig{
@@ -290,12 +293,12 @@ func NewV2Default(name, provider string) (*Config, error) {
 				Modules: map[string]ModuleConfig{
 					"kubespray": {
 						Enabled: true,
-						Source:  "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/provider/kubespray?ref=main",
+						Source:  "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/provider/kubespray?ref=2026.03-rc",
 					},
 				},
 				KubesprayCluster: ModuleConfig{
 					Enabled: true,
-					Source:  "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/provider/kubespray?ref=main",
+					Source:  "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/provider/kubespray?ref=2026.03-rc",
 				},
 			},
 		},
@@ -477,7 +480,7 @@ func NewV2FullTemplate(name, provider string) (*Config, error) {
 	}
 	// Keep the base repository URL selected by applyGitOpsAuthDefaults.
 	cfg.OpenCenter.GitOps.BaseRepo.Release = defaultGitBaseRepoRelease
-	cfg.OpenCenter.GitOps.BaseRepo.Branch = defaultGitBranch
+	cfg.OpenCenter.GitOps.BaseRepo.Branch = defaultGitBaseRepoBranch
 
 	return cfg, nil
 }
@@ -554,7 +557,7 @@ func applyProviderCloudDefaults(cfg *Config, availabilityZone string) {
 			},
 			Modules: OpenStackModulesConfig{
 				OpenstackNova: OpenstackNovaModuleConfig{
-					Source: "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/cloud/openstack/openstack-nova?ref=main",
+					Source: "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/cloud/openstack/openstack-nova?ref=2026.03-rc",
 				},
 			},
 		}

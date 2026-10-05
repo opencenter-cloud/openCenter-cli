@@ -45,6 +45,9 @@ type DestroyResult struct {
 	StepsCompleted []string
 	// Error contains any error that occurred during destruction.
 	Error error
+	// CleanupWarnings contains non-fatal errors from post-destroy cleanup (e.g., CSI volume deletion).
+	// The destroy still succeeds, but the caller should check this and signal a warning.
+	CleanupWarnings error
 }
 
 // NewDestroyService creates a new DestroyService with the default command runner.

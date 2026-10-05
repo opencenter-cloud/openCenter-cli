@@ -18,8 +18,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -59,7 +61,7 @@ func (s *gophercloudCinderService) Delete(_ context.Context, id string) error {
 }
 
 // newGophercloudCinderService authenticates with Keystone and returns a
-// block-storage service client.
+// block-storage service client with a 30-second timeout.
 func newGophercloudCinderService(creds *credentials.OpenStackCredentials) (cinderVolumeService, error) {
 	authOpts := gophercloud.AuthOptions{
 		IdentityEndpoint:            creds.AuthURL,
@@ -87,6 +89,11 @@ func newGophercloudCinderService(creds *credentials.OpenStackCredentials) (cinde
 	if err != nil {
 		return nil, fmt.Errorf("authenticate with OpenStack: %w", err)
 	}
+
+	// Set a 30-second timeout on the provider's HTTP client to prevent indefinite
+	// hangs against unresponsive Cinder endpoints. gophercloud v1.14.1 does not
+	// honor context deadlines, so an explicit timeout is needed.
+	provider.HTTPClient = &http.Client{Timeout: 30 * time.Second}
 
 	client, err := openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{Region: creds.Region})
 	if err != nil {
@@ -174,8 +181,16 @@ func cleanupCSIVolumes(ctx context.Context, handles []string, svc cinderVolumeSe
 	for _, id := range handles {
 		status, sizeGB, err := svc.GetStatus(ctx, id)
 		if err != nil {
-			// Volume may already be gone — log and continue.
-			fmt.Fprintf(output, "  Warning: could not check volume %s: %v (may already be deleted)\n", id, err)
+			// Distinguish "definitely not found" from transient errors.
+			// Only 404 means the volume is already gone and safe to skip.
+			// Other errors (5xx, timeout, auth failure) indicate a check failure
+			// and should be counted as retrieval failures, not skipped.
+			if isNotFoundError(err) {
+				fmt.Fprintf(output, "  %s: already deleted (not found)\n", id)
+				continue
+			}
+			fmt.Fprintf(output, "  Warning: could not check volume %s: %v\n", id, err)
+			skipped = append(skipped, fmt.Sprintf("%s (error: %v)", id, err))
 			continue
 		}
 
@@ -240,4 +255,17 @@ func cleanupCSIVolumes(ctx context.Context, handles []string, svc cinderVolumeSe
 
 	fmt.Fprintf(output, "Successfully deleted %d CSI volume(s) (%d GB freed).\n", deleted, totalGB)
 	return nil
+}
+
+// isNotFoundError returns true if err is a definitive "volume not found" error
+// from gophercloud (404). Other errors (5xx, timeout, auth failure) return false
+// so they can be treated as retrieval failures, not "already deleted".
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// gophercloud wraps 404 responses as ErrDefault404 or generic error messages
+	// containing "404" or "not found". Check the error string for these signals.
+	errStr := err.Error()
+	return strings.Contains(errStr, "404") || strings.Contains(strings.ToLower(errStr), "not found")
 }

@@ -523,20 +523,24 @@ func (r *readinessBuilder) validateMagnumProvider(cfg *Config) {
 
 	hasAppCredID := valueSet(magnum.ApplicationCredentialID)
 	hasAppCredSecret := valueSet(magnum.ApplicationCredentialSecret)
+	hasUsername := valueSet(magnum.Username)
+	hasPassword := valueSet(magnum.Password)
 	if hasAppCredID != hasAppCredSecret {
 		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_id",
 			"Magnum application credential ID and secret must be set together.",
 			"Set both application_credential_id and application_credential_secret.")
 	}
-	if !hasAppCredID {
-		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_id",
-			"Magnum application credential ID is required for readiness validation.",
-			"Create a Keystone application credential and set its ID.")
+	if hasUsername != hasPassword {
+		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.username",
+			"Magnum username and password must be set together.",
+			"Set both username and password.")
 	}
-	if !hasAppCredSecret {
-		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_secret",
-			"Magnum application credential secret is required for readiness validation.",
-			"Set the Keystone application credential secret.")
+	// Accept EITHER application-credential OR username/password auth. Password
+	// auth is required on clouds that enforce Keystone trusts for Magnum.
+	if !(hasAppCredID && hasAppCredSecret) && !(hasUsername && hasPassword) {
+		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_id",
+			"Magnum requires either application credential (ID+secret) or username/password.",
+			"Set application_credential_id+secret, or username+password (needed on clouds that enforce Keystone trusts).")
 	}
 
 	if cloud.OpenStack != nil || cloud.AWS != nil || cloud.GCP != nil || cloud.Azure != nil || cloud.VMware != nil {

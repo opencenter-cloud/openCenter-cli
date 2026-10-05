@@ -52,7 +52,15 @@ type Config struct {
 	ProjectID                   string
 	ApplicationCredentialID     string
 	ApplicationCredentialSecret string
-	Insecure                    bool
+	// Password (v3password) auth. Magnum requires Keystone to create a trust for
+	// the COE cluster, which Keystone forbids under application-credential auth;
+	// password auth is the supported path on trust-enforcing clouds (e.g. SJC3).
+	Username          string
+	Password          string
+	UserDomainName    string
+	ProjectName       string
+	ProjectDomainName string
+	Insecure          bool
 	ClusterTemplate             string
 	Labels                      map[string]string
 	Keypair                     string
@@ -677,8 +685,15 @@ func validateConfig(config Config) error {
 	if (strings.TrimSpace(config.ApplicationCredentialID) == "") != (strings.TrimSpace(config.ApplicationCredentialSecret) == "") {
 		return errors.New("application credential ID and secret must be supplied together")
 	}
-	if strings.TrimSpace(config.ApplicationCredentialID) == "" {
-		return errors.New("application credential ID and secret are required")
+	if (strings.TrimSpace(config.Username) == "") != (strings.TrimSpace(config.Password) == "") {
+		return errors.New("username and password must be supplied together")
+	}
+	// Accept EITHER application-credential OR username/password auth. Password
+	// auth is required on clouds that enforce Keystone trusts for Magnum.
+	hasAppCred := strings.TrimSpace(config.ApplicationCredentialID) != ""
+	hasPassword := strings.TrimSpace(config.Password) != ""
+	if !hasAppCred && !hasPassword {
+		return errors.New("either application credential (ID+secret) or username/password are required")
 	}
 	if strings.TrimSpace(config.ClusterTemplate) == "" {
 		return errors.New("cluster template is required")
@@ -858,6 +873,24 @@ func cloneTransport() *http.Transport {
 }
 
 func authOptions(config Config) gophercloud.AuthOptions {
+	// Password (v3password) auth, when supplied, is project-scoped so Keystone
+	// can mint the trust Magnum needs for the COE cluster.
+	if strings.TrimSpace(config.Password) != "" {
+		return gophercloud.AuthOptions{
+			IdentityEndpoint: config.IdentityEndpoint,
+			Username:         config.Username,
+			Password:         config.Password,
+			DomainName:       config.UserDomainName,
+			TenantID:         config.TenantID,
+			TenantName:       config.ProjectName,
+			AllowReauth:      true,
+			Scope: &gophercloud.AuthScope{
+				ProjectID:   config.TenantID,
+				ProjectName: config.ProjectName,
+				DomainName:  config.ProjectDomainName,
+			},
+		}
+	}
 	// Application credentials are project-scoped by definition. Supplying a
 	// TenantID here changes the Keystone request into a project-scoped auth
 	// request and is rejected by several Keystone deployments.

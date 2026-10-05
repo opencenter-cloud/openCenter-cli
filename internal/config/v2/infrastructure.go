@@ -309,6 +309,13 @@ type MagnumCloudConfig struct {
 	ProjectID                   string            `yaml:"project_id" json:"project_id" validate:"required"`
 	ApplicationCredentialID     string            `yaml:"application_credential_id,omitempty" json:"application_credential_id,omitempty" validate:"required_with=ApplicationCredentialSecret"`
 	ApplicationCredentialSecret string            `yaml:"application_credential_secret,omitempty" json:"application_credential_secret,omitempty" validate:"required_with=ApplicationCredentialID"`
+	// Username/Password (v3password) auth. Required on clouds that enforce
+	// Keystone trusts for Magnum (app-credential auth cannot create trusts).
+	Username                    string            `yaml:"username,omitempty" json:"username,omitempty" validate:"required_with=Password"`
+	Password                    string            `yaml:"password,omitempty" json:"password,omitempty" validate:"required_with=Username"`
+	UserDomainName              string            `yaml:"user_domain_name,omitempty" json:"user_domain_name,omitempty"`
+	ProjectName                 string            `yaml:"project_name,omitempty" json:"project_name,omitempty"`
+	ProjectDomainName           string            `yaml:"project_domain_name,omitempty" json:"project_domain_name,omitempty"`
 	Insecure                    bool              `yaml:"insecure,omitempty" json:"insecure,omitempty"`
 	Domain                      string            `yaml:"domain,omitempty" json:"domain,omitempty"`
 	CA                          string            `yaml:"ca,omitempty" json:"ca,omitempty"`

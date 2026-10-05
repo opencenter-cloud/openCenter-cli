@@ -15,7 +15,7 @@ last_updated: 2026-09-25
 | Name | Configuration boundary evidenced in this checkout |
 | --- | --- |
 | `openstack` | OpenStack cloud fields and provider lifecycle are implemented. |
-| `magnum` | OpenStack Magnum configuration and validation are implemented. |
+| `magnum` | OpenStack Magnum configuration and validation are implemented. Supports either application-credential or username/password (`v3password`) auth; password auth is required on clouds that enforce Keystone trusts for Magnum COE clusters. |
 | `vmware` | Static VMware node inventory and VMware cloud selectors are validated. |
 | `baremetal` | Static master and worker node inventory is validated. |
 | `kind` | Local Kind configuration and container-runtime deployment are implemented. |

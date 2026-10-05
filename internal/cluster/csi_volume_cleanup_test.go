@@ -339,12 +339,48 @@ func TestCleanupCSIVolumes_AlreadyGoneVolume(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// vol-gone returns an error from GetStatus; it should be skipped with a warning.
+	// vol-gone returns "not found" from GetStatus; it should be skipped as already deleted.
 	if len(svc.deleted) != 1 || svc.deleted[0] != "vol-exists" {
 		t.Errorf("expected only vol-exists deleted, got: %v", svc.deleted)
 	}
-	if !strings.Contains(buf.String(), "Warning") {
-		t.Errorf("expected Warning for vol-gone, got: %s", buf.String())
+	if !strings.Contains(buf.String(), "already deleted") {
+		t.Errorf("expected 'already deleted' for vol-gone, got: %s", buf.String())
+	}
+}
+
+// TestCleanupCSIVolumes_DeleteFailureIsReported asserts that when a delete fails
+// (not a 404), cleanupCSIVolumes returns an error aggregating the failures.
+func TestCleanupCSIVolumes_DeleteFailureIsReported(t *testing.T) {
+	svc := &fakeCinderSvc{
+		volumes: map[string]struct {
+			status string
+			size   int
+		}{
+			"vol-ok":   {status: "available", size: 10},
+			"vol-fail": {status: "available", size: 20},
+		},
+		deleteErr: map[string]error{
+			"vol-fail": fmt.Errorf("API error: 500 internal server error"),
+		},
+	}
+	buf := &bytes.Buffer{}
+	err := cleanupCSIVolumes(context.Background(),
+		[]string{"vol-ok", "vol-fail"}, svc, true, buf)
+
+	// Should return an aggregated error listing the failures.
+	if err == nil {
+		t.Fatal("expected error when delete fails, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to delete") {
+		t.Errorf("expected 'failed to delete' in error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "vol-fail") {
+		t.Errorf("expected vol-fail in error, got: %v", err)
+	}
+
+	// vol-ok should be deleted despite vol-fail error.
+	if len(svc.deleted) != 1 || svc.deleted[0] != "vol-ok" {
+		t.Errorf("expected vol-ok deleted despite failure, got: %v", svc.deleted)
 	}
 }
 

@@ -86,7 +86,10 @@ func (p *openstackDestroyProvider) BuildSteps(cfg *v2.Config, opts *DestroyInfra
 	var steps []destroyStep
 
 	if isOpenStack {
-		kubeconfigPath := filepath.Join(cfg.GitDir(), "infrastructure", "clusters", cfg.ClusterName(), "kubeconfig.yaml")
+		// Derive kubeconfig path from the same base as clusterDir to ensure consistency.
+		// Both capture and tofu use the same infrastructure root so they stay in sync
+		// across layout changes (flat vs org-scoped).
+		kubeconfigPath := filepath.Join(clusterDir, "kubeconfig.yaml")
 		steps = append(steps, destroyStep{
 			ID:          "capture-csi-volumes",
 			Description: "Capture CSI-provisioned Cinder volume handles from cluster",
@@ -145,7 +148,14 @@ func (p *openstackDestroyProvider) BuildSteps(cfg *v2.Config, opts *DestroyInfra
 					return nil
 				}
 				if err := cleanupCSIVolumes(ctx, capturedHandles, svc, deleteVolumes, p.output); err != nil {
-					// Non-fatal: log but don't fail the destroy.
+					// In delete-mode: surface error so caller can signal non-zero exit.
+					// In report-only: log warning and continue (destruction already succeeded).
+					if deleteVolumes {
+						p.logf("ERROR: CSI volume cleanup failed: %v\n", err)
+						p.logf("Verify that all volumes were deleted. Some may still be orphaned.\n")
+						// Return the error; the provider will track it for the caller.
+						return fmt.Errorf("volume cleanup: %w", err)
+					}
 					p.logf("Warning: CSI volume cleanup encountered errors: %v\n", err)
 					p.logf("Some volumes may need manual cleanup.\n")
 				}

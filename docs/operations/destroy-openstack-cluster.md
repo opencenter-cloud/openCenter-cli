@@ -121,6 +121,11 @@ opencenter cluster destroy <org>/<cluster> --force --delete-volumes --remove-fil
   touched.
 - Volumes in `in-use`, `reserved`, or any state other than `available` are always
   skipped, even if their IDs appear in the captured list.
-- Both the capture and cleanup steps are non-fatal. If the cluster API is already
-  unreachable when destroy runs, the capture step warns and continues; the cleanup step
-  then reports the handles it could not verify.
+- Capture step is non-fatal. If the cluster API is already unreachable, the capture
+  warns and continues with zero handles (cleanup becomes a no-op).
+- **In `--delete-volumes` mode:** deletion failures are reported but do NOT fail the
+  overall destroy command (exit 0). Always check the cleanup output to verify volumes
+  were actually deleted. If cleanup errors appear, re-run the report step or manually
+  delete remaining volumes.
+- **In report-only mode (default):** failures are logged as warnings and do not affect
+  the destroy result.

@@ -96,8 +96,15 @@ func (s *DestroyService) DestroyInfrastructure(ctx context.Context, cfg *v2.Conf
 		s.logf("Running: %s\n", step.Description)
 
 		if err := step.Run(ctx); err != nil {
-			result.Error = fmt.Errorf("step %q failed: %w", step.ID, err)
-			return result, result.Error
+			// Distinguish cleanup warnings (non-fatal post-destroy issues) from hard failures.
+			// Steps named "cleanup-*" are post-destroy and non-fatal; capture them separately.
+			if strings.HasPrefix(step.ID, "cleanup-") {
+				result.CleanupWarnings = err
+				s.logf("Warning: %s encountered issues: %v\n", step.Description, err)
+			} else {
+				result.Error = fmt.Errorf("step %q failed: %w", step.ID, err)
+				return result, result.Error
+			}
 		}
 
 		result.StepsCompleted = append(result.StepsCompleted, step.ID)

@@ -93,7 +93,7 @@ func newGophercloudCinderService(creds *credentials.OpenStackCredentials) (cinde
 	// Set a 30-second timeout on the provider's HTTP client to prevent indefinite
 	// hangs against unresponsive Cinder endpoints. gophercloud v1.14.1 does not
 	// honor context deadlines, so an explicit timeout is needed.
-	provider.HTTPClient = &http.Client{Timeout: 30 * time.Second}
+	provider.HTTPClient = http.Client{Timeout: 30 * time.Second}
 
 	client, err := openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{Region: creds.Region})
 	if err != nil {

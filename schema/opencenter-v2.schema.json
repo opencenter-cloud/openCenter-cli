@@ -1583,11 +1583,32 @@
                     "node_flavor_id": {
                       "type": "string"
                     },
+                    "password": {
+                      "type": "string",
+                      "x-opencenter-validation": [
+                        "required_with=Username"
+                      ]
+                    },
+                    "project_domain_name": {
+                      "type": "string"
+                    },
                     "project_id": {
+                      "type": "string"
+                    },
+                    "project_name": {
                       "type": "string"
                     },
                     "region": {
                       "type": "string"
+                    },
+                    "user_domain_name": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string",
+                      "x-opencenter-validation": [
+                        "required_with=Password"
+                      ]
                     }
                   },
                   "required": [

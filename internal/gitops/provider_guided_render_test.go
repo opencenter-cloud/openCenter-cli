@@ -912,6 +912,12 @@ func TestRenderClusterAppsOpenStackCCMNamespace(t *testing.T) {
 	cfg := newDefault("ccm-ns-test")
 	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 
+	// openstack-ccm now defaults to disabled (kubespray deploys the CCM); this
+	// test exercises the gitops CCM rendering, so enable it explicitly.
+	if svc, ok := cfg.OpenCenter.Services["openstack-ccm"].(*configservices.DefaultServiceConfig); ok {
+		svc.Enabled = true
+	}
+
 	if err := RenderClusterApps(cfg); err != nil {
 		t.Fatalf("RenderClusterApps() error = %v", err)
 	}

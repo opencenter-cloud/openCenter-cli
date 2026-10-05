@@ -740,6 +740,12 @@ func normalizeRequest(request Request) Request {
 	if request.NodeCount == 0 && request.WorkerCount != 0 {
 		request.NodeCount = request.WorkerCount
 	}
+	// Magnum rejects master_count < 1 ("master_count should be >= 1"). A zero
+	// value reaching the API means the count was lost on a readiness/recovery
+	// poll; default to a single master so the request is valid.
+	if request.MasterCount < 1 {
+		request.MasterCount = 1
+	}
 	return request
 }
 

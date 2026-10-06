@@ -832,7 +832,14 @@ func NewDefaultServiceConfig(serviceName, clusterFQDN string) (any, bool) {
 	case "loki":
 		return &services.LokiConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "observability"}}, true
 	case "openstack-ccm":
-		return &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "openstack-ccm"}}, true
+		// Default OFF: the OpenStack cloud-controller-manager is deployed by
+		// kubespray when cloud_provider=external + external_cloud_provider=openstack
+		// (the single source of truth that sets providerID / clears the uninitialized
+		// taint). Enabling this gitops service too deploys a SECOND CCM that collides
+		// with the kubespray one on hostNetwork port 10258 (one pod per control-plane
+		// node CrashLoops) and the HelmRelease times out. Users who want the gitops
+		// CCM instead of the kubespray one can explicitly enable this service.
+		return &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: false, Namespace: "openstack-ccm"}}, true
 	case "openstack-csi":
 		return &services.DefaultServiceConfig{BaseConfig: services.BaseConfig{Enabled: true, Namespace: "openstack-csi"}}, true
 	case "tempo":

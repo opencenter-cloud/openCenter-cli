@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-28
+last_updated: 2026-10-05
 id: service-openstack-ccm
 title: "OpenStack Cloud Controller Manager"
 sidebar_label: OpenStack CCM
@@ -13,13 +13,21 @@ tags: [openstack, services]
 
 ## Configuration
 
-`openstack-ccm` uses `DefaultServiceConfig`. The generated default is enabled in `openstack-ccm`.
+`openstack-ccm` uses `DefaultServiceConfig` and defaults to **disabled**.
+
+The OpenStack cloud-controller-manager is normally deployed by kubespray during bootstrap when
+`cloud_provider: external` and `external_cloud_provider: openstack` are set — that kubespray-managed
+CCM is the single source of truth that sets each node's `providerID` and clears the
+`node.cloudprovider.kubernetes.io/uninitialized` taint. Enabling this gitops `openstack-ccm` service
+in addition deploys a SECOND CCM that collides with the kubespray one on hostNetwork port 10258 (one
+pod per control-plane node CrashLoops and the HelmRelease times out). It is therefore disabled by
+default. Enable it explicitly only if you intend to run the gitops CCM instead of the kubespray one.
 
 ```yaml
 opencenter:
   services:
     openstack-ccm:
-      enabled: true
+      enabled: false
       namespace: openstack-ccm
       adoption_mode: managed
       address_pool:
@@ -27,7 +35,7 @@ opencenter:
 
 | Field | Default | Evidence |
 |-------|---------|----------|
-| `enabled` | `true` | `NewDefaultServiceConfig` |
+| `enabled` | `false` | `NewDefaultServiceConfig` (avoids duplicate CCM vs kubespray) |
 | `namespace` | `openstack-ccm` | `NewDefaultServiceConfig` |
 | common fields | — | `BaseConfig` |
 

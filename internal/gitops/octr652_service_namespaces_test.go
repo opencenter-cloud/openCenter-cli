@@ -7,12 +7,14 @@ import (
 
 func TestOCTR652ServiceNamespacesBeforeOverrides(t *testing.T) {
 	tests := []struct {
-		service        string
-		namespaceStage string
+		service               string
+		namespaceStage        string
+		namespaceDependencies []string
+		skipSourcesDependency bool
 	}{
-		{service: "openstack-ccm", namespaceStage: "openstack-ccm-namespace"},
-		{service: "openstack-csi", namespaceStage: "openstack-csi-namespace"},
-		{service: "velero", namespaceStage: "velero-namespace"},
+		{service: "openstack-ccm", namespaceStage: "openstack-ccm-namespace", skipSourcesDependency: true},
+		{service: "openstack-csi", namespaceStage: "openstack-csi-namespace", namespaceDependencies: []string{"sources"}},
+		{service: "velero", namespaceStage: "velero-namespace", namespaceDependencies: []string{"sources"}},
 	}
 
 	for _, tc := range tests {
@@ -45,7 +47,13 @@ func TestOCTR652ServiceNamespacesBeforeOverrides(t *testing.T) {
 				t.Fatalf("parse %s: %v", namespaceStagePath, err)
 			}
 			namespaceStageDoc := findFluxKustomization(t, namespaceStageDocs, tc.namespaceStage)
-			assertFluxDependencies(t, namespaceStageDoc, tc.namespaceStage, "sources")
+			if len(tc.namespaceDependencies) == 0 {
+				if _, ok := nestedValue(namespaceStageDoc, "spec", "dependsOn").([]any); ok {
+					t.Errorf("%s must not wait for the aggregate sources gate: %#v", tc.namespaceStage, namespaceStageDoc)
+				}
+			} else {
+				assertFluxDependencies(t, namespaceStageDoc, tc.namespaceStage, tc.namespaceDependencies...)
+			}
 			wantNamespacePath := "./applications/overlays/" + cfg.ClusterName() + "/services/" + tc.service + "/namespace"
 			if got := nestedString(namespaceStageDoc, "spec", "path"); got != wantNamespacePath {
 				t.Errorf("%s spec.path = %q, want local namespace path %q", tc.namespaceStage, got, wantNamespacePath)
@@ -71,8 +79,14 @@ func TestOCTR652ServiceNamespacesBeforeOverrides(t *testing.T) {
 			}
 			base := findFluxKustomization(t, serviceDocs, tc.service+"-base")
 			override := findFluxKustomization(t, serviceDocs, tc.service+"-override")
-			assertFluxDependencies(t, override, tc.service+"-override", "sources", tc.namespaceStage)
-			assertFluxDependencies(t, base, tc.service+"-base", "sources", tc.service+"-override")
+			overrideDependencies := []string{tc.namespaceStage}
+			baseDependencies := []string{tc.service + "-override"}
+			if !tc.skipSourcesDependency {
+				overrideDependencies = append([]string{"sources"}, overrideDependencies...)
+				baseDependencies = append([]string{"sources"}, baseDependencies...)
+			}
+			assertFluxDependencies(t, override, tc.service+"-override", overrideDependencies...)
+			assertFluxDependencies(t, base, tc.service+"-base", baseDependencies...)
 
 			if hasFluxDependency(t, override, tc.service+"-base") || hasFluxDependency(t, base, tc.namespaceStage) {
 				t.Fatalf("service topology contains an early-base dependency or cycle: base=%#v override=%#v", base, override)

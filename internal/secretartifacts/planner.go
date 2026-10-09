@@ -64,7 +64,7 @@ func Plan(cfg *v2.Config) ([]Artifact, error) {
 		{"cert-manager", certManagerPayload(cfg)}, {"loki", lokiPayload(cfg)},
 		{"mimir", mimirPayload(cfg)},
 		{"headlamp", cfg.Secrets.Headlamp},
-		{"weave-gitops", cfg.Secrets.WeaveGitOps}, {"grafana", cfg.Secrets.Grafana},
+		{"weave-gitops", cfg.Secrets.WeaveGitOps}, {"grafana", grafanaPayload(cfg)},
 		{"tempo", cfg.Secrets.Tempo}, {"alert-proxy", cfg.Secrets.AlertProxy},
 		{"vsphere-csi", cfg.Secrets.VSphereCsi},
 		{"etcd-backup", etcdBackupPayload(cfg)},
@@ -179,6 +179,25 @@ func Plan(cfg *v2.Config) ([]Artifact, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+// grafanaPayload keeps older or hand-edited cluster configurations compatible
+// with kube-prometheus-stack's existingSecret contract. The chart requires
+// both admin-user and admin-password keys, while legacy configurations can
+// contain only the password.
+func grafanaPayload(cfg *v2.Config) map[string]interface{} {
+	password := cfg.Secrets.Grafana.AdminPassword
+	if strings.TrimSpace(password) == "" {
+		return nil
+	}
+	user := cfg.Secrets.Grafana.AdminUser
+	if strings.TrimSpace(user) == "" {
+		user = "admin"
+	}
+	return map[string]interface{}{
+		"admin_user":     user,
+		"admin_password": password,
+	}
 }
 
 func etcdBackupPayload(cfg *v2.Config) map[string]interface{} {

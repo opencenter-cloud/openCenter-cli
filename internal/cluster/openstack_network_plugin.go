@@ -92,6 +92,16 @@ func (p *openstackBootstrapProvider) installOpenStackNetworkPlugin(ctx context.C
 	}
 	defer os.RemoveAll(tmpDir)
 
+	// Helm otherwise uses the user's global cache/config/data directories. On
+	// macOS those directories may be protected by filesystem permissions, and
+	// concurrent cluster bootstraps can also race on the same repository index.
+	// Keep all Helm state inside this bootstrap's writable temporary directory;
+	// this is platform-neutral and makes the step isolated and repeatable.
+	env, err = withBootstrapHelmDirectories(env, tmpDir)
+	if err != nil {
+		return err
+	}
+
 	if selection.Name == "calico" {
 		if err := p.installOpenStackCalicoWithHelm(ctx, cfg, selection, kubeconfigPath, tmpDir, env); err != nil {
 			return err
@@ -113,6 +123,29 @@ func (p *openstackBootstrapProvider) installOpenStackNetworkPlugin(ctx context.C
 	}
 
 	return p.waitForOpenStackNetworkPlugin(ctx, selection, kubeconfigPath, tmpDir, env)
+}
+
+func withBootstrapHelmDirectories(env map[string]string, tmpDir string) (map[string]string, error) {
+	helmRoot := filepath.Join(tmpDir, "helm")
+	dirs := map[string]string{
+		"HELM_CACHE_HOME":  filepath.Join(helmRoot, "cache"),
+		"HELM_CONFIG_HOME": filepath.Join(helmRoot, "config"),
+		"HELM_DATA_HOME":   filepath.Join(helmRoot, "data"),
+	}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return nil, fmt.Errorf("create Helm state directory %s: %w", dir, err)
+		}
+	}
+
+	isolated := make(map[string]string, len(env)+len(dirs))
+	for key, value := range env {
+		isolated[key] = value
+	}
+	for key, value := range dirs {
+		isolated[key] = value
+	}
+	return isolated, nil
 }
 
 // installOpenStackCalicoWithHelm installs Calico via the official Helm chart
@@ -178,6 +211,11 @@ func (p *openstackBootstrapProvider) installOpenStackCalicoWithHelm(ctx context.
 		"--namespace", selection.Namespace,
 		"--create-namespace",
 		"--skip-crds",
+		// Helm 4 uses server-side apply for this release. On a retry, the Tigera
+		// operator already owns normalized Installation fields such as ipPools;
+		// force conflict resolution so the declared values (including bootstrap
+		// tolerations) can be reconciled idempotently.
+		"--force-conflicts",
 		"-f", valuesPath,
 	); err != nil {
 		return fmt.Errorf("helm install Calico %s: %w", selection.Version, err)
@@ -395,7 +433,7 @@ func openStackNetworkPluginPlanCommands(selection openStackNetworkPluginSelectio
 			commandPlan("kubectl", kubectlArgs(kubeconfigPath, "apply", "--server-side", "-f", fmt.Sprintf(calicoOperatorCRDsURLFormat, selection.Version))...),
 			commandPlan("helm", "repo", "add", calicoHelmRepoName, calicoHelmRepo),
 			commandPlan("helm", "repo", "update", calicoHelmRepoName),
-			commandPlan("helm", "upgrade", "--install", selection.ReleaseName, calicoHelmChart, "--version", selection.Version, "--namespace", selection.Namespace, "--create-namespace", "-f", "<organization>/applications/overlays/<cluster>/services/calico/helm-values/override_values.yaml"),
+			commandPlan("helm", "upgrade", "--install", selection.ReleaseName, calicoHelmChart, "--version", selection.Version, "--namespace", selection.Namespace, "--create-namespace", "--force-conflicts", "-f", "<organization>/applications/overlays/<cluster>/services/calico/helm-values/override_values.yaml"),
 		}
 		return append(commands, openStackNetworkPluginReadinessPlanCommands(selection, kubeconfigPath)...)
 	}

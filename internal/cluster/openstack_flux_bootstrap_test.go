@@ -18,6 +18,7 @@ func TestResolveFluxBootstrapParams_GitHub(t *testing.T) {
 		Provider:  "github",
 		TokenFile: "/tmp/token",
 		Owner:     "my-org",
+		Personal:  true,
 	}
 
 	params, err := resolveFluxBootstrapParams(cfg)
@@ -28,6 +29,7 @@ func TestResolveFluxBootstrapParams_GitHub(t *testing.T) {
 	assert.Equal(t, "main", params.Branch)
 	assert.Equal(t, "clusters/prod-east", params.Path)
 	assert.Equal(t, "/tmp/token", params.TokenFile)
+	assert.True(t, params.Personal)
 }
 
 func TestResolveFluxBootstrapParams_Gitea(t *testing.T) {
@@ -292,10 +294,27 @@ func TestFluxBootstrapPlanCommands_GitHub(t *testing.T) {
 	assert.Contains(t, commands[0].Args, "bootstrap")
 	assert.Contains(t, commands[0].Args, "github")
 	assert.Contains(t, commands[0].Args, "--token-auth")
+	assert.Contains(t, commands[0].Args, "--toleration-keys=node.cloudprovider.kubernetes.io/uninitialized")
 	assert.Contains(t, commands[0].Args, "--owner=my-org")
 	assert.Contains(t, commands[0].Args, "--repository=my-repo")
 	assert.Contains(t, commands[0].Args, "--branch=main")
 	assert.Contains(t, commands[0].Args, "--path=clusters/prod")
+	assert.NotContains(t, commands[0].Args, "--personal")
+}
+
+func TestFluxBootstrapPlanCommands_GitHubPersonal(t *testing.T) {
+	params := &fluxBootstrapParams{
+		Provider:   "github",
+		Owner:      "someuser",
+		Repository: "my-repo",
+		Branch:     "main",
+		Path:       "clusters/dev",
+		Personal:   true,
+	}
+
+	commands := fluxBootstrapPlanCommands(params)
+	require.Len(t, commands, 1)
+	assert.Contains(t, commands[0].Args, "--personal")
 }
 
 func TestFluxBootstrapPlanCommands_Gitea(t *testing.T) {
@@ -313,6 +332,7 @@ func TestFluxBootstrapPlanCommands_Gitea(t *testing.T) {
 	assert.Contains(t, commands[0].Args, "bootstrap")
 	assert.Contains(t, commands[0].Args, "gitea")
 	assert.Contains(t, commands[0].Args, "--token-auth")
+	assert.Contains(t, commands[0].Args, "--toleration-keys=node.cloudprovider.kubernetes.io/uninitialized")
 	assert.Contains(t, commands[0].Args, "--owner=team")
 }
 
@@ -330,6 +350,7 @@ func TestFluxBootstrapPlanCommands_GitLab(t *testing.T) {
 	assert.Equal(t, "flux", commands[0].Name)
 	assert.Contains(t, commands[0].Args, "bootstrap")
 	assert.Contains(t, commands[0].Args, "gitlab")
+	assert.Contains(t, commands[0].Args, "--toleration-keys=node.cloudprovider.kubernetes.io/uninitialized")
 	assert.Contains(t, commands[0].Args, "--owner=group/subgroup")
 }
 

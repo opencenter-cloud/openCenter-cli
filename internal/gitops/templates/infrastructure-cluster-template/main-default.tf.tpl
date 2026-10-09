@@ -81,7 +81,16 @@ locals {
   worker_node_bfv_source_type             = "{{ .OpenCenter.Infrastructure.Storage.WorkerVolumeSourceType | default "image" }}"
   worker_node_bfv_volume_type             = "{{ .OpenCenter.Infrastructure.Storage.WorkerVolumeType | default "Standard" }}"
 {{- end }}
-  additional_block_devices_worker = {{ if .OpenCenter.Infrastructure.Storage.AdditionalBlockDevices }}[{{ range $i, $device := .OpenCenter.Infrastructure.Storage.AdditionalBlockDevices }}{{if $i}}, {{end}}{{ $device }}{{ end }}]{{ else }}[]{{ end }}
+  additional_block_devices_worker = {{ if .OpenCenter.Infrastructure.Storage.AdditionalBlockDevices }}[{{ range $i, $device := .OpenCenter.Infrastructure.Storage.AdditionalBlockDevices }}{{if $i}}, {{end}}{
+    source_type           = "blank"
+    volume_size           = {{ $device.Size }}
+    volume_type           = "{{ $device.Type }}"
+    boot_index            = {{ add $i 1 }}
+    destination_type      = "{{ $.OpenCenter.Infrastructure.Storage.WorkerVolumeDestinationType }}"
+    mountpoint            = "{{ $device.MountPath }}"
+    label                 = "{{ $device.Name }}"
+    delete_on_termination = {{ $device.DeleteOnTermination }}
+  }{{ end }}]{{ else }}[]{{ end }}
 
   additional_server_pools_worker = {{ if .OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker }}[{{ range $i, $pool := .OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker }}{{if $i}}, {{end}}{
     name                                = "{{ $pool.Name }}"
@@ -118,7 +127,7 @@ locals {
   # CNI install_method: "helm" (default) and "kustomize-helm" skip CNI in Kubespray.
   # OpenStack deploy installs the selected CNI after kubeconfig normalization.
   # "kubespray" is retained only for non-OpenStack migration compatibility.
-  network_plugin                          = "{{- if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.InstallMethod | default "helm") "kubespray" }}calico{{- else }}none{{- end }}{{- else if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.InstallMethod | default "helm") "kubespray" }}cilium{{- else }}none{{- end }}{{- else if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled }}{{- if eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.InstallMethod | default "helm") "kubespray" }}kube-ovn{{- else }}none{{- end }}{{- else }}none{{- end }}"
+  network_plugin                          = "{{- if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled (eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.InstallMethod | default "helm") "kubespray") }}calico{{- else if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.Enabled (eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Cilium.InstallMethod | default "helm") "kubespray") }}cilium{{- else if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN .OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.Enabled (eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.KubeOVN.InstallMethod | default "helm") "kubespray") }}kube-ovn{{- else }}none{{- end }}"
   # CLI mode delegates Kubernetes lifecycle operations to the CLI. Keep the
   # explicit deployment setting in legacy mode for existing module users.
   deploy_cluster                          = var.opencenter_lifecycle_mode == "cli" ? false : {{ .Deployment.AutoDeploy }}
@@ -354,10 +363,10 @@ module "kubespray-cluster" {
 {{- end }}
   network_plugin                          = local.network_plugin
 {{- if ne (.OpenCenter.Infrastructure.Provider | default "openstack") "baremetal" }}
-  # Run kubelet with --cloud-provider=external so the OpenStack CCM initializes
-  # each node (sets spec.providerID, clears the uninitialized taint). Required
-  # for CCM LoadBalancer/Octavia provisioning. See OCTR-750.
-  external_cloud_provider                 = "openstack"
+  # Configure kubelet for an external CCM while preventing Kubespray from
+  # installing a provider-specific CCM. GitOps remains the single CCM owner.
+  kubelet_cloud_provider                  = "external"
+  external_cloud_provider                 = "manual"
 {{- end }}
   k8s_hardening_enabled                   = local.k8s_hardening_enabled
   os_hardening_enabled                    = local.os_hardening_enabled

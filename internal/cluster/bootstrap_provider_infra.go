@@ -234,6 +234,12 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 	}
 	steps = append(steps, networkPluginStep)
 
+	// Patch CoreDNS to tolerate the cloud-provider-uninitialized taint so cluster
+	// DNS is available before Flux bootstraps. Without this, CoreDNS cannot schedule
+	// on tainted nodes, source-controller cannot resolve external endpoints, and the
+	// GitRepository never becomes Ready — blocking CCM installation indefinitely.
+	steps = append(steps, p.buildCoreDNSTolerationStep(opts.KubeconfigPath))
+
 	// Flux bootstrap runs after the CNI is installed so the cluster is
 	// network-ready when FluxCD source-controller starts reconciling.
 	// Only add the step when token auth is configured and a real (non-placeholder)
@@ -246,14 +252,12 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 			return nil, fmt.Errorf("building flux bootstrap step: %w", err)
 		}
 		steps = append(steps, fluxStep)
+		steps = append(steps, newSopsAgeSecretStep(clusterPaths.SOPSKeyPath, opts.KubeconfigPath, p.runner))
 		// No opencenter-base credential Secret is created: the shared
 		// openCenter-gitops-base repository is public, so its GitRepository
 		// source is rendered anonymously (no secretRef).
-		steps = append(steps, newSopsAgeSecretStep(clusterPaths.SOPSKeyPath, opts.KubeconfigPath, p.runner))
 		steps = append(steps, newGrafanaAdminSecretStep(cfg, opts.KubeconfigPath, p.runner))
 	}
-
-	// No automatic git push — the user commits and pushes manually after deploy.
 
 	return steps, nil
 }
@@ -576,6 +580,38 @@ func replaceLocalhostInKubeconfig(data []byte, apiEndpointIP string) []byte {
 			"http://"+apiEndpointIP+":")
 	}
 	return []byte(result)
+}
+
+// buildCoreDNSTolerationStep returns a bootstrap step that patches the CoreDNS
+// Deployment to tolerate the cloud-provider-uninitialized taint. Kubespray
+// leaves nodes tainted until the external CCM initialises them, but CCM is
+// installed by Flux/GitOps, which requires cluster DNS. Without this toleration
+// CoreDNS cannot schedule, DNS is unavailable, and Flux source-controller
+// cannot resolve external git endpoints — creating a deadlock. The step is
+// non-fatal (the patch is idempotent on repeat runs) and logs a warning rather
+// than failing the bootstrap if the patch is not needed or already applied.
+func (p *openstackBootstrapProvider) buildCoreDNSTolerationStep(kubeconfigPath string) bootstrapStep {
+	return bootstrapStep{
+		ID:          "patch-coredns-toleration",
+		Description: "Patch CoreDNS to tolerate the cloud-provider-uninitialized taint",
+		Plan: BootstrapPlanStep{
+			ID:     "patch-coredns-toleration",
+			Action: "kubectl patch deployment coredns -n kube-system (add cloud-provider-uninitialized toleration)",
+		},
+		Run: func(ctx context.Context) error {
+			// Strategic merge patch: Kubernetes merges tolerations by key, so
+			// this is idempotent and safe to apply on every bootstrap run.
+			patch := `{"spec":{"template":{"spec":{"tolerations":[{"key":"node.cloudprovider.kubernetes.io/uninitialized","operator":"Exists","effect":"NoSchedule"}]}}}}`
+			_, err := p.runner.Run(ctx, "", nil, "kubectl",
+				"--kubeconfig", kubeconfigPath,
+				"-n", "kube-system",
+				"patch", "deployment", "coredns",
+				"--type=strategic",
+				"-p", patch,
+			)
+			return err
+		},
+	}
 }
 
 // buildPreflightStep returns a provider-aware preflight validation step.

@@ -39,8 +39,8 @@ func overlayFilesToEncrypt(cfg *v2.Config) []string {
 // may not be enabled or may not have generated an override-values file yet.
 func serviceOverrideValuesFilesToEncrypt(cfg *v2.Config) []string {
 	// Services with credentials in their override-values.yaml templates:
-	//   - openstack-ccm: application-credential-id/secret (openstack only)
-	//   - openstack-csi: application-credential-id/secret (openstack only)
+	//   - openstack-ccm: cloud credentials (openstack and Magnum)
+	//   - openstack-csi: cloud credentials (openstack and Magnum)
 	//   - loki: swift application_credential_secret or S3 secretAccessKey
 	//   - tempo: swift application_credential_secret or S3 secret_key
 	//   - mimir: Swift application_credential_secret
@@ -49,7 +49,8 @@ func serviceOverrideValuesFilesToEncrypt(cfg *v2.Config) []string {
 	var files []string
 
 	serviceNames := []string{"loki", "tempo", "mimir", "headlamp", "harbor"}
-	if strings.EqualFold(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider), "openstack") {
+	provider := strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider))
+	if provider == "openstack" || provider == "magnum" {
 		serviceNames = append([]string{"openstack-ccm", "openstack-csi"}, serviceNames...)
 	}
 

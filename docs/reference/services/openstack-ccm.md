@@ -39,10 +39,14 @@ The catalog entry uses namespace stage `openstack-ccm`, override values, base pa
 
 The external OpenStack cloud-controller-manager resolves its `external_openstack_*`
 settings from environment lookups such as `OS_AUTH_URL`, `OS_APPLICATION_CREDENTIAL_ID`,
-and `OS_APPLICATION_CREDENTIAL_SECRET`. During a cluster deploy, the CLI forwards every
-`OS_*` variable from the OpenTofu environment into the Kubespray ansible run so the CCM
-role can configure itself without the operator re-exporting each variable in the deploy
-shell.
+and `OS_APPLICATION_CREDENTIAL_SECRET`. GitOps is the single CCM owner. Kubespray only
+configures kubelet with `cloud_provider: external`; its provider-specific
+`external_cloud_provider` setting must remain empty so Kubespray does not install a
+second OpenStack CCM.
+
+During a cluster deploy, the CLI forwards every `OS_*` variable from the OpenTofu
+environment into the Kubespray ansible run (OCTR-750), preserving the deployment's
+credential flow without requiring username/password credentials.
 
 If the CCM cannot read these credentials it fails with
 `external_openstack_auth_url is missing`, nodes keep the

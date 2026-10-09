@@ -394,7 +394,7 @@ func (s *ValidateService) validateProviderSpecific(ctx context.Context, cfg *v2.
 	case "openstack":
 		s.validateOpenStackCatalog(ctx, cfg, result)
 		return nil
-	case "aws", "vsphere", "vmware", "kind", "baremetal", "gcp", "azure":
+	case "aws", "vsphere", "vmware", "kind", "baremetal", "gcp", "azure", "magnum":
 		return nil
 	default:
 		result.addIssue(v2.ValidationIssue{
@@ -402,7 +402,7 @@ func (s *ValidateService) validateProviderSpecific(ctx context.Context, cfg *v2.
 			Category:   v2.CategoryProvider,
 			Path:       "opencenter.infrastructure.provider",
 			Message:    fmt.Sprintf("unknown provider: %s", provider),
-			Suggestion: "Supported providers: openstack, aws, gcp, azure, vsphere, vmware, baremetal, kind",
+			Suggestion: "Supported providers: openstack, aws, gcp, azure, vsphere, vmware, baremetal, kind, magnum",
 		})
 		return nil
 	}

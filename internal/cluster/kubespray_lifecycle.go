@@ -46,6 +46,7 @@ type kubesprayLifecycle struct {
 	kubeconfigPath string
 	kubeconfigTemp string
 	outputsPath    string
+	sshControlPath string
 	outputs        kubesprayLifecycleOutputs
 	osHardening    bool
 }
@@ -65,6 +66,14 @@ func newKubesprayLifecycle(runner lifecycleCommandRunner, openTofuPath, clusterD
 	if strings.TrimSpace(inventoryPath) == "" {
 		inventoryPath = filepath.Join(stateDir, "inventory")
 	}
+	clusterLabel := sanitizeRuntimeSegment(filepath.Base(clusterDir))
+	if len(clusterLabel) > 24 {
+		clusterLabel = clusterLabel[:24]
+	}
+	shortTempDir := "/tmp"
+	if _, err := os.Stat(shortTempDir); err != nil {
+		shortTempDir = os.TempDir()
+	}
 	return &kubesprayLifecycle{
 		runner:         runner,
 		openTofuPath:   openTofuPath,
@@ -77,6 +86,7 @@ func newKubesprayLifecycle(runner lifecycleCommandRunner, openTofuPath, clusterD
 		kubeconfigPath: kubeconfigPath,
 		kubeconfigTemp: filepath.Join(stateDir, ".kubeconfig.fetch.tmp"),
 		outputsPath:    filepath.Join(stateDir, kubesprayOutputsFile),
+		sshControlPath: filepath.Join(shortTempDir, "oc-ssh-"+clusterLabel),
 	}
 }
 
@@ -90,9 +100,11 @@ func (l *kubesprayLifecycle) environment() map[string]string {
 		pathValue += string(os.PathListSeparator) + current
 	}
 	return map[string]string{
-		"ANSIBLE_INVENTORY":         filepath.Join(l.inventoryPath, "inventory.yaml"),
-		"ANSIBLE_HOST_KEY_CHECKING": "False",
-		"PATH":                      pathValue,
+		"ANSIBLE_INVENTORY":            filepath.Join(l.inventoryPath, "inventory.yaml"),
+		"ANSIBLE_HOST_KEY_CHECKING":    "False",
+		"ANSIBLE_LOCAL_TEMP":           filepath.Join(l.stateDir, "ansible-local-tmp"),
+		"ANSIBLE_SSH_CONTROL_PATH_DIR": l.sshControlPath,
+		"PATH":                         pathValue,
 	}
 }
 
@@ -109,6 +121,11 @@ func (l *kubesprayLifecycle) prepare(ctx context.Context, cfg *v2.Config) error 
 
 	if err := os.MkdirAll(l.stateDir, 0o700); err != nil {
 		return fmt.Errorf("create Kubespray state directory: %w", err)
+	}
+	for _, dir := range []string{filepath.Join(l.stateDir, "ansible-local-tmp"), l.sshControlPath} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return fmt.Errorf("create Kubespray execution directory %s: %w", dir, err)
+		}
 	}
 	encoded, err := json.MarshalIndent(outputs, "", "  ")
 	if err != nil {

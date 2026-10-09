@@ -153,7 +153,7 @@ users:
 		t.Fatalf("BuildSteps() error = %v", err)
 	}
 
-	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin"}
+	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration"}
 	if got := bootstrapStepIDs(steps); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("BuildSteps() IDs = %v, want %v", got, wantIDs)
 	}
@@ -201,6 +201,46 @@ users:
 	}
 	if !strings.Contains(kubeconfigContent, "https://10.2.128.5:6443") {
 		t.Fatalf("kubeconfig does not contain expected VIP endpoint https://10.2.128.5:6443:\n%s", kubeconfigContent)
+	}
+}
+
+func TestOpenStackBootstrapCreatesFluxBeforeSOPSSecret(t *testing.T) {
+	ctx := context.Background()
+	resolver := paths.NewPathResolver(t.TempDir())
+	if err := resolver.CreateClusterDirectories(ctx, "sops-order", "test-org"); err != nil {
+		t.Fatalf("create cluster directories: %v", err)
+	}
+	clusterPaths, err := resolver.Resolve(ctx, "sops-order", "test-org")
+	if err != nil {
+		t.Fatalf("resolve cluster paths: %v", err)
+	}
+
+	cfg := mustNewClusterTestConfig("sops-order", "openstack")
+	cfg.OpenCenter.Meta.Organization = "test-org"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(t.TempDir(), "repo")
+	cfg.OpenCenter.GitOps.Repository.URL = "https://github.com/example-org/sops-order-gitops.git"
+	cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{Provider: "github", Owner: "example-org", Token: "test-token"}
+	cfg.OpenTofu.Path = "tofu"
+
+	provider := &openstackBootstrapProvider{runner: &fakeLifecycleRunner{}}
+	steps, err := provider.BuildSteps(&cfg, clusterPaths, &BootstrapOptions{KubeconfigPath: filepath.Join(t.TempDir(), "kubeconfig.yaml")})
+	if err != nil {
+		t.Fatalf("BuildSteps() error = %v", err)
+	}
+	ids := bootstrapStepIDs(steps)
+	index := func(want string) int {
+		for i, id := range ids {
+			if id == want {
+				return i
+			}
+		}
+		return -1
+	}
+	if index(sopsAgeSecretStepID) < 0 || index("openstack-flux-bootstrap") < 0 {
+		t.Fatalf("expected SOPS and Flux steps, got %v", ids)
+	}
+	if index("openstack-flux-bootstrap") >= index(sopsAgeSecretStepID) {
+		t.Fatalf("Flux bootstrap must run before SOPS secret reconciliation, got %v", ids)
 	}
 }
 
@@ -456,7 +496,7 @@ func TestOpenStackNetworkPluginInstallCalicoUsesHelmChart(t *testing.T) {
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "apply --server-side -f https://raw.githubusercontent.com/projectcalico/calico/v"+configuredCalicoVersion+"/manifests/operator-crds.yaml")
 	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "repo add projectcalico https://docs.tigera.io/calico/charts")
 	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "repo update projectcalico")
-	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install calico projectcalico/tigera-operator --version v"+configuredCalicoVersion+" --namespace tigera-operator --create-namespace --skip-crds -f "+valuesPath)
+	assertRecordedCommandContains(t, fakeRunner.calls, "helm", "upgrade --install calico projectcalico/tigera-operator --version v"+configuredCalicoVersion+" --namespace tigera-operator --create-namespace --skip-crds --force-conflicts -f "+valuesPath)
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n tigera-operator rollout status deployment/tigera-operator --timeout=5m")
 
 	crdApplyIndex, helmInstallIndex := -1, -1

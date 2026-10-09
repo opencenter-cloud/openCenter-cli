@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"os"
+	"syscall"
 	"testing"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev"
@@ -154,12 +155,18 @@ func TestWriteCertificatesKeyReadableByContainer(t *testing.T) {
 		t.Fatalf("stat key.pem: %v", err)
 	}
 	mode := info.Mode().Perm()
-	// The container (a different UID) must be able to read the key. Either it
-	// was chowned to the container UID (owner-read set) or, as the unprivileged
-	// fallback, it is world/group readable. Both satisfy "a foreign UID can
-	// read it". The only failing case is a foreign-owned 0600 file.
-	if mode&0o004 == 0 && mode&0o040 == 0 {
-		t.Fatalf("key.pem mode %v is not readable by a foreign UID (container); want world or group read", mode)
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		t.Fatal("key.pem stat did not expose Unix ownership")
+	}
+	// The container must be able to read the key. Either the key is owned by
+	// the container UID with owner-read set, or the unprivileged fallback made
+	// it group/world readable. The first case is common on CI runners whose host
+	// UID is already the same as the container UID.
+	containerOwnedAndReadable := stat.Uid == uint32(giteaContainerUID) && mode&0o400 != 0
+	fallbackReadable := mode&0o044 != 0
+	if !containerOwnedAndReadable && !fallbackReadable {
+		t.Fatalf("key.pem uid=%d mode=%v is not readable by container uid %d", stat.Uid, mode, giteaContainerUID)
 	}
 	// And the CLI user (owner, when not chowned) must retain read for the
 	// next write cycle — owner-read must be set.

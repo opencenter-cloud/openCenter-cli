@@ -453,10 +453,12 @@ func NewV2FullTemplate(name, provider string) (*Config, error) {
 		Enabled: false,
 		ID:      100,
 	}
+	// Keep Victor's optional GPU pool in the blueprint, but disabled by
+	// default. Users can set count > 0 after selecting a real GPU flavor.
 	cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker = []WorkerPoolConfig{
 		{
 			Name:   "gpu-workers",
-			Count:  1,
+			Count:  0,
 			Flavor: "worker-gpu-placeholder",
 			Image:  defaultImageForProvider(cfg.OpenCenter.Infrastructure.Provider, cfg.OpenCenter.Meta.Region),
 			BootVolume: VolumeConfig{

@@ -87,6 +87,23 @@ func TestKubeletRotateServerCertsDefaultValue(t *testing.T) {
 	t.Logf("Rendered locals block (default/unset case):\n%s", extractSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
 }
 
+func TestOpenStackUsesGitOpsOwnedExternalCCM(t *testing.T) {
+	cfg := mustNewGitOpsTestConfig("openstack-gitops-ccm", "openstack")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = t.TempDir()
+
+	require.NoError(t, RenderInfrastructureCluster(cfg))
+	mainTFPath := filepath.Join(cfg.GitDir(), "infrastructure", "clusters", cfg.ClusterName(), "main.tf")
+	content, err := os.ReadFile(mainTFPath)
+	require.NoError(t, err)
+
+	mainTF := string(content)
+	assert.Contains(t, mainTF, `kubelet_cloud_provider                  = "external"`)
+	assert.Contains(t, mainTF, `external_cloud_provider                 = "manual"`,
+		"Kubespray requires manual mode when GitOps owns OpenStack CCM")
+	assert.NotContains(t, mainTF, `external_cloud_provider                 = "openstack"`,
+		"Kubespray must not deploy a second OpenStack CCM")
+}
+
 func TestRenderInfrastructureClusterLifecycleContract(t *testing.T) {
 	tests := []struct {
 		name       string

@@ -71,6 +71,23 @@ func TestCalicoAutodetectionRejectsUnsupportedMode(t *testing.T) {
 	require.ErrorContains(t, err, "unsupported calico_interface_autodetect mode")
 }
 
+func TestOpenStackCalicoToleratesExternalCloudProviderBootstrapTaint(t *testing.T) {
+	dst := t.TempDir()
+	cfg := mustNewGitOpsTestConfig("calico-openstack-bootstrap", "openstack")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+
+	require.NoError(t, RenderClusterApps(cfg))
+	values := readYAMLMap(t, filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "calico", "helm-values", "override_values.yaml"))
+	installation := mapAt(t, values, "installation")
+	tolerations, ok := installation["controlPlaneTolerations"].([]any)
+	require.True(t, ok)
+	require.Equal(t, []any{map[string]any{
+		"key":      "node.cloudprovider.kubernetes.io/uninitialized",
+		"operator": "Exists",
+		"effect":   "NoSchedule",
+	}}, tolerations)
+}
+
 func TestCalicoAutodetectionRegenerationFromPersistedConfig(t *testing.T) {
 	dst := t.TempDir()
 	configPath := filepath.Join(t.TempDir(), "cluster.yaml")

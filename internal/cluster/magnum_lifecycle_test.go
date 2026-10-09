@@ -63,6 +63,44 @@ func TestMagnumBootstrapProviderBuildSteps(t *testing.T) {
 	}
 }
 
+func TestMagnumBootstrapCreatesFluxBeforeSOPSSecret(t *testing.T) {
+	ctx := context.Background()
+	resolver := paths.NewPathResolver(t.TempDir())
+	if err := resolver.CreateClusterDirectories(ctx, "magnum-sops-order", "test-org"); err != nil {
+		t.Fatalf("create cluster directories: %v", err)
+	}
+	clusterPaths, err := resolver.Resolve(ctx, "magnum-sops-order", "test-org")
+	if err != nil {
+		t.Fatalf("resolve cluster paths: %v", err)
+	}
+
+	cfg := validMagnumLifecycleConfig("magnum-sops-order")
+	cfg.OpenCenter.Meta.Organization = "test-org"
+	cfg.OpenCenter.GitOps.Repository.URL = "https://github.com/example-org/magnum-sops-order-gitops.git"
+	cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{Provider: "github", Owner: "example-org", Token: "test-token"}
+
+	service := NewBootstrapService(resolver, nil)
+	steps, err := service.buildBootstrapSteps(cfg, clusterPaths, &BootstrapOptions{KubeconfigPath: filepath.Join(t.TempDir(), "kubeconfig.yaml")})
+	if err != nil {
+		t.Fatalf("buildBootstrapSteps() error = %v", err)
+	}
+	ids := bootstrapStepIDsForTest(steps)
+	index := func(want string) int {
+		for i, id := range ids {
+			if id == want {
+				return i
+			}
+		}
+		return -1
+	}
+	if index(sopsAgeSecretStepID) < 0 || index("openstack-flux-bootstrap") < 0 {
+		t.Fatalf("expected SOPS and Flux steps, got %v", ids)
+	}
+	if index("openstack-flux-bootstrap") >= index(sopsAgeSecretStepID) {
+		t.Fatalf("Flux bootstrap must run before SOPS secret reconciliation, got %v", ids)
+	}
+}
+
 func TestMagnumBootstrapProviderNilOptionsReturnsClearError(t *testing.T) {
 	cfg := validMagnumLifecycleConfig("magnum-cluster")
 	provider := newMagnumBootstrapProvider(nil)
@@ -318,6 +356,7 @@ func TestMagnumDestroyAcceptedInvisibleClusterRetainsState(t *testing.T) {
 	}
 	fake := &lifecycleMagnumService{
 		getByID:    clusters.Cluster{UUID: testMagnumUUID, Name: cfg.ClusterName(), Status: "CREATE_IN_PROGRESS"},
+		getNameErr: gophercloud.ErrUnexpectedResponseCode{Actual: http.StatusNotFound},
 		idNotFound: true,
 	}
 	client := newLifecycleMagnumProvider(t, fake)

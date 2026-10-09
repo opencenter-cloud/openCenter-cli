@@ -213,7 +213,7 @@ func (cl *ConfigLoader) applyDefaults(cfg *Config) error {
 	provider := cfg.OpenCenter.Infrastructure.Provider
 	region := cfg.OpenCenter.Meta.Region
 
-	// Providers without region-based defaults in the registry (kind, vmware,
+	// Providers without region-based defaults in the registry (kind, magnum, vmware,
 	// baremetal) skip registry-based hydration. However, provider-specific
 	// behavior defaults (e.g. the Kind block) must still be applied when
 	// missing so that configs created outside `cluster init` or manually
@@ -224,7 +224,7 @@ func (cl *ConfigLoader) applyDefaults(cfg *Config) error {
 			applyProviderBehaviorDefaults(cfg)
 		}
 		return nil
-	case "vmware", "baremetal":
+	case "magnum", "vmware", "baremetal":
 		return nil
 	}
 

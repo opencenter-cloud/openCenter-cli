@@ -48,6 +48,7 @@ type autoServiceContext struct {
 	GeneratedResourceFiles           []string
 	ExtraDependencies                []string
 	OverrideDependsOn                []string
+	SkipSourcesDependency            bool
 	OverrideValues                   string
 	OverrideValuesRenderer           OverrideValuesRenderer
 	KustomizationContent             string
@@ -261,6 +262,7 @@ func buildAutoServiceContextWithArtifacts(serviceName string, base *services.Bas
 		GeneratedResourceFiles:           generatedResourceFiles,
 		ExtraDependencies:                extraDeps,
 		OverrideDependsOn:                append([]string{}, spec.OverrideDependsOn...),
+		SkipSourcesDependency:            spec.SkipSourcesDependency,
 		OverrideValues:                   spec.OverrideValues,
 		OverrideValuesRenderer:           spec.OverrideValuesRenderer,
 		KustomizationContent:             spec.KustomizationContent,
@@ -535,9 +537,12 @@ kind: Kustomization
 metadata:
   name: %s
   namespace: flux-system
+
 spec:
-  dependsOn:
 `, stage.Name)
+	if len(stage.DependsOn) > 0 {
+		buf.WriteString("  dependsOn:\n")
+	}
 	for _, dependency := range stage.DependsOn {
 		fmt.Fprintf(&buf, `    - name: %s
       namespace: flux-system
@@ -624,12 +629,16 @@ metadata:
   name: {{ $kn }}-base
   namespace: flux-system
 spec:
+{{- if or (not .SkipSourcesDependency) .ExtraDependencies }}
   dependsOn:
+{{- if not .SkipSourcesDependency }}
     - name: sources
       namespace: flux-system
+{{- end }}
 {{- range .ExtraDependencies }}
     - name: {{ . }}
       namespace: flux-system
+{{- end }}
 {{- end }}
   interval: {{ .FluxInterval }}
   retryInterval: 1m
@@ -712,12 +721,16 @@ metadata:
   name: {{ $kn }}-base
   namespace: flux-system
 spec:
+{{- if or (not .SkipSourcesDependency) .ExtraDependencies }}
   dependsOn:
+{{- if not .SkipSourcesDependency }}
     - name: sources
       namespace: flux-system
+{{- end }}
 {{- range .ExtraDependencies }}
     - name: {{ . }}
       namespace: flux-system
+{{- end }}
 {{- end }}
   interval: {{ .FluxInterval }}
   retryInterval: 1m
@@ -813,9 +826,11 @@ metadata:
   name: {{ .ServiceName }}-namespace
   namespace: flux-system
 spec:
+{{- if not .SkipSourcesDependency }}
   dependsOn:
     - name: sources
       namespace: flux-system
+{{- end }}
   interval: {{ .FluxInterval }}
   retryInterval: 1m
   timeout: 5m

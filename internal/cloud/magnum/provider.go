@@ -237,9 +237,9 @@ func (p *Provider) GetCluster(ctx context.Context, idOrName string) (Cluster, er
 }
 
 // WaitVisible waits until a cluster can be read by UUID or by a unique name.
-// A not-found response is treated as eventual consistency only for this
-// bounded reconciliation operation; authorization and server errors are
-// returned immediately.
+// A not-found response, or Magnum's transient master_count validation response
+// while a newly-created cluster is being materialized, is treated as eventual
+// consistency only for this bounded reconciliation operation.
 func (p *Provider) WaitVisible(ctx context.Context, idOrName string, interval time.Duration) (Cluster, error) {
 	ctx = nonNilContext(ctx)
 	if interval <= 0 {
@@ -265,7 +265,7 @@ func (p *Provider) WaitVisible(ctx context.Context, idOrName string, interval ti
 		if getErr == nil {
 			return cluster, nil
 		}
-		if !isNotFound(getErr) {
+		if !isNotFound(getErr) && !isTransientMasterCountValidation(getErr) {
 			return current, getErr
 		}
 		if err := waitInterval(ctx, interval); err != nil {
@@ -282,15 +282,14 @@ func (p *Provider) getClusterWithService(ctx context.Context, service Service, i
 	if getErr == nil {
 		return normalizeCluster(cluster), nil
 	}
-	if looksLikeUUID(identifier) {
-		return Cluster{}, fmt.Errorf("get Magnum cluster %q: %w", identifier, getErr)
-	}
-	if !isNotFound(getErr) {
+	if !isNotFound(getErr) && !isTransientMasterCountValidation(getErr) {
 		return Cluster{}, fmt.Errorf("get Magnum cluster %q: %w", identifier, getErr)
 	}
 
 	// Magnum's GET endpoint is ID-only. Falling back to a list makes names
-	// useful, but only a documented 404 permits this fallback.
+	// useful. A known transient master_count validation response is also safe to
+	// reconcile through the list endpoint because Magnum may expose the object
+	// there before its GET representation is internally consistent.
 	if err := ctx.Err(); err != nil {
 		return Cluster{}, err
 	}
@@ -1109,6 +1108,15 @@ func writeSecureFile(path, content string) error {
 func isNotFound(err error) bool {
 	var statusError gophercloud.StatusCodeError
 	return errors.As(err, &statusError) && statusError.GetStatusCode() == http.StatusNotFound
+}
+
+func isTransientMasterCountValidation(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "invalid input for field/attribute master_count") &&
+		strings.Contains(message, "value: '0'")
 }
 
 type gophercloudService struct {

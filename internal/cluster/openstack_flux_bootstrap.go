@@ -13,6 +13,8 @@ import (
 
 const openStackFluxBootstrapStepID = "openstack-flux-bootstrap"
 
+const openStackCloudProviderToleration = "node.cloudprovider.kubernetes.io/uninitialized"
+
 // buildFluxBootstrapStep returns a bootstrap step that runs `flux bootstrap`
 // against the newly provisioned OpenStack cluster. The provider-specific
 // command (github, gitea, or gitlab) is chosen based on
@@ -68,6 +70,10 @@ type fluxBootstrapParams struct {
 
 	// TokenFile is the path to the file containing the access token.
 	TokenFile string
+
+	// Personal indicates that a GitHub owner is a user account rather than an
+	// organization. It is ignored for non-GitHub providers.
+	Personal bool
 }
 
 // resolveFluxBootstrapParams extracts and validates all parameters needed for
@@ -135,6 +141,7 @@ func resolveFluxBootstrapParams(cfg *v2.Config) (*fluxBootstrapParams, error) {
 		Branch:     branch,
 		Path:       bootstrapPath,
 		TokenFile:  tokenFile,
+		Personal:   cfg.OpenCenter.GitOps.Auth.Token.Personal,
 	}, nil
 }
 
@@ -160,10 +167,14 @@ func (p *openstackBootstrapProvider) runFluxBootstrap(ctx context.Context, cfg *
 		fluxArgs = []string{
 			"bootstrap", "github",
 			"--token-auth",
+			"--toleration-keys=" + openStackCloudProviderToleration,
 			"--owner=" + params.Owner,
 			"--repository=" + params.Repository,
 			"--branch=" + params.Branch,
 			"--path=" + params.Path,
+		}
+		if params.Personal {
+			fluxArgs = append(fluxArgs, "--personal")
 		}
 		env["GITHUB_TOKEN"] = token
 
@@ -171,6 +182,7 @@ func (p *openstackBootstrapProvider) runFluxBootstrap(ctx context.Context, cfg *
 		fluxArgs = []string{
 			"bootstrap", "gitea",
 			"--token-auth",
+			"--toleration-keys=" + openStackCloudProviderToleration,
 			"--owner=" + params.Owner,
 			"--repository=" + params.Repository,
 			"--branch=" + params.Branch,
@@ -182,6 +194,7 @@ func (p *openstackBootstrapProvider) runFluxBootstrap(ctx context.Context, cfg *
 		fluxArgs = []string{
 			"bootstrap", "gitlab",
 			"--token-auth",
+			"--toleration-keys=" + openStackCloudProviderToleration,
 			"--owner=" + params.Owner,
 			"--repository=" + params.Repository,
 			"--branch=" + params.Branch,
@@ -291,18 +304,24 @@ func splitFluxOwnerRepo(pathPart string) (owner, repo string, err error) {
 func fluxBootstrapPlanCommands(params *fluxBootstrapParams) []BootstrapPlanCommand {
 	switch params.Provider {
 	case "github":
-		return []BootstrapPlanCommand{commandPlan("flux",
+		args := []string{
 			"bootstrap", "github",
 			"--token-auth",
-			"--owner="+params.Owner,
-			"--repository="+params.Repository,
-			"--branch="+params.Branch,
-			"--path="+params.Path,
-		)}
+			"--toleration-keys=" + openStackCloudProviderToleration,
+			"--owner=" + params.Owner,
+			"--repository=" + params.Repository,
+			"--branch=" + params.Branch,
+			"--path=" + params.Path,
+		}
+		if params.Personal {
+			args = append(args, "--personal")
+		}
+		return []BootstrapPlanCommand{commandPlan("flux", args...)}
 	case "gitea":
 		return []BootstrapPlanCommand{commandPlan("flux",
 			"bootstrap", "gitea",
 			"--token-auth",
+			"--toleration-keys="+openStackCloudProviderToleration,
 			"--owner="+params.Owner,
 			"--repository="+params.Repository,
 			"--branch="+params.Branch,
@@ -312,6 +331,7 @@ func fluxBootstrapPlanCommands(params *fluxBootstrapParams) []BootstrapPlanComma
 		return []BootstrapPlanCommand{commandPlan("flux",
 			"bootstrap", "gitlab",
 			"--token-auth",
+			"--toleration-keys="+openStackCloudProviderToleration,
 			"--owner="+params.Owner,
 			"--repository="+params.Repository,
 			"--branch="+params.Branch,

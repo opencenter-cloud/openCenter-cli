@@ -35,8 +35,12 @@ type RenderSpec struct {
 	ExtraDependencies       []string
 	ConditionalDependencies []catalogConditionalDependency
 	OverrideDependsOn       []string
-	OverrideValues          string
-	KustomizationContent    string
+	// SkipSourcesDependency lets bootstrap-priority services reconcile before the
+	// aggregate sources gate. Use only for services that must start before external
+	// git sources are ready (e.g. openstack-ccm, which unblocks CoreDNS and DNS).
+	SkipSourcesDependency bool
+	OverrideValues        string
+	KustomizationContent  string
 
 	OverrideValuesRenderer           OverrideValuesRenderer
 	OverlayFilesRenderer             OverlayFilesRenderer
@@ -151,7 +155,10 @@ func newBuiltInRenderCatalog() RenderCatalog {
 		{
 			ServiceName: "openstack-ccm", DefaultNamespace: "openstack-ccm", HasOverrideValues: true, NamespaceStage: true,
 			SourceName: "opencenter-openstack-ccm", SourceGroup: "openstack-ccm", EmitSource: true,
-			BasePath: "applications/base/services/openstack-ccm", ExtraDependencies: []string{"openstack-ccm-override"}, OverrideDependsOn: []string{"sources", "openstack-ccm-namespace"},
+			// SkipSourcesDependency: CCM is bootstrap-priority. It must reconcile before
+			// the sources aggregate gate is ready: DNS isn't available until CCM removes
+			// the cloud-provider-uninitialized taint, and sources needs DNS to fetch repos.
+			BasePath: "applications/base/services/openstack-ccm", ExtraDependencies: []string{"openstack-ccm-override"}, OverrideDependsOn: []string{"openstack-ccm-namespace"}, SkipSourcesDependency: true,
 			OverrideValuesRenderer: templateRenderer(openstackCCMTemplate),
 		},
 		{
@@ -182,6 +189,7 @@ func newBuiltInRenderCatalog() RenderCatalog {
 			ServiceName: "weave-gitops", DefaultNamespace: "flux-system", HasOverrideValues: true,
 			SourceName: "opencenter-weave-gitops", SourceGroup: "weave-gitops", EmitSource: true,
 			BasePath: "applications/base/services/weave-gitops", OverrideDependsOn: []string{"sources", "envoy-gateway-api-base"},
+			OverrideValuesRenderer: weaveGitOpsRenderer,
 		},
 		{
 			ServiceName: "longhorn", DefaultNamespace: "longhorn-system", HasOverrideValues: true,

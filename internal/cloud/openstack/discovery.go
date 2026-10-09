@@ -66,8 +66,6 @@ func (c *GophercloudDiscoveryClient) Discover(ctx context.Context, cfg *v2.Confi
 		IdentityEndpoint:            authURL,
 		ApplicationCredentialID:     appCredID,
 		ApplicationCredentialSecret: appCredSecret,
-		DomainName:                  strings.TrimSpace(creds.Domain),
-		TenantName:                  firstNonEmpty(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ProjectName), strings.TrimSpace(cfg.OpenCenter.Infrastructure.Cloud.OpenStack.TenantName)),
 		AllowReauth:                 true,
 	}
 

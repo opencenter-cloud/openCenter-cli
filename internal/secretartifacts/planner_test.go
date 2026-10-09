@@ -85,6 +85,25 @@ func TestPlanDefaultGrafanaSecretContainsUserAndPassword(t *testing.T) {
 	require.NotEmpty(t, grafana.Payload["admin_password"])
 }
 
+func TestPlanLegacyGrafanaSecretDefaultsMissingAdminUser(t *testing.T) {
+	cfg := &v2.Config{Secrets: v2.SecretsConfig{Grafana: v2.GrafanaSecrets{
+		AdminPassword: "grafana-password",
+	}}}
+
+	artifacts, err := Plan(cfg)
+	require.NoError(t, err)
+	var grafana *Artifact
+	for i := range artifacts {
+		if artifacts[i].LogicalService == "grafana" {
+			grafana = &artifacts[i]
+			break
+		}
+	}
+	require.NotNil(t, grafana)
+	require.Equal(t, "admin", grafana.Payload["admin_user"])
+	require.Equal(t, "grafana-password", grafana.Payload["admin_password"])
+}
+
 func TestPlanIncludesEtcdBackupAndVeleroWorkloadSecrets(t *testing.T) {
 	cfg := &v2.Config{
 		OpenCenter: v2.OpenCenterConfig{Services: map[string]any{

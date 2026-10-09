@@ -51,6 +51,27 @@ func templateRenderer(tmpl string) OverrideValuesRenderer {
 	}
 }
 
+// weaveGitOpsRenderer renders the chart-required bcrypt password hash. Guided
+// configuration commonly supplies only the plaintext password; keeping the
+// fallback here prevents generation of an invalid empty passwordHash value.
+// An explicitly configured hash is preserved unchanged.
+func weaveGitOpsRenderer(cfg v2.Config) (string, error) {
+	if strings.TrimSpace(cfg.Secrets.WeaveGitOps.PasswordHash) == "" && cfg.Secrets.WeaveGitOps.Password != "" {
+		htpasswd, ok := sprig.TxtFuncMap()["htpasswd"].(func(string, string) string)
+		if !ok {
+			return "", fmt.Errorf("weave-gitops: bcrypt password renderer is unavailable")
+		}
+		entry := htpasswd("admin", cfg.Secrets.WeaveGitOps.Password)
+		_, passwordHash, found := strings.Cut(entry, ":")
+		if !found || strings.TrimSpace(passwordHash) == "" {
+			return "", fmt.Errorf("weave-gitops: failed to generate password hash")
+		}
+		cfg.Secrets.WeaveGitOps.PasswordHash = passwordHash
+	}
+
+	return templateRenderer(weaveGitOpsTemplate)(cfg)
+}
+
 type mimirStorageTemplateData struct {
 	Backend                string
 	BucketName             string
@@ -260,8 +281,15 @@ func staticRenderer(content string) OverrideValuesRenderer {
 
 // --- Templates (moved from .tpl files) ---
 
+const weaveGitOpsTemplate = `adminUser:
+  create: true
+  username: admin
+  passwordHash: {{ .Secrets.WeaveGitOps.PasswordHash }}
+`
+
 const openstackCCMTemplate = `cloudConfig:
   global:
+    {{- if .OpenCenter.Infrastructure.Cloud.OpenStack }}
     auth-url: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL }}
     application-credential-id: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID }}
     application-credential-secret: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialSecret }}
@@ -269,9 +297,21 @@ const openstackCCMTemplate = `cloudConfig:
     region: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Region }}
     tenant-name: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.TenantName }}
     tls-insecure: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Insecure | default false }}
+    {{- else if .OpenCenter.Infrastructure.Cloud.Magnum }}
+    auth-url: {{ .OpenCenter.Infrastructure.Cloud.Magnum.AuthURL }}
+    username: {{ .OpenCenter.Infrastructure.Cloud.Magnum.Username }}
+    password: {{ .OpenCenter.Infrastructure.Cloud.Magnum.Password }}
+    user-domain-name: {{ .OpenCenter.Infrastructure.Cloud.Magnum.UserDomainName | default "default" }}
+    project-id: {{ .OpenCenter.Infrastructure.Cloud.Magnum.ProjectID }}
+    project-domain-name: {{ .OpenCenter.Infrastructure.Cloud.Magnum.ProjectDomainName | default "default" }}
+    region: {{ .OpenCenter.Infrastructure.Cloud.Magnum.Region }}
+    tls-insecure: {{ .OpenCenter.Infrastructure.Cloud.Magnum.Insecure | default false }}
+    {{- end }}
+  {{- if .OpenCenter.Infrastructure.Cloud.OpenStack }}
   loadBalancer:
     floating-network-id: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Networking.FloatingNetworkID }}
     subnet-id: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Networking.SubnetID }}
+  {{- end }}
 `
 
 const openstackCSITemplate = `secret:
@@ -282,6 +322,7 @@ const openstackCSITemplate = `secret:
   name: cinder-csi-cloud-config
   data:
     cloud.conf: |-
+      {{- if .OpenCenter.Infrastructure.Cloud.OpenStack }}
       [Global]
       auth-url = {{ .OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL }}
       application-credential-id = {{ .OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID }}
@@ -290,6 +331,17 @@ const openstackCSITemplate = `secret:
       region = {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Region }}
       tenant-name = {{ .OpenCenter.Infrastructure.Cloud.OpenStack.TenantName }}
       tls-insecure = {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Insecure | default false }}
+      {{- else if .OpenCenter.Infrastructure.Cloud.Magnum }}
+      [Global]
+      auth-url = {{ .OpenCenter.Infrastructure.Cloud.Magnum.AuthURL }}
+      username = {{ .OpenCenter.Infrastructure.Cloud.Magnum.Username }}
+      password = {{ .OpenCenter.Infrastructure.Cloud.Magnum.Password }}
+      user-domain-name = {{ .OpenCenter.Infrastructure.Cloud.Magnum.UserDomainName | default "default" }}
+      tenant-id = {{ .OpenCenter.Infrastructure.Cloud.Magnum.ProjectID }}
+      project-domain-name = {{ .OpenCenter.Infrastructure.Cloud.Magnum.ProjectDomainName | default "default" }}
+      region = {{ .OpenCenter.Infrastructure.Cloud.Magnum.Region }}
+      tls-insecure = {{ .OpenCenter.Infrastructure.Cloud.Magnum.Insecure | default false }}
+      {{- end }}
 `
 
 const vsphereCsiTemplate = `global:

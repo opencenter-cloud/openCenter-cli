@@ -80,7 +80,8 @@ func (h *defaultHydrator) Hydrate(cfg interface{}, provider, region string) erro
 }
 
 func skipsProviderRegionDefaults(provider string) bool {
-	return strings.EqualFold(strings.TrimSpace(provider), "kind")
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	return provider == "kind" || provider == "magnum"
 }
 
 // GetAppliedDefaults returns a map of field paths to their default sources.

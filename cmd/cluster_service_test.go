@@ -409,6 +409,21 @@ func TestClusterServiceEnableParamPreservesJSONCommasAtCommandBoundary(t *testin
 	_, cleanup := setupServiceTestEnv(t, clusterName)
 	defer cleanup()
 
+	// MetalLB owns load-balancing in this fixture, so disable the OpenStack CCM
+	// controller that is enabled by default for OpenStack clusters.
+	cfg, err := loadConfig(context.Background(), clusterName)
+	if err != nil {
+		t.Fatalf("load initial config: %v", err)
+	}
+	ccm, ok := cfg.OpenCenter.Services["openstack-ccm"].(*services.DefaultServiceConfig)
+	if !ok {
+		t.Fatalf("openstack-ccm config type = %T", cfg.OpenCenter.Services["openstack-ccm"])
+	}
+	ccm.Enabled = false
+	if err := saveConfig(context.Background(), cfg); err != nil {
+		t.Fatalf("save MetalLB ownership fixture: %v", err)
+	}
+
 	jsonPools := `[{"name":"public","addresses":["192.0.2.10-192.0.2.20","198.51.100.10-198.51.100.20"]}]`
 	cmd := newClusterServiceEnableCmd()
 	cmd.SetOut(&bytes.Buffer{})
@@ -418,7 +433,7 @@ func TestClusterServiceEnableParamPreservesJSONCommasAtCommandBoundary(t *testin
 		t.Fatalf("enable metallb with JSON parameter: %v", err)
 	}
 
-	cfg, err := loadConfig(context.Background(), clusterName)
+	cfg, err = loadConfig(context.Background(), clusterName)
 	if err != nil {
 		t.Fatalf("load persisted config: %v", err)
 	}

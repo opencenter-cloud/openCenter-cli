@@ -404,6 +404,11 @@ func TestRenderObservabilityPVCStorageClassPinned(t *testing.T) {
 	if got := strings.Count(kpsValues, "storageClassName: "+sc); got < 3 {
 		t.Fatalf("expected kube-prometheus-stack to pin storageClassName %q on Prometheus/Alertmanager/Grafana (>=3), got %d:\n%s", sc, got, kpsValues)
 	}
+	for _, size := range []string{"storage: 10Gi", "storage: 150Gi", "size: 10Gi"} {
+		if !strings.Contains(kpsValues, size) {
+			t.Fatalf("expected kube-prometheus-stack PVC size %q:\n%s", size, kpsValues)
+		}
+	}
 }
 
 // TestRenderKafkaClusterPVCStorageClassPinned verifies the kafka-cluster Strimzi

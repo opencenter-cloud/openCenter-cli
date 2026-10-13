@@ -412,9 +412,13 @@ func planMultiPoolConfig(t *testing.T) v2.Config {
 	t.Helper()
 	cfg, err := v2.NewV2Default("k8s-multipool", "openstack")
 	require.NoError(t, err)
+	useMetalLBTestOwnership(cfg)
 	cfg.OpenCenter.Services["harbor"].(*services.HarborConfig).S3Endpoint = "https://harbor-s3.example"
 
-	for _, serviceCfg := range cfg.OpenCenter.Services {
+	for name, serviceCfg := range cfg.OpenCenter.Services {
+		if name == "openstack-ccm" {
+			continue
+		}
 		if base := extractBaseConfig(serviceCfg); base != nil {
 			base.Enabled = true
 		}
@@ -450,6 +454,7 @@ func listenerNameSet(doc map[string]any) map[string]bool {
 // default pool to prove the helper leaves default-pool services untouched.
 func TestTplHTTPRoutesRepointToPoolGateway(t *testing.T) {
 	cfg := newDefault("tpl-repoint")
+	useMetalLBTestOwnership(&cfg)
 	dst := t.TempDir()
 	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
 

@@ -21,16 +21,16 @@ const DefaultGitBaseRepoURLSSH = "ssh://git@github.com/opencenter-cloud/openCent
 const DefaultGitBaseRepoURLHTTPS = "https://github.com/opencenter-cloud/openCenter-gitops-base.git"
 
 const (
-	defaultSchemaVersion              = "2.0"
-	defaultOrganization               = "opencenter"
-	defaultProvider                   = "openstack"
-	defaultRegion                     = "DFW3"
-	defaultEnvironment                = "dev"
-	defaultBaseDomain                 = "k8s.opencenter.cloud"
-	defaultGitBranch                  = "main"
-	defaultGitURLPlaceholder          = "ssh://git@example.com/opencenter/cluster-config.git"
-	defaultHTTPSGitURLPlaceholder     = "https://github.com/opencenter/cluster-config.git"
-	defaultGitBaseRepoURL             = "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git"
+	defaultSchemaVersion          = "2.0"
+	defaultOrganization           = "opencenter"
+	defaultProvider               = "openstack"
+	defaultRegion                 = "DFW3"
+	defaultEnvironment            = "dev"
+	defaultBaseDomain             = "k8s.opencenter.cloud"
+	defaultGitBranch              = "main"
+	defaultGitURLPlaceholder      = "ssh://git@example.com/opencenter/cluster-config.git"
+	defaultHTTPSGitURLPlaceholder = "https://github.com/opencenter/cluster-config.git"
+	defaultGitBaseRepoURL         = "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git"
 	// Base repo (gitops-base) is pinned to the immutable 2026.03-rc01 tag so
 	// generated clusters resolve to a reproducible commit. The release (tag) slot
 	// takes precedence over branch, so branch is left empty.
@@ -88,6 +88,21 @@ type cliConfig struct {
 
 // NewV2Default creates a schema-valid v2 configuration with init defaults.
 func NewV2Default(name, provider string) (*Config, error) {
+	return newV2Default(name, provider, "")
+}
+
+// NewV2DefaultForRegion creates a schema-valid v2 configuration whose
+// region-derived defaults (FQDNs, node suffix, NTP servers, and provider
+// settings) are calculated from region at construction time.
+func NewV2DefaultForRegion(name, provider, region string) (*Config, error) {
+	region = strings.TrimSpace(region)
+	if region == "" {
+		return nil, fmt.Errorf("region cannot be empty")
+	}
+	return newV2Default(name, provider, region)
+}
+
+func newV2Default(name, provider, explicitRegion string) (*Config, error) {
 	defaults := loadCLIDefaults()
 	selectedProvider := canonicalInfrastructureProvider(strings.TrimSpace(provider))
 	if selectedProvider == "" {
@@ -97,7 +112,10 @@ func NewV2Default(name, provider string) (*Config, error) {
 		selectedProvider = defaultProvider
 	}
 
-	region := strings.TrimSpace(defaults.Region)
+	region := strings.TrimSpace(explicitRegion)
+	if region == "" {
+		region = strings.TrimSpace(defaults.Region)
+	}
 	if region == "" {
 		region = defaultRegion
 	}
@@ -410,6 +428,22 @@ func NewV2FullTemplate(name, provider string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return populateV2FullTemplate(cfg)
+}
+
+// NewV2FullTemplateForRegion is the explicit-region counterpart to
+// NewV2FullTemplate.
+func NewV2FullTemplateForRegion(name, provider, region string) (*Config, error) {
+	cfg, err := NewV2DefaultForRegion(name, provider, region)
+	if err != nil {
+		return nil, err
+	}
+
+	return populateV2FullTemplate(cfg)
+}
+
+func populateV2FullTemplate(cfg *Config) (*Config, error) {
 
 	cfg.Metadata.Version = "template"
 	cfg.Metadata.Labels = map[string]string{

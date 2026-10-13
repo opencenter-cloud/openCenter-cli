@@ -34,6 +34,7 @@ type InitOptions struct {
 	// already present in a loaded --config-file.
 	OrganizationExplicit  bool
 	Provider              string
+	Region                string
 	DeploymentMethod      string
 	ConfigFile            string
 	ConfigMap             map[string]any
@@ -378,12 +379,20 @@ func (s *InitService) createDefaultConfig(opts InitOptions) (*v2.Config, map[str
 	)
 
 	if opts.FullSchema {
-		cfg, err = v2.NewV2FullTemplate(opts.ClusterName, opts.Provider)
+		if strings.TrimSpace(opts.Region) != "" {
+			cfg, err = v2.NewV2FullTemplateForRegion(opts.ClusterName, opts.Provider, opts.Region)
+		} else {
+			cfg, err = v2.NewV2FullTemplate(opts.ClusterName, opts.Provider)
+		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("building v2 full template: %w", err)
 		}
 	} else {
-		cfg, err = v2.NewV2Default(opts.ClusterName, opts.Provider)
+		if strings.TrimSpace(opts.Region) != "" {
+			cfg, err = v2.NewV2DefaultForRegion(opts.ClusterName, opts.Provider, opts.Region)
+		} else {
+			cfg, err = v2.NewV2Default(opts.ClusterName, opts.Provider)
+		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("building v2 defaults: %w", err)
 		}
@@ -432,6 +441,17 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 	if opts.Provider != "" {
 		cfg.OpenCenter.Infrastructure.Provider = opts.Provider
 		setNestedConfigValue(configMap, opts.Provider, "opencenter", "infrastructure", "provider")
+	}
+
+	// An explicit region is applied before defaults for newly-created configs,
+	// so all derived fields are already consistent. For loaded profiles, reject
+	// a conflicting --region instead of silently creating a mixed-region file.
+	if opts.Region != "" {
+		if cfg.OpenCenter.Meta.Region != "" && !strings.EqualFold(cfg.OpenCenter.Meta.Region, opts.Region) {
+			return fmt.Errorf("--region %q conflicts with config-file region %q", opts.Region, cfg.OpenCenter.Meta.Region)
+		}
+		cfg.OpenCenter.Meta.Region = opts.Region
+		setNestedConfigValue(configMap, opts.Region, "opencenter", "meta", "region")
 	}
 
 	// Apply CLI config defaults

@@ -203,7 +203,7 @@ func (p *openstackBootstrapProvider) installOpenStackCalicoWithHelm(ctx context.
 	// Install/upgrade Calico using Helm. Passing --version pins the chart to
 	// the version resolved from the cluster config; without it helm would use
 	// whatever the local repo cache treats as latest.
-	if _, err := p.runner.Run(ctx, tmpDir, env, "helm",
+	helmArgs := []string{
 		"upgrade", "--install",
 		selection.ReleaseName,
 		calicoHelmChart,
@@ -211,16 +211,28 @@ func (p *openstackBootstrapProvider) installOpenStackCalicoWithHelm(ctx context.
 		"--namespace", selection.Namespace,
 		"--create-namespace",
 		"--skip-crds",
-		// Helm 4 uses server-side apply for this release. On a retry, the Tigera
-		// operator already owns normalized Installation fields such as ipPools;
-		// force conflict resolution so the declared values (including bootstrap
-		// tolerations) can be reconciled idempotently.
-		"--force-conflicts",
-		"-f", valuesPath,
-	); err != nil {
+	}
+	// Helm 4 uses server-side apply for this release. On a retry, the Tigera
+	// operator can own normalized Installation fields such as ipPools. Helm 3
+	// does not recognize --force-conflicts, so only pass it when the installed
+	// Helm advertises support for the flag.
+	if p.helmUpgradeSupportsForceConflicts(ctx, tmpDir, env) {
+		helmArgs = append(helmArgs, "--force-conflicts")
+	}
+	helmArgs = append(helmArgs, "-f", valuesPath)
+	if _, err := p.runner.Run(ctx, tmpDir, env, "helm", helmArgs...); err != nil {
 		return fmt.Errorf("helm install Calico %s: %w", selection.Version, err)
 	}
 	return nil
+}
+
+func (p *openstackBootstrapProvider) helmUpgradeSupportsForceConflicts(ctx context.Context, dir string, env map[string]string) bool {
+	out, err := p.runner.Run(ctx, dir, env, "helm", "upgrade", "--help")
+	if err != nil {
+		logging.Debugf("bootstrap: unable to inspect helm upgrade flags; continuing without --force-conflicts: %v", err)
+		return false
+	}
+	return strings.Contains(string(out), "--force-conflicts")
 }
 
 // resolveOpenStackCalicoValuesPath builds the path to the Calico Helm override
@@ -433,7 +445,7 @@ func openStackNetworkPluginPlanCommands(selection openStackNetworkPluginSelectio
 			commandPlan("kubectl", kubectlArgs(kubeconfigPath, "apply", "--server-side", "-f", fmt.Sprintf(calicoOperatorCRDsURLFormat, selection.Version))...),
 			commandPlan("helm", "repo", "add", calicoHelmRepoName, calicoHelmRepo),
 			commandPlan("helm", "repo", "update", calicoHelmRepoName),
-			commandPlan("helm", "upgrade", "--install", selection.ReleaseName, calicoHelmChart, "--version", selection.Version, "--namespace", selection.Namespace, "--create-namespace", "--force-conflicts", "-f", "<organization>/applications/overlays/<cluster>/services/calico/helm-values/override_values.yaml"),
+			commandPlan("helm", "upgrade", "--install", selection.ReleaseName, calicoHelmChart, "--version", selection.Version, "--namespace", selection.Namespace, "--create-namespace", "-f", "<organization>/applications/overlays/<cluster>/services/calico/helm-values/override_values.yaml"),
 		}
 		return append(commands, openStackNetworkPluginReadinessPlanCommands(selection, kubeconfigPath)...)
 	}

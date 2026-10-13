@@ -153,7 +153,7 @@ users:
 		t.Fatalf("BuildSteps() error = %v", err)
 	}
 
-	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration"}
+	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration", "kubespray-activate-oidc"}
 	if got := bootstrapStepIDs(steps); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("BuildSteps() IDs = %v, want %v", got, wantIDs)
 	}
@@ -485,7 +485,12 @@ func TestOpenStackNetworkPluginInstallCalicoUsesHelmChart(t *testing.T) {
 		t.Fatalf("write override values: %v", err)
 	}
 
-	fakeRunner := &fakeLifecycleRunner{}
+	fakeRunner := &fakeLifecycleRunner{onRun: func(_ string, _ map[string]string, name string, args ...string) ([]byte, error) {
+		if name == "helm" && strings.Join(args, " ") == "upgrade --help" {
+			return []byte("      --force-conflicts   force server-side apply conflicts"), nil
+		}
+		return nil, nil
+	}}
 	provider := &openstackBootstrapProvider{runner: fakeRunner}
 
 	step := findBootstrapStep(t, provider, cfg, cfg.GitDir(), kubeconfigPath, "openstack-install-network-plugin")
@@ -515,6 +520,32 @@ func TestOpenStackNetworkPluginInstallCalicoUsesHelmChart(t *testing.T) {
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" wait --for=create tigerastatus/calico --timeout=5m")
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" wait --for=condition=Available tigerastatus/calico --timeout=10m")
 	assertRecordedCommandContains(t, fakeRunner.calls, "kubectl", "--kubeconfig "+kubeconfigPath+" -n calico-system wait --for=condition=Ready pods --all --timeout=10m")
+}
+
+func TestHelmUpgradeSupportsForceConflicts(t *testing.T) {
+	tests := []struct {
+		name   string
+		output string
+		runErr error
+		want   bool
+	}{
+		{name: "helm 4", output: "--force-conflicts force server-side apply conflicts", want: true},
+		{name: "helm 3", output: "--force --force-update", want: false},
+		{name: "help failure", runErr: errors.New("helm unavailable"), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &fakeLifecycleRunner{onRun: func(_ string, _ map[string]string, _ string, _ ...string) ([]byte, error) {
+				return []byte(tt.output), tt.runErr
+			}}
+			provider := &openstackBootstrapProvider{runner: runner}
+			if got := provider.helmUpgradeSupportsForceConflicts(context.Background(), t.TempDir(), nil); got != tt.want {
+				t.Fatalf("helmUpgradeSupportsForceConflicts() = %v, want %v", got, tt.want)
+			}
+			assertRecordedCommandContains(t, runner.calls, "helm", "upgrade --help")
+		})
+	}
 }
 
 func TestOpenStackCalicoSelectionAcceptsAnyVersion(t *testing.T) {

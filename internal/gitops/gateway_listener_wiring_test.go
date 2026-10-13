@@ -77,6 +77,8 @@ func TestGeneratedHTTPRouteSectionNamesResolveToGatewayListeners(t *testing.T) {
 		"prometheus-gateway-route":   "prometheus-https",
 		"alertmanager-gateway-route": "alertmanager-https",
 		"grafana-gateway-route":      "grafana-https",
+		"headlamp-gateway-route":     "headlamp-https",
+		"weave-gitops-gateway-route": "gitops-https",
 	}
 	seenMonitoringRoutes := make(map[string]string, len(requiredMonitoringRoutes))
 	for _, ref := range refs {
@@ -135,7 +137,12 @@ func planAllServicesEnabled(t *testing.T) []clusterAppAction {
 	require.NoError(t, err)
 	cfg.OpenCenter.Services["harbor"].(*configservices.HarborConfig).S3Endpoint = "https://harbor-s3.example"
 
-	for _, serviceCfg := range cfg.OpenCenter.Services {
+	for serviceName, serviceCfg := range cfg.OpenCenter.Services {
+		// OpenStack CCM owns LoadBalancer Services for this fixture. MetalLB is
+		// mutually exclusive with it and is not needed to exercise route wiring.
+		if serviceName == "metallb" {
+			continue
+		}
 		if base := extractBaseConfig(serviceCfg); base != nil {
 			base.Enabled = true
 		}

@@ -15,6 +15,16 @@ func newDefault(name string) v2.Config {
 	return mustNewGitOpsTestConfig(name, "openstack")
 }
 
+// useMetalLBTestOwnership selects MetalLB as the sole LoadBalancer controller
+// for fixtures that exercise MetalLB while starting from OpenStack defaults.
+func useMetalLBTestOwnership(cfg *v2.Config) {
+	if service := cfg.OpenCenter.Services["openstack-ccm"]; service != nil {
+		if base := extractBaseConfig(service); base != nil {
+			base.Enabled = false
+		}
+	}
+}
+
 func applyProviderDefaults(cfg *v2.Config, provider string) error {
 	next, err := v2.NewV2Default(cfg.ClusterName(), provider)
 	if err != nil {

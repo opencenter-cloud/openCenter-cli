@@ -8,6 +8,7 @@ import (
 
 	openstackcloud "github.com/opencenter-cloud/opencenter-cli/internal/cloud/openstack"
 	"github.com/opencenter-cloud/opencenter-cli/internal/cluster/orchestration"
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 )
 
@@ -115,6 +116,7 @@ func (o *openStackConfigureOrchestrator) ApplyAnswers(cfg *v2.Config, answers or
 			orchestration.ConfigPatch{Group: configureGroupProvider, Path: "opencenter.meta.region", Label: "Region", Value: value},
 			orchestration.ConfigPatch{Group: configureGroupProvider, Path: "opencenter.infrastructure.cloud.openstack.region", Label: "OpenStack region", Value: value},
 		)
+		changes.Patches = append(changes.Patches, openStackRegionDerivedPatches(cfg, value)...)
 	}
 	if value := strings.TrimSpace(answers["openstack.project_id"]); value != "" {
 		changes.Patches = append(changes.Patches, orchestration.ConfigPatch{Group: configureGroupProvider, Path: "opencenter.infrastructure.cloud.openstack.project_id", Label: "Project ID", Value: value})
@@ -210,6 +212,65 @@ func (o *openStackConfigureOrchestrator) ApplyAnswers(cfg *v2.Config, answers or
 	}
 
 	return changes, nil
+}
+
+// openStackRegionDerivedPatches moves values that still match the previous
+// region's generated defaults. Explicit custom hostnames and DNS zones are
+// deliberately preserved.
+func openStackRegionDerivedPatches(cfg *v2.Config, newRegion string) []orchestration.ConfigPatch {
+	oldRegion := strings.TrimSpace(cfg.OpenCenter.Meta.Region)
+	newRegion = strings.TrimSpace(newRegion)
+	if oldRegion == "" || newRegion == "" || strings.EqualFold(oldRegion, newRegion) {
+		return nil
+	}
+
+	cluster := cfg.OpenCenter.Cluster
+	oldFQDN := fmt.Sprintf("%s.%s.%s", cluster.ClusterName, strings.ToLower(oldRegion), cluster.BaseDomain)
+	newFQDN := fmt.Sprintf("%s.%s.%s", cluster.ClusterName, strings.ToLower(newRegion), cluster.BaseDomain)
+	patches := make([]orchestration.ConfigPatch, 0, 12)
+	add := func(path, label, current, oldDefault, newDefault string) {
+		if strings.EqualFold(strings.TrimSpace(current), strings.TrimSpace(oldDefault)) {
+			patches = append(patches, orchestration.ConfigPatch{Group: configureGroupProvider, Path: path, Label: label, Value: newDefault})
+		}
+	}
+
+	add("opencenter.cluster.cluster_fqdn", "Cluster FQDN", cluster.ClusterFQDN, oldFQDN, newFQDN)
+	add("opencenter.infrastructure.node_naming.suffix", "Node suffix", cfg.OpenCenter.Infrastructure.NodeNaming.Suffix, oldRegion, newRegion)
+	add("opencenter.infrastructure.networking.dns_zone_name", "DNS zone", cfg.OpenCenter.Infrastructure.Networking.DNSZoneName, oldFQDN, newFQDN)
+	openstackCfg := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
+	if openstackCfg != nil {
+		add("opencenter.infrastructure.cloud.openstack.dns_zone_name", "OpenStack DNS zone", openstackCfg.DNSZoneName, oldFQDN, newFQDN)
+		if openstackCfg.Networking != nil {
+			add("opencenter.infrastructure.cloud.openstack.networking.designate.dns_zone_name", "Designate DNS zone", openstackCfg.Networking.Designate.DNSZoneName, oldFQDN, newFQDN)
+		}
+	}
+
+	serviceHostnamePatch := func(name, path, label, current, prefix string) {
+		add("opencenter.services."+name+"."+path, label, current, prefix+oldFQDN, prefix+newFQDN)
+	}
+	if svc, ok := cfg.OpenCenter.Services["headlamp"].(*services.HeadlampConfig); ok {
+		serviceHostnamePatch("headlamp", "hostname", "Headlamp hostname", svc.Hostname, "dashboard.")
+	}
+	if svc, ok := cfg.OpenCenter.Services["keycloak"].(*services.KeycloakConfig); ok {
+		serviceHostnamePatch("keycloak", "hostname", "Keycloak hostname", svc.Hostname, "auth.")
+	}
+	if svc, ok := cfg.OpenCenter.Services["longhorn"].(*services.LonghornConfig); ok {
+		serviceHostnamePatch("longhorn", "hostname", "Longhorn hostname", svc.Hostname, "longhorn.")
+	}
+	if svc, ok := cfg.OpenCenter.Services["harbor"].(*services.HarborConfig); ok {
+		serviceHostnamePatch("harbor", "hostname", "Harbor hostname", svc.Hostname, "harbor.")
+		add("opencenter.services.harbor.external_url", "Harbor external URL", svc.ExternalURL, "https://harbor."+oldFQDN, "https://harbor."+newFQDN)
+	}
+	if svc, ok := cfg.OpenCenter.Services["kube-prometheus-stack"].(*services.PrometheusStackConfig); ok {
+		serviceHostnamePatch("kube-prometheus-stack", "hostname", "Grafana hostname", svc.Hostname, "grafana.")
+		serviceHostnamePatch("kube-prometheus-stack", "grafana_hostname", "Grafana hostname", svc.GrafanaHostname, "grafana.")
+		serviceHostnamePatch("kube-prometheus-stack", "prometheus_hostname", "Prometheus hostname", svc.PrometheusHostname, "prometheus.")
+		serviceHostnamePatch("kube-prometheus-stack", "alertmanager_hostname", "Alertmanager hostname", svc.AlertmanagerHostname, "alertmanager.")
+	}
+	if svc, ok := cfg.OpenCenter.ManagedServices["alert-proxy"].(*services.AlertProxyConfig); ok {
+		add("opencenter.managed_services.alert-proxy.http_route_fqdn", "Alert proxy hostname", svc.HTTPRouteFQDN, "alerts."+oldFQDN, "alerts."+newFQDN)
+	}
+	return patches
 }
 
 func (o *openStackConfigureOrchestrator) CapabilityRequests(cfg *v2.Config, discovery orchestration.DiscoveryResult) []orchestration.CapabilityRequest {

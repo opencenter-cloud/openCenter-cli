@@ -15,6 +15,7 @@ import (
 func TestRenderMetalLBOverlayBuildsWithKustomize(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("kustomize-metallb")
+	useMetalLBTestOwnership(&cfg)
 	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
 	cfg.OpenCenter.Services = cloneServiceMap(cfg.OpenCenter.Services)
 	cfg.OpenCenter.Services["metallb"] = &services.MetalLBConfig{
@@ -43,6 +44,7 @@ func TestRenderMetalLBOverlayBuildsWithKustomize(t *testing.T) {
 func TestServiceOverlayWithoutCustomResourcesBuilds(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("kustomize-empty-custom")
+	useMetalLBTestOwnership(&cfg)
 	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
 	cfg.OpenCenter.Services = cloneServiceMap(cfg.OpenCenter.Services)
 	cfg.OpenCenter.Services["metallb"] = &services.MetalLBConfig{BaseConfig: services.BaseConfig{Enabled: true}}
@@ -130,6 +132,7 @@ func TestGeneratedDefaultOverlayKustomizeFailureMatrix(t *testing.T) {
 		t.Errorf("generated-overlay kustomize failure in %s:\n%s", relative, failures[relative])
 	}
 }
+
 // seedFluxSystemFixture writes a minimal flux-system/ overlay directory as
 // `flux bootstrap` would, so the root overlay (which references ./flux-system)
 // can be built locally without a live bootstrap.

@@ -170,6 +170,32 @@ func TestNewV2DefaultPreservesPersistedRegionCase(t *testing.T) {
 	}
 }
 
+func TestNewV2DefaultForRegionDerivesSJC3Values(t *testing.T) {
+	t.Setenv("OPENCENTER_CONFIG_DIR", t.TempDir())
+
+	cfg, err := NewV2DefaultForRegion("sjc-cluster", "openstack", "SJC3")
+	if err != nil {
+		t.Fatalf("NewV2DefaultForRegion() error = %v", err)
+	}
+	if cfg.OpenCenter.Meta.Region != "SJC3" {
+		t.Fatalf("Meta.Region = %q, want SJC3", cfg.OpenCenter.Meta.Region)
+	}
+	if got, want := cfg.OpenCenter.Cluster.ClusterFQDN, "sjc-cluster.sjc3.k8s.opencenter.cloud"; got != want {
+		t.Fatalf("ClusterFQDN = %q, want %q", got, want)
+	}
+	if got := cfg.OpenCenter.Infrastructure.NodeNaming.Suffix; got != "SJC3" {
+		t.Fatalf("NodeNaming.Suffix = %q, want SJC3", got)
+	}
+	if got := cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Region; got != "SJC3" {
+		t.Fatalf("Cloud.OpenStack.Region = %q, want SJC3", got)
+	}
+	for _, server := range cfg.OpenCenter.Infrastructure.Networking.NTPServers {
+		if strings.Contains(strings.ToLower(server), "dfw3") {
+			t.Fatalf("NTP server retained DFW3 default: %q", server)
+		}
+	}
+}
+
 // TestNewV2Default_NoKnownLegacyFieldContamination verifies that NewV2Default produces
 // YAML that contains only current schema fields and none of the known legacy fields.
 func TestNewV2Default_NoKnownLegacyFieldContamination(t *testing.T) {

@@ -413,7 +413,10 @@ module "kubespray-cluster" {
   use_octavia                             = local.use_octavia
 {{- end }}
   {{- if .OpenCenter.Cluster.Kubernetes.OIDC.Enabled }}
-  kube_oidc_auth_enabled                  = local.kube_oidc_auth_enabled
+  # Bootstrap without OIDC to avoid the Kubernetes <-> Keycloak dependency
+  # cycle in CLI mode. `opencenter cluster deploy` activates it after Flux is
+  # running. Preserve the existing behavior for module-owned legacy deploys.
+  kube_oidc_auth_enabled                  = var.opencenter_lifecycle_mode == "cli" ? false : local.kube_oidc_auth_enabled
   kube_oidc_url                           = local.kube_oidc_url
   kube_oidc_client_id                     = local.kube_oidc_client_id
   kube_oidc_ca_file                       = local.kube_oidc_ca_file

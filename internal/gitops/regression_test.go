@@ -65,6 +65,7 @@ func TestRenderClusterAppsRenderFailureLeavesExistingTreeIntact(t *testing.T) {
 func TestRenderSingleServiceMatchesOwnershipChecks(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("single-service-ownership")
+	useMetalLBTestOwnership(&cfg)
 	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
 	cfg.OpenCenter.Services = cloneServiceMap(cfg.OpenCenter.Services)
 	cfg.OpenCenter.Services["metallb"] = &services.MetalLBConfig{BaseConfig: services.BaseConfig{Enabled: true}}
@@ -99,6 +100,7 @@ func TestRenderSingleServiceMatchesOwnershipChecks(t *testing.T) {
 func TestPlanClusterAppsPromotionReportsChangesWithoutWriting(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("dry-run-report")
+	useMetalLBTestOwnership(&cfg)
 	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
 	cfg.OpenCenter.Services = cloneServiceMap(cfg.OpenCenter.Services)
 	cfg.OpenCenter.Services["metallb"] = &services.MetalLBConfig{BaseConfig: services.BaseConfig{Enabled: true}}

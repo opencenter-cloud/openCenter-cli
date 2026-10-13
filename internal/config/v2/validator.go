@@ -23,6 +23,7 @@ import (
 
 	semver "github.com/Masterminds/semver/v3"
 	"github.com/go-playground/validator/v10"
+	configdefaults "github.com/opencenter-cloud/opencenter-cli/internal/config/defaults"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 )
 
@@ -574,6 +575,9 @@ func (v *defaultValidator) ValidateBusinessRules(cfg *Config) error {
 	if len(cfg.OpenCenter.LegacyTalos) > 0 {
 		return fmt.Errorf("opencenter.talos is not supported in v2; remove the opencenter.talos section")
 	}
+	if err := validateOpenStackRegionConsistency(cfg); err != nil {
+		return err
+	}
 
 	// Validate OpenTofu backend configuration
 	if err := v.validateOpenTofuBackend(&cfg.OpenTofu); err != nil {
@@ -590,6 +594,36 @@ func (v *defaultValidator) ValidateBusinessRules(cfg *Config) error {
 		return err
 	}
 
+	return nil
+}
+
+// validateOpenStackRegionConsistency catches stale region-derived defaults
+// from a profile that was created for one Rackspace region and later edited to
+// target another. Custom domains remain valid; only the managed default domain
+// convention is checked.
+func validateOpenStackRegionConsistency(cfg *Config) error {
+	if cfg == nil || !strings.EqualFold(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider), "openstack") {
+		return nil
+	}
+	region := strings.TrimSpace(cfg.OpenCenter.Meta.Region)
+	cloud := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
+	if cloud != nil && strings.TrimSpace(cloud.Region) != "" && !strings.EqualFold(cloud.Region, region) {
+		return fmt.Errorf("opencenter.infrastructure.cloud.openstack.region %q does not match opencenter.meta.region %q", cloud.Region, region)
+	}
+
+	clusterName := strings.TrimSpace(cfg.OpenCenter.Cluster.ClusterName)
+	baseDomain := strings.Trim(strings.TrimSpace(cfg.OpenCenter.Cluster.BaseDomain), ".")
+	clusterFQDN := strings.Trim(strings.TrimSpace(cfg.OpenCenter.Cluster.ClusterFQDN), ".")
+	if clusterName == "" || baseDomain == "" || clusterFQDN == "" || region == "" {
+		return nil
+	}
+	expected := fmt.Sprintf("%s.%s.%s", clusterName, strings.ToLower(region), baseDomain)
+	for _, knownRegion := range configdefaults.GetGlobalRegistry().ListRegions("openstack") {
+		managed := fmt.Sprintf("%s.%s.%s", clusterName, strings.ToLower(knownRegion), baseDomain)
+		if strings.EqualFold(clusterFQDN, managed) && !strings.EqualFold(clusterFQDN, expected) {
+			return fmt.Errorf("opencenter.cluster.cluster_fqdn %q was derived for region %s; expected %q for opencenter.meta.region %s", clusterFQDN, strings.ToUpper(knownRegion), expected, region)
+		}
+	}
 	return nil
 }
 
@@ -799,6 +833,15 @@ func (v *defaultValidator) ValidateServices(cfg *Config) error {
 		if err := validateMetalLBConfig(mlb); err != nil {
 			return err
 		}
+	}
+
+	// OpenStack CCM and MetalLB both reconcile classless LoadBalancer Services.
+	// Running both causes MetalLB to clear the address published by CCM when no
+	// MetalLB pool can satisfy the Service, leaving Gateway and DNS controllers
+	// without an address. Keep a single owner for cloud load balancers.
+	if strings.EqualFold(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider), "openstack") &&
+		metallbEnabled && isServiceEnabled(cfg, "openstack-ccm") {
+		return fmt.Errorf("opencenter.services.metallb cannot be enabled with openstack-ccm: both controllers manage classless LoadBalancer Services; disable metallb when OpenStack CCM owns cloud load balancers")
 	}
 
 	// OCTR-762: validate per-service MetalLB address pool selection. Any service

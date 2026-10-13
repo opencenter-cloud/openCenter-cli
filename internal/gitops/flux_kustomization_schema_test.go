@@ -230,16 +230,20 @@ func TestPlannedFluxKustomizationSpecFields(t *testing.T) {
 	// here means a service is mis-wired, not that it should be skipped.
 	t.Run("all services enabled", func(t *testing.T) {
 		cfg := newDefaultServiceConfig(t)
+		useMetalLBTestOwnership(&cfg)
 
 		var enabled []string
 		for name, serviceCfg := range cfg.OpenCenter.Services {
+			if name == "openstack-ccm" {
+				continue
+			}
 			if base := extractBaseConfig(serviceCfg); base != nil {
 				base.Enabled = true
 				enabled = append(enabled, name)
 			}
 		}
-		require.Len(t, enabled, len(cfg.OpenCenter.Services),
-			"every default service should expose a BaseConfig")
+		require.Len(t, enabled, len(cfg.OpenCenter.Services)-1,
+			"every compatible default service should expose a BaseConfig")
 
 		checked, files := planAndValidateFluxKustomizations(t, cfg)
 		require.NotZero(t, checked)

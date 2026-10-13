@@ -33,6 +33,7 @@ func TestPromoteOverlayRoundTripRender(t *testing.T) {
 func TestRenderClusterAppsSeedsCustomLayerForMetalLB(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("ownership-custom-layer")
+	useMetalLBTestOwnership(&cfg)
 	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
 	cfg.OpenCenter.Services["metallb"].(*services.MetalLBConfig).Enabled = true
 
@@ -56,6 +57,7 @@ func TestRenderClusterAppsSeedsCustomLayerForMetalLB(t *testing.T) {
 func TestRenderClusterAppsCustomLayerIsUserOwned(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("ownership-custom-owned")
+	useMetalLBTestOwnership(&cfg)
 	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
 	cfg.OpenCenter.Services["metallb"].(*services.MetalLBConfig).Enabled = true
 	if err := RenderClusterApps(cfg); err != nil {
@@ -745,6 +747,7 @@ func TestPromoteOverlayAdoptGeneratedDoesNotAffectUnplannedOrCustomFiles(t *test
 func TestRepositoryOwnershipFullAppsServiceFullRoundTrip(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("ownership-v1-round-trip")
+	useMetalLBTestOwnership(&cfg)
 	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
 	cfg.OpenCenter.Services["metallb"].(*services.MetalLBConfig).Enabled = true
 
@@ -805,6 +808,7 @@ func TestRepositoryOwnershipFullAppsServiceFullRoundTrip(t *testing.T) {
 func TestRepositoryOwnershipFullChangedServiceAppsServiceFullHandoff(t *testing.T) {
 	repo := t.TempDir()
 	cfg := newDefault("ownership-service-handoff")
+	useMetalLBTestOwnership(&cfg)
 	cfg.OpenCenter.GitOps.Repository.LocalDir = repo
 	metallb := cfg.OpenCenter.Services["metallb"].(*services.MetalLBConfig)
 	metallb.Enabled = true

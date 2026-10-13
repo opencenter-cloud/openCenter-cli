@@ -222,6 +222,26 @@ func kubePrometheusStackOverlayFilesRenderer(cfg v2.Config) (map[string]string, 
 	return files, nil
 }
 
+func headlampOverlayFilesRenderer(cfg v2.Config) (map[string]string, error) {
+	content, err := renderOverlayTemplate(headlampHTTPRouteTemplate, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{
+		"headlamp-http-route.yaml":          content,
+		"headlamp-session-affinity.yaml":    headlampSessionAffinity,
+		"headlamp-oidc-ca-certificate.yaml": headlampOIDCCACertificate,
+	}, nil
+}
+
+func weaveGitOpsOverlayFilesRenderer(cfg v2.Config) (map[string]string, error) {
+	content, err := renderOverlayTemplate(weaveGitOpsHTTPRouteTemplate, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"weave-gitops-http-route.yaml": content}, nil
+}
+
 func longhornOverlayFilesRenderer(cfg v2.Config) (map[string]string, error) {
 	files := map[string]string{}
 
@@ -282,6 +302,18 @@ metadata:
   name: rackspace-system
 `
 
+const headlampOIDCCACertificate = `---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: headlamp-oidc-ca
+spec:
+  secretName: headlamp-oidc-ca
+  commonName: headlamp-oidc-ca
+  issuerRef:
+    name: rackspace-ca
+    kind: ClusterIssuer
+`
 const gatewayClassContent = `---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
@@ -369,7 +401,7 @@ const gatewayListenerKeycloakHTTP = `    - name: keycloak-http
 const gatewayListenerGitopsHTTPS = `    - name: gitops-https
       port: 443
       protocol: HTTPS
-      hostname: {{ (index .OpenCenter.Services "gitops").Hostname | default (printf "gitops.%s" fqdn) }}
+      hostname: {{ printf "gitops.%s" fqdn }}
       allowedRoutes:
         namespaces:
           from: All
@@ -498,6 +530,88 @@ const gatewayListenerLonghornHTTPS = `    - name: longhorn-https
 {{- if (gw).TLSSecretNamespace }}
             namespace: {{ (gw).TLSSecretNamespace }}
 {{- end }}
+`
+
+const headlampHTTPRouteTemplate = `---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: headlamp-gateway-route
+  namespace: headlamp
+spec:
+  hostnames:
+    - {{ (index .OpenCenter.Services "headlamp").Hostname | default (printf "headlamp.%s" fqdn) | quote }}
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: rmpk-gateway
+      namespace: rackspace-system
+      sectionName: headlamp-https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: headlamp
+          port: 80
+          weight: 1
+`
+
+// Headlamp stores pending OIDC authorization state in process memory. Cookie
+// affinity keeps the authorization request and callback on the same replica
+// without reducing the deployment to a single pod. Consistent hashing still
+// remaps the cookie to a healthy endpoint when a replica disappears.
+const headlampSessionAffinity = `---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: headlamp-session-affinity
+  namespace: headlamp
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: headlamp-gateway-route
+  loadBalancer:
+    type: ConsistentHash
+    consistentHash:
+      type: Cookie
+      cookie:
+        name: opencenter-headlamp-affinity
+        ttl: 1h
+        attributes:
+          SameSite: Lax
+`
+
+const weaveGitOpsHTTPRouteTemplate = `---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: weave-gitops-gateway-route
+  namespace: flux-system
+spec:
+  hostnames:
+    - {{ printf "gitops.%s" fqdn | quote }}
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: rmpk-gateway
+      namespace: rackspace-system
+      sectionName: gitops-https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: weave-gitops
+          port: 9001
+          weight: 1
 `
 
 const longhornHTTPRouteTemplate = `---

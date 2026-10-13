@@ -259,6 +259,17 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		steps = append(steps, newGrafanaAdminSecretStep(cfg, opts.KubeconfigPath, p.runner))
 	}
 
+	// Internal OIDC is delivered by Flux, so the API server cannot trust it
+	// during the initial Kubespray run. Activate OIDC only after GitOps has been
+	// bootstrapped and roll the control planes one at a time.
+	if kubeLifecycle != nil && shouldActivateKubernetesOIDC(cfg) {
+		oidcStep, err := p.buildKubernetesOIDCActivationStep(cfg, kubeLifecycle)
+		if err != nil {
+			return nil, fmt.Errorf("building Kubernetes OIDC activation step: %w", err)
+		}
+		steps = append(steps, oidcStep)
+	}
+
 	return steps, nil
 }
 

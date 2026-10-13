@@ -82,6 +82,7 @@ don't already exist, unless --no-keygen is specified.`,
 
 	cmd.Flags().String("org", "", "organization name (defaults to 'opencenter')")
 	cmd.Flags().String("type", "openstack", "cluster type: openstack, baremetal, kind, vmware, magnum")
+	cmd.Flags().String("region", "", "provider region used to derive region-specific defaults (for example SJC3)")
 	cmd.Flags().String("config-file", "", "load configuration from file")
 	cmd.Flags().String("config", "", "load configuration from file")
 	_ = cmd.Flags().MarkHidden("config")
@@ -177,6 +178,8 @@ func parseInitOptions(cmd *cobra.Command, args []string) (cluster.InitOptions, e
 	opts.Organization, _ = cmd.Flags().GetString("org")
 	opts.Provider, _ = cmd.Flags().GetString("type")
 	opts.Provider = strings.ToLower(strings.TrimSpace(opts.Provider))
+	opts.Region, _ = cmd.Flags().GetString("region")
+	opts.Region = strings.TrimSpace(opts.Region)
 	opts.DeploymentMethod = "kubespray"
 
 	// Handle org/cluster identifier format: extract organization if embedded

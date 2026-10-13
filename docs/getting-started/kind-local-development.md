@@ -162,15 +162,16 @@ Ordered steps (as reported by the plan):
 
 1. `kind-create`
 2. `kind-export-kubeconfig`
-3. `kind-install-cni` (managed-CNI mode only)
-4. `gitea-attach-kind` — attaches Gitea to the Kind network and **reissues its TLS cert + CA**
-5. `flux-bootstrap` — bootstraps Flux from the Gitea URL, then refreshes the in-cluster source secret's CA to match
-6. `reconcile-sops-age-secret`
-7. `reconcile-grafana-admin-secret`
-8. `gitea-source-rehome` — rewrites generated GitRepository sources to the in-cluster `gitea:3001` alias
-9. `gitea-rebase`
-10. `gitops-push`
-11. `flux-verify`
+3. `kind-label-workers`
+4. `kind-install-cni` (managed-CNI mode only)
+5. `gitea-attach-kind` — attaches Gitea to the Kind network and **reissues its TLS cert + CA**
+6. `flux-bootstrap` — bootstraps Flux from the Gitea URL, then refreshes the in-cluster source secret's CA to match
+7. `reconcile-sops-age-secret`
+8. `reconcile-grafana-admin-secret`
+9. `gitea-source-rehome` — rewrites generated GitRepository sources to the in-cluster `gitea:3001` alias
+10. `gitea-rebase`
+11. `gitops-push`
+12. `flux-verify`
 
 Resume control: rerunning deploy resumes from saved state
 (`~/.local/state/opencenter/bootstrap/<org>/<name>/state.json`); `--restart`

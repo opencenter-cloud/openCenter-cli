@@ -117,6 +117,17 @@ func (p *kindBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths.C
 				return kindProvider.ExportKubeconfig(ctx, kindClusterName, opts.KubeconfigPath, env)
 			},
 		},
+		func() bootstrapStep {
+			step := newKindWorkerLabelStep(opts.KubeconfigPath, p.runner)
+			run := step.Run
+			step.Run = func(ctx context.Context) error {
+				if os.Getenv("OPENCENTER_TEST_MODE") != "" {
+					return nil
+				}
+				return run(ctx)
+			}
+			return step
+		}(),
 		{
 			ID:          "kind-install-cni",
 			Description: "Install Calico CNI (managed CNI mode)",

@@ -627,7 +627,7 @@ func TestBootstrapService_DryRunKindBuildsProviderPlan(t *testing.T) {
 	if result.Plan.Provider != "kind" {
 		t.Fatalf("provider = %q, want kind", result.Plan.Provider)
 	}
-	wantIDs := []string{"kind-create", "kind-export-kubeconfig", "kind-install-cni", "gitea-attach-kind", "flux-bootstrap", "reconcile-sops-age-secret", "reconcile-grafana-admin-secret", "gitea-rebase", "gitops-push", "flux-verify"}
+	wantIDs := []string{"kind-create", "kind-export-kubeconfig", "kind-label-workers", "kind-install-cni", "gitea-attach-kind", "flux-bootstrap", "reconcile-sops-age-secret", "reconcile-grafana-admin-secret", "gitea-rebase", "gitops-push", "flux-verify"}
 	if got := planStepIDs(result.Plan); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("plan steps = %v, want %v", got, wantIDs)
 	}
@@ -688,7 +688,7 @@ func TestBootstrapService_DryRunKindGitHubProviderPlanSkipsGitea(t *testing.T) {
 	// Gitea-only steps (gitea-attach-kind, gitea-rebase, gitops-push) must be
 	// absent for an external GitHub provider; Flux bootstraps straight to the
 	// remote.
-	wantIDs := []string{"kind-create", "kind-export-kubeconfig", "kind-install-cni", "flux-bootstrap", "reconcile-sops-age-secret", "reconcile-grafana-admin-secret", "flux-verify"}
+	wantIDs := []string{"kind-create", "kind-export-kubeconfig", "kind-label-workers", "kind-install-cni", "flux-bootstrap", "reconcile-sops-age-secret", "reconcile-grafana-admin-secret", "flux-verify"}
 	if got := planStepIDs(result.Plan); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("plan steps = %v, want %v", got, wantIDs)
 	}

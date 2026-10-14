@@ -173,6 +173,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Rootless Podman can abort with "cannot re-exec process" when a stale
+          # infra pause PID remains from a previous runner session. Remove it
+          # before the first preflight probe so transient state does not block e2e.
+          if [ "$(id -u)" != "0" ]; then
+            tmp_dir="$(getent passwd "$(id -u)" | cut -d: -f6)/tmp/run-$(id -u)/libpod/tmp"
+            rm -f "${tmp_dir}/pause.pid" || true
+          fi
           podman --version && podman info >/dev/null
           kind version && kubectl version --client && flux --version && helm version --short
 

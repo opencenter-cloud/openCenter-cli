@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-10-13
+last_updated: 2026-10-14
 id: service-mimir
 title: "Grafana Mimir"
 sidebar_label: Mimir
@@ -17,7 +17,7 @@ The generated default is disabled in `observability`. `MimirConfig` embeds `Base
 
 The config metadata documents `s3` and `swift`, with `swift` as its type-level default. `defaults.go` materializes only disabled state and namespace. For S3, `GetMimirS3Credentials` prefers `secrets.mimir.s3_access_key_id` and `s3_secret_access_key`, then falls back to global AWS application credentials.
 
-An unset `storage_type` resolves to `swift`, which is supported only on the `openstack` provider. Loading a configuration and `cluster set` do not check this, so `storage_type` can be corrected on an existing configuration. `cluster validate`, generation and deployment report an error for `swift` on other providers.
+An unset `storage_type` resolves to `swift`, which is supported only on the `openstack` provider. Loading a configuration and `cluster set` do not block on this rule, so `storage_type` can be corrected on an existing configuration without failing unrelated service updates (OCTR-812). `cluster validate`, generation, and deployment still report an error for `swift` on other providers.
 
 ## Secrets and conditional facts
 

@@ -448,6 +448,12 @@ type Validator interface {
 	ValidateProvider(cfg *Config) error
 	ValidateDeployment(cfg *Config) error
 	ValidateServices(cfg *Config) error
+	// ValidateForSet performs the narrow validation required before `cluster set`
+	// persists a configuration change. It intentionally skips Mimir Swift provider
+	// checks so that updating one service does not fail because of an unrelated
+	// Mimir readiness issue (OCTR-812). Deployment-time validation continues to use
+	// ValidateReadiness, which enforces those rules when actually deploying.
+	ValidateForSet(cfg *Config) error
 }
 
 // defaultValidator implements the Validator interface.
@@ -536,6 +542,44 @@ func (v *defaultValidator) Validate(cfg *Config) error {
 
 	return nil
 }
+// ValidateForSet performs the narrow validation required before `cluster set`
+// persists a configuration change. It intentionally skips Mimir Swift provider
+// checks so that updating one service does not fail because of an unrelated
+// Mimir readiness issue (OCTR-812). Deployment-time validation continues to use
+// ValidateReadiness, which enforces those rules when actually deploying.
+func (v *defaultValidator) ValidateForSet(cfg *Config) error {
+	if err := v.ValidateCleanBreakRules(cfg); err != nil {
+		return err
+	}
+
+	// Schema validation
+	if err := v.ValidateSchema(cfg); err != nil {
+		return err
+	}
+
+	// Business rules validation, but exclude the Mimir Swift-on-non-OpenStack
+	// catchall from storagePolicyIssues so cross-service setters are not blocked.
+	if err := v.validateBusinessRulesForSet(cfg); err != nil {
+		return err
+	}
+
+	// Provider-specific validation
+	if err := v.ValidateProvider(cfg); err != nil {
+		return err
+	}
+
+	// Deployment-method validation
+	if err := v.ValidateDeployment(cfg); err != nil {
+		return err
+	}
+
+	// Service validation
+	if err := v.ValidateServices(cfg); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 // ValidateCleanBreakRules rejects legacy shapes before generic schema
 // validation so users get the explicit migration-free guidance.
@@ -561,7 +605,21 @@ func (v *defaultValidator) ValidateSchema(cfg *Config) error {
 // ValidateBusinessRules validates cross-field dependencies and value ranges.
 // Requirements: 11.2
 func (v *defaultValidator) ValidateBusinessRules(cfg *Config) error {
-	if issues := storagePolicyIssues(cfg); len(issues) > 0 {
+	return v.validateBusinessRulesWithOptions(cfg, false)
+}
+
+// validateBusinessRulesForSet is used by cluster set to avoid cross-service
+// catchall failures such as Mimir Swift on non-OpenStack (OCTR-812).
+func (v *defaultValidator) validateBusinessRulesForSet(cfg *Config) error {
+	return v.validateBusinessRulesWithOptions(cfg, true)
+}
+
+func (v *defaultValidator) validateBusinessRulesWithOptions(cfg *Config, forSet bool) error {
+	issues := storagePolicyIssues(cfg)
+	if forSet {
+		issues = filterStoragePolicyIssuesForSet(issues)
+	}
+	if len(issues) > 0 {
 		issue := issues[0]
 		return fmt.Errorf("%s: %s", issue.path, issue.message)
 	}
@@ -585,6 +643,20 @@ func (v *defaultValidator) ValidateBusinessRules(cfg *Config) error {
 	}
 
 	return nil
+}
+// filterStoragePolicyIssuesForSet drops the Mimir Swift-on-non-OpenStack
+// catchall so that `cluster set` does not fail because of an unrelated Mimir
+// readiness issue (OCTR-812). Other business-rule storage issues are preserved.
+func filterStoragePolicyIssuesForSet(issues []storagePolicyIssue) []storagePolicyIssue {
+	filtered := make([]storagePolicyIssue, 0, len(issues))
+	for _, issue := range issues {
+		if strings.HasPrefix(issue.path, "opencenter.services.mimir.storage_type") &&
+			strings.Contains(issue.message, "Mimir's resolved Swift storage backend is only supported on OpenStack infrastructure.") {
+			continue
+		}
+		filtered = append(filtered, issue)
+	}
+	return filtered
 }
 
 // validatePoolNameUniqueness ensures pool names are unique across Linux and Windows pools.

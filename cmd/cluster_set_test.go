@@ -374,3 +374,162 @@ func newClusterSetRootForTest() *cobra.Command {
 	root.AddCommand(cluster)
 	return root
 }
+// saveOCTR812ClusterConfigForCommandTest writes a kind cluster config that
+// reproduces the OCTR-812 local setup: Mimir and Harbor are enabled, but the
+// storage backend they would resolve to is Swift on a non-OpenStack provider.
+// The point of the fixture is to make load-time validation fail for Mimir Swift
+// if cross-service catchall behavior regresses, while still allowing the
+// cluster set command itself to update unrelated service keys.
+func saveOCTR812ClusterConfigForCommandTest(t *testing.T, dir, clusterName, organization string) (v2.Config, *paths.ClusterPaths) {
+	t.Helper()
+
+	cfg, clusterPaths := saveKindConfigForCommandTest(t, dir, clusterName, organization)
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	if mimir == nil {
+		t.Fatalf("expected mimir service in default kind config, got services=%v", cfg.OpenCenter.Services)
+	}
+	mimir.Enabled = true
+	mimir.StorageType = "swift"
+
+	if h, ok := cfg.OpenCenter.Services["harbor"].(*services.HarborConfig); ok && h != nil {
+		h.Enabled = true
+		h.S3Endpoint = "http://seaweedfs-filer-client.seaweed.svc.cluster.local:8333"
+	}
+
+	resolver := paths.NewPathResolver(filepath.Join(dir, "clusters"))
+	testhelpers.SaveConfigWithPathResolver(t, cfg, resolver)
+	return cfg, clusterPaths
+}
+
+func TestClusterSetOCTR812MimirS3SetterDoesNotBlockOnMimirSwiftReadiness(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+
+	cfg, clusterPaths := saveOCTR812ClusterConfigForCommandTest(t, dir, "octr812-mimir-set", "opencenter")
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.Enabled = true
+	mimir.StorageType = "s3"
+
+	cmd := newClusterSetCmd()
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"octr812-mimir-set", "opencenter.services.mimir.storage_type=s3"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("cluster set mimir s3 failed: %v\nstderr: %s", err, stderr.String())
+	}
+
+	updated := loadV2ConfigForTest(t, clusterPaths.ConfigPath)
+	got := updated.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	if got.StorageType != "s3" {
+		t.Fatalf("mimir storage_type = %q after set, want s3", got.StorageType)
+	}
+}
+
+func TestClusterSetOCTR812UnrelatedServiceSetterDoesNotFailOnMimirSwiftReadiness(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+
+	cfg, clusterPaths := saveOCTR812ClusterConfigForCommandTest(t, dir, "octr812-unrelated-set", "opencenter")
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.Enabled = true
+	mimir.StorageType = "swift"
+
+	cmd := newClusterSetCmd()
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{
+		"octr812-unrelated-set",
+		"opencenter.services.harbor.s3_endpoint=http://seaweedfs-filer-client.seaweed.svc.cluster.local:8333",
+	})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("cluster set harbor s3_endpoint failed: %v\nstderr: %s", err, stderr.String())
+	}
+
+	updated := loadV2ConfigForTest(t, clusterPaths.ConfigPath)
+	harbor := updated.OpenCenter.Services["harbor"].(*services.HarborConfig)
+	if harbor.S3Endpoint != "http://seaweedfs-filer-client.seaweed.svc.cluster.local:8333" {
+		t.Fatalf("harbor s3_endpoint = %q after set, want the provided endpoint", harbor.S3Endpoint)
+	}
+}
+
+func TestClusterSetOCTR812BulkConfigurationFlow(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+
+	cfg, clusterPaths := saveKindConfigForCommandTest(t, dir, "octr812-flow", "opencenter")
+	resolver := paths.NewPathResolver(filepath.Join(dir, "clusters"))
+
+	// Step 1: disable mimir and harbor manually in the config before running set.
+	mimir := cfg.OpenCenter.Services["mimir"].(*services.MimirConfig)
+	mimir.Enabled = false
+	harbor := cfg.OpenCenter.Services["harbor"].(*services.HarborConfig)
+	harbor.Enabled = false
+	testhelpers.SaveConfigWithPathResolver(t, cfg, resolver)
+
+	assignments := []string{
+		"opencenter.services.loki.storage_type=s3",
+		"opencenter.services.loki.s3_endpoint=http://seaweedfs-filer-client.seaweed.svc.cluster.local:8333",
+		"opencenter.services.loki.bucket_name=rackai-local-loki",
+		"opencenter.services.loki.s3_force_path_style=true",
+		"opencenter.services.loki.s3_insecure=true",
+		"opencenter.services.mimir.storage_type=s3",
+		"opencenter.services.mimir.s3_endpoint=http://seaweedfs-filer-client.seaweed.svc.cluster.local:8333",
+		"opencenter.services.mimir.bucket_name=rackai-local-mimir",
+		"opencenter.services.mimir.s3_force_path_style=true",
+		"opencenter.services.mimir.s3_insecure=true",
+		"opencenter.services.harbor.storage_type=s3",
+		"opencenter.services.harbor.s3_endpoint=http://seaweedfs-filer-client.seaweed.svc.cluster.local:8333",
+		"opencenter.services.harbor.s3_bucket=rackai-local-harbor",
+		"opencenter.services.etcd-backup.storage_type=s3",
+		"opencenter.services.etcd-backup.s3_endpoint=http://seaweedfs-filer-client.seaweed.svc.cluster.local:8333",
+		"opencenter.services.etcd-backup.s3_bucket_name=rackai-local-etcd-backup",
+		"opencenter.services.etcd-backup.s3_region=us-east-1",
+	}
+
+	cmd := newClusterSetCmd()
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	args := append([]string{"octr812-flow"}, assignments...)
+	cmd.SetArgs(args)
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("bulk cluster set flow step 2 failed: %v\nstderr: %s", err, stderr.String())
+	}
+
+	// Re-enable Mimir
+	reEnable := newClusterSetCmd()
+	reEnable.SetOut(&bytes.Buffer{})
+	reEnable.SetErr(&bytes.Buffer{})
+	reEnable.SetArgs([]string{"octr812-flow", "opencenter.services.mimir.enabled=true"})
+	if err := reEnable.Execute(); err != nil {
+		t.Fatalf("re-enabling mimir failed: %v", err)
+	}
+
+	// Re-enable Harbor
+	reEnableHarbor := newClusterSetCmd()
+	reEnableHarbor.SetOut(&bytes.Buffer{})
+	reEnableHarbor.SetErr(&bytes.Buffer{})
+	reEnableHarbor.SetArgs([]string{"octr812-flow", "opencenter.services.harbor.enabled=true"})
+	if err := reEnableHarbor.Execute(); err != nil {
+		t.Fatalf("re-enabling harbor failed: %v", err)
+	}
+
+	final := loadV2ConfigForTest(t, clusterPaths.ConfigPath)
+	if final.OpenCenter.Services["mimir"].(*services.MimirConfig).StorageType != "s3" {
+		t.Fatalf("final mimir storage_type = %q, want s3", final.OpenCenter.Services["mimir"].(*services.MimirConfig).StorageType)
+	}
+	if final.OpenCenter.Services["harbor"].(*services.HarborConfig).S3Bucket != "rackai-local-harbor" {
+		t.Fatalf("final harbor s3_bucket = %q, want rackai-local-harbor", final.OpenCenter.Services["harbor"].(*services.HarborConfig).S3Bucket)
+	}
+	if !final.OpenCenter.Services["mimir"].(*services.MimirConfig).Enabled {
+		t.Fatal("expected mimir to be re-enabled at end of flow")
+	}
+	if !final.OpenCenter.Services["harbor"].(*services.HarborConfig).Enabled {
+		t.Fatal("expected harbor to be re-enabled at end of flow")
+	}
+}

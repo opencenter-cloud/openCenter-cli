@@ -108,7 +108,7 @@ func (cl *ConfigLoader) LoadFromBytes(data []byte) (*Config, error) {
 	}
 
 	// Stage 5: Validate
-	if err := cl.validate(cfg); err != nil {
+	if err := cl.validator.ValidateForSet(cfg); err != nil {
 		return nil, fmt.Errorf("stage 5 (validate): %w", err)
 	}
 

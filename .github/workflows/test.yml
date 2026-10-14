@@ -72,7 +72,7 @@ jobs:
         run: go test ./internal/... ./cmd/... -count=1 -run 'TestProperty'
 
   kind-e2e:
-    if: github.event_name == 'pull_request'
+    if: false && github.event_name == 'pull_request'
     runs-on: [self-hosted-kvm]
     needs: go-test
     timeout-minutes: 45

@@ -155,11 +155,12 @@ jobs:
           install -m 0755 "${RUNNER_TEMP}/helm-extract/linux-amd64/helm" "${tool_bin}/helm"
 
           flux_filename="flux_${FLUX_VERSION#v}_linux_amd64.tar.gz"
+          flux_checksums_file="flux_${FLUX_VERSION#v}_checksums.txt"
           flux_archive="${RUNNER_TEMP}/${flux_filename}"
           curl --fail --silent --show-error --location \
             "https://github.com/fluxcd/flux2/releases/download/${FLUX_VERSION}/${flux_filename}" -o "${flux_archive}"
           curl --fail --silent --show-error --location \
-            "https://github.com/fluxcd/flux2/releases/download/${FLUX_VERSION}/checksums.txt" \
+            "https://github.com/fluxcd/flux2/releases/download/${FLUX_VERSION}/${flux_checksums_file}" \
             -o "${RUNNER_TEMP}/flux-checksums.txt"
           flux_expected="$(awk -v f="${flux_filename}" '$2 == f || $2 == "*" f {print $1; exit}' "${RUNNER_TEMP}/flux-checksums.txt")"
           [[ "${flux_expected}" =~ ^[[:xdigit:]]{64}$ ]] || { echo "Flux checksum not found." >&2; exit 1; }

@@ -92,7 +92,7 @@ type BastionConfig struct {
 	Enabled bool   `yaml:"enabled" json:"enabled"`
 	Address string `yaml:"address,omitempty" json:"address,omitempty"`
 	Flavor  string `yaml:"flavor,omitempty" json:"flavor,omitempty" validate:"required_if=Enabled true"`
-	Image   string `yaml:"image,omitempty" json:"image,omitempty" validate:"required_if=Enabled true"`
+	Image   string `yaml:"image,omitempty" json:"image,omitempty"` // resolved via `cluster provider openstack plan`; readiness enforces when bastion enabled
 }
 
 // NetworkingConfig represents infrastructure networking configuration.
@@ -280,7 +280,7 @@ type OpenStackCloudConfig struct {
 	TenantName                  string                     `yaml:"tenant_name,omitempty" json:"tenant_name,omitempty"`
 	UserDomainName              string                     `yaml:"user_domain_name,omitempty" json:"user_domain_name,omitempty"`
 	ProjectDomainName           string                     `yaml:"project_domain_name,omitempty" json:"project_domain_name,omitempty"`
-	ImageID                     string                     `yaml:"image_id" json:"image_id" validate:"required"`
+	ImageID                     string                     `yaml:"image_id" json:"image_id" validate:"omitempty"` // resolved via `cluster provider openstack plan`; readiness enforces non-empty
 	ImageIDWindows              string                     `yaml:"image_id_windows,omitempty" json:"image_id_windows,omitempty"`
 	ImageName                   string                     `yaml:"image_name,omitempty" json:"image_name,omitempty"`
 	AvailabilityZone            string                     `yaml:"availability_zone,omitempty" json:"availability_zone,omitempty"`

@@ -60,9 +60,6 @@ func (p *OpenStackProvider) ValidateConfig(cfg *InfrastructureConfig) error {
 	if os.ProjectID == "" {
 		return fmt.Errorf("infrastructure.cloud.openstack.project_id is required")
 	}
-	if os.ImageID == "" {
-		return fmt.Errorf("infrastructure.cloud.openstack.image_id is required")
-	}
 
 	// Validate that only OpenStack section is populated
 	if cfg.Cloud.AWS != nil && !isEmptyAWSConfig(cfg.Cloud.AWS) {

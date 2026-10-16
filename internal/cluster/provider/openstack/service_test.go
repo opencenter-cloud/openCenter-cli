@@ -139,6 +139,73 @@ func TestPlanRequiresReplaceForExplicitConflictingSelection(t *testing.T) {
 	}
 }
 
+// TestPlanBlocksStaleStoredImageWithoutSelector verifies that a stored
+// image_id matching no discovered resource is surfaced explicitly instead of
+// being silently preserved (the previous behavior made `plan` report a
+// misleading no-op for clusters seeded with baked-in default IDs).
+func TestPlanBlocksStaleStoredImageWithoutSelector(t *testing.T) {
+	cfg, err := v2.NewV2Default("prod", "openstack")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack = &v2.OpenStackCloudConfig{
+		ImageID:        "stale-image",
+		ImageIDWindows: "stale-windows-image",
+	}
+	snapshot := &cloudopenstack.DiscoverySnapshot{
+		Images:            []cloudopenstack.Resource{{ID: "img-a", Name: "Ubuntu A"}, {ID: "img-b", Name: "Ubuntu B"}},
+		WindowsImages:     []cloudopenstack.Resource{{ID: "win-a", Name: "Win A"}, {ID: "win-b", Name: "Win B"}},
+		Networks:          []cloudopenstack.Resource{{ID: "network", Name: "internal"}},
+		Subnets:           []cloudopenstack.Subnet{{Resource: cloudopenstack.Resource{ID: "subnet", Name: "internal"}, NetworkID: "network"}},
+		ExternalNetworks:  []cloudopenstack.Resource{{ID: "external", Name: "public"}},
+		AvailabilityZones: []cloudopenstack.Resource{{ID: "zone", Name: "zone"}},
+	}
+
+	result, prospective, err := Plan(context.Background(), cfg, snapshot, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != StatusBlocked {
+		t.Fatalf("status = %q, want blocked on stale images", result.Status)
+	}
+	warnings := strings.Join(result.Warnings, "\n")
+	for _, want := range []string{"image_id \"stale-image\" does not match any discovered Linux image", "image_id_windows \"stale-windows-image\" does not match any discovered Windows image"} {
+		if !strings.Contains(warnings, want) {
+			t.Errorf("warnings missing %q:\n%s", want, warnings)
+		}
+	}
+	if got := prospective.OpenCenter.Infrastructure.Cloud.OpenStack.ImageID; got != "stale-image" {
+		t.Fatalf("blocked plan mutated ImageID: %q", got)
+	}
+
+	// Explicit selector plus --replace resolves the stale value.
+	result, prospective, err = Plan(context.Background(), cfg, snapshot, Options{ImageID: "img-a", WindowsImageID: "win-a", Replace: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	osCfg := prospective.OpenCenter.Infrastructure.Cloud.OpenStack
+	if result.Status != StatusPlanned || osCfg.ImageID != "img-a" || osCfg.ImageIDWindows != "win-a" {
+		t.Fatalf("replace did not clear stale images: status=%q image=%q windows=%q", result.Status, osCfg.ImageID, osCfg.ImageIDWindows)
+	}
+
+	// A stored ID that DOES match discovery stays silent and unchanged.
+	cfg2, _ := v2.NewV2Default("prod", "openstack")
+	cfg2.OpenCenter.Infrastructure.Cloud.OpenStack = &v2.OpenStackCloudConfig{
+		ImageID:        "img-a",
+		ImageIDWindows: "win-a",
+	}
+	result, prospective, err = Plan(context.Background(), cfg2, snapshot, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != StatusPlanned {
+		t.Fatalf("valid stored images should not block: status=%q warnings=%v", result.Status, result.Warnings)
+	}
+	if got := prospective.OpenCenter.Infrastructure.Cloud.OpenStack.ImageID; got != "img-a" {
+		t.Fatalf("valid stored image was changed: %q", got)
+	}
+}
+
 func TestPlanPreservesPopulatedClusterValuesDuringCreateInternalNetworkImport(t *testing.T) {
 	cfg, err := v2.NewV2Default("prod", "openstack")
 	if err != nil {
@@ -149,8 +216,8 @@ func TestPlanPreservesPopulatedClusterValuesDuringCreateInternalNetworkImport(t 
 		Region:                      "dfw3",
 		ProjectID:                   "project-1",
 		ProjectDomainName:           "default",
-		ImageID:                     "799dcf97-3656-4361-8187-13ab1b295e33",
-		ImageIDWindows:              "windows-current",
+		ImageID:                     "discovered-linux",
+		ImageIDWindows:              "discovered-windows",
 		AvailabilityZone:            "existing-zone",
 		ApplicationCredentialID:     "app-id",
 		ApplicationCredentialSecret: "app-secret",
@@ -201,7 +268,7 @@ func TestPlanPreservesPopulatedClusterValuesDuringCreateInternalNetworkImport(t 
 		}
 	}
 	osCfg := prospective.OpenCenter.Infrastructure.Cloud.OpenStack
-	if osCfg.Region != "dfw3" || osCfg.ProjectDomainName != "default" || osCfg.ImageID != "799dcf97-3656-4361-8187-13ab1b295e33" || osCfg.ImageIDWindows != "windows-current" || osCfg.AvailabilityZone != "existing-zone" {
+	if osCfg.Region != "dfw3" || osCfg.ProjectDomainName != "default" || osCfg.ImageID != "discovered-linux" || osCfg.ImageIDWindows != "discovered-windows" || osCfg.AvailabilityZone != "existing-zone" {
 		t.Fatalf("populated cluster values were not preserved: %#v", osCfg)
 	}
 }

@@ -881,6 +881,10 @@ func makeSetupConfigGenerationReady(cfg *v2.Config) {
 	if openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack; openstack != nil {
 		openstack.ApplicationCredentialID = "openstack-application-credential-id"
 		openstack.ApplicationCredentialSecret = "openstack-application-credential-secret"
+		openstack.ImageID = "test-openstack-image-id"
+	}
+	if cfg.OpenCenter.Infrastructure.Bastion.Enabled && cfg.OpenCenter.Infrastructure.Provider == "openstack" {
+		cfg.OpenCenter.Infrastructure.Bastion.Image = "test-openstack-image-id"
 	}
 }
 

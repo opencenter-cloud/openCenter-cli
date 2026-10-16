@@ -503,6 +503,10 @@ func validReadinessConfig(t *testing.T, provider string) *Config {
 		os.SubnetID = "subnet-id"
 		os.FloatingNetworkID = "external-network-id"
 		os.RouterExternalNetworkID = "router-external-network-id"
+		os.ImageID = "ubuntu-2404-image-id"
+	}
+	if cfg.OpenCenter.Infrastructure.Bastion.Enabled {
+		cfg.OpenCenter.Infrastructure.Bastion.Image = "ubuntu-2404-image-id"
 	}
 
 	return cfg

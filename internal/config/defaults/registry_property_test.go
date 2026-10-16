@@ -43,10 +43,12 @@ func TestProperty_ProviderRegionDefaultApplication(t *testing.T) {
 				return true
 			}
 
-			// Verify all required default methods return non-empty values
-			imageID := defaults.GetImageID("24")
-			if imageID == "" {
-				return false
+			// OpenStack image IDs are intentionally empty (project-scoped; resolved via plan).
+			// Other providers still must supply a non-empty default.
+			if provider != "openstack" {
+				if defaults.GetImageID("24") == "" {
+					return false
+				}
 			}
 
 			azs := defaults.GetAvailabilityZones()
@@ -87,11 +89,15 @@ func TestProperty_ProviderRegionDefaultApplication(t *testing.T) {
 				return true
 			}
 
-			// Verify image IDs are different for different OS versions
+			// For OpenStack, both may be empty (images are project-scoped and resolved via plan).
+			if provider == "openstack" {
+				return true
+			}
+
 			image22 := defaults.GetImageID("22")
 			image24 := defaults.GetImageID("24")
 
-			// Both should be non-empty
+			// Both should be non-empty for non-OpenStack providers
 			if image22 == "" || image24 == "" {
 				return false
 			}

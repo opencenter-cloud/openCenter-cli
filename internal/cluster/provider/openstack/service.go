@@ -150,6 +150,26 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		set("opencenter.infrastructure.cloud.openstack.application_credential_secret", &osCfg.ApplicationCredentialSecret, opts.ImportAuth.ApplicationCredentialSecret, true)
 	}
 
+	// A stored image ID that matches neither the requested selector nor any
+	// discovered resource is stale (for example a baked-in default from a
+	// different project). It must be surfaced explicitly: otherwise chooseResource
+	// silently preserves the dead value and plan reports a misleading no-op.
+	if !opts.Replace && strings.TrimSpace(opts.ImageID) == "" {
+		if current := strings.TrimSpace(osCfg.ImageID); current != "" && !isPlaceholder(current) {
+			if _, exists := findResource(snapshot.Images, current); !exists {
+				blocked = true
+				result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id %q does not match any discovered Linux image; specify --image-id with --replace to select a valid image", current))
+			}
+		}
+	}
+	if !opts.Replace && strings.TrimSpace(opts.WindowsImageID) == "" {
+		if current := strings.TrimSpace(osCfg.ImageIDWindows); current != "" && !isPlaceholder(current) {
+			if _, exists := findResource(snapshot.WindowsImages, current); !exists {
+				blocked = true
+				result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id_windows %q does not match any discovered Windows image; specify --windows-image-id with --replace to select a valid image", current))
+			}
+		}
+	}
 	if resourceConflict(osCfg.ImageID, opts.ImageID, snapshot.Images, opts.Replace, true) {
 		blocked = true
 		result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id is populated with %q; use --replace or --image-id", osCfg.ImageID))
@@ -381,6 +401,15 @@ func chooseResource(field, current, explicit string, candidates []cloudopenstack
 		return candidates[0], true, false, nil
 	}
 	return cloudopenstack.Resource{}, false, len(candidates) > 1, nil
+}
+
+func findResource(candidates []cloudopenstack.Resource, id string) (cloudopenstack.Resource, bool) {
+	for _, candidate := range candidates {
+		if candidate.ID == strings.TrimSpace(id) {
+			return candidate, true
+		}
+	}
+	return cloudopenstack.Resource{}, false
 }
 
 func cloneProviderConfig(cfg *v2.Config) *v2.Config {

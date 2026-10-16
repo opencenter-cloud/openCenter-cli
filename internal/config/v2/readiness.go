@@ -257,6 +257,9 @@ func (r *readinessBuilder) validateOpenStackProvider(cfg *Config) {
 	}
 	if cfg.OpenCenter.Infrastructure.Bastion.Enabled {
 		r.requireNonPlaceholder(CategoryProvider, "opencenter.infrastructure.compute.flavor_bastion", compute.FlavorBastion, "OpenStack bastion flavor is required when bastion is enabled.", "Set compute.flavor_bastion.")
+		if os != nil && strings.TrimSpace(cfg.OpenCenter.Infrastructure.Bastion.Image) == "" {
+			r.addError(CategoryProvider, "opencenter.infrastructure.bastion.image", "bastion image is required when bastion is enabled on OpenStack.", "Run 'opencenter cluster provider openstack plan <cluster>' to select an image, or set infrastructure.bastion.image.")
+		}
 	}
 	for i, pool := range compute.AdditionalServerPoolsWorker {
 		if pool.Count > 0 {

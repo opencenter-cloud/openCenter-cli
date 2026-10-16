@@ -54,10 +54,7 @@ func (d *openstackDefaults) GetDefaultFlavors() FlavorDefaults {
 // newOpenStackSJC3Defaults returns defaults for OpenStack SJC3 region.
 func newOpenStackSJC3Defaults() ProviderDefaults {
 	return &openstackDefaults{
-		imageIDs: map[string]string{
-			"22": "a1b2c3d4-1234-5678-90ab-cdef12345678", // Ubuntu 22.04
-			"24": "799dcf97-3656-4361-8187-13ab1b295e33", // Ubuntu 24.04
-		},
+		imageIDs:          map[string]string{}, // images are project-scoped; resolved via `cluster provider openstack plan`
 		availabilityZones: []string{"az1", "az2", "az3"},
 		ntpServers: []string{
 			"time.sjc3.rackspace.com",
@@ -77,10 +74,7 @@ func newOpenStackSJC3Defaults() ProviderDefaults {
 // newOpenStackDFW3Defaults returns defaults for OpenStack DFW3 region.
 func newOpenStackDFW3Defaults() ProviderDefaults {
 	return &openstackDefaults{
-		imageIDs: map[string]string{
-			"22": "b2c3d4e5-2345-6789-01bc-def123456789", // Ubuntu 22.04
-			"24": "6e3967a7-904a-49c6-870e-d5014c827944", // Ubuntu 24.04
-		},
+		imageIDs:          map[string]string{}, // images are project-scoped; resolved via `cluster provider openstack plan`
 		availabilityZones: []string{"az1", "az2", "az3"},
 		ntpServers: []string{
 			"time.dfw3.rackspace.com",
@@ -100,10 +94,7 @@ func newOpenStackDFW3Defaults() ProviderDefaults {
 // newOpenStackIAD3Defaults returns defaults for OpenStack IAD3 region.
 func newOpenStackIAD3Defaults() ProviderDefaults {
 	return &openstackDefaults{
-		imageIDs: map[string]string{
-			"22": "c3d4e5f6-3456-7890-12cd-ef1234567890", // Ubuntu 22.04
-			"24": "9b0ecf97-5678-6583-0309-35cd2c407f55", // Ubuntu 24.04
-		},
+		imageIDs:          map[string]string{}, // images are project-scoped; resolved via `cluster provider openstack plan`
 		availabilityZones: []string{"az1", "az2", "az3"},
 		ntpServers: []string{
 			"time.iad3.rackspace.com",
@@ -123,10 +114,7 @@ func newOpenStackIAD3Defaults() ProviderDefaults {
 // newOpenStackORD1Defaults returns defaults for OpenStack ORD1 region.
 func newOpenStackORD1Defaults() ProviderDefaults {
 	return &openstackDefaults{
-		imageIDs: map[string]string{
-			"22": "d4e5f6g7-4567-8901-23de-f12345678901", // Ubuntu 22.04
-			"24": "0c1fdf97-6789-7694-1410-46de3d518g66", // Ubuntu 24.04
-		},
+		imageIDs:          map[string]string{}, // images are project-scoped; resolved via `cluster provider openstack plan`
 		availabilityZones: []string{"az1", "az2", "az3"},
 		ntpServers: []string{
 			"time.ord1.rackspace.com",

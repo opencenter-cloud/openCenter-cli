@@ -39,7 +39,10 @@ func TestHydrator_ExplicitValueNotOverridden(t *testing.T) {
 	}
 }
 
-// TestHydrator_EmptyFieldsPopulated verifies that empty fields are populated with defaults.
+// TestHydrator_EmptyFieldsPopulated verifies that empty fields are populated with
+// provider-region defaults. ImageID is intentionally NOT defaulted for OpenStack:
+// images are project-scoped and resolved via `cluster provider openstack plan`, so
+// a fresh config starts with an empty image_id that the user fills in from live inventory.
 func TestHydrator_EmptyFieldsPopulated(t *testing.T) {
 	registry := GetGlobalRegistry()
 	hydrator := NewHydrator(registry)
@@ -51,8 +54,8 @@ func TestHydrator_EmptyFieldsPopulated(t *testing.T) {
 		t.Fatalf("Hydrate failed: %v", err)
 	}
 
-	if cfg.ImageID == "" {
-		t.Error("Expected ImageID to be populated with default")
+	if cfg.ImageID != "" {
+		t.Errorf("Expected ImageID to remain empty (resolved via plan), got '%s'", cfg.ImageID)
 	}
 
 	if cfg.DefaultStorageClass == "" {
@@ -82,8 +85,8 @@ func TestHydrator_AppliedDefaultsTracking(t *testing.T) {
 		t.Error("Expected some defaults to be tracked")
 	}
 
-	if source, ok := appliedDefaults["ImageID"]; !ok || source != SourceProviderRegion {
-		t.Errorf("Expected ImageID to be tracked with source SourceProviderRegion, got %v", source)
+	if source, ok := appliedDefaults["DefaultStorageClass"]; !ok || source != SourceProviderRegion {
+		t.Errorf("Expected DefaultStorageClass to be tracked with source SourceProviderRegion, got %v", source)
 	}
 }
 

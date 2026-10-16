@@ -1401,10 +1401,7 @@
                   ]
                 },
                 "image": {
-                  "type": "string",
-                  "x-opencenter-validation": [
-                    "required_if=Enabled true"
-                  ]
+                  "type": "string"
                 }
               },
               "type": "object"
@@ -1779,7 +1776,6 @@
                   },
                   "required": [
                     "auth_url",
-                    "image_id",
                     "project_id",
                     "region"
                   ],

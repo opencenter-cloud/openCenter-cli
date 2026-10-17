@@ -21,16 +21,16 @@ const DefaultGitBaseRepoURLSSH = "ssh://git@github.com/opencenter-cloud/openCent
 const DefaultGitBaseRepoURLHTTPS = "https://github.com/opencenter-cloud/openCenter-gitops-base.git"
 
 const (
-	defaultSchemaVersion              = "2.0"
-	defaultOrganization               = "opencenter"
-	defaultProvider                   = "openstack"
-	defaultRegion                     = "DFW3"
-	defaultEnvironment                = "dev"
-	defaultBaseDomain                 = "k8s.opencenter.cloud"
-	defaultGitBranch                  = "main"
-	defaultGitURLPlaceholder          = "ssh://git@example.com/opencenter/cluster-config.git"
-	defaultHTTPSGitURLPlaceholder     = "https://github.com/opencenter/cluster-config.git"
-	defaultGitBaseRepoURL             = "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git"
+	defaultSchemaVersion          = "2.0"
+	defaultOrganization           = "opencenter"
+	defaultProvider               = "openstack"
+	defaultRegion                 = "DFW3"
+	defaultEnvironment            = "dev"
+	defaultBaseDomain             = "k8s.opencenter.cloud"
+	defaultGitBranch              = "main"
+	defaultGitURLPlaceholder      = "ssh://git@example.com/opencenter/cluster-config.git"
+	defaultHTTPSGitURLPlaceholder = "https://github.com/opencenter/cluster-config.git"
+	defaultGitBaseRepoURL         = "ssh://git@github.com/opencenter-cloud/openCenter-gitops-base.git"
 	// Base repo (gitops-base) is pinned to the immutable 2026.03-rc2 tag so
 	// generated clusters resolve to a reproducible commit. The release (tag) slot
 	// takes precedence over branch, so branch is left empty.
@@ -203,8 +203,7 @@ func NewV2Default(name, provider string) (*Config, error) {
 					User:           "ubuntu",
 					KeyPath:        sshKeyPath,
 				},
-				OSVersion:           "24",
-				ServerGroupAffinity: []string{"soft-anti-affinity"},
+				OSVersion: "24",
 				NodeNaming: NodeNamingConfig{
 					Prefix: name,
 					Suffix: region,
@@ -232,13 +231,14 @@ func NewV2Default(name, provider string) (*Config, error) {
 					},
 				},
 				Compute: ComputeConfig{
-					FlavorBastion:       bastionFlavor,
-					FlavorMaster:        defaultFlavorForProvider(selectedProvider, region, "master"),
-					FlavorWorker:        defaultFlavorForProvider(selectedProvider, region, "worker"),
-					FlavorWorkerWindows: defaultFlavorForProvider(selectedProvider, region, "worker-windows"),
-					MasterCount:         3,
-					WorkerCount:         3,
-					WorkerCountWindows:  0,
+					FlavorBastion:         bastionFlavor,
+					FlavorMaster:          defaultFlavorForProvider(selectedProvider, region, "master"),
+					FlavorWorker:          defaultFlavorForProvider(selectedProvider, region, "worker"),
+					FlavorWorkerWindows:   defaultFlavorForProvider(selectedProvider, region, "worker-windows"),
+					WorkerGroupAffinity:   []string{"soft-anti-affinity"},
+					CpServerGroupAffinity: []string{"soft-anti-affinity"},
+					MasterCount:           3,
+					WorkerCount:           3,
 				},
 				Storage: StorageConfig{
 					DefaultStorageClass:             defaultStorageClass(selectedProvider, region),

@@ -73,6 +73,60 @@ func TestClusterSetUpdatesNTPServersFromCommaDelimitedValue(t *testing.T) {
 	}
 }
 
+func TestClusterSetUpdatesCpServerGroupAffinity(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+
+	cfg, clusterPaths := saveKindConfigForCommandTest(t, dir, "set-cp-affinity", "opencenter")
+	resolver := paths.NewPathResolver(filepath.Join(dir, "clusters"))
+	testhelpers.SaveConfigWithPathResolver(t, cfg, resolver)
+
+	cmd := newClusterSetCmd()
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"set-cp-affinity", "opencenter.infrastructure.compute.cp_server_group_affinity=soft-anti-affinity"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("cluster set failed: %v\nstderr: %s", err, stderr.String())
+	}
+
+	resetCommandStateForTests()
+
+	updated := loadV2ConfigForTest(t, clusterPaths.ConfigPath)
+	got := updated.OpenCenter.Infrastructure.Compute.CpServerGroupAffinity
+	if want := []string{"soft-anti-affinity"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("cp_server_group_affinity = %#v, want %#v", got, want)
+	}
+}
+
+func TestClusterSetUpdatesWorkerGroupAffinity(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+
+	cfg, clusterPaths := saveKindConfigForCommandTest(t, dir, "set-worker-affinity", "opencenter")
+	resolver := paths.NewPathResolver(filepath.Join(dir, "clusters"))
+	testhelpers.SaveConfigWithPathResolver(t, cfg, resolver)
+
+	cmd := newClusterSetCmd()
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"set-worker-affinity", "opencenter.infrastructure.compute.worker_group_affinity=soft-anti-affinity"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("cluster set failed: %v\nstderr: %s", err, stderr.String())
+	}
+
+	resetCommandStateForTests()
+
+	updated := loadV2ConfigForTest(t, clusterPaths.ConfigPath)
+	got := updated.OpenCenter.Infrastructure.Compute.WorkerGroupAffinity
+	if want := []string{"soft-anti-affinity"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("worker_group_affinity = %#v, want %#v", got, want)
+	}
+}
+
 func TestClusterSetDryRunDoesNotWrite(t *testing.T) {
 	dir := t.TempDir()
 	prepareCommandTestEnv(t, dir)

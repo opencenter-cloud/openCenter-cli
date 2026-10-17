@@ -58,9 +58,9 @@ func TestKubeletRotateServerCertsRendering(t *testing.T) {
 	t.Logf("Rendered module block:\n%s", extractModuleSnippet(mainTfContent, "kubelet_rotate_server_certificates"))
 }
 
-func TestOpenStackWorkerSoftAntiAffinityRender(t *testing.T) {
-	// The cluster-wide worker server group affinity renders as soft-anti-affinity
-	// by default so scheduling degrades gracefully on capacity-short clouds.
+func TestOpenStackWorkerGroupAffinityRender(t *testing.T) {
+	// compute.worker_group_affinity drives locals.wn_server_group_affinity; it renders
+	// as soft-anti-affinity by default so scheduling degrades gracefully.
 	tmpDir := t.TempDir()
 	cfg := mustNewGitOpsTestConfig("os-soft-anti", "openstack")
 	cfg.OpenCenter.GitOps.Repository.LocalDir = tmpDir
@@ -69,16 +69,43 @@ func TestOpenStackWorkerSoftAntiAffinityRender(t *testing.T) {
 	mainTf := mustReadFile(t, filepath.Join(tmpDir, "infrastructure", "clusters", "os-soft-anti", "main.tf"))
 	assert.Contains(t, mainTf, "wn_server_group_affinity                = [\"soft-anti-affinity\"]",
 		"default OpenStack render must use soft anti-affinity for the worker server group")
+	assert.Contains(t, mainTf, "cp_server_group_affinity                = [\"soft-anti-affinity\"]",
+		"default OpenStack render must use soft anti-affinity for the control-plane server group")
+	assert.Contains(t, mainTf, "cp_server_group_affinity = local.cp_server_group_affinity",
+		"control-plane affinity must be passed to the openstack-nova module")
 
 	// Explicit opt-out to hard anti-affinity must still render unchanged.
 	tmpDir2 := t.TempDir()
 	cfgHard := mustNewGitOpsTestConfig("os-hard-anti", "openstack")
-	cfgHard.OpenCenter.Infrastructure.ServerGroupAffinity = []string{"anti-affinity"}
+	cfgHard.OpenCenter.Infrastructure.Compute.WorkerGroupAffinity = []string{"anti-affinity"}
 	cfgHard.OpenCenter.GitOps.Repository.LocalDir = tmpDir2
 	require.NoError(t, RenderInfrastructureCluster(cfgHard))
 	mainTfHard := mustReadFile(t, filepath.Join(tmpDir2, "infrastructure", "clusters", "os-hard-anti", "main.tf"))
 	assert.Contains(t, mainTfHard, "wn_server_group_affinity                = [\"anti-affinity\"]",
 		"explicit hard anti-affinity must be preserved when set in config")
+}
+
+func TestOpenStackCpServerGroupAffinityRender(t *testing.T) {
+	// compute.cp_server_group_affinity drives locals.cp_server_group_affinity and is
+	// forwarded to the openstack-nova module; unset values fall back to the default.
+	tmpDir := t.TempDir()
+	cfg := mustNewGitOpsTestConfig("os-cp-affinity", "openstack")
+	cfg.OpenCenter.Infrastructure.Compute.CpServerGroupAffinity = nil
+	cfg.OpenCenter.GitOps.Repository.LocalDir = tmpDir
+	require.NoError(t, RenderInfrastructureCluster(cfg))
+
+	mainTf := mustReadFile(t, filepath.Join(tmpDir, "infrastructure", "clusters", "os-cp-affinity", "main.tf"))
+	assert.Contains(t, mainTf, "cp_server_group_affinity                = [\"soft-anti-affinity\"]",
+		"unset control-plane affinity must fall back to soft anti-affinity")
+
+	tmpDir2 := t.TempDir()
+	cfgCustom := mustNewGitOpsTestConfig("os-cp-affinity-custom", "openstack")
+	cfgCustom.OpenCenter.Infrastructure.Compute.CpServerGroupAffinity = []string{"affinity"}
+	cfgCustom.OpenCenter.GitOps.Repository.LocalDir = tmpDir2
+	require.NoError(t, RenderInfrastructureCluster(cfgCustom))
+	mainTfCustom := mustReadFile(t, filepath.Join(tmpDir2, "infrastructure", "clusters", "os-cp-affinity-custom", "main.tf"))
+	assert.Contains(t, mainTfCustom, "cp_server_group_affinity                = [\"affinity\"]",
+		"explicit control-plane affinity must be preserved when set in config")
 }
 
 func TestKubeletRotateServerCertsDefaultValue(t *testing.T) {

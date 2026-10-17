@@ -67,9 +67,9 @@ opencenter settings ide                          # generate the schema plus edit
 | `provider` | Required. One of `openstack`, `aws`, `gcp`, `azure`, `baremetal`, `vsphere`, `vmware`, `kind`, `magnum`. (`aws`/`gcp`/`azure` are accepted by the schema but currently rejected at the CLI level by `checkProviderAvailability` as "planned, not yet available".) |
 | `ssh` | Required. `authorized_keys` (min 1), `username`/`user`, `key_path`. |
 | `os_version` | Required string. |
-| `server_group_affinity`, `k8s_api_ip`, `node_naming`, `bastion` | Optional. `bastion.flavor`/`bastion.image` required only if `bastion.enabled`. |
+| `k8s_api_ip`, `node_naming`, `bastion` | Optional. `bastion.flavor`/`bastion.image` required only if `bastion.enabled`. |
 | `networking` | Required -- node subnet/allocation pool/gateway, VRRP (`vrrp_ip` required if `vrrp_enabled`), load-balancer provider (`ovn`\|`octavia`\|`metallb`\|`cloud-native`), Designate/DNS, NTP servers (min 1), VLAN. |
-| `compute` | Required -- flavors, `master_count`/`worker_count`/`worker_count_windows`, static node lists (baremetal/vmware), `additional_server_pools_worker[_windows]` for extra worker pools. |
+| `compute` | Required -- flavors, `master_count`/`worker_count`/`worker_count_windows`, static node lists (baremetal/vmware), `additional_server_pools_worker[_windows]` for extra worker pools. `worker_group_affinity` and `cp_server_group_affinity` are optional `[]string` fields that render to `locals.wn_server_group_affinity` / `locals.cp_server_group_affinity` in the OpenStack `main.tf`; both default to `["soft-anti-affinity"]`. |
 | `storage` | Required -- `default_storage_class`, worker/master volume size/type/source/destination, `additional_block_devices`. |
 | `cloud` | Required -- exactly one of the per-provider blocks below should be populated for the selected provider; every other provider's block must be empty (enforced by readiness validation). |
 | `kind` | Optional, Kind-specific settings that don't yet have a provider-agnostic home (`cluster_name`, `kubernetes_version`, `node_image`, node counts, API server address/port, pod/service subnet, `disable_default_cni`, ingress, runtime, registry, `extra_port_mappings`, `extra_mounts`). |

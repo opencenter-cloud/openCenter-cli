@@ -2060,6 +2060,12 @@
                   },
                   "type": "array"
                 },
+                "cp_server_group_affinity": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "flavor_bastion": {
                   "type": "string"
                 },
@@ -2119,6 +2125,12 @@
                 "worker_count_windows": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "worker_group_affinity": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 "worker_nodes": {
                   "items": {
@@ -2383,12 +2395,6 @@
                 "magnum"
               ],
               "type": "string"
-            },
-            "server_group_affinity": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
             },
             "ssh": {
               "additionalProperties": false,

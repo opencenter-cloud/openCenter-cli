@@ -354,7 +354,7 @@ var configTypeToSection = map[string]string{
 // Used for "Did you mean?" suggestions when an unknown field is encountered.
 var configTypeFields = map[string][]string{
 	"InfrastructureConfig": {
-		"provider", "ssh", "os_version", "server_group_affinity", "k8s_api_ip",
+		"provider", "ssh", "os_version", "k8s_api_ip",
 		"node_naming", "bastion", "networking", "compute", "storage", "cloud", "kind",
 	},
 	"NetworkingConfig": {
@@ -365,6 +365,7 @@ var configTypeFields = map[string][]string{
 	},
 	"ComputeConfig": {
 		"flavor_bastion", "flavor_master", "flavor_worker", "flavor_worker_windows",
+		"worker_group_affinity", "cp_server_group_affinity",
 		"master_count", "worker_count", "worker_count_windows",
 		"master_nodes", "worker_nodes", "windows_nodes",
 		"additional_server_pools_worker", "additional_server_pools_worker_windows",

@@ -74,7 +74,8 @@ locals {
   worker_node_bfv_destination_type        = "{{ .OpenCenter.Infrastructure.Storage.WorkerVolumeDestinationType | default "volume" }}"
   worker_node_bfv_source_type             = "{{ .OpenCenter.Infrastructure.Storage.WorkerVolumeSourceType | default "image" }}"
   worker_node_bfv_volume_type             = "{{ .OpenCenter.Infrastructure.Storage.WorkerVolumeType | default "HA-Performance" }}"
-  wn_server_group_affinity                = {{ if .OpenCenter.Infrastructure.ServerGroupAffinity }}[{{ range $i, $affinity := .OpenCenter.Infrastructure.ServerGroupAffinity }}{{if $i}}, {{end}}"{{ $affinity }}"{{ end }}]{{ else }}["soft-anti-affinity"]{{ end }}
+  wn_server_group_affinity                = {{ if .OpenCenter.Infrastructure.Compute.WorkerGroupAffinity }}[{{ range $i, $affinity := .OpenCenter.Infrastructure.Compute.WorkerGroupAffinity }}{{if $i}}, {{end}}"{{ $affinity }}"{{ end }}]{{ else }}["soft-anti-affinity"]{{ end }}
+  cp_server_group_affinity                = {{ if .OpenCenter.Infrastructure.Compute.CpServerGroupAffinity }}[{{ range $i, $affinity := .OpenCenter.Infrastructure.Compute.CpServerGroupAffinity }}{{if $i}}, {{end}}"{{ $affinity }}"{{ end }}]{{ else }}["soft-anti-affinity"]{{ end }}
 {{- else }}
   worker_node_bfv_volume_size             = {{ .OpenCenter.Infrastructure.Storage.WorkerVolumeSize | default 20 }}
   worker_node_bfv_destination_type        = "{{ .OpenCenter.Infrastructure.Storage.WorkerVolumeDestinationType | default "volume" }}"
@@ -339,6 +340,7 @@ module "openstack-nova" {
   worker_node_bfv_source_type = local.worker_node_bfv_source_type
   worker_node_bfv_volume_type = local.worker_node_bfv_volume_type
   wn_server_group_affinity = local.wn_server_group_affinity
+  cp_server_group_affinity = local.cp_server_group_affinity
 }
 {{- end }}
 

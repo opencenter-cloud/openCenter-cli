@@ -356,7 +356,7 @@ func DecodePublicConfig(data []byte) (*Config, error) {
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&cfg); err != nil {
 		if yamlErr, ok := err.(*yaml.TypeError); ok {
-			return nil, &YAMLTypeErrors{Errors: yamlErr.Errors}
+			return nil, &YAMLTypeErrors{Errors: improveLegacyAffinityErrors(yamlErr.Errors)}
 		}
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
@@ -369,4 +369,18 @@ func DecodePublicConfig(data []byte) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// improveLegacyAffinityErrors rewrites the opaque KnownFields failure for the
+// removed top-level infrastructure.server_group_affinity field into an action-
+// oriented message pointing at its compute-level replacements.
+func improveLegacyAffinityErrors(errors []string) []string {
+	for i, e := range errors {
+		if strings.Contains(e, "field server_group_affinity not found in type v2.InfrastructureConfig") {
+			errors[i] = fmt.Sprintf(
+				"%s -- use opencenter.infrastructure.compute.worker_group_affinity (workers) or opencenter.infrastructure.compute.cp_server_group_affinity (control plane)",
+				e)
+		}
+	}
+	return errors
 }

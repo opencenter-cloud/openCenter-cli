@@ -166,6 +166,19 @@ func TestPromoteExemptsDeployManagedInventory(t *testing.T) {
 		t.Fatalf("deploy-managed .terraform.lock.hcl was modified: %q", got)
 	}
 
+	// terraform init also writes the .terraform module cache directory and the
+	// kubespray keypair provisioner drops id_rsa / id_rsa.pub into the cluster
+	// dir at deploy time; all of these are deploy-managed, not generated.
+	writeTestFile(t, filepath.Join(repo, infraRel, ".terraform", "modules", "mod.json"), "{ \"Modules\": [] }\n")
+	writeTestFile(t, filepath.Join(repo, infraRel, "id_rsa"), "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----\n")
+	writeTestFile(t, filepath.Join(repo, infraRel, "id_rsa.pub"), "ssh-rsa AAAA... example\n")
+	if _, err := promoteGeneratedTree(stage, repo, cluster, PromoteOptions{Force: true}); err != nil {
+		t.Fatalf("promotion rejected deploy-managed .terraform/ or SSH key files (OCTR-786): %v", err)
+	}
+	if got := readTestFile(t, filepath.Join(repo, infraRel, "id_rsa")); got != "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----\n" {
+		t.Fatalf("deploy-managed id_rsa was modified: %q", got)
+	}
+
 	// Negative case: a user file in the infrastructure scope but OUTSIDE the
 	// exempted deploy-managed paths must still be refused, proving the exemption
 	// is scoped (not a blanket cluster-dir exemption).

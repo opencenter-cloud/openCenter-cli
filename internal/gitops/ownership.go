@@ -418,7 +418,7 @@ func planRepositoryPromotion(root, clusterName string, planned, seeds map[string
 			continue
 		}
 		if isDeployManagedPath(clusterName, path) {
-			continue // kubespray inventory + terraform lock are deploy-managed (OCTR-786)
+			continue // kubespray inventory + terraform state + deploy SSH keys are deploy-managed (OCTR-786)
 		}
 		if expected, tracked := known[path]; tracked {
 			if hashBytes(onDisk) != expected.SHA256 || uint32(existingModes[path].Perm()) != expected.Mode {
@@ -801,8 +801,11 @@ func isGeneratedTreeCustomPath(path string) bool {
 //     inventory/.gitkeep; the actual inventory files (inventory.yaml,
 //     group_vars, k8s_hardening.yml, os_hardening_playbook.yml, credentials,
 //     etc.) are populated by kubespray at deploy time.
-//   - .terraform.lock.hcl: the Terraform dependency lock file, written by
-//     `terraform init` at deploy time and committed to the repo.
+//   - .terraform.lock.hcl and the .terraform/ directory: dependency lock file
+//     and module cache written by `terraform init` at deploy time.
+//   - the SSH key pair (id_rsa, id_rsa.pub): provisioned into the cluster dir
+//     by the kubespray OpenStack keypair terraform local-exec at deploy time;
+//     the generated Makefile/kubespray wiring reads it from there.
 //
 // None of these are part of the generator ownership ledger, so the ownership
 // preflight would otherwise reject them as "user-authored files found in
@@ -819,7 +822,10 @@ func isDeployManagedPath(clusterName, path string) bool {
 	if strings.HasPrefix(path, clusterDir+"/inventory/") {
 		return true
 	}
-	if path == clusterDir+"/.terraform.lock.hcl" {
+	if path == clusterDir+"/.terraform.lock.hcl" || strings.HasPrefix(path, clusterDir+"/.terraform/") {
+		return true
+	}
+	if path == clusterDir+"/id_rsa" || path == clusterDir+"/id_rsa.pub" {
 		return true
 	}
 	return false

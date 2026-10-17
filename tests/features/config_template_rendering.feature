@@ -38,7 +38,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/kustomization.yaml" should exist
     And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/kustomization.yaml" should contain "cert-manager-values-override"
@@ -77,7 +77,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/letsencrypt-prod-issuer.yaml" should exist
     And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/cert-manager/letsencrypt-prod-issuer.yaml" should contain "acme-v02.api.letsencrypt.org"
@@ -106,7 +106,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/managed-services/alert-proxy/kustomization.yaml" should exist
 
@@ -133,7 +133,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/managed-services/fluxcd/alert-proxy.yaml" should exist
 
@@ -166,7 +166,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/loki/kustomization.yaml" should exist
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/loki.yaml" should exist
@@ -192,7 +192,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/velero/kustomization.yaml" should exist
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/velero.yaml" should exist
@@ -226,7 +226,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/keycloak.yaml" should exist
     And the file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/keycloak.yaml" should contain "keycloak"
@@ -257,7 +257,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/headlamp/kustomization.yaml" should exist
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/headlamp.yaml" should exist
@@ -287,7 +287,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/weave-gitops.yaml" should exist
 
@@ -319,7 +319,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/kube-prometheus-stack/kustomization.yaml" should exist
     And a file "<<tmp>>/gitops-repo/applications/overlays/test-cluster/services/fluxcd/kube-prometheus-stack.yaml" should exist
@@ -359,7 +359,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
 
   @template @httproute @custom-hostname
@@ -390,7 +390,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
 
   # ---------------------------------------------------------------------------
@@ -409,7 +409,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-cluster --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And the directory "<<tmp>>/gitops-repo/applications" should exist
     And the directory "<<tmp>>/gitops-repo/infrastructure" should exist
@@ -506,7 +506,7 @@ Feature: Configuration-driven template rendering
       """
     When I run "opencenter cluster use test-integration --config-dir <<tmp>>/conf"
     Then the exit code should be 0
-    When I run "opencenter cluster generate --config-dir <<tmp>>/conf"
+    When I run "opencenter cluster generate --render-only --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     # Base structure
     And a file "<<tmp>>/gitops-repo/README.md" should exist

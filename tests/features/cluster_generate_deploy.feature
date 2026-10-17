@@ -28,8 +28,10 @@ Feature: GitOps generation and deployment
           cluster_name: dev
         gitops:
           git_dir: "<<tmp>>/repo-dev"
-      opentofu:
-        enabled: true
+        infrastructure:
+          cloud:
+            openstack:
+              image_id: "test-image-id"
       """
     When I run "opencenter cluster generate --render-only dev --config-dir <<tmp>>/conf"
     Then the exit code should be 0
@@ -154,6 +156,16 @@ Feature: GitOps generation and deployment
   Scenario: Generate works with organization-based structure
     Given I run "opencenter cluster init gitops-test --org gitops-org --config-dir <<tmp>>/conf"
     And the exit code should be 0
+    When I update the YAML "<<tmp>>/conf/clusters/blueprints/gitops-org/gitops-test/gitops-test-config.yaml" to set:
+      """
+      opencenter:
+        infrastructure:
+          bastion:
+            image: "test-bastion-image"
+          cloud:
+            openstack:
+              image_id: "test-image-id"
+      """
     When I run "opencenter cluster generate --render-only gitops-test --config-dir <<tmp>>/conf"
     Then the exit code should be 0
     And a directory "<<tmp>>/conf/clusters/gitops-org" should exist

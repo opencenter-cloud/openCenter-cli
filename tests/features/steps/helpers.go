@@ -595,10 +595,14 @@ func applyBDDStorageContractDefaults(cfg *v2.Config) {
 	if openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack; openstack != nil {
 		openstack.ApplicationCredentialID = "bdd-application-credential-id"
 		openstack.ApplicationCredentialSecret = "bdd-application-credential-secret"
+		openstack.ImageID = "bdd-openstack-image-id"
 	}
 	cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{
 		Provider: "github",
 		Token:    "bdd-git-token",
+	}
+	if cfg.OpenCenter.Infrastructure.Bastion.Enabled {
+		cfg.OpenCenter.Infrastructure.Bastion.Image = "bdd-openstack-image-id"
 	}
 	cfg.Secrets.Keycloak.AdminPassword = "bdd-keycloak-admin-password"
 	cfg.Secrets.Headlamp.OIDCClientSecret = "bdd-headlamp-oidc-secret"

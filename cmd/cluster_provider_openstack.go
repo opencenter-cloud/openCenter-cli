@@ -22,8 +22,8 @@ import (
 type providerOpenStackFlags struct {
 	cloudName             string
 	cloudsYAML            string
-	imageID               string
-	windowsImageID        string
+	imageName             string
+	windowsImageName      string
 	networkID             string
 	externalNetworkID     string
 	subnetID              string
@@ -48,7 +48,7 @@ This command does not deploy the cluster or create remote resources; it only
 writes the cluster's own configuration file. Use 'cluster deploy' for that.
 With --create-internal-network it switches internal networking to
 OpenTofu-managed mode instead of selecting an existing network.`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 	}
 	cmd.AddCommand(newClusterProviderOpenStackOperationCmd("plan", false))
 	cmd.AddCommand(newClusterProviderOpenStackOperationCmd("apply", true))
@@ -68,6 +68,10 @@ availability zones read-only, computes the changes, then writes them to the clus
 interactive confirmation prompt in text mode (use --yes to skip it). No remote resources are created
 or modified; use 'cluster deploy' for that.
 
+Selector flags (--image-name, --windows-image-name, --network-id, --subnet-id,
+--external-network-id, --availability-zone) accept a resource name or ID; a name
+that matches several discovered resources is rejected so nothing is picked silently.
+
 Plan first with 'plan' and pass identical flags so the same change set is applied.`
 	} else {
 		shortText = "plan OpenStack provider metadata and selections"
@@ -78,6 +82,10 @@ Reads the profile named by --os-cloud from clouds.yaml (override its location wi
 availability zones read-only, and prints the changes without writing anything: image IDs,
 internal/external network and subnet IDs, availability zone, plus application credential and TLS
 settings when requested. No remote resources are created or modified.
+
+Selector flags (--image-name, --windows-image-name, --network-id, --subnet-id,
+--external-network-id, --availability-zone) accept a resource name or ID; a name
+that matches several discovered resources is rejected so nothing is picked silently.
 
 Use 'apply' with identical flags to persist the same change set.`
 	}
@@ -92,12 +100,12 @@ Use 'apply' with identical flags to persist the same change set.`
 	}
 	cmd.Flags().StringVar(&flags.cloudName, "os-cloud", "", "profile name inside clouds.yaml to use for discovery")
 	cmd.Flags().StringVar(&flags.cloudsYAML, "clouds-yaml", "", "path to clouds.yaml")
-	cmd.Flags().StringVar(&flags.imageID, "image-id", "", "Linux image ID")
-	cmd.Flags().StringVar(&flags.windowsImageID, "windows-image-id", "", "Windows image ID")
-	cmd.Flags().StringVar(&flags.networkID, "network-id", "", "internal network ID")
-	cmd.Flags().StringVar(&flags.externalNetworkID, "external-network-id", "", "external network ID")
-	cmd.Flags().StringVar(&flags.subnetID, "subnet-id", "", "internal subnet ID")
-	cmd.Flags().StringVar(&flags.availabilityZone, "availability-zone", "", "availability zone")
+	cmd.Flags().StringVar(&flags.imageName, "image-name", "", "Linux image name or ID")
+	cmd.Flags().StringVar(&flags.windowsImageName, "windows-image-name", "", "Windows image name or ID")
+	cmd.Flags().StringVar(&flags.networkID, "network-id", "", "internal network name or ID")
+	cmd.Flags().StringVar(&flags.externalNetworkID, "external-network-id", "", "external network name or ID")
+	cmd.Flags().StringVar(&flags.subnetID, "subnet-id", "", "internal subnet name or ID")
+	cmd.Flags().StringVar(&flags.availabilityZone, "availability-zone", "", "availability zone name or ID")
 	cmd.Flags().BoolVar(&flags.createInternalNetwork, "create-internal-network", false, "let OpenTofu create and manage the internal network and subnet")
 	cmd.Flags().BoolVar(&flags.replace, "replace", false, "allow replacing populated provider selections")
 	cmd.Flags().BoolVar(&flags.importAuth, "import-auth", false, "write application credential fields from the selected profile")
@@ -161,7 +169,7 @@ func runClusterProviderOpenStack(cmd *cobra.Command, operation string, mutating 
 		authImport = &provideropenstack.AuthImport{ApplicationCredentialID: profile.AppCredID, ApplicationCredentialSecret: profile.AppCredSecret}
 	}
 	result, prospective, err := provideropenstack.Plan(cmd.Context(), cfg, snapshot, provideropenstack.Options{
-		ImageID: flags.imageID, WindowsImageID: flags.windowsImageID, NetworkID: flags.networkID,
+		ImageName: flags.imageName, WindowsImageName: flags.windowsImageName, NetworkID: flags.networkID,
 		ExternalNetworkID: flags.externalNetworkID, SubnetID: flags.subnetID, AvailabilityZone: flags.availabilityZone,
 		CreateInternalNetwork: flags.createInternalNetwork, Replace: flags.replace, ImportAuth: authImport, ImportTLS: flags.importTLS,
 	})

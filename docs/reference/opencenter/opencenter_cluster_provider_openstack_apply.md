@@ -22,6 +22,10 @@ availability zones read-only, computes the changes, then writes them to the clus
 interactive confirmation prompt in text mode (use --yes to skip it). No remote resources are created
 or modified; use 'cluster deploy' for that.
 
+Selector flags (--image-name, --windows-image-name, --network-id, --subnet-id,
+--external-network-id, --availability-zone) accept a resource name or ID; a name
+that matches several discovered resources is rejected so nothing is picked silently.
+
 Plan first with 'plan' and pass identical flags so the same change set is applied.
 
 ```
@@ -31,19 +35,19 @@ opencenter cluster provider openstack apply <cluster> [flags]
 ### Options
 
 ```
-      --availability-zone string     availability zone
+      --availability-zone string     availability zone name or ID
       --clouds-yaml string           path to clouds.yaml
       --create-internal-network      let OpenTofu create and manage the internal network and subnet
-      --external-network-id string   external network ID
+      --external-network-id string   external network name or ID
   -h, --help                         help for apply
-      --image-id string              Linux image ID
+      --image-name string            Linux image name or ID
       --import-auth                  write application credential fields from the selected profile
       --import-tls                   persist selected profile TLS settings
-      --network-id string            internal network ID
+      --network-id string            internal network name or ID
       --os-cloud string              profile name inside clouds.yaml to use for discovery
       --replace                      allow replacing populated provider selections
-      --subnet-id string             internal subnet ID
-      --windows-image-id string      Windows image ID
+      --subnet-id string             internal subnet name or ID
+      --windows-image-name string    Windows image name or ID
 ```
 
 ### Options inherited from parent commands

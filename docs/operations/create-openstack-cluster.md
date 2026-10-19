@@ -38,8 +38,10 @@ opencenter cluster provider openstack apply my-org/demo --os-cloud PROFILE
 ```
 
 The plan is read-only. Selectors include image, internal/external network,
-subnet, and availability zone IDs. `--create-internal-network` chooses the
-OpenTofu-managed internal-network mode and must be passed to both operations.
+subnet, and availability zone; each accepts a resource name or ID (`--image-name`,
+`--windows-image-name`, `--network-id`, `--subnet-id`, `--external-network-id`,
+`--availability-zone`) and persists the resolved ID. `--create-internal-network`
+chooses the OpenTofu-managed internal-network mode and must be passed to both operations.
 `--replace` allows replacement of populated values; `--import-auth` and
 `--import-tls` import selected profile settings. Apply prompts in text mode;
 global `--yes` is available for non-interactive use.

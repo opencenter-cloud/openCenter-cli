@@ -29,7 +29,7 @@ func TestClusterProviderOpenStackCommandHierarchy(t *testing.T) {
 		if err != nil || operationCmd == nil {
 			t.Fatalf("cluster provider openstack %s command not registered: command=%v err=%v", operation, operationCmd, err)
 		}
-		for _, flag := range []string{"os-cloud", "clouds-yaml", "image-id", "windows-image-id", "network-id", "external-network-id", "subnet-id", "availability-zone", "replace", "import-auth", "import-tls"} {
+		for _, flag := range []string{"os-cloud", "clouds-yaml", "image-name", "windows-image-name", "network-id", "external-network-id", "subnet-id", "availability-zone", "replace", "import-auth", "import-tls"} {
 			if operationCmd.Flags().Lookup(flag) == nil {
 				t.Fatalf("%s missing --%s", operation, flag)
 			}

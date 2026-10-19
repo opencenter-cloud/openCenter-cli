@@ -44,7 +44,7 @@ runClusterProviderOpenStack
        -> ApplyPersistence.Apply -> stale check -> backup -> atomic public config write
 ```
 
-Provider planning fills unambiguous selections and reports ambiguous candidates. Populated values need `--replace`; optional auth/TLS imports are explicit and sensitive result values are redacted. Neither provider plan nor apply creates a remote resource, container, or credential.
+Provider planning fills unambiguous selections and reports ambiguous candidates. Every ambiguous field also emits a warning naming its config path, the candidate count, and the selector that resolves it (`--image-id`, `--windows-image-id`, `--network-id`, `--subnet-id`, `--external-network-id`, `--availability-zone`), so a blocked plan states its reason instead of only printing candidates. Populated values need `--replace`; optional auth/TLS imports are explicit and sensitive result values are redacted. Neither provider plan nor apply creates a remote resource, container, or credential.
 
 ## Actual storage path
 

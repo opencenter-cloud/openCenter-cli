@@ -181,7 +181,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 	if selected, ok, ambiguous, err := chooseResource("image", osCfg.ImageID, opts.ImageID, snapshot.Images, opts.Replace); err != nil {
 		return result, cfg, err
 	} else if ambiguous {
-		result.Selections = append(result.Selections, Selection{Field: "image", Candidates: sortedResourceCopy(snapshot.Images)})
+		ambiguousSelection(&result, "image", "--image-id", "opencenter.infrastructure.cloud.openstack.image_id", snapshot.Images)
 		blocked = true
 	} else if ok {
 		set("opencenter.infrastructure.cloud.openstack.image_id", &osCfg.ImageID, selected.ID, false)
@@ -194,7 +194,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 	if selected, ok, ambiguous, err := chooseResource("windows image", osCfg.ImageIDWindows, opts.WindowsImageID, snapshot.WindowsImages, opts.Replace); err != nil {
 		return result, cfg, err
 	} else if ambiguous {
-		result.Selections = append(result.Selections, Selection{Field: "windows image", Candidates: sortedResourceCopy(snapshot.WindowsImages)})
+		ambiguousSelection(&result, "windows image", "--windows-image-id", "opencenter.infrastructure.cloud.openstack.image_id_windows", snapshot.WindowsImages)
 		blocked = true
 	} else if ok {
 		set("opencenter.infrastructure.cloud.openstack.image_id_windows", &osCfg.ImageIDWindows, selected.ID, false)
@@ -216,7 +216,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		if selected, ok, ambiguous, err := chooseResource("network", osCfg.NetworkID, opts.NetworkID, internalNetworks, opts.Replace); err != nil {
 			return result, cfg, err
 		} else if ambiguous {
-			result.Selections = append(result.Selections, Selection{Field: "network", Candidates: sortedResourceCopy(internalNetworks)})
+			ambiguousSelection(&result, "network", "--network-id", "opencenter.infrastructure.cloud.openstack.network_id", internalNetworks)
 			blocked = true
 		} else if ok {
 			set("opencenter.infrastructure.cloud.openstack.network_id", &osCfg.NetworkID, selected.ID, false)
@@ -236,7 +236,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 	if selected, ok, ambiguous, err := chooseResource("external network", osCfg.RouterExternalNetworkID, opts.ExternalNetworkID, snapshot.ExternalNetworks, opts.Replace); err != nil {
 		return result, cfg, err
 	} else if ambiguous {
-		result.Selections = append(result.Selections, Selection{Field: "external network", Candidates: sortedResourceCopy(snapshot.ExternalNetworks)})
+		ambiguousSelection(&result, "external network", "--external-network-id", "opencenter.infrastructure.cloud.openstack.router_external_network_id", snapshot.ExternalNetworks)
 		blocked = true
 	} else if ok {
 		set("opencenter.infrastructure.cloud.openstack.floating_network_id", &osCfg.FloatingNetworkID, selected.ID, false)
@@ -275,7 +275,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		if selected, ok, ambiguous, err := chooseResource("subnet", osCfg.SubnetID, opts.SubnetID, subnetResources, opts.Replace); err != nil {
 			return result, cfg, err
 		} else if ambiguous {
-			result.Selections = append(result.Selections, Selection{Field: "subnet", Candidates: sortedResourceCopy(subnetResources)})
+			ambiguousSelection(&result, "subnet", "--subnet-id", "opencenter.infrastructure.cloud.openstack.subnet_id", subnetResources)
 			blocked = true
 		} else if ok {
 			set("opencenter.infrastructure.cloud.openstack.subnet_id", &osCfg.SubnetID, selected.ID, false)
@@ -295,7 +295,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		if selected, ok, ambiguous, err := chooseResource("availability zone", osCfg.AvailabilityZone, opts.AvailabilityZone, snapshot.AvailabilityZones, opts.Replace); err != nil {
 			return result, cfg, err
 		} else if ambiguous {
-			result.Selections = append(result.Selections, Selection{Field: "availability zone", Candidates: sortedResourceCopy(snapshot.AvailabilityZones)})
+			ambiguousSelection(&result, "availability zone", "--availability-zone", "opencenter.infrastructure.cloud.openstack.availability_zone", snapshot.AvailabilityZones)
 			blocked = true
 		} else if ok {
 			set("opencenter.infrastructure.cloud.openstack.availability_zone", &osCfg.AvailabilityZone, selected.ID, false)
@@ -484,6 +484,14 @@ func filterInternalNetworks(networks, external []cloudopenstack.Resource) []clou
 
 func unresolvedSelection(current, explicit string, candidates []cloudopenstack.Resource) bool {
 	return strings.TrimSpace(explicit) == "" && isPlaceholder(current) && len(candidates) == 0
+}
+
+// ambiguousSelection records that a field could not be resolved automatically.
+// The candidate list alone does not explain the blocked status, so every
+// ambiguity also emits a warning naming the selector that resolves it.
+func ambiguousSelection(result *Result, field, selector, configPath string, candidates []cloudopenstack.Resource) {
+	result.Selections = append(result.Selections, Selection{Field: field, Candidates: sortedResourceCopy(candidates)})
+	result.Warnings = append(result.Warnings, fmt.Sprintf("%s is ambiguous: %d candidates discovered; specify %s with one of the listed IDs", configPath, len(candidates), selector))
 }
 
 func sortedResourceCopy(values []cloudopenstack.Resource) []cloudopenstack.Resource {

@@ -89,6 +89,102 @@ func TestPlanBlocksAmbiguousSelectionWithoutMutation(t *testing.T) {
 	if got := result.Selections[0].Candidates; len(got) != 2 || got[0].ID != "img-a" || got[1].ID != "img-b" {
 		t.Fatalf("candidates are not stable: %#v", got)
 	}
+	if got := strings.Join(result.Warnings, "\n"); !strings.Contains(got, "opencenter.infrastructure.cloud.openstack.image_id is ambiguous: 2 candidates discovered; specify --image-id with one of the listed IDs") {
+		t.Fatalf("blocked plan did not state why the image is unresolved:\n%s", got)
+	}
+}
+
+// TestPlanAmbiguousSelectionsNameResolvingSelector guards the exit-2 contract:
+// every ambiguous field must emit a warning naming the config path, the
+// candidate count, and the selector that resolves it, so a blocked plan is
+// self-explanatory instead of a bare candidate dump.
+func TestPlanAmbiguousSelectionsNameResolvingSelector(t *testing.T) {
+	cases := []struct {
+		name     string
+		snapshot *cloudopenstack.DiscoverySnapshot
+		options  Options
+		field    string
+		warning  string
+	}{
+		{
+			name:     "windows image",
+			snapshot: &cloudopenstack.DiscoverySnapshot{WindowsImages: []cloudopenstack.Resource{{ID: "win-a", Name: "Win A"}, {ID: "win-b", Name: "Win B"}}},
+			field:    "windows image",
+			warning:  "opencenter.infrastructure.cloud.openstack.image_id_windows is ambiguous: 2 candidates discovered; specify --windows-image-id",
+		},
+		{
+			name: "network",
+			snapshot: &cloudopenstack.DiscoverySnapshot{
+				Images:   []cloudopenstack.Resource{{ID: "image", Name: "Ubuntu"}},
+				Networks: []cloudopenstack.Resource{{ID: "network-a", Name: "a"}, {ID: "network-b", Name: "b"}},
+			},
+			options: Options{ImageID: "image"},
+			field:   "network",
+			warning: "opencenter.infrastructure.cloud.openstack.network_id is ambiguous: 2 candidates discovered; specify --network-id",
+		},
+		{
+			name: "external network",
+			snapshot: &cloudopenstack.DiscoverySnapshot{
+				Images:           []cloudopenstack.Resource{{ID: "image", Name: "Ubuntu"}},
+				ExternalNetworks: []cloudopenstack.Resource{{ID: "ext-a", Name: "PUBLICNET-A"}, {ID: "ext-b", Name: "PUBLICNET-B"}},
+			},
+			options: Options{ImageID: "image"},
+			field:   "external network",
+			warning: "opencenter.infrastructure.cloud.openstack.router_external_network_id is ambiguous: 2 candidates discovered; specify --external-network-id",
+		},
+		{
+			name: "subnet",
+			snapshot: &cloudopenstack.DiscoverySnapshot{
+				Images:   []cloudopenstack.Resource{{ID: "image", Name: "Ubuntu"}},
+				Networks: []cloudopenstack.Resource{{ID: "network", Name: "internal"}},
+				Subnets: []cloudopenstack.Subnet{
+					{Resource: cloudopenstack.Resource{ID: "subnet-a", Name: "a"}, NetworkID: "network"},
+					{Resource: cloudopenstack.Resource{ID: "subnet-b", Name: "b"}, NetworkID: "network"},
+				},
+				ExternalNetworks: []cloudopenstack.Resource{{ID: "external", Name: "PUBLICNET"}},
+			},
+			options: Options{ImageID: "image", NetworkID: "network"},
+			field:   "subnet",
+			warning: "opencenter.infrastructure.cloud.openstack.subnet_id is ambiguous: 2 candidates discovered; specify --subnet-id",
+		},
+		{
+			name: "availability zone",
+			snapshot: &cloudopenstack.DiscoverySnapshot{
+				Images:                     []cloudopenstack.Resource{{ID: "image", Name: "Ubuntu"}},
+				AvailabilityZonesAvailable: true,
+				AvailabilityZones:          []cloudopenstack.Resource{{ID: "az-a", Name: "az-a"}, {ID: "az-b", Name: "az-b"}},
+			},
+			options: Options{ImageID: "image"},
+			field:   "availability zone",
+			warning: "opencenter.infrastructure.cloud.openstack.availability_zone is ambiguous: 2 candidates discovered; specify --availability-zone",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := v2.NewV2Default("prod", "openstack")
+			if err != nil {
+				t.Fatal(err)
+			}
+			cfg.OpenCenter.Infrastructure.Cloud.OpenStack = &v2.OpenStackCloudConfig{}
+			result, _, err := Plan(context.Background(), cfg, tc.snapshot, tc.options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Status != StatusBlocked {
+				t.Fatalf("status = %q, want blocked; warnings=%v", result.Status, result.Warnings)
+			}
+			var selected bool
+			for _, selection := range result.Selections {
+				selected = selected || selection.Field == tc.field
+			}
+			if !selected {
+				t.Fatalf("selections missing %q: %#v", tc.field, result.Selections)
+			}
+			if warnings := strings.Join(result.Warnings, "\n"); !strings.Contains(warnings, tc.warning) {
+				t.Errorf("warnings missing %q:\n%s", tc.warning, warnings)
+			}
+		})
+	}
 }
 
 func TestPlanPreservesUppercaseDFW3Region(t *testing.T) {

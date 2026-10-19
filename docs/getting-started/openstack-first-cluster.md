@@ -52,8 +52,13 @@ opencenter cluster provider openstack plan my-org/demo \
   --os-cloud my-profile
 ```
 
-Selectors include `--image-id`, `--windows-image-id`, `--network-id`,
-`--external-network-id`, `--subnet-id`, and `--availability-zone`. If the
+Selectors include `--image-name`, `--windows-image-name`, `--network-id`,
+`--external-network-id`, `--subnet-id`, and `--availability-zone`. Each accepts a
+resource **name or ID** — the name printed by the `Selection required:` list is
+what you pass, e.g. `--image-name "Ubuntu 24.04"`. Matching is case-insensitive on
+the exact name; a name matching several discovered resources is rejected with the
+candidate list so nothing is chosen silently. The value written to the config is
+always the resolved ID, which is what OpenTofu consumes. If the
 generated infrastructure should own the internal network and subnet, use:
 
 ```bash
@@ -87,13 +92,13 @@ Apply writes the planned selections to the cluster configuration file:
 ```bash
 # Using an existing network
 opencenter cluster provider openstack apply my-org/demo \
-  --os-cloud my-profile --image-id IMAGE_ID --network-id NETWORK_ID \
-  --external-network-id EXTERNAL_NETWORK_ID --subnet-id SUBNET_ID
+  --os-cloud my-profile --image-name "Ubuntu 24.04" --network-id cluster-net \
+  --external-network-id PUBLICNET --subnet-id cluster-subnet
 
 # Letting OpenTofu manage the internal network
 opencenter cluster provider openstack apply my-org/demo \
   --os-cloud my-profile --create-internal-network --replace \
-  --image-id IMAGE_ID --windows-image-id WINDOWS_IMAGE_ID
+  --image-name "Ubuntu 24.04" --windows-image-name "Windows Server 2022"
 ```
 
 `--import-auth` copies the application credential ID and secret from the

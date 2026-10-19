@@ -26,8 +26,8 @@ type AuthImport struct {
 }
 
 type Options struct {
-	ImageID               string
-	WindowsImageID        string
+	ImageName             string
+	WindowsImageName      string
 	NetworkID             string
 	ExternalNetworkID     string
 	SubnetID              string
@@ -154,47 +154,47 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 	// discovered resource is stale (for example a baked-in default from a
 	// different project). It must be surfaced explicitly: otherwise chooseResource
 	// silently preserves the dead value and plan reports a misleading no-op.
-	if !opts.Replace && strings.TrimSpace(opts.ImageID) == "" {
+	if !opts.Replace && strings.TrimSpace(opts.ImageName) == "" {
 		if current := strings.TrimSpace(osCfg.ImageID); current != "" && !isPlaceholder(current) {
 			if _, exists := findResource(snapshot.Images, current); !exists {
 				blocked = true
-				result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id %q does not match any discovered Linux image; specify --image-id with --replace to select a valid image", current))
+				result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id %q does not match any discovered Linux image; specify --image-name with --replace to select a valid image", current))
 			}
 		}
 	}
-	if !opts.Replace && strings.TrimSpace(opts.WindowsImageID) == "" {
+	if !opts.Replace && strings.TrimSpace(opts.WindowsImageName) == "" {
 		if current := strings.TrimSpace(osCfg.ImageIDWindows); current != "" && !isPlaceholder(current) {
 			if _, exists := findResource(snapshot.WindowsImages, current); !exists {
 				blocked = true
-				result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id_windows %q does not match any discovered Windows image; specify --windows-image-id with --replace to select a valid image", current))
+				result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id_windows %q does not match any discovered Windows image; specify --windows-image-name with --replace to select a valid image", current))
 			}
 		}
 	}
-	if resourceConflict(osCfg.ImageID, opts.ImageID, snapshot.Images, opts.Replace, true) {
+	if resourceConflict(osCfg.ImageID, opts.ImageName, snapshot.Images, opts.Replace, true) {
 		blocked = true
-		result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id is populated with %q; use --replace or --image-id", osCfg.ImageID))
+		result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id is populated with %q; use --replace or --image-name", osCfg.ImageID))
 	}
-	if unresolvedSelection(osCfg.ImageID, opts.ImageID, snapshot.Images) {
+	if unresolvedSelection(osCfg.ImageID, opts.ImageName, snapshot.Images) {
 		blocked = true
-		result.Warnings = append(result.Warnings, "no viable Linux image was discovered; specify --image-id or provide a profile with an image")
+		result.Warnings = append(result.Warnings, "no viable Linux image was discovered; specify --image-name or provide a profile with an image")
 	}
-	if selected, ok, ambiguous, err := chooseResource("image", osCfg.ImageID, opts.ImageID, snapshot.Images, opts.Replace); err != nil {
+	if selected, ok, ambiguous, err := chooseResource("image", osCfg.ImageID, opts.ImageName, snapshot.Images, opts.Replace); err != nil {
 		return result, cfg, err
 	} else if ambiguous {
-		ambiguousSelection(&result, "image", "--image-id", "opencenter.infrastructure.cloud.openstack.image_id", snapshot.Images)
+		ambiguousSelection(&result, "image", "--image-name", "opencenter.infrastructure.cloud.openstack.image_id", snapshot.Images)
 		blocked = true
 	} else if ok {
 		set("opencenter.infrastructure.cloud.openstack.image_id", &osCfg.ImageID, selected.ID, false)
 		set("opencenter.infrastructure.cloud.openstack.image_name", &osCfg.ImageName, selected.Name, false)
 	}
-	if resourceConflict(osCfg.ImageIDWindows, opts.WindowsImageID, snapshot.WindowsImages, opts.Replace, true) {
+	if resourceConflict(osCfg.ImageIDWindows, opts.WindowsImageName, snapshot.WindowsImages, opts.Replace, true) {
 		blocked = true
-		result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id_windows is populated with %q; use --replace or --windows-image-id", osCfg.ImageIDWindows))
+		result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id_windows is populated with %q; use --replace or --windows-image-name", osCfg.ImageIDWindows))
 	}
-	if selected, ok, ambiguous, err := chooseResource("windows image", osCfg.ImageIDWindows, opts.WindowsImageID, snapshot.WindowsImages, opts.Replace); err != nil {
+	if selected, ok, ambiguous, err := chooseResource("windows image", osCfg.ImageIDWindows, opts.WindowsImageName, snapshot.WindowsImages, opts.Replace); err != nil {
 		return result, cfg, err
 	} else if ambiguous {
-		ambiguousSelection(&result, "windows image", "--windows-image-id", "opencenter.infrastructure.cloud.openstack.image_id_windows", snapshot.WindowsImages)
+		ambiguousSelection(&result, "windows image", "--windows-image-name", "opencenter.infrastructure.cloud.openstack.image_id_windows", snapshot.WindowsImages)
 		blocked = true
 	} else if ok {
 		set("opencenter.infrastructure.cloud.openstack.image_id_windows", &osCfg.ImageIDWindows, selected.ID, false)
@@ -375,16 +375,69 @@ func resourceConflict(current, explicit string, candidates []cloudopenstack.Reso
 	return true
 }
 
+// selectorMatch is a resource resolved from a `--*-id` selector value.
+type selectorMatch struct {
+	resource  cloudopenstack.Resource
+	ambiguous bool
+}
+
+// resolveSelector matches a selector value against discovered inventory by
+// resource ID or by name. Names are the human-facing handle (they are what the
+// candidate list prints and what operators type), while IDs remain accepted
+// because they are what the config stores and what OpenTofu consumes. A
+// selector matching several resources is ambiguous rather than
+// first-match-wins: Glance does not enforce unique names, and silently picking
+// one would bind the cluster to a resource the operator did not choose.
+func resolveSelector(candidates []cloudopenstack.Resource, selector string) selectorMatch {
+	matches := selectorMatches(candidates, selector)
+	switch len(matches) {
+	case 0:
+		return selectorMatch{}
+	case 1:
+		return selectorMatch{resource: matches[0]}
+	default:
+		return selectorMatch{ambiguous: true}
+	}
+}
+
+// selectorMatches lists every resource a selector value resolves to, so an
+// ambiguous selector can name the near misses instead of a bare count.
+func selectorMatches(candidates []cloudopenstack.Resource, selector string) []cloudopenstack.Resource {
+	selector = strings.TrimSpace(selector)
+	if selector == "" {
+		return nil
+	}
+	matches := make([]cloudopenstack.Resource, 0, len(candidates))
+	for _, candidate := range candidates {
+		if candidate.ID == selector || strings.EqualFold(strings.TrimSpace(candidate.Name), selector) {
+			matches = append(matches, candidate)
+		}
+	}
+	sortResources(matches)
+	return matches
+}
+
+func describeResources(values []cloudopenstack.Resource) string {
+	described := make([]string, 0, len(values))
+	for _, value := range values {
+		described = append(described, fmt.Sprintf("%s (%s)", value.Name, value.ID))
+	}
+	return strings.Join(described, ", ")
+}
+
 func chooseResource(field, current, explicit string, candidates []cloudopenstack.Resource, replace bool) (cloudopenstack.Resource, bool, bool, error) {
 	candidates = append([]cloudopenstack.Resource(nil), candidates...)
 	sortResources(candidates)
 	if strings.TrimSpace(explicit) != "" {
-		for _, candidate := range candidates {
-			if candidate.ID == strings.TrimSpace(explicit) {
-				return candidate, true, false, nil
-			}
+		match := resolveSelector(candidates, explicit)
+		if match.ambiguous {
+			matches := selectorMatches(candidates, explicit)
+			return cloudopenstack.Resource{}, false, false, fmt.Errorf("%s selector %q matches %d discovered resources: %s; specify exactly one", field, strings.TrimSpace(explicit), len(matches), describeResources(matches))
 		}
-		return cloudopenstack.Resource{}, false, false, fmt.Errorf("%s selector %q was not found in OpenStack discovery", field, explicit)
+		if match.resource.ID != "" {
+			return match.resource, true, false, nil
+		}
+		return cloudopenstack.Resource{}, false, false, fmt.Errorf("%s selector %q was not found in OpenStack discovery by ID or name", field, explicit)
 	}
 	current = strings.TrimSpace(current)
 	if current != "" && !isPlaceholder(current) {
@@ -491,7 +544,7 @@ func unresolvedSelection(current, explicit string, candidates []cloudopenstack.R
 // ambiguity also emits a warning naming the selector that resolves it.
 func ambiguousSelection(result *Result, field, selector, configPath string, candidates []cloudopenstack.Resource) {
 	result.Selections = append(result.Selections, Selection{Field: field, Candidates: sortedResourceCopy(candidates)})
-	result.Warnings = append(result.Warnings, fmt.Sprintf("%s is ambiguous: %d candidates discovered; specify %s with one of the listed IDs", configPath, len(candidates), selector))
+	result.Warnings = append(result.Warnings, fmt.Sprintf("%s is ambiguous: %d candidates discovered; specify %s with one of the listed names or IDs", configPath, len(candidates), selector))
 }
 
 func sortedResourceCopy(values []cloudopenstack.Resource) []cloudopenstack.Resource {

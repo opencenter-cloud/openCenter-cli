@@ -70,7 +70,11 @@ or modified; use 'cluster deploy' for that.
 
 Selector flags (--image-name, --windows-image-name, --network-id, --subnet-id,
 --external-network-id, --availability-zone) accept a resource name or ID; a name
-that matches several discovered resources is rejected so nothing is picked silently.
+that matches several discovered resources is rejected so nothing is picked
+silently. With no --image-name, the name Ubuntu 24.04 is resolved against the
+project inventory and reported as a warning; if the project does not have it, the
+candidate list is printed instead. --windows-image-name is only required when the
+cluster runs Windows workers.
 
 Plan first with 'plan' and pass identical flags so the same change set is applied.`
 	} else {
@@ -85,7 +89,11 @@ settings when requested. No remote resources are created or modified.
 
 Selector flags (--image-name, --windows-image-name, --network-id, --subnet-id,
 --external-network-id, --availability-zone) accept a resource name or ID; a name
-that matches several discovered resources is rejected so nothing is picked silently.
+that matches several discovered resources is rejected so nothing is picked
+silently. With no --image-name, the name Ubuntu 24.04 is resolved against the
+project inventory and reported as a warning; if the project does not have it, the
+candidate list is printed instead. --windows-image-name is only required when the
+cluster runs Windows workers.
 
 Use 'apply' with identical flags to persist the same change set.`
 	}

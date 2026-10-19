@@ -193,6 +193,138 @@ func TestPlanNameSelectorNeedsReplaceForPopulatedValue(t *testing.T) {
 	}
 }
 
+// TestPlanDefaultsToDefaultLinuxImageNameWhenDiscovered pins the preferred
+// behavior: with no --image-name, plan resolves DefaultLinuxImageName against
+// live inventory and says so, instead of blocking on 20+ candidates.
+func TestPlanDefaultsToDefaultLinuxImageNameWhenDiscovered(t *testing.T) {
+	cfg, err := v2.NewV2Default("prod", "openstack")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack = &v2.OpenStackCloudConfig{}
+	snapshot := &cloudopenstack.DiscoverySnapshot{
+		Images: []cloudopenstack.Resource{
+			{ID: "img-ubuntu", Name: "Ubuntu 24.04"},
+			{ID: "img-alma", Name: "AlmaLinux 9"},
+			{ID: "img-debian", Name: "Debian 12"},
+		},
+		Networks:         []cloudopenstack.Resource{{ID: "net-1", Name: "cluster-net"}},
+		Subnets:          []cloudopenstack.Subnet{{Resource: cloudopenstack.Resource{ID: "subnet-1", Name: "cluster-subnet"}, NetworkID: "net-1"}},
+		ExternalNetworks: []cloudopenstack.Resource{{ID: "ext-1", Name: "PUBLICNET"}},
+	}
+
+	result, prospective, err := Plan(context.Background(), cfg, snapshot, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != StatusPlanned {
+		t.Fatalf("status = %q, want planned; warnings=%v selections=%#v", result.Status, result.Warnings, result.Selections)
+	}
+	osCfg := prospective.OpenCenter.Infrastructure.Cloud.OpenStack
+	if osCfg.ImageID != "img-ubuntu" || osCfg.ImageName != "Ubuntu 24.04" {
+		t.Fatalf("default image name not resolved: %#v", osCfg)
+	}
+	if warnings := strings.Join(result.Warnings, "\n"); !strings.Contains(warnings, `defaulting to "Ubuntu 24.04" (img-ubuntu)`) {
+		t.Fatalf("defaulting was not reported to the operator:\n%s", warnings)
+	}
+}
+
+// TestPlanDefaultLinuxImageNameFallsBackToCandidateList verifies the default is
+// a preference, never a fabricated value: a project without that image keeps the
+// ordinary ambiguous behavior and prints every candidate.
+func TestPlanDefaultLinuxImageNameFallsBackToCandidateList(t *testing.T) {
+	cfg, err := v2.NewV2Default("prod", "openstack")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack = &v2.OpenStackCloudConfig{}
+	snapshot := &cloudopenstack.DiscoverySnapshot{
+		Images: []cloudopenstack.Resource{{ID: "img-alma", Name: "AlmaLinux 9"}, {ID: "img-debian", Name: "Debian 12"}},
+	}
+
+	result, prospective, err := Plan(context.Background(), cfg, snapshot, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != StatusBlocked {
+		t.Fatalf("status = %q, want blocked", result.Status)
+	}
+	if len(result.Selections) != 1 || result.Selections[0].Field != "image" || len(result.Selections[0].Candidates) != 2 {
+		t.Fatalf("candidate list not reported: %#v", result.Selections)
+	}
+	if warnings := strings.Join(result.Warnings, "\n"); strings.Contains(warnings, "defaulting") {
+		t.Fatalf("absent default was reported as applied:\n%s", warnings)
+	}
+	if got := prospective.OpenCenter.Infrastructure.Cloud.OpenStack.ImageID; got != "" {
+		t.Fatalf("blocked plan wrote image_id %q", got)
+	}
+}
+
+// TestPlanSkipsWindowsImageWithoutWindowsWorkers pins that a Linux-only cluster
+// is no longer blocked on a Windows image it will never boot, while Windows
+// workers bring the requirement back.
+func TestPlanSkipsWindowsImageWithoutWindowsWorkers(t *testing.T) {
+	newCfg := func() *v2.Config {
+		cfg, err := v2.NewV2Default("prod", "openstack")
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg.OpenCenter.Infrastructure.Cloud.OpenStack = &v2.OpenStackCloudConfig{}
+		return cfg
+	}
+	snapshot := &cloudopenstack.DiscoverySnapshot{
+		Images:           []cloudopenstack.Resource{{ID: "img-ubuntu", Name: "Ubuntu 24.04"}},
+		WindowsImages:    []cloudopenstack.Resource{{ID: "win-a", Name: "Win A"}, {ID: "win-b", Name: "Win B"}},
+		Networks:         []cloudopenstack.Resource{{ID: "net-1", Name: "cluster-net"}},
+		Subnets:          []cloudopenstack.Subnet{{Resource: cloudopenstack.Resource{ID: "subnet-1", Name: "cluster-subnet"}, NetworkID: "net-1"}},
+		ExternalNetworks: []cloudopenstack.Resource{{ID: "ext-1", Name: "PUBLICNET"}},
+	}
+
+	result, prospective, err := Plan(context.Background(), newCfg(), snapshot, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != StatusPlanned {
+		t.Fatalf("Linux-only cluster blocked on Windows image: status=%q warnings=%v selections=%#v", result.Status, result.Warnings, result.Selections)
+	}
+	if got := prospective.OpenCenter.Infrastructure.Cloud.OpenStack.ImageIDWindows; got != "" {
+		t.Fatalf("Windows image selected for a cluster with no Windows workers: %q", got)
+	}
+
+	// Windows workers present: the ambiguity is back, as it must be.
+	withWindows := newCfg()
+	withWindows.OpenCenter.Infrastructure.Compute.WorkerCountWindows = 2
+	result, _, err = Plan(context.Background(), withWindows, snapshot, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != StatusBlocked {
+		t.Fatalf("Windows cluster not blocked on ambiguous Windows image: status=%q", result.Status)
+	}
+}
+
+// TestPlanDefaultLinuxImageNameDoesNotOverrideStoredValue keeps the default from
+// silently rewriting a cluster that already has an image selected.
+func TestPlanDefaultLinuxImageNameDoesNotOverrideStoredValue(t *testing.T) {
+	cfg, err := v2.NewV2Default("prod", "openstack")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack = &v2.OpenStackCloudConfig{ImageID: "img-alma", ImageName: "AlmaLinux 9"}
+	snapshot := &cloudopenstack.DiscoverySnapshot{
+		Images: []cloudopenstack.Resource{{ID: "img-ubuntu", Name: "Ubuntu 24.04"}, {ID: "img-alma", Name: "AlmaLinux 9"}},
+	}
+
+	_, prospective, err := Plan(context.Background(), cfg, snapshot, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	osCfg := prospective.OpenCenter.Infrastructure.Cloud.OpenStack
+	if osCfg.ImageID != "img-alma" {
+		t.Fatalf("stored image was replaced by the default: %q", osCfg.ImageID)
+	}
+}
+
 // TestPlanAmbiguousNameSelectorIsRejectedByNameAndID guards against
 // first-match-wins: Glance names are not unique, so a name matching several
 // resources must name every candidate instead of picking one.

@@ -18,7 +18,38 @@ const (
 	StatusNoOp     = "no-op"
 	StatusBlocked  = "blocked"
 	StatusDeclined = "declined"
+
+	// DefaultLinuxImageName is the operator preference applied when no
+	// --image-name is given. It is a NAME, resolved against live Glance
+	// inventory exactly like an explicit selector, so nothing is ever persisted
+	// unless the cloud actually has that image. Image IDs are project-scoped and
+	// must never be baked in (see the stale-image detection in Plan); a name
+	// carries no such risk. When the cloud does not have it, plan falls through
+	// to the ordinary ambiguous path and prints the candidate list.
+	DefaultLinuxImageName = "Ubuntu 24.04"
 )
+
+// windowsImageNeeded reports whether the plan must resolve image_id_windows.
+// Readiness only requires that value when the cluster runs Windows workers
+// without a per-pool image override (config/v2/validator.go), so requiring a
+// selection otherwise blocked every Linux-only cluster over an image it will
+// never boot. A stored value or an explicit --windows-image-name also keeps the
+// field in scope, so a stale Windows image stays repairable on any cluster.
+func windowsImageNeeded(cfg *v2.Config, osCfg *v2.OpenStackCloudConfig, opts Options) bool {
+	if strings.TrimSpace(osCfg.ImageIDWindows) != "" || strings.TrimSpace(opts.WindowsImageName) != "" {
+		return true
+	}
+	compute := cfg.OpenCenter.Infrastructure.Compute
+	if compute.WorkerCountWindows > 0 {
+		return true
+	}
+	for _, pool := range compute.AdditionalServerPoolsWorkerWindows {
+		if pool.Count > 0 && strings.TrimSpace(pool.Image) == "" {
+			return true
+		}
+	}
+	return false
+}
 
 type AuthImport struct {
 	ApplicationCredentialID     string
@@ -89,6 +120,13 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		return result, cfg, fmt.Errorf("OpenStack discovery snapshot cannot be nil")
 	}
 	result.Warnings = append(result.Warnings, snapshot.Warnings...)
+	// No explicit Linux image: prefer the default name, but only if this cloud
+	// actually has it. Resolution is the ordinary selector path, so an absent
+	// default leaves the plan ambiguous and the candidate list is printed.
+	if strings.TrimSpace(opts.ImageName) == "" && resolveSelector(snapshot.Images, DefaultLinuxImageName).resource.ID != "" {
+		opts.ImageName = DefaultLinuxImageName
+		result.Warnings = append(result.Warnings, fmt.Sprintf("no --image-name specified; defaulting to %q (%s) discovered in this project", DefaultLinuxImageName, resolveSelector(snapshot.Images, DefaultLinuxImageName).resource.ID))
+	}
 	prospective := cloneProviderConfig(cfg)
 	osCfg := prospective.OpenCenter.Infrastructure.Cloud.OpenStack
 	changes := make([]Change, 0)
@@ -162,7 +200,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 			}
 		}
 	}
-	if !opts.Replace && strings.TrimSpace(opts.WindowsImageName) == "" {
+	if windowsImageNeeded(prospective, osCfg, opts) && !opts.Replace && strings.TrimSpace(opts.WindowsImageName) == "" {
 		if current := strings.TrimSpace(osCfg.ImageIDWindows); current != "" && !isPlaceholder(current) {
 			if _, exists := findResource(snapshot.WindowsImages, current); !exists {
 				blocked = true
@@ -187,17 +225,19 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		set("opencenter.infrastructure.cloud.openstack.image_id", &osCfg.ImageID, selected.ID, false)
 		set("opencenter.infrastructure.cloud.openstack.image_name", &osCfg.ImageName, selected.Name, false)
 	}
-	if resourceConflict(osCfg.ImageIDWindows, opts.WindowsImageName, snapshot.WindowsImages, opts.Replace, true) {
-		blocked = true
-		result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id_windows is populated with %q; use --replace or --windows-image-name", osCfg.ImageIDWindows))
-	}
-	if selected, ok, ambiguous, err := chooseResource("windows image", osCfg.ImageIDWindows, opts.WindowsImageName, snapshot.WindowsImages, opts.Replace); err != nil {
-		return result, cfg, err
-	} else if ambiguous {
-		ambiguousSelection(&result, "windows image", "--windows-image-name", "opencenter.infrastructure.cloud.openstack.image_id_windows", snapshot.WindowsImages)
-		blocked = true
-	} else if ok {
-		set("opencenter.infrastructure.cloud.openstack.image_id_windows", &osCfg.ImageIDWindows, selected.ID, false)
+	if windowsImageNeeded(prospective, osCfg, opts) {
+		if resourceConflict(osCfg.ImageIDWindows, opts.WindowsImageName, snapshot.WindowsImages, opts.Replace, true) {
+			blocked = true
+			result.Warnings = append(result.Warnings, fmt.Sprintf("opencenter.infrastructure.cloud.openstack.image_id_windows is populated with %q; use --replace or --windows-image-name", osCfg.ImageIDWindows))
+		}
+		if selected, ok, ambiguous, err := chooseResource("windows image", osCfg.ImageIDWindows, opts.WindowsImageName, snapshot.WindowsImages, opts.Replace); err != nil {
+			return result, cfg, err
+		} else if ambiguous {
+			ambiguousSelection(&result, "windows image", "--windows-image-name", "opencenter.infrastructure.cloud.openstack.image_id_windows", snapshot.WindowsImages)
+			blocked = true
+		} else if ok {
+			set("opencenter.infrastructure.cloud.openstack.image_id_windows", &osCfg.ImageIDWindows, selected.ID, false)
+		}
 	}
 	if opts.CreateInternalNetwork {
 		if !clearInternalNetworkSelections(osCfg, opts.Replace, &changes, &result.Warnings) {

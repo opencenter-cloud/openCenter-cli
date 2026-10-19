@@ -58,8 +58,14 @@ resource **name or ID** — the name printed by the `Selection required:` list i
 what you pass, e.g. `--image-name "Ubuntu 24.04"`. Matching is case-insensitive on
 the exact name; a name matching several discovered resources is rejected with the
 candidate list so nothing is chosen silently. The value written to the config is
-always the resolved ID, which is what OpenTofu consumes. If the
-generated infrastructure should own the internal network and subnet, use:
+always the resolved ID, which is what OpenTofu consumes.
+
+With no `--image-name`, plan resolves the name `Ubuntu 24.04` against the live
+project inventory and reports it as a warning. It is a name preference, not a
+baked-in image ID: if the project does not have that image, plan falls back to
+printing every candidate and blocks until you choose one. `--windows-image-name`
+is only required when the cluster actually runs Windows workers. If the generated
+infrastructure should own the internal network and subnet, use:
 
 ```bash
 opencenter cluster provider openstack plan my-org/demo \

@@ -44,7 +44,13 @@ blueprint and then runs the apply pass against it (selector flags such as
 The plan is read-only. Selectors include image, internal/external network,
 subnet, and availability zone; each accepts a resource name or ID (`--image-name`,
 `--windows-image-name`, `--network-id`, `--subnet-id`, `--external-network-id`,
-`--availability-zone`) and persists the resolved ID. `--create-internal-network`
+`--availability-zone`) and persists the resolved ID. When no `--image-name` is
+given, the default `Ubuntu 24.04` is resolved case-insensitively; if several
+active images match, the plan still resolves it when exactly one candidate's
+name matches byte-for-byte, or when exactly one of the same-name candidates is
+owned by your project (community imports lose). Any remaining ambiguity blocks
+with the candidate list. An explicit `--image-name` is never tie-broken: an
+ambiguous value always errors. `--create-internal-network`
 chooses the OpenTofu-managed internal-network mode and must be passed to both operations.
 The profile's region (`region_name`, or `OS_REGION_NAME` when the profile omits
 it) is authoritative: plan and apply repoint `infrastructure.cloud.openstack.region`,

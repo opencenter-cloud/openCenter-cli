@@ -19,9 +19,12 @@ import (
 )
 
 // Resource is a stable, redacted inventory item suitable for selection output.
+// Owner is populated only where the listing API exposes project ownership
+// (currently Glance images); it is empty for Neutron/cinder-style resources.
 type Resource struct {
-	ID   string `json:"id" yaml:"id"`
-	Name string `json:"name" yaml:"name"`
+	ID    string `json:"id" yaml:"id"`
+	Name  string `json:"name" yaml:"name"`
+	Owner string `json:"owner,omitempty" yaml:"owner,omitempty"`
 }
 
 // Subnet carries the network relationship needed to validate provider wiring.
@@ -241,7 +244,7 @@ func listProfileImages(client *gophercloud.ServiceClient) ([]Resource, error) {
 	result := make([]Resource, 0, len(items))
 	for _, item := range items {
 		if strings.EqualFold(string(item.Status), "active") {
-			result = append(result, Resource{ID: item.ID, Name: item.Name})
+			result = append(result, Resource{ID: item.ID, Name: item.Name, Owner: strings.TrimSpace(item.Owner)})
 		}
 	}
 	sortResources(result)

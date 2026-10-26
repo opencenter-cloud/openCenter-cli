@@ -123,9 +123,19 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 	// No explicit Linux image: prefer the default name, but only if this cloud
 	// actually has it. Resolution is the ordinary selector path, so an absent
 	// default leaves the plan ambiguous and the candidate list is printed.
-	if strings.TrimSpace(opts.ImageName) == "" && resolveSelector(snapshot.Images, DefaultLinuxImageName).resource.ID != "" {
-		opts.ImageName = DefaultLinuxImageName
-		result.Warnings = append(result.Warnings, fmt.Sprintf("no --image-name specified; defaulting to %q (%s) discovered in this project", DefaultLinuxImageName, resolveSelector(snapshot.Images, DefaultLinuxImageName).resource.ID))
+	// When the default name is ambiguous (case/variant duplicates, or a
+	// project-owned image shadowed by a community import of the same name),
+	// a two-step tie-break may still resolve it: first the byte-exact name,
+	// then the single project-owned candidate. Any remaining ambiguity keeps
+	// the ordinary blocked path so nothing is ever picked silently.
+	if strings.TrimSpace(opts.ImageName) == "" {
+		if image, reason, ok := resolveDefaultLinuxImage(snapshot.Images, snapshot.ProjectID); ok {
+			// Pin the resolved resource by ID: its name may still be an
+			// ambiguous selector (that is what the tie-break just resolved),
+			// and IDs are unique in Glance.
+			opts.ImageName = image.ID
+			result.Warnings = append(result.Warnings, fmt.Sprintf("no --image-name specified; defaulting to %q (%s) %s", image.Name, image.ID, reason))
+		}
 	}
 	prospective := cloneProviderConfig(cfg)
 	osCfg := prospective.OpenCenter.Infrastructure.Cloud.OpenStack
@@ -527,6 +537,51 @@ func selectorMatches(candidates []cloudopenstack.Resource, selector string) []cl
 	}
 	sortResources(matches)
 	return matches
+}
+
+// resolveDefaultLinuxImage applies the default-image tie-break chain when the
+// case-insensitive default-name match is ambiguous:
+//  1. exact-name (Option A): exactly one candidate whose name equals
+//     DefaultLinuxImageName byte-for-byte wins over case/variant duplicates;
+//  2. project ownership (Option B): otherwise, among candidates whose names
+//     match byte-exactly (the same-name-different-owner case), exactly one
+//     owned by the authenticated project wins over community/public imports.
+//
+// It reports ok=false whenever the ordinary ambiguous path should stand (no
+// match, both steps still ambiguous, or ownership metadata missing), so the
+// plan blocks with the candidate list instead of picking silently. Only the
+// default name gets this treatment; an explicit --image-name stays strictly
+// ambiguous-error.
+func resolveDefaultLinuxImage(images []cloudopenstack.Resource, projectID string) (cloudopenstack.Resource, string, bool) {
+	match := resolveSelector(images, DefaultLinuxImageName)
+	if match.resource.ID != "" {
+		return match.resource, "discovered in this project", true
+	}
+	if !match.ambiguous {
+		return cloudopenstack.Resource{}, "", false
+	}
+	matches := selectorMatches(images, DefaultLinuxImageName)
+	exact := make([]cloudopenstack.Resource, 0, len(matches))
+	for _, candidate := range matches {
+		if candidate.Name == DefaultLinuxImageName {
+			exact = append(exact, candidate)
+		}
+	}
+	if len(exact) == 1 {
+		return exact[0], "as the exact-name match among case/variant duplicates", true
+	}
+	if projectID = strings.TrimSpace(projectID); projectID != "" && len(exact) > 1 {
+		owned := make([]cloudopenstack.Resource, 0, len(exact))
+		for _, candidate := range exact {
+			if strings.TrimSpace(candidate.Owner) == projectID {
+				owned = append(owned, candidate)
+			}
+		}
+		if len(owned) == 1 {
+			return owned[0], "as the project-owned image among same-name candidates", true
+		}
+	}
+	return cloudopenstack.Resource{}, "", false
 }
 
 func describeResources(values []cloudopenstack.Resource) string {

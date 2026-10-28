@@ -18,10 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -63,37 +61,10 @@ func (s *gophercloudCinderService) Delete(_ context.Context, id string) error {
 // newGophercloudCinderService authenticates with Keystone and returns a
 // block-storage service client with a 30-second timeout.
 func newGophercloudCinderService(creds *credentials.OpenStackCredentials) (cinderVolumeService, error) {
-	authOpts := gophercloud.AuthOptions{
-		IdentityEndpoint:            creds.AuthURL,
-		ApplicationCredentialID:     creds.ApplicationCredentialID,
-		ApplicationCredentialSecret: creds.ApplicationCredentialSecret,
-		AllowReauth:                 true,
-	}
-
-	// Fall back to username/password when application credentials are absent.
-	if creds.ApplicationCredentialID == "" {
-		authOpts.Username = creds.Username
-		authOpts.Password = creds.Password
-		authOpts.DomainName = creds.Domain
-		if authOpts.DomainName == "" {
-			authOpts.DomainName = creds.UserDomainName
-		}
-		if creds.ProjectName != "" {
-			authOpts.TenantName = creds.ProjectName
-		} else {
-			authOpts.TenantName = creds.TenantName
-		}
-	}
-
-	provider, err := openstack.AuthenticatedClient(authOpts)
+	provider, err := authenticateOpenStack(creds)
 	if err != nil {
-		return nil, fmt.Errorf("authenticate with OpenStack: %w", err)
+		return nil, err
 	}
-
-	// Set a 30-second timeout on the provider's HTTP client to prevent indefinite
-	// hangs against unresponsive Cinder endpoints. gophercloud v1.14.1 does not
-	// honor context deadlines, so an explicit timeout is needed.
-	provider.HTTPClient = http.Client{Timeout: 30 * time.Second}
 
 	client, err := openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{Region: creds.Region})
 	if err != nil {

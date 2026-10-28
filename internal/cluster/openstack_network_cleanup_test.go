@@ -299,3 +299,12 @@ func TestCleanupClusterLoadBalancers_RefusesWithoutNetworkScope(t *testing.T) {
 		t.Error("expected error for empty cluster name")
 	}
 }
+
+// TestNewGophercloudOpenStackNetworkCleanupService_NilCredentials guards the
+// destroy path for configurations without OpenStack credentials: the factory
+// must return an error, not panic dereferencing creds.
+func TestNewGophercloudOpenStackNetworkCleanupService_NilCredentials(t *testing.T) {
+	if _, err := newGophercloudOpenStackNetworkCleanupService(nil); err == nil {
+		t.Fatal("expected error for nil credentials")
+	}
+}

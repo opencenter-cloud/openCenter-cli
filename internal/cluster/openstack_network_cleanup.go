@@ -42,6 +42,9 @@ type gophercloudOpenStackNetworkCleanupService struct {
 }
 
 func newGophercloudOpenStackNetworkCleanupService(creds *credentials.OpenStackCredentials) (openStackNetworkCleanupService, error) {
+	if creds == nil {
+		return nil, fmt.Errorf("openstack credentials are nil")
+	}
 	provider, err := authenticateOpenStack(creds)
 	if err != nil {
 		return nil, err

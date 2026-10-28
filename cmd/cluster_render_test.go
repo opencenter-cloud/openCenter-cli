@@ -262,6 +262,66 @@ func TestBackupServiceDirectory(t *testing.T) {
 	}
 }
 
+// TestBackupInfrastructureDirectory_SkipsTofuTrees guards against the
+// regression that broke `cluster destroy`: the force-render backup walker
+// copied files inside .terraform/providers and .terraform/modules, and
+// OpenTofu then rejected the provider cache ("existing cached package ...
+// does not match the content of the downloaded package"), failing
+// tofu init during destroy. tfstate under nested .opentofu-* dirs must
+// also stay untouched.
+func TestBackupInfrastructureDirectory_SkipsTofuTrees(t *testing.T) {
+	root := t.TempDir()
+
+	writeAt := func(rel string) {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeAt("main.tf")
+	writeAt(".terraform.lock.hcl")
+	writeAt(".terraform/providers/registry.opentofu.org/hashicorp/local/2.9.1/darwin_arm64/terraform-provider-local")
+	writeAt(".terraform/modules/openstack-nova/main.tf")
+	writeAt(".opentofu-local-test-cluster/terraform.tfstate")
+	writeAt("venv/lib/python3.14/site-packages/ansible/__init__.py")
+	writeAt("kubespray/cluster.yml")
+	writeAt("inventory/inventory.yaml")
+
+	cmd, _ := newTestCmd()
+	if err := backupInfrastructureDirectory(root, "test-cluster", cmd); err != nil {
+		t.Fatalf("backupInfrastructureDirectory: %v", err)
+	}
+
+	for _, rel := range []string{
+		".terraform/providers/registry.opentofu.org/hashicorp/local/2.9.1/darwin_arm64/terraform-provider-local",
+		".terraform/modules/openstack-nova/main.tf",
+		".opentofu-local-test-cluster/terraform.tfstate",
+		"venv/lib/python3.14/site-packages/ansible/__init__.py",
+		"kubespray/cluster.yml",
+	} {
+		matches, err := filepath.Glob(filepath.Join(root, rel)+".bak-*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(matches) != 0 {
+			t.Errorf("backup created inside skipped tree: %v", matches)
+		}
+	}
+
+	for _, rel := range []string{"main.tf", ".terraform.lock.hcl", "inventory/inventory.yaml"} {
+		matches, err := filepath.Glob(filepath.Join(root, rel)+".bak-*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(matches) != 1 {
+			t.Errorf("expected exactly one backup for %s, got %v", rel, matches)
+		}
+	}
+}
+
 func TestPrintPromotionSummaryIncludesCountsDestructivePathsAndBackups(t *testing.T) {
 	cmd, buf := newTestCmd()
 	printPromotionSummary(cmd, &gitops.PromoteResult{

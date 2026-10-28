@@ -408,6 +408,62 @@ func renderInfrastructureOnly(cfg *v2.Config, dryRun bool, cmd *cobra.Command) e
 	return nil
 }
 
+// backupSkipDirNames are directories whose contents are never backed up:
+// OpenTofu-managed trees (.terraform holds provider packages whose extra
+// files make `tofu init` reject the cache as "modified"; nested .opentofu-*
+// directories hold tfstate), virtualenvs, vendored kubespray, and git data.
+// The ownership manifest in internal/gitops tracks generated files and
+// ignores .bak-* paths, so these backups were never consumed anyway.
+var backupSkipDirNames = map[string]bool{
+	".terraform": true,
+	".git":       true,
+	"venv":       true,
+	"kubespray":  true,
+}
+
+// shouldSkipBackupDir reports whether dir is a subtree the backup walkers
+// must not descend into. Besides the fixed skip list, this covers the
+// per-cluster local tfstate directories (.opentofu-<cluster>) that sit next
+// to main.tf.
+func shouldSkipBackupDir(name string) bool {
+	if backupSkipDirNames[name] {
+		return true
+	}
+	return strings.HasPrefix(name, ".opentofu-")
+}
+
+// backupTree copies every regular file under root to <path>.bak-<timestamp>,
+// skipping existing backups and the subtrees in shouldSkipBackupDir. The
+// printed timestamp is the one baked into the backup names.
+func backupTree(root string, announce func(timestamp string)) error {
+	timestamp := time.Now().Format("20060102-150405")
+	if announce != nil {
+		announce(timestamp)
+	}
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			if path != root && shouldSkipBackupDir(info.Name()) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Skip files that are already backups (contain .bak- in the filename)
+		if strings.Contains(filepath.Base(path), ".bak-") {
+			return nil
+		}
+
+		backupPath := fmt.Sprintf("%s.bak-%s", path, timestamp)
+		if err := copyFile(path, backupPath); err != nil {
+			return fmt.Errorf("failed to backup %s: %w", path, err)
+		}
+		return nil
+	})
+}
+
 // backupApplicationsDirectory creates backups of all files in the applications overlay directory
 func backupApplicationsDirectory(cfg *v2.Config, cmd *cobra.Command) error {
 	clusterName := cfg.ClusterName()
@@ -417,80 +473,22 @@ func backupApplicationsDirectory(cfg *v2.Config, cmd *cobra.Command) error {
 	if _, err := os.Stat(appsPath); os.IsNotExist(err) {
 		return nil // Nothing to backup
 	}
-
-	timestamp := time.Now().Format("20060102-150405")
-	fmt.Fprintf(cmd.OutOrStdout(), "Creating backups with timestamp: %s\n", timestamp)
-
-	return filepath.Walk(appsPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		// Skip files that are already backups (contain .bak- in the filename)
-		if strings.Contains(filepath.Base(path), ".bak-") {
-			return nil
-		}
-
-		backupPath := fmt.Sprintf("%s.bak-%s", path, timestamp)
-		if err := copyFile(path, backupPath); err != nil {
-			return fmt.Errorf("failed to backup %s: %w", path, err)
-		}
-		return nil
+	return backupTree(appsPath, func(timestamp string) {
+		fmt.Fprintf(cmd.OutOrStdout(), "Creating backups with timestamp: %s\n", timestamp)
 	})
 }
 
 // backupServiceDirectory creates backups of all files in a service directory
 func backupServiceDirectory(serviceDir, serviceName string, cmd *cobra.Command) error {
-	timestamp := time.Now().Format("20060102-150405")
-	fmt.Fprintf(cmd.OutOrStdout(), "Creating backup of service '%s' with timestamp: %s\n", serviceName, timestamp)
-
-	return filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		// Skip files that are already backups (contain .bak- in the filename)
-		if strings.Contains(filepath.Base(path), ".bak-") {
-			return nil
-		}
-
-		backupPath := fmt.Sprintf("%s.bak-%s", path, timestamp)
-		if err := copyFile(path, backupPath); err != nil {
-			return fmt.Errorf("failed to backup %s: %w", path, err)
-		}
-		return nil
+	return backupTree(serviceDir, func(timestamp string) {
+		fmt.Fprintf(cmd.OutOrStdout(), "Creating backup of service '%s' with timestamp: %s\n", serviceName, timestamp)
 	})
 }
 
 // backupInfrastructureDirectory creates backups of all files in the infrastructure directory
 func backupInfrastructureDirectory(infraPath, clusterName string, cmd *cobra.Command) error {
-	timestamp := time.Now().Format("20060102-150405")
-	fmt.Fprintf(cmd.OutOrStdout(), "Creating backup of infrastructure files with timestamp: %s\n", timestamp)
-
-	return filepath.Walk(infraPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		// Skip files that are already backups (contain .bak- in the filename)
-		if strings.Contains(filepath.Base(path), ".bak-") {
-			return nil
-		}
-
-		backupPath := fmt.Sprintf("%s.bak-%s", path, timestamp)
-		if err := copyFile(path, backupPath); err != nil {
-			return fmt.Errorf("failed to backup %s: %w", path, err)
-		}
-		return nil
+	return backupTree(infraPath, func(timestamp string) {
+		fmt.Fprintf(cmd.OutOrStdout(), "Creating backup of infrastructure files with timestamp: %s\n", timestamp)
 	})
 }
 

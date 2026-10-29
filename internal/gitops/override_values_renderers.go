@@ -1297,6 +1297,23 @@ grafana:
       defaultMode: 0440
       mountPath: /etc/secrets/grafana_oauth
       readOnly: true
+      # Project the Secret keys onto the exact filenames $__file opens above.
+      # A Secret volume names each file after its key, so the mounted name has
+      # to match the path in grafana.ini character for character. Committed
+      # overlays carry these keys hyphenated (client-id/client-secret) while the
+      # ini reads them with underscores, so the mount projected nothing Grafana
+      # could open: it failed to expand auth.generic_oauth.client_id and
+      # crash-looped, the kube-prometheus-stack install timed out, Flux's
+      # uninstall remediation tore the release down, and the monitoring
+      # dependsOn chain stayed blocked behind it. Projecting here rather than
+      # renaming the keys keeps the mount working regardless of which spelling a
+      # given overlay was committed with. The chart passes items through
+      # verbatim (grafana/templates/_pod.tpl).
+      items:
+        - key: client-id
+          path: client_id
+        - key: client-secret
+          path: client_secret
   admin:
     existingSecret: "grafana-admin-password"
     userKey: admin-user

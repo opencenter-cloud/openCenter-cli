@@ -34,10 +34,15 @@ import (
 
 func newClusterDestroyCmd() *cobra.Command {
 	var (
-		force              bool
-		removeFiles        bool
-		skipInfrastructure bool
-		deleteVolumes      bool
+		force                bool
+		removeFiles          bool
+		skipInfrastructure   bool
+		deleteVolumes        bool
+		strict               bool
+		requireClusterAccess bool
+		allowCleanupFailures bool
+		destroyRetries       int
+		destroyParallelism   int
 	)
 
 	cmd := &cobra.Command{
@@ -162,21 +167,40 @@ to automatically break any existing lock without prompting.`,
 			}
 
 			logging.LogActionMessage(ctx, "destroy started for %s/%s", organization, clusterName)
-			logging.LogActionMessage(ctx, "options: force=%v, remove_files=%v, skip_infrastructure=%v, delete_volumes=%v", force, removeFiles, skipInfrastructure, deleteVolumes)
+			logging.LogActionMessage(ctx, "options: force=%v, remove_files=%v, skip_infrastructure=%v, delete_volumes=%v, require_cluster_access=%v, allow_cleanup_failures=%v, strict=%v, destroy_retries=%d, destroy_parallelism=%d",
+				force, removeFiles, skipInfrastructure, deleteVolumes, requireClusterAccess, allowCleanupFailures, strict, destroyRetries, destroyParallelism)
 			logging.Debugf("destroy: log file at %s", destroyLogPath)
 
 			// Destroy infrastructure (unless skipped)
+			var cleanupWarnings []error
 			if !skipInfrastructure {
-				if err := destroyClusterInfrastructure(ctx, cmd, cfg, deleteVolumes); err != nil {
+				warnings, err := destroyClusterInfrastructure(ctx, cmd, cfg, destroyOptions{
+					deleteVolumes:        deleteVolumes,
+					requireClusterAccess: requireClusterAccess,
+					allowCleanupFailures: allowCleanupFailures,
+					retries:              destroyRetries,
+					parallelism:          destroyParallelism,
+				})
+				if err != nil {
 					logging.LogActionMessage(ctx, "destroy failed during infrastructure destruction: %v", err)
 					if destroyLogPath != "" {
 						fmt.Fprintf(cmd.ErrOrStderr(), "Destroy log: %s\n", destroyLogPath)
 					}
 					return err
 				}
+				cleanupWarnings = warnings
 			} else {
 				fmt.Fprintf(cmd.OutOrStdout(), "Skipping infrastructure destruction (--skip-infrastructure)\n")
 				logging.LogActionMessage(ctx, "skipped infrastructure destruction (--skip-infrastructure)")
+			}
+
+			// Surface non-fatal cleanup degradations (leaked LBs, orphaned
+			// volumes, skipped CSI capture) so they are never silent.
+			if err := reportDestroyCleanupWarnings(cmd, ctx, cleanupWarnings, strict); err != nil {
+				if destroyLogPath != "" {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Destroy log: %s\n", destroyLogPath)
+				}
+				return err
 			}
 
 			// If --remove-files is not set, we're done
@@ -211,13 +235,31 @@ to automatically break any existing lock without prompting.`,
 	cmd.Flags().BoolVar(&removeFiles, "remove-files", false, "Remove local configuration and GitOps files after infrastructure destruction")
 	cmd.Flags().BoolVar(&skipInfrastructure, "skip-infrastructure", false, "Skip infrastructure destruction (only remove local files when combined with --remove-files)")
 	cmd.Flags().BoolVar(&deleteVolumes, "delete-volumes", false, "Delete CSI-provisioned Cinder volumes left orphaned after infrastructure destruction (OpenStack only)")
+	cmd.Flags().BoolVar(&strict, "strict", false, "Exit with an error when post-destroy cleanup reported warnings (leaked load balancers, orphaned volumes)")
+	cmd.Flags().BoolVar(&requireClusterAccess, "require-cluster-access", false, "Abort before destroying infrastructure if the cluster kubeconfig is missing or unreachable (CSI volume capture cannot be skipped)")
+	cmd.Flags().BoolVar(&allowCleanupFailures, "allow-cleanup-failures", false, "Continue when pre-destroy cleanup steps (load balancer sweep) fail; leaked resources are reported as warnings")
+	cmd.Flags().IntVar(&destroyRetries, "destroy-retries", 1, "Additional attempts for the OpenTofu destroy step after a transient failure (0 disables retries)")
+	cmd.Flags().IntVar(&destroyParallelism, "destroy-parallelism", 0, "OpenTofu destroy -parallelism value (0 keeps the OpenTofu default)")
 	cmd.Flags().String("log", "", "log file path (defaults to <state_dir>/logs/destroy/<org>/<name>/destroy-YYYYMMDDTHHMMSSZ.log)")
 
 	return cmd
 }
 
-// destroyClusterInfrastructure handles infrastructure destruction based on provider type.
-func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v2.Config, deleteVolumes bool) error {
+// destroyOptions carries the infrastructure-destruction knobs from the CLI
+// flags into destroyClusterInfrastructure.
+type destroyOptions struct {
+	deleteVolumes        bool
+	requireClusterAccess bool
+	allowCleanupFailures bool
+	retries              int
+	parallelism          int
+}
+
+// destroyClusterInfrastructure handles infrastructure destruction based on
+// provider type. It returns the non-fatal cleanup warnings collected during
+// destruction (leaked load balancers, orphaned volumes, skipped CSI capture)
+// alongside the fatal error, if any.
+func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v2.Config, opts destroyOptions) ([]error, error) {
 	provider := strings.ToLower(cfg.Provider())
 
 	// Handle Kind clusters
@@ -226,11 +268,11 @@ func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v
 		logging.LogActionMessage(ctx, "destroying Kind cluster %s", cfg.ClusterName())
 		if err := destroyKindCluster(ctx, cfg); err != nil {
 			logging.LogActionMessage(ctx, "failed to destroy Kind cluster %s: %v", cfg.ClusterName(), err)
-			return err
+			return nil, err
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Kind cluster destroyed.\n")
 		logging.LogActionMessage(ctx, "Kind cluster %s destroyed successfully", cfg.ClusterName())
-		return nil
+		return nil, nil
 	}
 
 	// Handle OpenTofu-based providers
@@ -244,23 +286,46 @@ func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v
 			logging.LogActionMessage(ctx, "destroying infrastructure via OpenTofu for %s", cfg.ClusterName())
 		}
 		result, err := destroyService.DestroyInfrastructure(ctx, &cfg, &cluster.DestroyOptions{
-			AutoApprove:   true,
-			DeleteVolumes: deleteVolumes,
+			AutoApprove:          true,
+			DeleteVolumes:        opts.deleteVolumes,
+			RequireClusterAccess: opts.requireClusterAccess,
+			AllowCleanupFailures: opts.allowCleanupFailures,
+			DestroyRetries:       opts.retries,
+			DestroyParallelism:   opts.parallelism,
 		})
 		if err != nil {
 			logging.LogActionMessage(ctx, "infrastructure destruction failed: %v", err)
-			return fmt.Errorf("infrastructure destruction failed: %w", err)
+			return nil, fmt.Errorf("infrastructure destruction failed: %w", err)
 		}
 		if result.InfraDestroyed {
 			fmt.Fprintf(cmd.OutOrStdout(), "Infrastructure destroyed successfully.\n")
 			logging.LogActionMessage(ctx, "infrastructure destroyed successfully")
 		}
-		return nil
+		return result.CleanupWarnings, nil
 	}
 
 	// Provider doesn't have infrastructure to destroy
 	fmt.Fprintf(cmd.OutOrStdout(), "Provider %q does not have infrastructure to destroy.\n", provider)
 	logging.LogActionMessage(ctx, "provider %q does not have infrastructure to destroy", provider)
+	return nil, nil
+}
+
+// reportDestroyCleanupWarnings prints and logs every non-fatal cleanup
+// warning so leaked resources are visible in both the terminal and the
+// destroy log. With strict mode the warnings become a command error, giving
+// automation a non-zero exit code to react to.
+func reportDestroyCleanupWarnings(cmd *cobra.Command, ctx context.Context, warnings []error, strict bool) error {
+	if len(warnings) == 0 {
+		return nil
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "\nWarnings (%d): post-destroy cleanup was incomplete:\n", len(warnings))
+	for i, w := range warnings {
+		fmt.Fprintf(cmd.OutOrStdout(), "  %d. %v\n", i+1, w)
+		logging.LogActionMessage(ctx, "destroy cleanup warning %d: %v", i+1, w)
+	}
+	if strict {
+		return fmt.Errorf("destroy completed with %d cleanup warning(s); review the list above and the destroy log", len(warnings))
+	}
 	return nil
 }
 

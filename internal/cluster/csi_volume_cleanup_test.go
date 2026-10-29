@@ -49,7 +49,7 @@ type fakeCinderSvc struct {
 		status string
 		size   int
 	}
-	deleted  []string
+	deleted   []string
 	deleteErr map[string]error
 }
 

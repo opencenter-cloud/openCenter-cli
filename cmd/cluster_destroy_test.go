@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -421,4 +422,48 @@ func TestClusterDestroyFailurePrintsLogPath(t *testing.T) {
 	if !strings.Contains(string(logContent), "destroy failed") {
 		t.Fatalf("expected failure message in log, got:\n%s", string(logContent))
 	}
+}
+
+// TestReportDestroyCleanupWarnings covers the CLI surfacing contract: every
+// cleanup warning is printed and logged, and --strict converts the set into
+// a command error so automation gets a non-zero exit.
+func TestReportDestroyCleanupWarnings(t *testing.T) {
+	t.Run("no warnings", func(t *testing.T) {
+		cmd := newClusterDestroyCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		if err := reportDestroyCleanupWarnings(cmd, context.Background(), nil, true); err != nil {
+			t.Fatalf("no warnings must not error even in strict mode: %v", err)
+		}
+		if out.Len() != 0 {
+			t.Fatalf("no warnings must print nothing, got: %s", out.String())
+		}
+	})
+
+	t.Run("warnings reported", func(t *testing.T) {
+		cmd := newClusterDestroyCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		warnings := []error{errors.New("leaked load balancer"), errors.New("orphaned volume pvc-1")}
+		if err := reportDestroyCleanupWarnings(cmd, context.Background(), warnings, false); err != nil {
+			t.Fatalf("non-strict warnings must not fail the command: %v", err)
+		}
+		text := out.String()
+		if !strings.Contains(text, "Warnings (2)") || !strings.Contains(text, "leaked load balancer") || !strings.Contains(text, "orphaned volume pvc-1") {
+			t.Fatalf("expected both warnings listed, got: %s", text)
+		}
+	})
+
+	t.Run("strict fails", func(t *testing.T) {
+		cmd := newClusterDestroyCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		err := reportDestroyCleanupWarnings(cmd, context.Background(), []error{errors.New("orphaned volume pvc-1")}, true)
+		if err == nil {
+			t.Fatal("strict mode must return an error when warnings exist")
+		}
+		if !strings.Contains(err.Error(), "1 cleanup warning") {
+			t.Fatalf("unexpected strict error: %v", err)
+		}
+	})
 }

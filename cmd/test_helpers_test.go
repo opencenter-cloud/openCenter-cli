@@ -20,6 +20,7 @@ func prepareCommandTestEnv(t *testing.T, dir string) {
 	t.Helper()
 	t.Setenv("OPENCENTER_CONFIG_DIR", dir)
 	t.Setenv("OPENCENTER_CLUSTERS_DIR", "")
+	t.Setenv("OPENCENTER_STATE_DIR", filepath.Join(dir, ".local", "state", "opencenter"))
 	t.Setenv("HOME", dir)
 	t.Setenv("OPENCENTER_CLUSTER", "")
 	t.Setenv("OPENCENTER_SESSION_FILE", "")

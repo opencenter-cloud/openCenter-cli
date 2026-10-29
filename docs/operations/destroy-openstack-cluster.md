@@ -1,5 +1,5 @@
 ---
-last_updated: "2026-10-28"
+last_updated: "2026-10-29"
 id: destroy-openstack-cluster
 title: Destroy an OpenStack cluster
 sidebar_label: Destroy an OpenStack cluster
@@ -58,8 +58,10 @@ What happens step by step:
    network deletion hang during teardown. Only load balancers whose name starts with
    `k8s-<cluster>-` **and** whose VIP sits on the configured cluster network are
    deleted (cascade, waiting for each deletion to complete). If `network_id` is not
-   configured the step refuses to run rather than guess a delete scope. Failures are
-   reported as warnings and never block the destroy.
+   configured the step refuses to run rather than guess a delete scope. A failure
+   here is **fatal by default** (a leaked load balancer keeps the router interface
+   that hangs OpenTofu teardown): pass `--allow-cleanup-failures` to downgrade it
+   to a warning and continue.
 3. **opentofu-init** — initialises the OpenTofu working directory.
 4. **opentofu-destroy** — tears down compute, network, and storage infrastructure.
 5. **cleanup-csi-volumes** — deletes the captured Cinder volume IDs via the Cinder API.
@@ -122,7 +124,7 @@ Add `--remove-files` to delete them as well:
 opencenter cluster destroy <org>/<cluster> --force --delete-volumes --remove-files
 ```
 
-## Idempotent teardown
+## Idempotent teardown and retries
 
 Destroy is safe to re-run. If the OpenTofu working directory is already gone —
 the infrastructure was destroyed earlier, or `gitops.repository.local_dir`
@@ -135,6 +137,14 @@ on-disk location, which is authoritative when the stored
 removes the whole blueprint directory, including the `<cluster>-config.yaml.backup`
 sidecar, so no phantom directory is left behind.
 
+Transient OpenTofu failures (for example
+`Error waiting for openstack_networking_router_interface_v2 ... to Delete: context
+deadline exceeded`) are retried automatically: `--destroy-retries` (default `1`)
+controls the number of additional attempts, and `0` disables retrying. A cancelled
+destroy never retries. `--destroy-parallelism N` passes `-parallelism=N` to
+`tofu destroy` when OpenStack API rate limits make the default concurrency too slow
+or too aggressive.
+
 ## Safety guarantees
 
 - `--delete-volumes` only deletes volumes whose IDs were captured from the cluster's own
@@ -142,14 +152,22 @@ sidecar, so no phantom directory is left behind.
   touched.
 - Volumes in `in-use`, `reserved`, or any state other than `available` are always
   skipped, even if their IDs appear in the captured list.
-- Capture step is non-fatal. If the cluster API is already unreachable, the capture
-  warns and continues with zero handles (cleanup becomes a no-op).
-- **In `--delete-volumes` mode:** deletion failures are reported but do NOT fail the
-  overall destroy command (exit 0). Always check the cleanup output to verify volumes
-  were actually deleted. If cleanup errors appear, re-run the report step or manually
-  delete remaining volumes.
+- The capture step reads the cluster-owned kubeconfig from the secrets zone
+  (`clusters/secrets/<org>/<cluster>/kubernetes/kubeconfig.yaml`, falling back to the
+  legacy infrastructure-directory location). If the kubeconfig is missing or the
+  cluster is unreachable, capture warns, records a cleanup warning, and continues
+  with zero handles. Pass `--require-cluster-access` to make that condition fatal so
+  destroy aborts **before** any infrastructure is torn down.
+- **In `--delete-volumes` mode:** deletion failures are reported as cleanup warnings
+  and the destroy command still completes; add `--strict` to turn any cleanup warning
+  into a non-zero exit for automation. Always check the cleanup output to verify
+  volumes were actually deleted. If cleanup errors appear, re-run the report step or
+  manually delete remaining volumes.
 - **In report-only mode (default):** failures are logged as warnings and do not affect
   the destroy result.
+- Every non-fatal degradation (skipped capture, leaked load balancers, failed volume
+  deletion) is written to the destroy log and printed in a final `Warnings (N):`
+  block — cleanup problems are never silent.
 - The Octavia cleanup step deletes only load balancers that match **both** the
   `k8s-<cluster>-` name prefix and the configured cluster network (`network_id`).
   Load balancers belonging to other clusters or networks are never touched, and the

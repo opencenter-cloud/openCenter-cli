@@ -162,7 +162,7 @@ Most service and topology changes are in-place: regenerate, commit, and let Flux
 opencenter cluster destroy my-cluster
 ```
 
-`internal/cluster.DestroyService` runs a provider-specific `lifecycleDestroyProvider` (an OpenTofu destroy path for OpenStack/VMware/bare metal, direct Kind teardown for Kind, Magnum cluster deletion for Magnum). Destroy does not take an automatic backup — run `cluster backup create` first if you need one; see [Backup and Restore](../operations/backup-and-restore.md).
+`internal/cluster.DestroyService` runs a provider-specific `lifecycleDestroyProvider` (an OpenTofu destroy path for OpenStack/VMware/bare metal, direct Kind teardown for Kind, Magnum cluster deletion for Magnum). Step severity is explicit (`destroyStep.Fatal`): fatal failures abort, non-fatal ones accumulate into `DestroyResult.CleanupWarnings`, which `cmd/cluster_destroy.go` prints and logs (and fails on under `--strict`). Destroy does not take an automatic backup — run `cluster backup create` first if you need one; see [Backup and Restore](../operations/backup-and-restore.md).
 
 **Evidence:** `cmd/cluster_destroy.go`, `internal/cluster/destroy_service.go`
 

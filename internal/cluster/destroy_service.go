@@ -15,6 +15,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -26,6 +27,8 @@ import (
 type DestroyService struct {
 	runner lifecycleCommandRunner
 	output io.Writer
+	// providerOverride injects a provider (tests only); nil selects by cfg.
+	providerOverride lifecycleDestroyProvider
 }
 
 // DestroyOptions contains options for the destroy operation.
@@ -35,6 +38,17 @@ type DestroyOptions struct {
 	// DeleteVolumes deletes CSI-provisioned Cinder volumes after infrastructure
 	// destruction. When false, orphaned volumes are only reported.
 	DeleteVolumes bool
+	// RequireClusterAccess aborts destroy when the cluster kubeconfig is
+	// missing or unreachable instead of skipping CSI volume capture.
+	RequireClusterAccess bool
+	// AllowCleanupFailures downgrades pre-destroy cleanup steps from fatal
+	// to warning (historical lenient behavior, explicit opt-in).
+	AllowCleanupFailures bool
+	// DestroyRetries is the number of additional attempts for the
+	// opentofu-destroy step after a transient failure (default 1).
+	DestroyRetries int
+	// DestroyParallelism sets the tofu -parallelism flag when > 0.
+	DestroyParallelism int
 }
 
 // DestroyResult contains the result of a destroy operation.
@@ -45,9 +59,27 @@ type DestroyResult struct {
 	StepsCompleted []string
 	// Error contains any error that occurred during destruction.
 	Error error
-	// CleanupWarnings contains non-fatal errors from post-destroy cleanup (e.g., CSI volume deletion).
-	// The destroy still succeeds, but the caller should check this and signal a warning.
-	CleanupWarnings error
+	// CleanupWarnings collects non-fatal step failures (e.g. CSI volume
+	// deletion errors, downgraded cleanup steps). The destroy still
+	// succeeds, but callers must surface these so leaked resources are
+	// never silently swallowed.
+	CleanupWarnings []error
+}
+
+// AddCleanupWarning records a non-fatal warning for the caller. Providers
+// use this when a step degrades instead of failing (e.g. an unreachable
+// Cinder API after the infrastructure is already gone).
+func (r *DestroyResult) AddCleanupWarning(err error) {
+	if err == nil {
+		return
+	}
+	r.CleanupWarnings = append(r.CleanupWarnings, err)
+}
+
+// CleanupWarning returns the combined cleanup warnings as a single error,
+// or nil when there are none.
+func (r *DestroyResult) CleanupWarning() error {
+	return errors.Join(r.CleanupWarnings...)
 }
 
 // NewDestroyService creates a new DestroyService with the default command runner.
@@ -77,14 +109,36 @@ func (s *DestroyService) DestroyInfrastructure(ctx context.Context, cfg *v2.Conf
 
 	result := &DestroyResult{}
 
-	provider, err := s.getDestroyProvider(cfg)
-	if err != nil {
-		return nil, err
+	if opts == nil {
+		opts = &DestroyOptions{}
+	}
+	if opts.DestroyRetries == 0 {
+		opts.DestroyRetries = 1
+	} else if opts.DestroyRetries < 0 {
+		opts.DestroyRetries = 0
+	}
+
+	provider := s.providerOverride
+	if provider == nil {
+		var err error
+		provider, err = s.getDestroyProvider(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Give the provider a sink for non-fatal degradations its steps swallow
+	// (unreachable Cinder, skipped CSI capture) so they reach the caller.
+	if osp, ok := provider.(*openstackDestroyProvider); ok {
+		osp.result = result
 	}
 
 	infraOpts := &DestroyInfraOptions{
-		AutoApprove:   opts != nil && opts.AutoApprove,
-		DeleteVolumes: opts != nil && opts.DeleteVolumes,
+		AutoApprove:          opts.AutoApprove,
+		DeleteVolumes:        opts.DeleteVolumes,
+		RequireClusterAccess: opts.RequireClusterAccess,
+		AllowCleanupFailures: opts.AllowCleanupFailures,
+		DestroyRetries:       opts.DestroyRetries,
+		DestroyParallelism:   destroyParallelism(opts),
 	}
 
 	steps, err := provider.BuildSteps(cfg, infraOpts)
@@ -97,17 +151,16 @@ func (s *DestroyService) DestroyInfrastructure(ctx context.Context, cfg *v2.Conf
 		logBootstrapMessage(ctx, "destroy: running step %s (%s)", step.ID, step.Description)
 
 		if err := step.Run(ctx); err != nil {
-			// Distinguish cleanup warnings (non-fatal post-destroy issues) from hard failures.
-			// Steps named "cleanup-*" are post-destroy and non-fatal; capture them separately.
-			if strings.HasPrefix(step.ID, "cleanup-") {
-				result.CleanupWarnings = err
-				s.logf("Warning: %s encountered issues: %v\n", step.Description, err)
-				logBootstrapMessage(ctx, "destroy: warning in step %s: %v", step.ID, err)
-			} else {
+			if step.Fatal {
 				result.Error = fmt.Errorf("step %q failed: %w", step.ID, err)
 				logBootstrapMessage(ctx, "destroy: step %s failed: %v", step.ID, err)
 				return result, result.Error
 			}
+			// Non-fatal step: record the warning so the CLI surfaces it,
+			// then continue with the remaining steps.
+			result.AddCleanupWarning(fmt.Errorf("step %s: %w", step.ID, err))
+			s.logf("Warning: %s encountered issues: %v\n", step.Description, err)
+			logBootstrapMessage(ctx, "destroy: warning in step %s: %v", step.ID, err)
 		}
 
 		result.StepsCompleted = append(result.StepsCompleted, step.ID)
@@ -117,6 +170,13 @@ func (s *DestroyService) DestroyInfrastructure(ctx context.Context, cfg *v2.Conf
 
 	result.InfraDestroyed = true
 	return result, nil
+}
+
+func destroyParallelism(opts *DestroyOptions) int {
+	if opts == nil || opts.DestroyParallelism < 0 {
+		return 0
+	}
+	return opts.DestroyParallelism
 }
 
 // SupportsInfraDestroy returns true if the provider supports infrastructure destruction.

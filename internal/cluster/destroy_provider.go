@@ -23,7 +23,12 @@ import (
 type destroyStep struct {
 	ID          string
 	Description string
-	Run         func(ctx context.Context) error
+	// Fatal marks a step whose failure must abort the destroy pipeline.
+	// When false, the failure is recorded as a cleanup warning and the
+	// remaining steps still run. Severity is explicit: the runner must
+	// never infer it from the step ID.
+	Fatal bool
+	Run   func(ctx context.Context) error
 }
 
 // lifecycleDestroyProvider defines the interface for provider-specific destroy logic.
@@ -38,4 +43,18 @@ type DestroyInfraOptions struct {
 	// DeleteVolumes deletes CSI-provisioned Cinder volumes after infrastructure
 	// destruction. When false, orphaned volumes are only reported.
 	DeleteVolumes bool
+	// RequireClusterAccess turns a CSI volume-capture failure (missing or
+	// unreachable cluster kubeconfig) into a fatal error instead of a
+	// warning, so destroy aborts before any infrastructure is torn down.
+	RequireClusterAccess bool
+	// AllowCleanupFailures downgrades pre-destroy cleanup steps (e.g. the
+	// Octavia load-balancer sweep) from fatal to warning, preserving the
+	// historical lenient behavior when the operator explicitly accepts the
+	// risk of leaked resources.
+	AllowCleanupFailures bool
+	// DestroyRetries is the number of additional attempts for the
+	// opentofu-destroy step after a transient failure (default 1).
+	DestroyRetries int
+	// DestroyParallelism sets the tofu -parallelism flag when > 0.
+	DestroyParallelism int
 }

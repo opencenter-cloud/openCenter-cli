@@ -45,6 +45,12 @@ func configureDryRunTestEnv(t *testing.T, tmpDir string) {
 
 	configDir := filepath.Join(tmpDir, ".config", "opencenter")
 
+	// verifyReachablePrivateKey consults SOPS_AGE_KEY_FILE, which an operator's
+	// shell routinely exports at a real cluster key. Left set, a dry-run
+	// revocation judges reachability against a key outside tmpDir and aborts with
+	// "no reachable private key would remain" before it can prove immutability.
+	t.Setenv("SOPS_AGE_KEY_FILE", "")
+
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
 }

@@ -62,6 +62,13 @@ func setupTestRevoker(t *testing.T) (*DefaultKeyRevoker, *MockKeyRegistry, *Defa
 	// Create key revoker
 	revoker := NewDefaultKeyRevoker(mockRegistry, mockRotator, secretsManager, nil, slog.Default())
 
+	// The operator's shell routinely exports SOPS_AGE_KEY_FILE at a real cluster
+	// key. verifyReachablePrivateKey consults it, so a revocation would be judged
+	// against a key outside this test's fixtures and abort with "no reachable
+	// private key would remain". t.Setenv keeps the test env-safe for the t.Setenv
+	// calls in the fixtures.
+	t.Setenv("SOPS_AGE_KEY_FILE", "")
+
 	cleanup := func() {
 		os.RemoveAll(tmpDir)
 	}

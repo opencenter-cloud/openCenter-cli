@@ -47,6 +47,12 @@ func setupTestRotator(t *testing.T) (*DefaultKeyRotator, *MockKeyRegistry, *Defa
 	testHome := filepath.Join(tmpDir, "home")
 	testConfigDir := filepath.Join(testHome, ".config", "opencenter")
 
+	// verifyReachablePrivateKey consults SOPS_AGE_KEY_FILE, which an operator's
+	// shell routinely exports at a real cluster key. Left set, a revocation reached
+	// through this harness judges reachability against a key outside the temp dir
+	// and aborts with "no reachable private key would remain".
+	t.Setenv("SOPS_AGE_KEY_FILE", "")
+
 	require.NoError(t, os.MkdirAll(testConfigDir, 0o755))
 	require.NoError(t, os.Setenv("HOME", testHome))
 	require.NoError(t, os.Setenv("OPENCENTER_CONFIG_DIR", testConfigDir))

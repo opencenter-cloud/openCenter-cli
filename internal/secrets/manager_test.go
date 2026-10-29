@@ -42,13 +42,22 @@ func setupTestManager(t *testing.T) (*DefaultSecretsManager, string, func()) {
 	tmpDir, err := os.MkdirTemp("", "secrets-manager-test-*")
 	require.NoError(t, err)
 
-	originalHome := os.Getenv("HOME")
-	originalConfigDir := os.Getenv("OPENCENTER_CONFIG_DIR")
 	configDir := filepath.Join(tmpDir, ".config", "opencenter")
 
+	// The operator's shell routinely exports SOPS_AGE_KEY_FILE at a real cluster
+	// key. verifyReachablePrivateKey reads it, so a revocation test would judge
+	// reachability against a key outside the temp dir and abort with "no reachable
+	// private key would remain". Clearing it here keeps the check scoped to this
+	// test's own fixtures.
+	//
+	// t.Setenv, not os.Setenv: it restores each value automatically, and mixing a
+	// direct os.Setenv into a test makes the whole test env-unsafe, which turns
+	// every later t.Setenv in it into a panic.
+	t.Setenv("SOPS_AGE_KEY_FILE", "")
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("OPENCENTER_CONFIG_DIR", configDir)
+
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
-	require.NoError(t, os.Setenv("HOME", tmpDir))
-	require.NoError(t, os.Setenv("OPENCENTER_CONFIG_DIR", configDir))
 
 	// Create file system
 	errorHandler := errors.NewDefaultErrorHandlerWithoutMasking()
@@ -63,19 +72,9 @@ func setupTestManager(t *testing.T) (*DefaultSecretsManager, string, func()) {
 	// Create secrets manager
 	manager := NewDefaultSecretsManager(configLoader, sopsManager, nil, slog.Default())
 
-	cleanup := func() {
-		if originalHome == "" {
-			os.Unsetenv("HOME")
-		} else {
-			os.Setenv("HOME", originalHome)
-		}
-		if originalConfigDir == "" {
-			os.Unsetenv("OPENCENTER_CONFIG_DIR")
-		} else {
-			os.Setenv("OPENCENTER_CONFIG_DIR", originalConfigDir)
-		}
-		os.RemoveAll(tmpDir)
-	}
+	// t.Setenv restores HOME, OPENCENTER_CONFIG_DIR and SOPS_AGE_KEY_FILE when the
+	// test ends, so cleanup only owns the temp directory.
+	cleanup := func() { os.RemoveAll(tmpDir) }
 
 	return manager, tmpDir, cleanup
 }

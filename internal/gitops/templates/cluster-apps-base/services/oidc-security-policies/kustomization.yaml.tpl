@@ -4,5 +4,6 @@ kind: Kustomization
 resources:
   - alertmanager-security-policy.yaml
   - prometheus-security-policy.yaml
-  - gateway-oidc-secret.yaml
+{{- $gatewayOIDCSecret := dedicatedSecretFilename "gateway-oidc" }}
+  - {{ $gatewayOIDCSecret }}
 {{- end }}

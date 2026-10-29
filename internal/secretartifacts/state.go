@@ -39,14 +39,14 @@ func HashBytes(data []byte) string {
 }
 
 // SafeArtifactPath reports whether a relative path may hold a sync-owned
-// secret. Two shapes are allowed: the generic per-service manifest
-// services/<service>/secret.yaml, and a cert-manager DNS-credential Secret
-// services/cert-manager/<credential-file>.yaml.
+// secret. Three shapes are allowed: the generic per-service manifest
+// services/<service>/secret.yaml, a cert-manager DNS-credential Secret
+// services/cert-manager/<credential-file>.yaml, and a renderer-emitted Secret
+// carrying a dedicated filename (see DedicatedSecretFilename).
 //
-// The credential shape is constrained to the cert-manager directory and to a
-// filename the planner itself constructs (CertManagerCredentialArtifactPath),
-// so a corrupt or hostile ownership state still cannot name an arbitrary file
-// for sync to write, hash-check, or delete.
+// Every shape is constrained to a filename the planner itself constructs, so a
+// corrupt or hostile ownership state still cannot name an arbitrary file for
+// sync to write, hash-check, or delete.
 func SafeArtifactPath(relative string) bool {
 	if relative == "" || filepath.IsAbs(filepath.FromSlash(relative)) {
 		return false
@@ -67,7 +67,11 @@ func SafeArtifactPath(relative string) bool {
 	if parts[2] == secretFilename {
 		return true
 	}
-	return parts[0] == "services" && parts[1] == "cert-manager" && IsCertManagerCredentialFilename(parts[2])
+	if parts[0] == "services" && parts[1] == "cert-manager" && IsCertManagerCredentialFilename(parts[2]) {
+		return true
+	}
+	_, _, dedicated := DedicatedSecretFilename(clean)
+	return dedicated
 }
 
 func LoadOwnershipState(root string) (OwnershipState, bool, error) {

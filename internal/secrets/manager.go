@@ -183,17 +183,19 @@ func (m *DefaultSecretsManager) SyncSecrets(ctx context.Context, opts SyncOption
 					result.Errors = append(result.Errors, SyncError{FilePath: fullPath, Service: artifact.TargetService, Error: fmt.Errorf("existing unowned or unsafe secret artifact")})
 					continue
 				}
-				// A cert-manager credential Secret the generator rendered from
-				// its plaintext template sits at exactly the path this sync
-				// plans to own: the planner derives the filename from the same
-				// credential set the renderer iterates. The credential is
-				// already exposed in the working tree (and often staged), so
-				// refusing to adopt it leaves the leak in place with no way to
-				// fix it. --force adopts the path: the plaintext is snapshotted
-				// for rollback and the rewrite leaves a SOPS-encrypted file.
-				// Without --force the refusal stands, and a generic per-service
-				// secret.yaml is never adoptable either way.
-				if opts.Force && secretartifacts.IsCertManagerCredentialFilename(filepath.Base(artifact.Path)) {
+				// A Secret the generator rendered from a plaintext template sits at
+				// exactly the path this sync plans to own: cert-manager credential
+				// Secrets and the dedicated renderer Secrets (grafana-admin-password,
+				// grafana-oauth-secret, gateway-oidc-secret) all derive their filename
+				// from the planner's own set. The credential is already exposed in the
+				// working tree (and often staged), so refusing to adopt it leaves the
+				// leak in place with no way to fix it. --force adopts the path: the
+				// plaintext is snapshotted for rollback and the rewrite leaves a
+				// SOPS-encrypted file. Without --force the refusal stands, and a
+				// generic per-service secret.yaml is never adoptable either way.
+				base := filepath.Base(artifact.Path)
+				_, _, dedicated := secretartifacts.DedicatedSecretFilename(filepath.ToSlash(artifact.Path))
+				if opts.Force && (secretartifacts.IsCertManagerCredentialFilename(base) || dedicated) {
 					m.logger.Warn("Adopting unowned credential artifact",
 						"service", artifact.TargetService, "path", fullPath)
 					adoptData, readErr := os.ReadFile(fullPath)
@@ -1955,8 +1957,15 @@ func finalValuesSecretNamespace(service string) (string, bool) {
 // because that is the name the ClusterIssuer's secretRefs were rendered with;
 // every other artifact keeps the service-derived name.
 func secretManifestName(service, manifestPath string) string {
-	if base := filepath.Base(manifestPath); secretartifacts.IsCertManagerCredentialFilename(base) {
+	base := filepath.Base(manifestPath)
+	if secretartifacts.IsCertManagerCredentialFilename(base) {
 		return strings.TrimSuffix(base, ".yaml")
+	}
+	// A dedicated Secret is named after its own file: the Helm chart or the
+	// Envoy SecurityPolicy resolves it by that exact name, so the service-derived
+	// fallback would produce a valid, encrypted, unusable Secret.
+	if _, filename, ok := secretartifacts.DedicatedSecretFilename(filepath.ToSlash(base)); ok {
+		return strings.TrimSuffix(filename, ".yaml")
 	}
 	// Service-specific names where the Helm chart expects a Secret name that
 	// does not follow the standard pattern.

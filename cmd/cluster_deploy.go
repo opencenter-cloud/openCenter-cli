@@ -330,13 +330,19 @@ func checkSecretsSynced(cfg *v2.Config, clusterName string) error {
 			// so the renderer intentionally omits it; accept the dedicated
 			// manifest in its place (PR #55).
 			if grafanaDedicatedSecretReplacesArtifact(cfg, artifact.TargetService) &&
-				grafanaDedicatedSecretWired(dir) {
+				grafanaDedicatedSecretPresent(dir) {
+				if !grafanaDedicatedSecretWired(dir) {
+					missing = append(missing, artifact.Path+
+						" (dedicated grafana-admin-password.yaml created but not wired into kustomization)")
+				}
 				continue
 			}
 			missing = append(missing, artifact.Path+" (not created)")
 			continue
 		}
-		wired, wErr := secretWiredIntoKustomization(dir, "secret.yaml")
+		// A dedicated Secret is listed in its kustomization under its own
+		// filename, not secret.yaml, so the wiring check has to use that name.
+		wired, wErr := secretWiredIntoKustomization(dir, filepath.Base(rel))
 		if wErr == nil && !wired && !grafanaDedicatedSecretWired(dir) {
 			missing = append(missing, artifact.Path+" (created but not wired into kustomization)")
 		}
@@ -367,11 +373,20 @@ func grafanaDedicatedSecretReplacesArtifact(cfg *v2.Config, targetService string
 // grafana-admin-password.yaml manifest AND its kustomization.yaml lists it in
 // resources so Flux applies it.
 func grafanaDedicatedSecretWired(dir string) bool {
-	if _, err := os.Stat(filepath.Join(dir, "grafana-admin-password.yaml")); err != nil {
+	if !grafanaDedicatedSecretPresent(dir) {
 		return false
 	}
 	wired, err := secretWiredIntoKustomization(dir, "grafana-admin-password.yaml")
 	return err == nil && wired
+}
+
+// grafanaDedicatedSecretPresent reports whether dir holds the dedicated
+// grafana-admin-password.yaml manifest, wired or not. Presence is what makes the
+// generic secret.yaml redundant: an unwired dedicated manifest is a wiring
+// failure to report, not a reason to fall back to a stale generic Secret.
+func grafanaDedicatedSecretPresent(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, "grafana-admin-password.yaml"))
+	return err == nil
 }
 
 // secretWiredIntoKustomization reports whether the kustomization.yaml in dir

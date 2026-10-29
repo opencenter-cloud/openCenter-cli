@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: gateway-oidc-secret
+  name: {{ dedicatedSecretFilename "gateway-oidc" | trimSuffix ".yaml" }}
   namespace: {{ (kubePrometheusStack).Namespace }}
 type: Opaque
 stringData:

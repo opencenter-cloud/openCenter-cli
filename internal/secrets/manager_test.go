@@ -178,9 +178,13 @@ func TestExtractSecretsFromConfig(t *testing.T) {
 		// so the typed KeycloakSecrets struct is not materialized.
 		assert.NotContains(t, secretsMap, "keycloak")
 
-		// Verify Grafana secrets
-		assert.Contains(t, secretsMap, "grafana")
-		assert.Equal(t, "test-grafana-password", secretsMap["grafana"]["admin_password"])
+		// Grafana's admin credential is harvested under the grafana-admin key:
+		// the default config declares kube-prometheus-stack, so the dedicated
+		// grafana-admin-password Secret replaces the generic grafana one (both
+		// would otherwise define the same Kubernetes Secret twice).
+		assert.Contains(t, secretsMap, "grafana-admin")
+		assert.Equal(t, "test-grafana-password", secretsMap["grafana-admin"]["admin-password"])
+		assert.NotContains(t, secretsMap, "grafana")
 	})
 
 	t.Run("excludes services with no secrets", func(t *testing.T) {
@@ -384,7 +388,7 @@ func TestSyncSecrets(t *testing.T) {
 		require.GreaterOrEqual(t, len(secretsMap), 3, "Config should have at least 3 services")
 		require.Contains(t, secretsMap, "cert-manager")
 		require.Contains(t, secretsMap, "loki")
-		require.Contains(t, secretsMap, "grafana")
+		require.Contains(t, secretsMap, "grafana-admin")
 
 		// Test filtering to only cert-manager
 		manifestPaths, err := manager.mapSecretsToManifests(cfg, secretsMap, []string{"cert-manager"})
@@ -396,14 +400,16 @@ func TestSyncSecrets(t *testing.T) {
 		assert.NotContains(t, manifestPaths, "loki")
 		assert.NotContains(t, manifestPaths, "grafana")
 
-		// Test filtering to multiple services
-		manifestPaths, err = manager.mapSecretsToManifests(cfg, secretsMap, []string{"cert-manager", "grafana"})
+		// Test filtering to multiple services. grafana-admin is the dedicated
+		// Grafana credential key: kube-prometheus-stack is declared in the default
+		// config, so it replaces the generic grafana secret.
+		manifestPaths, err = manager.mapSecretsToManifests(cfg, secretsMap, []string{"cert-manager", "grafana-admin"})
 		require.NoError(t, err)
 
-		// Should include both cert-manager and grafana
+		// Should include both cert-manager and grafana-admin
 		assert.Len(t, manifestPaths, 2)
 		assert.Contains(t, manifestPaths, "cert-manager")
-		assert.Contains(t, manifestPaths, "grafana")
+		assert.Contains(t, manifestPaths, "grafana-admin")
 		assert.NotContains(t, manifestPaths, "loki")
 
 		// Test with empty filter (should include all services)

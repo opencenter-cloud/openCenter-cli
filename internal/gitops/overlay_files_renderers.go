@@ -21,6 +21,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/secretartifacts"
 )
 
 func gatewayOverlayFilesRenderer(cfg v2.Config) (map[string]string, error) {
@@ -363,7 +364,7 @@ func kubePrometheusStackOverlayFilesRenderer(cfg v2.Config) (map[string]string, 
 	// reconciles over the real one applied during bootstrap
 	// (cluster.newGrafanaAdminSecretStep), locking operators out of Grafana.
 	if strings.TrimSpace(cfg.Secrets.Grafana.AdminPassword) != "" {
-		templates["grafana-admin-password.yaml"] = grafanaAdminPasswordSecretTemplate
+		templates[secretartifacts.GrafanaAdminPasswordSecretFilename] = grafanaAdminPasswordSecretTemplate
 	}
 	// The Grafana OIDC client Secret is emitted only once both client secrets
 	// are real. Rendering a Secret that still holds the CHANGEME placeholder
@@ -375,7 +376,7 @@ func kubePrometheusStackOverlayFilesRenderer(cfg v2.Config) (map[string]string, 
 	if cfg.OpenCenter.Identity.OIDC.Enabled &&
 		isConfiguredSecret(cfg.Secrets.Keycloak.ClientSecret) &&
 		isConfiguredSecret(cfg.Secrets.Keycloak.GrafanaClientSecret) {
-		templates["grafana-oauth-secret.yaml"] = grafanaOAuthSecretTemplate
+		templates[secretartifacts.GrafanaOAuthSecretFilename] = grafanaOAuthSecretTemplate
 	}
 	files := make(map[string]string, len(templates))
 	for name, tmpl := range templates {

@@ -8,6 +8,7 @@ package secretartifacts
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -19,6 +20,17 @@ import (
 )
 
 const secretFilename = "secret.yaml"
+
+// Dedicated secret filenames are Secrets the renderers emit with a filename of
+// their own instead of the generic per-service secret.yaml, because the Helm
+// chart or the Envoy SecurityPolicy references that exact Kubernetes Secret
+// name. They carry credential material, so they are sync-owned: see
+// DedicatedSecretFilename for why the planner has to know them.
+const (
+	GrafanaAdminPasswordSecretFilename = "grafana-admin-password.yaml"
+	GrafanaOAuthSecretFilename         = "grafana-oauth-secret.yaml"
+	GatewayOIDCSecretFilename          = "gateway-oidc-secret.yaml"
+)
 
 type Owner struct {
 	LogicalService string
@@ -181,11 +193,53 @@ func Plan(cfg *v2.Config) ([]Artifact, error) {
 		return nil, err
 	}
 	result = append(result, credentialArtifacts...)
+	dedicatedArtifacts, err := dedicatedSecretArtifacts(cfg)
+	if err != nil {
+		return nil, err
+	}
+	// kube-prometheus-stack consumes Grafana's admin credential through the
+	// dedicated grafana-admin-password.yaml. The generic secret.yaml carries the
+	// same credential under the same Kubernetes identity, so the renderer omits it
+	// and Kustomize never sees a duplicate resource; materializing both would have
+	// sync write two Secrets that fight over one name.
+	if grafanaAdminDedicatedSecretPlanned(dedicatedArtifacts) {
+		result = dropGenericGrafanaSecret(result)
+	}
+	result = append(result, dedicatedArtifacts...)
 	sort.Slice(result, func(i, j int) bool { return result[i].Path < result[j].Path })
 	if err := ValidateTargets(cfg, result); err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+// grafanaAdminDedicatedSecretPlanned reports whether the dedicated
+// grafana-admin-password Secret is in the planned set.
+func grafanaAdminDedicatedSecretPlanned(artifacts []Artifact) bool {
+	want := "services/kube-prometheus-stack/" + GrafanaAdminPasswordSecretFilename
+	for _, artifact := range artifacts {
+		if artifact.Path == want {
+			return true
+		}
+	}
+	return false
+}
+
+// dropGenericGrafanaSecret removes the generic kube-prometheus-stack secret.yaml
+// owned solely by the grafana logical service, which the dedicated admin Secret
+// replaces. An artifact with any other owner is kept: a second credential owner
+// on that target is not the admin password's to displace.
+func dropGenericGrafanaSecret(artifacts []Artifact) []Artifact {
+	generic := "services/kube-prometheus-stack/" + secretFilename
+	kept := make([]Artifact, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		owners := artifact.OwnerNames()
+		if artifact.Path == generic && len(owners) == 1 && owners[0] == "grafana" {
+			continue
+		}
+		kept = append(kept, artifact)
+	}
+	return kept
 }
 
 // grafanaPayload keeps older or hand-edited cluster configurations compatible
@@ -572,6 +626,161 @@ func isPlaceholderSecret(value string) bool {
 	return trimmed == "" || strings.EqualFold(trimmed, v2.PlaceholderSecret)
 }
 
+// DedicatedSecretFilename reports whether an overlay-relative path is a Secret
+// manifest the renderers emit with a dedicated filename instead of the generic
+// per-service secret.yaml, and returns the directory that owns it.
+//
+// The renderers and the planner must agree on exactly one set: a name listed
+// here but not rendered produces an orphan that sync prunes, and a rendered
+// name missing from here stays committed as plaintext because sync never claims
+// the path. The renderers consult this function instead of keeping their own copy.
+func DedicatedSecretFilename(relative string) (dir string, filename string, ok bool) {
+	parts := strings.Split(filepath.ToSlash(filepath.Clean(filepath.ToSlash(relative))), "/")
+	if len(parts) != 3 || parts[0] != "services" {
+		return "", "", false
+	}
+	// The directory is part of the match, not just the filename: a file named
+	// gateway-oidc-secret.yaml somewhere else is not the rendered manifest, and
+	// claiming it would let sync own a path no consumer reads.
+	switch parts[1] + "/" + parts[2] {
+	case "kube-prometheus-stack/" + GrafanaAdminPasswordSecretFilename,
+		"kube-prometheus-stack/" + GrafanaOAuthSecretFilename:
+		return "kube-prometheus-stack", parts[2], true
+	case "oidc-security-policies/" + GatewayOIDCSecretFilename:
+		// The Envoy SecurityPolicies and their Secret live in their own
+		// services/oidc-security-policies layer (service-keycloak descriptor),
+		// which is not a service, so the directory is fixed rather than derived
+		// from the owning service's namespace.
+		return "oidc-security-policies", parts[2], true
+	}
+	return "", "", false
+}
+
+// dedicatedSecretArtifacts plans the Secrets the renderers emit outside the
+// generic services/<service>/secret.yaml route.
+//
+// These three manifests carry real credentials interpolated straight out of the
+// cluster config, and the renderers cannot encrypt them: the staged-tree
+// encryption hook is scoped to helm-values/override-values.yaml. Before this
+// planner claimed them, `cluster validate` failed on plaintext Secret material
+// that `secrets sync` -- the documented remedy -- reported as `unchanged` and
+// never opened, so the operator had no way to pass validation.
+//
+// Each artifact reproduces the renderer's filename, Secret name, namespace and
+// key set exactly: sync regenerates the whole file, so a divergence would
+// silently rename or relocate a Secret that a Helm chart or an Envoy
+// SecurityPolicy resolves by exact identity. The gates below mirror the
+// renderer gates, so a planned artifact always has a rendered file to land in.
+func dedicatedSecretArtifacts(cfg *v2.Config) ([]Artifact, error) {
+	type dedicated struct {
+		// dir is the overlay directory the renderer writes into, and the only
+		// thing the artifact path needs. targetService is the enabled service the
+		// gate consults; it is deliberately not reported as the artifact's target,
+		// because oidc-security-policies is a layer rather than a service and
+		// ValidateTargets would reject it as a missing one.
+		dir           string
+		filename      string
+		owner         string
+		targetService string
+		payload       map[string]interface{}
+	}
+	var planned []dedicated
+
+	if password := strings.TrimSpace(cfg.Secrets.Grafana.AdminPassword); password != "" && declaresService(cfg, "kube-prometheus-stack") && isTargetServiceEnabled(cfg, "kube-prometheus-stack") {
+		// Same gate as kubePrometheusStackOverlayFilesRenderer: an empty admin
+		// password must not produce a Secret, or Flux reconciles it over the one
+		// applied during bootstrap and locks the operator out of Grafana.
+		user := cfg.Secrets.Grafana.AdminUser
+		if strings.TrimSpace(user) == "" {
+			user = "admin"
+		}
+		planned = append(planned, dedicated{
+			dir:           "kube-prometheus-stack",
+			filename:      GrafanaAdminPasswordSecretFilename,
+			owner:         "grafana-admin",
+			targetService: "kube-prometheus-stack",
+			payload:       map[string]interface{}{"admin-user": user, "admin-password": password},
+		})
+	}
+
+	if cfg.OpenCenter.Identity.OIDC.Enabled && oidcClientSecretsConfigured(cfg) &&
+		declaresService(cfg, "kube-prometheus-stack") && isTargetServiceEnabled(cfg, "kube-prometheus-stack") {
+		planned = append(planned, dedicated{
+			dir:           "kube-prometheus-stack",
+			filename:      GrafanaOAuthSecretFilename,
+			owner:         "grafana-oauth",
+			targetService: "kube-prometheus-stack",
+			payload: map[string]interface{}{
+				"client_id":     "grafana-oauth",
+				"client_secret": cfg.Secrets.Keycloak.GrafanaClientSecret,
+			},
+		})
+		// The SecurityPolicy layer renders only when keycloak AND
+		// kube-prometheus-stack are enabled, on top of the OIDC gate above.
+		if isTargetServiceEnabled(cfg, "keycloak") {
+			planned = append(planned, dedicated{
+				dir:           "oidc-security-policies",
+				filename:      GatewayOIDCSecretFilename,
+				owner:         "gateway-oidc",
+				targetService: "keycloak",
+				payload:       map[string]interface{}{"client-secret": cfg.Secrets.Keycloak.ClientSecret},
+			})
+		}
+	}
+
+	artifacts := make([]Artifact, 0, len(planned))
+	for _, entry := range planned {
+		if !isTargetServiceEnabled(cfg, entry.targetService) {
+			continue
+		}
+		artifacts = append(artifacts, Artifact{
+			LogicalService: entry.owner,
+			TargetService:  entry.dir,
+			Path:           path.Join("services", entry.dir, entry.filename),
+			Payload:        entry.payload,
+			Owners:         []string{entry.owner},
+			SourcePayloads: map[string]map[string]interface{}{entry.owner: entry.payload},
+		})
+	}
+	sort.Slice(artifacts, func(i, j int) bool { return artifacts[i].Path < artifacts[j].Path })
+	return artifacts, nil
+}
+
+// oidcClientSecretsConfigured reports whether both realm client secrets are real
+// credentials. It is the planner's copy of the oidcClientSecretsConfigured
+// template function that gates the OIDC SecurityPolicy manifests; the gitops
+// package owns the template helper and cannot import this package, so the two
+// are kept in sync by TestOIDCClientSecretsGateMatchesRenderer.
+func oidcClientSecretsConfigured(cfg *v2.Config) bool {
+	return !isPlaceholderSecret(cfg.Secrets.Keycloak.ClientSecret) &&
+		!isPlaceholderSecret(cfg.Secrets.Keycloak.GrafanaClientSecret)
+}
+
+// declaresService reports whether the configuration names a service in its
+// topology at all, enabled or not. The overlay renderers are reached through the
+// service's descriptor, so a service absent from the map renders nothing and a
+// Secret planned for it would be an orphan sync later prunes.
+func declaresService(cfg *v2.Config, service string) bool {
+	if cfg == nil {
+		return false
+	}
+	for raw := range cfg.OpenCenter.Services {
+		if normalizeServiceName(raw) == service {
+			return true
+		}
+	}
+	managed := cfg.OpenCenter.ManagedServices
+	if len(managed) == 0 {
+		managed = cfg.OpenCenter.LegacyManaged
+	}
+	for raw := range managed {
+		if normalizeServiceName(raw) == service {
+			return true
+		}
+	}
+	return false
+}
+
 func normalizeServiceName(raw string) string {
 	return strings.ReplaceAll(strings.TrimSpace(raw), "_", "-")
 }
@@ -625,6 +834,13 @@ func ValidateTargets(cfg *v2.Config, artifacts []Artifact) error {
 		return fmt.Errorf("config cannot be nil")
 	}
 	for _, artifact := range artifacts {
+		// A dedicated Secret lives in the layer that renders it, and for
+		// gateway-oidc-secret that layer is services/oidc-security-policies -- a
+		// descriptor layer, not a service. Its enablement gate is checked in
+		// dedicatedSecretArtifacts, so no service remains to resolve here.
+		if _, _, dedicated := DedicatedSecretFilename(artifact.Path); dedicated {
+			continue
+		}
 		if len(cfg.OpenCenter.Services) == 0 && len(cfg.OpenCenter.ManagedServices) == 0 && len(cfg.OpenCenter.LegacyManaged) == 0 {
 			continue
 		}

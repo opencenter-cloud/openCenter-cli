@@ -66,23 +66,29 @@ func TestPlanRejectsUnsafeServiceNames(t *testing.T) {
 	require.Error(t, err)
 }
 
+// The default configuration declares kube-prometheus-stack, so the dedicated
+// grafana-admin-password Secret is rendered and replaces the generic
+// secret.yaml: both would carry the same credential under the same Kubernetes
+// identity, and Kustomize would reject the duplicate resource.
 func TestPlanDefaultGrafanaSecretContainsUserAndPassword(t *testing.T) {
 	cfg, err := v2.NewV2Default("grafana-defaults", "kind")
 	require.NoError(t, err)
 
 	artifacts, err := Plan(cfg)
 	require.NoError(t, err)
-	var grafana *Artifact
+	var dedicated, generic *Artifact
 	for i := range artifacts {
-		if artifacts[i].LogicalService == "grafana" {
-			grafana = &artifacts[i]
-			break
+		switch artifacts[i].LogicalService {
+		case "grafana-admin":
+			dedicated = &artifacts[i]
+		case "grafana":
+			generic = &artifacts[i]
 		}
 	}
-	require.NotNil(t, grafana)
-	require.Equal(t, "admin", grafana.Payload["admin_user"])
-	require.Contains(t, grafana.Payload, "admin_password")
-	require.NotEmpty(t, grafana.Payload["admin_password"])
+	require.NotNil(t, dedicated)
+	require.Nil(t, generic, "the dedicated admin Secret replaces the generic one")
+	require.Equal(t, "admin", dedicated.Payload["admin-user"])
+	require.NotEmpty(t, dedicated.Payload["admin-password"])
 }
 
 func TestPlanLegacyGrafanaSecretDefaultsMissingAdminUser(t *testing.T) {

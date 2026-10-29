@@ -491,8 +491,11 @@ secrets:
 	writeManagerTestConfig(t, cluster, configData)
 	overlay := filepath.Join(repoDir, "applications", "overlays", cluster)
 	paths := map[string]string{
-		"services/cert-manager/secret.yaml":          "cert-manager manifest",
-		"services/kube-prometheus-stack/secret.yaml": "grafana manifest",
+		"services/cert-manager/secret.yaml": "cert-manager manifest",
+		// Grafana's admin credential is planned at the dedicated manifest, not the
+		// generic per-service one: kube-prometheus-stack is declared by the config,
+		// so it replaces services/kube-prometheus-stack/secret.yaml.
+		"services/kube-prometheus-stack/grafana-admin-password.yaml": "grafana manifest",
 	}
 	state := artifactState{Version: secretartifacts.OwnershipStateVersion}
 	for relative, contents := range paths {

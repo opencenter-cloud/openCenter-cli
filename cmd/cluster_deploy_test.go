@@ -454,8 +454,10 @@ func TestCheckSecretsSyncedPreflightGrafanaDedicatedSecret(t *testing.T) {
 		t.Fatalf("expected preflight failure for unwired dedicated secret, got %v", err)
 	}
 
-	// (3) Stale generic secret.yaml (e.g. materialized by an older release)
-	// without either manifest wired -> must still fail.
+	// (3) The dedicated manifest removed while a stale generic secret.yaml (e.g.
+	// materialized by an older release) is left unwired -> must still fail. The
+	// planned artifact is now the dedicated file itself, so the preflight reports
+	// it as missing rather than reporting the generic path.
 	if err := os.WriteFile(filepath.Join(svcDir, "secret.yaml"), []byte("kind: Secret\n"), 0o600); err != nil {
 		t.Fatalf("write stale secret: %v", err)
 	}
@@ -463,7 +465,21 @@ func TestCheckSecretsSyncedPreflightGrafanaDedicatedSecret(t *testing.T) {
 		t.Fatalf("remove dedicated secret: %v", err)
 	}
 	if err := checkSecretsSynced(&cfg, "gp"); err == nil ||
+		!strings.Contains(err.Error(), "grafana-admin-password.yaml (not created)") {
+		t.Fatalf("expected preflight failure when the dedicated manifest is absent, got %v", err)
+	}
+
+	// (4) Dedicated manifest present but the generic secret.yaml is the only one
+	// wired -> must fail: the credential Flux applies would be the stale one.
+	if err := os.WriteFile(filepath.Join(svcDir, "grafana-admin-password.yaml"), []byte("kind: Secret\n"), 0o600); err != nil {
+		t.Fatalf("rewrite dedicated secret: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(svcDir, "kustomization.yaml"),
+		[]byte("resources:\n  - custom/\n  - secret.yaml\n"), 0o644); err != nil {
+		t.Fatalf("rewrite kustomization: %v", err)
+	}
+	if err := checkSecretsSynced(&cfg, "gp"); err == nil ||
 		!strings.Contains(err.Error(), "not wired") {
-		t.Fatalf("expected 'not wired' failure when neither manifest is wired, got %v", err)
+		t.Fatalf("expected 'not wired' failure when only the stale generic secret is wired, got %v", err)
 	}
 }

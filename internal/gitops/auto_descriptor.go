@@ -331,6 +331,12 @@ func secretArtifactTargetMaterialized(cfg v2.Config, serviceName string, artifac
 		if artifact.TargetService != serviceName {
 			continue
 		}
+		// Only the generic route is wired here. A dedicated Secret is listed by
+		// the descriptor that renders it, so claiming it through this path would
+		// add a second resource entry for a file this service does not own.
+		if filepath.Base(filepath.ToSlash(artifact.Path)) != "secret.yaml" {
+			continue
+		}
 		record, ok := records[artifact.Path]
 		if !ok {
 			continue

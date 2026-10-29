@@ -315,6 +315,24 @@ func renderTemplateAtomic(path, dst string, cfg v2.Config, workspace *GitOpsWork
 			isConfiguredSecret(cfg.Secrets.Keycloak.GrafanaClientSecret)
 	}
 
+	// dedicatedSecretFilename returns the canonical filename of a Secret the
+	// renderers emit outside the generic per-service secret.yaml route. Templates
+	// interpolate it instead of hardcoding the string, so the descriptor that
+	// lists the resource, the Secret manifest itself, and the secretartifacts
+	// planner that claims the path for `secrets sync` all resolve one constant.
+	funcMap["dedicatedSecretFilename"] = func(kind string) (string, error) {
+		switch kind {
+		case "gateway-oidc":
+			return secretartifacts.GatewayOIDCSecretFilename, nil
+		case "grafana-admin-password":
+			return secretartifacts.GrafanaAdminPasswordSecretFilename, nil
+		case "grafana-oauth":
+			return secretartifacts.GrafanaOAuthSecretFilename, nil
+		default:
+			return "", fmt.Errorf("unknown dedicated secret kind %q", kind)
+		}
+	}
+
 	// autoServices returns service names that use auto-descriptors (no explicit
 	// descriptor) and own their own source (not shared). Used by aggregate templates
 	// to include dynamically-added services.

@@ -752,10 +752,14 @@ func validateMaterializedSecretMembership(cfg v2.Config, actions []clusterAppAct
 		if err := yaml.Unmarshal(content, &kustomization); err != nil {
 			return fmt.Errorf("secret artifact %q is materialized but final kustomization for service %q is invalid: %w", artifact.Path, artifact.TargetService, err)
 		}
+		// Every artifact must be listed under the filename it is materialized at:
+		// the generic route uses secret.yaml, while a dedicated Secret is listed
+		// under its own name by the descriptor that renders it.
+		want := filepath.Base(filepath.ToSlash(artifact.Path))
 		included := false
 		for _, resource := range kustomization.Resources {
 			resource = strings.TrimPrefix(filepath.ToSlash(strings.TrimSpace(resource)), "./")
-			if resource == "secret.yaml" {
+			if resource == want {
 				included = true
 				break
 			}
@@ -763,12 +767,12 @@ func validateMaterializedSecretMembership(cfg v2.Config, actions []clusterAppAct
 		// kube-prometheus-stack owns Grafana's admin credential through the
 		// dedicated renderer. That manifest intentionally replaces the generic
 		// secret.yaml artifact because both have the same Kubernetes identity.
-		if !included && artifact.TargetService == "kube-prometheus-stack" {
-			_, statErr := os.Stat(filepath.Join(filepath.Dir(kustomizationPath), "grafana-admin-password.yaml"))
+		if !included && want == "secret.yaml" && artifact.TargetService == "kube-prometheus-stack" {
+			_, statErr := os.Stat(filepath.Join(filepath.Dir(kustomizationPath), secretartifacts.GrafanaAdminPasswordSecretFilename))
 			included = statErr == nil
 		}
 		if !included {
-			return fmt.Errorf("secret artifact %q is materialized but final kustomization for service %q does not include secret.yaml in resources", artifact.Path, artifact.TargetService)
+			return fmt.Errorf("secret artifact %q is materialized but final kustomization for service %q does not include %s in resources", artifact.Path, artifact.TargetService, want)
 		}
 	}
 	return nil

@@ -100,22 +100,37 @@ func TestProperty_SyncRoundTripConsistency(t *testing.T) {
 					return false
 				}
 
-				// Verify all config secrets are present in manifest
+				// Verify the key sets match under normalization. A harvested payload
+				// may already carry the manifest spelling: the dedicated
+				// grafana-admin Secret is keyed admin-user/admin-password because
+				// kube-prometheus-stack's chart requires those exact keys, while
+				// cert-manager is harvested as aws_access_key and written as
+				// aws-access-key. Normalizing both sides is the invariant drift
+				// detection relies on; normalizing only the config side would reject
+				// an already-correct key as drift.
+				normalizedConfig := make(map[string]string, len(secrets))
 				for configKey := range secrets {
-					manifestKey := strings.ReplaceAll(configKey, "_", "-")
-					if _, exists := manifestData[manifestKey]; !exists {
-						t.Logf("Config secret %s (manifest key: %s) not found in manifest for service %s",
-							configKey, manifestKey, service)
+					normalizedConfig[strings.ReplaceAll(configKey, "_", "-")] = configKey
+				}
+				normalizedManifest := make(map[string]string, len(manifestData))
+				for manifestKey := range manifestData {
+					normalizedManifest[strings.ReplaceAll(manifestKey, "_", "-")] = manifestKey
+				}
+
+				// Verify all config secrets are present in manifest
+				for normalizedKey, configKey := range normalizedConfig {
+					if _, exists := normalizedManifest[normalizedKey]; !exists {
+						t.Logf("Config secret %s (normalized key: %s) not found in manifest for service %s",
+							configKey, normalizedKey, service)
 						return false
 					}
 				}
 
 				// Verify no extra secrets in manifest
-				for manifestKey := range manifestData {
-					configKey := strings.ReplaceAll(manifestKey, "-", "_")
-					if _, exists := secrets[configKey]; !exists {
-						t.Logf("Manifest secret %s not found in config for service %s",
-							manifestKey, service)
+				for normalizedKey, manifestKey := range normalizedManifest {
+					if _, exists := normalizedConfig[normalizedKey]; !exists {
+						t.Logf("Manifest secret %s (normalized key: %s) not found in config for service %s",
+							manifestKey, normalizedKey, service)
 						return false
 					}
 				}
@@ -1564,7 +1579,7 @@ func TestProperty_ServiceFilterCorrectness(t *testing.T) {
 				t.Logf("Expected at least 3 services, got %d", len(allSecrets))
 				return false
 			}
-			for _, service := range []string{"cert-manager", "loki", "grafana"} {
+			for _, service := range []string{"cert-manager", "loki", "grafana-admin"} {
 				if _, exists := allSecrets[service]; !exists {
 					t.Logf("Expected service %s in extracted secrets", service)
 					return false
@@ -1591,21 +1606,24 @@ func TestProperty_ServiceFilterCorrectness(t *testing.T) {
 				serviceFilter = []string{"loki"}
 				expectedServices = map[string]bool{"loki": true}
 			case 2:
-				// Filter to grafana only
-				serviceFilter = []string{"grafana"}
-				expectedServices = map[string]bool{"grafana": true}
+				// Filter to the Grafana admin credential only. The token is the
+				// harvested key: intersectServiceSet below matches keys exactly, and
+				// the generic grafana secret is replaced by grafana-admin whenever
+				// kube-prometheus-stack is declared.
+				serviceFilter = []string{"grafana-admin"}
+				expectedServices = map[string]bool{"grafana-admin": true}
 			case 3:
 				// Filter to cert-manager and loki
 				serviceFilter = []string{"cert-manager", "loki"}
 				expectedServices = map[string]bool{"cert-manager": true, "loki": true}
 			case 4:
-				// Filter to cert-manager and grafana
-				serviceFilter = []string{"cert-manager", "grafana"}
-				expectedServices = map[string]bool{"cert-manager": true, "grafana": true}
+				// Filter to cert-manager and the Grafana admin credential
+				serviceFilter = []string{"cert-manager", "grafana-admin"}
+				expectedServices = map[string]bool{"cert-manager": true, "grafana-admin": true}
 			case 5:
-				// Filter to loki and grafana
-				serviceFilter = []string{"loki", "grafana"}
-				expectedServices = map[string]bool{"loki": true, "grafana": true}
+				// Filter to loki and the Grafana admin credential
+				serviceFilter = []string{"loki", "grafana-admin"}
+				expectedServices = map[string]bool{"loki": true, "grafana-admin": true}
 			case 6:
 				// No filter (all services)
 				serviceFilter = nil
@@ -1824,7 +1842,11 @@ func TestProperty_ServiceFilterCorrectness_Sanity(t *testing.T) {
 	require.GreaterOrEqual(t, len(allSecrets), 3, "Should have at least 3 services")
 	require.Contains(t, allSecrets, "cert-manager", "Should contain cert-manager")
 	require.Contains(t, allSecrets, "loki", "Should contain loki")
-	require.Contains(t, allSecrets, "grafana", "Should contain grafana")
+	// grafana-admin is the dedicated Grafana credential key: the property config
+	// declares kube-prometheus-stack, so it replaces the generic grafana secret.
+	// The filter token "grafana" still selects it (serviceMatchesFilter maps it to
+	// the kube-prometheus-stack target), but the harvested key is grafana-admin.
+	require.Contains(t, allSecrets, "grafana-admin", "Should contain grafana-admin")
 	allServiceSet := serviceSet(allSecrets)
 
 	// Test 1: Filter to single service
@@ -1834,7 +1856,7 @@ func TestProperty_ServiceFilterCorrectness_Sanity(t *testing.T) {
 		require.Len(t, manifestPaths, 1, "Should have 1 service")
 		require.Contains(t, manifestPaths, "cert-manager", "Should contain cert-manager")
 		require.NotContains(t, manifestPaths, "loki", "Should not contain loki")
-		require.NotContains(t, manifestPaths, "grafana", "Should not contain grafana")
+		require.NotContains(t, manifestPaths, "grafana-admin", "Should not contain grafana-admin")
 	})
 
 	// Test 2: Filter to multiple services
@@ -1844,17 +1866,17 @@ func TestProperty_ServiceFilterCorrectness_Sanity(t *testing.T) {
 		require.Len(t, manifestPaths, 2, "Should have 2 services")
 		require.Contains(t, manifestPaths, "cert-manager", "Should contain cert-manager")
 		require.Contains(t, manifestPaths, "loki", "Should contain loki")
-		require.NotContains(t, manifestPaths, "grafana", "Should not contain grafana")
+		require.NotContains(t, manifestPaths, "grafana-admin", "Should not contain grafana-admin")
 	})
 
 	// Test 3: Filter to all services
 	t.Run("filter to all services", func(t *testing.T) {
-		manifestPaths, err := manager.mapSecretsToManifests(cfg, allSecrets, []string{"cert-manager", "loki", "grafana"})
+		manifestPaths, err := manager.mapSecretsToManifests(cfg, allSecrets, []string{"cert-manager", "loki", "grafana-admin"})
 		require.NoError(t, err)
 		require.Len(t, manifestPaths, 3, "Should have 3 services")
 		require.Contains(t, manifestPaths, "cert-manager", "Should contain cert-manager")
 		require.Contains(t, manifestPaths, "loki", "Should contain loki")
-		require.Contains(t, manifestPaths, "grafana", "Should contain grafana")
+		require.Contains(t, manifestPaths, "grafana-admin", "Should contain grafana-admin")
 	})
 
 	// Test 4: No filter (nil)

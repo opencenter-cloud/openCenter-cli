@@ -555,11 +555,14 @@ func executeSOPSSecretsEncrypt(ctx context.Context, out, errOut io.Writer, keyFi
 
 		if !info.IsDir() && isSOPSYAMLFile(path) {
 			if isEncrypted, err := encryptor.IsFileEncrypted(path); err == nil && !isEncrypted {
-				// Use SOPS path matcher if available, otherwise fall back to basic matching
+				// The repository's .sops.yaml creation rules are authoritative.
+				// The content heuristic (shouldFileBeEncrypted) matches any YAML
+				// containing "data:" or "key:", so applying it alongside the rules
+				// swept up kustomization.yaml, namespace.yaml and every other
+				// manifest under an overlay and encrypted whole files that Flux
+				// must read as plaintext. It is a fallback for a tree with no rules
+				// at all, never an extension of a rule set that exists.
 				shouldEncrypt := pathMatcher.ShouldEncryptPath(path)
-				if !shouldEncrypt {
-					shouldEncrypt = shouldFileBeEncrypted(path)
-				}
 
 				if shouldEncrypt {
 					filesToEncrypt = append(filesToEncrypt, path)
@@ -792,11 +795,9 @@ func executeSOPSSecretsList(ctx context.Context, out, errOut io.Writer, keyFile,
 				if isEncrypted {
 					encryptedFiles = append(encryptedFiles, path)
 				} else {
-					// Use SOPS path matcher if available, otherwise fall back to basic matching
+					// Same rule as encrypt: creation rules decide, so status does
+					// not flag every manifest carrying a "data:" key as unencrypted.
 					shouldEncrypt := pathMatcher.ShouldEncryptPath(path)
-					if !shouldEncrypt {
-						shouldEncrypt = shouldFileBeEncrypted(path)
-					}
 
 					if shouldEncrypt {
 						unencryptedFiles = append(unencryptedFiles, path)

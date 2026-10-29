@@ -28,7 +28,7 @@ The encryption process:
 
 Use this command when you want to encrypt secrets in your project.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeSOPSSecretsEncrypt(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "", path, false, !noBackup)
+			return executeSOPSSecretsEncrypt(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "", path, getGlobalOptions(cmd).DryRun, !noBackup)
 		},
 	}
 
@@ -62,7 +62,7 @@ The decryption process:
 
 Use this command when you need to decrypt secrets in your project.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeSOPSSecretsDecrypt(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "", path, false, !noBackup)
+			return executeSOPSSecretsDecrypt(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "", path, getGlobalOptions(cmd).DryRun, !noBackup)
 		},
 	}
 
@@ -89,7 +89,7 @@ their SOPS encryption status. It identifies:
 Use this command to get an overview of all secrets in your project and
 verify which files are encrypted and which need encryption.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeSOPSSecretsList(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "", path, false)
+			return executeSOPSSecretsList(cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr(), "", path, getGlobalOptions(cmd).DryRun)
 		},
 	}
 

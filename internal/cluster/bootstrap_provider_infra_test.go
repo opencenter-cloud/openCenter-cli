@@ -223,7 +223,7 @@ users:
 	}
 }
 
-func TestOpenStackBootstrapCreatesFluxBeforeSOPSSecret(t *testing.T) {
+func TestOpenStackBootstrapOrdersSopsSecretBeforeCCMGate(t *testing.T) {
 	ctx := context.Background()
 	resolver := paths.NewPathResolver(t.TempDir())
 	if err := resolver.CreateClusterDirectories(ctx, "sops-order", "test-org"); err != nil {
@@ -258,20 +258,21 @@ func TestOpenStackBootstrapCreatesFluxBeforeSOPSSecret(t *testing.T) {
 	if index(sopsAgeSecretStepID) < 0 || index("openstack-flux-bootstrap") < 0 {
 		t.Fatalf("expected SOPS and Flux steps, got %v", ids)
 	}
+	// Flux bootstrap has to come first: both the SOPS Secret and the CCM are
+	// applied into a cluster whose Flux is not yet installed otherwise.
 	if index("openstack-flux-bootstrap") >= index(sopsAgeSecretStepID) {
 		t.Fatalf("Flux bootstrap must run before SOPS secret reconciliation, got %v", ids)
-	}
-	// The CCM is installed by Flux, so the readiness gate can only observe it
-	// after bootstrap; and it must precede the secret steps so a cluster that
-	// cannot schedule never reports a successful deploy.
-	if index(waitForCCMStepID) < 0 {
-		t.Fatalf("expected the %s step, got %v", waitForCCMStepID, ids)
 	}
 	if index("openstack-flux-bootstrap") >= index(waitForCCMStepID) {
 		t.Fatalf("%s must run after Flux bootstrap, got %v", waitForCCMStepID, ids)
 	}
-	if index(waitForCCMStepID) >= index(sopsAgeSecretStepID) {
-		t.Fatalf("%s must run before SOPS secret reconciliation, got %v", waitForCCMStepID, ids)
+	// Deadlock guard: the CCM overlay is SOPS-encrypted and Flux decrypts it
+	// with the sops-age Secret. Gating on the CCM before that Secret exists
+	// waits forever on a taint nothing can clear, so the Secret must precede
+	// the gate.
+	if index(sopsAgeSecretStepID) >= index(waitForCCMStepID) {
+		t.Fatalf("%s must run before %s, otherwise the gate waits on a CCM Flux can never decrypt, got %v",
+			sopsAgeSecretStepID, waitForCCMStepID, ids)
 	}
 }
 

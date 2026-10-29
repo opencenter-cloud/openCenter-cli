@@ -306,11 +306,19 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 			return nil, fmt.Errorf("building flux bootstrap step: %w", err)
 		}
 		steps = append(steps, fluxStep)
+		// The sops-age Secret must land before the CCM gate. Flux decrypts the
+		// SOPS-encrypted overlay that renders the CCM with this key, and
+		// openstack-ccm-override depends on it: without the Secret the override
+		// fails with `secrets "sops-age" not found`, openstack-ccm-base never
+		// runs, no CCM is ever installed, and the gate below polls a taint that
+		// nothing can ever clear. Observed on kit-kat, where deploy blocked here
+		// while cert-manager, CSI, headlamp, metrics-server and the postgres
+		// stack sat unschedulable behind the same missing key.
+		steps = append(steps, newSopsAgeSecretStep(clusterPaths.SOPSKeyPath, opts.KubeconfigPath, p.runner))
 		// The CCM is installed by Flux, so its effect can only be observed
 		// after bootstrap. This gate is what turns "cluster is up" into
 		// "cluster can actually run workloads".
 		steps = append(steps, p.buildWaitForCCMStep(opts.KubeconfigPath))
-		steps = append(steps, newSopsAgeSecretStep(clusterPaths.SOPSKeyPath, opts.KubeconfigPath, p.runner))
 		// No opencenter-base credential Secret is created: the shared
 		// openCenter-gitops-base repository is public, so its GitRepository
 		// source is rendered anonymously (no secretRef).

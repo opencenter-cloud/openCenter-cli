@@ -30,12 +30,20 @@ const waitForCCMStepID = "wait-for-cloud-controller-manager"
 const cloudProviderInitTaintKey = "node.cloudprovider.kubernetes.io/uninitialized"
 
 // ccmWaitInterval and ccmWaitTimeout bound the gate. The CCM is installed by
-// Flux after bootstrap, so the step has to allow for the Helm install plus the
-// node-initializer pass; five minutes covers a cold image pull on a fresh
-// cluster without hiding a genuinely broken configuration for long.
+// Flux, but the flux-system Kustomization only *applies* the app-of-apps tree;
+// the openstack-ccm HelmRelease sits behind a dependsOn chain
+// (openstack-ccm-namespace -> openstack-ccm-override -> openstack-ccm-base)
+// whose sync and health checks run on 5m intervals, and the override retries a
+// failed decryption every 1m. A budget under one full Flux interval expires
+// while that chain is still legitimately converging on a cold cluster, so the
+// gate reported "cloud controller manager did not initialize the nodes within
+// 5m0s" over a cluster whose CCM was about to arrive. 20m covers two full Flux
+// intervals plus the Helm install and the node-initializer pass, while still
+// failing a permanently broken configuration (missing sops-age secret, Keystone
+// error) inside a single deploy.
 const (
 	ccmWaitInterval = 15 * time.Second
-	ccmWaitTimeout  = 8 * time.Minute
+	ccmWaitTimeout  = 20 * time.Minute
 )
 
 // nodeCloudState is the per-node evidence the gate inspects.
@@ -177,12 +185,26 @@ func parseNodeCloudState(raw string) ([]nodeCloudState, error) {
 	return nodes, nil
 }
 
-// ccmEvidence collects what a failed gate should report: the HelmRelease
-// status and the CCM pods. Without this the operator sees only "timed out" and
-// has to rediscover that Flux uninstalled the release, or that the release is
-// stalled on a Keystone error.
+// ccmEvidence collects what a failed gate should report: the stalled Flux
+// Kustomizations, the HelmRelease status and the CCM pods. Without this the
+// operator sees only "timed out" and has to rediscover the cause by hand.
+//
+// The Kustomization line matters most. The CCM is not applied directly: it sits
+// behind a dependsOn chain, so a Kustomization that cannot decrypt its overlay
+// (missing sops-age secret) leaves every downstream app — CCM, CSI,
+// cert-manager, monitoring — blocked, and no CCM HelmRelease exists yet for a
+// HelmRelease-shaped report to describe. Observed on kit-kat: the gate timed
+// out reporting nothing useful while openstack-ccm-override was failing with
+// `secrets "sops-age" not found`.
 func (p *openstackBootstrapProvider) ccmEvidence(ctx context.Context, kubeconfigPath string) string {
 	var parts []string
+	if out, err := p.runner.Run(ctx, "", nil, "kubectl", "--kubeconfig", kubeconfigPath,
+		"get", "kustomization", "-n", "flux-system",
+		"-o", "jsonpath={range .items[*]}{.metadata.name}={.status.conditions[?(@.type==\"Ready\")].message}{\"\\n\"}{end}"); err == nil {
+		if line := selectBlockedKustomizations(string(out)); line != "" {
+			parts = append(parts, "blocked flux kustomizations: "+line)
+		}
+	}
 	if out, err := p.runner.Run(ctx, "", nil, "kubectl", "--kubeconfig", kubeconfigPath,
 		"get", "helmrelease", "-A", "-o", "jsonpath={range .items[*]}{.metadata.namespace}/{.metadata.name}={.status.conditions[?(@.type==\"Ready\")].message}{\"\\n\"}{end}"); err == nil {
 		if line := selectCCMRelease(string(out)); line != "" {
@@ -199,12 +221,56 @@ func (p *openstackBootstrapProvider) ccmEvidence(ctx context.Context, kubeconfig
 	return "; " + strings.Join(parts, "; ")
 }
 
+// ccmReleaseKeywords identify resources whose name indicates they own the cloud
+// controller manager.
+var ccmReleaseKeywords = []string{"controller-manager", "ccm"}
+
+// mentionsCCM reports whether a resource name refers to the CCM.
+func mentionsCCM(name string) bool {
+	lower := strings.ToLower(name)
+	for _, keyword := range ccmReleaseKeywords {
+		if strings.Contains(lower, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// ccmKustomizationPrefixes are the Flux Kustomizations in the CCM dependsOn
+// chain. Matching is by prefix so a future openstack-ccm-override-v2 line still
+// surfaces.
+var ccmKustomizationPrefixes = []string{"openstack-ccm-"}
+
+// selectBlockedKustomizations picks the CCM-chain Kustomizations that are not
+// Ready, rendering them as "name=message". An empty message means the
+// Kustomization converged and is not the blocker.
+func selectBlockedKustomizations(dump string) string {
+	var blocked []string
+	for _, line := range strings.Split(dump, "\n") {
+		name, message, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		name = strings.TrimSpace(name)
+		if strings.TrimSpace(message) == "" {
+			continue
+		}
+		for _, prefix := range ccmKustomizationPrefixes {
+			if strings.HasPrefix(name, prefix) {
+				blocked = append(blocked, name+"="+strings.TrimSpace(message))
+				break
+			}
+		}
+	}
+	return strings.Join(blocked, ", ")
+}
+
 // selectCCMRelease picks the cloud-controller-manager line out of a
 // namespace/name=condition dump.
 func selectCCMRelease(dump string) string {
 	for _, line := range strings.Split(dump, "\n") {
 		name, _, _ := strings.Cut(line, "=")
-		if strings.Contains(strings.ToLower(name), "controller-manager") || strings.Contains(strings.ToLower(name), "ccm") {
+		if mentionsCCM(name) {
 			return strings.TrimSpace(line)
 		}
 	}

@@ -255,6 +255,56 @@ func TestSelectCCMRelease(t *testing.T) {
 	}
 }
 
+// The CCM is applied through a Flux dependsOn chain, so the usual reason the
+// gate times out is a Kustomization upstream of the CCM that never became
+// Ready — and at that point no CCM HelmRelease exists to blame. The decryption
+// failure has to reach the operator's error message.
+func TestWaitForCloudControllerManagerIncludesBlockedKustomization(t *testing.T) {
+	runner := &recordingRunner{responder: func(args []string) (string, error) {
+		switch call := stripKubectlPrefix(args); {
+		case len(call) > 0 && call[0] == "nodes":
+			return nodesJSONPathOutput(taintedNodeRecord("wn0")), nil
+		case len(call) > 0 && call[0] == "kustomization":
+			return "openstack-ccm-namespace=\n" +
+				"openstack-ccm-override=secrets \"sops-age\" not found\n" +
+				"openstack-ccm-base=dependency 'flux-system/openstack-ccm-override' is not ready\n" +
+				"sources=\n", nil
+		}
+		return "", nil
+	}}
+	provider := &openstackBootstrapProvider{runner: runner}
+
+	err := provider.waitForCloudControllerManager(context.Background(), "/tmp/kc", 30*time.Millisecond, 10*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected a timeout error")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, `openstack-ccm-override=secrets "sops-age" not found`) {
+		t.Errorf("error should name the failing Kustomization and why: %s", msg)
+	}
+	if !strings.Contains(msg, "openstack-ccm-base=dependency") {
+		t.Errorf("error should include the downstream blocked Kustomization: %s", msg)
+	}
+	// Converged Kustomizations in the same namespace are not the blocker and
+	// must not be reported as one.
+	if strings.Contains(msg, "openstack-ccm-namespace=") {
+		t.Errorf("ready Kustomization should not be reported as blocked: %s", msg)
+	}
+}
+
+func TestSelectBlockedKustomizations(t *testing.T) {
+	dump := "openstack-ccm-namespace=\n" +
+		"openstack-ccm-override=secrets \"sops-age\" not found\n" +
+		"kyverno-base=dependency 'flux-system/sources' is not ready\n"
+	got := selectBlockedKustomizations(dump)
+	if got != `openstack-ccm-override=secrets "sops-age" not found` {
+		t.Errorf("selectBlockedKustomizations = %q", got)
+	}
+	if selectBlockedKustomizations("openstack-ccm-namespace=\nsources=\n") != "" {
+		t.Error("expected no blocked Kustomization when the CCM chain is ready")
+	}
+}
+
 func TestWaitForCCMStepIsRegistered(t *testing.T) {
 	step := (&openstackBootstrapProvider{}).buildWaitForCCMStep("/tmp/kc")
 	if step.ID != waitForCCMStepID {

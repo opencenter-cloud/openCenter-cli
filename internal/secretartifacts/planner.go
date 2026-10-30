@@ -656,6 +656,34 @@ func DedicatedSecretFilename(relative string) (dir string, filename string, ok b
 	return "", "", false
 }
 
+// RelativeArtifactPath converts a materialized manifest path (absolute or
+// relative, OS separators) into the overlay-relative slash form that
+// DedicatedSecretFilename and the ownership ledger key on: the path starting at
+// its "services" or "managed-services" root.
+//
+// Naming and ownership are both decided by the artifact's position under the
+// overlay, so every caller must resolve names from the same shape. Handing a
+// helper only the basename silently degrades a path-scoped match into a filename
+// match, which is how the dedicated Grafana Secrets both ended up named
+// opencenter-kube-prometheus-stack-secret.
+//
+// A path with no services root is returned unchanged in slash form, so the
+// caller's own match simply fails rather than guessing an overlay location.
+func RelativeArtifactPath(manifestPath string) string {
+	slashed := filepath.ToSlash(filepath.Clean(filepath.ToSlash(manifestPath)))
+	parts := strings.Split(slashed, "/")
+	for i, part := range parts {
+		if part != "services" && part != "managed-services" {
+			continue
+		}
+		if i == 0 {
+			return strings.Join(parts, "/")
+		}
+		return strings.Join(parts[i:], "/")
+	}
+	return slashed
+}
+
 // dedicatedSecretArtifacts plans the Secrets the renderers emit outside the
 // generic services/<service>/secret.yaml route.
 //

@@ -1912,7 +1912,17 @@ func (m *DefaultSecretsManager) generateSecretManifest(
 	// services/cert-manager/opencenter-cloudflare-credentials-secret-<name>.yaml
 	// would hold a Secret called opencenter-cert-manager-secret, and the
 	// ClusterIssuer would silently never become Ready.
-	if metadata["name"] == nil {
+	//
+	// For the two file-named shapes -- a cert-manager credential Secret and a
+	// dedicated renderer Secret -- the path IS the contract, so the derived name
+	// wins outright rather than filling a gap. Preserving whatever name is already
+	// on disk would instead make the corruption permanent: the buggy fallback
+	// wrote opencenter-kube-prometheus-stack-secret into both Grafana files, and a
+	// preserve-first rule kept re-reading that name back out on every subsequent
+	// sync, --force included.
+	if derived, fileNamed := derivedSecretName(manifestPath); fileNamed {
+		metadata["name"] = derived
+	} else if metadata["name"] == nil {
 		metadata["name"] = secretManifestName(service, manifestPath)
 	}
 	// Final Helm values Secrets are consumed directly by the Harbor and Loki
@@ -1952,20 +1962,37 @@ func finalValuesSecretNamespace(service string) (string, bool) {
 	}
 }
 
-// secretManifestName chooses the Kubernetes Secret name for a materialized
-// artifact. A cert-manager DNS-credential Secret is named after its own file,
-// because that is the name the ClusterIssuer's secretRefs were rendered with;
-// every other artifact keeps the service-derived name.
-func secretManifestName(service, manifestPath string) string {
+// derivedSecretName returns the Kubernetes Secret name dictated by the artifact's
+// own filename, and whether the filename dictates one at all. Two shapes qualify:
+// a cert-manager DNS credential Secret, whose name the ClusterIssuer's secretRefs
+// were rendered with, and a dedicated renderer Secret, whose name the Helm chart
+// existingSecret / extraSecretMounts or the Envoy SecurityPolicy was rendered
+// with. For both, the file's position under the overlay IS the contract.
+//
+// Resolution goes through secretartifacts against the overlay-relative path, not
+// the basename: DedicatedSecretFilename matches on services/<dir>/<file>, so a
+// basename can never satisfy it. Matching on the base name left that branch
+// permanently false, and both Grafana Secrets fell through to
+// opencenter-<service>-secret -- one Kubernetes identity declared twice in a single
+// Kustomize build, which kustomize rejects outright and which wedged the whole
+// monitoring dependsOn chain.
+func derivedSecretName(manifestPath string) (string, bool) {
 	base := filepath.Base(manifestPath)
 	if secretartifacts.IsCertManagerCredentialFilename(base) {
-		return strings.TrimSuffix(base, ".yaml")
+		return strings.TrimSuffix(base, ".yaml"), true
 	}
-	// A dedicated Secret is named after its own file: the Helm chart or the
-	// Envoy SecurityPolicy resolves it by that exact name, so the service-derived
-	// fallback would produce a valid, encrypted, unusable Secret.
-	if _, filename, ok := secretartifacts.DedicatedSecretFilename(filepath.ToSlash(base)); ok {
-		return strings.TrimSuffix(filename, ".yaml")
+	if _, filename, ok := secretartifacts.DedicatedSecretFilename(secretartifacts.RelativeArtifactPath(manifestPath)); ok {
+		return strings.TrimSuffix(filename, ".yaml"), true
+	}
+	return "", false
+}
+
+// secretManifestName chooses the Kubernetes Secret name for a materialized
+// artifact. A file whose own name IS the contract is named after itself; every
+// other artifact keeps the service-derived name.
+func secretManifestName(service, manifestPath string) string {
+	if name, ok := derivedSecretName(manifestPath); ok {
+		return name
 	}
 	// Service-specific names where the Helm chart expects a Secret name that
 	// does not follow the standard pattern.

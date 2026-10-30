@@ -173,12 +173,15 @@ func TestGenerateSecretManifestNamesCredentialSecretAfterItsFile(t *testing.T) {
 		serviceScopedSecretPath("cert-manager"))
 	require.Equal(t, "opencenter-cert-manager-secret", metadataOfManifest(t, generic)["name"])
 
-	// An existing manifest's name still wins, so a repository whose Secret was
-	// already named is never silently renamed under sync.
-	preserved := manager.generateSecretManifest("cert-manager", secrets, map[string]interface{}{
+	// The filename is the contract, so a stale name on disk is corrected rather
+	// than preserved: preserve-first made the corrupted Grafana Secrets permanent,
+	// because sync kept reading the bad name back out of the file it was rewriting.
+	// See TestGenerateSecretManifestCorrectsExistingDedicatedSecretName.
+	corrected := manager.generateSecretManifest("cert-manager", secrets, map[string]interface{}{
 		"metadata": map[string]interface{}{"name": "hand-named-issuer-secret"},
 	}, certManagerCredentialSecretPath(t, "cloudflare", "prod"))
-	require.Equal(t, "hand-named-issuer-secret", metadataOfManifest(t, preserved)["name"])
+	require.Equal(t, "opencenter-cloudflare-credentials-secret-prod",
+		metadataOfManifest(t, corrected)["name"])
 }
 
 // TestSyncSecretsRefusesPlaintextCredentialArtifact is the guard that keeps the

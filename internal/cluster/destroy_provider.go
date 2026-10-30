@@ -47,6 +47,12 @@ type DestroyInfraOptions struct {
 	// unreachable cluster kubeconfig) into a fatal error instead of a
 	// warning, so destroy aborts before any infrastructure is torn down.
 	RequireClusterAccess bool
+	// SkipClusterAccess omits every destroy step that talks to the live
+	// cluster API (the CSI volume-capture kubectl step). Used when the
+	// kube endpoint is unreachable and the operator has accepted that CSI
+	// volume handles cannot be captured. It is incompatible with
+	// RequireClusterAccess.
+	SkipClusterAccess bool
 	// AllowCleanupFailures downgrades pre-destroy cleanup steps (e.g. the
 	// Octavia load-balancer sweep) from fatal to warning, preserving the
 	// historical lenient behavior when the operator explicitly accepts the

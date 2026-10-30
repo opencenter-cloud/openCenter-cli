@@ -41,6 +41,10 @@ type DestroyOptions struct {
 	// RequireClusterAccess aborts destroy when the cluster kubeconfig is
 	// missing or unreachable instead of skipping CSI volume capture.
 	RequireClusterAccess bool
+	// SkipClusterAccess omits every destroy step that requires access to the
+	// live cluster API (the CSI volume-capture kubectl step), so destroy
+	// proceeds against an unreachable endpoint without a capture warning.
+	SkipClusterAccess bool
 	// AllowCleanupFailures downgrades pre-destroy cleanup steps from fatal
 	// to warning (historical lenient behavior, explicit opt-in).
 	AllowCleanupFailures bool
@@ -112,6 +116,11 @@ func (s *DestroyService) DestroyInfrastructure(ctx context.Context, cfg *v2.Conf
 	if opts == nil {
 		opts = &DestroyOptions{}
 	}
+	if opts.SkipClusterAccess && opts.RequireClusterAccess {
+		return nil, fmt.Errorf("SkipClusterAccess and RequireClusterAccess are mutually exclusive: " +
+			"one demands live cluster access, the other forbids touching the cluster API")
+	}
+
 	if opts.DestroyRetries == 0 {
 		opts.DestroyRetries = 1
 	} else if opts.DestroyRetries < 0 {
@@ -136,6 +145,7 @@ func (s *DestroyService) DestroyInfrastructure(ctx context.Context, cfg *v2.Conf
 		AutoApprove:          opts.AutoApprove,
 		DeleteVolumes:        opts.DeleteVolumes,
 		RequireClusterAccess: opts.RequireClusterAccess,
+		SkipClusterAccess:    opts.SkipClusterAccess,
 		AllowCleanupFailures: opts.AllowCleanupFailures,
 		DestroyRetries:       opts.DestroyRetries,
 		DestroyParallelism:   destroyParallelism(opts),

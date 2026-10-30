@@ -138,11 +138,57 @@ func TestOpenStackDestroyProvider_CaptureUnreachableRecordsWarning(t *testing.T)
 	}
 }
 
+// TestOpenStackDestroyProvider_SkipClusterAccessOmitsCapture asserts
+// SkipClusterAccess removes the capture step from the pipeline entirely: no
+// kubectl call is possible (the step does not exist), the skip is announced
+// on stdout, and the remaining steps (networking sweep, tofu, volume
+// cleanup) are untouched.
+func TestOpenStackDestroyProvider_SkipClusterAccessOmitsCapture(t *testing.T) {
+	cfg := makeOpenStackCfg(t)
+	clusterDir := filepath.Join(cfg.GitDir(), "infrastructure", "clusters", cfg.ClusterName())
+	kubeconfigPath := filepath.Join(clusterDir, "kubeconfig.yaml")
+	if err := os.WriteFile(kubeconfigPath, []byte("placeholder"), 0o600); err != nil {
+		t.Fatalf("write kubeconfig: %v", err)
+	}
+
+	runner := &failingPVRunner{}
+	var out bytes.Buffer
+	p := newTestOpenStackDestroyProvider(runner, &out)
+
+	steps, err := p.BuildSteps(cfg, &DestroyInfraOptions{AutoApprove: true, SkipClusterAccess: true})
+	if err != nil {
+		t.Fatalf("BuildSteps: %v", err)
+	}
+	for _, s := range steps {
+		if s.ID == "capture-csi-volumes" {
+			t.Fatal("capture-csi-volumes must be omitted under SkipClusterAccess")
+		}
+	}
+	for _, id := range []string{"cleanup-openstack-networking", "opentofu-init", "opentofu-destroy", "cleanup-csi-volumes"} {
+		findStep(t, steps, id)
+	}
+	if !strings.Contains(out.String(), "Skipping CSI volume capture (--skip-cluster-access)") {
+		t.Fatalf("expected skip notice in output, got: %s", out.String())
+	}
+
+	ctx := context.Background()
+	for _, s := range steps {
+		if err := s.Run(ctx); err != nil {
+			t.Fatalf("step %q failed: %v", s.ID, err)
+		}
+	}
+	if runner.kubectlCalls != 0 {
+		t.Fatalf("kubectl must never be called under SkipClusterAccess, calls=%d", runner.kubectlCalls)
+	}
+}
+
 // TestOpenStackDestroyProvider_NetworkingSeverity asserts the pre-destroy
 // Octavia sweep is fatal by default (leaked LBs are not silent) and only
 // downgrades under AllowCleanupFailures.
 func TestOpenStackDestroyProvider_NetworkingSeverity(t *testing.T) {
 	cfg := makeOpenStackCfg(t)
+	// Severity only applies to a scoped sweep; un-scoped is always a warning.
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.NetworkID = "net-scope"
 	runner := &fakeDestroyCommandRunner{}
 	p := newTestOpenStackDestroyProvider(runner, &bytes.Buffer{})
 

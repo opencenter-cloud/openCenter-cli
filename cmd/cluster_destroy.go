@@ -40,6 +40,7 @@ func newClusterDestroyCmd() *cobra.Command {
 		deleteVolumes        bool
 		strict               bool
 		requireClusterAccess bool
+		skipClusterAccess    bool
 		allowCleanupFailures bool
 		destroyRetries       int
 		destroyParallelism   int
@@ -60,7 +61,12 @@ The cluster name can be specified as 'cluster' or 'organization/cluster'.
 If no cluster name is provided, the active cluster will be destroyed.
 
 If an existing lock is found, you will be prompted to break it. Use --break-lock
-to automatically break any existing lock without prompting.`,
+to automatically break any existing lock without prompting.
+
+When the cluster API endpoint is unreachable (decommissioned cluster, VPN down),
+use --skip-cluster-access to omit the kubectl CSI volume-capture step entirely,
+so destroy never blocks on the dead endpoint. Orphaned Cinder volumes then need
+manual cleanup.`,
 		Example: `  # Destroy infrastructure only (keep local files for inspection)
   opencenter cluster destroy my-cluster --force
 
@@ -69,6 +75,9 @@ to automatically break any existing lock without prompting.`,
 
   # Skip infrastructure destruction (just remove local files)
   opencenter cluster destroy my-cluster --force --skip-infrastructure --remove-files
+
+  # Destroy with an unreachable cluster API endpoint (skip kubectl capture)
+  opencenter cluster destroy my-cluster --force --skip-cluster-access --remove-files
 
   # Destroy cluster in specific organization
   opencenter cluster destroy myorg/my-cluster --force
@@ -83,6 +92,12 @@ to automatically break any existing lock without prompting.`,
 			// Apply log-level flag
 			if logLevel, _ := cmd.Flags().GetString("log-level"); logLevel != "" {
 				_ = logging.SetLogLevel(logLevel)
+			}
+
+			// --skip-cluster-access and --require-cluster-access are exact
+			// opposites; reject before touching the lock or the cluster.
+			if skipClusterAccess && requireClusterAccess {
+				return fmt.Errorf("--skip-cluster-access and --require-cluster-access are mutually exclusive: one skips the cluster API, the other requires it")
 			}
 
 			// Resolve cluster name from args or active cluster
@@ -167,8 +182,8 @@ to automatically break any existing lock without prompting.`,
 			}
 
 			logging.LogActionMessage(ctx, "destroy started for %s/%s", organization, clusterName)
-			logging.LogActionMessage(ctx, "options: force=%v, remove_files=%v, skip_infrastructure=%v, delete_volumes=%v, require_cluster_access=%v, allow_cleanup_failures=%v, strict=%v, destroy_retries=%d, destroy_parallelism=%d",
-				force, removeFiles, skipInfrastructure, deleteVolumes, requireClusterAccess, allowCleanupFailures, strict, destroyRetries, destroyParallelism)
+			logging.LogActionMessage(ctx, "options: force=%v, remove_files=%v, skip_infrastructure=%v, delete_volumes=%v, require_cluster_access=%v, skip_cluster_access=%v, allow_cleanup_failures=%v, strict=%v, destroy_retries=%d, destroy_parallelism=%d",
+				force, removeFiles, skipInfrastructure, deleteVolumes, requireClusterAccess, skipClusterAccess, allowCleanupFailures, strict, destroyRetries, destroyParallelism)
 			logging.Debugf("destroy: log file at %s", destroyLogPath)
 
 			// Destroy infrastructure (unless skipped)
@@ -177,6 +192,7 @@ to automatically break any existing lock without prompting.`,
 				warnings, err := destroyClusterInfrastructure(ctx, cmd, cfg, destroyOptions{
 					deleteVolumes:        deleteVolumes,
 					requireClusterAccess: requireClusterAccess,
+					skipClusterAccess:    skipClusterAccess,
 					allowCleanupFailures: allowCleanupFailures,
 					retries:              destroyRetries,
 					parallelism:          destroyParallelism,
@@ -237,6 +253,7 @@ to automatically break any existing lock without prompting.`,
 	cmd.Flags().BoolVar(&deleteVolumes, "delete-volumes", false, "Delete CSI-provisioned Cinder volumes left orphaned after infrastructure destruction (OpenStack only)")
 	cmd.Flags().BoolVar(&strict, "strict", false, "Exit with an error when post-destroy cleanup reported warnings (leaked load balancers, orphaned volumes)")
 	cmd.Flags().BoolVar(&requireClusterAccess, "require-cluster-access", false, "Abort before destroying infrastructure if the cluster kubeconfig is missing or unreachable (CSI volume capture cannot be skipped)")
+	cmd.Flags().BoolVar(&skipClusterAccess, "skip-cluster-access", false, "Never contact the cluster API during destroy (skips the kubectl CSI volume capture); use when the kube endpoint is unreachable (incompatible with --require-cluster-access)")
 	cmd.Flags().BoolVar(&allowCleanupFailures, "allow-cleanup-failures", false, "Continue when pre-destroy cleanup steps (load balancer sweep) fail; leaked resources are reported as warnings")
 	cmd.Flags().IntVar(&destroyRetries, "destroy-retries", 1, "Additional attempts for the OpenTofu destroy step after a transient failure (0 disables retries)")
 	cmd.Flags().IntVar(&destroyParallelism, "destroy-parallelism", 0, "OpenTofu destroy -parallelism value (0 keeps the OpenTofu default)")
@@ -250,6 +267,7 @@ to automatically break any existing lock without prompting.`,
 type destroyOptions struct {
 	deleteVolumes        bool
 	requireClusterAccess bool
+	skipClusterAccess    bool
 	allowCleanupFailures bool
 	retries              int
 	parallelism          int
@@ -264,6 +282,13 @@ func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v
 
 	// Handle Kind clusters
 	if provider == "kind" {
+		if opts.skipClusterAccess {
+			// The flag contract is "never contact the cluster API". A Kind
+			// cluster is deleted through the container runtime, but the
+			// endpoint belongs to that same control plane: refuse rather
+			// than silently violating the contract.
+			return nil, fmt.Errorf("--skip-cluster-access cannot destroy a Kind cluster: the Kind control plane is the cluster API endpoint; omit the flag or delete the cluster with 'kind delete cluster --name %s'", cfg.ClusterName())
+		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Destroying Kind cluster...\n")
 		logging.LogActionMessage(ctx, "destroying Kind cluster %s", cfg.ClusterName())
 		if err := destroyKindCluster(ctx, cfg); err != nil {
@@ -289,6 +314,7 @@ func destroyClusterInfrastructure(ctx context.Context, cmd *cobra.Command, cfg v
 			AutoApprove:          true,
 			DeleteVolumes:        opts.deleteVolumes,
 			RequireClusterAccess: opts.requireClusterAccess,
+			SkipClusterAccess:    opts.skipClusterAccess,
 			AllowCleanupFailures: opts.allowCleanupFailures,
 			DestroyRetries:       opts.retries,
 			DestroyParallelism:   opts.parallelism,

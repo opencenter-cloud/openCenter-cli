@@ -163,39 +163,50 @@ func (p *openstackDestroyProvider) BuildSteps(cfg *v2.Config, opts *DestroyInfra
 			clusterDir, !infraAlreadyGone, kubeconfigPath, kubeconfigExists, displayTofuBinary(openTofuPath, infraAlreadyGone), networkID)
 
 		requireClusterAccess := opts != nil && opts.RequireClusterAccess
-		steps = append(steps, destroyStep{
-			ID:          "capture-csi-volumes",
-			Description: "Capture CSI-provisioned Cinder volume handles from cluster",
-			Fatal:       requireClusterAccess,
-			Run: func(ctx context.Context) error {
-				// Distinguish "kubeconfig absent" (cluster may already be
-				// gone: expected skip) from "cluster unreachable" (real
-				// failure: volumes may be orphaned without a record).
-				effectivePath, statErr := kubeconfigForDestroy(cfg, clusterDir)
-				if statErr != nil {
-					if requireClusterAccess {
-						return fmt.Errorf("capture CSI volume handles: %w", statErr)
+		if opts != nil && opts.SkipClusterAccess {
+			// --skip-cluster-access: the operator knows the cluster API
+			// endpoint is unreachable (decommissioned cluster, VPN down).
+			// The capture step is omitted entirely rather than attempted
+			// and degraded to a warning, so destroy never blocks on a dead
+			// endpoint. cleanup-csi-volumes then reports zero handles, as
+			// with any capture skip.
+			p.logf("Skipping CSI volume capture (--skip-cluster-access): the cluster API is not contacted.\n")
+			p.logf("Orphaned Cinder volumes may need manual cleanup after destroy.\n")
+		} else {
+			steps = append(steps, destroyStep{
+				ID:          "capture-csi-volumes",
+				Description: "Capture CSI-provisioned Cinder volume handles from cluster",
+				Fatal:       requireClusterAccess,
+				Run: func(ctx context.Context) error {
+					// Distinguish "kubeconfig absent" (cluster may already be
+					// gone: expected skip) from "cluster unreachable" (real
+					// failure: volumes may be orphaned without a record).
+					effectivePath, statErr := kubeconfigForDestroy(cfg, clusterDir)
+					if statErr != nil {
+						if requireClusterAccess {
+							return fmt.Errorf("capture CSI volume handles: %w", statErr)
+						}
+						p.logfCtx(ctx, "Warning: skipping CSI volume capture: %v\n", statErr)
+						p.logfCtx(ctx, "Orphaned Cinder volumes may need manual cleanup after destroy.\n")
+						p.warn(p.result, "capture-csi-volumes: %v", statErr)
+						return nil
 					}
-					p.logfCtx(ctx, "Warning: skipping CSI volume capture: %v\n", statErr)
-					p.logfCtx(ctx, "Orphaned Cinder volumes may need manual cleanup after destroy.\n")
-					p.warn(p.result, "capture-csi-volumes: %v", statErr)
-					return nil
-				}
-				handles, err := collectCSIVolumeHandles(ctx, effectivePath, p.runner)
-				if err != nil {
-					if requireClusterAccess {
-						return fmt.Errorf("capture CSI volume handles: %w", err)
+					handles, err := collectCSIVolumeHandles(ctx, effectivePath, p.runner)
+					if err != nil {
+						if requireClusterAccess {
+							return fmt.Errorf("capture CSI volume handles: %w", err)
+						}
+						p.logfCtx(ctx, "Warning: could not capture CSI volume handles: %v\n", err)
+						p.logfCtx(ctx, "Orphaned Cinder volumes may need manual cleanup after destroy.\n")
+						p.warn(p.result, "capture-csi-volumes: %v", err)
+						return nil
 					}
-					p.logfCtx(ctx, "Warning: could not capture CSI volume handles: %v\n", err)
-					p.logfCtx(ctx, "Orphaned Cinder volumes may need manual cleanup after destroy.\n")
-					p.warn(p.result, "capture-csi-volumes: %v", err)
+					capturedHandles = handles
+					p.logfCtx(ctx, "Captured %d CSI-provisioned Cinder volume handle(s).\n", len(handles))
 					return nil
-				}
-				capturedHandles = handles
-				p.logfCtx(ctx, "Captured %d CSI-provisioned Cinder volume handle(s).\n", len(handles))
-				return nil
-			},
-		})
+				},
+			})
+		}
 		// The Octavia sweep runs BEFORE tofu destroy: skipping it on failure
 		// leaks cluster-owned load balancers, so its failure is fatal unless
 		// the operator explicitly accepts the risk. When the infrastructure
@@ -203,13 +214,34 @@ func (p *openstackDestroyProvider) BuildSteps(cfg *v2.Config, opts *DestroyInfra
 		// load balancers; sweeping with placeholder or unscoped credentials
 		// cannot succeed, so the step is skipped (with credentials present
 		// it still runs and can clean up real leftovers).
-		networkingUseful := creds != nil && networkID != ""
-		if !skipRemoteSteps && (!infraAlreadyGone || networkingUseful) {
+		//
+		// The sweep is scoped to network_id by design and refuses to guess a
+		// delete scope without it. Blueprints that never set network_id
+		// cannot delete anything through the sweep; failing fatally there
+		// would block destroy for a config that was always un-scoped. The
+		// step still runs (keeping client/credential problems visible) but
+		// reports the refusal as a cleanup warning instead of a fatal error.
+		networkingScoped := creds != nil && networkID != ""
+		if !skipRemoteSteps && (!infraAlreadyGone || networkingScoped) {
+			networkingFatal := opts == nil || !opts.AllowCleanupFailures
+			if !networkingScoped {
+				networkingFatal = false
+			}
 			steps = append(steps, destroyStep{
 				ID:          "cleanup-openstack-networking",
 				Description: "Remove cluster-owned Octavia load balancers before OpenTofu destroy",
-				Fatal:       opts == nil || !opts.AllowCleanupFailures,
+				Fatal:       networkingFatal,
 				Run: func(ctx context.Context) error {
+					if !networkingScoped {
+						why := "network_id is not configured"
+						if creds == nil {
+							why = "credentials are unavailable"
+						}
+						msg := fmt.Sprintf("%s: the sweep refuses to delete load balancers without a network scope; cluster-owned load balancers (k8s-%s-*) may need manual cleanup before network deletion", why, cfg.ClusterName())
+						p.logfCtx(ctx, "Warning: skipping Octavia load-balancer sweep: %s.\n", msg)
+						p.warn(p.result, "cleanup-openstack-networking: %s", msg)
+						return nil
+					}
 					svc, err := p.networkCleanupFactory(creds)
 					if err != nil {
 						return fmt.Errorf("create OpenStack networking cleanup client: %w", err)

@@ -158,6 +158,14 @@ or too aggressive.
   cluster is unreachable, capture warns, records a cleanup warning, and continues
   with zero handles. Pass `--require-cluster-access` to make that condition fatal so
   destroy aborts **before** any infrastructure is torn down.
+- When the kube API endpoint is unreachable and you know capture cannot
+  succeed (decommissioned control plane, VPN down), pass
+  `--skip-cluster-access`: the capture step is omitted from the pipeline
+  entirely — no `kubectl` process is ever started, so destroy never blocks on
+  the dead endpoint and no capture warning is recorded. The remaining steps
+  (Octavia sweep, OpenTofu destroy, Cinder cleanup of captured handles —
+  which is a no-op without capture) run normally. `--skip-cluster-access` and
+  `--require-cluster-access` are mutually exclusive.
 - **In `--delete-volumes` mode:** deletion failures are reported as cleanup warnings
   and the destroy command still completes; add `--strict` to turn any cleanup warning
   into a non-zero exit for automation. Always check the cleanup output to verify

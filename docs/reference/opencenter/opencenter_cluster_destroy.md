@@ -28,6 +28,11 @@ If no cluster name is provided, the active cluster will be destroyed.
 If an existing lock is found, you will be prompted to break it. Use --break-lock
 to automatically break any existing lock without prompting.
 
+When the cluster API endpoint is unreachable (decommissioned cluster, VPN down),
+use --skip-cluster-access to omit the kubectl CSI volume-capture step entirely,
+so destroy never blocks on the dead endpoint. Orphaned Cinder volumes then need
+manual cleanup.
+
 ```
 opencenter cluster destroy [name] [flags]
 ```
@@ -44,6 +49,9 @@ opencenter cluster destroy [name] [flags]
   # Skip infrastructure destruction (just remove local files)
   opencenter cluster destroy my-cluster --force --skip-infrastructure --remove-files
 
+  # Destroy with an unreachable cluster API endpoint (skip kubectl capture)
+  opencenter cluster destroy my-cluster --force --skip-cluster-access --remove-files
+
   # Destroy cluster in specific organization
   opencenter cluster destroy myorg/my-cluster --force
 
@@ -57,12 +65,18 @@ opencenter cluster destroy [name] [flags]
 ### Options
 
 ```
-      --delete-volumes        Delete CSI-provisioned Cinder volumes left orphaned after infrastructure destruction (OpenStack only)
-      --force                 Skip confirmation prompt
-  -h, --help                  help for destroy
-      --log string            log file path (defaults to <state_dir>/logs/destroy/<org>/<name>/destroy-YYYYMMDDTHHMMSSZ.log)
-      --remove-files          Remove local configuration and GitOps files after infrastructure destruction
-      --skip-infrastructure   Skip infrastructure destruction (only remove local files when combined with --remove-files)
+      --allow-cleanup-failures    Continue when pre-destroy cleanup steps (load balancer sweep) fail; leaked resources are reported as warnings
+      --delete-volumes            Delete CSI-provisioned Cinder volumes left orphaned after infrastructure destruction (OpenStack only)
+      --destroy-parallelism int   OpenTofu destroy -parallelism value (0 keeps the OpenTofu default)
+      --destroy-retries int       Additional attempts for the OpenTofu destroy step after a transient failure (0 disables retries) (default 1)
+      --force                     Skip confirmation prompt
+  -h, --help                      help for destroy
+      --log string                log file path (defaults to <state_dir>/logs/destroy/<org>/<name>/destroy-YYYYMMDDTHHMMSSZ.log)
+      --remove-files              Remove local configuration and GitOps files after infrastructure destruction
+      --require-cluster-access    Abort before destroying infrastructure if the cluster kubeconfig is missing or unreachable (CSI volume capture cannot be skipped)
+      --skip-cluster-access       Never contact the cluster API during destroy (skips the kubectl CSI volume capture); use when the kube endpoint is unreachable (incompatible with --require-cluster-access)
+      --skip-infrastructure       Skip infrastructure destruction (only remove local files when combined with --remove-files)
+      --strict                    Exit with an error when post-destroy cleanup reported warnings (leaked load balancers, orphaned volumes)
 ```
 
 ### Options inherited from parent commands

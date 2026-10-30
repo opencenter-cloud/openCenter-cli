@@ -43,6 +43,7 @@ func TestOpenStackDestroyProvider_NetworkingCleanupStep_Wiring(t *testing.T) {
 		topNetworkID  string
 		nestedNetwork string // networking.network_id fallback
 		wantNetworkID string
+		wantSkipped   bool
 	}{
 		{
 			name:          "top-level network id",
@@ -55,8 +56,9 @@ func TestOpenStackDestroyProvider_NetworkingCleanupStep_Wiring(t *testing.T) {
 			wantNetworkID: "net-nested",
 		},
 		{
-			name:          "empty network id is passed through for the service to reject",
+			name:          "empty network id skips the sweep as a warning",
 			wantNetworkID: "",
+			wantSkipped:   true,
 		},
 	}
 	for _, tc := range tests {
@@ -69,8 +71,11 @@ func TestOpenStackDestroyProvider_NetworkingCleanupStep_Wiring(t *testing.T) {
 				}
 			}
 
+			var out bytes.Buffer
 			fake := &fakeNetworkCleanupForDestroy{}
-			provider := newTestOpenStackDestroyProvider(&fakeDestroyCommandRunner{}, &bytes.Buffer{})
+			provider := newTestOpenStackDestroyProvider(&fakeDestroyCommandRunner{}, &out)
+			result := &DestroyResult{}
+			provider.result = result
 			provider.networkCleanupFactory = func(_ *credentials.OpenStackCredentials) (openStackNetworkCleanupService, error) {
 				return fake, nil
 			}
@@ -84,6 +89,19 @@ func TestOpenStackDestroyProvider_NetworkingCleanupStep_Wiring(t *testing.T) {
 				t.Fatalf("cleanup step: %v", err)
 			}
 
+			if tc.wantSkipped {
+				// Un-scoped sweep: no service call, non-fatal, warning recorded.
+				if fake.calls != 0 {
+					t.Fatalf("CleanupClusterLoadBalancers must not be called without a network scope, calls=%d", fake.calls)
+				}
+				if step.Fatal {
+					t.Fatal("un-scoped sweep must not be Fatal")
+				}
+				if len(result.CleanupWarnings) != 1 || !strings.Contains(result.CleanupWarnings[0].Error(), "network scope") {
+					t.Fatalf("expected network-scope cleanup warning, got %v", result.CleanupWarnings)
+				}
+				return
+			}
 			if fake.calls != 1 {
 				t.Fatalf("CleanupClusterLoadBalancers calls = %d, want 1", fake.calls)
 			}
@@ -102,6 +120,8 @@ func TestOpenStackDestroyProvider_NetworkingCleanupStep_ErrorPropagation(t *test
 
 	t.Run("factory error", func(t *testing.T) {
 		cfg := makeOpenStackCfg(t)
+		// The sweep only reaches the service when network-scoped.
+		cfg.OpenCenter.Infrastructure.Cloud.OpenStack.NetworkID = "net-scope"
 		provider := newTestOpenStackDestroyProvider(&fakeDestroyCommandRunner{}, &bytes.Buffer{})
 		provider.networkCleanupFactory = func(_ *credentials.OpenStackCredentials) (openStackNetworkCleanupService, error) {
 			return nil, sentinel
@@ -122,6 +142,7 @@ func TestOpenStackDestroyProvider_NetworkingCleanupStep_ErrorPropagation(t *test
 
 	t.Run("cleanup error", func(t *testing.T) {
 		cfg := makeOpenStackCfg(t)
+		cfg.OpenCenter.Infrastructure.Cloud.OpenStack.NetworkID = "net-scope"
 		provider := newTestOpenStackDestroyProvider(&fakeDestroyCommandRunner{}, &bytes.Buffer{})
 		provider.networkCleanupFactory = func(_ *credentials.OpenStackCredentials) (openStackNetworkCleanupService, error) {
 			return &fakeNetworkCleanupForDestroy{err: sentinel}, nil

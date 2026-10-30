@@ -125,3 +125,24 @@ func TestDestroyService_RetryDefaults(t *testing.T) {
 		t.Fatalf("DestroyRetries=-1 must clamp to 0, got %d", got.DestroyRetries)
 	}
 }
+
+// TestDestroyService_SkipClusterAccessForwards asserts SkipClusterAccess
+// reaches the provider options, and that combining it with
+// RequireClusterAccess is rejected before any step runs.
+func TestDestroyService_SkipClusterAccessForwards(t *testing.T) {
+	svc := NewDestroyServiceWithRunner(&fakeDestroyCommandRunner{}, &bytes.Buffer{})
+	var got *DestroyInfraOptions
+	svc.providerOverride = &capturingDestroyProvider{capture: &got}
+
+	testCfg := &v2.Config{OpenCenter: v2.OpenCenterConfig{}}
+	if _, err := svc.DestroyInfrastructure(context.Background(), testCfg, &DestroyOptions{SkipClusterAccess: true}); err != nil {
+		t.Fatalf("destroy: %v", err)
+	}
+	if got == nil || !got.SkipClusterAccess {
+		t.Fatalf("SkipClusterAccess must reach the provider, got %+v", got)
+	}
+
+	if _, err := svc.DestroyInfrastructure(context.Background(), testCfg, &DestroyOptions{SkipClusterAccess: true, RequireClusterAccess: true}); err == nil {
+		t.Fatal("SkipClusterAccess + RequireClusterAccess must be rejected")
+	}
+}

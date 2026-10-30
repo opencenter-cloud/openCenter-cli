@@ -236,10 +236,14 @@ func gatewayIsBYO(cfg v2.Config) bool {
 //
 // The dns_provider branch is what makes the provider the default: with
 // dns_provider: cloudflare (or route53) and a credential, the issuer named
-// after the lowest-sorted credential wins, exactly matching the ClusterIssuer
+// after the resolved credential wins, exactly matching the ClusterIssuer
 // planCertManagerDynamicActions renders. designate resolves to
 // letsencrypt-designate, whose issuer is rendered from infrastructure
 // credentials and needs no service secret.
+//
+// dns_provider: none resolves to rackspace-ca explicitly rather than by
+// falling through: the internal CA is the intended answer, not the residue of
+// no match.
 func gatewayDefaultIssuer(cfg v2.Config) string {
 	gw := gatewayServiceConfig(cfg)
 	if gw != nil && gw.DefaultIssuer != "" {
@@ -257,16 +261,26 @@ func gatewayDefaultIssuer(cfg v2.Config) string {
 	if dnsProvider == "designate" {
 		return "letsencrypt-designate"
 	}
-	if dnsProvider == "" && !isDefaultClusterCertificateEnabled(cfg) {
+	if cfg.DNSProviderDisabled() {
 		return "rackspace-ca"
 	}
-	if names := sortedNames(cfg.ResolvedCertManagerAWSCredentials()); len(names) > 0 {
-		return "letsencrypt-" + names[0]
-	}
-	if names := sortedNames(cfg.ResolvedCertManagerCloudflareCredentials()); len(names) > 0 {
-		return "letsencrypt-" + names[0]
+	if name := cfg.ResolvedDNSCredential(dnsProvider, "", cfg.OpenCenter.Cluster.ClusterFQDN); name != "" {
+		return "letsencrypt-" + name
 	}
 	return "rackspace-ca"
+}
+
+// serviceIssuerRef resolves the ClusterIssuer for one DNS-consuming service.
+// requested is that service's own issuer_ref override. It exists so a
+// service Certificate and the Gateway listener in front of it can never
+// disagree: before this, service Certificates were pinned to rackspace-ca
+// while the Gateway annotation could name an ACME issuer, leaving a listener
+// holding a self-signed leaf where a public one was expected.
+func serviceIssuerRef(cfg v2.Config, requested string) string {
+	if strings.TrimSpace(requested) != "" {
+		return strings.TrimSpace(requested)
+	}
+	return gatewayDefaultIssuer(cfg)
 }
 
 // typedCertManagerConfig returns the cert-manager service config, or nil when

@@ -222,6 +222,13 @@ func runClusterGenerate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(cmd.OutOrStdout(), "Base domain synced:  %s -> %s (cluster config updated)\n",
 			result.BaseDomainSyncedFrom, result.BaseDomainSyncedTo)
 	}
+	if len(result.RepairedHostnameFields) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "\nHostname repair (values were still the `cluster init` placeholder identity):\n")
+		for _, field := range result.RepairedHostnameFields {
+			fmt.Fprintf(cmd.OutOrStdout(), "  ↻ %s\n", field)
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "  Re-run 'opencenter secrets sync %s' if a certificate DNS name changed.\n", name)
+	}
 
 	// Report warnings (non-fatal)
 	if len(result.Warnings) > 0 {

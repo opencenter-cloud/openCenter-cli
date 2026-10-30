@@ -111,6 +111,17 @@ func (cl *ConfigLoader) LoadFromBytes(data []byte) (*Config, error) {
 	// fields (managed.base_domain) and cluster_fqdn re-derivation.
 	applySettingsProvenance(cfg)
 
+	// Stage 4c: Heal service hostnames still baked from a placeholder
+	// identity. `cluster init --base-domain` and the provider-binding region
+	// rewrite both re-derive cluster_fqdn but leave the hostname scalars that
+	// defaults.go materialized from the pre-override FQDN, and every render
+	// template prefers an explicit hostname over the derived FQDN. Sweeping
+	// before validation and freeze means every read path and every re-marshal
+	// sees the repaired value, exactly like cluster_fqdn does.
+	cfg.RepairedHostnameFields = append(
+		RepairPlaceholderHostnames(cfg),
+		RepairPlaceholderDNSZoneNames(cfg)...)
+
 	// Stage 5: Validate
 	if err := cl.validator.ValidateForSet(cfg); err != nil {
 		return nil, fmt.Errorf("stage 5 (validate): %w", err)

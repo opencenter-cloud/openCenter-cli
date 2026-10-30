@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	corePaths "github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/logging"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
@@ -87,6 +88,15 @@ type ClusterDefaultsConfig struct {
 	KubernetesVersion string   `yaml:"kubernetes_version,omitempty"`
 	CNI               string   `yaml:"cni,omitempty"`
 	SSHUser           string   `yaml:"ssh_user,omitempty"`
+
+	// DNS defaults seed services.cert-manager. A cluster follows them while its
+	// managed.dns_provider tag is "default"; editing dns_provider by hand or via
+	// `cluster set` pins it and the cluster owns the value from then on.
+	// DNSProvider accepts route53 | cloudflare | designate | clouddns | azuredns
+	// | none, where none disables ACME and leaves the internal self-signed CA.
+	DNSProvider string   `yaml:"dns_provider,omitempty"`
+	DNSEmail    string   `yaml:"dns_email,omitempty"`
+	DNSZones    []string `yaml:"dns_zones,omitempty"`
 }
 
 // ConfigManager handles CLI configuration loading, validation, and merging.
@@ -440,6 +450,12 @@ func (cm *ConfigManager) generateDefaultConfigTemplate() string {
 	b.WriteString("  # ssh_user: " + d.ClusterDefaults.SSHUser + "\n")
 	b.WriteString("  # ssh_authorized_keys:\n")
 	b.WriteString("  #   - ssh-ed25519 AAAAC3... user@example.com\n")
+	// DNS defaults seed services.cert-manager. A cluster follows them while its
+	// managed.dns_provider tag is 'default'; `cluster set` on that field pins it.
+	// dns_provider: none disables ACME and uses the in-cluster self-signed CA.
+	b.WriteString("  # dns_provider: " + d.ClusterDefaults.DNSProvider + "\n")
+	b.WriteString("  # dns_email: " + d.ClusterDefaults.DNSEmail + "\n")
+	b.WriteString("  # dns_zones: []\n")
 
 	return b.String()
 }
@@ -1197,6 +1213,46 @@ func (cm *ConfigManager) setClusterDefaultsValue(defaults *ClusterDefaultsConfig
 				Message: "base_domain must be a string",
 			}
 		}
+	case "dns_provider":
+		str, ok := value.(string)
+		if !ok {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "cluster_defaults.dns_provider",
+				Value:   value,
+				Message: "dns_provider must be a string",
+			}
+		}
+		str = strings.ToLower(strings.TrimSpace(str))
+		if str != "" && !services.IsDNSProviderNone(str) && !validDNSSettingsProvider(str) {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "cluster_defaults.dns_provider",
+				Value:   value,
+				Message: "dns_provider must be one of route53, cloudflare, designate, clouddns, azuredns, none",
+			}
+		}
+		if services.IsDNSProviderNone(str) {
+			str = string(services.DNSProviderNone)
+		}
+		defaults.DNSProvider = str
+	case "dns_email":
+		if str, ok := value.(string); ok {
+			defaults.DNSEmail = strings.ToLower(strings.TrimSpace(str))
+		} else {
+			return &ConfigError{
+				Type:    "validation",
+				Field:   "cluster_defaults.dns_email",
+				Value:   value,
+				Message: "dns_email must be a string",
+			}
+		}
+	case "dns_zones":
+		zones, err := coerceStringList("cluster_defaults.dns_zones", value)
+		if err != nil {
+			return err
+		}
+		defaults.DNSZones = zones
 	case "admin_email":
 		if str, ok := value.(string); ok {
 			defaults.AdminEmail = str
@@ -1413,11 +1469,76 @@ func (cm *ConfigManager) getClusterDefaultsValue(defaults *ClusterDefaultsConfig
 		return defaults.CNI, nil
 	case "ssh_user":
 		return defaults.SSHUser, nil
+	case "dns_provider":
+		return defaults.DNSProvider, nil
+	case "dns_email":
+		return defaults.DNSEmail, nil
+	case "dns_zones":
+		return defaults.DNSZones, nil
 	default:
 		return nil, &ConfigError{
 			Type:    "validation",
 			Field:   fmt.Sprintf("cluster_defaults.%s", parts[0]),
 			Message: fmt.Sprintf("unknown cluster_defaults field: %s", parts[0]),
+		}
+	}
+}
+
+// validDNSSettingsProvider reports whether name is a provider the cert-manager
+// DNS-01 path can render an issuer for.
+func validDNSSettingsProvider(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "route53", "cloudflare", "designate", "clouddns", "azuredns":
+		return true
+	}
+	return false
+}
+
+// coerceStringList accepts a native string slice, a YAML sequence, or a single
+// comma-separated scalar, and returns a trimmed lower-cased list. Settings may
+// carry dns_zones as a YAML sequence or, set from the command line, as one
+// scalar.
+func coerceStringList(field string, value interface{}) ([]string, error) {
+	switch typed := value.(type) {
+	case []string:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if item = strings.ToLower(strings.TrimSpace(item)); item != "" {
+				out = append(out, item)
+			}
+		}
+		return out, nil
+	case []interface{}:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			str, ok := item.(string)
+			if !ok {
+				return nil, &ConfigError{
+					Type:    "validation",
+					Field:   field,
+					Value:   value,
+					Message: "every entry must be a string",
+				}
+			}
+			if str = strings.ToLower(strings.TrimSpace(str)); str != "" {
+				out = append(out, str)
+			}
+		}
+		return out, nil
+	case string:
+		var out []string
+		for _, item := range strings.Split(typed, ",") {
+			if item = strings.ToLower(strings.TrimSpace(item)); item != "" {
+				out = append(out, item)
+			}
+		}
+		return out, nil
+	default:
+		return nil, &ConfigError{
+			Type:    "validation",
+			Field:   field,
+			Value:   value,
+			Message: "must be a list of strings",
 		}
 	}
 }

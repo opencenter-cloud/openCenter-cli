@@ -96,6 +96,10 @@ func (c Config) ResolvedCertManagerAWSCredentials() map[string]CertManagerAWSCre
 			enabled = append(enabled, name)
 		}
 	}
+	// dns_provider: none disables ACME, so the legacy flat-credential
+	// derivation must not resurrect an issuer the operator just turned off.
+	// Explicitly enabled secrets.cert_manager.aws entries still pass through
+	// above; validateCertManagerCredentials rejects that contradiction.
 	if len(result) > 0 || c.ResolvedDNSProvider() != "route53" {
 		return result
 	}
@@ -149,15 +153,169 @@ func (c Config) ResolvedCertManagerCloudflareCredentials() map[string]CertManage
 // registry auto-selects for the infrastructure, because that is the provider
 // the renderers and readiness treat as in force. Returns "" when cert-manager
 // is absent or disabled.
+//
+// The disable sentinel is normalized here: dns_provider: off/disabled/internal
+// all collapse to "none", so every consumer can compare against
+// services.DNSProviderNone without re-knowing the alias table.
+// AutoSelectDNSProvider never yields "none", so the sentinel is strictly
+// opt-in.
 func (c Config) ResolvedDNSProvider() string {
 	certManager, ok := c.OpenCenter.Services["cert-manager"].(*services.CertManagerConfig)
 	if !ok || certManager == nil || !certManager.Enabled {
 		return ""
 	}
 	if provider := strings.ToLower(strings.TrimSpace(certManager.DNSProvider)); provider != "" {
+		if services.IsDNSProviderNone(provider) {
+			return string(services.DNSProviderNone)
+		}
 		return provider
 	}
 	return strings.ToLower(string(services.AutoSelectDNSProvider(c.Provider(), c.ClusterName(), c.designateEnabled())))
+}
+
+// DNSProviderDisabled reports whether ACME issuance is switched off for this
+// cluster, either by dns_provider: none (or an alias) or by cert-manager being
+// absent/disabled.
+func (c Config) DNSProviderDisabled() bool {
+	provider := c.ResolvedDNSProvider()
+	return provider == "" || provider == string(services.DNSProviderNone)
+}
+
+// ResolvedDNSCredential picks the DNS credential a DNS-consuming service should
+// use and returns its name ("" when there is no credential to pick, e.g.
+// designate or ACME is disabled).
+//
+// provider is advisory, not a filter. cert-manager can run several DNS-01
+// solvers, and an operator can enable an AWS credential while dns_provider
+// auto-selects cloudflare; filtering strictly by provider would find nothing and
+// silently drop the Gateway back to the internal CA. So an explicit name is
+// honored wherever it lives, then the named provider's credentials are
+// preferred, then any other enabled credential.
+//
+// Precedence, highest first:
+//  1. requested  - the per-consumer dns_credential override
+//  2. zone match - a credential whose dns_zones cover hostname, when a hostname
+//     is supplied. Without this step the resolver can name an issuer whose
+//     selector.dnsZones cannot solve for the Certificate's zone: an issuer
+//     exists, matches nothing, and the Certificate never becomes Ready.
+//  3. services.cert-manager.default_credential - the cluster-wide default
+//  4. the sole enabled credential
+//  5. the lowest-sorted enabled name
+//
+// Step 5 preserves the historical behaviour (gatewayDefaultIssuer took the
+// lowest-sorted AWS name, else Cloudflare) so existing clusters see no change.
+// Steps 1-4 make the choice explicit instead of leaving it to name collation,
+// which silently follows a credential rename.
+func (c Config) ResolvedDNSCredential(provider, requested, hostname string) string {
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	if provider == string(services.DNSProviderNone) || provider == string(services.DNSProviderDesignate) {
+		return ""
+	}
+
+	// Advisory order: the named provider first, then any other. An empty
+	// provider (cert-manager disabled) still scans, so an explicitly named
+	// credential resolves rather than falling through to the internal CA.
+	ordered := []string{"route53", "cloudflare"}
+	if provider == "cloudflare" {
+		ordered = []string{"cloudflare", "route53"}
+	}
+
+	zonesByProvider := map[string]map[string][]string{}
+	namesByProvider := map[string][]string{}
+	var all []string
+	for _, name := range ordered {
+		names, zones := c.dnsCredentialIndex(name)
+		if len(names) == 0 {
+			continue
+		}
+		namesByProvider[name] = names
+		zonesByProvider[name] = zones
+		all = append(all, names...)
+	}
+	if len(all) == 0 {
+		return ""
+	}
+
+	certManager, _ := c.OpenCenter.Services["cert-manager"].(*services.CertManagerConfig)
+	clusterDefault := ""
+	if certManager != nil {
+		clusterDefault = strings.TrimSpace(certManager.DefaultCredential)
+	}
+
+	// 1 and 3: explicit names, searched across providers so a credential that
+	// lives under a different provider than the auto-selected one is still
+	// selectable.
+	for _, candidate := range []string{strings.TrimSpace(requested), clusterDefault} {
+		if candidate == "" {
+			continue
+		}
+		if containsName(all, candidate) {
+			return candidate
+		}
+	}
+
+	// 2: zone coverage, preferring the named provider.
+	if hostname = strings.ToLower(strings.TrimSpace(hostname)); hostname != "" {
+		for _, name := range ordered {
+			for _, credential := range namesByProvider[name] {
+				if zoneCoversHostname(zonesByProvider[name][credential], hostname) {
+					return credential
+				}
+			}
+		}
+	}
+
+	// 4 and 5.
+	return all[0]
+}
+
+// dnsCredentialIndex returns the enabled credential names for a provider in
+// sorted order, plus each credential's declared DNS zones.
+func (c Config) dnsCredentialIndex(provider string) ([]string, map[string][]string) {
+	zones := map[string][]string{}
+	var names []string
+	switch provider {
+	case "route53":
+		for name, cred := range c.ResolvedCertManagerAWSCredentials() {
+			names = append(names, name)
+			zones[name] = cred.DNSZones
+		}
+	case "cloudflare":
+		for name, cred := range c.ResolvedCertManagerCloudflareCredentials() {
+			names = append(names, name)
+			zones[name] = cred.DNSZones
+		}
+	default:
+		return nil, nil
+	}
+	sort.Strings(names)
+	return names, zones
+}
+
+// containsName reports whether names holds name.
+func containsName(names []string, name string) bool {
+	for _, candidate := range names {
+		if candidate == name {
+			return true
+		}
+	}
+	return false
+}
+
+// zoneCoversHostname reports whether any zone is the hostname itself or a
+// parent suffix of it, which is the relation cert-manager's selector.dnsZones
+// actually applies.
+func zoneCoversHostname(zones []string, hostname string) bool {
+	for _, zone := range zones {
+		zone = strings.ToLower(strings.TrimSpace(zone))
+		if zone == "" {
+			continue
+		}
+		if hostname == zone || strings.HasSuffix(hostname, "."+zone) {
+			return true
+		}
+	}
+	return false
 }
 
 // designateEnabled reports whether the cluster uses OpenStack Designate, the

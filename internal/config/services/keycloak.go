@@ -12,6 +12,18 @@ type KeycloakConfig struct {
 	Hostname    string `yaml:"hostname,omitempty" json:"hostname,omitempty" jsonschema:"description=Keycloak external hostname"`
 	FrontendURL string `yaml:"frontend_url,omitempty" json:"frontend_url,omitempty" jsonschema:"description=Keycloak frontend URL"`
 
+	// IssuerRef names the ClusterIssuer that mints this service's certificate.
+	// Empty means "same issuer the Gateway listener in front of me uses", which
+	// keeps the listener and the leaf certificate in agreement. Pin it only to
+	// deliberately use a different CA for this service than the rest of the
+	// cluster.
+	IssuerRef string `yaml:"issuer_ref,omitempty" json:"issuer_ref,omitempty" jsonschema:"description=ClusterIssuer for this service certificate; defaults to the cluster default issuer"`
+
+	// DNSCredential pins the DNS credential used when this service's
+	// certificate needs a DNS-01 challenge, overriding
+	// services.cert-manager.default_credential.
+	DNSCredential string `yaml:"dns_credential,omitempty" json:"dns_credential,omitempty" jsonschema:"description=DNS credential override for this service"`
+
 	// Realm
 	Realm              string   `yaml:"realm,omitempty" json:"realm,omitempty" jsonschema:"description=Keycloak realm name"`
 	ClientID           string   `yaml:"client_id,omitempty" json:"client_id,omitempty" jsonschema:"description=Keycloak client ID,default=opencenter"`

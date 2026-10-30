@@ -14,11 +14,13 @@
 package v2
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	configpersistence "github.com/opencenter-cloud/opencenter-cli/internal/config/persistence"
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,7 +37,42 @@ func DefaultBaseDomain() string { return defaultBaseDomain }
 type settingsClusterDefaults struct {
 	ClusterDefaults struct {
 		BaseDomain string `yaml:"base_domain"`
+
+		// DNS defaults seed services.cert-manager. dns_provider accepts the
+		// same spellings as the service field, including the `none` sentinel
+		// that turns ACME off cluster-wide.
+		DNSProvider string   `yaml:"dns_provider"`
+		DNSEmail    string   `yaml:"dns_email"`
+		DNSZones    []string `yaml:"dns_zones"`
 	} `yaml:"cluster_defaults"`
+}
+
+// ReadSettingsDNSDefaults returns the settings-file cert-manager DNS defaults.
+// A missing file or unreadable file yields zero values (no opinion).
+func ReadSettingsDNSDefaults() (provider, email string, zones []string) {
+	path, err := settingsBaseDomainPath()
+	if err != nil {
+		return "", "", nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", "", nil
+	}
+	var settings settingsClusterDefaults
+	if err := yaml.Unmarshal(data, &settings); err != nil {
+		return "", "", nil
+	}
+	provider = strings.ToLower(strings.TrimSpace(settings.ClusterDefaults.DNSProvider))
+	if services.IsDNSProviderNone(provider) {
+		provider = string(services.DNSProviderNone)
+	}
+	email = strings.ToLower(strings.TrimSpace(settings.ClusterDefaults.DNSEmail))
+	for _, zone := range settings.ClusterDefaults.DNSZones {
+		if zone = strings.ToLower(strings.TrimSpace(zone)); zone != "" {
+			zones = append(zones, zone)
+		}
+	}
+	return provider, email, zones
 }
 
 // settingsBaseDomainPath resolves the CLI settings file path. It is a variable
@@ -117,6 +154,82 @@ func applySettingsProvenance(cfg *Config) {
 
 	if strings.TrimSpace(cluster.ClusterFQDN) == "" {
 		cluster.ClusterFQDN = cluster.DeriveClusterFQDN(region)
+	}
+
+	applySettingsDNSProvenance(cfg)
+}
+
+// applySettingsDNSProvenance propagates the settings-file cert-manager DNS
+// defaults into services.cert-manager, using the same managed/pinned rules as
+// base_domain.
+//
+// This is the missing half of the guided DNS flow: configure_dns.go writes
+// dns_provider, region, and credentials, but nothing read them back, so a later
+// change to cluster_defaults.dns_provider left the previous provider's
+// ClusterIssuer rendering and the Gateway annotation still naming it. With the
+// field tagged managed the settings value wins at load and the renderer emits
+// the new issuer set instead.
+//
+// A cluster whose dns_provider is already set and untagged pins itself: the
+// first write is treated as an operator choice, exactly like a base_domain that
+// is no longer the init placeholder.
+func applySettingsDNSProvenance(cfg *Config) {
+	certManager, ok := cfg.OpenCenter.Services["cert-manager"].(*services.CertManagerConfig)
+	if !ok || certManager == nil {
+		return
+	}
+	cluster := &cfg.OpenCenter.Cluster
+	settingsProvider, settingsEmail, settingsZones := ReadSettingsDNSDefaults()
+
+	// dns_provider
+	switch {
+	case cluster.Managed.DNSProviderManaged():
+		if settingsProvider != "" && settingsProvider != strings.ToLower(strings.TrimSpace(certManager.DNSProvider)) {
+			slog.Info("propagated settings dns_provider to cluster cert-manager",
+				"cluster", cfg.ClusterName(),
+				"from", certManager.DNSProvider,
+				"to", settingsProvider,
+			)
+			certManager.DNSProvider = settingsProvider
+		}
+	case strings.TrimSpace(certManager.DNSProvider) == "":
+		if settingsProvider != "" {
+			certManager.DNSProvider = settingsProvider
+			cluster.Managed.DNSProvider = ProvenanceDefault
+		} else {
+			cluster.Managed.DNSProvider = ProvenancePinned
+		}
+	default:
+		cluster.Managed.DNSProvider = ProvenancePinned
+	}
+
+	// ACME registration email
+	switch {
+	case cluster.Managed.DNSEmailManaged():
+		if settingsEmail != "" {
+			certManager.Email = settingsEmail
+		}
+	case strings.TrimSpace(certManager.Email) == "" && settingsEmail != "":
+		certManager.Email = settingsEmail
+		cluster.Managed.DNSEmail = ProvenanceDefault
+	default:
+		cluster.Managed.DNSEmail = ProvenancePinned
+	}
+
+	// DNS zones. Cluster-level zones are the default for credentials that
+	// declare none of their own (defaultCertManagerDNSZones' job); they never
+	// constrain a credential that declares its own, so a per-credential zone
+	// list stays authoritative.
+	switch {
+	case cluster.Managed.DNSZonesManaged():
+		if len(settingsZones) > 0 {
+			certManager.DNSZones = settingsZones
+		}
+	case len(certManager.DNSZones) == 0 && len(settingsZones) > 0:
+		certManager.DNSZones = settingsZones
+		cluster.Managed.DNSZones = ProvenanceDefault
+	default:
+		cluster.Managed.DNSZones = ProvenancePinned
 	}
 }
 

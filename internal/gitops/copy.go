@@ -241,6 +241,14 @@ func renderTemplateAtomic(path, dst string, cfg v2.Config, workspace *GitOpsWork
 
 	funcMap["fqdn"] = clusterFQDNFunc(cfg)
 	funcMap["cluster_fqdn"] = clusterFQDNFunc(cfg)
+
+	// defaultIssuer resolves the ClusterIssuer a service Certificate should
+	// reference when the service does not pin its own. Exposed so a service
+	// template and the Gateway listener in front of it ask the same question and
+	// get the same answer.
+	funcMap["defaultIssuer"] = func(requested string) string {
+		return serviceIssuerRef(cfg, requested)
+	}
 	funcMap["kubePrometheusStack"] = func() (kubePrometheusStackRenderContract, error) {
 		contract, err := resolveKubePrometheusStackContract(cfg)
 		if err != nil {

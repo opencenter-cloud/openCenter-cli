@@ -250,6 +250,36 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		}
 	}
 
+	// rederiveIdentityAfterRegionChange re-derives cluster_fqdn and heals any
+	// service hostname still baked from the pre-binding identity. The region the
+	// cloud reports arrives AFTER defaults were built from the init default
+	// region, so both cluster_fqdn and every hostname scalar materialized from
+	// it still name the guessed region. Without this step a cluster bound to
+	// IAD3 keeps auth.<name>.dfw3.k8s.opencenter.cloud and the Gateway ends up
+	// with listeners in two DNS domains.
+	rederiveIdentityAfterRegionChange := func(desired string) {
+		region := strings.ToLower(strings.TrimSpace(desired))
+		if region == "" {
+			return
+		}
+		if derived := prospective.OpenCenter.Cluster.DeriveClusterFQDN(region); derived != "" &&
+			derived != prospective.OpenCenter.Cluster.ClusterFQDN {
+			changes = append(changes, Change{
+				Path: "opencenter.cluster.cluster_fqdn",
+				Old:  prospective.OpenCenter.Cluster.ClusterFQDN,
+				New:  derived,
+			})
+			prospective.OpenCenter.Cluster.ClusterFQDN = derived
+		}
+		for _, field := range v2.RepairPlaceholderHostnames(prospective) {
+			changes = append(changes, Change{
+				Path: field,
+				Old:  "(placeholder-derived)",
+				New:  "re-derived from cluster_fqdn",
+			})
+		}
+	}
+
 	// setRegionListFollowers repoints a region-derived field that holds a LIST,
 	// which the scalar follower loop above cannot express. The same
 	// all-or-nothing rule applies: a value that is neither the discovered
@@ -385,6 +415,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 			&prospective.OpenCenter.Infrastructure.Networking.NTPServers,
 			v2.DefaultNTPServers(prospective.OpenCenter.Infrastructure.Provider, snapshot.Region))
 		setFlavorsFromRegion(snapshot.Region)
+		rederiveIdentityAfterRegionChange(snapshot.Region)
 	}
 	setDerived("opencenter.infrastructure.cloud.openstack.project_id", &osCfg.ProjectID, snapshot.ProjectID)
 	setDerived("opencenter.infrastructure.cloud.openstack.project_name", &osCfg.ProjectName, snapshot.ProjectName)

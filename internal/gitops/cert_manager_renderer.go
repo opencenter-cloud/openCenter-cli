@@ -60,6 +60,16 @@ func planCertManagerDynamicActions(cfg v2.Config, artifacts []secretartifacts.Ar
 		return nil, err
 	}
 
+	// dns_provider: none switches ACME off. No credential Secret, no ACME
+	// ClusterIssuer, and no designate webhook issuer: the only issuer left is
+	// the in-cluster self-signed rackspace-ca, which gatewayDefaultIssuer
+	// returns for a disabled provider. Credentials are still validated above so
+	// an explicitly enabled secret under `none` stays a hard error rather than
+	// a silently ignored one.
+	if cfg.DNSProviderDisabled() {
+		return nil, nil
+	}
+
 	awsCreds := cfg.ResolvedCertManagerAWSCredentials()
 	cfCreds := cfg.ResolvedCertManagerCloudflareCredentials()
 	var credentials []certManagerCredentialData

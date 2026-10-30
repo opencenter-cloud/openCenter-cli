@@ -50,6 +50,13 @@ type SetupResult struct {
 	// BaseDomainSyncedFrom/To describe the applied rewrite.
 	BaseDomainSyncedFrom string
 	BaseDomainSyncedTo   string
+
+	// RepairedHostnameFields lists the service hostname fields loader stage 4c
+	// healed while loading the config for this generation run. Surfaced because
+	// the sweep changes TLS DNS names on a read path: without a line in the
+	// generate output an operator would see hostnames move in the GitOps tree
+	// with nothing explaining why.
+	RepairedHostnameFields []string
 }
 
 type overlayFileEncryptor interface {
@@ -181,6 +188,9 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 
 	result := &SetupResult{
 		GitOpsPath: gitDir,
+		// The loader healed any placeholder-derived hostnames while hydrating
+		// this config (stage 4c). Carry them so the command layer can say so.
+		RepairedHostnameFields: cfg.RepairedHostnameFields,
 	}
 
 	if !opts.SkipValidation {

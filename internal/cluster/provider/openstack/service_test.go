@@ -898,15 +898,23 @@ func TestPlanPreservesPopulatedClusterValuesDuringCreateInternalNetworkImport(t 
 	}
 	// The region fields are the exception to "preserved": the discovered
 	// region is authoritative and repoints the provider block, meta.region, the
-	// Barbican backend, and the region-specific NTP hosts, even without
-	// --replace (meta.region and the NTP pair were the init defaults here).
-	// Everything else must stay untouched.
+	// Barbican backend, the region-specific NTP hosts, and everything derived
+	// from cluster_fqdn, even without --replace (meta.region and the NTP pair
+	// were the init defaults here). The FQDN-derived set is the same class of
+	// value: init bakes those hostnames from the guessed region, so leaving them
+	// behind would put the Gateway's listeners in two DNS domains. Everything
+	// else must stay untouched.
 	regionPaths := map[string]bool{
 		"opencenter.infrastructure.cloud.openstack.availability_zones": true,
 		"opencenter.infrastructure.cloud.openstack.region":             true,
 		"opencenter.infrastructure.networking.ntp_servers":             true,
 		"opencenter.meta.region":                                       true,
 		"opencenter.secrets.barbican.region":                           true,
+		"opencenter.cluster.cluster_fqdn":                              true,
+		"opencenter.services.keycloak.hostname":                        true,
+		"opencenter.services.headlamp.hostname":                        true,
+		"opencenter.services.longhorn.hostname":                        true,
+		"opencenter.managed_services.alert-proxy.http_route_fqdn":      true,
 	}
 	for _, change := range result.Changes {
 		if !regionPaths[change.Path] {

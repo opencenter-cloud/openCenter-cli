@@ -1,6 +1,8 @@
 package services
 
 import (
+	"strings"
+
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/registry"
 )
 
@@ -8,14 +10,35 @@ import (
 type CertManagerConfig struct {
 	BaseConfig `yaml:",inline"`
 
-	LetsEncryptServer         string                           `yaml:"letsencrypt_server,omitempty" json:"letsencrypt_server,omitempty" jsonschema:"description=LetsEncrypt ACME server URL,default=https://acme-v02.api.letsencrypt.org/directory"`
-	Email                     string                           `yaml:"email,omitempty" json:"email,omitempty" jsonschema:"description=Email for LetsEncrypt registration"`
-	Region                    string                           `yaml:"region,omitempty" json:"region,omitempty" jsonschema:"description=Cloud region for DNS validation (e.g. AWS Route53 region)"`
-	DNSZones                  []string                         `yaml:"dns_zones,omitempty" json:"dns_zones,omitempty" jsonschema:"description=DNS zones for certificate validation"`
-	CreateClusterIssuer       bool                             `yaml:"create_cluster_issuer,omitempty" json:"create_cluster_issuer,omitempty" jsonschema:"description=Create external ClusterIssuer resource,default=true"`
-	Issuers                   []CertIssuer                     `yaml:"issuers,omitempty" json:"issuers,omitempty" jsonschema:"description=List of certificate issuers"`
-	DNSProvider               string                           `yaml:"dns_provider,omitempty" json:"dns_provider,omitempty" jsonschema:"description=DNS provider for ACME DNS-01 challenge,enum=route53,enum=designate,enum=cloudflare,enum=clouddns,enum=azuredns"`
+	LetsEncryptServer   string       `yaml:"letsencrypt_server,omitempty" json:"letsencrypt_server,omitempty" jsonschema:"description=LetsEncrypt ACME server URL,default=https://acme-v02.api.letsencrypt.org/directory"`
+	Email               string       `yaml:"email,omitempty" json:"email,omitempty" jsonschema:"description=Email for LetsEncrypt registration"`
+	Region              string       `yaml:"region,omitempty" json:"region,omitempty" jsonschema:"description=Cloud region for DNS validation (e.g. AWS Route53 region)"`
+	DNSZones            []string     `yaml:"dns_zones,omitempty" json:"dns_zones,omitempty" jsonschema:"description=DNS zones for certificate validation"`
+	CreateClusterIssuer bool         `yaml:"create_cluster_issuer,omitempty" json:"create_cluster_issuer,omitempty" jsonschema:"description=Create external ClusterIssuer resource,default=true"`
+	Issuers             []CertIssuer `yaml:"issuers,omitempty" json:"issuers,omitempty" jsonschema:"description=List of certificate issuers"`
+	DNSProvider         string       `yaml:"dns_provider,omitempty" json:"dns_provider,omitempty" jsonschema:"description=DNS provider for ACME DNS-01 challenge; none disables ACME and uses the internal CA,enum=route53,enum=designate,enum=cloudflare,enum=clouddns,enum=azuredns,enum=none"`
+	// DefaultCredential names the DNS credential every DNS-consuming service
+	// uses when it does not pin its own. Empty means "resolve it for me": the
+	// sole enabled credential wins, otherwise the lowest-sorted name.
+	DefaultCredential         string                           `yaml:"default_credential,omitempty" json:"default_credential,omitempty" jsonschema:"description=Default DNS credential name used by DNS-consuming services"`
 	DefaultClusterCertificate *DefaultClusterCertificateConfig `yaml:"default_cluster_certificate,omitempty" json:"default_cluster_certificate,omitempty" jsonschema:"description=Default cluster certificate configuration"`
+}
+
+// dnsProviderNoneAliases are the accepted spellings of the disable sentinel.
+// Operators reach for all of these; normalizing them keeps `dns_provider: off`
+// from being handled as an unrecognized provider.
+var dnsProviderNoneAliases = map[string]bool{
+	"none":     true,
+	"off":      true,
+	"disabled": true,
+	"internal": true,
+}
+
+// IsDNSProviderNone reports whether a configured dns_provider value disables
+// ACME DNS-01 issuance, accepting every alias. Callers use it instead of
+// comparing against DNSProviderNone so the aliases stay honored everywhere.
+func IsDNSProviderNone(provider string) bool {
+	return dnsProviderNoneAliases[strings.ToLower(strings.TrimSpace(provider))]
 }
 
 // DefaultClusterCertificateSecretName is the Secret name used for the

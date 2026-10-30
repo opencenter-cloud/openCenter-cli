@@ -1158,6 +1158,27 @@
                     "pinned"
                   ],
                   "type": "string"
+                },
+                "dns_email": {
+                  "enum": [
+                    "default",
+                    "pinned"
+                  ],
+                  "type": "string"
+                },
+                "dns_provider": {
+                  "enum": [
+                    "default",
+                    "pinned"
+                  ],
+                  "type": "string"
+                },
+                "dns_zones": {
+                  "enum": [
+                    "default",
+                    "pinned"
+                  ],
+                  "type": "string"
                 }
               },
               "type": "object"
@@ -2698,6 +2719,9 @@
                   },
                   "type": "object"
                 },
+                "default_credential": {
+                  "type": "string"
+                },
                 "dns_provider": {
                   "type": "string"
                 },
@@ -3397,6 +3421,9 @@
                 "db_pool_min_size": {
                   "type": "integer"
                 },
+                "dns_credential": {
+                  "type": "string"
+                },
                 "enabled": {
                   "type": "boolean"
                 },
@@ -3429,6 +3456,9 @@
                 },
                 "internal_tls_enabled": {
                   "type": "boolean"
+                },
+                "issuer_ref": {
+                  "type": "string"
                 },
                 "log_format": {
                   "type": "string"
@@ -4960,6 +4990,9 @@
                   },
                   "type": "object"
                 },
+                "default_credential": {
+                  "type": "string"
+                },
                 "dns_provider": {
                   "type": "string"
                 },
@@ -5659,6 +5692,9 @@
                 "db_pool_min_size": {
                   "type": "integer"
                 },
+                "dns_credential": {
+                  "type": "string"
+                },
                 "enabled": {
                   "type": "boolean"
                 },
@@ -5691,6 +5727,9 @@
                 },
                 "internal_tls_enabled": {
                   "type": "boolean"
+                },
+                "issuer_ref": {
+                  "type": "string"
                 },
                 "log_format": {
                   "type": "string"
@@ -7298,6 +7337,9 @@
                   },
                   "type": "object"
                 },
+                "default_credential": {
+                  "type": "string"
+                },
                 "dns_provider": {
                   "type": "string"
                 },
@@ -7997,6 +8039,9 @@
                 "db_pool_min_size": {
                   "type": "integer"
                 },
+                "dns_credential": {
+                  "type": "string"
+                },
                 "enabled": {
                   "type": "boolean"
                 },
@@ -8029,6 +8074,9 @@
                 },
                 "internal_tls_enabled": {
                   "type": "boolean"
+                },
+                "issuer_ref": {
+                  "type": "string"
                 },
                 "log_format": {
                   "type": "string"

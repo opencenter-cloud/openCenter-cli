@@ -24,6 +24,13 @@ type Config struct {
 	Deployment    DeploymentConfig `yaml:"deployment,omitempty" json:"deployment,omitempty"`
 	OpenTofu      OpenTofuConfig   `yaml:"opentofu,omitempty" json:"opentofu,omitempty" validate:"required"`
 	Secrets       SecretsConfig    `yaml:"secrets" json:"secrets" validate:"required"`
+
+	// RepairedHostnameFields lists the hostname field paths loader stage 4c
+	// rewrote during this load. It is runtime reporting state, never config:
+	// it carries no yaml tag so MarshalPublicConfig cannot persist it, and it
+	// is what lets `cluster generate`/`cluster status` tell the operator that
+	// TLS DNS names moved on their own.
+	RepairedHostnameFields []string `yaml:"-" json:"-"`
 }
 
 // ConfigMetadata holds system-managed metadata about the configuration.

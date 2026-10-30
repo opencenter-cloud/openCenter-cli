@@ -13,6 +13,6 @@ spec:
     - keycloak.keycloak.svc
     - keycloak
   issuerRef:
-    name: rackspace-ca
+    name: {{ defaultIssuer (.OpenCenter.Services.keycloak.IssuerRef | default "") }}
     kind: ClusterIssuer
     group: cert-manager.io

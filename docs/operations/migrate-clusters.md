@@ -6,7 +6,7 @@ description: Preview and apply the filesystem layout migration for a legacy open
 doc_type: how-to
 audience: openCenter operators
 tags: [migration, configuration]
-last_updated: 2026-09-25
+last_updated: 2026-10-22
 ---
 # Migrate the legacy layout
 
@@ -47,6 +47,28 @@ The implementation maps eligible hand-authored service files into service
 `custom/` directories and updates custom kustomizations. It reports tracked,
 modified, unknown, refused, and symlinked files rather than claiming that all
 files can be moved automatically.
+
+## Kubeconfig is not relocated
+
+The migration moves the cluster config, SOPS/SSH keys, and the GitOps tree. It
+does **not** move a kubeconfig into the cluster state zone. A `kubeconfig.yaml`
+left in the legacy `infrastructure/clusters/<cluster>/` directory is carried
+into the new GitOps tree, which the path resolver deliberately ignores:
+kubeconfigs are only ever read from
+`state/<organization>/<cluster>/kubeconfig.yaml` (see
+[File Locations](../reference/file-locations.md)).
+
+After migrating, regenerate the kubeconfig in the state zone rather than
+copying the old file:
+
+```bash
+opencenter cluster deploy ORG/CLUSTER   # or re-run the provider bootstrap
+eval "$(opencenter cluster env ORG/CLUSTER)"   # exports KUBECONFIG from the state zone
+```
+
+`cluster status`, `cluster describe`, and `cluster use` all resolve the
+state-zone path, so a kubeconfig still sitting in the GitOps tree is invisible
+to them.
 
 ## Evidence
 

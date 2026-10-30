@@ -49,6 +49,55 @@ type ClusterConfig struct {
 // the safe interpretation for configs written before provenance existed.
 type FieldProvenance struct {
 	BaseDomain string `yaml:"base_domain,omitempty" json:"base_domain,omitempty" jsonschema_validate:"oneof=default pinned"`
+
+	// DNSProvider tags services.cert-manager.dns_provider. It exists because
+	// the guided DNS flow writes that field but nothing read it back: a later
+	// settings change left the old ACME issuer rendering and the Gateway
+	// annotation pointing at it. Tagged "default", the settings value wins at
+	// load; tagged "pinned" (or absent), the cluster owns it.
+	DNSProvider string `yaml:"dns_provider,omitempty" json:"dns_provider,omitempty" jsonschema_validate:"oneof=default pinned"`
+
+	// DNSEmail and DNSZones tag the other two settings-seedable cert-manager
+	// DNS fields, for the same reason: an issuer's ACME registration address
+	// and zone selector have to move with the provider, not freeze at the value
+	// the first guided run happened to write.
+	DNSEmail string `yaml:"dns_email,omitempty" json:"dns_email,omitempty" jsonschema_validate:"oneof=default pinned"`
+	DNSZones string `yaml:"dns_zones,omitempty" json:"dns_zones,omitempty" jsonschema_validate:"oneof=default pinned"`
+}
+
+// DNS provenance accessors mirror the base_domain ones so the cert-manager DNS
+// fields follow the same managed/pinned rules.
+
+// DNSProviderManaged reports whether dns_provider is owned by the settings file.
+func (p FieldProvenance) DNSProviderManaged() bool {
+	return strings.EqualFold(strings.TrimSpace(p.DNSProvider), ProvenanceDefault)
+}
+
+// DNSEmailManaged reports whether the ACME registration email is settings-owned.
+func (p FieldProvenance) DNSEmailManaged() bool {
+	return strings.EqualFold(strings.TrimSpace(p.DNSEmail), ProvenanceDefault)
+}
+
+// DNSZonesManaged reports whether the DNS zone list is settings-owned.
+func (p FieldProvenance) DNSZonesManaged() bool {
+	return strings.EqualFold(strings.TrimSpace(p.DNSZones), ProvenanceDefault)
+}
+
+// PinDNSFields marks every settings-seedable cert-manager DNS field as
+// cluster-owned. Called when the operator edits one by hand or through
+// `cluster set`, which is a deliberate freeze.
+func (p *FieldProvenance) PinDNSFields() {
+	p.DNSProvider = ProvenancePinned
+	p.DNSEmail = ProvenancePinned
+	p.DNSZones = ProvenancePinned
+}
+
+// DefaultDNSFields marks the cert-manager DNS fields settings-owned so future
+// cluster_defaults changes propagate at load.
+func (p *FieldProvenance) DefaultDNSFields() {
+	p.DNSProvider = ProvenanceDefault
+	p.DNSEmail = ProvenanceDefault
+	p.DNSZones = ProvenanceDefault
 }
 
 // Provenance values for FieldProvenance entries.

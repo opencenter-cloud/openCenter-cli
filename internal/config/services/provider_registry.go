@@ -29,6 +29,17 @@ const (
 	DNSProviderCloudflare ServiceProviderType = "cloudflare"
 	DNSProviderCloudDNS   ServiceProviderType = "clouddns"
 	DNSProviderAzureDNS   ServiceProviderType = "azuredns"
+	// DNSProviderNone disables ACME entirely: no DNS-01 solver, no public
+	// ClusterIssuer, and every Gateway/Harbor certificate falls back to the
+	// in-cluster self-signed rackspace-ca. It is a sentinel, not a provider:
+	// AutoSelectDNSProvider never picks it, so it is strictly opt-in.
+	//
+	// A bool would not work here. AutoSelectDNSProvider always returns a
+	// non-empty provider (OpenStack without Designate falls back to
+	// cloudflare), so ResolvedDNSProvider() == "" is unreachable while
+	// cert-manager is enabled and the internal-CA branch of issuer selection
+	// could never be reached deliberately.
+	DNSProviderNone ServiceProviderType = "none"
 
 	// Storage providers for backup services
 	StorageProviderS3    ServiceProviderType = "s3"

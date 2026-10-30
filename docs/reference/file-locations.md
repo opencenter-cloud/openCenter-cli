@@ -63,7 +63,10 @@ See [Cluster Init Details](../contributing/cluster-init-details.md) for exactly 
 ```
 <state-dir>/
 ├── locks/<resource>.lock                                   # distributed/local file locks (LockManager)
-├── bootstrap/<org>/<cluster>/state.json                    # cluster deploy resume state
+├── bootstrap/<org>/<cluster>/<generation-id>/state.json  # cluster deploy resume state, scoped to one cluster generation
+│                             # (a pre-generation bootstrap/<org>/<cluster>/state.json is never resumed from:
+│                             #  it cannot be attributed to a generation, and `cluster deploy` removes it on sight.
+│                             #  `cluster destroy` removes the whole bootstrap/<org>/<cluster>/ directory)
 └── logs/
     ├── bootstrap/<org>/<cluster>/bootstrap-<timestamp>.log  # full deploy command output
     └── destroy/<org>/<cluster>/destroy-<timestamp>.log      # full destroy command output

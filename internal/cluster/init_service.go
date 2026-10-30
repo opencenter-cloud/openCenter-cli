@@ -33,28 +33,28 @@ type InitOptions struct {
 	// deprecated org flag), as opposed to Organization merely holding a
 	// resolved default. Only an explicit organization may override a value
 	// already present in a loaded --config-file.
-	OrganizationExplicit  bool
-	Region                string
-	RegionExplicit        bool
-	Provider              string
-	DeploymentMethod      string
-	ConfigFile            string
-	ConfigMap             map[string]any
-	Force                 bool
-	Strict                bool
-	NoKeyGen              bool
-	NoSOPSKeyGen          bool
-	RegenerateKeys        bool
-	NoGitInit             bool
-	FullSchema            bool
-	SchemaVersion         string
-	ServerPools           []string
-	FlagOverrides         []string
+	OrganizationExplicit bool
+	Region               string
+	RegionExplicit       bool
+	Provider             string
+	DeploymentMethod     string
+	ConfigFile           string
+	ConfigMap            map[string]any
+	Force                bool
+	Strict               bool
+	NoKeyGen             bool
+	NoSOPSKeyGen         bool
+	RegenerateKeys       bool
+	NoGitInit            bool
+	FullSchema           bool
+	SchemaVersion        string
+	ServerPools          []string
+	FlagOverrides        []string
 	// BaseDomain is the normalized --base-domain value. When set, the
 	// base_domain override (which parseInitOptions injects into
 	// FlagOverrides) is tagged managed.base_domain: default so the cluster
 	// keeps following cluster_defaults.base_domain from the settings file.
-	BaseDomain string
+	BaseDomain            string
 	KindDisableDefaultCNI *bool
 	// DryRun performs every read, validation and path-resolution step and
 	// reports what would be created, but writes nothing: no directories, no
@@ -731,6 +731,12 @@ func (s *InitService) createDirectories(ctx context.Context, clusterPaths *paths
 func (s *InitService) saveConfig(ctx context.Context, cfg *v2.Config, configPath string, fullSchema bool) error {
 	_ = ctx
 	cfg.Metadata.UpdatedAt = time.Now().Format(time.RFC3339Nano)
+	// Mint the generation identifier at creation, where it belongs: 'cluster
+	// init' is the only operation that begins a generation, so a recreate after
+	// destroy always gets a fresh one. The bootstrap resume state is stored under
+	// this value, which is what keeps a new generation from resuming the dead
+	// generation's completed steps.
+	v2.EnsureGenerationID(cfg)
 
 	loader := s.v2Loader()
 	if fullSchema {

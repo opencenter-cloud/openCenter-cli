@@ -16,6 +16,7 @@ import (
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/validation"
+	"github.com/opencenter-cloud/opencenter-cli/internal/credentials"
 	"github.com/opencenter-cloud/opencenter-cli/internal/logging"
 	"github.com/opencenter-cloud/opencenter-cli/internal/security"
 	"github.com/opencenter-cloud/opencenter-cli/internal/util/errors"
@@ -75,6 +76,10 @@ type BootstrapService struct {
 	runner           lifecycleCommandRunner
 	commandRunner    security.CommandRunner
 	output           io.Writer
+	// openStackValidateCredentials overrides the live Keystone preflight for the
+	// OpenStack/vmware/baremetal provider. Tests use placeholder credentials and
+	// hosts that must never be contacted; nil means the real check.
+	openStackValidateCredentials func(context.Context, *credentials.OpenStackCredentials) error
 }
 
 // SetOutput sets the writer used for user-facing progress messages.
@@ -201,9 +206,14 @@ type bootstrapStep struct {
 
 // bootstrapState tracks the state of bootstrap steps
 type bootstrapState struct {
-	Version                   int                           `json:"version"`
-	Steps                     map[string]bootstrapStepState `json:"steps"`
-	LegacyApplyHandoffPending bool                          `json:"legacy_apply_handoff_pending,omitempty"`
+	Version int                           `json:"version"`
+	Steps   map[string]bootstrapStepState `json:"steps"`
+	// GenerationID is the cluster generation this state belongs to. It is
+	// written alongside the file's path (which is scoped by the same value) so a
+	// state file that predates generation-scoped paths can be identified as
+	// belonging to a generation that no longer exists, instead of being trusted.
+	GenerationID              string `json:"generation_id,omitempty"`
+	LegacyApplyHandoffPending bool   `json:"legacy_apply_handoff_pending,omitempty"`
 }
 
 // bootstrapStepState represents the state of a single step
@@ -381,6 +391,12 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 	if err := s.removeBootstrapState(runtimePaths.LegacyStatePath); err != nil {
 		logBootstrapMessage(ctx, "warning: failed to remove legacy bootstrap state %s: %v", runtimePaths.LegacyStatePath, err)
 	}
+	// A pre-generation state.json cannot be attributed to any generation, so it
+	// is never resumed from; retiring it here keeps a stale file from lingering
+	// where an older CLI would still read it.
+	if err := s.removeBootstrapState(runtimePaths.UnscopedStatePath); err != nil {
+		logBootstrapMessage(ctx, "warning: failed to remove pre-generation bootstrap state %s: %v", runtimePaths.UnscopedStatePath, err)
+	}
 	result.ResumeStatePath = ""
 	logBootstrapMessage(ctx, "bootstrap completed in %s", result.Duration.Round(time.Second))
 	return result, nil
@@ -396,6 +412,10 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 	}
 
 	state := s.newBootstrapState()
+	generation := strings.TrimSpace(cfg.GenerationID())
+	if v2.IsGenerationID(generation) {
+		state.GenerationID = generation
+	}
 	stateEnabled := strings.TrimSpace(statePath) != ""
 	if opts.Restart {
 		if err := s.removeBootstrapState(statePath); err != nil {
@@ -406,6 +426,15 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 		}
 		logBootstrapMessage(ctx, "bootstrap restart requested; cleared saved state")
 	} else if stateEnabled {
+		// A state.json left at the pre-generation path cannot be attributed to
+		// any cluster generation: a destroyed-and-reinitialized cluster shares
+		// that path with its dead predecessor, and trusting it resumed steps
+		// whose outputs, venv, and Kubespray checkout no longer existed. The
+		// generation-scoped path is the only resume source; the ambiguous file is
+		// retired on sight.
+		if err := s.removeBootstrapState(runtimePaths.UnscopedStatePath); err != nil {
+			logBootstrapMessage(ctx, "warning: failed to remove pre-generation bootstrap state %s: %v", runtimePaths.UnscopedStatePath, err)
+		}
 		loadedState, loadedPath, err := s.loadBootstrapStateWithFallback(statePath, legacyStatePath)
 		if err != nil {
 			return fmt.Errorf("loading bootstrap state: %w", err)
@@ -427,6 +456,12 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 		logBootstrapMessage(ctx, "migrated bootstrap state to version %d", bootstrapStateVersion)
 	}
 
+	// Persist before the first step runs so an early failure still has a state
+	// file for the resume hint.
+	if err := s.persistBootstrapState(statePath, state); err != nil {
+		return err
+	}
+
 	// Filter steps based on options
 	selectedSteps, ignoreState, err := s.filterSteps(steps, opts)
 	if err != nil {
@@ -434,6 +469,22 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 	}
 
 	return s.executeBootstrapSteps(ctx, selectedSteps, ignoreState, stateEnabled, statePath, state, result, opts)
+}
+
+// persistBootstrapState writes the freshly built state before any step runs, so
+// a failure in the very first step still has a resume state to point the
+// operator at. Without it, a preflight rejection - an unreplaced CHANGEME
+// credential, for instance - leaves no state.json behind, and the "Resume
+// state:" line the deploy command prints on failure names a file that does not
+// exist.
+func (s *BootstrapService) persistBootstrapState(statePath string, state *bootstrapState) error {
+	if strings.TrimSpace(statePath) == "" {
+		return nil
+	}
+	if err := s.saveBootstrapState(statePath, state); err != nil {
+		return fmt.Errorf("saving initial bootstrap state: %w", err)
+	}
+	return nil
 }
 
 func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error) {
@@ -448,6 +499,7 @@ func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *pat
 	switch provider {
 	case "openstack":
 		providerImpl := newOpenStackBootstrapProvider(s.runner)
+		providerImpl.validateCredentials = s.openStackValidateCredentials
 		return providerImpl.BuildSteps(cfg, clusterPaths, opts)
 
 	case "aws", "gcp", "azure":
@@ -516,6 +568,7 @@ func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *pat
 
 	case "vmware", "vsphere", "baremetal":
 		providerImpl := newOpenStackBootstrapProvider(s.runner)
+		providerImpl.validateCredentials = s.openStackValidateCredentials
 		return providerImpl.BuildSteps(cfg, clusterPaths, opts)
 
 	default:

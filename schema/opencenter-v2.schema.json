@@ -637,6 +637,9 @@
         "created_by": {
           "type": "string"
         },
+        "generation_id": {
+          "type": "string"
+        },
         "labels": {
           "additionalProperties": {
             "type": "string"

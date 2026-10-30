@@ -205,6 +205,13 @@ func (cm *ConfigurationManager) loadFromCacheOrDisk(ctx context.Context, name st
 		)
 	}
 
+	// Stamp a generation identifier on configurations written before the field
+	// existed, so every consumer (notably the bootstrap resume path) can rely on
+	// a non-empty value. The stamp lives in the cached copy only: a config that
+	// is merely read never has its bytes rewritten, and the next operation that
+	// saves this config persists the identifier.
+	EnsureGenerationID(config)
+
 	// Cache the loaded configuration (without validation)
 	cm.cache.Set(ctx, name, config)
 
@@ -268,6 +275,11 @@ func (cm *ConfigurationManager) Save(ctx context.Context, config *Config) error 
 			"save",
 		)
 	}
+
+	// Persist a generation identifier for configurations that lack one: an
+	// in-memory config built without going through the loader (templates,
+	// generated blueprints) still acquires an identity before it reaches disk.
+	EnsureGenerationID(config)
 
 	configPath := clusterPaths.ConfigPath
 
@@ -352,6 +364,8 @@ func (cm *ConfigurationManager) SaveWithoutValidation(ctx context.Context, confi
 			"save",
 		)
 	}
+
+	EnsureGenerationID(config)
 
 	configPath := clusterPaths.ConfigPath
 

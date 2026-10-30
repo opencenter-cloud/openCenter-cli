@@ -329,6 +329,44 @@ func (l *kubesprayLifecycle) prepareOSHardeningContext(ctx context.Context) erro
 	return nil
 }
 
+// prepareArtifactsPresent reports whether every artifact kubespray-prepare
+// produces still exists on disk. Bootstrap resume state records step success
+// by name only, so a cluster directory that was wiped and regenerated
+// (destroy --remove-files, a manual rm -rf, git clean -fdx) would otherwise
+// leave `kubespray-prepare (already completed)` standing for artifacts that
+// are gone: deploy then dies in loadOutputs on a missing
+// kubespray-outputs.json, or Ansible dies on a missing venv. This is the same
+// probe opentofu-apply's CanSkip performs on the state-zone inventory:
+// on-disk truth, not saved status.
+func (l *kubesprayLifecycle) prepareArtifactsPresent() bool {
+	probe := func(path string) bool {
+		_, err := os.Stat(path)
+		return err == nil
+	}
+	required := []string{
+		l.outputsPath,
+		filepath.Join(l.venvPath, "bin", "ansible-playbook"),
+		filepath.Join(l.kubesprayPath, "cluster.yml"),
+		filepath.Join(l.inventoryPath, "inventory.yaml"),
+	}
+	// The hardening playbook and role come from prepare's hardening pass, so
+	// they are required whenever hardening is on: harden() executes the playbook
+	// directly, and prepare only writes it when the inventory directory already
+	// exists - a wiped tree with hardening enabled must re-run prepare.
+	if l.osHardening {
+		required = append(required,
+			filepath.Join(l.inventoryPath, "os_hardening_playbook.yml"),
+			filepath.Join(l.inventoryPath, "roles", "ansible-hardening"),
+		)
+	}
+	for _, path := range required {
+		if !probe(path) {
+			return false
+		}
+	}
+	return true
+}
+
 const (
 	cloudInitRetryInterval      = time.Second
 	cloudInitDiagnosticsTimeout = 2 * time.Minute

@@ -496,6 +496,24 @@ func removeClusterFiles(ctx context.Context, cmd *cobra.Command, cfg v2.Config, 
 		logging.LogActionMessage(ctx, "removed blueprint directory: %s", blueprintDir)
 	}
 
+	// Remove the cluster's bootstrap resume state. The deploy resume file lives
+	// in the runtime state zone (<state-dir>/bootstrap/<org>/<cluster>/), which
+	// --remove-files did not previously touch, so destroying a cluster left a
+	// state.json asserting that steps of a now-deleted cluster had succeeded.
+	// Generation scoping already prevents a recreated cluster from reading it,
+	// but the file would otherwise accumulate forever - the same litter the
+	// blueprint-directory cleanup removed. The whole cluster directory goes, which
+	// also covers the generation subdirectories of past attempts.
+	if stateDir := cluster.BootstrapStateClusterDir(clusterName, organization); stateDir != "" {
+		if err := os.RemoveAll(stateDir); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove bootstrap state directory: %w", err)
+		}
+		if _, statErr := os.Stat(stateDir); os.IsNotExist(statErr) {
+			fmt.Fprintf(cmd.OutOrStdout(), "Removed bootstrap state directory: %s\n", stateDir)
+			logging.LogActionMessage(ctx, "removed bootstrap state directory: %s", stateDir)
+		}
+	}
+
 	// Remove from active cluster if it was active
 	activeCluster, err := getActiveCluster()
 	if err == nil && activeCluster == name {

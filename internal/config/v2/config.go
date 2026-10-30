@@ -34,6 +34,16 @@ type ConfigMetadata struct {
 	Version     string            `yaml:"version,omitempty" json:"version,omitempty"`
 	Labels      map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
 	Annotations map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	// GenerationID identifies this particular creation of the cluster. It is
+	// minted by 'cluster init' and never rewritten by load, save, edit, or
+	// generate, so it survives every operation short of a fresh init. A
+	// destroy/recreate cycle mints a new one. Bootstrap resume state is stored
+	// under it, which makes it structurally impossible for a new generation to
+	// read the previous generation's step statuses: the old file is not at the
+	// path the new generation looks at. Name-keyed state could not tell two
+	// generations of the same cluster apart, and resumed a wiped cluster into
+	// "already completed" steps whose artifacts were gone.
+	GenerationID string `yaml:"generation_id,omitempty" json:"generation_id,omitempty"`
 }
 
 // OpenCenterConfig represents the main opencenter configuration with five domains.

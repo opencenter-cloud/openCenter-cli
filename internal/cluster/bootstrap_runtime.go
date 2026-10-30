@@ -19,6 +19,22 @@ type bootstrapRuntimePaths struct {
 	StatePath       string
 	LegacyStatePath string
 	LogPath         string
+
+	// GenerationDir is <state>/bootstrap/<org>/<cluster>/<generation-id>. Every
+	// resume artifact of one generation lives under it, so a destroy/recreate
+	// cycle - which mints a new generation identifier at init - cannot read the
+	// dead generation's state: the old file simply is not at the path the new
+	// generation looks at. Name-only state could not tell two generations of the
+	// same cluster apart, and resumed a wiped cluster into "already completed"
+	// steps whose artifacts were gone.
+	GenerationDir string
+
+	// UnscopedStatePath is the pre-generation location
+	// <state>/bootstrap/<org>/<cluster>/state.json. It is never resumed from: a
+	// file there cannot be attributed to any generation. Deploy removes it once
+	// the cluster has a generation identifier, so the ambiguous file an older CLI
+	// left behind cannot outlive the first run under the new layout.
+	UnscopedStatePath string
 }
 
 type bootstrapLogWriterKey struct{}
@@ -38,7 +54,16 @@ func resolveBootstrapRuntimePaths(cfg *v2.Config, logPath string, startedAt time
 	}
 
 	stateDir := config.GetStateDir()
-	statePath, err := resolveBootstrapPath(filepath.Join(stateDir, "bootstrap", organization, clusterName, "state.json"))
+	clusterStateDir := filepath.Join(stateDir, "bootstrap", organization, clusterName)
+	// The generation identifier scopes the resume state. Configurations written
+	// before the field existed have none and keep using the cluster directory
+	// directly, so their in-flight resume keeps working; the identifier is
+	// stamped on the next load/save, and the generation after that is scoped.
+	generationDir := clusterStateDir
+	if generation := strings.TrimSpace(cfg.GenerationID()); v2.IsGenerationID(generation) {
+		generationDir = filepath.Join(clusterStateDir, generation)
+	}
+	statePath, err := resolveBootstrapPath(filepath.Join(generationDir, "state.json"))
 	if err != nil {
 		return nil, fmt.Errorf("resolve bootstrap state path: %w", err)
 	}
@@ -57,10 +82,23 @@ func resolveBootstrapRuntimePaths(cfg *v2.Config, logPath string, startedAt time
 		return nil, fmt.Errorf("resolve bootstrap log path: %w", err)
 	}
 
+	resolvedGenerationDir, err := resolveBootstrapPath(generationDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolve bootstrap generation directory: %w", err)
+	}
+	// The pre-generation location, resolved only so deploy can retire an
+	// ambiguous state.json an older CLI left behind. It is never a resume source.
+	unscopedStatePath, err := resolveBootstrapPath(filepath.Join(clusterStateDir, "state.json"))
+	if err != nil {
+		return nil, fmt.Errorf("resolve pre-generation bootstrap state path: %w", err)
+	}
+
 	return &bootstrapRuntimePaths{
-		StatePath:       statePath,
-		LegacyStatePath: legacyStatePath,
-		LogPath:         resolvedLogPath,
+		StatePath:         statePath,
+		LegacyStatePath:   legacyStatePath,
+		LogPath:           resolvedLogPath,
+		GenerationDir:     resolvedGenerationDir,
+		UnscopedStatePath: unscopedStatePath,
 	}, nil
 }
 
@@ -93,6 +131,30 @@ func ResolveDestroyLogPath(cfg *v2.Config, logPath string, startedAt time.Time) 
 
 func destroyLogFileName(startedAt time.Time) string {
 	return "destroy-" + startedAt.UTC().Format("20060102T150405Z") + ".log"
+}
+
+// BootstrapStateClusterDir returns the runtime state directory holding a
+// cluster's deploy resume state: <state-dir>/bootstrap/<org>/<cluster>. It
+// contains one subdirectory per cluster generation (plus the unscoped
+// state.json of configurations that predate generation identifiers), so
+// removing it retires every resume artifact of every past attempt.
+//
+// Destroy uses it for local-file cleanup; deploy's --restart clears only the
+// current generation's file. Returns "" when the cluster name is unusable.
+func BootstrapStateClusterDir(clusterName, organization string) string {
+	cluster := sanitizeRuntimeSegment(clusterName)
+	if cluster == "" {
+		return ""
+	}
+	org := sanitizeRuntimeSegment(organization)
+	if org == "" {
+		org = "opencenter"
+	}
+	resolved, err := resolveBootstrapPath(filepath.Join(config.GetStateDir(), "bootstrap", org, cluster))
+	if err != nil {
+		return ""
+	}
+	return resolved
 }
 
 func resolveBootstrapPath(path string) (string, error) {

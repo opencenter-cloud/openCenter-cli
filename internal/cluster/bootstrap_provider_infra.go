@@ -26,7 +26,10 @@ type openstackBootstrapProvider struct {
 
 const calicoStateResource = "module.calico.local_file.calico_values"
 
-func newOpenStackBootstrapProvider(runner lifecycleCommandRunner) lifecycleBootstrapProvider {
+// newOpenStackBootstrapProvider returns the concrete provider so callers can
+// substitute validateCredentials (tests use placeholder keystone hosts that must
+// never be contacted). It satisfies lifecycleBootstrapProvider.
+func newOpenStackBootstrapProvider(runner lifecycleCommandRunner) *openstackBootstrapProvider {
 	return &openstackBootstrapProvider{runner: runner, validateCredentials: ValidateOpenStackLive}
 }
 
@@ -170,6 +173,7 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 			bootstrapStep{
 				ID:          "kubespray-prepare",
 				Description: "Prepare Kubespray execution environment",
+				CanSkip:     kubeLifecycle.prepareArtifactsPresent,
 				Plan: BootstrapPlanStep{
 					ID:          "kubespray-prepare",
 					Action:      "Prepare Kubespray execution environment",
@@ -245,6 +249,18 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 			bootstrapStep{
 				ID:          "kubespray-export-kubeconfig",
 				Description: "Export the Kubernetes admin kubeconfig",
+				CanSkip: func() bool {
+					// The exported admin kubeconfig lives in the secrets zone, which
+					// outlives the cluster directory; its presence is the evidence
+					// this step succeeded. The next step re-verifies the file's
+					// contents against the live API endpoint, so a stale kubeconfig
+					// cannot slip through a resume.
+					if kubeLifecycle == nil || strings.TrimSpace(kubeLifecycle.kubeconfigPath) == "" {
+						return true
+					}
+					_, err := os.Stat(kubeLifecycle.kubeconfigPath)
+					return err == nil
+				},
 				Plan: BootstrapPlanStep{
 					ID:          "kubespray-export-kubeconfig",
 					Action:      "Export the Kubernetes admin kubeconfig",

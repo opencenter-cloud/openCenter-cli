@@ -130,6 +130,16 @@ opencenter cluster deploy my-cluster
 
 `internal/cluster.BootstrapService` selects a provider-specific step sequence and persists progress in `bootstrap-state.json`, so a failed run can resume with `--step` or `--from-step` instead of starting over. OpenStack, VMware, and bare metal share an infrastructure bootstrap implementation (OpenTofu provisioning, then Kubernetes/Ansible-driven cluster bring-up and Flux install); Kind and Magnum have their own dedicated bootstrap providers. See [Cluster Lifecycle](../CODEMAPS/cluster-lifecycle.md) for the provider table.
 
+The resume file lives under the cluster's **generation identifier**
+(`metadata.generation_id`, minted by `cluster init` and never rewritten by
+`load`, `save`, `edit`, or `generate`). Destroying and re-initializing a cluster
+mints a new identifier, so the new generation resolves to a different state path
+and cannot read the previous generation's completed steps. The pre-generation
+location `bootstrap/<org>/<cluster>/state.json` is never a resume source -- a
+file there cannot be attributed to any generation -- and `cluster deploy`
+removes it when it starts a scoped run. `cluster destroy` removes the whole
+`bootstrap/<org>/<cluster>/` directory.
+
 **Evidence:** `cmd/cluster_deploy.go`, `internal/cluster/bootstrap_service.go`, `internal/cluster/bootstrap_provider_infra.go`
 
 ### Stage 6: Operation

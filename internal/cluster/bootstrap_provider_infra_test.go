@@ -436,7 +436,12 @@ func TestBootstrapServiceOpenStackProvisionInfrastructureHonorsSavedState(t *tes
 	stateRoot := t.TempDir()
 	t.Setenv("OPENCENTER_STATE_DIR", stateRoot)
 
-	statePath := filepath.Join(clusterDir, "logs", "bootstrap-state.json")
+	// The fake config carries a placeholder keystone host, so the live credential
+	// check is stubbed; its real behaviour is covered by
+	// TestValidateOpenStackCredentials in internal/cloud/openstack.
+	bootstrapService.openStackValidateCredentials = stubCredentialValidation
+
+	statePath := filepath.Join(stateRoot, "bootstrap", organization, clusterName, "state.json")
 	state := bootstrapService.newBootstrapState()
 	bootstrapService.setStepStatus(state, "preflight", bootstrapStatusSuccess, "")
 	bootstrapService.setStepStatus(state, "opentofu-init", bootstrapStatusSuccess, "")

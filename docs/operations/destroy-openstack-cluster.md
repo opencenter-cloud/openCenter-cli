@@ -124,6 +124,12 @@ Add `--remove-files` to delete them as well:
 opencenter cluster destroy <org>/<cluster> --force --delete-volumes --remove-files
 ```
 
+`--remove-files` is cluster-scoped: it deletes only the destroyed cluster's
+trees (`infrastructure/clusters/<cluster>/`, `applications/overlays/<cluster>/`,
+`clusters/<cluster>/`, the blueprint directory, and the config file). The
+organization GitOps worktree (`gitops.repository.local_dir`, shared by every
+cluster in the organization) and all other clusters' files are left intact.
+
 ## Idempotent teardown and retries
 
 Destroy is safe to re-run. If the OpenTofu working directory is already gone —

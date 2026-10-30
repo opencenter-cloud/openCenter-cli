@@ -32,9 +32,6 @@ func TestClusterDestroyKindProvider(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(stateDir, "clusters"), []byte("destroy-kind\n"), 0o644); err != nil {
 		t.Fatalf("write cluster state: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(clusterPaths.GitOpsDir, "README.md"), []byte("gitops"), 0o644); err != nil {
-		t.Fatalf("write gitops marker: %v", err)
-	}
 
 	cmd := newClusterDestroyCmd()
 	var stdout, stderr bytes.Buffer
@@ -49,8 +46,16 @@ func TestClusterDestroyKindProvider(t *testing.T) {
 	if _, err := os.Stat(clusterPaths.ConfigPath); !os.IsNotExist(err) {
 		t.Fatalf("expected config file to be removed")
 	}
-	if _, err := os.Stat(clusterPaths.GitOpsDir); !os.IsNotExist(err) {
-		t.Fatalf("expected gitops directory to be removed")
+	// The shared organization GitOps worktree must survive; only the
+	// cluster's own trees are removed.
+	if _, err := os.Stat(clusterPaths.GitOpsDir); err != nil {
+		t.Fatalf("expected shared gitops worktree to remain: %v", err)
+	}
+	if _, err := os.Stat(clusterPaths.ClusterDir); !os.IsNotExist(err) {
+		t.Fatalf("expected cluster directory to be removed")
+	}
+	if _, err := os.Stat(clusterPaths.ApplicationsDir); !os.IsNotExist(err) {
+		t.Fatalf("expected applications overlay to be removed")
 	}
 
 	kindLog, err := os.ReadFile(filepath.Join(stateDir, "kind.log"))
@@ -233,12 +238,15 @@ func TestClusterDestroySkipInfrastructure(t *testing.T) {
 		t.Fatalf("cluster destroy failed: %v", err)
 	}
 
-	// Files should be removed
+	// The cluster's files should be removed; the shared worktree survives.
 	if _, err := os.Stat(clusterPaths.ConfigPath); !os.IsNotExist(err) {
 		t.Fatalf("expected config file to be removed")
 	}
-	if _, err := os.Stat(clusterPaths.GitOpsDir); !os.IsNotExist(err) {
-		t.Fatalf("expected gitops directory to be removed")
+	if _, err := os.Stat(clusterPaths.ClusterDir); !os.IsNotExist(err) {
+		t.Fatalf("expected cluster directory to be removed")
+	}
+	if _, err := os.Stat(clusterPaths.GitOpsDir); err != nil {
+		t.Fatalf("expected shared gitops worktree to remain: %v", err)
 	}
 
 	// Kind should NOT have been called for delete
@@ -253,6 +261,116 @@ func TestClusterDestroySkipInfrastructure(t *testing.T) {
 	// Output should mention skipping
 	if !strings.Contains(stdout.String(), "Skipping infrastructure destruction") {
 		t.Fatalf("expected output to mention skipping infrastructure\noutput:\n%s", stdout.String())
+	}
+}
+
+// TestClusterDestroyRemoveFilesOnlyRemovesDesignatedCluster covers the
+// two-cluster scenario: both clusters share one organization GitOps worktree
+// (GitOpsDir is the org repo root, e.g. clusters/gitops/<org>). Destroying
+// cluster-a with --remove-files must remove only cluster-a's own trees
+// (infrastructure/clusters/a, applications/overlays/a, clusters/a bridge,
+// blueprint dir, config file) and must leave cluster-b's files, the shared
+// repository content, and the GitOps worktree itself intact.
+func TestClusterDestroyRemoveFilesOnlyRemovesDesignatedCluster(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+
+	stateDir := t.TempDir()
+	binDir := t.TempDir()
+	t.Setenv("FAKE_KIND_STATE_DIR", stateDir)
+	installFakeKindBinary(t, binDir)
+	prependTestPath(t, binDir)
+
+	cfgA, pathsA := saveKindConfigForCommandTest(t, dir, "destroy-two-a", "opencenter")
+	cfgA.OpenCenter.Meta.Stage = v2.StageBootstrap
+	cfgA.OpenCenter.Meta.Status = v2.StatusSuccess
+	if err := saveConfig(context.Background(), cfgA); err != nil {
+		t.Fatalf("save config a: %v", err)
+	}
+	cfgB, pathsB := saveKindConfigForCommandTest(t, dir, "destroy-two-b", "opencenter")
+	cfgB.OpenCenter.Meta.Stage = v2.StageBootstrap
+	cfgB.OpenCenter.Meta.Status = v2.StatusSuccess
+	if err := saveConfig(context.Background(), cfgB); err != nil {
+		t.Fatalf("save config b: %v", err)
+	}
+
+	// Both clusters resolve to the same organization GitOps worktree.
+	if pathsA.GitOpsDir != pathsB.GitOpsDir {
+		t.Fatalf("expected shared gitops worktree, got %q and %q", pathsA.GitOpsDir, pathsB.GitOpsDir)
+	}
+
+	write := func(path, content string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", path, err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+	}
+
+	// Shared repository content.
+	write(filepath.Join(pathsA.GitOpsDir, "README.md"), "shared gitops repo")
+	// Cluster A files (to be removed).
+	write(filepath.Join(pathsA.ClusterDir, "main.tf"), "a infra")
+	write(filepath.Join(pathsA.ApplicationsDir, "kustomization.yaml"), "a overlay")
+	write(filepath.Join(pathsA.GitOpsDir, "clusters", "destroy-two-a", "services.yaml"), "a bridge")
+	// Cluster B files (must survive).
+	write(filepath.Join(pathsB.ClusterDir, "main.tf"), "b infra")
+	write(filepath.Join(pathsB.ApplicationsDir, "kustomization.yaml"), "b overlay")
+	write(filepath.Join(pathsB.GitOpsDir, "clusters", "destroy-two-b", "services.yaml"), "b bridge")
+
+	if err := os.WriteFile(filepath.Join(stateDir, "clusters"), []byte("destroy-two-a\ndestroy-two-b\n"), 0o644); err != nil {
+		t.Fatalf("write cluster state: %v", err)
+	}
+
+	cmd := newClusterDestroyCmd()
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"destroy-two-a", "--force", "--skip-infrastructure", "--remove-files"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("cluster destroy failed: %v\nstdout: %s", err, stdout.String())
+	}
+
+	// Cluster A is gone.
+	if _, err := os.Stat(pathsA.ConfigPath); !os.IsNotExist(err) {
+		t.Fatalf("expected cluster-a config file to be removed, stat err: %v", err)
+	}
+	if _, err := os.Stat(pathsA.ClusterDir); !os.IsNotExist(err) {
+		t.Fatalf("expected cluster-a infrastructure dir to be removed, stat err: %v", err)
+	}
+	if _, err := os.Stat(pathsA.ApplicationsDir); !os.IsNotExist(err) {
+		t.Fatalf("expected cluster-a applications overlay to be removed, stat err: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(pathsA.GitOpsDir, "clusters", "destroy-two-a")); !os.IsNotExist(err) {
+		t.Fatalf("expected cluster-a bridge dir to be removed, stat err: %v", err)
+	}
+
+	// The shared GitOps worktree and cluster B must survive.
+	if _, err := os.Stat(pathsB.GitOpsDir); err != nil {
+		t.Fatalf("expected shared gitops worktree to remain: %v", err)
+	}
+	for _, path := range []string{
+		filepath.Join(pathsB.GitOpsDir, "README.md"),
+		pathsB.ConfigPath,
+		pathsB.ClusterDir,
+		pathsB.ApplicationsDir,
+		filepath.Join(pathsB.GitOpsDir, "clusters", "destroy-two-b", "services.yaml"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected cluster-b/shared path to survive destroy of cluster-a: %s: %v", path, err)
+		}
+	}
+
+	// Destroy must not have touched cluster B's kind cluster.
+	kindLog, err := os.ReadFile(filepath.Join(stateDir, "kind.log"))
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("read fake kind log: %v", err)
+	}
+	if strings.Contains(string(kindLog), "destroy-two-b") {
+		t.Fatalf("expected destroy to never touch cluster-b\nlog:\n%s", string(kindLog))
 	}
 }
 
@@ -317,7 +435,7 @@ func TestClusterDestroyCreatesLog(t *testing.T) {
 		"destroy started for opencenter/destroy-log-test",
 		"destroying Kind cluster destroy-log-test",
 		"executing command: kind delete cluster",
-		"removed GitOps directory:",
+		"removed cluster directory:",
 		"removed config file:",
 		"destroy complete for opencenter/destroy-log-test",
 	}

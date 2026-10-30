@@ -52,10 +52,14 @@ func newClusterDestroyCmd() *cobra.Command {
 		Long: `Destroy a cluster's infrastructure and optionally remove its configuration files.
 
 This command first destroys the cloud infrastructure (via OpenTofu for supported providers),
-then optionally removes local configuration files and GitOps directories.
+then optionally removes this cluster's local configuration files and its
+trees inside the GitOps worktree.
 
 By default, local files are preserved after infrastructure destruction to allow for
 inspection, debugging, or recovery. Use --remove-files to also delete local files.
+The GitOps worktree (gitops.repository.local_dir) is shared by every cluster in
+the organization: --remove-files deletes only the designated cluster's
+directories and never the shared worktree or another cluster's files.
 
 The cluster name can be specified as 'cluster' or 'organization/cluster'.
 If no cluster name is provided, the active cluster will be destroyed.
@@ -248,7 +252,7 @@ manual cleanup.`,
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "Skip confirmation prompt")
-	cmd.Flags().BoolVar(&removeFiles, "remove-files", false, "Remove local configuration and GitOps files after infrastructure destruction")
+	cmd.Flags().BoolVar(&removeFiles, "remove-files", false, "Remove this cluster's local configuration and GitOps files after infrastructure destruction (the shared organization GitOps worktree and other clusters' files are preserved)")
 	cmd.Flags().BoolVar(&skipInfrastructure, "skip-infrastructure", false, "Skip infrastructure destruction (only remove local files when combined with --remove-files)")
 	cmd.Flags().BoolVar(&deleteVolumes, "delete-volumes", false, "Delete CSI-provisioned Cinder volumes left orphaned after infrastructure destruction (OpenStack only)")
 	cmd.Flags().BoolVar(&strict, "strict", false, "Exit with an error when post-destroy cleanup reported warnings (leaked load balancers, orphaned volumes)")
@@ -426,16 +430,12 @@ func removeClusterFiles(ctx context.Context, cmd *cobra.Command, cfg v2.Config, 
 		}
 	}
 
-	// Remove GitOps directory if specified
-	gitopsDir := cfg.GitDir()
-	if gitopsDir != "" {
-		if err := os.RemoveAll(gitopsDir); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("failed to remove gitops directory: %w", err)
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Removed GitOps directory: %s\n", gitopsDir)
-		logging.LogActionMessage(ctx, "removed GitOps directory: %s", gitopsDir)
-	}
-
+	// The config's GitOps directory is the shared organization worktree (e.g.
+	// clusters/gitops/<org>): every cluster in the organization renders into it
+	// (infrastructure/clusters/<cluster>/, applications/overlays/<cluster>/,
+	// clusters/<cluster>/). Removing the whole worktree destroyed every other
+	// cluster's files, so --remove-files only removes this cluster's own trees
+	// below.
 	if !isFlatConfig {
 		if clusterPaths != nil {
 			// Organization-based structure found
@@ -455,6 +455,20 @@ func removeClusterFiles(ctx context.Context, cmd *cobra.Command, cfg v2.Config, 
 			if _, statErr := os.Stat(clusterPaths.ApplicationsDir); os.IsNotExist(statErr) {
 				fmt.Fprintf(cmd.OutOrStdout(), "Removed applications directory: %s\n", clusterPaths.ApplicationsDir)
 				logging.LogActionMessage(ctx, "removed applications directory: %s", clusterPaths.ApplicationsDir)
+			}
+
+			// Remove this cluster's GitOps bridge directory: <gitops>/clusters/<cluster>/
+			// (the services.yaml bridge written by the generator; the flux
+			// bootstrap content under the same directory dies with the cluster).
+			if gitopsDir := strings.TrimSpace(cfg.GitDir()); gitopsDir != "" {
+				bridgeDir := filepath.Join(gitopsDir, "clusters", clusterName)
+				if err := os.RemoveAll(bridgeDir); err != nil && !os.IsNotExist(err) {
+					return fmt.Errorf("failed to remove cluster bridge directory: %w", err)
+				}
+				if _, statErr := os.Stat(bridgeDir); os.IsNotExist(statErr) {
+					fmt.Fprintf(cmd.OutOrStdout(), "Removed cluster bridge directory: %s\n", bridgeDir)
+					logging.LogActionMessage(ctx, "removed cluster bridge directory: %s", bridgeDir)
+				}
 			}
 		}
 	}

@@ -17,10 +17,14 @@ Destroy a cluster
 Destroy a cluster's infrastructure and optionally remove its configuration files.
 
 This command first destroys the cloud infrastructure (via OpenTofu for supported providers),
-then optionally removes local configuration files and GitOps directories.
+then optionally removes this cluster's local configuration files and its
+trees inside the GitOps worktree.
 
 By default, local files are preserved after infrastructure destruction to allow for
 inspection, debugging, or recovery. Use --remove-files to also delete local files.
+The GitOps worktree (gitops.repository.local_dir) is shared by every cluster in
+the organization: --remove-files deletes only the designated cluster's
+directories and never the shared worktree or another cluster's files.
 
 The cluster name can be specified as 'cluster' or 'organization/cluster'.
 If no cluster name is provided, the active cluster will be destroyed.
@@ -72,7 +76,7 @@ opencenter cluster destroy [name] [flags]
       --force                     Skip confirmation prompt
   -h, --help                      help for destroy
       --log string                log file path (defaults to <state_dir>/logs/destroy/<org>/<name>/destroy-YYYYMMDDTHHMMSSZ.log)
-      --remove-files              Remove local configuration and GitOps files after infrastructure destruction
+      --remove-files              Remove this cluster's local configuration and GitOps files after infrastructure destruction (the shared organization GitOps worktree and other clusters' files are preserved)
       --require-cluster-access    Abort before destroying infrastructure if the cluster kubeconfig is missing or unreachable (CSI volume capture cannot be skipped)
       --skip-cluster-access       Never contact the cluster API during destroy (skips the kubectl CSI volume capture); use when the kube endpoint is unreachable (incompatible with --require-cluster-access)
       --skip-infrastructure       Skip infrastructure destruction (only remove local files when combined with --remove-files)

@@ -76,8 +76,8 @@ var clusterDefaultExplanations = []clusterDefaultExplanation{
 	{
 		Key:       "cluster_defaults.base_domain",
 		AppliedTo: "opencenter.cluster.base_domain (and the derived cluster_fqdn)",
-		When:      "cluster config tags managed.base_domain=default, or still holds the placeholder domain; a pinned domain is never rewritten (generate warns instead; --sync-base-domain opts in)",
-		During:    "cluster init, config load, cluster generate",
+		When:      "cluster config tags managed.base_domain=default (set by 'cluster init --base-domain' or 'cluster set --follow-settings'), or still holds the placeholder domain; a pinned domain is never rewritten (generate warns instead; --sync-base-domain opts in)",
+		During:    "cluster init, cluster set, config load, cluster generate",
 	},
 	{
 		Key:       "cluster_defaults.admin_email",

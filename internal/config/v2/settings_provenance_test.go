@@ -165,6 +165,27 @@ func TestApplySettingsProvenanceDerivesEmptyFQDN(t *testing.T) {
 	}
 }
 
+func TestApplySettingsProvenanceManagedHealsDriftedFQDN(t *testing.T) {
+	// A managed cluster whose stored cluster_fqdn drifted from its
+	// base_domain (hand edit, older CLI) is re-derived at load even when the
+	// domain already matches settings: the identity fields cannot disagree.
+	withSettingsBaseDomain(t, "k8s.example.com", func() {
+		cfg := provenanceTestConfig()
+		cfg.OpenCenter.Cluster.BaseDomain = "k8s.example.com"
+		cfg.OpenCenter.Cluster.ClusterFQDN = "stale.example.net"
+		cfg.OpenCenter.Cluster.Managed.DefaultBaseDomain()
+
+		applySettingsProvenance(cfg)
+
+		if cfg.OpenCenter.Cluster.BaseDomain != "k8s.example.com" {
+			t.Fatalf("base_domain = %q, want unchanged", cfg.OpenCenter.Cluster.BaseDomain)
+		}
+		if cfg.OpenCenter.Cluster.ClusterFQDN != "acme.sjc3.k8s.example.com" {
+			t.Fatalf("cluster_fqdn = %q, want healed derivation", cfg.OpenCenter.Cluster.ClusterFQDN)
+		}
+	})
+}
+
 func TestSyncBaseDomainFromSettingsRewritesDerivedFQDN(t *testing.T) {
 	cfg := provenanceTestConfig()
 	cfg.OpenCenter.Cluster.BaseDomain = "old.example.org"

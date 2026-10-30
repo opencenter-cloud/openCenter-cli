@@ -50,6 +50,11 @@ type InitOptions struct {
 	SchemaVersion         string
 	ServerPools           []string
 	FlagOverrides         []string
+	// BaseDomain is the normalized --base-domain value. When set, the
+	// base_domain override (which parseInitOptions injects into
+	// FlagOverrides) is tagged managed.base_domain: default so the cluster
+	// keeps following cluster_defaults.base_domain from the settings file.
+	BaseDomain string
 	KindDisableDefaultCNI *bool
 	// DryRun performs every read, validation and path-resolution step and
 	// reports what would be created, but writes nothing: no directories, no
@@ -543,6 +548,21 @@ func (s *InitService) applyOverrides(cfg *v2.Config, configMap map[string]any, o
 		}
 	}
 
+	// --base-domain: the dotted override above wrote base_domain into both the
+	// struct and the config map. Tag it settings-owned (managed.default) so
+	// future cluster_defaults.base_domain changes keep propagating at load --
+	// seeding a cluster is not freezing it (a deliberate freeze is 'cluster
+	// set', which pins), and re-derive cluster_fqdn so the identity fields
+	// agree on disk.
+	if opts.BaseDomain != "" {
+		cfg.OpenCenter.Cluster.Managed.DefaultBaseDomain()
+		setNestedConfigValue(configMap, v2.ProvenanceDefault, "opencenter", "cluster", "managed", "base_domain")
+		if derived := cfg.OpenCenter.Cluster.DeriveClusterFQDN(cfg.OpenCenter.Meta.Region); derived != "" {
+			cfg.OpenCenter.Cluster.ClusterFQDN = derived
+			setNestedConfigValue(configMap, derived, "opencenter", "cluster", "cluster_fqdn")
+		}
+	}
+
 	if opts.KindDisableDefaultCNI != nil {
 		if !strings.EqualFold(cfg.OpenCenter.Infrastructure.Provider, "kind") {
 			return fmt.Errorf("--kind-disable-default-cni is only valid for kind clusters")
@@ -750,6 +770,10 @@ func (s *InitService) buildResultMessage(clusterPaths *paths.ClusterPaths, organ
 		fmt.Fprintf(&msg, "SOPS key location: %s\n", clusterPaths.SOPSKeyPath)
 	}
 
+	if opts.BaseDomain != "" {
+		fmt.Fprintf(&msg, "Base domain: %s (from --base-domain; follows cluster_defaults.base_domain from settings until pinned with 'cluster set')\n", opts.BaseDomain)
+	}
+
 	msg.WriteString(clusterDefaultsBlock(opts))
 
 	return msg.String()
@@ -777,7 +801,9 @@ func clusterDefaultsBlock(opts InitOptions) string {
 	if len(cd.SSHAuthorizedKeys) > 0 {
 		defaults = append(defaults, fmt.Sprintf("  ssh_authorized_keys: %d key(s)", len(cd.SSHAuthorizedKeys)))
 	}
-	if cd.BaseDomain != "" {
+	// --base-domain supersedes the settings default; listing both would
+	// contradict the written config (same rule as region above).
+	if cd.BaseDomain != "" && opts.BaseDomain == "" {
 		defaults = append(defaults, fmt.Sprintf("  base_domain:         %s", cd.BaseDomain))
 	}
 	if cd.AdminEmail != "" {
@@ -811,6 +837,9 @@ func (s *InitService) buildDryRunMessage(clusterPaths *paths.ClusterPaths, organ
 	}
 	if !opts.NoGitInit {
 		fmt.Fprintf(&msg, "[dry-run] Would initialize a git repository in the cluster directory\n")
+	}
+	if opts.BaseDomain != "" {
+		fmt.Fprintf(&msg, "[dry-run] Would set base domain: %s (from --base-domain; follows cluster_defaults.base_domain from settings)\n", opts.BaseDomain)
 	}
 	msg.WriteString(clusterDefaultsBlock(opts))
 	fmt.Fprintf(&msg, "\n[dry-run] Nothing was written.\n")

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 
 	cloudopenstack "github.com/opencenter-cloud/opencenter-cli/internal/cloud/openstack"
@@ -34,7 +35,40 @@ import (
 const (
 	kindDisableDefaultCNIFlagName = "kind-disable-default-cni"
 	kindDisableDefaultCNIPath     = "opencenter.infrastructure.kind.disable_default_cni"
+	baseDomainFlagName            = "base-domain"
+	baseDomainConfigPath          = "opencenter.cluster.base_domain"
 )
+
+// initDomainPattern mirrors the validator's domain pattern
+// (internal/core/validation/validators): labels of alphanumerics and hyphens,
+// dots between them. Used to fail --base-domain before any cluster state is
+// written, instead of surfacing a generic validate-stage error later.
+var initDomainPattern = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`)
+
+// normalizeInitBaseDomain lowercases and trims a --base-domain value and
+// rejects anything the fqdn validator would reject, so 'cluster init
+// --base-domain' fails with no directories, keys, or config written.
+func normalizeInitBaseDomain(value string) (string, error) {
+	domain := strings.ToLower(strings.TrimSpace(value))
+	if domain == "" {
+		return "", fmt.Errorf("--base-domain cannot be empty")
+	}
+	if len(domain) > 253 {
+		return "", fmt.Errorf("--base-domain is too long (maximum 253 characters): %s", domain)
+	}
+	if strings.Contains(domain, "..") {
+		return "", fmt.Errorf("--base-domain cannot contain consecutive dots: %s", domain)
+	}
+	if !initDomainPattern.MatchString(domain) {
+		return "", fmt.Errorf("invalid --base-domain %q: must contain only alphanumeric characters, hyphens, and dots (e.g. k8s.example.com)", domain)
+	}
+	for _, label := range strings.Split(domain, ".") {
+		if len(label) > 63 {
+			return "", fmt.Errorf("--base-domain label %q is too long (maximum 63 characters)", label)
+		}
+	}
+	return domain, nil
+}
 
 func newClusterInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -72,7 +106,15 @@ selector flags (--clouds-yaml, --image-name, --windows-image-name,
 --network-id, --external-network-id, --subnet-id, --availability-zone,
 --create-internal-network, --replace, --import-auth, --import-tls,
 --create-application-credential) are only valid together with --os-cloud and
-are forwarded to the provider apply pass.`,
+are forwarded to the provider apply pass.
+
+--base-domain sets opencenter.cluster.base_domain (and the derived
+cluster_fqdn) on the new cluster and tags it managed.base_domain: default, so
+the cluster keeps following cluster_defaults.base_domain from the CLI settings
+file: later 'opencenter settings set cluster_defaults.base_domain ...' changes
+propagate through generate/validate/deploy at every config load. To freeze the
+domain against settings changes later, use 'cluster set
+<cluster> opencenter.cluster.base_domain=...'.`,
 		Example: `  # Initialize with defaults
   opencenter cluster init my-cluster
 
@@ -99,7 +141,10 @@ are forwarded to the provider apply pass.`,
 
   # Initialize and bind to an OpenStack cloud in one step (Tofu-managed
   # internal network and an auto-minted application credential included)
-  opencenter cluster init my-cluster --org production --os-cloud prod-profile --yes`,
+  opencenter cluster init my-cluster --org production --os-cloud prod-profile --yes
+
+  # Initialize with an explicit base domain (still follows settings changes)
+  opencenter cluster init my-cluster --base-domain k8s.example.com`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: runClusterInit,
 	}
@@ -107,6 +152,7 @@ are forwarded to the provider apply pass.`,
 	cmd.Flags().String("org", "", "organization name (defaults to 'opencenter')")
 	cmd.Flags().String("type", "openstack", "cluster type: openstack, baremetal, kind, vmware, magnum")
 	cmd.Flags().String("region", "", "cluster region (e.g. dfw3, sjc3, iad3, ord1)")
+	cmd.Flags().String(baseDomainFlagName, "", "base DNS domain for the cluster (sets opencenter.cluster.base_domain; the cluster keeps following cluster_defaults.base_domain from settings)")
 	cmd.Flags().String("config-file", "", "load configuration from file")
 	cmd.Flags().String("config", "", "load configuration from file")
 	_ = cmd.Flags().MarkHidden("config")
@@ -312,6 +358,29 @@ func parseInitOptions(cmd *cobra.Command, args []string) (cluster.InitOptions, *
 	opts.FlagOverrides = flagOverrides
 	if opts.Organization == "" && deprecatedOrg != "" {
 		opts.Organization = deprecatedOrg
+	}
+
+	// --base-domain: validate before anything is written, then funnel into the
+	// same dotted-override path as --opencenter.cluster.base_domain=... so the
+	// value lands in both the struct and the config map. The explicit flag is
+	// the last word: it replaces a duplicate dotted override rather than
+	// racing with it inside ProcessFlags (map iteration order).
+	if cmd.Flags().Changed(baseDomainFlagName) {
+		baseDomainRaw, _ := cmd.Flags().GetString(baseDomainFlagName)
+		baseDomain, bdErr := normalizeInitBaseDomain(baseDomainRaw)
+		if bdErr != nil {
+			return opts, nil, bdErr
+		}
+		opts.BaseDomain = baseDomain
+		deduped := make([]string, 0, len(opts.FlagOverrides)+1)
+		prefix := "--" + baseDomainConfigPath + "="
+		for _, override := range opts.FlagOverrides {
+			if strings.HasPrefix(override, prefix) {
+				continue
+			}
+			deduped = append(deduped, override)
+		}
+		opts.FlagOverrides = append(deduped, prefix+baseDomain)
 	}
 
 	if enabled, changed, err := kindDisableDefaultCNIValue(cmd, opts.Provider); err != nil {

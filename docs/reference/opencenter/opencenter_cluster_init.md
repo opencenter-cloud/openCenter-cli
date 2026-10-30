@@ -45,6 +45,14 @@ selector flags (--clouds-yaml, --image-name, --windows-image-name,
 --create-application-credential) are only valid together with --os-cloud and
 are forwarded to the provider apply pass.
 
+--base-domain sets opencenter.cluster.base_domain (and the derived
+cluster_fqdn) on the new cluster and tags it managed.base_domain: default, so
+the cluster keeps following cluster_defaults.base_domain from the CLI settings
+file: later 'opencenter settings set cluster_defaults.base_domain ...' changes
+propagate through generate/validate/deploy at every config load. To freeze the
+domain against settings changes later, use 'cluster set
+<cluster> opencenter.cluster.base_domain=...'.
+
 ```
 opencenter cluster init [name] [flags]
 ```
@@ -79,11 +87,15 @@ opencenter cluster init [name] [flags]
   # Initialize and bind to an OpenStack cloud in one step (Tofu-managed
   # internal network and an auto-minted application credential included)
   opencenter cluster init my-cluster --org production --os-cloud prod-profile --yes
+
+  # Initialize with an explicit base domain (still follows settings changes)
+  opencenter cluster init my-cluster --base-domain k8s.example.com
 ```
 
 ### Options
 
 ```
+      --base-domain string         base DNS domain for the cluster (sets opencenter.cluster.base_domain; the cluster keeps following cluster_defaults.base_domain from settings)
       --config-file string         load configuration from file
       --force                      overwrite existing config file
       --full-schema                generate configuration with all available fields

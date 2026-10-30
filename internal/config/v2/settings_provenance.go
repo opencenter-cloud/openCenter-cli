@@ -74,7 +74,8 @@ func ReadSettingsBaseDomain() string {
 //
 //   - base_domain tagged managed.base_domain: default → the settings file owns
 //     the value; every load re-applies cluster_defaults.base_domain and
-//     re-derives cluster_fqdn, so a settings change propagates through
+//     unconditionally re-derives cluster_fqdn (healing any stored FQDN that
+//     drifted), so a settings change propagates through
 //     generate/validate/deploy without rewriting the cluster config file.
 //   - legacy configs (no provenance) whose base_domain is still the init
 //     placeholder adopt the settings domain and are tagged default, provided
@@ -96,8 +97,12 @@ func applySettingsProvenance(cfg *Config) {
 	case cluster.Managed.BaseDomainManaged():
 		if settingsDomain != "" && settingsDomain != cluster.BaseDomain {
 			cluster.BaseDomain = settingsDomain
-			cluster.ClusterFQDN = cluster.DeriveClusterFQDN(region)
 		}
+		// A managed field always re-derives the FQDN, even when the domain
+		// already matches settings: the in-memory derivation is free, and it
+		// heals a cluster_fqdn that drifted from its base_domain (hand edit,
+		// older CLI) instead of leaving the identity fields disagreeing.
+		cluster.ClusterFQDN = cluster.DeriveClusterFQDN(region)
 	case cluster.BaseDomain == "" || strings.EqualFold(strings.TrimSpace(cluster.BaseDomain), defaultBaseDomain):
 		if settingsDomain != "" && settingsDomain != defaultBaseDomain && fqdnStillPlaceholder(cluster, region) {
 			cluster.BaseDomain = settingsDomain

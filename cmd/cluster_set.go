@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +29,20 @@ func newClusterSetCmd() *cobra.Command {
 
 Fields use native v2 dot notation, for example:
   opencenter.meta.env=prod
-  opencenter.gitops.repository.url=https://github.com/acme/platform.git`,
+  opencenter.gitops.repository.url=https://github.com/acme/platform.git
+
+base_domain provenance: an explicit opencenter.cluster.base_domain assignment
+pins the field (the cluster config owns it; cluster_defaults.base_domain from
+settings never rewrites it). Pass --follow-settings to instead tag the field
+managed.base_domain=default so settings changes propagate at every config load
+(generate/validate/deploy). A cluster that has reached the bootstrap stage is
+live: its DNS identity pins automatically and --follow-settings is rejected
+there, because re-pointing a deployed cluster is a destructive rename.`,
+		Example: `  # Freeze the cluster's own domain (pins against settings changes)
+  opencenter cluster set my-cluster opencenter.cluster.base_domain=k8s.example.com
+
+  # Seed a domain and keep following cluster_defaults.base_domain from settings
+  opencenter cluster set my-cluster opencenter.cluster.base_domain=k8s.example.com --follow-settings`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusterArg, assignments, err := parseClusterSetArgs(args)
@@ -66,15 +80,28 @@ Fields use native v2 dot notation, for example:
 			// ownership to the cluster. Pinning here keeps the settings file
 			// from re-propagating over the user's choice at the next load,
 			// and the derived cluster_fqdn is recomputed so the identity
-			// fields cannot disagree on disk.
+			// fields cannot disagree on disk. --follow-settings is the
+			// explicit opt-in to the opposite: tag the field
+			// managed.base_domain=default so every load re-applies
+			// cluster_defaults.base_domain from settings. A cluster that has
+			// reached bootstrap is live; its DNS identity stays pinned.
+			followSettings, _ := cmd.Flags().GetBool("follow-settings")
 			for _, assignment := range configAssignments {
-				if assignment.Path == "opencenter.cluster.base_domain" {
-					cfg.OpenCenter.Cluster.Managed.PinBaseDomain()
-					if derived := cfg.OpenCenter.Cluster.DeriveClusterFQDN(cfg.OpenCenter.Meta.Region); derived != "" {
-						cfg.OpenCenter.Cluster.ClusterFQDN = derived
-					}
-					break
+				if assignment.Path != "opencenter.cluster.base_domain" {
+					continue
 				}
+				if followSettings && cfg.OpenCenter.Meta.Stage == v2.StageBootstrap {
+					return fmt.Errorf("--follow-settings cannot apply to cluster %s: it is in the bootstrap stage, where base_domain is pinned (re-pointing a live cluster's DNS identity is a destructive rename)", name)
+				}
+				if followSettings {
+					cfg.OpenCenter.Cluster.Managed.DefaultBaseDomain()
+				} else {
+					cfg.OpenCenter.Cluster.Managed.PinBaseDomain()
+				}
+				if derived := cfg.OpenCenter.Cluster.DeriveClusterFQDN(cfg.OpenCenter.Meta.Region); derived != "" {
+					cfg.OpenCenter.Cluster.ClusterFQDN = derived
+				}
+				break
 			}
 
 			strict, _ := cmd.Flags().GetBool("strict")
@@ -106,10 +133,14 @@ Fields use native v2 dot notation, for example:
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Updated cluster configuration %s\n", name)
+			if followSettings {
+				fmt.Fprintf(cmd.OutOrStdout(), "base_domain now follows cluster_defaults.base_domain from settings (managed: default)\n")
+			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Next: opencenter cluster validate %s\n", name)
 			return nil
 		},
 	}
 	cmd.Flags().Bool("strict", false, "fail if the resulting configuration is not valid")
+	cmd.Flags().Bool("follow-settings", false, "with an opencenter.cluster.base_domain assignment, tag the field managed.base_domain=default so cluster_defaults.base_domain from settings keeps propagating at every config load (default: pin the field to the cluster)")
 	return cmd
 }

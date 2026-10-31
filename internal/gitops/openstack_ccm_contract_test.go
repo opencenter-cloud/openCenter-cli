@@ -67,3 +67,54 @@ func TestOpenstackCCMCatalogWiresRemediationPatch(t *testing.T) {
 		t.Error("openstack-ccm must skip the sources dependency or it deadlocks on DNS")
 	}
 }
+
+// ccmValuesConfig builds a minimal OpenStack config for the CCM override
+// renderer with the given use_octavia and networking ids.
+func ccmValuesConfig(useOctavia bool) v2.Config {
+	return v2.Config{OpenCenter: v2.OpenCenterConfig{
+		Infrastructure: v2.InfrastructureConfig{Cloud: v2.CloudConfig{
+			OpenStack: &v2.OpenStackCloudConfig{
+				AuthURL:     "https://keystone.example.test/v3/",
+				Region:      "IAD3",
+				ProjectID:   "proj",
+				UseOctavia:  useOctavia,
+				Networking: &v2.OpenStackNetworkingConfig{
+					FloatingNetworkID: "27f1ceeb-50d5-4c72-a9eb-f90502f32ffb",
+					SubnetID:          "a127da07-5e5a-4342-aad3-f3108dec8028",
+				},
+			},
+		}},
+	}}
+}
+
+func renderCCMOverride(t *testing.T, useOctavia bool) string {
+	t.Helper()
+	out, err := templateRenderer(openstackCCMTemplate)(ccmValuesConfig(useOctavia))
+	if err != nil {
+		t.Fatalf("render CCM override values: %v", err)
+	}
+	return out
+}
+
+// networking.subnet_id is the cluster's NODE subnet. The CCM's
+// [LoadBalancer] subnet-id means "subnet to allocate the VIP from", which is
+// only the node subnet when use_octavia=false (the VIP is a Neutron port there).
+// Under Octavia the key must be omitted, or the CCM allocates VIPs from the
+// node subnet.
+func TestOpenstackCCMSubnetIDFollowsOctaviaMode(t *testing.T) {
+	vrrp := renderCCMOverride(t, false)
+	if !strings.Contains(vrrp, "subnet-id: a127da07-5e5a-4342-aad3-f3108dec8028") {
+		t.Errorf("use_octavia=false must emit the node subnet-id for the VRRP VIP port:\n%s", vrrp)
+	}
+	if !strings.Contains(vrrp, "floating-network-id: 27f1ceeb-50d5-4c72-a9eb-f90502f32ffb") {
+		t.Errorf("floating-network-id must always be emitted:\n%s", vrrp)
+	}
+
+	octavia := renderCCMOverride(t, true)
+	if strings.Contains(octavia, "subnet-id") {
+		t.Errorf("use_octavia=true must omit [LoadBalancer] subnet-id (Octavia owns the VIP):\n%s", octavia)
+	}
+	if !strings.Contains(octavia, "floating-network-id: 27f1ceeb-50d5-4c72-a9eb-f90502f32ffb") {
+		t.Errorf("floating-network-id must survive the octavia branch:\n%s", octavia)
+	}
+}

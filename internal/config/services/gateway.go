@@ -15,12 +15,13 @@ type GatewayConfig struct {
 	TLS              *GatewayTLSConfig `yaml:"tls,omitempty" json:"tls,omitempty" jsonschema:"description=Bring-your-own TLS configuration for Gateway listeners"`
 	Listeners        []GatewayListener `yaml:"listeners,omitempty" json:"listeners,omitempty" jsonschema:"description=List of Gateway listeners"`
 	// FloatingIP pins the OpenStack floating IP on the Envoy data-plane
-	// LoadBalancer Service (loadbalancer.openstack.org/floating-ip). The CCM
-	// only honors it while the Service has no status yet, so it must be
-	// present from the first EnsureLoadBalancer; it makes data-plane Service
-	// recreation (rename, Gateway re-creation) rebind the SAME IP instead of
-	// allocating a new one. Ignored on non-OpenStack providers.
-	FloatingIP string `yaml:"floating_ip,omitempty" json:"floating_ip,omitempty" jsonschema:"description=Pre-allocated OpenStack floating IP pinned to the Envoy data-plane LoadBalancer Service"`
+	// LoadBalancer Service (loadbalancer.openstack.org/floating-ip), so the
+	// CCM binds a pre-allocated IP instead of allocating a new one.
+	// CAUTION: Rackspace IAD3/SJC3 (provider-os CCM v1.36) was measured to
+	// IGNORE this annotation even when present at Service creation, so the
+	// pin does not hold there; verify against the target cloud before
+	// relying on it. Ignored on non-OpenStack providers.
+	FloatingIP string `yaml:"floating_ip,omitempty" json:"floating_ip,omitempty" jsonschema:"description=Pre-allocated OpenStack floating IP for the Envoy data-plane LoadBalancer Service (CCM support varies by cloud)"`
 }
 
 // GatewayTLSConfig lets operators supply their own TLS material instead of

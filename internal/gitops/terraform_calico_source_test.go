@@ -30,7 +30,7 @@ import (
 const defaultGitBaseRepoTag = "2026.03-rc4"
 
 // kubesprayModuleTag is the gitops-base tag carrying the lifecycle contract v2
-// kubespray module (inventory_output_dir and coredns_rewrite_block).
+// kubespray module (inventory_output_dir and the OIDC/kubespray contract vars).
 // Keep in sync with internal/config/v2/defaults.go kubespray module sources.
 const kubesprayModuleTag = "2026.03-rc4"
 

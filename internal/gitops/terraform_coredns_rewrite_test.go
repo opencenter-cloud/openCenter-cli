@@ -21,7 +21,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTerraformCoreDNSRewriteEmittedAcrossProviders(t *testing.T) {
+// The kubespray module must NOT receive a coredns_rewrite_block. Rewriting
+// auth.<cluster_fqdn> to an in-cluster Service was wrong twice over: the
+// original target (envoy-gateway.gateway.svc) never existed, so in-cluster
+// OIDC discovery returned NXDOMAIN, and the correct target (the Envoy
+// data-plane Service, whose name embeds a config hash) drifts whenever the
+// Gateway is recreated. auth.<cluster_fqdn> resolves through ordinary DNS like
+// every other service hostname, which is what the fleet already does.
+func TestTerraformCoreDNSRewriteNeverEmitted(t *testing.T) {
 	providers := []string{"openstack", "baremetal", "vmware"}
 
 	for _, provider := range providers {
@@ -40,17 +47,10 @@ func TestTerraformCoreDNSRewriteEmittedAcrossProviders(t *testing.T) {
 			require.NoError(t, err, "failed to read rendered %s", mainTf)
 			rendered := string(data)
 
-			require.Contains(t, rendered, `cluster_fqdn                            = "mycluster.example.test"`,
-				"provider %q: main.tf must define local.cluster_fqdn", provider)
-			// The rewrite target must be the Envoy data-plane LoadBalancer
-			// Service in envoy-gateway-system; the control-plane Service
-			// (envoy-gateway) does not serve traffic and the old
-			// "envoy-gateway.gateway.svc" target never resolved (NXDOMAIN),
-			// breaking in-cluster OIDC discovery.
-			require.Contains(t, rendered, `coredns_rewrite_block                   = "rewrite name exact auth.${local.cluster_fqdn} envoy-rackspace-system-rmpk-gateway-067d088f.envoy-gateway-system.svc.cluster.local"`,
-				"provider %q: kubespray-cluster module must rewrite auth.<fqdn> to the envoy data-plane service", provider)
-			require.NotContains(t, rendered, `envoy-gateway.gateway.svc.cluster.local`,
-				"provider %q: rewrite must not target the non-existent gateway/gateway service", provider)
+			require.NotContains(t, rendered, "coredns_rewrite_block",
+				"provider %q: main.tf must not hand kubespray a coredns rewrite block", provider)
+			require.NotContains(t, rendered, "rewrite name exact",
+				"provider %q: main.tf must not emit a CoreDNS rewrite for auth.<fqdn>", provider)
 		})
 	}
 }

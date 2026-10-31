@@ -485,3 +485,32 @@ func TestTplHTTPRoutesRepointToPoolGateway(t *testing.T) {
 	require.Contains(t, keycloakRoute, "name: rmpk-gateway\n",
 		"keycloak (default pool) .tpl HTTPRoute must stay on rmpk-gateway")
 }
+
+// TestGatewayFloatingIPPinsDataPlaneService verifies that gateway.floating_ip
+// lands as the loadbalancer.openstack.org/floating-ip annotation on the
+// GatewayClass-level EnvoyProxy (so the CCM binds the pre-allocated FIP at
+// creation, surviving data-plane Service recreation), and that an unset
+// floating_ip emits no envoyService block at all (byte-identical legacy).
+func TestGatewayFloatingIPPinsDataPlaneService(t *testing.T) {
+	cfg := v2.Config{OpenCenter: v2.OpenCenterConfig{
+		Cluster: v2.ClusterConfig{ClusterFQDN: "rackai-dev.rax.io"},
+		Services: v2.ServiceMap{"gateway": &services.GatewayConfig{
+			BaseConfig: services.BaseConfig{Enabled: true},
+			FloatingIP: "203.0.113.10",
+		}},
+	}}
+	files, err := gatewayOverlayFilesRenderer(cfg)
+	require.NoError(t, err)
+	envoy, ok := files["envoy-proxy-config.yaml"]
+	require.True(t, ok)
+	require.Contains(t, envoy, "loadbalancer.openstack.org/floating-ip: 203.0.113.10",
+		"pinned floating_ip must be emitted as the CCM floating-ip annotation")
+	require.Contains(t, envoy, "envoyService:\n        annotations:",
+		"annotation must live under spec.provider.kubernetes.envoyService")
+
+	cfg.OpenCenter.Services["gateway"] = &services.GatewayConfig{BaseConfig: services.BaseConfig{Enabled: true}}
+	files, err = gatewayOverlayFilesRenderer(cfg)
+	require.NoError(t, err)
+	require.NotContains(t, files["envoy-proxy-config.yaml"], "envoyService",
+		"unset floating_ip must not emit an envoyService block")
+}

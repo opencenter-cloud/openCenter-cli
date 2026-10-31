@@ -27,10 +27,12 @@ import (
 func gatewayOverlayFilesRenderer(cfg v2.Config) (map[string]string, error) {
 	files := map[string]string{}
 
-	// Static files (unchanged): the GatewayClass and its default EnvoyProxy.
+	// Static files: the namespace and the GatewayClass. The default EnvoyProxy
+	// is rendered (not static) so a pinned gateway.floating_ip lands on the
+	// data-plane Service from the first deploy.
 	files["namespace.yaml"] = gatewayNamespaceContent
 	files["gateway-class.yaml"] = gatewayClassContent
-	files["envoy-proxy-config.yaml"] = envoyProxyConfigContent
+	files["envoy-proxy-config.yaml"] = renderEnvoyProxyConfig(cfg)
 
 	// gateway.yaml holds one Gateway document per pool group (OCTR-762). In the
 	// single-pool case this is exactly the one rmpk-gateway that shipped before.
@@ -523,24 +525,38 @@ spec:
     namespace: envoy-gateway-system
 `
 
-const envoyProxyConfigContent = `apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: EnvoyProxy
-metadata:
-  name: custom-proxy-config
-  namespace: envoy-gateway-system
-spec:
-  provider:
-    type: Kubernetes
-    kubernetes:
-      envoyDaemonSet:
-        patch:
-          value:
-            spec:
-              template:
-                spec:
-                  nodeSelector:
-                    node-role.kubernetes.io/worker: "worker"
-`
+// renderEnvoyProxyConfig renders the GatewayClass-level EnvoyProxy. When the
+// gateway service pins a floating_ip, the data-plane LoadBalancer Service gets
+// the loadbalancer.openstack.org/floating-ip annotation so recreating the
+// Service (rename, Gateway re-creation) rebinds the SAME IP instead of
+// allocating a new one. The CCM honors the annotation only while the Service
+// has no status, so it must be emitted from the very first render.
+func renderEnvoyProxyConfig(cfg v2.Config) string {
+	var b strings.Builder
+	b.WriteString("apiVersion: gateway.envoyproxy.io/v1alpha1\n")
+	b.WriteString("kind: EnvoyProxy\n")
+	b.WriteString("metadata:\n")
+	b.WriteString("  name: custom-proxy-config\n")
+	b.WriteString("  namespace: envoy-gateway-system\n")
+	b.WriteString("spec:\n")
+	b.WriteString("  provider:\n")
+	b.WriteString("    type: Kubernetes\n")
+	b.WriteString("    kubernetes:\n")
+	if gw := gatewayServiceConfig(cfg); gw != nil && strings.TrimSpace(gw.FloatingIP) != "" {
+		b.WriteString("      envoyService:\n")
+		b.WriteString("        annotations:\n")
+		b.WriteString("          loadbalancer.openstack.org/floating-ip: " + strings.TrimSpace(gw.FloatingIP) + "\n")
+	}
+	b.WriteString("      envoyDaemonSet:\n")
+	b.WriteString("        patch:\n")
+	b.WriteString("          value:\n")
+	b.WriteString("            spec:\n")
+	b.WriteString("              template:\n")
+	b.WriteString("                spec:\n")
+	b.WriteString("                  nodeSelector:\n")
+	b.WriteString("                    node-role.kubernetes.io/worker: \"worker\"\n")
+	return b.String()
+}
 
 // gatewayListenerTemplates maps each Gateway listener section name to its YAML
 // block. The blocks are rendered against the full v2.Config (so the fqdn and gw

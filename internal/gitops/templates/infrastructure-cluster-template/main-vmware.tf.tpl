@@ -188,7 +188,12 @@ module "kubespray-cluster" {
   kube_oidc_groups_claim                  = local.kube_oidc_groups_claim
   kube_oidc_groups_prefix                 = local.kube_oidc_groups_prefix
   {{- end }}
-  coredns_rewrite_block                   = "rewrite name exact auth.${local.cluster_fqdn} envoy-gateway.gateway.svc.cluster.local"
+  # Envoy Gateway names the data-plane LoadBalancer Service
+  # envoy-<gateway-namespace>-<gateway-name>-<hash> in envoy-gateway-system.
+  # The control-plane Service ("envoy-gateway") does not serve traffic, and
+  # "envoy-gateway.gateway.svc" never existed, so rewriting to it made
+  # in-cluster OIDC discovery NXDOMAIN. Rewrite to the data-plane Service.
+  coredns_rewrite_block                   = "rewrite name exact auth.${local.cluster_fqdn} envoy-rackspace-system-rmpk-gateway-067d088f.envoy-gateway-system.svc.cluster.local"
 }
 
 {{- if and .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico .OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.Enabled (eq (.OpenCenter.Cluster.Kubernetes.NetworkPlugin.Calico.InstallMethod | default "helm") "kubespray") }}

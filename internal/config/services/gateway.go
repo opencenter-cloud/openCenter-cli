@@ -14,6 +14,13 @@ type GatewayConfig struct {
 	DefaultIssuer    string            `yaml:"default_issuer,omitempty" json:"default_issuer,omitempty" jsonschema:"description=Default certificate issuer for Gateway listeners"`
 	TLS              *GatewayTLSConfig `yaml:"tls,omitempty" json:"tls,omitempty" jsonschema:"description=Bring-your-own TLS configuration for Gateway listeners"`
 	Listeners        []GatewayListener `yaml:"listeners,omitempty" json:"listeners,omitempty" jsonschema:"description=List of Gateway listeners"`
+	// FloatingIP pins the OpenStack floating IP on the Envoy data-plane
+	// LoadBalancer Service (loadbalancer.openstack.org/floating-ip). The CCM
+	// only honors it while the Service has no status yet, so it must be
+	// present from the first EnsureLoadBalancer; it makes data-plane Service
+	// recreation (rename, Gateway re-creation) rebind the SAME IP instead of
+	// allocating a new one. Ignored on non-OpenStack providers.
+	FloatingIP string `yaml:"floating_ip,omitempty" json:"floating_ip,omitempty" jsonschema:"description=Pre-allocated OpenStack floating IP pinned to the Envoy data-plane LoadBalancer Service"`
 }
 
 // GatewayTLSConfig lets operators supply their own TLS material instead of

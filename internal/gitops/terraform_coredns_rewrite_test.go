@@ -42,8 +42,15 @@ func TestTerraformCoreDNSRewriteEmittedAcrossProviders(t *testing.T) {
 
 			require.Contains(t, rendered, `cluster_fqdn                            = "mycluster.example.test"`,
 				"provider %q: main.tf must define local.cluster_fqdn", provider)
-			require.Contains(t, rendered, `coredns_rewrite_block                   = "rewrite name exact auth.${local.cluster_fqdn} envoy-gateway.gateway.svc.cluster.local"`,
-				"provider %q: kubespray-cluster module must receive coredns_rewrite_block", provider)
+			// The rewrite target must be the Envoy data-plane LoadBalancer
+			// Service in envoy-gateway-system; the control-plane Service
+			// (envoy-gateway) does not serve traffic and the old
+			// "envoy-gateway.gateway.svc" target never resolved (NXDOMAIN),
+			// breaking in-cluster OIDC discovery.
+			require.Contains(t, rendered, `coredns_rewrite_block                   = "rewrite name exact auth.${local.cluster_fqdn} envoy-rackspace-system-rmpk-gateway-067d088f.envoy-gateway-system.svc.cluster.local"`,
+				"provider %q: kubespray-cluster module must rewrite auth.<fqdn> to the envoy data-plane service", provider)
+			require.NotContains(t, rendered, `envoy-gateway.gateway.svc.cluster.local`,
+				"provider %q: rewrite must not target the non-existent gateway/gateway service", provider)
 		})
 	}
 }

@@ -778,7 +778,7 @@ func TestBootstrapService_DryRunOpenStackBuildsPlanWithoutPrerequisites(t *testi
 	if result.Plan == nil {
 		t.Fatal("expected dry-run plan")
 	}
-	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", "kubespray-os-hardening", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration"}
+	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", bindNetworkOutputsStepID, "kubespray-os-hardening", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration"}
 	if got := planStepIDs(result.Plan); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("plan steps = %v, want %v", got, wantIDs)
 	}
@@ -1054,6 +1054,8 @@ func TestBootstrapService_DryRunVMwareBuildsPlan(t *testing.T) {
 	if result.Plan.Provider != "vmware" {
 		t.Fatalf("provider = %q, want vmware", result.Plan.Provider)
 	}
+	// No bind-network-outputs: the vmware template declares no openstack-nova
+	// module, so there are no network/subnet outputs to sync.
 	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", "kubespray-os-hardening", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration"}
 	if got := planStepIDs(result.Plan); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("plan steps = %v, want %v", got, wantIDs)
@@ -1194,6 +1196,8 @@ func TestBootstrapService_DryRunBaremetalBuildsPlan(t *testing.T) {
 	if result.Plan.Provider != "baremetal" {
 		t.Fatalf("provider = %q, want baremetal", result.Plan.Provider)
 	}
+	// No bind-network-outputs: the baremetal template declares no openstack-nova
+	// module, so there are no network/subnet outputs to sync.
 	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", "kubespray-os-hardening", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration"}
 	if got := planStepIDs(result.Plan); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("plan steps = %v, want %v", got, wantIDs)

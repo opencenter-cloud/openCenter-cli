@@ -14,6 +14,7 @@ import (
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/opencenter-cloud/opencenter-cli/internal/credentials"
+	"github.com/opencenter-cloud/opencenter-cli/internal/logging"
 )
 
 type openstackBootstrapProvider struct {
@@ -22,6 +23,11 @@ type openstackBootstrapProvider struct {
 	// preflight. It is a field so tests can substitute a stub; nil means the
 	// real Keystone check.
 	validateCredentials func(context.Context, *credentials.OpenStackCredentials) error
+	// persistConfig writes the cluster config to disk after the network identity
+	// is promoted. Injected rather than reached for through a global so the
+	// binding is testable and shares the service's manager (and its cache
+	// invalidation). nil leaves the promotion in memory only.
+	persistConfig networkOutputsPersister
 }
 
 const calicoStateResource = "module.calico.local_file.calico_values"
@@ -31,6 +37,42 @@ const calicoStateResource = "module.calico.local_file.calico_values"
 // never be contacted). It satisfies lifecycleBootstrapProvider.
 func newOpenStackBootstrapProvider(runner lifecycleCommandRunner) *openstackBootstrapProvider {
 	return &openstackBootstrapProvider{runner: runner, validateCredentials: ValidateOpenStackLive}
+}
+
+// persistNetworkBindings writes a config mutated by bindNetworkOutputs. Saving
+// through the manager keeps its cache consistent, so a later Load in the same
+// process sees the promoted network instead of the pre-deploy snapshot.
+func (p *openstackBootstrapProvider) persistNetworkBindings(ctx context.Context, cfg *v2.Config) error {
+	if p == nil || p.persistConfig == nil {
+		return fmt.Errorf("no configuration persister is wired for the openstack provider")
+	}
+	return p.persistConfig(ctx, cfg)
+}
+
+// isOpenStackProvider reports whether the cluster's infrastructure provider is
+// OpenStack. An unset provider means OpenStack: that is the default the config
+// loader and the templates both assume, and it is the same rule
+// ReportsKubesprayModuleContract3Gap applies. baremetal and vmware share this
+// step builder but declare no openstack-nova module, so the network/subnet
+// outputs never exist for them.
+func isOpenStackProvider(cfg *v2.Config) bool {
+	if cfg == nil {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) {
+	case "", "openstack":
+		return true
+	default:
+		return false
+	}
+}
+
+// displayNetworkID keeps progress lines readable when a value is absent.
+func displayNetworkID(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "<unset>"
+	}
+	return value
 }
 
 func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) ([]bootstrapStep, error) {
@@ -201,6 +243,49 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 				Run: func(ctx context.Context) error { return kubeLifecycle.waitCloudInit(ctx, cloudInitTimeout) },
 			},
 		)
+		// Sync the network/subnet OpenTofu just created into the cluster config,
+		// as the last thing done to the infrastructure and the first thing done
+		// before the cluster is built on top of it. `cluster provider openstack`
+		// deliberately clears these fields so OpenTofu can own them, so right here
+		// is the first moment the created IDs exist and the last moment before
+		// anything consumes them.
+		//
+		// OpenStack only: the outputs come from the openstack-nova module, which
+		// only the openstack template declares.
+		if isOpenStackProvider(cfg) {
+			bindPlan := BootstrapPlanStep{
+				ID:         bindNetworkOutputsStepID,
+				Action:     "Read opencenter_network_id/opencenter_subnet_id from the applied state and fill the empty config fields",
+				WorkingDir: clusterDir,
+				Reads:      []string{clusterDir},
+				Notes:      []string{"Plan only; the OpenTofu state was not read. No-op when the config already pins a network or the module predates lifecycle contract v3."},
+			}
+			if clusterPaths != nil {
+				bindPlan.Writes = []string{clusterPaths.ConfigPath}
+			}
+			steps = append(steps, bootstrapStep{
+				ID:          bindNetworkOutputsStepID,
+				Description: "Sync the OpenTofu-created network/subnet identity into the cluster config",
+				Plan:        bindPlan,
+				Run: func(ctx context.Context) error {
+					if opts.DryRun {
+						return nil
+					}
+					bound, err := bindNetworkOutputs(ctx, cfg, clusterDir, cfg.OpenTofu.Path, p.persistNetworkBindings)
+					if err != nil {
+						return err
+					}
+					// The provider has no user-facing writer (the service owns
+					// progress output), so the outcome goes to the debug log; the
+					// step's own completion line tells the operator it ran.
+					logging.Debugf("bootstrap: %s promoted=%v network_id=%s subnet_id=%s",
+						bindNetworkOutputsStepID, bound.Changed,
+						displayNetworkID(bound.NetworkID), displayNetworkID(bound.SubnetID))
+					return nil
+				},
+			})
+		}
+
 		if cfg.OpenCenter.Infrastructure.Networking.Security.OSHardening {
 			hardeningPlanEnv := kubeLifecycle.environment()
 			hardeningPlanEnv["ANSIBLE_ROLES_PATH"] = filepath.Join(kubeLifecycle.inventoryPath, "roles")
@@ -297,7 +382,6 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 			return normalizeOpenStackKubeconfig(clusterDir, opts.KubeconfigPath, apiEndpointIP)
 		},
 	})
-
 	networkPluginStep, err := p.buildNetworkPluginInstallStep(cfg, clusterDir, planEnv, opts)
 	if err != nil {
 		return nil, err
@@ -331,6 +415,38 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		// while cert-manager, CSI, headlamp, metrics-server and the postgres
 		// stack sat unschedulable behind the same missing key.
 		steps = append(steps, newSopsAgeSecretStep(clusterPaths.SOPSKeyPath, opts.KubeconfigPath, p.runner))
+		// The CCM overlay was rendered before the network identity existed, so
+		// its [LoadBalancer] subnet-id is blank on a tofu-managed network. Flux
+		// installs the CCM from that overlay, so the re-render has to land before
+		// the gate below observes the taint clear; otherwise the first CCM
+		// deployment comes up with the wrong VIP scope and only converges after
+		// the next Flux sync. Skipped when nothing was promoted or Octavia owns
+		// VIP allocation, so a healthy deploy leaves the GitOps tree untouched.
+		steps = append(steps, bootstrapStep{
+			ID:          rerenderCCMValuesStepID,
+			Description: "Re-render the openstack-ccm overlay with the promoted network identity",
+			Plan: BootstrapPlanStep{
+				ID:     rerenderCCMValuesStepID,
+				Action: "Re-render and promote services/openstack-ccm so the CCM override-values carries the real subnet-id",
+				Notes: []string{
+					"Plan only; runs solely when a network/subnet was promoted and use_octavia is false.",
+					"Scoped single-service render: main.tf is not re-rendered, so no OpenTofu diff is introduced.",
+				},
+			},
+			Run: func(ctx context.Context) error {
+				if opts.DryRun {
+					return nil
+				}
+				bound, err := bindNetworkOutputs(ctx, cfg, clusterDir, cfg.OpenTofu.Path, nil)
+				if err != nil {
+					return err
+				}
+				if !needsCCMNetworkRerender(cfg, bound) {
+					return nil
+				}
+				return rerenderCCMNetworkValues(ctx, cfg)
+			},
+		})
 		// The CCM is installed by Flux, so its effect can only be observed
 		// after bootstrap. This gate is what turns "cluster is up" into
 		// "cluster can actually run workloads".

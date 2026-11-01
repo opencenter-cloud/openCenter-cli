@@ -168,7 +168,7 @@ users:
 		t.Fatalf("BuildSteps() error = %v", err)
 	}
 
-	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", "kubespray-os-hardening", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration"}
+	wantIDs := []string{"preflight", "opentofu-init", "opentofu-apply", "kubespray-prepare", "kubespray-wait-cloudinit", bindNetworkOutputsStepID, "kubespray-os-hardening", "kubespray-deploy", "kubespray-export-kubeconfig", "openstack-normalize-kubeconfig", "openstack-install-network-plugin", "patch-coredns-toleration"}
 	if got := bootstrapStepIDs(steps); strings.Join(got, ",") != strings.Join(wantIDs, ",") {
 		t.Fatalf("BuildSteps() IDs = %v, want %v", got, wantIDs)
 	}
@@ -273,6 +273,77 @@ func TestOpenStackBootstrapOrdersSopsSecretBeforeCCMGate(t *testing.T) {
 	if index(sopsAgeSecretStepID) >= index(waitForCCMStepID) {
 		t.Fatalf("%s must run before %s, otherwise the gate waits on a CCM Flux can never decrypt, got %v",
 			sopsAgeSecretStepID, waitForCCMStepID, ids)
+	}
+}
+
+// The CCM is installed by Flux from the SOPS-encrypted overlay, so a re-render
+// that lands after the gate lets the first CCM deployment come up with the blank
+// subnet-id the overlay was rendered with, and the gate observes a CCM configured
+// against the wrong VIP scope. The binding also has to precede the re-render,
+// since that is what supplies the subnet being rendered.
+func TestOpenStackBootstrapOrdersNetworkBindingBeforeCCMGate(t *testing.T) {
+	ctx := context.Background()
+	resolver := paths.NewPathResolver(t.TempDir())
+	if err := resolver.CreateClusterDirectories(ctx, "net-bind-order", "test-org"); err != nil {
+		t.Fatalf("create cluster directories: %v", err)
+	}
+	clusterPaths, err := resolver.Resolve(ctx, "net-bind-order", "test-org")
+	if err != nil {
+		t.Fatalf("resolve cluster paths: %v", err)
+	}
+
+	cfg := mustNewClusterTestConfig("net-bind-order", "openstack")
+	cfg.OpenCenter.Meta.Organization = "test-org"
+	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(t.TempDir(), "repo")
+	cfg.OpenCenter.GitOps.Repository.URL = "https://github.com/example-org/net-bind-order-gitops.git"
+	cfg.OpenCenter.GitOps.Auth.Token = &v2.GitOpsTokenAuth{Provider: "github", Owner: "example-org", Token: "test-token"}
+	cfg.OpenTofu.Path = "tofu"
+
+	provider := &openstackBootstrapProvider{runner: &fakeLifecycleRunner{}}
+	steps, err := provider.BuildSteps(&cfg, clusterPaths, &BootstrapOptions{KubeconfigPath: filepath.Join(t.TempDir(), "kubeconfig.yaml")})
+	if err != nil {
+		t.Fatalf("BuildSteps() error = %v", err)
+	}
+	ids := bootstrapStepIDs(steps)
+	index := func(want string) int {
+		for i, id := range ids {
+			if id == want {
+				return i
+			}
+		}
+		return -1
+	}
+	if index(bindNetworkOutputsStepID) < 0 || index(rerenderCCMValuesStepID) < 0 {
+		t.Fatalf("expected network binding and CCM re-render steps, got %v", ids)
+	}
+	// The binding reads the applied OpenTofu state, so it is meaningless before
+	// the infrastructure actually exists.
+	if index("opentofu-apply") >= index(bindNetworkOutputsStepID) {
+		t.Fatalf("%s must run after opentofu-apply, got %v", bindNetworkOutputsStepID, ids)
+	}
+	// The config is the source of truth everything downstream renders from, so the
+	// sync has to land before the cluster is built on top of it: hardening and the
+	// Kubespray run both consume the inventory derived from it.
+	if index(bindNetworkOutputsStepID) >= index("kubespray-os-hardening") {
+		t.Fatalf("%s must run before kubespray-os-hardening, got %v", bindNetworkOutputsStepID, ids)
+	}
+	if index(bindNetworkOutputsStepID) >= index("kubespray-deploy") {
+		t.Fatalf("%s must run before kubespray-deploy, got %v", bindNetworkOutputsStepID, ids)
+	}
+	if index(bindNetworkOutputsStepID) >= index(rerenderCCMValuesStepID) {
+		t.Fatalf("%s must run after %s, which supplies the subnet it renders, got %v",
+			rerenderCCMValuesStepID, bindNetworkOutputsStepID, ids)
+	}
+	// The re-render has to reach Flux before the gate starts observing the CCM,
+	// and it writes into the GitOps tree so it needs the sops-age Secret in place
+	// for Flux to decrypt what it gets.
+	if index(rerenderCCMValuesStepID) >= index(waitForCCMStepID) {
+		t.Fatalf("%s must run before %s, otherwise the first CCM deployment uses the stale overlay, got %v",
+			rerenderCCMValuesStepID, waitForCCMStepID, ids)
+	}
+	if index(sopsAgeSecretStepID) >= index(rerenderCCMValuesStepID) {
+		t.Fatalf("%s must run before %s, otherwise Flux cannot decrypt the re-rendered overlay, got %v",
+			sopsAgeSecretStepID, rerenderCCMValuesStepID, ids)
 	}
 }
 

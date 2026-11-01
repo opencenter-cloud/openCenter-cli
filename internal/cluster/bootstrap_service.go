@@ -498,9 +498,7 @@ func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *pat
 
 	switch provider {
 	case "openstack":
-		providerImpl := newOpenStackBootstrapProvider(s.runner)
-		providerImpl.validateCredentials = s.openStackValidateCredentials
-		return providerImpl.BuildSteps(cfg, clusterPaths, opts)
+		return s.newOpenStackProvider().BuildSteps(cfg, clusterPaths, opts)
 
 	case "aws", "gcp", "azure":
 		clusterDir, err := infrastructureClusterDir(cfg)
@@ -567,9 +565,10 @@ func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *pat
 		return providerImpl.BuildSteps(cfg, clusterPaths, opts)
 
 	case "vmware", "vsphere", "baremetal":
-		providerImpl := newOpenStackBootstrapProvider(s.runner)
-		providerImpl.validateCredentials = s.openStackValidateCredentials
-		return providerImpl.BuildSteps(cfg, clusterPaths, opts)
+		// Shares the openstack step builder. Their templates declare no
+		// openstack-nova module, so the contract v3 network outputs never appear
+		// and the bind/re-render steps stay inert.
+		return s.newOpenStackProvider().BuildSteps(cfg, clusterPaths, opts)
 
 	default:
 		if opts.DryRun {
@@ -577,6 +576,17 @@ func (s *BootstrapService) buildBootstrapSteps(cfg *v2.Config, clusterPaths *pat
 		}
 		return nil, fmt.Errorf("unsupported provider %q", provider)
 	}
+}
+
+// newOpenStackProvider builds the OpenStack step provider with the service's
+// credential preflight and config persister wired in.
+func (s *BootstrapService) newOpenStackProvider() *openstackBootstrapProvider {
+	providerImpl := newOpenStackBootstrapProvider(s.runner)
+	providerImpl.validateCredentials = s.openStackValidateCredentials
+	if s.configurationMgr != nil {
+		providerImpl.persistConfig = s.configurationMgr.Save
+	}
+	return providerImpl
 }
 
 func (s *BootstrapService) executeBootstrapSteps(ctx context.Context, selectedSteps []bootstrapStep, ignoreState bool, stateEnabled bool, statePath string, state *bootstrapState, result *BootstrapResult, opts *BootstrapOptions) error {

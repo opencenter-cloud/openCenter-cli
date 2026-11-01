@@ -23,6 +23,9 @@ const (
 	FieldOriginLive    FieldOrigin = "live"
 	FieldOriginDefault FieldOrigin = "default"
 	FieldOriginManual  FieldOrigin = "manual"
+	// FieldOriginTerraform marks a value read from the applied OpenTofu state,
+	// i.e. infrastructure that exists because the CLI provisioned it.
+	FieldOriginTerraform FieldOrigin = "terraform"
 )
 
 type EvidenceRef struct {

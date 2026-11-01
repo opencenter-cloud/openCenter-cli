@@ -101,7 +101,9 @@ opencenter cluster [flags]
 * [opencenter cluster lock](opencenter_cluster_lock.md)	 - Lock a cluster to prevent modifications
 * [opencenter cluster migrate-layout](opencenter_cluster_migrate-layout.md)	 - Migrate legacy cluster files into secure GitOps, state, and secrets zones
 * [opencenter cluster normalize](opencenter_cluster_normalize.md)	 - Add missing default fields to a cluster configuration
+* [opencenter cluster observe](opencenter_cluster_observe.md)	 - Report differences between the deployed cluster and its config
 * [opencenter cluster pool](opencenter_cluster_pool.md)	 - Manage worker pools
+* [opencenter cluster promote](opencenter_cluster_promote.md)	 - Write observed deployed-cluster values into the cluster config
 * [opencenter cluster provider](opencenter_cluster_provider.md)	 - Manage provider configuration
 * [opencenter cluster service](opencenter_cluster_service.md)	 - Manage cluster services
 * [opencenter cluster set](opencenter_cluster_set.md)	 - Set fields in an existing cluster configuration

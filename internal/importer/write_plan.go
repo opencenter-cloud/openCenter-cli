@@ -150,7 +150,7 @@ func patchYAMLBytes(path string, original []byte, updates []FieldInferenceResult
 
 	root := ensureDocumentRoot(&document)
 	for _, update := range updates {
-		if err := setYAMLPath(root, update.Path, update.Value); err != nil {
+		if err := SetYAMLPath(root, update.Path, update.Value); err != nil {
 			return nil, "", fmt.Errorf("set yaml path %q: %w", update.Path, err)
 		}
 	}

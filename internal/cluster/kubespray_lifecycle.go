@@ -15,6 +15,7 @@ import (
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
+	"github.com/opencenter-cloud/opencenter-cli/internal/tofuoutput"
 	"gopkg.in/yaml.v3"
 )
 
@@ -211,40 +212,30 @@ func (l *kubesprayLifecycle) loadOutputs() error {
 }
 
 func parseKubesprayLifecycleOutputs(data []byte) (kubesprayLifecycleOutputs, error) {
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
+	parsed, err := tofuoutput.Parse(data)
+	if err != nil {
 		return kubesprayLifecycleOutputs{}, fmt.Errorf("parse Kubespray OpenTofu outputs: %w", err)
 	}
 	var outputs kubesprayLifecycleOutputs
-	outputValue := func(name string) (json.RawMessage, bool) {
-		value, ok := raw[name]
-		if !ok || string(value) == "null" {
-			return nil, false
-		}
-		// `tofu output -json` returns {"value": ...} for named outputs.
-		// Accept direct values too; this keeps parsing compatible with small
-		// test runners and older Terraform-compatible implementations.
-		var envelope map[string]json.RawMessage
-		if err := json.Unmarshal(value, &envelope); err == nil {
-			if nested, exists := envelope["value"]; exists {
-				return nested, string(nested) != "null"
-			}
-		}
-		return value, true
-	}
 	decodeString := func(name string, target *string) error {
-		value, ok := outputValue(name)
+		value, ok := parsed.String(name)
 		if !ok {
 			return nil
 		}
-		return json.Unmarshal(value, target)
+		*target = value
+		return nil
 	}
 	if err := decodeString("opencenter_kubespray_inventory_path", &outputs.InventoryPath); err != nil {
 		return outputs, fmt.Errorf("decode Kubespray inventory output: %w", err)
 	}
 	if err := decodeString("opencenter_kubespray_lifecycle_contract_version", &outputs.ContractVersion); err != nil {
-		var number json.Number
-		if rawValue, ok := outputValue("opencenter_kubespray_lifecycle_contract_version"); ok {
+		return outputs, fmt.Errorf("decode Kubespray lifecycle contract output: %w", err)
+	}
+	// A module may emit the contract version as a number; the CLI compares it
+	// as a string.
+	if outputs.ContractVersion == "" {
+		if rawValue, ok := parsed.Raw("opencenter_kubespray_lifecycle_contract_version"); ok {
+			var number json.Number
 			if err := json.Unmarshal(rawValue, &number); err == nil {
 				outputs.ContractVersion = number.String()
 			}
@@ -253,7 +244,7 @@ func parseKubesprayLifecycleOutputs(data []byte) (kubesprayLifecycleOutputs, err
 	if err := decodeString("opencenter_kubespray_api_address", &outputs.APIAddress); err != nil {
 		return outputs, fmt.Errorf("decode Kubespray API address output: %w", err)
 	}
-	if rawValue, ok := outputValue("opencenter_kubespray_api_port"); ok {
+	if rawValue, ok := parsed.Raw("opencenter_kubespray_api_port"); ok {
 		if err := json.Unmarshal(rawValue, &outputs.APIPort); err != nil {
 			return outputs, fmt.Errorf("decode Kubespray API port output: %w", err)
 		}

@@ -15,14 +15,15 @@ package importer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/tofuoutput"
 )
 
 // TerraformOutputNames are the OpenTofu outputs `cluster observe` promotes into
@@ -33,15 +34,6 @@ const (
 	TerraformOutputNetworkID = "opencenter_network_id"
 	TerraformOutputSubnetID  = "opencenter_subnet_id"
 )
-
-// TerraformObservation is one OpenTofu output paired with the config path it
-// promotes to. The path is empty when no config field owns the output, which
-// keeps the mapping in one place instead of spreading it across callers.
-type TerraformObservation struct {
-	Output string
-	Path   string
-	Value  string
-}
 
 // terraformFieldPaths maps an OpenTofu output name to the cluster-config path
 // that owns the value. Both the flat and the nested openstack networking fields
@@ -88,11 +80,8 @@ func ObserveTerraform(ctx context.Context, cfg *v2.Config, clusterDir string, to
 	if info, err := os.Stat(clusterDir); err != nil || !info.IsDir() {
 		return nil, nil, nil
 	}
-	if strings.TrimSpace(tofuPath) == "" {
-		tofuPath = "tofu"
-	}
 
-	outputs, err := readTerraformOutputs(ctx, clusterDir, tofuPath)
+	outputs, err := tofuoutput.Run(ctx, clusterDir, tofuPath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -103,7 +92,7 @@ func ObserveTerraform(ctx context.Context, cfg *v2.Config, clusterDir string, to
 	var inferred []FieldInferenceResult
 	var conflicts []FieldConflict
 	for _, outputName := range []string{TerraformOutputNetworkID, TerraformOutputSubnetID} {
-		value, ok := outputs[outputName]
+		value, ok := outputs.String(outputName)
 		if !ok || strings.TrimSpace(value) == "" {
 			continue
 		}
@@ -112,7 +101,7 @@ func ObserveTerraform(ctx context.Context, cfg *v2.Config, clusterDir string, to
 			continue
 		}
 		for _, path := range paths {
-			current := strings.TrimSpace(readConfigPath(cfg, path))
+			current := strings.TrimSpace(cfgPathValue(cfg, path))
 			evidence := []EvidenceRef{{
 				Source: "tofu",
 				Path:   clusterDir,
@@ -156,82 +145,32 @@ func ObserveTerraformFromConfig(ctx context.Context, cfg *v2.Config, tofuPath st
 	return ObserveTerraform(ctx, cfg, filepath.Join(gitDir, "infrastructure", "clusters", clusterName), tofuPath)
 }
 
-// readTerraformOutputs runs `tofu output -json` and flattens it to name → string
-// value. Outputs whose value is not a string (or is null) are skipped: the
-// contract only defines string identity outputs, and a list-valued output is not
-// something a config scalar can hold.
-func readTerraformOutputs(ctx context.Context, clusterDir, tofuPath string) (map[string]string, error) {
-	cmd := exec.CommandContext(ctx, tofuPath, "output", "-json")
-	cmd.Dir = clusterDir
-	output, err := cmd.Output()
-	if err != nil {
-		// No state yet (never applied) is an ordinary observation, not a
-		// failure: there is simply nothing to promote.
-		if len(output) == 0 {
-			if ee, ok := err.(*exec.ExitError); ok && looksLikeMissingState(string(ee.Stderr)) {
-				return nil, nil
-			}
-		}
-		return nil, fmt.Errorf("read OpenTofu outputs in %s: %w", clusterDir, err)
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(output, &raw); err != nil {
-		return nil, fmt.Errorf("parse OpenTofu outputs in %s: %w", clusterDir, err)
-	}
-	result := make(map[string]string, len(raw))
-	for name, value := range raw {
-		if string(value) == "null" {
-			continue
-		}
-		// `tofu output -json` wraps each output as {"value": ...}. Accept a bare
-		// value too, matching the tolerant parser used during deploy.
-		var envelope map[string]json.RawMessage
-		if err := json.Unmarshal(value, &envelope); err == nil {
-			if nested, exists := envelope["value"]; exists {
-				value = nested
-			}
-		}
-		var text string
-		if err := json.Unmarshal(value, &text); err != nil {
-			continue
-		}
-		result[name] = text
-	}
-	return result, nil
-}
-
-func looksLikeMissingState(stderr string) bool {
-	lowered := strings.ToLower(stderr)
-	return strings.Contains(lowered, "no state file was found") ||
-		strings.Contains(lowered, "command \"output\" failed")
-}
-
-// readConfigPath reads a dotted cluster-config path for the subset observe
-// understands. It is deliberately a closed switch rather than reflection: an
-// unmapped path returns "" so it is reported as promotable, and adding an output
-// means adding a case here plus its entry in terraformFieldPaths, which keeps
-// the two lists reviewable together.
-func readConfigPath(cfg *v2.Config, path string) string {
+// cfgPathValue reads a dotted cluster-config path generically: the public
+// serialization is decoded into a YAML document and the path is walked, so
+// every field the config file can hold is readable without a per-field switch
+// that drifts from the writer. An unreadable path is "" (the field is absent),
+// matching how the config file itself would present it.
+func cfgPathValue(cfg *v2.Config, path string) string {
 	if cfg == nil {
 		return ""
 	}
-	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
-	if openstack == nil {
+	data, err := v2.MarshalPublicConfig(cfg)
+	if err != nil {
 		return ""
 	}
-	switch path {
-	case "opencenter.infrastructure.cloud.openstack.network_id":
-		return openstack.NetworkID
-	case "opencenter.infrastructure.cloud.openstack.subnet_id":
-		return openstack.SubnetID
-	case "opencenter.infrastructure.cloud.openstack.networking.network_id":
-		if openstack.Networking != nil {
-			return openstack.Networking.NetworkID
-		}
-	case "opencenter.infrastructure.cloud.openstack.networking.subnet_id":
-		if openstack.Networking != nil {
-			return openstack.Networking.SubnetID
-		}
+	var document yaml.Node
+	if err := yaml.Unmarshal(data, &document); err != nil || len(document.Content) == 0 {
+		return ""
 	}
-	return ""
+	node := document.Content[0]
+	for _, part := range strings.Split(strings.TrimSpace(path), ".") {
+		if node == nil || node.Kind != yaml.MappingNode {
+			return ""
+		}
+		node = findMappingValue(node, part)
+	}
+	if node == nil || node.Kind != yaml.ScalarNode {
+		return ""
+	}
+	return node.Value
 }

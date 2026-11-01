@@ -77,7 +77,7 @@ func PatchYAMLFile(path string, updates []FieldInferenceResult) (*PatchResult, e
 
 	root := ensureDocumentRoot(&document)
 	for _, update := range updates {
-		if err := setYAMLPath(root, update.Path, update.Value); err != nil {
+		if err := SetYAMLPath(root, update.Path, update.Value); err != nil {
 			return nil, fmt.Errorf("set yaml path %q: %w", update.Path, err)
 		}
 	}
@@ -124,7 +124,12 @@ func ensureDocumentRoot(document *yaml.Node) *yaml.Node {
 	return root
 }
 
-func setYAMLPath(root *yaml.Node, path string, value any) error {
+// SetYAMLPath writes value at the dotted path (for example
+// "opencenter.infrastructure.cloud.openstack.subnet_id"), creating the
+// intermediate mappings. It is the repo's generic config-path writer: the
+// import write plan, `cluster promote`, and the deploy network-binding all
+// patch through it so a config field has exactly one write mechanism.
+func SetYAMLPath(root *yaml.Node, path string, value any) error {
 	parts := strings.Split(strings.TrimSpace(path), ".")
 	if len(parts) == 0 {
 		return fmt.Errorf("path cannot be empty")

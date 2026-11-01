@@ -69,18 +69,25 @@ func newClusterServiceEnableCmd() *cobra.Command {
 If the service requires additional parameters or secrets, they must be provided
 as flags. If they are missing, the command will return an error with an example.
 
+Service configuration is decoupled from manifest rendering. After enabling a service,
+the next step is to execute 'opencenter cluster generate' (or 'opencenter cluster generate --render-only')
+to render all changes across the cluster manifests.
+
 Examples:
   # Enable the 'cert-manager' service with Cloudflare DNS (the default provider) and pin
   # the token's credential as the cluster default issuer; --default=false clears that pin
   opencenter cluster service enable cert-manager --param="email=$CLOUDFLARE_DNS_EMAIL" --param="dns_provider=cloudflare" --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" --default --force
 
+  # Next step: render all cluster manifests
+  opencenter cluster generate
+
   # Enable a managed service with a secret
   opencenter cluster service enable my-managed-service --managed --secret="api_key=some_secret_value"
 
-  # Force re-enable (re-render) an already enabled service
+  # Force re-enable an already enabled service
   opencenter cluster service enable prometheus --force
 
-  # Enable a service and immediately render its templates
+  # Enable a service and scoped-render only its own templates
   opencenter cluster service enable loki --render`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -222,6 +229,9 @@ Examples:
 					return fmt.Errorf("failed to render service: %w", err)
 				}
 				printPromotionSummary(cmd, promotion)
+				fmt.Fprintf(cmd.OutOrStdout(), "Note: Scoped render completed for service '%s'. Dependent resources (such as Gateway annotations and routes) require running 'opencenter cluster generate' to render all changes.\n", serviceName)
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), "Next step: execute 'opencenter cluster generate' to render all changes.\n")
 			}
 
 			return nil
@@ -234,7 +244,7 @@ Examples:
 	cmd.Flags().StringSliceVar(&secrets, "secret", []string{}, "Set a service secret (e.g., --secret key=value)")
 	cmd.Flags().StringVar(&cluster, "cluster", "", "Specify the cluster name")
 	cmd.Flags().BoolVar(&force, "force", false, "Force re-enable an already enabled service to re-render configuration")
-	cmd.Flags().BoolVar(&render, "render", false, "Render the service templates immediately after enabling")
+	cmd.Flags().BoolVar(&render, "render", false, "Render the service templates immediately after enabling (scoped render; run 'opencenter cluster generate' to update dependent resources)")
 	cmd.Flags().BoolVar(&adoptGenerated, "adopt-generated", false, "Claim differing planned files after creating backups during --render")
 	cmd.Flags().BoolVar(&prune, "prune", true, "Remove stale generated files during --render")
 	// Tri-state by absence: unset leaves services.cert-manager.default_credential

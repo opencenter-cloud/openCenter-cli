@@ -13,6 +13,13 @@ type HarborConfig struct {
 	Hostname    string `yaml:"hostname,omitempty" json:"hostname,omitempty" jsonschema:"description=Harbor external hostname"`
 	ExternalURL string `yaml:"external_url,omitempty" json:"external_url,omitempty" jsonschema:"description=External URL for Harbor"`
 
+	// IssuerRef names the ClusterIssuer that mints Harbor's certificate.
+	// Empty means "same issuer the Gateway listener in front of me uses", which
+	// keeps the listener and the leaf certificate in agreement. Pin it only to
+	// deliberately use a different CA for this service than the rest of the
+	// cluster.
+	IssuerRef string `yaml:"issuer_ref,omitempty" json:"issuer_ref,omitempty" jsonschema:"description=ClusterIssuer for this service certificate; defaults to the cluster default issuer"`
+
 	// Storage
 	StorageType          string `yaml:"storage_type,omitempty" json:"storage_type,omitempty" validate:"oneof=s3 filesystem" jsonschema:"description=Storage backend type,enum=s3,enum=filesystem,default=s3"`
 	RegistryVolumeSize   int    `yaml:"registry_volume_size,omitempty" json:"registry_volume_size,omitempty" validate:"min=1" jsonschema:"description=Registry PVC size in GB; retained for compatibility and required Harbor cache/state,default=100"`

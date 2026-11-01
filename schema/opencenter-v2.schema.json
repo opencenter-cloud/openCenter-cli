@@ -3217,6 +3217,9 @@
                   },
                   "type": "object"
                 },
+                "issuer_ref": {
+                  "type": "string"
+                },
                 "jobservice_volume_size": {
                   "minimum": 1,
                   "type": "integer"
@@ -5490,6 +5493,9 @@
                     }
                   },
                   "type": "object"
+                },
+                "issuer_ref": {
+                  "type": "string"
                 },
                 "jobservice_volume_size": {
                   "minimum": 1,
@@ -7840,6 +7846,9 @@
                     }
                   },
                   "type": "object"
+                },
+                "issuer_ref": {
+                  "type": "string"
                 },
                 "jobservice_volume_size": {
                   "minimum": 1,

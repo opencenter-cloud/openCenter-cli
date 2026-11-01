@@ -108,7 +108,18 @@ the repository in plaintext unnoticed. See
 ## Commands
 
 ```bash
-opencenter cluster service enable cert-manager
+# Enable cert-manager with Cloudflare and pin it as default issuer
+opencenter cluster service enable cert-manager \
+  --param="email=$CLOUDFLARE_DNS_EMAIL" \
+  --param="dns_provider=cloudflare" \
+  --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" \
+  --default \
+  --force
+
+# Service enablement is decoupled from rendering; the next step is to execute
+# 'opencenter cluster generate' to render all changes across the cluster manifests:
+opencenter cluster generate
+
 opencenter cluster service disable cert-manager
 opencenter cluster service options cert-manager
 ```

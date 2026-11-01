@@ -8,5 +8,5 @@ spec:
   dnsNames:
     - {{ (index .OpenCenter.Services "harbor").Hostname | default (printf "harbor.%s" .OpenCenter.Cluster.ClusterFQDN) }}
   issuerRef:
-    name: {{ (index .OpenCenter.Services "gateway").DefaultIssuer | default "rackspace-ca" }}
+    name: {{ defaultIssuer ((index .OpenCenter.Services "harbor").IssuerRef | default "") }}
     kind: ClusterIssuer

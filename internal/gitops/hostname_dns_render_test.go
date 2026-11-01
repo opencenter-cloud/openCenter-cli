@@ -180,3 +180,48 @@ func TestKeycloakCertificateAndGatewayAgreeOnIssuer(t *testing.T) {
 		t.Errorf("keycloak Certificate issuer does not follow the Gateway issuer %q\nGot:\n%s", want, certificate)
 	}
 }
+
+// TestHarborCertificateAndGatewayAgreeOnIssuer verifies that Harbor's standalone
+// Certificate follows the Gateway default issuer (e.g. ACME Cloudflare) rather
+// than staying pinned to rackspace-ca.
+func TestHarborCertificateAndGatewayAgreeOnIssuer(t *testing.T) {
+	cfg := newDefault("harbor-issuer-agree")
+	certManager, ok := cfg.OpenCenter.Services["cert-manager"].(*services.CertManagerConfig)
+	if !ok || certManager == nil {
+		t.Fatal("cert-manager service config missing")
+	}
+	certManager.Enabled = true
+	certManager.DNSProvider = "cloudflare"
+	certManager.Email = "ops@example.com"
+	cfg.Secrets.CertManager.Cloudflare = map[string]v2.CertManagerCloudflareCredential{
+		"cf": {Enabled: true, APIToken: "tok", DNSZones: []string{"k8s.opensnack.cloud"}},
+	}
+
+	harbor, ok := cfg.OpenCenter.Services["harbor"].(*services.HarborConfig)
+	if !ok || harbor == nil {
+		t.Fatal("harbor service config missing")
+	}
+	harbor.Enabled = true
+	harbor.EmitCertificate = true
+
+	want := gatewayDefaultIssuer(cfg)
+	if want == "rackspace-ca" {
+		t.Fatalf("fixture produced no ACME issuer; dns_provider wiring regressed (issuer %q)", want)
+	}
+
+	dst := t.TempDir()
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps() error = %v", err)
+	}
+
+	path := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(),
+		"services", "harbor", "certificate.yaml")
+	certificate, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	if !strings.Contains(string(certificate), "name: "+want) {
+		t.Errorf("harbor Certificate issuer does not follow the Gateway issuer %q\nGot:\n%s", want, certificate)
+	}
+}

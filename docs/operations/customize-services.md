@@ -21,9 +21,12 @@ opencenter cluster service disable SERVICE --cluster ORG/CLUSTER
 ```
 
 `enable` accepts repeatable `--param key=value` and `--secret key=value`
-options. `--managed` marks the service as managed; `--render` renders after the
-change. `disable` also accepts `--managed` and `--render`. Both render paths
-accept `--prune` and `--adopt-generated`.
+options. Use `--default` with `cert-manager` to pin the DNS credential as the
+cluster default issuer. Service enablement is decoupled from rendering: after
+enabling or modifying services, the next step is to execute `opencenter cluster generate`
+(or `opencenter cluster generate --render-only`) to render all changes across
+the cluster manifests. The optional `--render` flag performs a scoped render of
+that single service only. Both render paths accept `--prune` and `--adopt-generated`.
 
 For direct field edits, use native dot notation:
 

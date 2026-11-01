@@ -18,18 +18,25 @@ This command enables a service in the cluster configuration.
 If the service requires additional parameters or secrets, they must be provided
 as flags. If they are missing, the command will return an error with an example.
 
+Service configuration is decoupled from manifest rendering. After enabling a service,
+the next step is to execute 'opencenter cluster generate' (or 'opencenter cluster generate --render-only')
+to render all changes across the cluster manifests.
+
 Examples:
   # Enable the 'cert-manager' service with Cloudflare DNS (the default provider) and pin
   # the token's credential as the cluster default issuer; --default=false clears that pin
   opencenter cluster service enable cert-manager --param="email=$CLOUDFLARE_DNS_EMAIL" --param="dns_provider=cloudflare" --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" --default --force
 
+  # Next step: render all cluster manifests
+  opencenter cluster generate
+
   # Enable a managed service with a secret
   opencenter cluster service enable my-managed-service --managed --secret="api_key=some_secret_value"
 
-  # Force re-enable (re-render) an already enabled service
+  # Force re-enable an already enabled service
   opencenter cluster service enable prometheus --force
 
-  # Enable a service and immediately render its templates
+  # Enable a service and scoped-render only its own templates
   opencenter cluster service enable loki --render
 
 ```
@@ -47,7 +54,7 @@ opencenter cluster service enable <service-name> [flags]
       --managed             Enable the service as a managed service
       --param stringArray   Set a service parameter (e.g., --param key=value)
       --prune               Remove stale generated files during --render (default true)
-      --render              Render the service templates immediately after enabling
+      --render              Render the service templates immediately after enabling (scoped render; run 'opencenter cluster generate' to update dependent resources)
       --secret strings      Set a service secret (e.g., --secret key=value)
 ```
 

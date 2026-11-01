@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/importer"
 )
 
 // writeStubTofu installs a fake `tofu` that answers `tofu output -json` with the
@@ -204,44 +205,64 @@ func TestNeedsCCMNetworkRerender(t *testing.T) {
 	}
 }
 
-func TestApplyNetworkField(t *testing.T) {
-	cfg := mustNewClusterTestConfig("apply-field", "openstack")
+// TestApplyConfigPathsPatchesEveryOwnedPath proves the generic writer lands
+// each dotted path the observer can report, including the nested networking
+// pair, in one patch pass.
+func TestApplyConfigPathsPatchesEveryOwnedPath(t *testing.T) {
+	cfg := mustNewClusterTestConfig("apply-paths", "openstack")
 	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
 	openstack.NetworkID = ""
 	openstack.SubnetID = ""
 	openstack.Networking.NetworkID = ""
 	openstack.Networking.SubnetID = ""
 
-	cases := []struct {
-		path string
-		want func() bool
-	}{
-		{"opencenter.infrastructure.cloud.openstack.network_id", func() bool { return openstack.NetworkID == "v" }},
-		{"opencenter.infrastructure.cloud.openstack.subnet_id", func() bool { return openstack.SubnetID == "v" }},
-		{"opencenter.infrastructure.cloud.openstack.networking.network_id", func() bool { return openstack.Networking.NetworkID == "v" }},
-		{"opencenter.infrastructure.cloud.openstack.networking.subnet_id", func() bool { return openstack.Networking.SubnetID == "v" }},
+	updates := []importer.FieldInferenceResult{
+		{Path: "opencenter.infrastructure.cloud.openstack.network_id", Value: "net-1"},
+		{Path: "opencenter.infrastructure.cloud.openstack.subnet_id", Value: "sub-1"},
+		{Path: "opencenter.infrastructure.cloud.openstack.networking.network_id", Value: "net-1"},
+		{Path: "opencenter.infrastructure.cloud.openstack.networking.subnet_id", Value: "sub-1"},
 	}
-	for _, test := range cases {
-		if !applyNetworkField(&cfg, test.path, "v") {
-			t.Errorf("applyNetworkField(%q) = false, want true", test.path)
-			continue
-		}
-		if !test.want() {
-			t.Errorf("applyNetworkField(%q) did not write the value", test.path)
-		}
+	changed, err := applyConfigPaths(&cfg, updates)
+	if err != nil {
+		t.Fatalf("applyConfigPaths() error = %v", err)
 	}
+	if !changed {
+		t.Fatal("applyConfigPaths() reported no change")
+	}
+	if openstack.NetworkID != "net-1" || openstack.SubnetID != "sub-1" {
+		t.Fatalf("flat fields not patched: network_id=%q subnet_id=%q", openstack.NetworkID, openstack.SubnetID)
+	}
+	if openstack.Networking == nil {
+		t.Fatal("nested networking block missing after patch")
+	}
+	if openstack.Networking.NetworkID != "net-1" || openstack.Networking.SubnetID != "sub-1" {
+		t.Fatalf("nested fields not patched: %+v", openstack.Networking)
+	}
+}
 
-	// An unknown path must be refused rather than silently dropped.
-	if applyNetworkField(&cfg, "opencenter.infrastructure.cloud.openstack.flavor_master", "v") {
-		t.Error("applyNetworkField accepted a path it does not own")
-	}
+// TestApplyConfigPathsAllocatesMissingNetworking pins the nil-pointer guard:
+// a config whose nested networking block was never hydrated must gain the
+// full flat+nested pair rather than dropping the nested half.
+func TestApplyConfigPathsAllocatesMissingNetworking(t *testing.T) {
+	cfg := mustNewClusterTestConfig("apply-paths-nil", "openstack")
+	cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Networking = nil
 
-	// A second write to the same path is refused: the first value wins.
-	if applyNetworkField(&cfg, "opencenter.infrastructure.cloud.openstack.subnet_id", "other") {
-		t.Error("applyNetworkField overwrote a value it had just written")
+	changed, err := applyConfigPaths(&cfg, []importer.FieldInferenceResult{
+		{Path: "opencenter.infrastructure.cloud.openstack.subnet_id", Value: "sub-2"},
+		{Path: "opencenter.infrastructure.cloud.openstack.networking.subnet_id", Value: "sub-2"},
+	})
+	if err != nil {
+		t.Fatalf("applyConfigPaths() error = %v", err)
 	}
-	if openstack.SubnetID != "v" {
-		t.Errorf("SubnetID = %q, want the first value v", openstack.SubnetID)
+	if !changed {
+		t.Fatal("applyConfigPaths() reported no change")
+	}
+	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
+	if openstack.SubnetID != "sub-2" {
+		t.Fatalf("SubnetID = %q, want sub-2", openstack.SubnetID)
+	}
+	if openstack.Networking == nil || openstack.Networking.SubnetID != "sub-2" {
+		t.Fatalf("nested subnet_id not allocated: %+v", openstack.Networking)
 	}
 }
 

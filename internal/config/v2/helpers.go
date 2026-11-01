@@ -26,6 +26,35 @@ func (c Config) Provider() string {
 	return strings.TrimSpace(c.OpenCenter.Infrastructure.Provider)
 }
 
+// IsOpenStack reports whether the cluster's infrastructure provider is
+// OpenStack. An unset provider means OpenStack: that is the default the config
+// loader, the templates, and the provider registry all assume. Use this instead
+// of restating the rule at each call site; strict equality on the raw field
+// silently misclassifies the empty default.
+func (c Config) IsOpenStack() bool {
+	switch strings.ToLower(strings.TrimSpace(c.OpenCenter.Infrastructure.Provider)) {
+	case "", "openstack":
+		return true
+	default:
+		return false
+	}
+}
+
+// EnsureNetworking allocates the nested openstack networking block when it is
+// absent, so a writer can populate networking.* fields without a nil check at
+// each call site. The flat and nested openstack network representations are
+// kept in sync by every writer (the guided configure flow, the provider
+// binding, the provider selection command); this is where the nested half of
+// that pair is guaranteed to exist.
+func (c *OpenStackCloudConfig) EnsureNetworking() {
+	if c == nil {
+		return
+	}
+	if c.Networking == nil {
+		c.Networking = &OpenStackNetworkingConfig{}
+	}
+}
+
 // GitOps returns the GitOps configuration block.
 func (c Config) GitOps() GitOpsConfig {
 	return c.OpenCenter.GitOps

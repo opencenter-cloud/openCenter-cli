@@ -558,7 +558,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		} else if ok {
 			set("opencenter.infrastructure.cloud.openstack.network_id", &osCfg.NetworkID, selected.ID, false)
 			set("opencenter.infrastructure.cloud.openstack.network_name", &osCfg.NetworkName, selected.Name, false)
-			ensureNetworking(osCfg)
+			osCfg.EnsureNetworking()
 			set("opencenter.infrastructure.cloud.openstack.networking.network_id", &osCfg.Networking.NetworkID, selected.ID, false)
 		}
 	}
@@ -580,7 +580,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 		set("opencenter.infrastructure.cloud.openstack.router_external_network_id", &osCfg.RouterExternalNetworkID, selected.ID, false)
 		set("opencenter.infrastructure.cloud.openstack.floating_ip_pool", &osCfg.FloatingIPPool, selected.Name, false)
 		set("opencenter.infrastructure.cloud.openstack.external_network_name", &osCfg.ExternalNetworkName, selected.Name, false)
-		ensureNetworking(osCfg)
+		osCfg.EnsureNetworking()
 		set("opencenter.infrastructure.cloud.openstack.networking.floating_network_id", &osCfg.Networking.FloatingNetworkID, selected.ID, false)
 		set("opencenter.infrastructure.cloud.openstack.networking.router_external_network_id", &osCfg.Networking.RouterExternalNetworkID, selected.ID, false)
 		set("opencenter.infrastructure.cloud.openstack.networking.floating_ip_pool", &osCfg.Networking.FloatingIPPool, selected.Name, false)
@@ -616,7 +616,7 @@ func Plan(ctx context.Context, cfg *v2.Config, snapshot *cloudopenstack.Discover
 			blocked = true
 		} else if ok {
 			set("opencenter.infrastructure.cloud.openstack.subnet_id", &osCfg.SubnetID, selected.ID, false)
-			ensureNetworking(osCfg)
+			osCfg.EnsureNetworking()
 			set("opencenter.infrastructure.cloud.openstack.networking.subnet_id", &osCfg.Networking.SubnetID, selected.ID, false)
 		}
 	}
@@ -835,12 +835,6 @@ func cloneBastionAndPools(cfg *v2.Config) {
 		pools := make([]v2.WorkerPoolConfig, len(cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker))
 		copy(pools, cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker)
 		cfg.OpenCenter.Infrastructure.Compute.AdditionalServerPoolsWorker = pools
-	}
-}
-
-func ensureNetworking(cfg *v2.OpenStackCloudConfig) {
-	if cfg.Networking == nil {
-		cfg.Networking = &v2.OpenStackNetworkingConfig{}
 	}
 }
 

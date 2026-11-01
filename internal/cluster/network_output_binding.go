@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
 	"github.com/opencenter-cloud/opencenter-cli/internal/gitops"
 	"github.com/opencenter-cloud/opencenter-cli/internal/importer"
@@ -98,6 +100,7 @@ func bindNetworkOutputs(ctx context.Context, cfg *v2.Config, clusterDir, tofuPat
 	}
 
 	bound := &networkOutputsBinding{}
+	promotable := make([]importer.FieldInferenceResult, 0, len(inferred))
 	for _, field := range inferred {
 		if importer.IsProtectedField(field.Path) {
 			continue
@@ -106,9 +109,15 @@ func bindNetworkOutputs(ctx context.Context, cfg *v2.Config, clusterDir, tofuPat
 		if !ok || strings.TrimSpace(value) == "" {
 			continue
 		}
-		if applyNetworkField(cfg, field.Path, strings.TrimSpace(value)) {
-			bound.Changed = true
+		field.Value = strings.TrimSpace(value)
+		promotable = append(promotable, field)
+	}
+	if len(promotable) > 0 {
+		changed, err := applyConfigPaths(cfg, promotable)
+		if err != nil {
+			return nil, err
 		}
+		bound.Changed = changed
 	}
 
 	bound.NetworkID = openstackEffectiveNetworkID(cfg)
@@ -122,41 +131,58 @@ func bindNetworkOutputs(ctx context.Context, cfg *v2.Config, clusterDir, tofuPat
 	return bound, nil
 }
 
-// applyNetworkField writes one promoted value into the config. Both the flat and
-// the nested openstack representation are written, because the guided configure
-// flow keeps them in sync (openstack_configure_orchestrator.go) and a
-// half-updated pair would render differently depending on which one a template
-// reads. Returns false when the target already held a value.
-func applyNetworkField(cfg *v2.Config, path, value string) bool {
+// applyConfigPaths patches dotted config paths into the config through the
+// importer's generic YAML path writer - the same mechanism `cluster promote`
+// and the import write plan use - then decodes the patched document back into
+// the live config. One write mechanism means the deploy-time binding and the
+// operator-facing promote can never disagree about how a field is written.
+//
+// ObserveTerraform only reports a field when the config holds nothing there
+// (a populated field is a conflict, kept by the config), so the patch never
+// overwrites an operator selection; that guard lives in the observer, not in
+// a per-field switch here. The nested networking block is allocated after the
+// patch so a config without one still gains the full flat+nested pair,
+// matching what the provider selection command (provider/openstack/service.go)
+// keeps in sync.
+//
+// The round-trip is public serialization only: secrets live in the dedicated
+// secret artifacts, so nothing user-visible is rewritten, and the caller
+// persists through the configuration manager exactly as before.
+//
+// Returns whether any value actually changed.
+func applyConfigPaths(cfg *v2.Config, updates []importer.FieldInferenceResult) (bool, error) {
 	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
 	if openstack == nil {
-		return false
+		return false, nil
 	}
-	switch path {
-	case "opencenter.infrastructure.cloud.openstack.network_id":
-		if strings.TrimSpace(openstack.NetworkID) != "" {
-			return false
-		}
-		openstack.NetworkID = value
-	case "opencenter.infrastructure.cloud.openstack.subnet_id":
-		if strings.TrimSpace(openstack.SubnetID) != "" {
-			return false
-		}
-		openstack.SubnetID = value
-	case "opencenter.infrastructure.cloud.openstack.networking.network_id":
-		if openstack.Networking == nil || strings.TrimSpace(openstack.Networking.NetworkID) != "" {
-			return false
-		}
-		openstack.Networking.NetworkID = value
-	case "opencenter.infrastructure.cloud.openstack.networking.subnet_id":
-		if openstack.Networking == nil || strings.TrimSpace(openstack.Networking.SubnetID) != "" {
-			return false
-		}
-		openstack.Networking.SubnetID = value
-	default:
-		return false
+	data, err := v2.MarshalPublicConfig(cfg)
+	if err != nil {
+		return false, fmt.Errorf("serialize config for network binding: %w", err)
 	}
-	return true
+	var document yaml.Node
+	if err := yaml.Unmarshal(data, &document); err != nil || len(document.Content) == 0 {
+		return false, fmt.Errorf("parse config document for network binding: %w", err)
+	}
+	root := document.Content[0]
+	for _, update := range updates {
+		if err := importer.SetYAMLPath(root, update.Path, update.Value); err != nil {
+			return false, fmt.Errorf("patch %s: %w", update.Path, err)
+		}
+	}
+	patched, err := yaml.Marshal(&document)
+	if err != nil {
+		return false, fmt.Errorf("serialize patched config: %w", err)
+	}
+	var decoded v2.Config
+	if err := yaml.Unmarshal(patched, &decoded); err != nil {
+		return false, fmt.Errorf("decode patched config: %w", err)
+	}
+	if decoded.OpenCenter.Infrastructure.Cloud.OpenStack == nil {
+		return false, fmt.Errorf("patched config lost the openstack block")
+	}
+	decoded.OpenCenter.Infrastructure.Cloud.OpenStack.EnsureNetworking()
+	*openstack = *decoded.OpenCenter.Infrastructure.Cloud.OpenStack
+	return true, nil
 }
 
 func openstackEffectiveNetworkID(cfg *v2.Config) string {

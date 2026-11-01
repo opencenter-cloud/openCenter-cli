@@ -136,3 +136,69 @@ func TestValidateGenerationBlocksStaleKubesprayModulePin(t *testing.T) {
 		t.Fatal("stale kubespray pin must invalidate the report")
 	}
 }
+
+// Contract 3 is the opposite of the contract-2 gate: a pre-v3 module deploys and
+// runs, it only leaves the network/subnet outputs unavailable. So it must warn
+// without invalidating the report, and the repair it names has to actually clear
+// it -- suggesting the v2 default instead would leave an operator running a
+// command that never silences the warning.
+func TestValidateGenerationWarnsOnContract3Gap(t *testing.T) {
+	cfg, err := NewV2Default("contract3-gap", "openstack")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Deployment.Method = "kubespray"
+
+	contract3Warning := func(report GenerationValidationReport) *ValidationIssue {
+		for i, issue := range report.Issues {
+			if issue.Path == "deployment.kubespray" &&
+				issue.Severity == SeverityWarning &&
+				strings.Contains(issue.Message, "lifecycle contract 3") {
+				return &report.Issues[i]
+			}
+		}
+		return nil
+	}
+
+	report := ValidateGeneration(cfg)
+	warning := contract3Warning(report)
+	if warning == nil {
+		t.Fatalf("a v2-pinned module ref must report the contract 3 gap: %+v", report.Issues)
+	}
+	// The gap must arrive as a warning. Asserting on report.Valid instead would
+	// be wrong twice over: a bare NewV2Default config carries unrelated
+	// readiness errors (image_id, credentials, tokens), and a warning never
+	// touches Valid, so Valid says nothing about this issue.
+	if warning.Severity != SeverityWarning {
+		t.Errorf("contract 3 gap severity = %q, want %q: it is advisory and must never block generation",
+			warning.Severity, SeverityWarning)
+	}
+
+	// Follow the repair the message names.
+	cfg.Deployment.Kubespray.KubesprayCluster.Source = DefaultKubesprayModuleSourceURLContract3
+	for name, module := range cfg.Deployment.Kubespray.Modules {
+		module.Source = DefaultKubesprayModuleSourceURLContract3
+		cfg.Deployment.Kubespray.Modules[name] = module
+	}
+	if after := contract3Warning(ValidateGeneration(cfg)); after != nil {
+		t.Errorf("the advertised repair does not clear the contract 3 warning: %s", after.Message)
+	}
+}
+
+// Only openstack gains the outputs: the baremetal and vmware templates declare no
+// openstack-nova module, so flagging them would push a repair that can never
+// apply.
+func TestContract3GapIgnoresNonOpenStackProviders(t *testing.T) {
+	for _, provider := range []string{"baremetal", "vmware", "kind", "magnum"} {
+		t.Run(provider, func(t *testing.T) {
+			cfg, err := NewV2Default("gap-"+provider, provider)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cfg.Deployment.Method = "kubespray"
+			if ReportsKubesprayModuleContract3Gap(cfg) {
+				t.Errorf("provider %q must never report the contract 3 gap", provider)
+			}
+		})
+	}
+}

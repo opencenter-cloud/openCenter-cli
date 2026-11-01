@@ -77,6 +77,23 @@ func ValidateGeneration(cfg *Config) GenerationValidationReport {
 				cfg.ClusterName(), DefaultKubesprayModuleSourceURL, DefaultKubesprayModuleSourceURL),
 		})
 	}
+
+	// Contract v3 is advisory, never blocking: a v2 module deploys and runs
+	// fine, it just exposes no opencenter_network_id/opencenter_subnet_id, so
+	// `cluster observe` cannot promote a tofu-created network and the CCM
+	// [LoadBalancer] subnet-id stays blank on a tofu-managed network with
+	// use_octavia=false. Warn with the repair command rather than refusing to
+	// generate for every cluster that predates the v3 module.
+	if ReportsKubesprayModuleContract3Gap(cfg) {
+		report.addIssue(ValidationIssue{
+			Severity: SeverityWarning,
+			Category: CategorySchema,
+			Path:     "deployment.kubespray",
+			Message: fmt.Sprintf(
+				"Kubespray module source predates lifecycle contract 3 (network/subnet outputs); `cluster observe` cannot recover a network OpenTofu created and the CCM [LoadBalancer] subnet-id stays blank when use_octavia=false. Repair: opencenter cluster set %s deployment.kubespray.kubespray_cluster.source=%q deployment.kubespray.modules.kubespray.source=%q",
+				cfg.ClusterName(), DefaultKubesprayModuleSourceURLContract3, DefaultKubesprayModuleSourceURLContract3),
+		})
+	}
 	return report
 }
 

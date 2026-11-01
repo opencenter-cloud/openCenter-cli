@@ -19,11 +19,19 @@ import (
 )
 
 const (
-	kubesprayLifecycleContractVersion = "2"
-	kubesprayOutputsFile              = "kubespray-outputs.json"
-	kubesprayRepositoryURL            = "https://github.com/kubernetes-sigs/kubespray.git"
-	ansibleHardeningRepositoryURL     = "https://opendev.org/openstack/ansible-hardening"
-	ansibleHardeningVersion           = "stable/2025.1"
+	// kubesprayLifecycleContractVersion is the contract the CLI renders and
+	// expects. Contract v2 added inventory_output_dir; v3 adds the network and
+	// subnet identity outputs (opencenter_network_id / opencenter_subnet_id) so
+	// a network OpenTofu created can be promoted back into the cluster config.
+	kubesprayLifecycleContractVersion = "3"
+	// kubesprayLifecycleContractMinVersion is the oldest contract the CLI still
+	// runs. A v2 module has no network/subnet outputs, so those fields stay
+	// empty and the network-binding path stays inert instead of failing deploy.
+	kubesprayLifecycleContractMinVersion = "2"
+	kubesprayOutputsFile                 = "kubespray-outputs.json"
+	kubesprayRepositoryURL               = "https://github.com/kubernetes-sigs/kubespray.git"
+	ansibleHardeningRepositoryURL        = "https://opendev.org/openstack/ansible-hardening"
+	ansibleHardeningVersion              = "stable/2025.1"
 	// The branch exists only as a remote-tracking ref after a plain clone. A bare
 	// name makes `checkout --detach` try to create a local branch, which git
 	// rejects as a conflict with -b.
@@ -256,9 +264,14 @@ func parseKubesprayLifecycleOutputs(data []byte) (kubesprayLifecycleOutputs, err
 	return outputs, nil
 }
 
+// validateKubesprayLifecycleOutputs accepts the contract range the CLI can run.
+// Contract v2 modules stay deployable: they simply expose no network/subnet
+// outputs, so the network-binding path remains inert. Inventory and API endpoint
+// are required at every supported version.
 func validateKubesprayLifecycleOutputs(outputs kubesprayLifecycleOutputs) error {
-	if strings.TrimSpace(outputs.ContractVersion) != kubesprayLifecycleContractVersion {
-		return fmt.Errorf("unsupported Kubespray lifecycle contract %q; CLI requires contract %s", outputs.ContractVersion, kubesprayLifecycleContractVersion)
+	contract := strings.TrimSpace(outputs.ContractVersion)
+	if contract != kubesprayLifecycleContractVersion && contract != kubesprayLifecycleContractMinVersion {
+		return fmt.Errorf("unsupported Kubespray lifecycle contract %q; CLI requires contract %s or %s", contract, kubesprayLifecycleContractMinVersion, kubesprayLifecycleContractVersion)
 	}
 	if strings.TrimSpace(outputs.InventoryPath) == "" {
 		return fmt.Errorf("OpenTofu output opencenter_kubespray_inventory_path is empty")

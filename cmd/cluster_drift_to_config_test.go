@@ -59,6 +59,82 @@ func TestClusterDriftReconcileToConfigDryRunUsesLiveKubectlState(t *testing.T) {
 	}
 }
 
+// TestClusterDriftReconcileToConfigWritesConfigAndHonorsField proves the
+// folded-in promotion behavior: --to-config actually writes the patch (the
+// capability the old `cluster promote` owned), and --field restricts the
+// promoted paths so an operator can promote the network identity without
+// accepting every other live divergence.
+func TestClusterDriftReconcileToConfigWritesConfigAndHonorsField(t *testing.T) {
+	dirs := testenv.SetIsolatedCLIDirs(t)
+	prepareCommandTestEnv(t, dirs.ConfigDir)
+	t.Setenv("OPENCENTER_STATE_DIR", dirs.StateDir)
+	t.Setenv("OPENCENTER_TEST_MODE", "1")
+
+	cfg, clusterPaths := saveKindConfigForCommandTest(t, dirs.ConfigDir, "drift-write", "opencenter")
+	cfg.OpenCenter.Infrastructure.Compute.WorkerCount = 2
+	if err := saveConfig(context.Background(), cfg); err != nil {
+		t.Fatalf("save config: %v", err)
+	}
+	if err := os.WriteFile(clusterPaths.KubeconfigPath, []byte("apiVersion: v1\nkind: Config\n"), 0o600); err != nil {
+		t.Fatalf("write kubeconfig: %v", err)
+	}
+	installFakeKubectlForDriftTest(t, t.TempDir(), map[string]string{
+		"nodes":      `{"items":[{"metadata":{"labels":{"node-role.kubernetes.io/control-plane":""}},"status":{"nodeInfo":{"kubeletVersion":"v1.32.7"}}},{"metadata":{"labels":{}},"status":{"nodeInfo":{"kubeletVersion":"v1.32.7"}}},{"metadata":{"labels":{}},"status":{"nodeInfo":{"kubeletVersion":"v1.32.7"}}}]}`,
+		"namespaces": `{"items":[]}`,
+	})
+
+	// --field with a path the live source does not report: nothing is written.
+	filtered := newClusterDriftCmd()
+	var filteredOut bytes.Buffer
+	filtered.SetOut(&filteredOut)
+	filtered.SetErr(&filteredOut)
+	filtered.SetArgs([]string{"reconcile", "drift-write", "--to-config",
+		"--field", "opencenter.infrastructure.cloud.openstack.networking.subnet_id"})
+	if err := filtered.Execute(); err != nil {
+		t.Fatalf("filtered reconcile failed: %v", err)
+	}
+	if !strings.Contains(filteredOut.String(), "No promotable live-to-config drift detected") {
+		t.Fatalf("expected the --field filter to suppress the unrelated live patch, got:\n%s", filteredOut.String())
+	}
+
+	// Without --field the patch is applied and the config file changes. The
+	// filtered pass cached the pre-patch config; drop it so the apply reads the
+	// file the way a fresh process would.
+	if manager, err := getConfigManager(); err == nil {
+		if err := manager.ClearCache(context.Background()); err != nil {
+			t.Fatalf("clear cache: %v", err)
+		}
+	}
+
+	// Without --field the patch is applied and the config file changes. The
+	// write target is the plan's resolved blueprint path (the one the command
+	// reports), not the fixture-time resolver view.
+	apply := newClusterDriftCmd()
+	var applyOut bytes.Buffer
+	apply.SetOut(&applyOut)
+	apply.SetErr(&applyOut)
+	apply.SetArgs([]string{"reconcile", "drift-write", "--to-config"})
+	if err := apply.Execute(); err != nil {
+		t.Fatalf("apply reconcile failed: %v", err)
+	}
+	updatedLine := "Updated config for drift-write at "
+	index := strings.Index(applyOut.String(), updatedLine)
+	if index < 0 {
+		t.Fatalf("apply did not report a written config:\n%s", applyOut.String())
+	}
+	writtenPath := strings.TrimSpace(applyOut.String()[index+len(updatedLine):])
+	written, err := os.ReadFile(writtenPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", writtenPath, err)
+	}
+	if !strings.Contains(string(written), "version: 1.32.7") {
+		t.Fatalf("config was not patched by --to-config.\napply output:\n%s", applyOut.String())
+	}
+	if _, err := os.Stat(writtenPath + ".backup"); err != nil {
+		t.Fatalf("write-plan backup missing: %v", err)
+	}
+}
+
 func TestClusterDriftReconcileDefaultsToProviderPath(t *testing.T) {
 	dirs := testenv.SetIsolatedCLIDirs(t)
 	prepareCommandTestEnv(t, dirs.ConfigDir)

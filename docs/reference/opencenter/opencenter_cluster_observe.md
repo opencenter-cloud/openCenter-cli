@@ -17,7 +17,7 @@ Report differences between the deployed cluster and its config
 Report what the deployed cluster knows that the cluster configuration does not.
 
 observe is read-only. It never writes the configuration file; use
-'opencenter cluster promote' to write the reported values.
+'opencenter cluster drift reconcile --to-config' to write the reported values.
 
 Two evidence sources are merged into one report:
 

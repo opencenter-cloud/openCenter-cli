@@ -21,6 +21,12 @@ state back in line with the desired configuration. Only reconcilable drift can b
 automatically. Non-reconcilable drift (e.g., deleted resources, manual resource creation)
 requires manual intervention.
 
+With --to-config, the direction reverses: observed deployed-cluster state is promoted
+into the config file. --source selects the evidence (terraform: the applied OpenTofu
+state, which recovers a network OpenTofu created; live: the running cluster; all: both),
+and --field restricts the promoted config paths. Run 'opencenter cluster observe' first
+to see the same report without writing.
+
 Use --dry-run to see what changes would be made without applying them.
 
 If no cluster name is provided, uses the currently active cluster.
@@ -43,16 +49,24 @@ opencenter cluster drift reconcile [cluster] [flags]
 
   # Reconcile with confirmation prompt
   opencenter cluster drift reconcile my-cluster --confirm
+
+  # Promote a network OpenTofu created back into the config
+  opencenter cluster drift reconcile my-cluster --to-config --source terraform
+
+  # Preview the config patch from every evidence source
+  opencenter cluster drift reconcile my-cluster --to-config --source all --dry-run
 ```
 
 ### Options
 
 ```
-      --confirm      Prompt for confirmation before applying changes
-      --dry-run      Show what would be changed without applying
-  -h, --help         help for reconcile
-      --to-cluster   Reconcile infrastructure to match the current config (default)
-      --to-config    Promote approved live cluster state back into config
+      --confirm         Prompt for confirmation before applying changes
+      --dry-run         Show what would be changed without applying
+      --field strings   with --to-config: promote only these config paths
+  -h, --help            help for reconcile
+      --source string   with --to-config: evidence source: terraform, live, or all (default "live")
+      --to-cluster      Reconcile infrastructure to match the current config (default)
+      --to-config       Promote observed deployed-cluster state back into config
 ```
 
 ### Options inherited from parent commands

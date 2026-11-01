@@ -170,6 +170,12 @@ state back in line with the desired configuration. Only reconcilable drift can b
 automatically. Non-reconcilable drift (e.g., deleted resources, manual resource creation)
 requires manual intervention.
 
+With --to-config, the direction reverses: observed deployed-cluster state is promoted
+into the config file. --source selects the evidence (terraform: the applied OpenTofu
+state, which recovers a network OpenTofu created; live: the running cluster; all: both),
+and --field restricts the promoted config paths. Run 'opencenter cluster observe' first
+to see the same report without writing.
+
 Use --dry-run to see what changes would be made without applying them.
 
 If no cluster name is provided, uses the currently active cluster.`,
@@ -183,7 +189,13 @@ If no cluster name is provided, uses the currently active cluster.`,
   opencenter cluster drift reconcile my-cluster
 
   # Reconcile with confirmation prompt
-  opencenter cluster drift reconcile my-cluster --confirm`,
+  opencenter cluster drift reconcile my-cluster --confirm
+
+  # Promote a network OpenTofu created back into the config
+  opencenter cluster drift reconcile my-cluster --to-config --source terraform
+
+  # Preview the config patch from every evidence source
+  opencenter cluster drift reconcile my-cluster --to-config --source all --dry-run`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Resolve cluster name from args or active cluster
@@ -197,7 +209,13 @@ If no cluster name is provided, uses the currently active cluster.`,
 			toConfig, _ := cmd.Flags().GetBool("to-config")
 
 			if toConfig {
-				return reconcileDriftToConfig(cmd, clusterName, dryRun)
+				source, _ := cmd.Flags().GetString("source")
+				sources, err := parseObserveSources(source)
+				if err != nil {
+					return NewExitError(2, err.Error(), nil)
+				}
+				fields, _ := cmd.Flags().GetStringSlice("field")
+				return reconcileDriftToConfig(cmd, clusterName, dryRun, sources, fields)
 			}
 
 			// Load configuration
@@ -274,36 +292,38 @@ If no cluster name is provided, uses the currently active cluster.`,
 
 	cmd.Flags().Bool("dry-run", false, "Show what would be changed without applying")
 	cmd.Flags().Bool("confirm", false, "Prompt for confirmation before applying changes")
-	cmd.Flags().Bool("to-config", false, "Promote approved live cluster state back into config")
+	cmd.Flags().Bool("to-config", false, "Promote observed deployed-cluster state back into config")
 	cmd.Flags().Bool("to-cluster", false, "Reconcile infrastructure to match the current config (default)")
+	cmd.Flags().String("source", observeSourceLive, "with --to-config: evidence source: terraform, live, or all")
+	cmd.Flags().StringSlice("field", nil, "with --to-config: promote only these config paths")
 	cmd.MarkFlagsMutuallyExclusive("to-config", "to-cluster")
 
 	return cmd
 }
 
-func reconcileDriftToConfig(cmd *cobra.Command, clusterIdentifier string, dryRun bool) error {
-	cfg, _, _, clusterPaths, err := loadNativeV2ConfigWithIdentifier(cmd.Context(), clusterIdentifier)
+// reconcileDriftToConfig writes the shared promotion pipeline's plan to the
+// config file. sources selects the evidence ("terraform", "live"); fields
+// optionally restricts the promoted paths. This is the only deployed-cluster →
+// config write path: the deprecated `cluster promote` delegates here.
+func reconcileDriftToConfig(cmd *cobra.Command, clusterIdentifier string, dryRun bool, sources, fields []string) error {
+	pending, err := buildPromotionPlan(cmd.Context(), clusterIdentifier, sources, fields)
 	if err != nil {
-		return fmt.Errorf("failed to load cluster configuration: %w", err)
+		return err
 	}
-
-	liveResult, err := importer.BuildLiveImportResult(cmd.Context(), cfg, clusterPaths.KubeconfigPath)
-	if err != nil {
-		return fmt.Errorf("failed to inspect live cluster state: %w", err)
-	}
-
-	plan, err := importer.PrepareClusterWritePlan(cmd.Context(), liveResult)
-	if err != nil {
-		return fmt.Errorf("failed to prepare config promotion plan: %w", err)
-	}
-
-	if strings.TrimSpace(plan.Diff) == "" {
+	if pending.Plan == nil || strings.TrimSpace(pending.Plan.Diff) == "" {
 		fmt.Fprintln(cmd.OutOrStdout(), "No promotable live-to-config drift detected")
+		for _, note := range pending.Report.Notes {
+			fmt.Fprintf(cmd.OutOrStdout(), "note: %s\n", note)
+		}
 		return nil
 	}
+	plan := pending.Plan
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Live-to-config patch for cluster %s:\n\n", plan.ClusterName)
 	fmt.Fprintln(cmd.OutOrStdout(), plan.Diff)
+	for _, skipped := range plan.SkippedFields {
+		fmt.Fprintf(cmd.OutOrStdout(), "skipped %s: %s\n", skipped.Path, skipped.Reason)
+	}
 
 	if dryRun {
 		return nil
@@ -335,33 +355,30 @@ type configPromotionPreview struct {
 	Diff        string                          `json:"diff,omitempty" yaml:"diff,omitempty"`
 }
 
+// buildConfigPromotionPreview answers "what would --to-config write?" through
+// the shared promotion pipeline, so the scheduled-detect preview and the
+// reconcile write can never disagree about what is promotable.
 func buildConfigPromotionPreview(ctx context.Context, clusterIdentifier string) (*configPromotionPreview, error) {
-	cfg, _, _, clusterPaths, err := loadNativeV2ConfigWithIdentifier(ctx, clusterIdentifier)
+	pending, err := buildPromotionPlan(ctx, clusterIdentifier, []string{observeSourceLive}, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	liveResult, err := importer.BuildLiveImportResult(ctx, cfg, clusterPaths.KubeconfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	approved, skipped := importer.SelectApprovedFields(liveResult)
-	plan, err := importer.PrepareClusterWritePlan(ctx, liveResult)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(approved) == 0 && strings.TrimSpace(plan.Diff) == "" {
+	if pending.Plan == nil {
 		return nil, nil
 	}
-
+	approved, skipped := importer.SelectApprovedFields(importer.ClusterImportResult{
+		FieldResults: pending.Report.Promotable,
+		Conflicts:    pending.Report.Conflicts,
+	})
+	if len(approved) == 0 && strings.TrimSpace(pending.Plan.Diff) == "" {
+		return nil, nil
+	}
 	return &configPromotionPreview{
-		ClusterName: liveResult.ClusterName,
+		ClusterName: pending.Plan.ClusterName,
 		FieldCount:  len(approved),
 		Fields:      approved,
-		Skipped:     skipped,
-		Diff:        plan.Diff,
+		Skipped:     append(skipped, pending.Plan.SkippedFields...),
+		Diff:        pending.Plan.Diff,
 	}, nil
 }
 

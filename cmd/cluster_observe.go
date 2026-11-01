@@ -130,39 +130,3 @@ func renderObservationReport(cmd *cobra.Command, report *observationReport) {
 		fmt.Fprintf(cmd.OutOrStdout(), "\nApply with: opencenter cluster drift reconcile %s --to-config\n", report.ClusterName)
 	}
 }
-
-// newClusterPromoteCmd is the deprecated alias of
-// 'cluster drift reconcile --to-config'. The promotion pipeline it once
-// implemented now lives in cluster_promotion.go and is shared with drift
-// reconcile; this shell only maps the old flags onto the shared pipeline and
-// points at the replacement. It is hidden from help and removed at the next
-// major.
-func newClusterPromoteCmd() *cobra.Command {
-	var source string
-	var dryRun bool
-	var fields []string
-
-	cmd := &cobra.Command{
-		Use:    "promote [cluster]",
-		Short:  "Deprecated alias for 'cluster drift reconcile --to-config'",
-		Hidden: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Fprintln(cmd.ErrOrStderr(), "deprecated: 'opencenter cluster promote' moved to 'opencenter cluster drift reconcile --to-config'; this alias is removed at the next major")
-			sources, err := parseObserveSources(source)
-			if err != nil {
-				return NewExitError(2, err.Error(), nil)
-			}
-			identifier, err := resolveClusterNameForCommand(cmd, args, true)
-			if err != nil {
-				return err
-			}
-			return reconcileDriftToConfig(cmd, identifier, dryRun, sources, fields)
-		},
-	}
-
-	cmd.Flags().String("source", observeSourceAll, "evidence source: terraform, live, or all")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show the patch without writing it")
-	cmd.Flags().StringSliceVar(&fields, "field", nil, "promote only these config paths")
-
-	return cmd
-}

@@ -109,6 +109,7 @@ func TestGAClusterCommandSurface(t *testing.T) {
 		{"cluster", "revoke-key"},
 		{"cluster", "install-hooks"},
 		{"cluster", "credentials"},
+		{"cluster", "promote"},
 	}
 	for _, path := range removedClusterCommands {
 		requireNoCommandPath(t, root, path...)
@@ -132,6 +133,7 @@ func TestRemovedClusterCommandsAreRejectedAtRuntime(t *testing.T) {
 		{"cluster", "revoke-key"},
 		{"cluster", "install-hooks"},
 		{"cluster", "credentials"},
+		{"cluster", "promote"},
 	}
 
 	for _, args := range removedClusterCommands {

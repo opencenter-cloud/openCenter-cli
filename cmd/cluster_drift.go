@@ -304,7 +304,7 @@ If no cluster name is provided, uses the currently active cluster.`,
 // reconcileDriftToConfig writes the shared promotion pipeline's plan to the
 // config file. sources selects the evidence ("terraform", "live"); fields
 // optionally restricts the promoted paths. This is the only deployed-cluster →
-// config write path: the deprecated `cluster promote` delegates here.
+// config write path.
 func reconcileDriftToConfig(cmd *cobra.Command, clusterIdentifier string, dryRun bool, sources, fields []string) error {
 	pending, err := buildPromotionPlan(cmd.Context(), clusterIdentifier, sources, fields)
 	if err != nil {

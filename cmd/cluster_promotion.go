@@ -25,11 +25,11 @@ import (
 )
 
 // The deployed-cluster → config promotion pipeline lives here, in one place.
-// `cluster observe` reports it, `cluster drift reconcile --to-config` writes
-// it, and the deprecated `cluster promote` delegates to it. Before this file,
-// the same load → collect → dedupe → write-plan sequence existed three times
-// (drift reconcile, the promotion preview, and promote) with subtly different
-// source coverage.
+// `cluster observe` reports it and `cluster drift reconcile --to-config`
+// writes it. Before this file, the same load → collect → dedupe → write-plan
+// sequence existed three times (drift reconcile, the promotion preview, and
+// the removed `cluster promote` command) with subtly different source
+// coverage.
 
 const (
 	observeSourceTerraform = "terraform"

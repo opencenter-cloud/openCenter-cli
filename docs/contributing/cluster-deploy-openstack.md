@@ -93,9 +93,11 @@ wasted roughly an hour of deploy time; both that provisioner and the
 Bootstrap step results are persisted to `state.json` after each step runs (`internal/cluster/bootstrap_service.go` / `bootstrap_runtime.go`):
 
 ```
-<state dir>/bootstrap/<org>/<cluster>/state.json     — resume state
-<state dir>/logs/bootstrap/<org>/<cluster>/bootstrap-<timestamp>.log  — full command output
+<state dir>/bootstrap/<org>/<cluster>/<generation_id>/state.json          — resume state
+<state dir>/logs/bootstrap/<org>/<cluster>/bootstrap-<timestamp>.log      — full command output
 ```
+
+The resume state is scoped by `metadata.generation_id`, so a destroyed-and-reinitialized cluster cannot resume from its predecessor's completed steps. The older pre-generation path `<state dir>/bootstrap/<org>/<cluster>/state.json` is never a resume source and `cluster deploy` deletes it on sight; a config with no generation identifier yet falls back to that directory until one is stamped.
 
 Re-running `cluster deploy` reads saved state and skips steps already marked `success`. Relevant flags: `--restart` (ignore saved state, rerun everything), `--step <id>` (run exactly one step), `--from-step <id>` (run from a given step onward).
 

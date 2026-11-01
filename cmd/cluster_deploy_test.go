@@ -233,9 +233,21 @@ func TestClusterDeployFailurePrintsLogAndResumeState(t *testing.T) {
 		t.Fatalf("expected bootstrap log directory at %s: %v", expectedLogDir, statErr)
 	}
 
-	expectedStatePath := filepath.Join(stateRoot, "bootstrap", "opencenter", "demo", "state.json")
-	if _, statErr := os.Stat(expectedStatePath); statErr != nil {
-		t.Fatalf("expected bootstrap state at %s: %v", expectedStatePath, statErr)
+	// Resume state is scoped by metadata.generation_id (see
+	// resolveBootstrapRuntimePaths), so locate it by walking the cluster's
+	// bootstrap directory rather than pinning one layout: a config with no
+	// generation identifier yet uses <cluster>/state.json, a scoped one uses
+	// <cluster>/<generation_id>/state.json, and both are valid.
+	expectedStateDir := filepath.Join(stateRoot, "bootstrap", "opencenter", "demo")
+	stateFiles, walkErr := filepath.Glob(filepath.Join(expectedStateDir, "*", "state.json"))
+	if walkErr != nil {
+		t.Fatalf("glob bootstrap state: %v", walkErr)
+	}
+	if direct, statErr := os.Stat(filepath.Join(expectedStateDir, "state.json")); statErr == nil && !direct.IsDir() {
+		stateFiles = append(stateFiles, filepath.Join(expectedStateDir, "state.json"))
+	}
+	if len(stateFiles) != 1 {
+		t.Fatalf("expected exactly one bootstrap resume state under %s, found %d: %v", expectedStateDir, len(stateFiles), stateFiles)
 	}
 
 	stderr := errOut.String()

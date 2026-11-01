@@ -326,7 +326,7 @@ func firstNonEmptyValidation(values ...string) string {
 
 // validateConnectivity checks connectivity to required services
 func (s *ValidateService) validateConnectivity(ctx context.Context, cfg *v2.Config, result *ValidationResult) error {
-	if !strings.EqualFold(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider), "openstack") {
+	if !cfg.IsOpenStack() {
 		return nil
 	}
 	if cfg.OpenCenter.Infrastructure.Cloud.OpenStack == nil {

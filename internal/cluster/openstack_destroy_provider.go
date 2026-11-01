@@ -122,7 +122,7 @@ func (p *openstackDestroyProvider) BuildSteps(cfg *v2.Config, opts *DestroyInfra
 
 	// CSI volume cleanup is only applicable to the OpenStack provider. The
 	// VMware provider shares this same struct but does not use Cinder.
-	isOpenStack := strings.EqualFold(cfg.Provider(), "openstack")
+	isOpenStack := cfg.IsOpenStack()
 
 	// Resolve the cluster kubeconfig once: the CSI capture step reads it and
 	// the OpenTofu environment exports it as KUBECONFIG (bootstrap parity).

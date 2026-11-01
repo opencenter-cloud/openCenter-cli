@@ -560,7 +560,7 @@ func validateLoadBalancerOwnership(cfg *Config) error {
 	if cfg == nil {
 		return nil
 	}
-	if strings.EqualFold(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider), "openstack") &&
+	if cfg.IsOpenStack() &&
 		isServiceEnabled(cfg, "metallb") && isServiceEnabled(cfg, "openstack-ccm") {
 		return fmt.Errorf("opencenter.services.metallb cannot be enabled with openstack-ccm: both controllers manage classless LoadBalancer Services; disable metallb when OpenStack CCM owns cloud load balancers")
 	}
@@ -1237,8 +1237,7 @@ func (v *defaultValidator) validatePlaceholderSecrets(cfg *Config) error {
 	}
 
 	// OpenStack application credentials
-	provider := strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)
-	if strings.EqualFold(provider, "openstack") && cfg.OpenCenter.Infrastructure.Cloud.OpenStack != nil {
+	if cfg.IsOpenStack() && cfg.OpenCenter.Infrastructure.Cloud.OpenStack != nil {
 		if cfg.OpenCenter.Infrastructure.Cloud.OpenStack.ApplicationCredentialID == PlaceholderSecret {
 			placeholders = append(placeholders, "opencenter.infrastructure.cloud.openstack.application_credential_id")
 		}

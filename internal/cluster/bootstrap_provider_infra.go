@@ -49,24 +49,6 @@ func (p *openstackBootstrapProvider) persistNetworkBindings(ctx context.Context,
 	return p.persistConfig(ctx, cfg)
 }
 
-// isOpenStackProvider reports whether the cluster's infrastructure provider is
-// OpenStack. An unset provider means OpenStack: that is the default the config
-// loader and the templates both assume, and it is the same rule
-// ReportsKubesprayModuleContract3Gap applies. baremetal and vmware share this
-// step builder but declare no openstack-nova module, so the network/subnet
-// outputs never exist for them.
-func isOpenStackProvider(cfg *v2.Config) bool {
-	if cfg == nil {
-		return false
-	}
-	switch strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) {
-	case "", "openstack":
-		return true
-	default:
-		return false
-	}
-}
-
 // displayNetworkID keeps progress lines readable when a value is absent.
 func displayNetworkID(value string) string {
 	if strings.TrimSpace(value) == "" {
@@ -252,7 +234,7 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		//
 		// OpenStack only: the outputs come from the openstack-nova module, which
 		// only the openstack template declares.
-		if isOpenStackProvider(cfg) {
+		if cfg.IsOpenStack() {
 			bindPlan := BootstrapPlanStep{
 				ID:         bindNetworkOutputsStepID,
 				Action:     "Read opencenter_network_id/opencenter_subnet_id from the applied state and fill the empty config fields",

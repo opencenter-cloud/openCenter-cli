@@ -102,9 +102,7 @@ func ReportsKubesprayModuleContract3Gap(cfg *Config) bool {
 	}
 	// The network/subnet outputs live in the openstack-nova module, which only
 	// the openstack template declares; baremetal and vmware never gain them.
-	switch strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) {
-	case "", "openstack":
-	default:
+	if !cfg.IsOpenStack() {
 		return false
 	}
 	if kubesprayModuleSourceNeedsContractUpgrade(cfg.Deployment.Kubespray.KubesprayCluster.Source, kubesprayModuleTagContract3) {

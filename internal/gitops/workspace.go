@@ -136,6 +136,23 @@ func NewWorkspaceManagerWithOptions(baseDir string, maxAge, cleanupInterval time
 	return manager
 }
 
+// workspaceBaseDir returns the base directory for gitops workspaces.
+// In shared temporary directories (like /tmp or os.TempDir()), the path is
+// scoped by user ID (e.g. gitops-workspaces-1001) to prevent multi-user
+// permission collisions.
+func (m *DefaultWorkspaceManager) workspaceBaseDir() string {
+	uid := os.Getuid()
+	if uid >= 0 && isSystemTempDir(m.baseDir) {
+		return filepath.Join(m.baseDir, fmt.Sprintf("gitops-workspaces-%d", uid))
+	}
+	return filepath.Join(m.baseDir, "gitops-workspaces")
+}
+
+func isSystemTempDir(dir string) bool {
+	clean := filepath.Clean(dir)
+	return clean == "/tmp" || clean == "/var/tmp" || clean == filepath.Clean(os.TempDir())
+}
+
 // CreateWorkspace creates a new isolated workspace for GitOps generation.
 // The workspace provides an isolated environment with its own directory structure.
 func (m *DefaultWorkspaceManager) CreateWorkspace(ctx context.Context, cfg v2.Config) (*GitOpsWorkspace, error) {
@@ -146,12 +163,29 @@ func (m *DefaultWorkspaceManager) CreateWorkspace(ctx context.Context, cfg v2.Co
 	// plaintext secret-bearing manifests before encryption, so both the
 	// workspace and its intermediate directory must be inaccessible to other
 	// local users even when the process umask is permissive.
-	workspaceBase := filepath.Join(m.baseDir, "gitops-workspaces")
+	workspaceBase := m.workspaceBaseDir()
 	if err := os.MkdirAll(workspaceBase, 0o700); err != nil {
-		return nil, fmt.Errorf("failed to create workspace base directory: %w", err)
+		if uid := os.Getuid(); uid >= 0 {
+			workspaceBase = filepath.Join(m.baseDir, fmt.Sprintf("gitops-workspaces-%d", uid))
+			if err := os.MkdirAll(workspaceBase, 0o700); err != nil {
+				return nil, fmt.Errorf("failed to create workspace base directory: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to create workspace base directory: %w", err)
+		}
 	}
 	if err := os.Chmod(workspaceBase, 0o700); err != nil {
-		return nil, fmt.Errorf("failed to secure workspace base directory: %w", err)
+		if uid := os.Getuid(); uid >= 0 {
+			workspaceBase = filepath.Join(m.baseDir, fmt.Sprintf("gitops-workspaces-%d", uid))
+			if err := os.MkdirAll(workspaceBase, 0o700); err != nil {
+				return nil, fmt.Errorf("failed to create workspace base directory: %w", err)
+			}
+			if err := os.Chmod(workspaceBase, 0o700); err != nil {
+				return nil, fmt.Errorf("failed to secure workspace base directory: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to secure workspace base directory: %w", err)
+		}
 	}
 	rootDir := filepath.Join(workspaceBase, workspaceID)
 	if err := os.MkdirAll(rootDir, 0o700); err != nil {
@@ -415,7 +449,7 @@ func (m *DefaultWorkspaceManager) Shutdown(ctx context.Context) error {
 // workspace directories that are not tracked in the manager's registry.
 // This helps recover from crashes or improper shutdowns.
 func (m *DefaultWorkspaceManager) CleanupOrphanedWorkspaces(ctx context.Context) error {
-	workspaceBaseDir := filepath.Join(m.baseDir, "gitops-workspaces")
+	workspaceBaseDir := m.workspaceBaseDir()
 
 	// Check if workspace directory exists
 	if _, err := os.Stat(workspaceBaseDir); os.IsNotExist(err) {

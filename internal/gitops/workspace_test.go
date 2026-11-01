@@ -15,8 +15,10 @@ package gitops
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -602,5 +604,28 @@ func TestTransactionRollback(t *testing.T) {
 	content, _ := os.ReadFile(workspace.GetPath("existing.txt"))
 	if string(content) != "original" {
 		t.Error("Existing file should be unchanged after rollback")
+	}
+}
+
+// TestWorkspaceBaseDirSystemTempCollisionSafety tests that when using a shared
+// system temp directory, the workspace base directory is scoped by UID to prevent
+// multi-user permission collisions.
+func TestWorkspaceBaseDirSystemTempCollisionSafety(t *testing.T) {
+	manager := NewWorkspaceManager(os.TempDir())
+	ctx := context.Background()
+	cfg := newDefault("collision-test")
+
+	workspace, err := manager.CreateWorkspace(ctx, cfg)
+	if err != nil {
+		t.Fatalf("Failed to create workspace in os.TempDir(): %v", err)
+	}
+	defer manager.CleanupWorkspace(ctx, workspace)
+
+	uid := os.Getuid()
+	if uid >= 0 {
+		expectedBase := fmt.Sprintf("gitops-workspaces-%d", uid)
+		if !strings.Contains(workspace.RootDir, expectedBase) {
+			t.Errorf("Workspace root directory %q should contain UID-scoped base %q", workspace.RootDir, expectedBase)
+		}
 	}
 }

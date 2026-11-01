@@ -423,7 +423,7 @@ func TestBootstrapService_LegacyApplyHandoffRunsOnceBeforeLifecycle(t *testing.T
 		t.Fatal("legacy apply handoff remained pending after successful apply")
 	}
 
-	persisted, _, err := service.loadBootstrapState(statePath)
+	persisted, _, err := service.loadBootstrapState(statePath, "")
 	if err != nil {
 		t.Fatalf("loadBootstrapState() error = %v", err)
 	}
@@ -1336,7 +1336,7 @@ func TestBootstrapService_bootstrapState(t *testing.T) {
 		}
 
 		// Load state
-		loadedState, enabled, err := bootstrapService.loadBootstrapState(statePath)
+		loadedState, enabled, err := bootstrapService.loadBootstrapState(statePath, "")
 		if err != nil {
 			t.Fatalf("loadBootstrapState() error = %v", err)
 		}
@@ -1369,7 +1369,7 @@ func TestBootstrapService_bootstrapState(t *testing.T) {
 	t.Run("load non-existent state", func(t *testing.T) {
 		nonExistentPath := filepath.Join(tmpDir, "non-existent-state.json")
 
-		state, enabled, err := bootstrapService.loadBootstrapState(nonExistentPath)
+		state, enabled, err := bootstrapService.loadBootstrapState(nonExistentPath, "")
 		if err != nil {
 			t.Fatalf("loadBootstrapState() error = %v", err)
 		}
@@ -1389,7 +1389,7 @@ func TestBootstrapService_bootstrapState(t *testing.T) {
 	})
 
 	t.Run("empty state path", func(t *testing.T) {
-		state, enabled, err := bootstrapService.loadBootstrapState("")
+		state, enabled, err := bootstrapService.loadBootstrapState("", "")
 		if err != nil {
 			t.Fatalf("loadBootstrapState() error = %v", err)
 		}

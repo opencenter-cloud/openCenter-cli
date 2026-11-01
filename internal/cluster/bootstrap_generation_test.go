@@ -218,7 +218,8 @@ func TestResolveBootstrapRuntimePathsScopesStateToGeneration(t *testing.T) {
 }
 
 // TestBootstrapStateGenerationIsPersisted proves the identifier survives the
-// state file round-trip, which is what lets a foreign file be recognized.
+// state file round-trip when the deploying generation matches, which is what
+// lets a foreign file be recognized and discarded.
 func TestBootstrapStateGenerationIsPersisted(t *testing.T) {
 	service := createTestBootstrapService(paths.NewPathResolver(t.TempDir()))
 	path := filepath.Join(t.TempDir(), "state.json")
@@ -231,7 +232,7 @@ func TestBootstrapStateGenerationIsPersisted(t *testing.T) {
 		t.Fatalf("saveBootstrapState() error = %v", err)
 	}
 
-	loaded, enabled, err := service.loadBootstrapState(path)
+	loaded, enabled, err := service.loadBootstrapState(path, generation)
 	if err != nil {
 		t.Fatalf("loadBootstrapState() error = %v", err)
 	}
@@ -240,6 +241,71 @@ func TestBootstrapStateGenerationIsPersisted(t *testing.T) {
 	}
 	if loaded.GenerationID != generation {
 		t.Fatalf("generation id lost through state round-trip: %q -> %q", generation, loaded.GenerationID)
+	}
+}
+
+// TestLoadBootstrapStateDiscardsForeignGeneration is the enforcement test for
+// the in-file generation identifier: a state file sitting at the *correct*
+// scoped path but recording another generation's identifier is discarded, not
+// resumed. This is the case path-scoping cannot catch - a copied config carries
+// its generation identifier onto another cluster's artifacts.
+func TestLoadBootstrapStateDiscardsForeignGeneration(t *testing.T) {
+	service := createTestBootstrapService(paths.NewPathResolver(t.TempDir()))
+	path := filepath.Join(t.TempDir(), "state.json")
+	foreign := v2.NewGenerationID()
+	deploying := v2.NewGenerationID()
+
+	state := service.newBootstrapState()
+	state.GenerationID = foreign
+	service.setStepStatus(state, "kubespray-prepare", bootstrapStatusSuccess, "")
+	if err := service.saveBootstrapState(path, state); err != nil {
+		t.Fatalf("saveBootstrapState() error = %v", err)
+	}
+
+	loaded, enabled, err := service.loadBootstrapState(path, deploying)
+	if err != nil {
+		t.Fatalf("loadBootstrapState() error = %v", err)
+	}
+	if !enabled {
+		t.Fatal("loadBootstrapState() reported state disabled")
+	}
+	if len(loaded.Steps) != 0 {
+		t.Fatalf("foreign-generation state resumed: %d step(s) survived", len(loaded.Steps))
+	}
+	if loaded.GenerationID == foreign {
+		t.Fatal("discarded state must not carry the foreign generation identifier")
+	}
+
+	// The same file resumes normally for the generation that recorded it.
+	resumed, _, err := service.loadBootstrapState(path, foreign)
+	if err != nil {
+		t.Fatalf("loadBootstrapState() matching generation error = %v", err)
+	}
+	if len(resumed.Steps) == 0 {
+		t.Fatal("matching-generation state must resume with its steps")
+	}
+}
+
+// TestLoadBootstrapStateKeepsPreFieldStateResumable pins the compatibility
+// half of the enforcement: a state written before generation_id existed
+// records no identifier and must stay resumable, otherwise every in-flight
+// deploy from an older CLI restarts from zero.
+func TestLoadBootstrapStateKeepsPreFieldStateResumable(t *testing.T) {
+	service := createTestBootstrapService(paths.NewPathResolver(t.TempDir()))
+	path := filepath.Join(t.TempDir(), "state.json")
+
+	state := service.newBootstrapState()
+	service.setStepStatus(state, "kubespray-prepare", bootstrapStatusSuccess, "")
+	if err := service.saveBootstrapState(path, state); err != nil {
+		t.Fatalf("saveBootstrapState() error = %v", err)
+	}
+
+	loaded, _, err := service.loadBootstrapState(path, v2.NewGenerationID())
+	if err != nil {
+		t.Fatalf("loadBootstrapState() error = %v", err)
+	}
+	if len(loaded.Steps) == 0 {
+		t.Fatal("pre-field state (no recorded identifier) must remain resumable")
 	}
 }
 

@@ -435,11 +435,18 @@ func (s *BootstrapService) provisionInfrastructure(ctx context.Context, cfg *v2.
 		if err := s.removeBootstrapState(runtimePaths.UnscopedStatePath); err != nil {
 			logBootstrapMessage(ctx, "warning: failed to remove pre-generation bootstrap state %s: %v", runtimePaths.UnscopedStatePath, err)
 		}
-		loadedState, loadedPath, err := s.loadBootstrapStateWithFallback(statePath, legacyStatePath)
+		loadedState, loadedPath, err := s.loadBootstrapStateWithFallback(statePath, legacyStatePath, generation)
 		if err != nil {
 			return fmt.Errorf("loading bootstrap state: %w", err)
 		}
 		state = loadedState
+		// The loaded state now provably belongs to this generation: either its
+		// recorded identifier matched, it recorded none (pre-field file), or it
+		// came from the legacy location and was attributed here. Stamp it so the
+		// next save carries the identity.
+		if v2.IsGenerationID(generation) {
+			state.GenerationID = generation
+		}
 		if loadedPath != "" {
 			logBootstrapMessage(ctx, "resuming bootstrap from %s", loadedPath)
 		}
@@ -852,8 +859,16 @@ func (s *BootstrapService) newBootstrapState() *bootstrapState {
 	}
 }
 
-// loadBootstrapState loads the bootstrap state from disk
-func (s *BootstrapService) loadBootstrapState(path string) (*bootstrapState, bool, error) {
+// loadBootstrapState loads the bootstrap state from disk. expectedGeneration
+// is the cluster generation the caller is deploying: a state file whose
+// generation_id disagrees belongs to a different generation of the cluster and
+// is discarded, exactly as a file at the wrong path is. Path-scoping alone is
+// not the guarantee - a copied config carries its generation identifier to the
+// artifacts of another cluster, and EnsureGenerationID stamps a fresh
+// identifier on a load whose state directory survived a manual wipe - so the
+// in-file identifier is the second check. A state written before the field
+// existed carries no identifier and stays resumable.
+func (s *BootstrapService) loadBootstrapState(path, expectedGeneration string) (*bootstrapState, bool, error) {
 	if strings.TrimSpace(path) == "" {
 		return s.newBootstrapState(), false, nil
 	}
@@ -883,7 +898,12 @@ func (s *BootstrapService) loadBootstrapState(path string) (*bootstrapState, boo
 	if state.Version > bootstrapStateVersion {
 		return nil, true, fmt.Errorf("unsupported bootstrap state version %d (current version is %d)", state.Version, bootstrapStateVersion)
 	}
-
+	if recorded := strings.TrimSpace(state.GenerationID); recorded != "" && recorded != strings.TrimSpace(expectedGeneration) {
+		// Discard, never resume: the steps recorded here were executed by a
+		// different generation of the cluster.
+		logging.Debugf("bootstrap: discarding state %s: recorded generation_id %s does not match the deploying generation %q", path, recorded, expectedGeneration)
+		return s.newBootstrapState(), true, nil
+	}
 	return &state, true, nil
 }
 
@@ -983,8 +1003,14 @@ func isLegacyKubernetesCompletionStep(stepID string) bool {
 	}
 }
 
-func (s *BootstrapService) loadBootstrapStateWithFallback(path, fallbackPath string) (*bootstrapState, string, error) {
-	state, enabled, err := s.loadBootstrapState(path)
+// loadBootstrapStateWithFallback resumes from the generation-scoped state,
+// falling back to the legacy pre-generation location. expectedGeneration is
+// checked against the scoped file's recorded identifier (see
+// loadBootstrapState); the legacy file predates the field and carries no
+// identifier of its own, so it is attributed to the deploying generation - the
+// same trust the pre-scoping layout placed in it.
+func (s *BootstrapService) loadBootstrapStateWithFallback(path, fallbackPath, expectedGeneration string) (*bootstrapState, string, error) {
+	state, enabled, err := s.loadBootstrapState(path, expectedGeneration)
 	if err != nil {
 		return nil, "", err
 	}
@@ -996,7 +1022,7 @@ func (s *BootstrapService) loadBootstrapStateWithFallback(path, fallbackPath str
 		return state, "", nil
 	}
 
-	legacyState, enabled, err := s.loadBootstrapState(fallbackPath)
+	legacyState, enabled, err := s.loadBootstrapState(fallbackPath, "")
 	if err != nil {
 		return nil, "", err
 	}

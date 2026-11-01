@@ -12,7 +12,7 @@ import (
 var kubesprayModuleSourceRe = regexp.MustCompile(`(?s)module\s+"kubespray-cluster"\s*\{.*?source\s*=\s*"([^"]*)"`)
 
 // Regression: a config whose deployment.kubespray block predates the module
-// source fields (empty sources) must still render the contract v2 pin;
+// source fields (empty sources) must still render the contract v3 pin;
 // otherwise `tofu init` fails with "inventory_output_dir: Unsupported argument".
 func TestLegacyConfigRendersContract2KubespraySource(t *testing.T) {
 	for _, provider := range []string{"openstack", "baremetal", "vmware"} {
@@ -31,7 +31,7 @@ func TestLegacyConfigRendersContract2KubespraySource(t *testing.T) {
 			require.NoError(t, err)
 			m := kubesprayModuleSourceRe.FindStringSubmatch(string(data))
 			require.NotNil(t, m)
-			require.Equal(t, "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/provider/kubespray?ref=2026.03-rc4", m[1])
+			require.Equal(t, "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/provider/kubespray?ref=2026.03-rc05", m[1])
 		})
 	}
 }

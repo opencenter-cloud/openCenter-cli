@@ -128,7 +128,7 @@ opencenter:
       local_dir: /absolute/path/to/gitops/<cluster-name>-gitops
 ```
 
-Set `opencenter.gitops.base_repo.release` to the intended release, for example `2026.03-rc4`. Any explicit
+Set `opencenter.gitops.base_repo.release` to the intended release, for example `2026.03-rc05`. Any explicit
 OpenTofu module `source` override must reference a tag, commit, or branch that exists in the remote repository;
 a local-only branch causes `tofu init` to fail before infrastructure is applied. Check custom refs with
 `git ls-remote` before deployment.

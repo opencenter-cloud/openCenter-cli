@@ -60,14 +60,14 @@ func ValidateGeneration(cfg *Config) GenerationValidationReport {
 		report.addIssue(issue)
 	}
 
-	// Lifecycle contract v2: the CLI deploy path always renders the
+	// Lifecycle contract v3: the CLI deploy path always renders the
 	// infrastructure in cli lifecycle mode, which requires the kubespray
 	// module to support inventory_output_dir. A config whose module slots pin
 	// a pre-contract-2 gitops-base ref renders the inventory inside the
 	// GitOps worktree, and `cluster deploy` then fails in kubespray-prepare
 	// with "inventory rendered outside the cluster state zone". Block
 	// generation with the exact repair command instead.
-	if RequiresKubesprayModuleContract2Upgrade(cfg) {
+	if RequiresKubesprayModuleContract3Upgrade(cfg) {
 		report.addIssue(ValidationIssue{
 			Severity: SeverityError,
 			Category: CategorySchema,

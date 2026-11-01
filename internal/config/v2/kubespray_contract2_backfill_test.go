@@ -31,10 +31,10 @@ deployment:
 	if cfg.Deployment.Kubespray == nil {
 		t.Fatal("nil kubespray")
 	}
-	if !strings.Contains(cfg.Deployment.Kubespray.KubesprayCluster.Source, "2026.03-rc4") {
+	if !strings.Contains(cfg.Deployment.Kubespray.KubesprayCluster.Source, "2026.03-rc05") {
 		t.Fatalf("kubespray_cluster source not backfilled: %q", cfg.Deployment.Kubespray.KubesprayCluster.Source)
 	}
-	if !strings.Contains(cfg.Deployment.Kubespray.Modules["kubespray"].Source, "2026.03-rc4") {
+	if !strings.Contains(cfg.Deployment.Kubespray.Modules["kubespray"].Source, "2026.03-rc05") {
 		t.Fatalf("modules.kubespray source not backfilled: %#v", cfg.Deployment.Kubespray.Modules)
 	}
 }
@@ -148,6 +148,10 @@ func TestValidateGenerationWarnsOnContract3Gap(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg.Deployment.Method = "kubespray"
+	// Pin to a contract v2 ref to assert that the contract 3 gap is detected.
+	staleV2 := "github.com/opencenter-cloud/openCenter-gitops-base.git//iac/provider/kubespray?ref=2026.03-rc4"
+	cfg.Deployment.Kubespray.KubesprayCluster.Source = staleV2
+	cfg.Deployment.Kubespray.Modules["kubespray"] = ModuleConfig{Source: staleV2, Enabled: true}
 
 	contract3Warning := func(report GenerationValidationReport) *ValidationIssue {
 		for i, issue := range report.Issues {
@@ -182,6 +186,16 @@ func TestValidateGenerationWarnsOnContract3Gap(t *testing.T) {
 	}
 	if after := contract3Warning(ValidateGeneration(cfg)); after != nil {
 		t.Errorf("the advertised repair does not clear the contract 3 warning: %s", after.Message)
+	}
+
+	// A freshly defaulted cluster should already satisfy contract 3 and have no warning:
+	fresh, err := NewV2Default("fresh-v3", "openstack")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fresh.Deployment.Method = "kubespray"
+	if after := contract3Warning(ValidateGeneration(fresh)); after != nil {
+		t.Errorf("fresh cluster on default contracts must not report contract 3 gap: %s", after.Message)
 	}
 }
 

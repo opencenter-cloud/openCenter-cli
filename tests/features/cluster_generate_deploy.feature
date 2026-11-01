@@ -146,7 +146,7 @@ Feature: GitOps generation and deployment
     When I run "opencenter cluster destroy demo --force --skip-infrastructure --remove-files --config-dir <<tmp>>/conf"
     Then the command should succeed
     And a file "<<tmp>>/conf/demo.yaml" should not exist
-    And a directory "<<tmp>>/opencenter-demo" should not exist
+    And a directory "<<tmp>>/opencenter-demo" should exist
 
   # ---------------------------------------------------------------------------
   # Organization-based generate

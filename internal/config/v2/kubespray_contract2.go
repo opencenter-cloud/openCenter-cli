@@ -15,19 +15,23 @@ package v2
 
 import "strings"
 
-// kubesprayModuleSourceNeedsContract2Upgrade reports whether a Kubespray
+// kubesprayModuleSourceNeedsContract3Upgrade reports whether a Kubespray
 // module source pins the gitops-base kubespray module at a ref older than
-// lifecycle contract v2 (inventory_output_dir: the inventory renders once,
-// into the CLI state zone). A pre-contract-2 ref (2026.03-rc2 and older)
-// renders the inventory inside the GitOps worktree, so `cluster deploy` fails
-// in kubespray-prepare with "inventory rendered outside the cluster state
-// zone".
+// lifecycle contract v3 (inventory_output_dir, CoreDNS rewrite block, and
+// openstack-nova network/subnet identity outputs). A pre-contract-3 ref
+// renders the inventory inside the GitOps worktree or misses network identity outputs.
 //
 // An empty source needs no upgrade: templates and the load pipeline backfill
 // DefaultKubesprayModuleSourceURL. Sources outside the gitops-base kubespray
 // module path are deliberate user pins and are never flagged.
-func kubesprayModuleSourceNeedsContract2Upgrade(source string) bool {
+func kubesprayModuleSourceNeedsContract3Upgrade(source string) bool {
 	return kubesprayModuleSourceNeedsContractUpgrade(source, kubesprayModuleTag)
+}
+
+// kubesprayModuleSourceNeedsContract2Upgrade is preserved for backward compatibility
+// and delegates to kubesprayModuleSourceNeedsContract3Upgrade.
+func kubesprayModuleSourceNeedsContract2Upgrade(source string) bool {
+	return kubesprayModuleSourceNeedsContract3Upgrade(source)
 }
 
 // kubesprayModuleSourceNeedsContractUpgrade reports whether a gitops-base
@@ -55,35 +59,37 @@ func kubesprayModuleSourceNeedsContractUpgrade(source, want string) bool {
 	return ref != "" && ref != want
 }
 
-// RequiresKubesprayModuleContract2Upgrade reports whether any Kubespray module
+// RequiresKubesprayModuleContract3Upgrade reports whether any Kubespray module
 // slot (deployment.kubespray.kubespray_cluster for the baremetal/vmware
 // templates, deployment.kubespray.modules.kubespray for the openstack/default
-// template) still pins a pre-contract-2 gitops-base ref. The CLI deploy path
-// always renders in lifecycle mode, so every slot must resolve contract v2.
-func RequiresKubesprayModuleContract2Upgrade(cfg *Config) bool {
+// template) still pins a pre-contract-3 gitops-base ref. The CLI deploy path
+// always renders in lifecycle mode, so every slot must resolve contract v3.
+func RequiresKubesprayModuleContract3Upgrade(cfg *Config) bool {
 	if cfg == nil || cfg.Deployment.Kubespray == nil ||
 		!strings.EqualFold(strings.TrimSpace(cfg.Deployment.Method), "kubespray") {
 		return false
 	}
-	if kubesprayModuleSourceNeedsContract2Upgrade(cfg.Deployment.Kubespray.KubesprayCluster.Source) {
+	if kubesprayModuleSourceNeedsContract3Upgrade(cfg.Deployment.Kubespray.KubesprayCluster.Source) {
 		return true
 	}
 	for _, module := range cfg.Deployment.Kubespray.Modules {
-		if kubesprayModuleSourceNeedsContract2Upgrade(module.Source) {
+		if kubesprayModuleSourceNeedsContract3Upgrade(module.Source) {
 			return true
 		}
 	}
 	return false
 }
 
+// RequiresKubesprayModuleContract2Upgrade is preserved for backward compatibility
+// and delegates to RequiresKubesprayModuleContract3Upgrade.
+func RequiresKubesprayModuleContract2Upgrade(cfg *Config) bool {
+	return RequiresKubesprayModuleContract3Upgrade(cfg)
+}
+
 // kubesprayModuleTagContract3 is the gitops-base tag that adds the
 // opencenter_network_id / opencenter_subnet_id outputs to the openstack-nova
-// module. It is tracked separately from kubesprayModuleTag because the
-// contract-v3 gap is reported as an advisory while kubesprayModuleTag still
-// pins the newest *released* module: bumping that constant is what promotes
-// every cluster to v3 at load time, and it must not happen until the tag
-// actually exists upstream.
-const kubesprayModuleTagContract3 = "2026.11-contract3"
+// module (lifecycle contract v3).
+const kubesprayModuleTagContract3 = "2026.03-rc05"
 
 // DefaultKubesprayModuleSourceURLContract3 is the kubespray module source that
 // resolves contract v3, for repair text in validation messages.

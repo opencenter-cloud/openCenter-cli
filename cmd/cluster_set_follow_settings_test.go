@@ -30,6 +30,7 @@ import (
 func TestClusterSetFollowSettingsTagsManagedAndPersists(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("OPENCENTER_CONFIG_DIR", dir)
+	t.Setenv("OPENCENTER_STATE_DIR", filepath.Join(dir, "state"))
 
 	binDir := t.TempDir()
 	installFakeGitBinary(t, binDir)

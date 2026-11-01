@@ -26,8 +26,8 @@ import (
 //
 // For any infrastructure provider, when a service requires provider-specific configuration
 // (e.g., cert-manager DNS challenge), the system must auto-select a compatible service
-// provider based on the infrastructure provider (AWS→route53, OpenStack+Designate→designate,
-// OpenStack-Designate→cloudflare) and validate that user overrides are compatible with the
+// provider based on the infrastructure provider (cloudflare by default,
+// OpenStack+Designate→designate) and validate that user overrides are compatible with the
 // infrastructure provider.
 func TestProperty_ServiceProviderPolymorphism(t *testing.T) {
 	properties := gopter.NewProperties(nil)
@@ -129,8 +129,8 @@ func TestProperty_ServiceProviderPolymorphism(t *testing.T) {
 		},
 	))
 
-	// Property 4: AWS auto-selects Route53 for DNS
-	properties.Property("AWS auto-selects Route53 DNS provider", prop.ForAll(
+	// Property 4: AWS auto-selects Cloudflare for DNS (the portable default)
+	properties.Property("AWS auto-selects Cloudflare DNS provider", prop.ForAll(
 		func() bool {
 			registry := GetProviderRegistry()
 			clusterName := "test-cluster-aws"
@@ -141,8 +141,8 @@ func TestProperty_ServiceProviderPolymorphism(t *testing.T) {
 				return false
 			}
 
-			// Should select Route53
-			return dnsProvider == DNSProviderRoute53
+			// Should select Cloudflare
+			return dnsProvider == DNSProviderCloudflare
 		},
 	))
 

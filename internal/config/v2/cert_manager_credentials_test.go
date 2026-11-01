@@ -99,9 +99,11 @@ func TestResolvedCredentialsReuseProviderNamedCredential(t *testing.T) {
 }
 
 func TestResolvedDNSProviderFallsBackToInfrastructureDefault(t *testing.T) {
+	// Cloudflare is the default for every infrastructure provider; Designate
+	// remains the one infrastructure-derived override.
 	cfg := dnsProviderConfig("")
 	cfg.OpenCenter.Infrastructure.Provider = "aws"
-	require.Equal(t, "route53", cfg.ResolvedDNSProvider())
+	require.Equal(t, "cloudflare", cfg.ResolvedDNSProvider())
 
 	cfg.OpenCenter.Infrastructure.Provider = "openstack"
 	require.Equal(t, "cloudflare", cfg.ResolvedDNSProvider())

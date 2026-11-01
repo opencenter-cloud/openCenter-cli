@@ -39,19 +39,19 @@ func TestGetDefaultProvider_CertManagerDNS(t *testing.T) {
 		expected      ServiceProviderType
 	}{
 		{
-			name:          "AWS defaults to Route53",
+			name:          "AWS defaults to Cloudflare",
 			infraProvider: ProviderAWS,
-			expected:      DNSProviderRoute53,
+			expected:      DNSProviderCloudflare,
 		},
 		{
-			name:          "GCP defaults to CloudDNS",
+			name:          "GCP defaults to Cloudflare",
 			infraProvider: ProviderGCP,
-			expected:      DNSProviderCloudDNS,
+			expected:      DNSProviderCloudflare,
 		},
 		{
-			name:          "Azure defaults to AzureDNS",
+			name:          "Azure defaults to Cloudflare",
 			infraProvider: ProviderAzure,
-			expected:      DNSProviderAzureDNS,
+			expected:      DNSProviderCloudflare,
 		},
 		{
 			name:          "BareMetal defaults to Cloudflare",
@@ -331,14 +331,14 @@ func TestAutoSelectProvider_NonOpenStack(t *testing.T) {
 		expected      ServiceProviderType
 	}{
 		{
-			name:          "AWS auto-selects Route53",
+			name:          "AWS auto-selects Cloudflare",
 			infraProvider: ProviderAWS,
-			expected:      DNSProviderRoute53,
+			expected:      DNSProviderCloudflare,
 		},
 		{
-			name:          "GCP auto-selects CloudDNS",
+			name:          "GCP auto-selects Cloudflare",
 			infraProvider: ProviderGCP,
-			expected:      DNSProviderCloudDNS,
+			expected:      DNSProviderCloudflare,
 		},
 	}
 

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/registry"
@@ -59,6 +60,7 @@ func newClusterServiceEnableCmd() *cobra.Command {
 		render         bool
 		prune          bool
 		adoptGenerated bool
+		defaultCred    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "enable <service-name>",
@@ -68,8 +70,9 @@ If the service requires additional parameters or secrets, they must be provided
 as flags. If they are missing, the command will return an error with an example.
 
 Examples:
-  # Enable the 'cert-manager' service with a required email parameter
-  opencenter cluster service enable cert-manager --param="email=admin@example.com"
+  # Enable the 'cert-manager' service with Cloudflare DNS (the default provider) and pin
+  # the token's credential as the cluster default issuer; --default=false clears that pin
+  opencenter cluster service enable cert-manager --param="email=$CLOUDFLARE_DNS_EMAIL" --param="dns_provider=cloudflare" --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" --default --force
 
   # Enable a managed service with a secret
   opencenter cluster service enable my-managed-service --managed --secret="api_key=some_secret_value"
@@ -133,6 +136,16 @@ Examples:
 				return fmt.Errorf("failed to enable service: %w", err)
 			}
 
+			// cert-manager defaults to Cloudflare: a bare enable (no
+			// --param=dns_provider) must not silently land on a cloud-native
+			// provider, so the provider is written explicitly before
+			// validation. An explicit --param=dns_provider wins, and a config
+			// that already pins a provider is left alone.
+			if serviceName == "cert-manager" && !hasParam(params, "dns_provider") {
+				if certManager, ok := serviceCfg.(*services.CertManagerConfig); ok && strings.TrimSpace(certManager.DNSProvider) == "" {
+					certManager.DNSProvider = string(services.DNSProviderCloudflare)
+				}
+			}
 			// Process parameters
 			if err := processParams(params, serviceCfg); err != nil {
 				return err
@@ -140,6 +153,33 @@ Examples:
 			// Process secrets
 			if err := processSecrets(secrets, serviceName, &cfg.Secrets); err != nil {
 				return err
+			}
+			// --default pins the credential these secrets populate as the
+			// cluster-wide DNS credential (services.cert-manager
+			// .default_credential), the precedence step that decides which
+			// rendered ClusterIssuer becomes the gateway default. --default=false
+			// clears the pin so credential selection falls back to resolution
+			// (zone match, sole credential, lowest name). The flag is meaningful
+			// only for cert-manager; any other service is a hard error rather
+			// than a silently ignored option.
+			if cmd.Flags().Changed("default") {
+				if serviceName == "cert-manager" && !isManaged {
+					certManager, ok := serviceCfg.(*services.CertManagerConfig)
+					if !ok {
+						return fmt.Errorf("internal error: cert-manager config type %T", serviceCfg)
+					}
+					if defaultCred {
+						cred := defaultCloudflareCredentialName(&cfg.Secrets)
+						if cred == "" {
+							return fmt.Errorf("--default requires a cert-manager DNS credential to pin.\nExample: --secret=\"cloudflare_api_token=$CLOUDFLARE_API_TOKEN\"")
+						}
+						certManager.DefaultCredential = cred
+					} else {
+						certManager.DefaultCredential = ""
+					}
+				} else {
+					return fmt.Errorf("--default is only supported for the 'cert-manager' service")
+				}
 			}
 			// Custom validation logic (validate before saving). Include the candidate
 			// service in the config so provider-aware backend resolution sees it.
@@ -195,8 +235,12 @@ Examples:
 	cmd.Flags().StringVar(&cluster, "cluster", "", "Specify the cluster name")
 	cmd.Flags().BoolVar(&force, "force", false, "Force re-enable an already enabled service to re-render configuration")
 	cmd.Flags().BoolVar(&render, "render", false, "Render the service templates immediately after enabling")
-	cmd.Flags().BoolVar(&prune, "prune", true, "Remove stale generated files during --render")
 	cmd.Flags().BoolVar(&adoptGenerated, "adopt-generated", false, "Claim differing planned files after creating backups during --render")
+	cmd.Flags().BoolVar(&prune, "prune", true, "Remove stale generated files during --render")
+	// Tri-state by absence: unset leaves services.cert-manager.default_credential
+	// untouched, --default pins the resolved credential, --default=false clears
+	// the pin. BoolVar's false default cannot express "unset", hence Changed().
+	cmd.Flags().BoolVar(&defaultCred, "default", false, "cert-manager: pin the DNS credential these secrets populate as the cluster default issuer (cert-manager only; --default=false clears the pin)")
 	return cmd
 }
 
@@ -529,6 +573,56 @@ func processSecrets(secrets []string, serviceName string, secretsCfg *v2.Secrets
 	return nil
 }
 
+// hasParam reports whether a --param assignment supplies the given key.
+func hasParam(params []string, key string) bool {
+	for _, p := range params {
+		parts := strings.SplitN(p, "=", 2)
+		if len(parts) == 2 && strings.TrimSpace(parts[0]) == key {
+			return true
+		}
+	}
+	return false
+}
+
+// defaultCloudflareCredentialName resolves the credential name --default pins
+// for cert-manager: an already-enabled named credential (lowest-sorted, so the
+// choice is deterministic), otherwise the flat
+// secrets.cert_manager.cloudflare_api_token that --secret populates, which
+// ResolvedCertManagerCloudflareCredentials surfaces under the provider name.
+// "" means no credential exists to pin; the init placeholder never counts.
+func defaultCloudflareCredentialName(secretsCfg *v2.SecretsConfig) string {
+	enabled := make([]string, 0, len(secretsCfg.CertManager.Cloudflare)+len(secretsCfg.CertManager.AWS))
+	for name, cred := range secretsCfg.CertManager.Cloudflare {
+		if cred.Enabled && !isMissingSecretValue(cred.APIToken) {
+			enabled = append(enabled, name)
+		}
+	}
+	for name, cred := range secretsCfg.CertManager.AWS {
+		if cred.Enabled && !isMissingSecretValue(cred.AWSAccessKey) && !isMissingSecretValue(cred.AWSSecretAccessKey) {
+			enabled = append(enabled, name)
+		}
+	}
+	if len(enabled) > 0 {
+		sort.Strings(enabled)
+		return enabled[0]
+	}
+	if !isMissingSecretValue(secretsCfg.CertManager.CloudflareAPIToken) {
+		return string(services.DNSProviderCloudflare)
+	}
+	application := secretsCfg.Global.AWS.Application
+	if !isMissingSecretValue(application.AccessKey) && !isMissingSecretValue(application.SecretAccessKey) {
+		return string(services.DNSProviderRoute53)
+	}
+	return ""
+}
+
+// isMissingSecretValue reports whether a secret is empty or still the init
+// placeholder, matching v2.isMissingSecret without exporting it.
+func isMissingSecretValue(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	return trimmed == "" || strings.EqualFold(trimmed, v2.PlaceholderSecret)
+}
+
 // validateService performs custom validation for specific services.
 func validateServiceLegacy(serviceName string, serviceCfg any, secretsCfg *v2.SecretsConfig) error {
 	switch serviceName {
@@ -826,6 +920,7 @@ func getServiceOptions(serviceName string) []ServiceOption {
 	case "cert-manager":
 		return []ServiceOption{
 			{Name: "email", Type: "string", Description: "Email address for Let's Encrypt certificate notifications", Required: true},
+			{Name: "dns_provider", Type: "string", Description: "DNS provider for ACME DNS-01 validation (cloudflare [default], route53, designate, clouddns, azuredns, none)", Required: false},
 			{Name: "letsencrypt_server", Type: "string", Description: "LetsEncrypt ACME server URL", Required: false},
 			{Name: "region", Type: "string", Description: "AWS region for Route53 DNS validation", Required: false},
 		}
@@ -938,6 +1033,7 @@ func getServiceSecrets(serviceName string) []ServiceOption {
 	switch serviceName {
 	case "cert-manager":
 		return []ServiceOption{
+			{Name: "cloudflare_api_token", Type: "string", Description: "Cloudflare API token for DNS validation (default provider)", Required: false},
 			{Name: "aws_access_key", Type: "string", Description: "AWS access key for Route53 DNS validation", Required: false},
 			{Name: "aws_secret_access_key", Type: "string", Description: "AWS secret access key for Route53 DNS validation", Required: false},
 		}

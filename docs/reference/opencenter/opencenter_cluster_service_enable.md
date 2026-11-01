@@ -19,8 +19,9 @@ If the service requires additional parameters or secrets, they must be provided
 as flags. If they are missing, the command will return an error with an example.
 
 Examples:
-  # Enable the 'cert-manager' service with a required email parameter
-  opencenter cluster service enable cert-manager --param="email=admin@example.com"
+  # Enable the 'cert-manager' service with Cloudflare DNS (the default provider) and pin
+  # the token's credential as the cluster default issuer; --default=false clears that pin
+  opencenter cluster service enable cert-manager --param="email=$CLOUDFLARE_DNS_EMAIL" --param="dns_provider=cloudflare" --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" --default --force
 
   # Enable a managed service with a secret
   opencenter cluster service enable my-managed-service --managed --secret="api_key=some_secret_value"
@@ -40,6 +41,7 @@ opencenter cluster service enable <service-name> [flags]
 ```
       --adopt-generated     Claim differing planned files after creating backups during --render
       --cluster string      Specify the cluster name
+      --default             cert-manager: pin the DNS credential these secrets populate as the cluster default issuer (cert-manager only; --default=false clears the pin)
       --force               Force re-enable an already enabled service to re-render configuration
   -h, --help                help for enable
       --managed             Enable the service as a managed service

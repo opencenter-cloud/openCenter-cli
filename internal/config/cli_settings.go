@@ -94,6 +94,8 @@ type ClusterDefaultsConfig struct {
 	// `cluster set` pins it and the cluster owns the value from then on.
 	// DNSProvider accepts route53 | cloudflare | designate | clouddns | azuredns
 	// | none, where none disables ACME and leaves the internal self-signed CA.
+	// The default is cloudflare: the portable provider that works on every
+	// infrastructure.
 	DNSProvider string   `yaml:"dns_provider,omitempty"`
 	DNSEmail    string   `yaml:"dns_email,omitempty"`
 	DNSZones    []string `yaml:"dns_zones,omitempty"`
@@ -293,6 +295,10 @@ func DefaultCLIConfig() *CLIConfig {
 			Region:           "DFW3",
 			Environment:      "dev",
 			GitopsAuthMethod: GitopsAuthMethodToken,
+			// Cloudflare is the default cert-manager DNS provider: it works
+			// identically on every infrastructure provider, so a fresh install
+			// issues public ACME certificates without a cloud-specific setup.
+			DNSProvider: string(services.DNSProviderCloudflare),
 		},
 	}
 }

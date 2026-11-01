@@ -404,6 +404,98 @@ func TestClusterServiceEnableParamPersists(t *testing.T) {
 	}
 }
 
+// The --default tri-state drives services.cert-manager.default_credential,
+// which selects the ClusterIssuer the Gateway annotates. Unset must leave an
+// existing pin untouched, --default must pin the credential the flat token
+// resolves to, and --default=false must clear the pin.
+func TestClusterServiceEnableDefaultFlagPinsDNSCredential(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		initialPin  string
+		wantPin     string
+		wantErrText string
+	}{
+		{
+			name:       "flag-absent-preserves-existing-pin",
+			args:       []string{"cert-manager", "--force", `--param=email=admin@example.com`, `--param=dns_provider=cloudflare`, `--secret=cloudflare_api_token=cf-token`},
+			initialPin: "prod",
+			wantPin:    "prod",
+		},
+		{
+			name:       "default-pins-flat-token-credential",
+			args:       []string{"cert-manager", "--force", "--default", `--param=email=admin@example.com`, `--param=dns_provider=cloudflare`, `--secret=cloudflare_api_token=cf-token`},
+			wantPin:    "cloudflare",
+		},
+		{
+			name:       "default-false-clears-pin",
+			args:       []string{"cert-manager", "--force", "--default=false", `--param=email=admin@example.com`, `--param=dns_provider=cloudflare`, `--secret=cloudflare_api_token=cf-token`},
+			initialPin: "prod",
+			wantPin:    "",
+		},
+		{
+			name:        "default-without-credential-errors",
+			args:        []string{"cert-manager", "--force", "--default", `--param=email=admin@example.com`},
+			wantErrText: "--default requires a cert-manager DNS credential",
+		},
+		{
+			name:        "default-on-other-service-errors",
+			args:        []string{"prometheus", "--force", "--default"},
+			wantErrText: "--default is only supported for the 'cert-manager' service",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clusterName := uniqueServiceTestCluster("service-default-flag", tt.name)
+			_, cleanup := setupServiceTestEnv(t, clusterName)
+			defer cleanup()
+
+			if tt.initialPin != "" {
+				cfg, err := loadConfig(context.Background(), clusterName)
+				if err != nil {
+					t.Fatalf("load config: %v", err)
+				}
+				cfg.OpenCenter.Services["cert-manager"] = &services.CertManagerConfig{
+					BaseConfig:        services.BaseConfig{Enabled: false},
+					DefaultCredential: tt.initialPin,
+				}
+				if err := saveConfig(context.Background(), cfg); err != nil {
+					t.Fatalf("save config: %v", err)
+				}
+			}
+
+			cmd := newClusterServiceEnableCmd()
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			cmd.SetArgs(tt.args)
+			err := cmd.Execute()
+
+			if tt.wantErrText != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrText) {
+					t.Fatalf("error = %v, want containing %q", err, tt.wantErrText)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("enable: %v", err)
+			}
+
+			cfg, err := loadConfig(context.Background(), clusterName)
+			if err != nil {
+				t.Fatalf("load persisted config: %v", err)
+			}
+			service, ok := cfg.OpenCenter.Services["cert-manager"].(*services.CertManagerConfig)
+			if !ok {
+				t.Fatalf("cert-manager config type = %T", cfg.OpenCenter.Services["cert-manager"])
+			}
+			if service.DefaultCredential != tt.wantPin {
+				t.Fatalf("default_credential = %q, want %q", service.DefaultCredential, tt.wantPin)
+			}
+		})
+	}
+}
+
 func TestClusterServiceEnableParamPreservesJSONCommasAtCommandBoundary(t *testing.T) {
 	clusterName := "service-param-json-array"
 	_, cleanup := setupServiceTestEnv(t, clusterName)

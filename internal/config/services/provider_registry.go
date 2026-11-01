@@ -157,13 +157,16 @@ func (r *ServiceProviderRegistry) initializeCompatibilityMatrix() {
 func (r *ServiceProviderRegistry) initializeDefaultProviders() {
 	// DNS provider defaults for cert-manager
 	dnsDefaults := make(map[InfrastructureProvider]ServiceProviderType)
-	dnsDefaults[ProviderAWS] = DNSProviderRoute53
-	dnsDefaults[ProviderGCP] = DNSProviderCloudDNS
-	dnsDefaults[ProviderAzure] = DNSProviderAzureDNS
-	dnsDefaults[ProviderBareMetal] = DNSProviderCloudflare
-	dnsDefaults[ProviderVSphere] = DNSProviderCloudflare
-	// OpenStack default is conditional - set by SetDesignateAvailability
-	dnsDefaults[ProviderOpenStack] = DNSProviderCloudflare // fallback default
+	// Cloudflare is the default DNS provider for every infrastructure
+	// provider. It is the portable choice: it works identically on AWS,
+	// OpenStack, GCP, Azure, bare metal, and vSphere, and the guided
+	// `cluster service enable cert-manager --param=dns_provider=cloudflare`
+	// flow targets it. A cluster that wants a cloud-native issuer (route53,
+	// clouddns, azuredns) or OpenStack Designate sets dns_provider explicitly,
+	// which pins the field.
+	for _, infrastructureProvider := range []InfrastructureProvider{ProviderAWS, ProviderOpenStack, ProviderGCP, ProviderAzure, ProviderBareMetal, ProviderVSphere} {
+		dnsDefaults[infrastructureProvider] = DNSProviderCloudflare
+	}
 	r.defaultProviders["cert-manager:dns"] = dnsDefaults
 
 	// Object storage is not inferred from infrastructure. All service defaults
@@ -220,11 +223,11 @@ func (r *ServiceProviderRegistry) SetDesignateAvailability(clusterName string, a
 
 // AutoSelectDNSProvider resolves the cert-manager DNS provider for an
 // infrastructure provider without mutating registry state. It is the pure form
-// of AutoSelectProvider for the cert-manager/dns capability: Designate only for
-// OpenStack clusters that enable it, otherwise the per-provider default
-// (route53 on AWS, clouddns on GCP, azuredns on Azure, cloudflare elsewhere).
-// An unknown or empty infrastructure provider yields cloudflare, the portable
-// choice.
+// of AutoSelectProvider for the cert-manager/dns capability: Designate for
+// OpenStack clusters that enable it, otherwise cloudflare — the portable
+// default for every infrastructure provider. An explicit dns_provider always
+// wins before this is consulted; cloud-native issuers (route53, clouddns,
+// azuredns) are opt-in through it.
 func AutoSelectDNSProvider(infraProvider, clusterName string, designateAvailable bool) ServiceProviderType {
 	if InfrastructureProvider(strings.ToLower(strings.TrimSpace(infraProvider))) == ProviderOpenStack {
 		if designateAvailable {

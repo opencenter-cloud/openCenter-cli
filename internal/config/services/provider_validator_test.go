@@ -27,19 +27,19 @@ func TestValidateCertManagerDNSProvider_AutoSelect(t *testing.T) {
 		expected      string
 	}{
 		{
-			name:          "AWS auto-selects Route53",
+			name:          "AWS auto-selects Cloudflare",
 			infraProvider: ProviderAWS,
-			expected:      "route53",
+			expected:      "cloudflare",
 		},
 		{
-			name:          "GCP auto-selects CloudDNS",
+			name:          "GCP auto-selects Cloudflare",
 			infraProvider: ProviderGCP,
-			expected:      "clouddns",
+			expected:      "cloudflare",
 		},
 		{
-			name:          "Azure auto-selects AzureDNS",
+			name:          "Azure auto-selects Cloudflare",
 			infraProvider: ProviderAzure,
-			expected:      "azuredns",
+			expected:      "cloudflare",
 		},
 	}
 
@@ -263,8 +263,8 @@ func TestApplyDefaultProviders(t *testing.T) {
 
 	// Verify defaults were applied
 	certMgr := services["cert-manager"].(*CertManagerConfig)
-	if certMgr.DNSProvider != "route53" {
-		t.Errorf("expected cert-manager DNS provider route53, got %s", certMgr.DNSProvider)
+	if certMgr.DNSProvider != "cloudflare" {
+		t.Errorf("expected cert-manager DNS provider cloudflare, got %s", certMgr.DNSProvider)
 	}
 
 	loki := services["loki"].(*LokiConfig)

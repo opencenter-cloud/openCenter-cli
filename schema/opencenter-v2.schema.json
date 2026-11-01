@@ -3026,6 +3026,9 @@
                 "enabled": {
                   "type": "boolean"
                 },
+                "floating_ip": {
+                  "type": "string"
+                },
                 "gateway_class": {
                   "type": "string"
                 },
@@ -5296,6 +5299,9 @@
                 },
                 "enabled": {
                   "type": "boolean"
+                },
+                "floating_ip": {
+                  "type": "string"
                 },
                 "gateway_class": {
                   "type": "string"
@@ -7643,6 +7649,9 @@
                 },
                 "enabled": {
                   "type": "boolean"
+                },
+                "floating_ip": {
+                  "type": "string"
                 },
                 "gateway_class": {
                   "type": "string"

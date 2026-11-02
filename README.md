@@ -31,11 +31,40 @@ To install or pin a specific release (such as `v1.0.0-rc07`):
 curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash -s -- --version v1.0.0-rc07
 ```
 
-Verify the installation:
+### Install from repository checkout
+
+If you have cloned the repository, execute the install script directly:
+
+```bash
+./scripts/install.sh
+```
+
+Common installer options and examples:
+
+```bash
+# Pin a specific release version
+./scripts/install.sh --version v1.0.0-rc07
+
+# Preview planned actions without downloading or installing
+./scripts/install.sh --dry-run
+
+# Specify custom binary and plugin installation directories
+./scripts/install.sh --bin-dir ~/.local/bin --plugins-dir ~/.config/opencenter/plugins
+```
+
+### Verify installation
+
+Confirm that the CLI and plugin are installed:
 
 ```bash
 opencenter version
 opencenter plugins list
+```
+
+When run as non-root, the CLI installs to `~/.local/bin`. Ensure this directory is in your `$PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 The installer detects your operating system (`linux`, `darwin`) and architecture
@@ -43,8 +72,8 @@ The installer detects your operating system (`linux`, `darwin`) and architecture
 on the release, installs the CLI to `/usr/local/bin` when running as root and to
 `~/.local/bin` otherwise, installs the plugin to
 `~/.config/opencenter/plugins`, and registers the plugin's release checksum in
-that directory's `checksums.txt`. Options and environment variables are
-documented in the
+that directory's `checksums.txt`. Complete options, environment variables, and
+uninstall steps are documented in the
 [installation reference](docs/reference/installation.md).
 
 ### Build from source

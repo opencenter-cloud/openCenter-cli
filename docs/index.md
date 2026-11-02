@@ -53,6 +53,7 @@ Task-oriented operations are grouped by outcome:
 - [Configure networking](operations/configure-networking.md)
 - [Manage secrets](operations/manage-secrets.md)
 - [Manage worker pools](operations/manage-worker-pools.md)
+- [Production OpenStack deployment](operations/openstack-production-deployment.md)
 - [Back up and restore](operations/backup-and-restore.md)
 - [Upgrade Kubernetes](operations/upgrade-kubernetes.md)
 - [Migrate clusters](operations/migrate-clusters.md)

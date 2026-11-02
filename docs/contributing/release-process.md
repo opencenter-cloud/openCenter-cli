@@ -66,7 +66,7 @@ When cutting any release or bumping the upstream `openCenter-gitops-base` depend
 | **CLI Version** | `VERSION` | Version string (e.g. `1.0.0`) | Repository-level version file read by release automation. |
 | **JSON Schemas** | `schema/opencenter-v2.schema.json`, `schema/cluster.schema.json` | Generated schema files | Run `mise run schema-v2` if any config structs changed. |
 | **CLI Docs** | `docs/reference/cli/` | Auto-generated Cobra documentation | Run `mise run docs-gen` to sync CLI flags and command descriptions. |
-| **Workflow Docs**| `docs/concepts/gitops-workflow.md`, `docs/getting-started/openstack-cluster-deployment.md` | Base repo tag and contract descriptions in markdown snippets | Guides and examples referencing default tags. |
+| **Workflow Docs**| `docs/concepts/gitops-workflow.md`, `docs/operations/openstack-production-deployment.md` | Base repo tag and contract descriptions in markdown snippets | Guides and examples referencing default tags. |
 
 ---
 
@@ -167,7 +167,7 @@ git grep "2026.03-rc" docs/
 
 Update references in:
 * `docs/concepts/gitops-workflow.md`
-* `docs/getting-started/openstack-cluster-deployment.md`
+* `docs/operations/openstack-production-deployment.md`
 
 Regenerate reference docs if CLI command signatures or flags were modified:
 

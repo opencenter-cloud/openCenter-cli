@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: mise-tasks
 title: "Mise Tasks Reference"
 sidebar_label: Mise Tasks
@@ -16,8 +16,9 @@ tags: [mise, build, tasks, reference]
 
 | Tool | Version |
 | --- | --- |
-| `golang` | `1.26.6` |
-| `golangci-lint` | `2.11.4` |
+| `go` | `1.27.1` |
+| `golangci-lint` | `2.14.0` |
+| `vale` | `3.23.0` |
 | `kubectl` | `latest` |
 | `kind` | `latest` |
 | `helm` | `latest` |
@@ -58,16 +59,17 @@ tags: [mise, build, tasks, reference]
 | `test-build` | `go build ./...` |
 | `test-remediation` | `go test ./internal/sops ./internal/secrets ./internal/secretartifacts ./internal/gitops ./cmd -count=1` |
 | `test-remediation-race` | `go test -race ./internal/secrets -run 'TestSyncSecretsSerializesConcurrentTransactions\|TestReconcileStateWriteFailureRollsBackAllMutationsAndRetry' -count=3` |
-| `test-docs` | `go test -tags tools ./cmd/docs -count=1`, plus repository-only documentation checks for maintained Markdown, links, frontmatter, and Mermaid fences; it does not publish or render documentation. |
+| `test-docs` | `test-docs-scripts`, `go test -tags tools ./cmd/docs -count=1`, `test-docs-idempotency`, `go test ./cmd -run '^TestDocsDoNotUseRemovedGACommands$' -count=1`, `go test ./internal/config/v2schema -run '^TestDocumentationYAMLSnippetsMatchSchema$' -count=1`, `test-docs-frontmatter`, `test-docs-timestamps`, `test-docs-links`, `test-docs-mermaid`; it does not publish or render documentation |
 | `test-go-all` | Local `go test ./... -count=1 -timeout 15m` sweep; on failure, a transient failure log is written under `.tmp/` for diagnosis, not kept as a repository artifact. |
 | `test-kustomize` | `go test ./internal/gitops -run '^TestGeneratedDefaultOverlayKustomizeFailureMatrix$' -count=1` |
 | `test-diff` | `git diff --check` |
 | `godog` | `go test ./tests/features/steps/... -v -- --godog.tags=~@wip --godog.paths=tests/features` |
 | `godog-wip` | Same, with `--godog.tags=@wip` |
 | `godog-tag <tag>` | Same, with `--godog.tags=@<tag>` |
-| `property` (alias `test-properties`) | `go test ./internal/... ./cmd/... -v -run "TestProperty" -count=1` |
+| `property` | alias of `test-properties`; `go test ./internal/... ./cmd/... -v -run "TestProperty" -count=1` |
+| `test-properties` | the same property-based suite under its canonical name |
 | `govulncheck` | `govulncheck ./...` |
-| `gitleaks` | `gitleaks detect --source . -c .gitleaks.toml --redact --no-banner` |
+| `gitleaks` | `gitleaks detect --source . --redact --no-banner` with the long configuration-file flag pointing at `.gitleaks.toml` |
 | `integration` | Runs `TestClusterSetup` (`./cmd`), then `TestRetry\|TestCircuitBreaker\|TestLockManager\|TestProperty` (`./internal/resilience/...`), then `TestDriftDetector\|TestBackupManager\|TestProperty` (`./internal/operations/...`) |
 | `perf` | `go test -tags perf ./internal/config -run "TestMemoryUsageRegression" -count=1` |
 | `test:all` | `test`, `test-race`, `vet`, `godog`, `property`, `govulncheck`; separate from the local full-package `test-go-all` sweep and repository-only `test-docs` checks |
@@ -79,19 +81,26 @@ tags: [mise, build, tasks, reference]
 | `validate` | `./bin/opencenter cluster validate` |
 | `schema-verify` | **Unavailable as a supported workflow:** legacy end-to-end helper with an obsolete update step; do not use it. |
 | `docs-gen` | `go run cmd/docs/generate.go` |
-| `test-docs-idempotency` | Runs `docs-gen` twice, diffs the two results, fails if unstable |
-| `test-docs-frontmatter` | `python3 hack/scripts/audit_doc_frontmatter.py --strict` across maintained Markdown pages |
-| `test-docs-frontmatter-remediation` | Same, with an `--ignore` list of documented legacy pages |
+| `docs-update-timestamps -- <page.md> ...` | `python3 hack/scripts/audit_doc_frontmatter.py --update-last-updated` on the explicitly supplied pages; exits with status 2 and prints usage when no page is given |
+| `test-docs-idempotency` | Runs `docs-gen` twice, diffs the two results, fails if unstable; chained by `test-docs` |
+| `test-docs-scripts` | `python3 -m unittest discover -s hack/scripts -p 'test_*.py'` -- unit tests for every documentation policy/helper script; first step chained by `test-docs` |
+| `test-docs-links` | `python3 hack/scripts/check_doc_links.py` -- checks local Markdown links without network access; chained by `test-docs` |
+| `test-docs-mermaid` | `python3 hack/scripts/check_mermaid_fences.py` -- checks Mermaid fence structure without a renderer; chained by `test-docs` |
+| `test-docs-frontmatter` | `python3 hack/scripts/audit_doc_frontmatter.py --strict` across maintained Markdown pages; chained by `test-docs` |
+| `test-docs-frontmatter-remediation` | Same audit, with an `--ignore` list of documented legacy pages |
+| `test-docs-timestamps` | `python3 hack/scripts/audit_doc_frontmatter.py --strict --check-stale-timestamps` -- fails when a page's `last_updated` predates the newest commit that changed its body; needs full Git history, and is chained by `test-docs` |
+| `test-docs-task-coverage` | `python3 hack/scripts/check_mise_task_docs.py` -- fails when `.mise.toml` defines a task that `docs/reference/mise-tasks.md` does not document, or the page documents a task that no longer exists; chained by `test-docs` |
+| `test-docs-cli-invocations` | `python3 hack/scripts/check_doc_cli_invocations.py` -- asks the built binary, through cobra completion, whether every command shown in a shell code block is registered; skips when `bin/opencenter` is absent, so run `mise run build` first; chained by `test-docs` |
 | `tag-wip-failures` | `python3 hack/tag_wip_failures.py` |
 | `gitea-up` | `go run ./cmd/opencenter-local gitea up` |
 | `gitea-cleanup` | `go run ./cmd/opencenter-local gitea destroy` |
 | `active` | `./bin/opencenter cluster status` |
-| `terraform-generate <cluster> [dir]` | `mise run build`; `./bin/opencenter cluster terraform-generate <cluster> --output-dir=<dir>` |
-| `preflight` | `./bin/opencenter cluster validate` |
+| `terraform-generate <cluster> [dir]` | **Unavailable:** legacy command flow invokes `./bin/opencenter cluster terraform-generate`, which is not registered in the current command tree. |
+| `preflight` | **Unavailable:** legacy command flow invokes a removed `cluster`-`preflight` verb that is not registered in the current command tree. |
 | `install-shell-integration` | `./hack/install-shell-integration.sh` |
-| `install-hooks` | Verifies and `chmod +x`s `.git/hooks/pre-commit` |
+| `install-hooks` | Errors out unless `pre-commit` is on `PATH` (run `mise install` first), then runs `pre-commit install --hook-type pre-commit` pointing it at the tracked `.pre-commit-config.yaml`; that hook runs gitleaks, the docs frontmatter audit, Vale on staged Markdown, and the maintained-docs requirement for public behavior changes |
 | `clean` | Removes `bin/`, `testdata/`, `new-schema.json`, `terraform-output/` |
-| `kind-cleanup [cluster]` | Destroys the named Kind cluster (default `my-cluster`) and local Gitea; removes a stale lock file |
+| `kind-cleanup [cluster]` | Destroys the named Kind cluster (default `my-cluster`) and local Gitea; removes a stale lock file. Its two existence probes invoke commands that are not registered in the current command tree -- a removed `cluster`-`info` verb and the separate plugin binary's command group -- so both probes fail and each step is skipped. |
 | `demo-cleanup` | `kind-cleanup` then `clean` |
 | `openstack-reset` | `hack/scripts/openstack-reset.sh` (accepts `--os-cloud`, `--force`, `--dry-run` after `--`) |
 
@@ -118,9 +127,16 @@ maintenance items rather than supported CLI examples:
   is not present in the current tree.
 * `schema-verify` is unavailable as a supported workflow because its command
   flow contains an obsolete update step.
-* `terraform-generate` is a legacy helper; use `cluster generate`.
-* `preflight` is the local validation wrapper.
-* `kind-cleanup` checks for the named cluster before cleanup.
+* `terraform-generate` is unavailable because it invokes a `cluster` subcommand that is
+  not registered in the current tree; generate infrastructure with `cluster generate`.
+* `preflight` is unavailable because it invokes a removed `cluster`-`preflight` verb;
+  audit local prerequisites with `cluster doctor` and validate a configuration with
+  `cluster validate`.
+* `validate` invokes `cluster validate`, which is registered, but passes no cluster
+  name, so it only resolves the active cluster.
+* `kind-cleanup` probes for the named cluster and the local Gitea instance through
+  commands that are not registered in the current tree, so both cleanup steps are
+  skipped and only the stale lock file is removed.
 
 For current command spelling and flags, use the generated [CLI command
 reference](cli-commands.md).

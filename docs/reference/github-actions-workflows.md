@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-10-02
 id: github-actions-workflows
 title: "GitHub Actions Workflows"
 sidebar_label: GitHub Actions Workflows

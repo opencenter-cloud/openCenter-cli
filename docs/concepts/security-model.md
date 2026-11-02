@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-09-26
 id: security-model
 title: "Security Model"
 sidebar_label: Security Model

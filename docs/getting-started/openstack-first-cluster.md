@@ -82,15 +82,19 @@ The deployment documented here reflects the real-world cluster configuration for
 
 Before beginning, ensure the following requirements are met:
 
-1. **openCenter CLI & Local Plugin (v1.0.0-rc07)**: Installed and available in your `$PATH`. Install via the curl installer:
+1. **openCenter CLI & Local Plugin (v1.0.0-rc07)**: Installed and available in your `$PATH`. Install via the official curl installer:
    ```bash
+   # Install openCenter CLI and local plugin (pinned to v1.0.0-rc07)
    curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash -s -- --version v1.0.0-rc07
-   ```
-   Verify the installation and plugin registration:
-   ```bash
+
+   # Or install the latest release automatically:
+   # curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash
+
+   # Verify the installation and verified plugin registration
    opencenter version
    opencenter plugins list
    ```
+   The installer verifies SHA-256 release checksums, installs `opencenter` and `opencenter-local` into your binary path (`~/.local/bin` or `/usr/local/bin`), and registers the plugin in `~/.config/opencenter/plugins/checksums.txt`.
 2. **OpenStack Cloud Profile**: A functional profile in `~/.config/openstack/clouds.yaml` (e.g., `octr-dev-iad3`) with permissions to create instances, volumes, networks, routers, and Keystone application credentials.
 3. **OpenStack Quotas**: Sufficient compute cores, RAM, floating IPs, and server groups.
 4. **Git Provider Account**: Access to GitHub (or GitLab) with permissions to create private repositories, and an authenticated GitHub Personal Access Token (PAT) with repo write permissions (`GH_BOOTSTRAP_TOKEN`).
@@ -236,11 +240,13 @@ gh repo create "$GH_ORG/$CLUSTER-gitops" --private --disable-wiki
 
 ## Step 5: Provision Service Object Storage (Swift / S3)
 
-Stateful platform services (Harbor registry, Loki logging, Mimir metrics, Tempo tracing, Velero backups, and etcd snapshot backups) require S3-compatible object storage.
+Stateful platform services (Harbor registry, Loki logging, Mimir metrics, Tempo tracing, Velero backups, and etcd snapshot backups) read their object storage from S3-compatible buckets.
 
-Provision the required S3 storage containers and credentials in a single loop:
+`storage apply` resolves each service's typed configuration and exits with `service "<name>" is not configured` for a service that is not enabled, so the loop must cover only the services this cluster actually enables. Check the enabled set first, then provision each one:
 
 ```bash
+opencenter cluster service status --cluster "$ORG/$CLUSTER"
+
 for service in harbor loki mimir tempo velero etcd-backup; do
   opencenter cluster service storage apply "$service" \
     --cluster "$ORG/$CLUSTER" \
@@ -252,8 +258,10 @@ for service in harbor loki mimir tempo velero etcd-backup; do
 done
 ```
 
+Drop any service from the list that `service status` reports as disabled. The accepted backends differ per service: `loki` takes `swift`, `s3`, or `none`; `tempo` takes `s3` only; `mimir` takes `swift` or `s3`; `harbor` takes `s3` or `filesystem`; `etcd-backup` and `velero` take `s3` or `none`. The `none` and `filesystem` modes provision no bucket and no credentials, so those services need no `storage apply` run at all.
+
 ### What This Accomplishes:
-- **Bucket Creation**: Interacts with the Swift S3 API at `$S3_ENDPOINT` to create dedicated buckets for each service.
+- **Bucket Creation**: Interacts with the Swift S3 API at `$S3_ENDPOINT` to create dedicated buckets for each provisioned service.
 - **Keystone EC2 Credentials**: Generates isolated EC2 credentials with `--rotate-credentials` for least-privilege service access.
 - **Blueprint Updates**: Injects the generated endpoints, bucket names, and credential references directly into `doritos-config.yaml`.
 
@@ -315,6 +323,7 @@ opencenter cluster service enable cert-manager \
   --param="email=$CLOUDFLARE_DNS_EMAIL" \
   --param="dns_provider=cloudflare" \
   --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" \
+  --default \
   --force
 ```
 
@@ -329,11 +338,12 @@ opencenter cluster service enable cert-manager \
   --param="region=us-east-1" \
   --secret="aws_access_key=<AWS_ACCESS_KEY_ID>" \
   --secret="aws_secret_access_key=<AWS_SECRET_ACCESS_KEY>" \
+  --default \
   --force
 ```
 
 > [!NOTE]
-> Setting `--force` overwrites any existing parameter defaults. The command registers the issuer configuration and provisions the appropriate Kubernetes Secret containing your API token.
+> `--default` pins the credential these secrets populate as the cluster default issuer, so the gateway `cert-manager.io/cluster-issuer` annotation points at it. `--force` overwrites any existing parameter defaults. The command registers the issuer configuration and provisions the appropriate Kubernetes Secret containing your API token.
 
 ---
 
@@ -380,29 +390,26 @@ opencenter secrets sync $ORG/$CLUSTER
 
 ## Step 10: Commit and Push to the GitOps Repository
 
-Publish the rendered manifests and encrypted secrets to the remote GitOps repository.
-
-The local GitOps working tree is located under `~/.config/opencenter/clusters/gitops/$ORG`:
+Publish the rendered manifests and encrypted secrets to the remote GitOps repository
+created in Step 4. `cluster init` has already run `git init` in
+`~/.config/opencenter/clusters/gitops/$ORG` and set `core.hooksPath`, so commit and push:
 
 ```bash
 # Navigate to the local GitOps directory
 cd ~/.config/opencenter/clusters/gitops/$ORG
 
-# Initialize git tracking (if not already initialized)
-git init
+# Name the branch and stage all generated files
 git branch -M main
-
-# Stage and commit all generated files
 git add -A
 git commit -m "feat(cluster): initial GitOps manifests for $CLUSTER"
 
-# Add the remote and push
-git remote add origin https://github.com/$GH_ORG/$CLUSTER-gitops.git
-# Or if using SSH:
-# git remote add origin git@github.com:$GH_ORG/$CLUSTER-gitops.git
-
+# Push
 git push -u origin main
 ```
+
+`cluster deploy` re-points `origin` to `opencenter.gitops.repository.url` (set in Step 6)
+and aborts when the two differ. The push above is what registers the remote created in
+Step 4, so no `git remote add` is needed.
 
 > [!IMPORTANT]
 > **Push before deploying:** While openCenter can provision infrastructure before the repository is pushed, pushing **first** ensures that as soon as Kubespray finishes bootstrapping Kubernetes and installs Flux, Flux immediately finds and reconciles the cluster manifests without delays or git merge conflicts.
@@ -532,6 +539,9 @@ For rapid automation or repeatability, here is the consolidated execution script
 #!/usr/bin/env bash
 set -euo pipefail
 
+# 0. Install openCenter CLI & plugin (if not already installed)
+# curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash -s -- --version v1.0.0-rc07
+
 # 1. Environment Variables
 export ORG=opensnack
 export CLUSTER=doritos
@@ -557,7 +567,7 @@ opencenter cluster use "$ORG/$CLUSTER"
 # 3. Create Remote GitOps Repo
 gh repo create "$GH_ORG/$CLUSTER-gitops" --private --disable-wiki
 
-# 4. Provision Service Storage
+# 4. Provision Service Storage (drop any service `service status` reports as disabled)
 for service in harbor loki mimir tempo velero etcd-backup; do
   opencenter cluster service storage apply "$service" \
     --cluster "$ORG/$CLUSTER" \
@@ -581,6 +591,7 @@ opencenter cluster service enable cert-manager \
   --param="email=$CLOUDFLARE_DNS_EMAIL" \
   --param="dns_provider=cloudflare" \
   --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" \
+  --default \
   --force
 
 # 7. Validate, Generate, and Sync Secrets
@@ -588,13 +599,11 @@ opencenter cluster validate "$ORG/$CLUSTER"
 opencenter cluster generate "$ORG/$CLUSTER" --force
 opencenter secrets sync "$ORG/$CLUSTER"
 
-# 8. Commit and Push GitOps Manifests
+# 8. Commit and Push GitOps Manifests (cluster init already ran git init)
 cd "$HOME/.config/opencenter/clusters/gitops/$ORG"
-git init
 git branch -M main
 git add -A
 git commit -m "feat(cluster): initial GitOps manifests for $CLUSTER"
-git remote add origin "https://github.com/$GH_ORG/$CLUSTER-gitops.git"
 git push -u origin main
 
 # 9. Deploy Infrastructure and Kubernetes

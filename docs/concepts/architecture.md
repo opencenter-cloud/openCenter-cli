@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-10-22
 id: architecture
 title: "Architecture: rationale and design"
 sidebar_label: Architecture (concepts)

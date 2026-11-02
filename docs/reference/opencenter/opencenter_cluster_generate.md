@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-10-26
 id: opencenter-cluster-generate
 title: "Opencenter_Cluster_Generate"
 sidebar_label: Opencenter_Cluster_Generate

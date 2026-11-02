@@ -1,5 +1,5 @@
 ---
-last_updated: "2026-10-31"
+last_updated: 2026-10-31
 id: cluster-deploy-openstack
 title: "cluster deploy — OpenStack Provider"
 sidebar_label: cluster deploy — OpenStack
@@ -55,7 +55,7 @@ After a deploy that promoted network IDs (steps 4 and 11), the config holds valu
 ```bash
 opencenter cluster generate <org>/<cluster> --force
 opencenter secrets sync <org>/<cluster> --force
-cd <gitops-dir>          # opencenter.cluster.gitops.repository.local_dir
+cd <gitops-dir>          # opencenter.gitops.repository.local_dir
 git add -A
 git commit -m "update networks"
 git push origin

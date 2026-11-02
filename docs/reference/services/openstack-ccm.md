@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-28
+last_updated: 2026-11-02
 id: service-openstack-ccm
 title: "OpenStack Cloud Controller Manager"
 sidebar_label: OpenStack CCM
@@ -33,7 +33,7 @@ opencenter:
 
 ## Rendering
 
-The catalog entry uses namespace stage `openstack-ccm`, override values, base path `applications/base/services/openstack-ccm`, and override dependencies `sources` and `openstack-ccm-namespace`. No explicit service descriptor is present.
+The catalog entry uses namespace stage `openstack-ccm`, override values, base path `applications/base/services/openstack-ccm`, and override dependency `openstack-ccm-namespace`. `SkipSourcesDependency: true` drops the `sources` dependency the other services carry: CCM is bootstrap-priority and must reconcile before the sources aggregate gate is ready, because DNS is unavailable until CCM clears the cloud-provider-uninitialized taint while sources needs DNS to fetch repositories. No explicit service descriptor is present.
 
 ## Credentials (OCTR-750)
 

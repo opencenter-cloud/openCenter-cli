@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-29
+last_updated: 2026-11-02
 id: service-metallb
 title: "MetalLB"
 sidebar_label: MetalLB
@@ -75,7 +75,7 @@ l2_advertisements:
 
 ## Rendering
 
-The built-in catalog uses an overlay-files renderer for MetalLB. The renderer names `ipaddresspool.yaml` and `l2advertisement.yaml` as generated outputs. No explicit service descriptor is present.
+The built-in catalog uses an overlay-files renderer for MetalLB and sets no `GeneratedResourceFiles` for it. `metallbOverlayFilesRenderer` writes `ipaddresspool.yaml` and `l2advertisement.yaml`, and the auto-descriptor appends whatever filenames that renderer returns to the overlay Kustomization's resources list. No explicit service descriptor is present.
 
 ## Dependencies
 

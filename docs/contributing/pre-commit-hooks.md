@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-09-26
 id: pre-commit-hooks
 title: "Pre-commit Hooks"
 sidebar_label: Pre-commit Hooks

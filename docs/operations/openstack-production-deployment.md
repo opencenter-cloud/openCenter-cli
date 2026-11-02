@@ -21,7 +21,7 @@ Deploying Kubernetes in production on OpenStack involves aligning the cloud inve
 
 1. **Manifest Rendering**: openCenter renders the cluster configuration and infrastructure manifests.
 2. **Infrastructure Provisioning**: OpenTofu provisions the tenant network, compute instances, security groups, Cinder volumes, and related resources.
-3. **Cluster Bootstrap**: Kubespray bootstraps Kubernetes and container runtimes across provisioned instances.
+3. **Kubernetes Provisioning**: Kubespray installs Kubernetes and container runtimes across the provisioned instances.
 4. **GitOps Engine**: Flux reconciles cluster configurations, controllers, and platform services from Git.
 5. **Cloud Integration**: The OpenStack Cloud Controller Manager (CCM) assigns provider IDs and manages cloud-facing Kubernetes resources.
 6. **Networking & Storage**: Calico supplies the network policy layer, while OpenStack CSI provides block storage.
@@ -86,10 +86,10 @@ OpenStack block storage attachment limits are often a hidden operational constra
 
 Before enabling a full service suite:
 - Calculate the total expected volume count per worker node.
-- If volume density is high, scale out additional worker nodes or utilize shared filesystem storage (e.g., Longhorn or NFS) where appropriate.
+- If volume density is high, scale out additional worker nodes or use shared filesystem storage (e.g., Longhorn or NFS) where appropriate.
 
 ### 2. Nova Server-Group Quotas
-Production topologies utilize server groups for soft anti-affinity across masters and worker pools. Check Nova quotas before starting:
+Production topologies use server groups for soft anti-affinity across masters and worker pools. Check Nova quotas before starting:
 
 ```bash
 openstack --os-cloud "$OS_CLOUD" server group list
@@ -149,9 +149,11 @@ opencenter cluster set "$ORG/$CLUSTER" \
 
 ### 3. Provision Stateful Service Storage
 
-Apply storage provisioning for all enabled S3-backed platform services:
+`storage apply` resolves each service's typed configuration and exits with `service "<name>" is not configured` for a service the cluster does not enable, so provision only the services that are enabled. Confirm the enabled set, then run the loop over that subset:
 
 ```bash
+opencenter cluster service status --cluster "$ORG/$CLUSTER"
+
 for service in harbor loki mimir tempo velero etcd-backup; do
   opencenter cluster service storage apply "$service" \
     --cluster "$ORG/$CLUSTER" \
@@ -163,6 +165,8 @@ for service in harbor loki mimir tempo velero etcd-backup; do
 done
 ```
 
+The accepted backends differ per service: `loki` takes `swift`, `s3`, or `none`; `tempo` takes `s3` only; `mimir` takes `swift` or `s3`; `harbor` takes `s3` or `filesystem`; `etcd-backup` and `velero` take `s3` or `none`. A service on `none` or `filesystem` provisions no bucket and no credentials, so leave it out of the loop.
+
 ### 4. Enable cert-manager
 
 Configure automated DNS-01 ACME certificate issuance:
@@ -172,8 +176,11 @@ opencenter cluster service enable cert-manager \
   --param="email=$ADMIN_EMAIL" \
   --param="dns_provider=cloudflare" \
   --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" \
+  --default \
   --force
 ```
+
+`--default` pins the credential these secrets populate as the cluster default issuer, which is what the gateway `cert-manager.io/cluster-issuer` annotation resolves to.
 
 ### 5. Validate, Generate, and Encrypt Secrets
 
@@ -194,19 +201,21 @@ grep -rn "ENC\[" ~/.config/opencenter/clusters/gitops/$ORG/applications/overlays
 
 ### 6. Publish GitOps Manifests
 
-Create the empty remote repository and push the initial commit:
+`cluster init` has already run `git init` in `~/.config/opencenter/clusters/gitops/$ORG`
+and set `core.hooksPath`. Create the empty remote repository, commit, and push:
 
 ```bash
 gh repo create "$GH_ORG/$CLUSTER-gitops" --private --disable-wiki
 
 cd ~/.config/opencenter/clusters/gitops/$ORG
-git init
 git branch -M main
-git remote add origin "https://github.com/$GH_ORG/$CLUSTER-gitops.git"
 git add -A
 git commit -m "Deploy production cluster $ORG/$CLUSTER"
 git push -u origin main
 ```
+
+`cluster deploy` re-points `origin` to `opencenter.gitops.repository.url` (set in step 2)
+and aborts when the two differ, so no manual `git remote add` is needed.
 
 ### 7. Execute Deployment
 

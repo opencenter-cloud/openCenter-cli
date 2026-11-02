@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: service-fluxcd
 title: "FluxCD"
 sidebar_label: FluxCD
@@ -33,7 +33,7 @@ opencenter:
 
 ## Rendering
 
-The catalog gives FluxCD an override-values stage and base path `applications/base/services/fluxcd`. `auto_descriptor.go` treats it as structural. Descriptor facts are split across `root-overlay.yaml` and the services/managed-services Flux aggregate descriptors; these list Kustomization, sources, monitoring, and Flux config templates. The plugin registry records no dependency.
+The catalog gives FluxCD an override-values stage and base path `applications/base/services/fluxcd`. `auto_descriptor.go` treats it as structural. Descriptor facts are split across the services and managed-services Flux aggregate descriptors, which list the Kustomization, sources, monitoring, and Flux config templates; `root-overlay.yaml` is the root-layer aggregate and lists only `kustomization.yaml` and the conditional `.sops.yaml.tpl`, not FluxCD service templates. The plugin registry records no dependency.
 
 ## Commands
 

@@ -6,7 +6,7 @@ description: Set networking values in an openCenter cluster configuration.
 doc_type: how-to
 audience: openCenter operators
 tags: [networking, configuration]
-last_updated: 2026-10-13
+last_updated: 2026-10-14
 ---
 # Configure networking
 

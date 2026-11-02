@@ -6,7 +6,7 @@ description: Add a worker pool definition to an openCenter cluster configuration
 doc_type: how-to
 audience: openCenter operators
 tags: [worker-pools, configuration]
-last_updated: 2026-10-20
+last_updated: 2026-10-21
 ---
 # Add a worker pool
 

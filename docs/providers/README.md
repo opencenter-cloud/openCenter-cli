@@ -6,7 +6,7 @@ description: Reference the infrastructure provider types and common lifecycle wo
 doc_type: reference
 audience: openCenter users
 tags: [providers, reference]
-last_updated: 2026-09-25
+last_updated: 2026-10-05
 ---
 # Infrastructure providers
 
@@ -20,9 +20,10 @@ last_updated: 2026-09-25
 | `baremetal` | Static master and worker node inventory is validated. |
 | `kind` | Local Kind configuration and container-runtime deployment are implemented. |
 
-The configuration model also contains cloud provider types that are rejected by
-the CLI availability gate for cluster lifecycle commands. Schema presence is
-not deployment support.
+The configuration model also contains the `aws`, `gcp`, and `azure` provider
+types. The CLI availability gate rejects exactly those three for cluster
+lifecycle commands; `magnum` is not gated by it. Schema presence is not
+deployment support.
 
 ## Common workflow
 

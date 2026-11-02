@@ -1,5 +1,5 @@
 ---
-last_updated: "2026-10-29"
+last_updated: 2026-10-30
 id: destroy-openstack-cluster
 title: Destroy an OpenStack cluster
 sidebar_label: Destroy an OpenStack cluster

@@ -65,6 +65,19 @@ jobs:
           done
           python3 hack/scripts/audit_doc_frontmatter.py "${audit_args[@]}"
 
+      # The pre-commit hook refreshes `last_updated` on staged pages. This
+      # catches commits that skipped the hook (`--no-verify`) and pages whose
+      # body changed under a date nobody bumped. It scans the whole tree rather
+      # than the changed-file subset: the changed list only contains pages this
+      # pull request touched, so a scoped run would miss staleness introduced
+      # by an earlier merge into the base branch.
+      - name: Check documentation timestamps
+        if: steps.changed.outputs.has_files == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 hack/scripts/audit_doc_frontmatter.py --strict --check-stale-timestamps
+
       - name: Vale
         if: steps.changed.outputs.has_files == 'true'
         uses: vale-cli/vale-action@v2

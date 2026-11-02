@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-01
 id: gitops-workflow
 title: "GitOps Workflow"
 sidebar_label: GitOps Workflow

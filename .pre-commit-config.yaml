@@ -16,6 +16,19 @@ repos:
         # land in a batch without the accompanying doc and fail spuriously.
         # require_serial forces a single invocation that sees every changed file.
         require_serial: true
+      - id: doc-last-updated-refresh
+        name: Refresh last_updated on staged docs
+        # Stale `last_updated` values are otherwise invisible: a content edit
+        # leaves the old date untouched, and the frontmatter audit only checks
+        # the format. This hook rewrites the timestamp on every staged
+        # maintained page so the committed value reflects the commit that
+        # touched the file. pass_filenames supplies the staged set; the script
+        # ignores anything that is not maintained documentation.
+        entry: python3 hack/scripts/audit_doc_frontmatter.py --refresh-staged
+        language: system
+        files: ^docs/.*\.md$
+        pass_filenames: true
+        require_serial: true
       - id: doc-frontmatter
         name: Validate docs frontmatter (Diátaxis keys + YAML-safe values)
         entry: python3 hack/scripts/audit_doc_frontmatter.py --strict --files

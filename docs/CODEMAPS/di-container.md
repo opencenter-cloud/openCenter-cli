@@ -14,7 +14,7 @@ tags: [dependency-injection, runtime, services, security, wiring]
 
 | Feature | Subsystem / package | File → symbol | Dependencies and evidence |
 |---|---|---|---|
-| Process container | startup / `internal/di` | [`internal/di/container.go`](../../internal/di/container.go) → `SetupContainer`, `Container.Shutdown` | Outer compatibility container used by `main`; [`cmd/root_container_test.go`](../../cmd/root_container_test.go) |
+| Process container | startup / `internal/di` | [`internal/di/setup.go`](../../internal/di/setup.go) → `SetupContainer`; [`internal/di/container.go`](../../internal/di/container.go) → `Container`, `DIContainer.Shutdown` | Outer compatibility container used by `main`; `setup.go` builds and registers it, `container.go` defines the interface and the registry its `Shutdown` drains; [`cmd/root_container_test.go`](../../cmd/root_container_test.go) |
 | Typed graph | application graph / `internal/di` | [`internal/di/app.go`](../../internal/di/app.go) → `App`, `NewApp` | Explicit constructors for paths, config, validation, security, lifecycle; [`internal/di/app_test.go`](../../internal/di/app_test.go) |
 | Command adapter | compatibility boundary / `internal/di` | [`internal/di/app_container.go`](../../internal/di/app_container.go) → `NewAppContainer` | Exposes typed graph through legacy `Container`; command context uses `AppKey` and `ContainerKey` |
 | Context retrieval | command runtime / `cmd` | [`cmd/root.go`](../../cmd/root.go) → `initializeApp`, `GetApp`, `GetContainer`, `ExecuteWithContext` | Cobra handlers retrieve graph values, not global service constructors |

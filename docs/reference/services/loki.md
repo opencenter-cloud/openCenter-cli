@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: service-loki
 title: "Loki"
 sidebar_label: Loki
@@ -17,7 +17,9 @@ The generated default is enabled in `observability`. `LokiConfig` embeds `BaseCo
 
 `storage_type`, `bucket_name`, `volume_size`, `storage_class`, `swift_auth_url`, `swift_region`, `swift_auth_version`, `swift_username`, `swift_project_name`, `swift_project_domain_name`, `swift_container_name`, `swift_user_domain_name`, `swift_domain_name`, `swift_application_credential_id`, `s3_endpoint`, `s3_region`, `s3_credential_id`, `s3_force_path_style`, and `s3_insecure`.
 
-The config schema metadata documents `storage_type` values `s3`, `swift`, and `none`, with `swift` as its type-level default. `defaults.go` materializes only `enabled: true` and `namespace: observability`; provider selection separately defaults the registry entry to `s3`.
+The config schema metadata documents `storage_type` values `s3`, `swift`, and `none`, with `swift` as its type-level default. `defaults.go` materializes only `enabled: true` and `namespace: observability`; the provider registry separately selects `s3` for Loki.
+
+An unset `storage_type` resolves to `swift`, the type-level default in `LokiConfig`; the registry's `s3` selection is a separate compatibility record and does not rewrite the field. The override-values renderer takes its backend from `objectStorageBackend "loki"`, which returns `swift` for an unset or `swift` value and `s3` for anything else, so an unset field renders a Swift-backed Loki. Loki's own plugin validates `storage_type` only when it is set, so it never catches the unset case. Swift is no longer supported for platform bulk data: `cluster validate` rejects an explicit `swift` with `Swift is no longer supported for platform bulk data; migrate to the S3-compatible storage profile.`, and readiness for a resolved Swift backend requires `secrets.loki.swift_application_credential_secret` instead of the S3 endpoint and key pair. Set `storage_type: s3` explicitly.
 
 ## Runtime validation and secrets
 

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: service-keycloak
 title: "Keycloak"
 sidebar_label: Keycloak
@@ -9,11 +9,25 @@ audience: "platform engineers, operators"
 tags: [keycloak, identity, services]
 ---
 
-> **Evidence:** `internal/config/services/keycloak.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/keycloak.go`, `internal/config/services/dependency_validator.go`, `internal/services/plugins/registry.go`, and `internal/services/descriptors/data/service-keycloak.yaml`.
+> **Evidence:** `internal/config/services/keycloak.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/keycloak.go`, `internal/config/services/dependency_validator.go`, `internal/config/services/deprecations.go`, `internal/services/plugins/registry.go`, and `internal/services/descriptors/data/service-keycloak.yaml`.
 
 ## Configuration
 
-The generated default is enabled in `keycloak`; its generated hostname is `auth.<cluster FQDN>`. `KeycloakConfig` embeds `BaseConfig` and contains access, realm, runtime, resource, scaling, database, observability, TLS, backup, and SMTP fields.
+The generated default is enabled in `keycloak`; its generated hostname is `auth.<cluster FQDN>`. `KeycloakConfig` embeds `BaseConfig` and contains access, issuer, realm, theming, runtime, resource, scaling, database, observability, TLS, backup, and SMTP fields.
+
+```yaml
+opencenter:
+  services:
+    keycloak:
+      enabled: true
+      namespace: keycloak
+      hostname:
+      issuer_ref:
+      dns_credential:
+      theme_enabled: true
+      tls_secret_name:
+      internal_tls_enabled: false
+```
 
 | Group | Fields |
 |-------|--------|
@@ -24,10 +38,16 @@ The generated default is enabled in `keycloak`; its generated hostname is `auth.
 | Scaling | `instances`, `min_replicas`, `max_replicas` |
 | Database | `database_host`, `database_port`, `database_name`, `database_user`, `db_pool_min_size`, `db_pool_initial_size`, `db_pool_max_size` |
 | Observability | `metrics_enabled`, `event_metrics_enabled`, `health_enabled`, `log_level`, `log_format` |
-| TLS/backup | `tls_secret_name`, `tls_enabled`, `backup_enabled`, `backup_schedule` |
+| TLS | `tls_secret_name`, `internal_tls_enabled`, `issuer_ref`, `dns_credential` |
+| Theming | `theme_enabled` |
+| Backup | `backup_enabled`, `backup_schedule` |
 | SMTP | `smtp_host`, `smtp_port`, `smtp_from`, `smtp_starttls` |
 
-The config type's documented defaults include `client_id: opencenter`, `realm_import_enabled: true`, `start_optimized: false`, `cache_enabled: true`, `cache_stack: kubernetes`, resource values, scaling values, `database_port: 5432`, pool values, observability booleans, log values, TLS values, backup values, and `smtp_port: 587`/`smtp_starttls: true`. `defaults.go` additionally materializes `resource_requests_cpu: 500m`, `resource_limits_cpu: 2`, and `instances: 3` in the generated default. Other fields are empty unless configured.
+The config type's documented defaults include `client_id: opencenter`, `realm_import_enabled: true`, `theme_enabled: true`, `start_optimized: false`, `cache_enabled: true`, `cache_stack: kubernetes`, resource values, scaling values, `database_port: 5432`, pool values, observability booleans, log values, `tls_secret_name: keycloak-tls-secret`, backup values, and `smtp_port: 587`/`smtp_starttls: true`. `internal_tls_enabled` has no documented default and is false unless configured. `defaults.go` additionally materializes `resource_requests_cpu: 500m`, `resource_limits_cpu: 2`, and `instances: 3` in the generated default. Other fields are empty unless configured.
+
+`internal_tls_enabled` puts TLS on the Keycloak pods themselves; `tls_secret_name` is only consumed when it is set, because both the `Certificate` and the Keycloak CR `tlsSecret` are gated on it. TLS at the edge is the Gateway's default-cluster certificate, so the field stays false in a Gateway-terminated cluster. The former `tls_enabled` knob was never read by any renderer and is registered as deprecated in `deprecations.go`; the public serializer strips it from a saved configuration, so use `internal_tls_enabled` instead.
+
+`issuer_ref` names the ClusterIssuer that mints this service's certificate; empty means the issuer the Gateway listener in front of Keycloak uses, which keeps the listener and the leaf certificate in agreement. `dns_credential` pins the DNS credential used when that certificate needs a DNS-01 challenge, overriding `services.cert-manager.default_credential`. `theme_enabled` controls the OpenCenter login theme and defaults to true when omitted; the config type is a `*bool` so an explicit `false` is distinguishable from unset.
 
 ## Runtime validation and dependencies
 

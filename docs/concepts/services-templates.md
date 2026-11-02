@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-10-27
 id: services-templates
 title: "Service Templates: How They Work"
 sidebar_label: "Service Templates: How They Work"

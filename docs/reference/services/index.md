@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: services-index
 title: "Platform Services"
 sidebar_label: Services
@@ -95,7 +95,7 @@ opencenter cluster service options <service>
 
 ## Storage provider registry
 
-`internal/config/services/provider_registry.go` selects `s3` as the default provider for `loki`, `velero`, and `tempo` for every listed infrastructure provider. Its compatibility matrix additionally accepts `none` for Loki and Velero, and rejects Swift, GCS, and Azure for these service entries. Individual service config types expose their own fields; see each page for runtime validation.
+`internal/config/services/provider_registry.go` selects `s3` as the default provider for `loki`, `velero`, and `tempo` for every listed infrastructure provider. Its compatibility matrix additionally accepts `none` for Loki and Velero and `filesystem` for Tempo, and rejects Swift, GCS, and Azure for these service entries. Individual service config types expose their own fields; see each page for runtime validation.
 
 | Infrastructure provider | Registry default |
 |-------------------------|------------------|

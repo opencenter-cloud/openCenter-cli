@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import datetime as _datetime
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -184,7 +185,77 @@ def plain_scalar_problem(value: str) -> str | None:
 # Audit rules
 # ---------------------------------------------------------------------------
 
-def audit_file(path: Path) -> list[Issue]:
+def split_frontmatter(text: str) -> tuple[str, str] | None:
+    """Return ``(frontmatter_block, body)``, or ``None`` without valid block."""
+    match = _FRONTMATTER_RE.match(text)
+    if not match:
+        return None
+    # group(1) is the block content; the closing delimiter follows it.
+    return match.group(1), text[match.end(1) + 3 :]
+
+
+def body_last_changed_date(path: Path, repo_root: Path) -> str | None:
+    """Return the author date of the newest commit that changed the body.
+
+    "Body" is everything after the closing frontmatter delimiter, so a commit
+    that only bumps ``last_updated`` does not move the goalposts and a page
+    cannot be made to look fresh by editing the date alone.
+
+    ``git log -p --format=commit:%H %as -- <path>`` is parsed for hunk headers:
+    a hunk whose old-line range starts below the frontmatter block touched the
+    body, one starting inside the block did not. Returns ``None`` when Git
+    cannot answer (no repository, untracked file) or when no commit touched the
+    body, so the caller skips the check instead of guessing.
+    """
+    try:
+        relative = path.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        return None
+    try:
+        current = split_frontmatter(path.read_text(encoding="utf-8"))
+    except OSError:
+        return None
+    if current is None:
+        return None
+    body_start = current[0].count("\n") + 3
+
+    result = subprocess.run(
+        (
+            "git",
+            "log",
+            "-p",
+            "--no-color",
+            "--format=commit:%H %as",
+            "--",
+            relative.as_posix(),
+        ),
+        cwd=repo_root,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if result.returncode != 0:
+        return None
+
+    stale_date: str | None = None
+    commit_date: str | None = None
+    for line in result.stdout.decode("utf-8", "replace").splitlines():
+        if line.startswith("commit:"):
+            _, _, commit_date = line.partition(" ")
+            continue
+        if stale_date is not None or not commit_date:
+            continue
+        header = re.match(r"^@@ -(\d+)(?:,\d+)? \+", line)
+        if not header:
+            continue
+        old_start = int(header.group(1))
+        # `-0,0` means an added file: every line, body included, is new.
+        if old_start == 0 or old_start > body_start:
+            stale_date = commit_date
+    return stale_date
+
+
+def audit_file(path: Path, *, repo_root: Path | None = None) -> list[Issue]:
     """Apply every audit rule to a single Markdown file."""
     issues: list[Issue] = []
     try:
@@ -240,6 +311,22 @@ def audit_file(path: Path) -> list[Issue]:
                 "last_updated must be an ISO-8601 date in YYYY-MM-DD format",
             )
         )
+
+    # A content edit that leaves `last_updated` untouched is invisible in the
+    # diff, so the format-only rules above never notice a stale date. When a
+    # repository root is supplied, the recorded date must not predate the last
+    # commit that changed the page body.
+    if repo_root is not None and is_iso_date(last_updated):
+        body_date = body_last_changed_date(path, repo_root)
+        if body_date is not None and last_updated < body_date:
+            issues.append(
+                Issue(
+                    path,
+                    "last_updated is stale: the page body changed on "
+                    f"{body_date} but last_updated is {last_updated} "
+                    "(run: mise run docs-update-timestamps -- <page>)",
+                )
+            )
 
     return issues
 
@@ -355,7 +442,16 @@ def update_last_updated(path: Path, value: str) -> None:
             raw_value = kv.group(2).strip()
             spacing_match = re.match(r"^([^:]*:)(\s*)", line_without_ending)
             spacing = spacing_match.group(2) if spacing_match else " "
-            quote = raw_value[0] if len(raw_value) >= 2 and raw_value[0] == raw_value[-1] and raw_value[0] in ("\"", "'") else "\""
+            # Preserve the page's existing style: an unquoted date stays
+            # unquoted. Forcing quotes would churn every page the refresh hook
+            # touches and diverge from the tree's dominant bare-date form.
+            quote = (
+                raw_value[0]
+                if len(raw_value) >= 2
+                and raw_value[0] == raw_value[-1]
+                and raw_value[0] in ("\"", "'")
+                else ""
+            )
             ending = line[len(line_without_ending) :]
             updated_lines.append(f"{prefix}{spacing}{quote}{value}{quote}{ending}")
             replaced = True
@@ -368,7 +464,7 @@ def update_last_updated(path: Path, value: str) -> None:
         new_block = block
         if new_block and not new_block.endswith(("\n", "\r")):
             new_block += "\n"
-        new_block += f'last_updated: "{value}"'
+        new_block += f"last_updated: {value}"
 
     start, end = match.span(1)
     updated = text[:start] + new_block + text[end:]
@@ -412,6 +508,42 @@ def update_supplied_paths(
     print(f"Updated last_updated in {len(files)} files to {value}.")
     return 0
 
+def refresh_staged_paths(
+    repo_root: Path, paths: list[str], ignores: list[str], value: str
+) -> int:
+    """Refresh timestamps for staged paths, skipping non-documentation inputs.
+
+    Pre-commit supplies every staged file, so paths outside maintained
+    documentation are skipped here rather than rejected the way an explicit
+    ``--update-last-updated`` target would be.
+    """
+    files, _ = supplied_markdown(repo_root, paths, ignores)
+    if not files:
+        print("No staged maintained documentation to refresh.")
+        return 0
+
+    pending: list[tuple[Path, str]] = []
+    for path in files:
+        try:
+            text = path.read_text(encoding="utf-8")
+            if not _FRONTMATTER_RE.match(text):
+                raise ValueError("missing or invalid YAML frontmatter")
+            pending.append((path, text))
+        except (OSError, ValueError) as exc:
+            print(Issue(path, str(exc)).render(repo_root))
+    if len(pending) != len(files):
+        return 1
+
+    for path, _ in pending:
+        try:
+            update_last_updated(path, value)
+        except OSError as exc:
+            print(Issue(path, f"could not update file: {exc}").render(repo_root))
+            return 1
+    print(f"Refreshed last_updated in {len(files)} staged file(s) to {value}.")
+    return 0
+
+
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -451,21 +583,45 @@ def main(argv: list[str]) -> int:
         help="Update timestamps in the explicitly supplied trailing Markdown paths",
     )
     parser.add_argument(
+        "--refresh-staged",
+        action="store_true",
+        help=(
+            "Refresh last_updated in the supplied paths that are maintained "
+            "documentation, ignoring every other path (pre-commit hook mode)"
+        ),
+    )
+    parser.add_argument(
+        "--check-stale-timestamps",
+        action="store_true",
+        help=(
+            "Fail when last_updated predates the newest commit that changed a "
+            "page body (needs Git history; CI guard for the pre-commit refresh hook)"
+        ),
+    )
+    parser.add_argument(
         "--date",
-        help="Date for --update-last-updated (default: current UTC date)",
+        help="Date for --update-last-updated / --refresh-staged (default: current UTC date)",
     )
     parser.add_argument("paths", nargs="*", metavar="PATH")
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
     ignores = list(DEFAULT_IGNORES) + args.ignore
+    timestamp_value = args.date or _datetime.datetime.now(
+        _datetime.timezone.utc
+    ).date().isoformat()
+    if args.update_last_updated and args.refresh_staged:
+        parser.error("--update-last-updated and --refresh-staged are mutually exclusive")
     if args.update_last_updated:
         if not args.paths:
             parser.error("--update-last-updated requires at least one Markdown path")
-        value = args.date or _datetime.datetime.now(_datetime.timezone.utc).date().isoformat()
-        if not is_iso_date(value):
+        if not is_iso_date(timestamp_value):
             parser.error("--date must be an ISO-8601 date in YYYY-MM-DD format")
-        return update_supplied_paths(repo_root, args.paths, ignores, value)
+        return update_supplied_paths(repo_root, args.paths, ignores, timestamp_value)
+    if args.refresh_staged:
+        if not is_iso_date(timestamp_value):
+            parser.error("--date must be an ISO-8601 date in YYYY-MM-DD format")
+        return refresh_staged_paths(repo_root, args.paths, ignores, timestamp_value)
 
     if args.paths:
         parser.error("paths require --update-last-updated")
@@ -485,7 +641,12 @@ def main(argv: list[str]) -> int:
 
     all_issues: list[Issue] = list(explicit_issues)
     for path in files:
-        all_issues.extend(audit_file(path))
+        all_issues.extend(
+            audit_file(
+                path,
+                repo_root=repo_root if args.check_stale_timestamps else None,
+            )
+        )
 
     if not all_issues:
         print(f"OK: {len(files)} files passed.")

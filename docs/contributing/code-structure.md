@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-10-22
 id: code-structure
 title: "Codebase Organization"
 sidebar_label: Codebase Organization
@@ -20,7 +20,7 @@ openCenter-cli/
 ├── internal/                # All non-exported Go packages (the bulk of the codebase)
 ├── docs/                     # Documentation (Markdown with YAML frontmatter)
 ├── tests/features/           # BDD scenarios (Gherkin) and Godog step definitions
-├── schema/                   # Generated JSON Schema (opencenter-v2.schema.json, cluster.schema.json)
+├── schema/                   # Generated JSON Schema (opencenter-v2.schema.json)
 ├── testdata/                  # Test fixtures (sample orgs/clusters, config fixtures)
 ├── hack/                      # Dev scripts: local Gitea, shell integration, doc audits
 ├── bin/                       # Compiled binaries (gitignored)

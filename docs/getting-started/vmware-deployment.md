@@ -6,7 +6,7 @@ description: Configure pre-provisioned VMware nodes in an openCenter cluster fil
 doc_type: tutorial
 audience: openCenter users
 tags: [vmware, configuration]
-last_updated: 2026-09-25
+last_updated: 2026-09-26
 ---
 # Configure VMware nodes
 

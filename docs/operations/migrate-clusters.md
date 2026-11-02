@@ -6,7 +6,7 @@ description: Preview and apply the filesystem layout migration for a legacy open
 doc_type: how-to
 audience: openCenter operators
 tags: [migration, configuration]
-last_updated: 2026-10-22
+last_updated: 2026-10-30
 ---
 # Migrate the legacy layout
 

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-09-26
 id: overlay-security-policy
 title: "Overlay Rendering Security Policy"
 sidebar_label: Overlay Rendering Security

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-10-30
 id: configuration-lifecycle
 title: "Configuration Lifecycle"
 sidebar_label: Configuration Lifecycle
@@ -29,8 +29,12 @@ openCenter treats the cluster configuration YAML as the single declarative input
 | --- | --- | --- | --- |
 | Blueprints | `OPENCENTER_BLUEPRINTS_DIR` | `<clusters-dir>/blueprints` | `<organization>/<cluster>/<cluster>-config.yaml` — the cluster config input |
 | GitOps | `OPENCENTER_GITOPS_DIR` | `<clusters-dir>/gitops` | `<organization>/` — the Git-tracked repository (`applications/overlays/<cluster>/`, `infrastructure/clusters/<cluster>/`) |
-| Cluster state | `OPENCENTER_CLUSTER_STATE_DIR` | `<clusters-dir>/state` | `<organization>/<cluster>/` — kubeconfig, Ansible inventory, venv, `.bin/` |
-| Secrets | `OPENCENTER_SECRETS_DIR` | `<clusters-dir>/secrets` | `<organization>/<cluster>/age/`, `<organization>/<cluster>/ssh/` |
+| Cluster state | `OPENCENTER_CLUSTER_STATE_DIR` | `<clusters-dir>/state` | Reserved root; the resolver computes it, but no cluster file is written there — kubeconfig lives in the secrets zone, and Ansible inventory, venv, and `.bin/` live in the GitOps zone (see the note below) |
+| Secrets | `OPENCENTER_SECRETS_DIR` | `<clusters-dir>/secrets` | `<organization>/<cluster>/age/`, `<organization>/<cluster>/ssh/`, `<organization>/<cluster>/kubernetes/kubeconfig.yaml` |
+
+Ansible inventory, `venv/`, and `.bin/` are created `0755` inside the GitOps cluster
+directory `gitops/<org>/infrastructure/clusters/<cluster>/`, and the root `.gitignore`
+excludes them, so a deploy never dirties the worktree.
 
 Each root also has a matching `paths.*Dir` field in the CLI settings file (`opencenter settings set paths.blueprintsDir ...`). `internal/core/paths.ClusterPaths.Validate()` rejects any resolved secrets, state, or config path that is equal to or nested inside the GitOps zone — this is enforced on every path resolution, not just at `init` time.
 

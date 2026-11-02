@@ -430,6 +430,9 @@ test-docs = [
   "go test ./cmd -run '^TestDocsDoNotUseRemovedGACommands$' -count=1",
   "go test ./internal/config/v2schema -run '^TestDocumentationYAMLSnippetsMatchSchema$' -count=1",
   "mise run test-docs-frontmatter",
+  "mise run test-docs-timestamps",
+  "mise run test-docs-task-coverage",
+  "mise run test-docs-cli-invocations",
   "mise run test-docs-links",
   "mise run test-docs-mermaid"
 ]
@@ -688,6 +691,22 @@ test-docs-mermaid = "python3 hack/scripts/check_mermaid_fences.py"
 # Audit every reader-facing Markdown page. This remains strict and reports
 # unrelated legacy pages until their frontmatter is remediated.
 test-docs-frontmatter = "python3 hack/scripts/audit_doc_frontmatter.py --strict"
+
+# Verify each maintained page's `last_updated` is at least as new as the newest
+# commit that changed its body. Catches edits that skipped the pre-commit
+# `doc-last-updated-refresh` hook. Needs Git history, so CI checks out with
+# `fetch-depth: 0`; without history the check reports nothing instead of
+# failing spuriously.
+test-docs-timestamps = "python3 hack/scripts/audit_doc_frontmatter.py --strict --check-stale-timestamps"
+
+# Verify docs/reference/mise-tasks.md documents exactly the tasks mise defines,
+# in both directions: no task without a row, no row without a task.
+test-docs-task-coverage = "python3 hack/scripts/check_mise_task_docs.py"
+
+# Verify every CLI example in the docs resolves to a registered command, by
+# asking the built binary via cobra completion. Needs `mise run build` first;
+# skips cleanly when bin/opencenter is absent.
+test-docs-cli-invocations = "python3 hack/scripts/check_doc_cli_invocations.py"
 
 # Audit the remediation corpus while preserving the documented legacy baseline.
 test-docs-frontmatter-remediation = '''

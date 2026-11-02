@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: service-gateway
 title: "Gateway"
 sidebar_label: Gateway
@@ -25,7 +25,9 @@ opencenter:
       gateway_namespace:
       gateway_class:
       default_issuer:
+      floating_ip:
       tls:
+        default_cluster_certificate: false
         wildcard_secret_name:
         secret_namespace:
         per_listener_secrets: {}
@@ -44,13 +46,17 @@ opencenter:
 | `enabled` | `true` | `NewDefaultServiceConfig` |
 | `namespace` | `gateway` | `NewDefaultServiceConfig` |
 | `gateway_name`, `gateway_namespace`, `gateway_class`, `default_issuer` | empty in config type | `GatewayConfig` |
+| `floating_ip` | empty | `GatewayConfig.FloatingIP` |
 | `tls.*` | absent | `GatewayTLSConfig` |
+| `tls.default_cluster_certificate` | false | `GatewayTLSConfig.DefaultClusterCertificate` |
 | `listeners[].name`, `port`, `protocol` | required by schema tags | `GatewayListener` |
 | `listeners[].hostname`, `tls_secret_name` | empty | `GatewayListener` |
 
 ## Runtime TLS behavior
 
-`GatewayConfig.IsBYO` is true when a wildcard or per-listener secret is configured; the generator then omits the cert-manager annotation. `TLSSecretFor` resolves a per-listener secret, then the wildcard, then its supplied built-in default. `secret_namespace` is returned separately and is empty when unset.
+`GatewayConfig.IsBYO` is true when `tls.default_cluster_certificate` is set, or a wildcard or per-listener secret is configured; the generator then omits the cert-manager annotation. `TLSSecretFor` resolves a per-listener secret, then the wildcard, then the default cluster certificate, then its supplied built-in default. A non-default Secret name configured on cert-manager is copied into `WildcardSecretName` by the renderer, because `GatewayConfig` has no view of the cert-manager service. `secret_namespace` is returned separately and is empty when unset.
+
+`floating_ip` pins a pre-allocated OpenStack floating IP on the Envoy data-plane LoadBalancer Service (`loadbalancer.openstack.org/floating-ip`) so the CCM binds that address instead of allocating a new one. Rackspace IAD3/SJC3 (provider-os CCM v1.36) was measured to ignore the annotation even when present at Service creation, so the pin does not hold there; verify against the target cloud before relying on it. It is ignored on non-OpenStack providers.
 
 ## Rendering and dependencies
 

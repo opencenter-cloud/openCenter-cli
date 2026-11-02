@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-10-27
 id: "opencenter-cluster-provider-openstack"
 title: "Opencenter_Cluster_Provider_Openstack"
 sidebar_label: "Opencenter_Cluster_Provider_Openstack"

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-10-28
 id: reference-architecture
 title: "Reference Architecture"
 sidebar_label: Reference Architecture

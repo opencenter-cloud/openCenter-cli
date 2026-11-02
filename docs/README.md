@@ -120,3 +120,19 @@ repository's unit, race, vet, BDD, property, and vulnerability checks.
 - [CLI command reference](reference/cli-commands.md)
 - [Configuration schema](reference/configuration-schema.md)
 - [Glossary](glossary.md)
+
+## Codebase maps
+
+The repository-internal maps under `CODEMAPS/` are indexed through
+[`CODEMAPS/INDEX.md`](CODEMAPS/INDEX.md), which links every map in the family:
+[CLI commands](CODEMAPS/cli-commands.md),
+[Config system](CODEMAPS/config-system.md),
+[DI container](CODEMAPS/di-container.md),
+[Cluster lifecycle](CODEMAPS/cluster-lifecycle.md),
+[GitOps engine](CODEMAPS/gitops-engine.md),
+[Rendering ownership and secret artifacts](CODEMAPS/rendering-ownership-and-secret-artifacts.md),
+[Secrets management](CODEMAPS/secrets-management.md),
+[Providers](CODEMAPS/providers.md),
+[OpenStack provider and storage operations](CODEMAPS/openstack-provider-storage-operations.md),
+[Import, operations, and resilience](CODEMAPS/import-operations-and-resilience.md), and
+[Runtime extensions and local development](CODEMAPS/runtime-extensions-and-local-development.md).

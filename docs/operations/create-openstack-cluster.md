@@ -6,7 +6,7 @@ description: Configure and prepare an OpenStack cluster through the openCenter c
 doc_type: how-to
 audience: openCenter operators
 tags: [openstack, clusters]
-last_updated: 2026-09-25
+last_updated: 2026-10-27
 ---
 # Create an OpenStack cluster
 

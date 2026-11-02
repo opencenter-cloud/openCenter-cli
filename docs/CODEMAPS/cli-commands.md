@@ -39,7 +39,7 @@ main.main
             -> typed service or feature package
 ```
 
-`NewBuiltinRootCmd` is deterministic and is also the input to generated command documentation. Production attaches external executables only inside `ExecuteWithContext`; therefore generated references and tests of the built-in tree must not expect plugins. Built-ins cannot be shadowed by a plugin name. Hidden `cluster template` and `cluster validate-manifests` commands are registered for internal workflows, not the normal GA surface.
+`NewBuiltinRootCmd` is deterministic and is also the input to generated command documentation. Production attaches external executables only inside `ExecuteWithContext`; therefore generated references and tests of the built-in tree must not expect plugins. Built-ins cannot be shadowed by a plugin name. Hidden `cluster`-`template` and `cluster validate-manifests` commands are registered for internal workflows, not the normal GA surface. Both set `Hidden: true` (`cmd/cluster_template.go:32`, `cmd/cluster.go:110-113`), so `IsAvailableCommand` is false and the Cobra `doc.GenMarkdownTreeCustom` recursion in `cmd/docs/generate.go:78` skips them: neither has a page under `docs/reference/opencenter/`. That absence is intentional; do not add pages for them or treat the missing reference as drift.
 
 The registered top-level tree is `cluster`, `settings`, `secrets`, `plugins`, `version`, and `shell-init`; Cobra adds `help` and completion. `NewClusterCmd` owns lifecycle, service/storage, pool, drift, backup, lock, import, layout, and provider subtrees. The exact command-surface assertions live in [`cmd/ga_command_surface_test.go`](../../cmd/ga_command_surface_test.go), not in this prose.
 

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-10-27
+last_updated: 2026-11-02
 id: service-cert-manager
 title: "cert-manager"
 sidebar_label: cert-manager
@@ -27,6 +27,12 @@ opencenter:
       dns_zones: []
       create_cluster_issuer: false
       dns_provider:
+      default_credential:
+      default_cluster_certificate:
+        enabled: false
+        secret_name:
+        issuer_ref:
+        dns_names: []
       issuers:
         - name:
           type: letsencrypt
@@ -41,10 +47,19 @@ opencenter:
 | `namespace` | `cert-manager` | `NewDefaultServiceConfig` |
 | `letsencrypt_server`, `email`, `region`, `dns_zones`, `issuers`, `dns_provider` | empty | `CertManagerConfig` |
 | `create_cluster_issuer` | false in Go zero value; schema tag documents true | `CertManagerConfig` |
+| `default_credential` | empty (resolve it) | `CertManagerConfig.DefaultCredential` |
+| `default_cluster_certificate` | absent | `CertManagerConfig.DefaultClusterCertificate` |
+| `default_cluster_certificate.enabled` | false | `DefaultClusterCertificateConfig.Enabled` |
+| `default_cluster_certificate.secret_name` | empty; falls back to `default-cluster-tls` | `DefaultClusterCertificateSecretName` |
+| `default_cluster_certificate.issuer_ref`, `dns_names` | empty | `DefaultClusterCertificateConfig` |
 | `issuers[].name`, `type` | required fields | `CertIssuer` |
 | `issuers[].server` | empty | `CertIssuer` |
 
 The registered validator checks that a configured `letsencrypt_server` starts with `https://` and a configured `email` contains `@`. The provider registry records DNS provider choices and provider compatibility; it does not change the config type's fields.
+
+`default_credential` names the DNS credential every DNS-consuming service uses when it does not pin its own through `dns_credential`. Empty means resolve it, and `Config.ResolvedDNSCredential` then walks: the per-service pin, a credential whose `dns_zones` cover the hostname, `default_credential`, the sole enabled credential, the lowest-sorted enabled name. `cluster service enable cert-manager --default` writes this field; `--default=false` clears it.
+
+`default_cluster_certificate` mints a cluster-wide wildcard certificate; `enabled` is the gate, `secret_name` falls back to `default-cluster-tls` when unset, `issuer_ref` selects the ClusterIssuer (default: the configured ACME issuer), and `dns_names` adds names beyond the cluster base domain. `services.gateway.tls.default_cluster_certificate` points Gateway listeners at this Secret.
 
 ## Secrets and credential resolution
 
@@ -108,13 +123,16 @@ the repository in plaintext unnoticed. See
 ## Commands
 
 ```bash
-# Enable cert-manager with Cloudflare and pin it as default issuer
-opencenter cluster service enable cert-manager \
-  --param="email=$CLOUDFLARE_DNS_EMAIL" \
-  --param="dns_provider=cloudflare" \
-  --secret="cloudflare_api_token=$CLOUDFLARE_API_TOKEN" \
-  --default \
-  --force
+# Enable cert-manager with a named Cloudflare credential and pin it as the default issuer
+opencenter cluster set my-cluster \
+  opencenter.services.cert-manager.email="$CLOUDFLARE_DNS_EMAIL" \
+  opencenter.services.cert-manager.dns_provider=cloudflare \
+  secrets.cert_manager.cloudflare.cloudflare.enabled=true \
+  secrets.cert_manager.cloudflare.cloudflare.api_token="$CLOUDFLARE_API_TOKEN"
+
+# Pin that credential as the cluster default issuer
+opencenter cluster set my-cluster \
+  opencenter.services.cert-manager.default_credential=cloudflare
 
 # Service enablement is decoupled from rendering; the next step is to execute
 # 'opencenter cluster generate' to render all changes across the cluster manifests:

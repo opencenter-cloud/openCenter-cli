@@ -44,7 +44,7 @@ SetupService.Setup
 
 The same private tree is validated, planned, and promoted; the live repository is not written before preflight succeeds. `PipelineGenerator` and stage types remain supporting library/test APIs in [`internal/gitops/pipeline.go`](../../internal/gitops/pipeline.go), not the command's top-level entry.
 
-Promotion records repository-relative SHA-256/mode records in `.opencenter/ownership/clusters/<cluster>.json` and the exact global allowlist in `.opencenter/ownership/global.json`. Cluster scopes are applications, infrastructure, and cluster bridge paths; Flux bootstrap, existing `custom/`, and hash-verified secret artifacts remain outside generator ownership. Legacy `.opencenter-generated.json` sentinels fail fast.
+Promotion records repository-relative SHA-256/mode records in `.opencenter/ownership/clusters/<cluster>.json`, and the same records for the built-in global files in `.opencenter/ownership/global.json`. The global ledger only ever holds paths from the compiled `globalOwnershipFiles` set (`.gitignore`, `README.md`, `applications/overlays/.gitkeep`, `infrastructure/clusters/.gitkeep`; `internal/gitops/ownership.go`), so it is a manifest of promoted files, not a configurable allowlist. Cluster scopes are applications, infrastructure, and cluster bridge paths; Flux bootstrap, existing `custom/`, and hash-verified secret artifacts remain outside generator ownership. Legacy `.opencenter-generated.json` sentinels fail fast.
 
 ## Safe-change boundaries
 

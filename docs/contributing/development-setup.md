@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: development-setup
 title: "Development Environment Setup"
 sidebar_label: Development Environment Setup
@@ -65,8 +65,9 @@ This installs, per `.mise.toml`:
 
 | Tool | Pinned version |
 | --- | --- |
-| `golang` | 1.26.6 |
-| `golangci-lint` | 2.11.4 |
+| `go` | 1.27.1 |
+| `golangci-lint` | 2.14.0 |
+| `vale` | 3.23.0 |
 | `kubectl` | latest |
 | `kind` | latest |
 | `helm` | latest |
@@ -109,7 +110,7 @@ See [Testing Guide](testing-guide.md) for the full test matrix (`test-race`, `pr
 
 If tests fail, check that:
 
-* `go version` matches the pinned `1.26.6` (`mise which go` shows the mise-managed binary).
+* `go version` reports the pinned `1.27.1` (`mise which go` shows the mise-managed binary). `go.mod` declares `go 1.26.9` with `toolchain go1.27.3`, so outside mise the Go command selects `go1.27.3` on its own.
 * Dependencies are downloaded (`go mod download`).
 * No stray local config from a previous run is interfering (`rm -rf testdata/config` is safe -- it is a generated test artifact, not checked-in fixture data).
 
@@ -157,7 +158,7 @@ mise run tidy
 
 **`mise: command not found`** -- add mise's install location to `PATH` (typically `$HOME/.local/bin`) and reload your shell.
 
-**Go version mismatch** -- run `mise install go` and `mise which go` to confirm the mise-managed `1.26.6` toolchain is what `go` resolves to in your shell.
+**Go version mismatch** -- run `mise install go` and `mise which go` to confirm the mise-managed `1.27.1` toolchain is what `go` resolves to in your shell.
 
 **Tests fail with a config-directory error** -- remove any stale local test config (`rm -rf testdata/config`) and re-run.
 

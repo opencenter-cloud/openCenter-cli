@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-10-21
 id: kind-cluster-verification
 title: "Kind Cluster Verification Guide"
 sidebar_label: Kind Cluster Verification Guide
@@ -62,7 +62,7 @@ These are defaults applied when a service has no explicit `namespace` override i
 ```bash
 kubectl get nodes                       # all Ready
 kubectl get pods -n kube-system         # all Running
-opencenter local gitea status           # Running: true (local Kind clusters only)
+./bin/opencenter-local gitea status     # Running: true (local Kind clusters only)
 kubectl cluster-info                    # API server reachable
 ```
 
@@ -121,7 +121,7 @@ kubectl get pods -A | grep -v Running | grep -v Completed
 
 ```bash
 kubectl describe gitrepository flux-system -n flux-system
-opencenter local gitea status
+./bin/opencenter-local gitea status
 ```
 
 Common causes: Gitea not attached to the Kind network, TLS certificate missing the host IP as a SAN, network connectivity. Fix by re-running the attach step:

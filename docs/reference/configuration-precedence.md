@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-09-26
 id: configuration-precedence
 title: "Configuration Precedence"
 sidebar_label: Configuration Precedence

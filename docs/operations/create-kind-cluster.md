@@ -6,7 +6,7 @@ description: Create and deploy a Kind cluster through the openCenter command pat
 doc_type: how-to
 audience: openCenter operators
 tags: [kind, clusters]
-last_updated: 2026-09-25
+last_updated: 2026-10-14
 ---
 # Create a Kind cluster
 

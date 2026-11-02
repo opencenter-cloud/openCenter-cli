@@ -6,7 +6,7 @@ description: Validate an openCenter v2 cluster configuration in offline or onlin
 doc_type: how-to
 audience: openCenter operators
 tags: [validation, configuration]
-last_updated: 2026-09-25
+last_updated: 2026-10-21
 ---
 # Validate configuration
 

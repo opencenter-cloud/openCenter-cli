@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: service-harbor
 title: "Harbor"
 sidebar_label: Harbor
@@ -17,12 +17,14 @@ The generated default is disabled in `harbor`. `HarborConfig` embeds `BaseConfig
 
 | Field group | Fields |
 |-------------|--------|
-| Access | `hostname`, `external_url` |
+| Access | `hostname`, `external_url`, `issuer_ref` |
 | Storage | `storage_type`, `registry_volume_size`, `jobservice_volume_size`, `database_volume_size`, `redis_volume_size`, `trivy_volume_size`, `storage_class`, `s3_bucket`, `s3_region`, `s3_endpoint` |
 | Database | `database_type`, `database_host`, `database_port`, `database_name`, `database_user` |
 | TLS | `emit_certificate` |
 
 When omitted from YAML, the custom unmarshaller sets `storage_type: s3`, volume sizes `100/10/10/10/10`; explicit zero values remain zero. `HarborSecrets` declares admin, database, registry, and S3 access/secret fields.
+
+`issuer_ref` names the ClusterIssuer that mints Harbor's certificate. Empty means the issuer the Gateway listener in front of Harbor uses, which keeps the listener and the leaf certificate in agreement; pin it only to deliberately use a different CA for Harbor than the rest of the cluster.
 
 ## Runtime validation and dependencies
 

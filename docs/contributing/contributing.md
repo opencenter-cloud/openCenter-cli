@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-09-26
 id: contributing
 title: "Contributing to openCenter-cli"
 sidebar_label: Contributing to openCenter-cli

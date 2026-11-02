@@ -22,11 +22,15 @@ Discovery order is `OPENCENTER_PLUGINS_DIR`, `<config-dir>/plugins`, then
 `PATH`. The list is read-only and reports each discovered plugin's name, path,
 status, and message.
 
-This checkout does not provide a built-in command that creates, installs, or
-publishes a plugin. Build and installation conventions are therefore outside
-this page's evidence boundary.
+The repository ships `scripts/install.sh`, which downloads the `opencenter` CLI
+and the `opencenter-local` plugin from a GitHub release and registers the
+plugin's checksum. See [Install the CLI](../reference/installation.md) for its
+options and checksum behavior. The built-in CLI itself has no command that
+creates, installs, or publishes a plugin; authoring a new plugin is outside this
+page's evidence boundary.
 
 ## Evidence
 
 - Plugin command: `cmd/plugins.go`
 - Discovery implementation: `internal/plugins/`
+- Installer: `scripts/install.sh`

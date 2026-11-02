@@ -6,7 +6,7 @@ description: Generate keys and manage encrypted secret files with openCenter.
 doc_type: how-to
 audience: openCenter operators
 tags: [secrets, security]
-last_updated: 2026-10-26
+last_updated: 2026-10-27
 ---
 # Manage secrets
 

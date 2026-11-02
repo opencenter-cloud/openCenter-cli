@@ -14,6 +14,10 @@ This tutorial follows the repository's supported configuration flow: initialize 
 v2 cluster file, select it, validate it, generate its GitOps tree, and deploy it.
 It does not assume that infrastructure, Kubernetes, or Git remotes are available.
 
+Before starting, install the CLI — see
+[Install the CLI](../reference/installation.md) — and confirm it runs with
+`opencenter version`.
+
 ## 1. Create a configuration
 
 `cluster init` accepts an organization and one of the provider types exposed by

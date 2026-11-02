@@ -54,7 +54,7 @@ opencenter cluster drift reconcile prod-cluster --to-config --confirm
 opencenter cluster drift schedule prod-cluster --interval=24h
 ```
 
-Drift severities are `critical` (for example control-plane or network configuration changes), `warning` (worker nodes, tags, labels), and `info` (metadata) — defined in `internal/operations/drift_detector.go`.
+Drift severities are `critical` (for example control-plane or network configuration changes), `warning` (worker nodes, tags, labels), and `info` (metadata). `cluster drift` (`cmd/cluster_drift.go`) calls the provider's `DetectDrift`, and both registered providers delegate to `CompareInfrastructureState` in `internal/cloud/compare.go`, which assigns every emitted severity. The parallel severity model in `internal/operations/drift_detector.go` is not wired into any command; only its package tests construct it.
 
 ## VMware-Specific Behavior
 

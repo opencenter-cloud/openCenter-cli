@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-24
+last_updated: 2026-10-22
 id: security-update-design
 title: "Secret and Config Separation"
 sidebar_label: Secret and Config
@@ -54,7 +54,7 @@ Blueprints and secrets live outside the GitOps repository under `~/.config/openc
     └── secrets/                            ← OPENCENTER_SECRETS_DIR, 0700
         └── <org>/<cluster>/
             ├── age/keys/<cluster>-key.txt   ← mode 0600
-            ├── ssh/<cluster>-<env>-<region> ← mode 0600 (.pub: 0644)
+            ├── ssh/<cluster>                ← mode 0600 (.pub: 0644)
             └── kubernetes/
                 └── kubeconfig.yaml          ← admin kubeconfig, mode 0600
 ```
@@ -122,8 +122,8 @@ The `<cluster>-config.yaml` file is declarative input, not a rendered output:
 | --- | --- |
 | `<secrets-dir>/<org>/<cluster>/`, `.../age/`, `.../ssh/` | `0700` |
 | `<secrets-dir>/.../age/keys/<cluster>-key.txt` | `0600` |
-| `<secrets-dir>/.../ssh/<cluster>-<env>-<region>` | `0600` |
-| `<cluster-state-dir>/<org>/<cluster>/`, `inventory/`, `venv/`, `.bin/` | `0700` |
+| `<secrets-dir>/.../ssh/<cluster>` | `0600` |
+| `<gitops-dir>/<org>/infrastructure/clusters/<cluster>/`, `inventory/`, `venv/`, `.bin/` | `0755` |
 | `<blueprints-dir>/.../<cluster>-config.yaml` | `0600` |
 | `.gitignore`, secret-scan CI workflow | `0644` |
 | `.opencenter/hooks/pre-commit`, `.opencenter/scripts/scan-secrets` | `0755` |

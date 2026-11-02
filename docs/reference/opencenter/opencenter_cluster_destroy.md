@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 id: opencenter-cluster-destroy
 title: "Opencenter_Cluster_Destroy"
 sidebar_label: Opencenter_Cluster_Destroy

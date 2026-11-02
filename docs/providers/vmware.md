@@ -37,11 +37,17 @@ opencenter:
           access_ip_v4: 192.0.2.20
 ```
 
-The provider validator requires the five VMware cloud selectors above. Node
-names must be unique and nodes need an access address. A VMware configuration
-can also enable the `vsphere-csi` service and provide its credentials under the
+The provider validator requires the five VMware cloud selectors above. Static
+node checks — a required `name` and a required `access_ip_v4` per entry — run
+only for the `baremetal` provider, not for VMware. A VMware configuration can
+also enable the `vsphere-csi` service and provide its credentials under the
 typed `secrets.vsphere_csi` section; the exact service fields should be taken
 from the generated v2 configuration and schema.
+
+The readiness report warns when neither `opencenter.cluster.kubernetes.storage_plugin.vsphere_csi.enabled`
+nor the `vsphere-csi` service is enabled. The knob the warning names is
+`opencenter.cluster.kubernetes.storage_plugin.vsphere_csi`; set its `enabled`
+to `true`, or configure an alternative CSI driver.
 
 ## Lifecycle commands
 
@@ -61,6 +67,7 @@ not prove that VMs, vCenter objects, SSH connectivity, or storage are present.
 ## Evidence
 
 - VMware validation: `internal/config/v2/readiness.go`
+- Static node validation runs only for `baremetal`: `internal/config/v2/readiness.go`
 - Configuration types: `internal/config/v2/provider.go`,
   `internal/config/v2/infrastructure.go`
 - CLI behavior: `cmd/cluster_init.go`, `cmd/cluster_generate.go`,

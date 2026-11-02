@@ -97,3 +97,6 @@ tests/features/steps/tmp/
 .opencode
 .slim/deepwork/
 .omp
+
+# Working plans and analysis artifacts kept out of the reader-facing docs tree.
+.plans/

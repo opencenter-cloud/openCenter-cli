@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: build-system
 title: "Build System (Mise)"
 sidebar_label: Build System (Mise)
@@ -20,8 +20,9 @@ openCenter-cli uses [mise](https://mise.jdx.dev/) rather than Make: it pins tool
 
 | Tool | Version | Install method |
 | --- | --- | --- |
-| `golang` | `1.26.6` | mise-native |
-| `golangci-lint` | `2.11.4` | mise-native |
+| `go` | `1.27.1` | mise-native |
+| `golangci-lint` | `2.14.0` | mise-native |
+| `vale` | `3.23.0` | mise-native |
 | `kubectl` | `latest` | mise-native |
 | `kind` | `latest` | mise-native |
 | `helm` | `latest` | mise-native |
@@ -29,7 +30,7 @@ openCenter-cli uses [mise](https://mise.jdx.dev/) rather than Make: it pins tool
 | `golang.org/x/vuln/cmd/govulncheck` | `latest` | `go:` backend |
 | `gitleaks/gitleaks` | `latest` | `aqua:` backend |
 
-Go, golangci-lint, and SOPS are hard-pinned; `kubectl`, `kind`, `helm`, `govulncheck`, and `gitleaks` float on `latest` locally. CI workflows pin some deployment tools independently for reproducibility -- notably `deploy-kind.yml` pins `KIND_VERSION=v0.29.0`, `KUBECTL_VERSION=v1.35.4`, `HELM_VERSION=v3.19.0`, `FLUX_VERSION=v2.6.4`, and `SOPS_VERSION=3.13.3`. See [GitHub Actions Workflows](../reference/github-actions-workflows.md).
+Go, golangci-lint, Vale, and SOPS are hard-pinned; `kubectl`, `kind`, `helm`, `pre-commit`, `govulncheck`, and `gitleaks` float on `latest` locally. The mise key for the Go toolchain is `go`, not `golang`. `go.mod` declares `go 1.26.9` with `toolchain go1.27.3`: the language floor the module requires, and the toolchain the Go command selects when it runs outside mise. CI workflows pin some deployment tools independently for reproducibility -- notably `deploy-kind.yml` pins `KIND_VERSION=v0.29.0`, `KUBECTL_VERSION=v1.35.4`, `HELM_VERSION=v3.19.0`, `FLUX_VERSION=v2.6.4`, and `SOPS_VERSION=3.13.3`. See [GitHub Actions Workflows](../reference/github-actions-workflows.md).
 
 ## Environment defaults (`[env]`)
 
@@ -80,7 +81,7 @@ CONTAINER_RUNTIME = "podman"
 | `test-build` | `go build ./...` (compile-only, no test execution). |
 | `test-remediation` | `go test ./internal/sops ./internal/secrets ./internal/secretartifacts ./internal/gitops ./cmd -count=1`. |
 | `test-remediation-race` | Runs two specific ownership/rollback tests three times under `-race`. |
-| `test-docs` | Runs `go test -tags tools ./cmd/docs -count=1` plus repository-only documentation validation for maintained Markdown, links, frontmatter, and Mermaid fences. It does not publish or render documentation. |
+| `test-docs` | `test-docs-scripts`, the generator tests, `test-docs-idempotency`, the removed-command and YAML-snippet Go tests, `test-docs-frontmatter`, `test-docs-links`, `test-docs-mermaid`. It does not publish or render documentation. |
 | `test-go-all` | Local `go test ./... -count=1 -timeout 15m` sweep; on failure, a transient failure log is written under `.tmp/` for diagnosis, not kept as a repository artifact. |
 | `test-kustomize` | `go test ./internal/gitops -run '^TestGeneratedDefaultOverlayKustomizeFailureMatrix$'`. |
 | `test-diff` | `git diff --check` (rejects whitespace errors in the working tree). |
@@ -89,7 +90,7 @@ CONTAINER_RUNTIME = "podman"
 | `godog-tag <tag>` | BDD scenarios filtered to `@<tag>`. |
 | `property` (alias `test-properties`) | `-run "TestProperty"` across `./internal/... ./cmd/...`. |
 | `govulncheck` | `govulncheck ./...`. |
-| `gitleaks` | `gitleaks detect --source . -c .gitleaks.toml --redact --no-banner` (full-history scan; not run in any CI workflow -- local/manual only). |
+| `gitleaks` | `gitleaks detect --source . --redact --no-banner` with the long configuration-file flag pointing at `.gitleaks.toml` (full-history scan; not run in any CI workflow -- local/manual only). |
 | `integration` | Runs three named suites in sequence: cluster-setup, resilience, operations. |
 | `perf` | `go test -tags perf ./internal/config -run "TestMemoryUsageRegression"`. |
 | `test:all` | `test`, `test-race`, `vet`, `godog`, `property`, `govulncheck`, in order. This aggregate is separate from the local full-package `test-go-all` sweep and the repository-only `test-docs` checks. |
@@ -111,8 +112,12 @@ CONTAINER_RUNTIME = "podman"
 | Task | What it does |
 | --- | --- |
 | `docs-gen` | `go run cmd/docs/generate.go` -- regenerates the auto-generated Cobra reference pages under `docs/reference/opencenter/`. |
-| `test-docs-idempotency` | Runs `docs-gen` twice and diffs the two results; fails if generation is not byte-for-byte stable. |
-| `test-docs-frontmatter` | `python3 hack/scripts/audit_doc_frontmatter.py --strict` across every Markdown page. |
+| `docs-update-timestamps -- <page.md> ...` | `python3 hack/scripts/audit_doc_frontmatter.py --update-last-updated` on the pages you name; exits 2 with usage text when you name none. |
+| `test-docs-idempotency` | Runs `docs-gen` twice and diffs the two results; fails if generation is not byte-for-byte stable. Chained by `test-docs`. |
+| `test-docs-scripts` | `python3 -m unittest discover -s hack/scripts -p 'test_*.py'` -- unit tests for every documentation policy/helper script. First step chained by `test-docs`. |
+| `test-docs-links` | `python3 hack/scripts/check_doc_links.py` -- checks local Markdown links without network access. Chained by `test-docs`. |
+| `test-docs-mermaid` | `python3 hack/scripts/check_mermaid_fences.py` -- checks Mermaid fence structure without a renderer. Chained by `test-docs`. |
+| `test-docs-frontmatter` | `python3 hack/scripts/audit_doc_frontmatter.py --strict` across every Markdown page. Chained by `test-docs`. |
 | `test-docs-frontmatter-remediation` | Same audit, with an explicit `--ignore` list for a documented set of legacy pages not yet remediated. |
 | `tag-wip-failures` | `python3 hack/tag_wip_failures.py` -- runs the Godog suite as Cucumber JSON and tags currently-failing scenarios `@wip`. |
 
@@ -123,17 +128,17 @@ CONTAINER_RUNTIME = "podman"
 | `gitea-up` | `go run ./cmd/opencenter-local gitea up` -- starts and provisions a local Gitea instance. |
 | `gitea-cleanup` | `go run ./cmd/opencenter-local gitea destroy`. |
 | `active` | `./bin/opencenter cluster status`. |
-| `terraform-generate <cluster> [output-dir]` | Legacy helper definition invoking `cluster terraform-generate`; that command is not registered in the current CLI tree. Generate infrastructure through `cluster generate`. |
-| `preflight` | `./bin/opencenter cluster validate`. |
+| `terraform-generate <cluster> [output-dir]` | **Unavailable:** legacy task definition invoking `cluster terraform-generate`; that command is not registered in the current CLI tree. Generate infrastructure through `cluster generate`. |
+| `preflight` | **Unavailable:** legacy task definition invoking a removed `cluster`-`preflight` verb that is not registered in the current CLI tree. Audit local prerequisites with `cluster doctor`. |
 | `install-shell-integration` | `./hack/install-shell-integration.sh`. |
-| `install-hooks` | Installs the tracked pre-commit hook configuration and enables the repository hooks. |
+| `install-hooks` | Fails unless `pre-commit` is on `PATH` (`mise install` first), then runs `pre-commit install --hook-type pre-commit` pointing it at the tracked `.pre-commit-config.yaml`. The installed hook runs gitleaks, the docs frontmatter audit, Vale on staged Markdown, and the maintained-docs requirement for public behavior changes. |
 
 ### Cleanup
 
 | Task | What it does |
 | --- | --- |
 | `clean` | Removes `bin/`, `testdata/`, `new-schema.json`, `terraform-output/`. |
-| `kind-cleanup [cluster]` | Destroys the named cluster (default `my-cluster`) and the local Gitea instance, verifies no stray Kind cluster remains, and removes a stale lock file. |
+| `kind-cleanup [cluster]` | Destroys the named cluster (default `my-cluster`) and the local Gitea instance, verifies no stray Kind cluster remains, and removes a stale lock file. Its two existence probes invoke commands that are not registered in the current CLI tree -- a removed `cluster`-`info` verb and the separate plugin binary's command group -- so both probes fail and each of those steps is skipped. |
 | `demo-cleanup` | `kind-cleanup` then `clean`. |
 
 ### OpenStack utilities

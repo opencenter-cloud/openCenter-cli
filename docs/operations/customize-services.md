@@ -6,7 +6,7 @@ description: Inspect and change service enablement and values in an openCenter c
 doc_type: how-to
 audience: openCenter operators
 tags: [services, configuration]
-last_updated: 2026-09-25
+last_updated: 2026-11-01
 ---
 # Customize services
 

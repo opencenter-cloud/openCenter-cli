@@ -6,7 +6,7 @@ description: Source index for the openCenter CLI reader-facing documentation.
 doc_type: reference
 audience: "users, operators, contributors"
 tags: [opencenter, cli, documentation, index]
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 ---
 
 # openCenter CLI Documentation
@@ -28,6 +28,8 @@ reference](reference/providers.md).
   OpenStack walkthrough.
 - [Kind local development](getting-started/kind-local-development.md) — local
   Kind workflow.
+- [Install the CLI](reference/installation.md) — installer options, checksum
+verification, and uninstall.
 - [CLI command reference](reference/cli-commands.md) — command groups and
   flags.
 - [Configuration schema](reference/configuration-schema.md) — configuration
@@ -48,21 +50,33 @@ Tutorials guide a reader through a working outcome:
 
 Task-oriented operations are grouped by outcome:
 
+- [Install the CLI](reference/installation.md)
+- [Create a Kind cluster](operations/create-kind-cluster.md)
+- [Create an OpenStack cluster](operations/create-openstack-cluster.md)
+- [Deploy from a cluster file](operations/deploy-openstack-cluster.md)
+- [Destroy an OpenStack cluster](operations/destroy-openstack-cluster.md)
 - [Validate configuration](operations/validate-configuration.md)
 - [Customize services](operations/customize-services.md)
+- [Service enablement profiles](operations/deployment-profiles.md)
+- [Normalize a legacy configuration](operations/normalize-legacy-renderer-metadata.md)
 - [Configure networking](operations/configure-networking.md)
+- [Flux and GitOps configuration](operations/flux-bootstrap-methods.md)
 - [Manage secrets](operations/manage-secrets.md)
 - [Manage worker pools](operations/manage-worker-pools.md)
+- [Add a worker pool](operations/add-worker-pools.md)
 - [Production OpenStack deployment](operations/openstack-production-deployment.md)
 - [Back up and restore](operations/backup-and-restore.md)
 - [Upgrade Kubernetes](operations/upgrade-kubernetes.md)
 - [Migrate clusters](operations/migrate-clusters.md)
+- [Use openCenter in CI](operations/integrate-ci-cd.md)
 - [Troubleshoot deployment](operations/troubleshoot-deployment.md)
 - [Create and install a CLI plugin](operations/create-install-cli-plugin.md)
 - [VMware provider guide](providers/vmware.md)
-
-The complete task set remains in the `docs/operations/` source directory;
-individual pages are linked from this index as they become reader entry points.
+- [Infrastructure providers](providers/README.md)
+ 
+Every page under `docs/operations/` is listed above except
+[Hardening defaults changed](operations/hardening-defaults-change.md), a
+one-off notice about the `k8s_hardening` and `os_hardening` default change.
 
 ## Reference
 
@@ -76,10 +90,13 @@ Lookup material for commands, configuration, providers, and services:
 - [File locations](reference/file-locations.md)
 - [GitOps configuration](reference/gitops-configuration.md)
 - [Validation rules](reference/validation-rules.md)
+- [Audit signing key](reference/audit-key.md)
+- [GitHub Actions workflows](reference/github-actions-workflows.md)
 - [Infrastructure providers](reference/providers.md)
 - [Platform services](reference/platform-services.md)
 - [Per-service reference](reference/services/index.md)
 - [Mise tasks](reference/mise-tasks.md)
+- [Local RustFS development service](reference/localdev-rustfs.md)
 - [Exit codes](reference/exit-codes.md)
 
 The [generated command pages](reference/cli-commands.md) are refreshed from
@@ -91,14 +108,18 @@ flags into another page.
 Background and rationale:
 
 - [Architecture](concepts/architecture.md)
+- [Architecture overview](architecture.md)
 - [Reference architecture](concepts/reference-architecture.md)
 - [GitOps workflow](concepts/gitops-workflow.md)
 - [Configuration lifecycle](concepts/configuration-lifecycle.md)
 - [Security model](concepts/security-model.md)
+- [Secret and config separation](concepts/security-update-design.md)
 - [Services and templates](concepts/services-templates.md)
 - [Drift detection](concepts/drift-detection.md)
 - [Provider comparison](concepts/provider-comparison.md)
 - [External CLI plugins](concepts/plugin-external-cli.md)
+- [Internal service plugins](concepts/plugin-internal-services.md)
+- [Deployment recommendations](recommendations.md)
 
 ## Contributing
 
@@ -106,13 +127,27 @@ Contributor-facing how-to and reference material:
 
 - [Contributing guide](contributing/contributing.md)
 - [Development setup](contributing/development-setup.md)
+- [Pre-commit hooks](contributing/pre-commit-hooks.md)
 - [Codebase organization](contributing/code-structure.md)
 - [Testing guide](contributing/testing-guide.md)
+- [Kind cluster verification](contributing/kind-cluster-verification.md)
 - [Adding providers](contributing/adding-providers.md)
 - [Adding services](contributing/adding-services.md)
+- [Adding a built-in service](contributing/adding-a-built-in-service.md)
 - [Build system](contributing/build-system.md)
 - [Release process](contributing/release-process.md)
 - [Documentation maintenance](README.md)
+ 
+Execution-flow and contract references for contributors changing the core
+pipelines:
+
+- [cluster deploy — OpenStack](contributing/cluster-deploy-openstack.md)
+- [Cluster init details](contributing/cluster-init-details.md)
+- [Cluster validate execution flow](contributing/validation.md)
+- [Service enable/disable lifecycle](contributing/services.md)
+- [Renderer contract](contributing/rendering-contract.md)
+- [Descriptor condition schema](contributing/descriptor-condition-schema.md)
+- [Overlay rendering security policy](contributing/overlay-security-policy.md)
 
 Repository-only architecture maps live in [CODEMAPS/](CODEMAPS/INDEX.md) and
 are intentionally not part of this reader-facing index. The repository map

@@ -6,7 +6,7 @@ description: Configure, render, and deploy a local Kind cluster reconciled by Fl
 doc_type: tutorial
 audience: openCenter developers
 tags: [kind, local-development]
-last_updated: 2026-10-13
+last_updated: 2026-10-22
 ---
 # Local development with Kind
 
@@ -29,19 +29,21 @@ refresh — so the happy path is about six commands.
   Silicon**. With Colima, start the VM with `--vm-type vz --vz-rosetta`.
 - `kind`, `kubectl`, `helm`, and `flux` on your PATH (mise installs the first
   three; install flux once: `brew install fluxcd age`).
-- From the repository root, build the CLI:
+- From the repository root, build the CLI and the local-services plugin:
 
   ```bash
-  mise run build-cli        # -> ./bin/opencenter
+  mise run build              # -> ./bin/opencenter and ./bin/opencenter-local
   ```
 
-  Use `./bin/opencenter` in the commands below (or add `bin/` to your PATH).
+  `./bin/opencenter` is the CLI. `./bin/opencenter-local` is the separate plugin
+  binary that runs the disposable local Gitea and RustFS instances used below.
+  Use both paths in the commands below (or add `bin/` to your PATH).
 
 ## 1. Start the local services
 
 ```bash
-opencenter local gitea up      # Gitea + tokens + test repo
-opencenter local gitea status  # expect "Running: true"
+./bin/opencenter-local gitea up      # Gitea + tokens + test repo
+./bin/opencenter-local gitea status  # expect "Running: true"
 ```
 
 This creates the Gitea container, the `admin`/user tokens under
@@ -50,7 +52,7 @@ GitOps `origin` points at. If Loki/Tempo S3 storage is enabled, also start the
 local object store:
 
 ```bash
-opencenter local rustfs up     # S3 API on :9000, credentials.json written
+./bin/opencenter-local rustfs up  # S3 API on :9000, credentials.json written
 cat ~/.config/opencenter/local/rustfs/credentials.json
 ```
 
@@ -173,10 +175,11 @@ Ordered steps (as reported by the plan):
 11. `gitops-push`
 12. `flux-verify`
 
-Resume control: rerunning deploy resumes from saved state
-(`~/.local/state/opencenter/bootstrap/<org>/<name>/state.json`); `--restart`
-ignores saved state, `--from-step <id>` starts at a named step, `--break-lock`
-clears a stale operation lock.
+Resume control: rerunning deploy resumes from saved state, scoped to the
+cluster generation at
+`~/.local/state/opencenter/bootstrap/<org>/<cluster>/<generation-id>/state.json`;
+`--restart` ignores saved state, `--from-step <id>` starts at a named step,
+`--break-lock` clears a stale operation lock.
 
 ## 7. Confirm the cluster
 
@@ -193,9 +196,9 @@ A successful deploy reports `Cluster ready at https://127.0.0.1:6443`.
 ## Teardown
 
 ```bash
-opencenter cluster destroy local/dev --force          # removes the Kind cluster
-opencenter local gitea destroy                        # optional
-opencenter local rustfs destroy                       # optional
+opencenter cluster destroy local/dev --force   # removes the Kind cluster
+./bin/opencenter-local gitea destroy           # optional
+./bin/opencenter-local rustfs destroy          # optional
 ```
 
 `destroy` preserves local configuration and GitOps files; add
@@ -260,7 +263,7 @@ and its state dir, then retry:
 ```bash
 podman rm -f rustfs
 rm -rf ~/.config/opencenter/local/rustfs
-opencenter local rustfs up
+./bin/opencenter-local rustfs up
 ```
 
 ### `flux bootstrap` times out cloning the repository
@@ -294,7 +297,7 @@ opencenter cluster deploy local/dev --container-runtime podman
 
 Saved step state marks `kind-create` etc. as complete. Either rerun deploy with
 `--restart`, or delete those entries from
-`~/.local/state/opencenter/bootstrap/local/dev/state.json`.
+`~/.local/state/opencenter/bootstrap/local/dev/<generation-id>/state.json`.
 
 ### Probing the cluster hits PodSecurity denials
 

@@ -3288,6 +3288,9 @@
                 "adoption_mode": {
                   "type": "string"
                 },
+                "branding_image": {
+                  "type": "string"
+                },
                 "enabled": {
                   "type": "boolean"
                 },
@@ -5563,6 +5566,9 @@
                   "type": "string"
                 },
                 "adoption_mode": {
+                  "type": "string"
+                },
+                "branding_image": {
                   "type": "string"
                 },
                 "enabled": {
@@ -7916,6 +7922,9 @@
                   "type": "string"
                 },
                 "adoption_mode": {
+                  "type": "string"
+                },
+                "branding_image": {
                   "type": "string"
                 },
                 "enabled": {

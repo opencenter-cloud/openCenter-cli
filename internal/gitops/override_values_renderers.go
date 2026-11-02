@@ -49,6 +49,15 @@ func templateRenderer(tmpl string) OverrideValuesRenderer {
 			}
 			return !IsServiceDisabled(svc)
 		}
+		// headlampBrandingImage resolves the digest-pinned branding plugin image
+		// for the headlamp-branding-plugins init container, falling back to the
+		// built-in pin when services.headlamp.branding_image is unset.
+		funcMap["headlampBrandingImage"] = func() string {
+			if hc, ok := cfg.OpenCenter.Services["headlamp"].(*services.HeadlampConfig); ok {
+				return hc.ResolvedBrandingImage()
+			}
+			return services.DefaultBrandingImage
+		}
 		t, err := template.New("override-values").Funcs(funcMap).Parse(tmpl)
 		if err != nil {
 			return "", err
@@ -962,25 +971,76 @@ const headlampTemplate = `config:
         issuerURL: https://{{ (index .OpenCenter.Services "keycloak").Hostname | default (printf "auth.%s" fqdn) }}/realms/opencenter
         scopes: openid profile email groups
         callbackURL: https://{{ (index .OpenCenter.Services "headlamp").Hostname | default (printf "headlamp.%s" fqdn) }}/oidc-callback
-    pluginsDir: /build/plugins
+    pluginsDir: /headlamp/plugins
+    extraArgs:
+        # Headlamp's Settings UI is reachable without authentication: /settings/general
+        # renders its theme picker to an anonymous visitor, and nothing in the chart or
+        # in Headlamp gates it on login (SettingsButton only checks for a cluster
+        # context, and Settings.tsx has no auth check). The theme choice is stored in
+        # the visitor's localStorage, so it cannot be enforced by hiding the page.
+        #
+        # -force-theme is the flag that actually enforces branding: the theme picker
+        # renders greyed out with "Theme has been forced by your administrator" and
+        # stops responding. It supersedes -default-light-theme/-default-dark-theme,
+        # which the backend logs as redundant when force-theme is also set, so do not
+        # add those alongside this.
+        #
+        # "Light" is the name registered by the branding plugin, which shadows the
+        # built-in theme of the same name; see docs/reference/services/headlamp.md.
+        - -force-theme=Light
+podSecurityContext:
+    # Makes the plugins emptyDir group-writable to gid 101, which is what lets the
+    # non-root branding init container write into it. Without this the branding copy
+    # only succeeds because the root Flux container chowns the volume first, so it
+    # would break if the branding container were ever ordered first or ran alone.
+    fsGroup: 101
 initContainers:
-    - command:
-        - /bin/sh
-        - -c
-        - mkdir -p /build/plugins && cp -r /plugins/* /build/plugins/ && chown -R 100:101 /build
+    # Both init containers fill the same plugins volume. The Flux UI plugin keeps
+    # its upstream image; the branding plugin is additive and stays non-root.
+    # They must not collide: the upstream image ships /plugins/flux, this one
+    # ships /plugins/branding.
+    #
+    # The glob copy is deliberate: it carries whatever the image lays out under
+    # /plugins/<name>/, which must include the plugin's package.json. Headlamp
+    # reads that manifest and silently disables any plugin whose declared SDK
+    # version it rejects, so an image shipping only main.js deploys as Running
+    # while the UI keeps the stock theme. Enforced against the built artifact by
+    # the CI gate in opencenter-headlamp-plugins; see docs/reference/services/
+    # headlamp.md for the predicate.
+    - name: headlamp-plugins
       image: ghcr.io/headlamp-k8s/headlamp-plugin-flux:latest
       imagePullPolicy: Always
-      name: headlamp-plugins
+      command:
+        - /bin/sh
+        - -c
+        - mkdir -p /headlamp/plugins && cp -r /plugins/* /headlamp/plugins/ && chown -R 100:101 /headlamp/plugins
       securityContext:
         runAsNonRoot: false
         privileged: false
         runAsUser: 0
         runAsGroup: 0
       volumeMounts:
-        - mountPath: /build/plugins
+        - mountPath: /headlamp/plugins
+          name: headlamp-plugins
+    - name: headlamp-branding-plugins
+      image: {{ headlampBrandingImage }}
+      imagePullPolicy: IfNotPresent
+      command:
+        - /bin/sh
+        - -c
+        - cp -r /plugins/* /headlamp/plugins/ && ls -l /headlamp/plugins
+      securityContext:
+        runAsNonRoot: true
+        privileged: false
+        allowPrivilegeEscalation: false
+        capabilities:
+            drop:
+                - ALL
+      volumeMounts:
+        - mountPath: /headlamp/plugins
           name: headlamp-plugins
 volumeMounts:
-    - mountPath: /build/plugins
+    - mountPath: /headlamp/plugins
       name: headlamp-plugins
 volumes:
     - name: headlamp-plugins

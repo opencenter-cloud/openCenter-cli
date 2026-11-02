@@ -118,6 +118,9 @@ CONTAINER_RUNTIME = "podman"
 | `test-docs-links` | `python3 hack/scripts/check_doc_links.py` -- checks local Markdown links without network access. Chained by `test-docs`. |
 | `test-docs-mermaid` | `python3 hack/scripts/check_mermaid_fences.py` -- checks Mermaid fence structure without a renderer. Chained by `test-docs`. |
 | `test-docs-frontmatter` | `python3 hack/scripts/audit_doc_frontmatter.py --strict` across every Markdown page. Chained by `test-docs`. |
+| `test-docs-timestamps` | `python3 hack/scripts/audit_doc_frontmatter.py --strict --check-stale-timestamps` -- fails a page whose `last_updated` predates the newest commit that changed its body. Needs full Git history; on a shallow clone it reports nothing. Chained by `test-docs`. |
+| `test-docs-task-coverage` | `python3 hack/scripts/check_mise_task_docs.py` -- fails when `.mise.toml` defines a task that `docs/reference/mise-tasks.md` omits, or that page documents a task mise does not define. Chained by `test-docs`. |
+| `test-docs-cli-invocations` | `python3 hack/scripts/check_doc_cli_invocations.py` -- asks the built binary, through cobra completion, whether every command shown in a shell code block is registered. Skips cleanly when `bin/opencenter` is absent, so run `mise run build` first. Chained by `test-docs`. |
 | `test-docs-frontmatter-remediation` | Same audit, with an explicit `--ignore` list for a documented set of legacy pages not yet remediated. |
 | `tag-wip-failures` | `python3 hack/tag_wip_failures.py` -- runs the Godog suite as Cucumber JSON and tags currently-failing scenarios `@wip`. |
 

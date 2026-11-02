@@ -6,7 +6,7 @@ description: Repository map and maintenance guide for openCenter CLI Markdown do
 doc_type: reference
 audience: "contributors, maintainers"
 tags: [documentation, maintenance, diataxis]
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 ---
 
 # Documentation maintenance
@@ -101,11 +101,25 @@ python3 hack/scripts/audit_doc_frontmatter.py --strict
 mise run test-docs-frontmatter
 ```
 
-The pull-request docs workflow audits changed Markdown files and runs Vale;
-see [`.github/workflows/docs-p0.yml`](../.github/workflows/docs-p0.yml).
+The pull-request docs workflow audits changed Markdown files, checks that no
+page's `last_updated` predates its last body change, runs Vale, and runs
+`mise run test-docs`; see
+[`.github/workflows/docs-p0.yml`](../.github/workflows/docs-p0.yml).
 For generated command pages, use `mise run test-docs` after regeneration. This
 is a repository-only check: it does not publish or deploy a documentation site.
 Its Mermaid coverage is structural and fence-only; it does not render diagrams.
+
+`mise run test-docs` also verifies that every task defined in `.mise.toml` has a
+row in [Mise tasks](reference/mise-tasks.md), and that every command shown in a
+shell code block resolves against the built binary. Run `mise run build` first,
+or the command check skips.
+
+Two hooks in [`.pre-commit-config.yaml`](../.pre-commit-config.yaml) keep
+frontmatter honest: `doc-last-updated-refresh` rewrites `last_updated` on every
+staged page, and `doc-frontmatter` audits the result. A content edit leaves the
+old date untouched and invisible in the diff, which is why the refresh is a hook
+while the staleness check also runs in CI -- `git commit --no-verify` skips the
+first, not the second.
 
 For the local full-package Go sweep, use `mise run test-go-all`. The task gives
 each Go test run a 15-minute timeout and, on failure, writes a transient failure

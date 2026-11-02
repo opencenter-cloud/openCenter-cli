@@ -6,7 +6,7 @@ description: Follow the documented openCenter workflow for initializing, inspect
 doc_type: tutorial
 audience: openCenter users
 tags: [getting-started, configuration]
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 ---
 # Getting Started with openCenter
 

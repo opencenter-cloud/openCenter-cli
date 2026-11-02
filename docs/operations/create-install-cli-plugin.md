@@ -6,7 +6,7 @@ description: Discover and inspect external CLI plugins available to openCenter.
 doc_type: how-to
 audience: openCenter operators
 tags: [plugins, cli]
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 ---
 # Discover CLI plugins
 

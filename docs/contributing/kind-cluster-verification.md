@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-10-21
+last_updated: 2026-11-02
 id: kind-cluster-verification
 title: "Kind Cluster Verification Guide"
 sidebar_label: Kind Cluster Verification Guide

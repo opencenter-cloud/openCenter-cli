@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-10-22
+last_updated: 2026-11-02
 id: security-update-design
 title: "Secret and Config Separation"
 sidebar_label: Secret and Config

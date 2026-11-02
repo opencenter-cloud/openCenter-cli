@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-10-31
+last_updated: 2026-11-02
 id: cluster-deploy-openstack
 title: "cluster deploy — OpenStack Provider"
 sidebar_label: cluster deploy — OpenStack

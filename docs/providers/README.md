@@ -6,7 +6,7 @@ description: Reference the infrastructure provider types and common lifecycle wo
 doc_type: reference
 audience: openCenter users
 tags: [providers, reference]
-last_updated: 2026-10-05
+last_updated: 2026-11-02
 ---
 # Infrastructure providers
 

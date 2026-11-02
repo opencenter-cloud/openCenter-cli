@@ -6,7 +6,7 @@ description: Configure, render, and deploy a local Kind cluster reconciled by Fl
 doc_type: tutorial
 audience: openCenter developers
 tags: [kind, local-development]
-last_updated: 2026-10-22
+last_updated: 2026-11-02
 ---
 # Local development with Kind
 

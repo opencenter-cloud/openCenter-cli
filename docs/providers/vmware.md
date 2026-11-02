@@ -6,7 +6,7 @@ description: Reference the VMware provider configuration shape and validation re
 doc_type: reference
 audience: openCenter operators
 tags: [vmware, providers]
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 ---
 # VMware provider
 

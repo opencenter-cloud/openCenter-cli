@@ -107,8 +107,14 @@ func (o Outputs) Raw(name string) (json.RawMessage, bool) {
 	return value, true
 }
 
-func looksLikeMissingState(stderr string) bool {
+// LooksLikeMissingState reports whether an error or stderr string indicates that
+// OpenTofu state was never initialized or applied in the directory.
+func LooksLikeMissingState(stderr string) bool {
 	lowered := strings.ToLower(stderr)
 	return strings.Contains(lowered, "no state file was found") ||
 		strings.Contains(lowered, "command \"output\" failed")
+}
+
+func looksLikeMissingState(stderr string) bool {
+	return LooksLikeMissingState(stderr)
 }

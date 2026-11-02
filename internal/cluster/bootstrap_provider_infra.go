@@ -253,7 +253,7 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 					if opts.DryRun {
 						return nil
 					}
-					bound, err := bindNetworkOutputs(ctx, cfg, clusterDir, cfg.OpenTofu.Path, p.persistNetworkBindings)
+					bound, err := bindNetworkOutputsWithRunner(ctx, cfg, clusterDir, openTofuPath, p.runner, p.persistNetworkBindings)
 					if err != nil {
 						return err
 					}
@@ -419,7 +419,7 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 				if opts.DryRun {
 					return nil
 				}
-				bound, err := bindNetworkOutputs(ctx, cfg, clusterDir, cfg.OpenTofu.Path, nil)
+				bound, err := bindNetworkOutputsWithRunner(ctx, cfg, clusterDir, openTofuPath, p.runner, nil)
 				if err != nil {
 					return err
 				}

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	v2 "github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/tofuoutput"
 )
 
 // fakeTofu writes a stub `tofu` script that answers `output -json` with the
@@ -262,5 +263,24 @@ func TestObserveTerraformFromConfigResolvesInfrastructureDir(t *testing.T) {
 		if field.Value != "net-9" {
 			t.Errorf("%s = %v, want net-9", field.Path, field.Value)
 		}
+	}
+}
+
+func TestObserveTerraformOutputsDirect(t *testing.T) {
+	cfg := openstackCfg()
+	raw := []byte(`{"` + TerraformOutputNetworkID + `":{"value":"net-direct"},"` + TerraformOutputSubnetID + `":{"value":"sub-direct"}}`)
+	outputs, err := tofuoutput.Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	inferred, conflicts, err := ObserveTerraformOutputs(cfg, "/infra/dir", outputs)
+	if err != nil {
+		t.Fatalf("ObserveTerraformOutputs: %v", err)
+	}
+	if len(conflicts) != 0 {
+		t.Fatalf("unexpected conflicts: %v", conflicts)
+	}
+	if len(inferred) != 4 {
+		t.Fatalf("expected 4 inferred results (2 flat + 2 nested), got %d", len(inferred))
 	}
 }

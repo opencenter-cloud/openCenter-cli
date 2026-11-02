@@ -15,6 +15,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -275,4 +276,68 @@ func TestRerenderCCMNetworkValuesRequiresGitDir(t *testing.T) {
 	if err := rerenderCCMNetworkValues(context.Background(), nil); err == nil {
 		t.Error("expected an error for a nil config")
 	}
+}
+
+func TestBindNetworkOutputsWithRunner(t *testing.T) {
+	t.Run("promotes outputs via runner", func(t *testing.T) {
+		cfg := mustNewClusterTestConfig("runner-promotes", "openstack")
+		cfg.OpenCenter.Infrastructure.Cloud.OpenStack.NetworkID = ""
+		cfg.OpenCenter.Infrastructure.Cloud.OpenStack.SubnetID = ""
+		cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.NetworkID = ""
+		cfg.OpenCenter.Infrastructure.Cloud.OpenStack.Networking.SubnetID = ""
+
+		clusterDir := t.TempDir()
+		runner := &fakeLifecycleRunner{
+			onRun: func(dir string, env map[string]string, name string, args ...string) ([]byte, error) {
+				return []byte(`{"opencenter_network_id":{"value":"net-via-runner"},"opencenter_subnet_id":{"value":"sub-via-runner"}}`), nil
+			},
+		}
+
+		bound, err := bindNetworkOutputsWithRunner(context.Background(), &cfg, clusterDir, "tofu", runner, nil)
+		if err != nil {
+			t.Fatalf("bindNetworkOutputsWithRunner: %v", err)
+		}
+		if !bound.Changed {
+			t.Fatal("expected bound.Changed to be true")
+		}
+		if bound.NetworkID != "net-via-runner" || bound.SubnetID != "sub-via-runner" {
+			t.Fatalf("unexpected bound outputs: %+v", bound)
+		}
+	})
+
+	t.Run("handles missing state gracefully", func(t *testing.T) {
+		cfg := mustNewClusterTestConfig("runner-missing-state", "openstack")
+		clusterDir := t.TempDir()
+		runner := &fakeLifecycleRunner{
+			onRun: func(dir string, env map[string]string, name string, args ...string) ([]byte, error) {
+				return []byte("No state file was found"), errors.New("exit status 1")
+			},
+		}
+
+		bound, err := bindNetworkOutputsWithRunner(context.Background(), &cfg, clusterDir, "tofu", runner, nil)
+		if err != nil {
+			t.Fatalf("expected missing state to be tolerated, got: %v", err)
+		}
+		if bound.Changed {
+			t.Fatal("expected bound.Changed to be false on missing state")
+		}
+	})
+
+	t.Run("handles empty outputs gracefully", func(t *testing.T) {
+		cfg := mustNewClusterTestConfig("runner-empty-outputs", "openstack")
+		clusterDir := t.TempDir()
+		runner := &fakeLifecycleRunner{
+			onRun: func(dir string, env map[string]string, name string, args ...string) ([]byte, error) {
+				return nil, nil
+			},
+		}
+
+		bound, err := bindNetworkOutputsWithRunner(context.Background(), &cfg, clusterDir, "tofu", runner, nil)
+		if err != nil {
+			t.Fatalf("expected empty outputs to be tolerated, got: %v", err)
+		}
+		if bound.Changed {
+			t.Fatal("expected bound.Changed to be false on empty outputs")
+		}
+	})
 }

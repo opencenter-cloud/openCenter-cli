@@ -85,6 +85,17 @@ func ObserveTerraform(ctx context.Context, cfg *v2.Config, clusterDir string, to
 	if err != nil {
 		return nil, nil, err
 	}
+	return ObserveTerraformOutputs(cfg, clusterDir, outputs)
+}
+
+// ObserveTerraformOutputs evaluates already-parsed OpenTofu outputs against the
+// cluster config, returning inferred fields and conflicts. This allows callers
+// using their own command runners (e.g. bootstrap lifecycle runners) to process
+// outputs without directly spawning an OS process.
+func ObserveTerraformOutputs(cfg *v2.Config, clusterDir string, outputs tofuoutput.Outputs) ([]FieldInferenceResult, []FieldConflict, error) {
+	if cfg == nil {
+		return nil, nil, fmt.Errorf("configuration cannot be nil")
+	}
 	if len(outputs) == 0 {
 		return nil, nil, nil
 	}

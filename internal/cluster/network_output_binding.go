@@ -16,6 +16,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -25,6 +26,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/importer"
 	"github.com/opencenter-cloud/opencenter-cli/internal/logging"
 	"github.com/opencenter-cloud/opencenter-cli/internal/sops"
+	"github.com/opencenter-cloud/opencenter-cli/internal/tofuoutput"
 )
 
 const (
@@ -73,6 +75,14 @@ type networkOutputsPersister func(ctx context.Context, cfg *v2.Config) error
 // cluster predating contract v3. clusterDir is the rendered infrastructure
 // directory; tofuPath overrides the OpenTofu binary and defaults to "tofu".
 func bindNetworkOutputs(ctx context.Context, cfg *v2.Config, clusterDir, tofuPath string, persist networkOutputsPersister) (*networkOutputsBinding, error) {
+	return bindNetworkOutputsWithRunner(ctx, cfg, clusterDir, tofuPath, nil, persist)
+}
+
+// bindNetworkOutputsWithRunner promotes the network/subnet identity OpenTofu
+// created into the in-memory config and, when persist is non-nil, to disk.
+// When runner is non-nil, it reads OpenTofu outputs through the lifecycle runner
+// instead of directly spawning a process.
+func bindNetworkOutputsWithRunner(ctx context.Context, cfg *v2.Config, clusterDir, tofuPath string, runner lifecycleCommandRunner, persist networkOutputsPersister) (*networkOutputsBinding, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("configuration is nil")
 	}
@@ -82,10 +92,59 @@ func bindNetworkOutputs(ctx context.Context, cfg *v2.Config, clusterDir, tofuPat
 		return &networkOutputsBinding{}, nil
 	}
 
-	inferred, conflicts, err := importer.ObserveTerraform(ctx, cfg, clusterDir, tofuPath)
-	if err != nil {
-		return nil, err
+	var (
+		inferred  []importer.FieldInferenceResult
+		conflicts []importer.FieldConflict
+		err       error
+	)
+
+	if runner != nil {
+		clusterDir = strings.TrimSpace(clusterDir)
+		if clusterDir == "" {
+			return &networkOutputsBinding{
+				NetworkID: openstackEffectiveNetworkID(cfg),
+				SubnetID:  openstackEffectiveSubnetID(cfg),
+			}, nil
+		}
+		if info, statErr := os.Stat(clusterDir); statErr != nil || !info.IsDir() {
+			return &networkOutputsBinding{
+				NetworkID: openstackEffectiveNetworkID(cfg),
+				SubnetID:  openstackEffectiveSubnetID(cfg),
+			}, nil
+		}
+		bin := strings.TrimSpace(tofuPath)
+		if bin == "" {
+			bin = "tofu"
+		}
+		raw, runErr := runner.Run(ctx, clusterDir, nil, bin, "output", "-json")
+		if runErr != nil {
+			if tofuoutput.LooksLikeMissingState(string(raw)) || tofuoutput.LooksLikeMissingState(runErr.Error()) {
+				return &networkOutputsBinding{
+					NetworkID: openstackEffectiveNetworkID(cfg),
+					SubnetID:  openstackEffectiveSubnetID(cfg),
+				}, nil
+			}
+			return nil, fmt.Errorf("read OpenTofu outputs in %s: %w", clusterDir, runErr)
+		}
+		var outputs tofuoutput.Outputs
+		if len(strings.TrimSpace(string(raw))) > 0 {
+			var parseErr error
+			outputs, parseErr = tofuoutput.Parse(raw)
+			if parseErr != nil {
+				return nil, fmt.Errorf("parse OpenTofu outputs in %s: %w", clusterDir, parseErr)
+			}
+		}
+		inferred, conflicts, err = importer.ObserveTerraformOutputs(cfg, clusterDir, outputs)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		inferred, conflicts, err = importer.ObserveTerraform(ctx, cfg, clusterDir, tofuPath)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	// Surfaced rather than silently ignored: the operator needs to know the
 	// config and the infrastructure disagree, and which one won.
 	for _, conflict := range conflicts {

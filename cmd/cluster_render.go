@@ -40,14 +40,15 @@ func renderClusterAppsEncryptedResult(ctx context.Context, cfg v2.Config, prune,
 }
 
 func renderSingleServiceEncryptedResult(ctx context.Context, cfg v2.Config, serviceName string, isManaged, prune, adoptGenerated bool) (*gitops.PromoteResult, error) {
-	return renderSingleServiceEncryptedResultWithBeforePromote(ctx, cfg, serviceName, isManaged, prune, adoptGenerated, nil)
+	return renderSingleServiceEncryptedResultWithBeforePromote(ctx, cfg, serviceName, isManaged, prune, adoptGenerated, false, nil)
 }
 
-func renderSingleServiceEncryptedResultWithBeforePromote(ctx context.Context, cfg v2.Config, serviceName string, isManaged, prune, adoptGenerated bool, beforePromote func() error) (*gitops.PromoteResult, error) {
+func renderSingleServiceEncryptedResultWithBeforePromote(ctx context.Context, cfg v2.Config, serviceName string, isManaged, prune, adoptGenerated, force bool, beforePromote func() error) (*gitops.PromoteResult, error) {
 	return gitops.RenderSingleServiceWithEncryptionResult(ctx, cfg, serviceName, isManaged, encryptRenderedServiceOverrides, gitops.PromoteOptions{
 		Prune:          &prune,
 		AdoptGenerated: adoptGenerated,
 		BeforePromote:  beforePromote,
+		Force:          force,
 	})
 }
 
@@ -150,6 +151,7 @@ func renderAllServicesWithOptionsAndValidator(cfg *v2.Config, force bool, dryRun
 				Prune:          &prune,
 				DryRun:         true,
 				AdoptGenerated: adoptGenerated,
+				Force:          force,
 			},
 		})
 		if err != nil {
@@ -193,6 +195,7 @@ func renderAllServicesWithOptionsAndValidator(cfg *v2.Config, force bool, dryRun
 			Prune:          &prune,
 			DryRun:         alreadyRendered && !force,
 			AdoptGenerated: adoptGenerated,
+			Force:          force,
 		},
 	})
 	if err != nil {
@@ -357,7 +360,7 @@ func renderSingleServiceWithOptions(cfg *v2.Config, serviceName string, force bo
 		}
 		return backupServiceDirectory(serviceDir, serviceName, cmd)
 	}
-	promotion, err := renderSingleServiceEncryptedResultWithBeforePromote(cmd.Context(), *cfg, serviceName, isManaged, prune, adoptGenerated, beforePromote)
+	promotion, err := renderSingleServiceEncryptedResultWithBeforePromote(cmd.Context(), *cfg, serviceName, isManaged, prune, adoptGenerated, force, beforePromote)
 	if err != nil {
 		return fmt.Errorf("failed to render service '%s': %w", serviceName, err)
 	}

@@ -103,7 +103,7 @@ func (m *GeneratedManifest) UnmarshalJSON(data []byte) error {
 
 type PromoteOptions struct {
 	Prune          *bool
-	Force          bool // compatibility only; never bypasses ownership checks
+	Force          bool // forces overwrite of modified tracked planned files (creates backups)
 	DryRun         bool
 	Scope          []string
 	AdoptGenerated bool
@@ -436,7 +436,13 @@ func planRepositoryPromotion(root, clusterName string, planned, seeds map[string
 				"retained %s: it is a credential Secret owned by `secrets sync` whose contents no longer match the secret artifact ledger; run `secrets sync` to re-encrypt it", path))
 		}
 	}
-	for path, onDisk := range existing {
+	existingPaths := make([]string, 0, len(existing))
+	for path := range existing {
+		existingPaths = append(existingPaths, path)
+	}
+	sort.Strings(existingPaths)
+	for _, path := range existingPaths {
+		onDisk := existing[path]
 		if syncOwned[path] {
 			continue
 		}
@@ -466,7 +472,18 @@ func planRepositoryPromotion(root, clusterName string, planned, seeds map[string
 					adoption[path] = true
 					continue
 				}
-				return nil, fmt.Errorf("ownership conflict: refusing to overwrite modified tracked file %s", path)
+				// Umask drift: if content is identical and the only difference is
+				// group-write permission (0644 vs 0664), heal/normalize without error.
+				if hashBytes(onDisk) == expected.SHA256 && isPermUmaskDrift(existingModes[path].Perm(), os.FileMode(expected.Mode)) {
+					continue
+				}
+				// When opts.Force is true and the modified tracked file is in planned,
+				// adopt it (with an automatic backup) and overwrite it.
+				if _, isPlanned := planned[path]; isPlanned && opts.Force {
+					adoption[path] = true
+					continue
+				}
+				return nil, fmt.Errorf("ownership conflict: refusing to overwrite modified tracked file %s; rerun with --force to back it up and overwrite", path)
 			}
 			continue
 		}
@@ -945,6 +962,22 @@ func trackedHygieneHealable(onDisk []byte, expected GeneratedFileInfo, plannedFi
 		}
 	}
 	return true
+}
+
+// isPermUmaskDrift reports whether the difference between actual on-disk
+// permissions and expected permissions is exclusively benign umask drift on a
+// standard non-executable file (e.g., 0664 vs 0644 from umask 0002).
+func isPermUmaskDrift(actual, expected os.FileMode) bool {
+	// Only regular non-executable permissions (no execute bits)
+	if actual&0o111 != 0 || expected&0o111 != 0 {
+		return false
+	}
+	actualPerm := actual.Perm()
+	expectedPerm := expected.Perm()
+	if actualPerm&0o600 != 0o600 || expectedPerm&0o600 != 0o600 {
+		return false
+	}
+	return (actualPerm | 0o020) == (expectedPerm | 0o020)
 }
 
 func gitIgnoreLineSet(data []byte) map[string]bool {

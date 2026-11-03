@@ -678,6 +678,65 @@ func TestSetupService_Setup_WithForce(t *testing.T) {
 	}
 }
 
+func TestSetupService_Setup_ForceOverwritesModifiedTrackedFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	gitDir := filepath.Join(tmpDir, "gitops")
+
+	pathResolver := paths.NewPathResolver(tmpDir)
+	ctx := context.Background()
+	if err := pathResolver.CreateClusterDirectories(ctx, "test-cluster", "opencenter"); err != nil {
+		t.Fatalf("failed to create cluster directories: %v", err)
+	}
+
+	cfg := mustNewClusterTestConfig("test-cluster", "kind")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
+	testhelpers.SaveConfigWithPathResolver(t, cfg, pathResolver)
+
+	service := createTestSetupService(pathResolver)
+
+	// First run to generate and record ownership ledger
+	opts := SetupOptions{
+		ClusterName:    "test-cluster",
+		Organization:   "opencenter",
+		DryRun:         false,
+		SkipValidation: true,
+	}
+	if _, err := service.Setup(ctx, opts); err != nil {
+		t.Fatalf("initial Setup() failed: %v", err)
+	}
+
+	// Modify a generated file directly on disk
+	targetFile := filepath.Join(gitDir, "applications", "overlays", "test-cluster", "kustomization.yaml")
+	if err := os.WriteFile(targetFile, []byte("resources:\n  - modified-by-user\n"), 0o644); err != nil {
+		t.Fatalf("failed to modify tracked file: %v", err)
+	}
+
+	// Run without force: must be refused with ownership conflict
+	opts.Force = false
+	if _, err := service.Setup(ctx, opts); err == nil || !strings.Contains(err.Error(), "ownership conflict") {
+		t.Fatalf("expected ownership conflict without force, got %v", err)
+	}
+
+	// Run with force: must succeed and overwrite
+	opts.Force = true
+	res, err := service.Setup(ctx, opts)
+	if err != nil {
+		t.Fatalf("Setup() with force failed: %v", err)
+	}
+	if res == nil {
+		t.Fatal("Setup() returned nil result")
+	}
+
+	// Verify file was restored/regenerated
+	content, err := os.ReadFile(targetFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(content), "modified-by-user") {
+		t.Fatalf("target file still contains modified content: %s", string(content))
+	}
+}
+
 func TestSetupService_SetupBlocksGenerationValidationBeforeTargetMutation(t *testing.T) {
 	tests := []struct {
 		name   string

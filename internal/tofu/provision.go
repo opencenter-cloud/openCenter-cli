@@ -80,7 +80,10 @@ func Provision(cfg v2.Config) error {
 		pf.Close()
 		return fmt.Errorf("failed to execute %s template: %w", templateName, err)
 	}
-	return pf.Close()
+	if err := pf.Close(); err != nil {
+		return err
+	}
+	return os.Chmod(providerPath, 0o644)
 }
 
 func writeOpenStackCredentialTfvars(clusterDir string, cfg v2.Config) error {

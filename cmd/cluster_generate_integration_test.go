@@ -497,9 +497,21 @@ func TestClusterGenerateForceOverwrite(t *testing.T) {
 		SkipValidation: true,
 	}
 
-	_, err := setupService.Setup(context.Background(), opts)
+	result1, err := setupService.Setup(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("first generate failed: %v", err)
+	}
+
+	// Modify a generated file on disk
+	targetFile := filepath.Join(result1.GitOpsPath, "applications", "overlays", clusterName, "kustomization.yaml")
+	if err := os.WriteFile(targetFile, []byte("resources:\n  - modified-by-test\n"), 0o644); err != nil {
+		t.Fatalf("failed to modify target file: %v", err)
+	}
+
+	// Without force, setup must fail with ownership conflict
+	opts.Force = false
+	if _, err := setupService.Setup(context.Background(), opts); err == nil {
+		t.Fatal("expected failure on modified file without force")
 	}
 
 	// Run setup again with force flag

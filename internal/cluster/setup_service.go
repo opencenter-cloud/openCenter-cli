@@ -279,6 +279,7 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 	promotion, manifestCount, err := s.generateGitOpsManifestsWithPromotion(ctx, cfg, clusterPaths, opts.DryRun, !opts.SkipValidation, gitops.PromoteOptions{
 		Prune:          opts.Prune,
 		AdoptGenerated: opts.AdoptGenerated,
+		Force:          opts.Force,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("generating manifests: %w", err)

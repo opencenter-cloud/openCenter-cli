@@ -670,6 +670,83 @@ func TestPromoteOverlayDefaultRejectsModifiedTrackedFile(t *testing.T) {
 	}
 }
 
+func TestPromoteOverlayForceOverwritesModifiedTrackedFile(t *testing.T) {
+	repo := t.TempDir()
+	root := filepath.Join(repo, "applications", "overlays", "cluster")
+	workspace := t.TempDir()
+	path := "services/one/generated.yaml"
+	writeTestFile(t, filepath.Join(workspace, path), "generated")
+	if _, err := promoteOverlay(workspace, root, "cluster", PromoteOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, path), "modified-by-human")
+	writeTestFile(t, filepath.Join(workspace, path), "new-generated")
+
+	// Without Force, promotion is refused with rerun hint
+	_, err := promoteOverlay(workspace, root, "cluster", PromoteOptions{})
+	if err == nil || !strings.Contains(err.Error(), "rerun with --force to back it up and overwrite") {
+		t.Fatalf("expected refusal with force hint, got %v", err)
+	}
+
+	// With Force, promotion succeeds, updates file, and creates backup
+	res, err := promoteOverlay(workspace, root, "cluster", PromoteOptions{Force: true})
+	if err != nil {
+		t.Fatalf("expected Force to overwrite modified tracked file, got %v", err)
+	}
+	if got, readErr := os.ReadFile(filepath.Join(root, path)); readErr != nil || string(got) != "new-generated" {
+		t.Fatalf("file content not updated: %q, %v", got, readErr)
+	}
+	if len(res.Adopted) != 1 || res.Adopted[0] != "applications/overlays/cluster/"+path {
+		t.Fatalf("res.Adopted = %v, want [%s]", res.Adopted, "applications/overlays/cluster/"+path)
+	}
+	if len(res.BackupPaths) != 1 {
+		t.Fatalf("expected 1 backup path, got %v", res.BackupPaths)
+	}
+	backupData, err := os.ReadFile(res.BackupPaths[0])
+	if err != nil || string(backupData) != "modified-by-human" {
+		t.Fatalf("backup content = %q, err = %v, want modified-by-human", backupData, err)
+	}
+
+	// Next run with identical content succeeds as unchanged
+	res2, err := promoteOverlay(workspace, root, "cluster", PromoteOptions{})
+	if err != nil {
+		t.Fatalf("subsequent promotion failed: %v", err)
+	}
+	if len(res2.Unchanged) != 1 {
+		t.Fatalf("expected file to be unchanged after adoption, got unchanged: %v, updated: %v", res2.Unchanged, res2.Updated)
+	}
+}
+
+func TestPromoteOverlayUmaskDriftNormalizesWithoutForce(t *testing.T) {
+	repo := t.TempDir()
+	root := filepath.Join(repo, "applications", "overlays", "cluster")
+	workspace := t.TempDir()
+	path := "services/one/generated.yaml"
+	writeTestFile(t, filepath.Join(workspace, path), "generated")
+	if _, err := promoteOverlay(workspace, root, "cluster", PromoteOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Simulate umask 0002 drift: permissions changed to 0664, but content is identical
+	fullPath := filepath.Join(root, path)
+	if err := os.Chmod(fullPath, 0o664); err != nil {
+		t.Fatal(err)
+	}
+
+	// Promotion without Force should succeed and normalize mode to 0644
+	res, err := promoteOverlay(workspace, root, "cluster", PromoteOptions{})
+	if err != nil {
+		t.Fatalf("expected umask drift to heal without error, got %v", err)
+	}
+	if len(res.Updated) != 1 {
+		t.Fatalf("res.Updated = %v, want [%s]", res.Updated, "applications/overlays/cluster/"+path)
+	}
+	info, err := os.Stat(fullPath)
+	if err != nil || info.Mode().Perm() != 0o644 {
+		t.Fatalf("expected mode 0644, got %v (err: %v)", info.Mode().Perm(), err)
+	}
+}
+
 func TestPromoteOverlayAdoptGeneratedDoesNotOverwriteModifiedTrackedFile(t *testing.T) {
 	repo := t.TempDir()
 	root := filepath.Join(repo, "applications", "overlays", "cluster")

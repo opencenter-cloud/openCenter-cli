@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-02
+last_updated: 2026-11-03
 id: service-headlamp
 title: "Headlamp Dashboard"
 sidebar_label: Headlamp
@@ -89,7 +89,7 @@ only when there is no cluster context, and `Settings.tsx` has no auth check. The
 chosen theme is a per-visitor `localStorage` preference, so no gateway rule on
 `/settings/*` constrains it either.
 
-`config.extraArgs: ["-force-theme=Light"]` is what actually binds the branding. The
+`config.extraArgs: ["-force-theme=Dark"]` is what actually binds the branding. The
 picker still renders but greys out behind "Theme has been forced by your
 administrator" and stops responding. Two constraints:
 

@@ -239,10 +239,10 @@ func TestRenderHeadlampForcesBrandedTheme(t *testing.T) {
 	if len(forced) != 1 {
 		t.Fatalf("expected exactly one -force-theme arg, got %v in %#v", forced, raw)
 	}
-	// The name must match a theme the branding plugin registers; "Light" shadows
+	// The name must match a theme the branding plugin registers; "Dark" shadows
 	// the built-in of the same name, so a typo here silently falls back to it.
-	if forced[0] != "-force-theme=Light" {
-		t.Errorf("-force-theme = %q, want %q", forced[0], "-force-theme=Light")
+	if forced[0] != "-force-theme=Dark" {
+		t.Errorf("-force-theme = %q, want %q", forced[0], "-force-theme=Dark")
 	}
 
 	// The backend logs default-light-theme/default-dark-theme as redundant when

@@ -983,9 +983,9 @@ const headlampTemplate = `config:
         # which the backend logs as redundant when force-theme is also set, so do not
         # add those alongside this.
         #
-        # "Light" is the name registered by the branding plugin, which shadows the
+        # "Dark" is the name registered by the branding plugin, which shadows the
         # built-in theme of the same name; see docs/reference/services/headlamp.md.
-        - -force-theme=Light
+        - -force-theme=Dark
 podSecurityContext:
     # Makes the plugins emptyDir group-writable to gid 101, which is what lets the
     # non-root branding init container write into it. Without this the branding copy

@@ -998,6 +998,50 @@ func TestRenderClusterAppsOpenStackCSINamespace(t *testing.T) {
 	}
 }
 
+// CCM runs as a hostNetwork + hostPath DaemonSet on the control plane, so its
+// namespace needs the same privileged PSA contract as openstack-csi. Without
+// PrivilegedNamespace in the render catalog the generated namespace carried no
+// PSA labels at all, and whether the CCM pods were admitted depended on
+// whatever the cluster happened to enforce -- a baseline enforcement would
+// reject them outright and stall cluster bootstrap behind the CCM.
+func TestRenderClusterAppsOpenStackCCMNamespaceIsPrivileged(t *testing.T) {
+	dst := t.TempDir()
+	cfg := newDefault("ccm-ns-psa")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = dst
+
+	if err := RenderClusterApps(cfg); err != nil {
+		t.Fatalf("RenderClusterApps() error = %v", err)
+	}
+
+	nsPath := filepath.Join(dst, "applications", "overlays", cfg.ClusterName(), "services", "openstack-ccm", "namespace", "namespace.yaml")
+	nsDocs, err := decodeYAMLDocuments([]byte(mustReadFile(t, nsPath)))
+	if err != nil {
+		t.Fatalf("parse %s: %v", nsPath, err)
+	}
+	if len(nsDocs) != 1 {
+		t.Fatalf("expected 1 document in namespace.yaml, got %d", len(nsDocs))
+	}
+	labels, _ := nestedValue(nsDocs[0], "metadata", "labels").(map[string]any)
+	if labels == nil {
+		t.Fatalf("openstack-ccm namespace.yaml has no metadata.labels; PrivilegedNamespace must emit the PSA trio")
+	}
+	for key, want := range map[string]string{
+		"pod-security.kubernetes.io/enforce": "privileged",
+		"pod-security.kubernetes.io/warn":    "baseline",
+		"pod-security.kubernetes.io/audit":   "baseline",
+	} {
+		if got := labels[key]; got != want {
+			t.Errorf("%s = %v, want %q", key, got, want)
+		}
+	}
+	// enforce-version is deliberately never emitted: absent means "track the
+	// newest Kubernetes version", so pinning it here would silently change PSA
+	// semantics on every cluster upgrade.
+	if v, ok := labels["pod-security.kubernetes.io/enforce-version"]; ok {
+		t.Errorf("pod-security.kubernetes.io/enforce-version must stay unset, got %v", v)
+	}
+}
+
 func TestRenderClusterAppsOpenStackCSIStagesAndSecretSettings(t *testing.T) {
 	dst := t.TempDir()
 	cfg := newDefault("csi-stages-test")

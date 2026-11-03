@@ -26,6 +26,11 @@ type RenderSpec struct {
 	SingleStage         bool
 	BaseOnly            bool
 	OmitTargetNamespace bool
+	// PrivilegedNamespace adds the privileged PSA trio (enforce: privileged,
+	// warn/audit: baseline) to the generated Namespace. Set it for services
+	// whose pods use hostNetwork or hostPath -- the profiles that reject them
+	// would block bootstrap, not just flag them. Never emits enforce-version;
+	// see autoNamespaceResourceTemplate for why.
 	PrivilegedNamespace bool
 	HasOverrideValues   bool
 	NamespaceStage      bool
@@ -163,7 +168,12 @@ func newBuiltInRenderCatalog() RenderCatalog {
 		},
 		{
 			ServiceName: "openstack-ccm", DefaultNamespace: "openstack-ccm", HasOverrideValues: true, NamespaceStage: true,
-			SourceName: "opencenter-openstack-ccm", SourceGroup: "openstack-ccm", EmitSource: true,
+			// CCM is a hostNetwork + hostPath DaemonSet: exactly the workload class
+			// `enforce: privileged` exists for, same contract as openstack-csi.
+			// Without it the rendered namespace carries no PSA labels and the pods
+			// rely on whatever the cluster happens to enforce.
+			PrivilegedNamespace: true,
+			SourceName:          "opencenter-openstack-ccm", SourceGroup: "openstack-ccm", EmitSource: true,
 			// SkipSourcesDependency: CCM is bootstrap-priority. It must reconcile before
 			// the sources aggregate gate is ready: DNS isn't available until CCM removes
 			// the cloud-provider-uninitialized taint, and sources needs DNS to fetch repos.

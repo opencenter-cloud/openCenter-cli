@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
@@ -592,6 +593,12 @@ spec:
 
 func renderInlineAutoTemplate(tmplStr string, ctx autoServiceContext) (string, error) {
 	funcMap := sprig.TxtFuncMap()
+	// The base Kustomization timeout is a constant rather than a literal in the
+	// template, so services that budget their HelmRelease upgrade against it can
+	// reference the same value -- see autoBaseKustomizationTimeout.
+	funcMap["autoBaseKustomizationTimeout"] = func() string {
+		return fluxDuration(autoBaseKustomizationTimeout)
+	}
 	// Add the shared source auth block renderer. Returning an error from a
 	// template function makes invalid repository URLs fail rendering clearly.
 	funcMap["sourceAuthBlock"] = func() (string, error) {
@@ -641,6 +648,22 @@ spec:
 {{ sourceAuthBlock }}
 `
 
+// autoBaseKustomizationTimeout is the health-check window emitted for the
+// <service>-base Kustomization in autoFluxTwoStageTemplate.
+//
+// It is a constant rather than a config knob so the template below and the
+// services that budget their HelmRelease upgrade against it stay in lockstep --
+// see openstackCCMBaseKustomizationTimeout, which derives the CCM upgrade budget
+// from this value and is guarded against drift by
+// TestOpenstackCCMTimeoutsFitInsideBaseKustomization.
+//
+// Scope is deliberately narrow: the sibling -override Kustomization in the same
+// template, the single-stage and base-only templates, and the 5m namespace stage
+// keep their own literals. None of them health-check a HelmRelease that an
+// upgrade budget has to fit inside, so binding them here would imply a
+// relationship that does not exist.
+const autoBaseKustomizationTimeout = 10 * time.Minute
+
 const autoFluxTwoStageTemplate = `{{- $kn := .KustomizationName | default .ServiceName -}}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -662,7 +685,7 @@ spec:
 {{- end }}
   interval: {{ .FluxInterval }}
   retryInterval: 1m
-  timeout: 10m
+  timeout: {{ autoBaseKustomizationTimeout }}
   sourceRef:
     kind: GitRepository
     name: {{ .SourceName }}
@@ -874,6 +897,20 @@ resources:
   - namespace.yaml
 `
 
+// autoNamespaceResourceTemplate renders the Namespace for services with
+// NamespaceStage: true. The privileged PSA trio is deliberate:
+//
+//   - enforce: privileged is the point -- hostNetwork/hostPath DaemonSets
+//     (openstack-ccm, openstack-csi) are rejected by baseline/restricted.
+//   - warn/audit: baseline keeps the security signal that enforce: privileged
+//     erases: every privileged pod still gets a Policy-violation warning on
+//     admission and an audit-log entry, so a namespace quietly accumulating
+//     host-namespace workloads stays visible without blocking bootstrap.
+//
+// None of them set pod-security.kubernetes.io/enforce-version. Omitting that
+// label means "track the newest Kubernetes version", which changes semantics
+// silently on every upgrade. The CLI never emits it; if one appears on a
+// generated namespace it came from outside this generator.
 const autoNamespaceResourceTemplate = `apiVersion: v1
 kind: Namespace
 metadata:
@@ -881,5 +918,7 @@ metadata:
 {{- if .PrivilegedNamespace }}
   labels:
     pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/audit: baseline
 {{- end }}
 `

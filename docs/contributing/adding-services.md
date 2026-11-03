@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-25
+last_updated: 2026-11-02
 id: adding-services
 title: "Adding New Platform Services"
 sidebar_label: Adding New Platform Services
@@ -161,6 +161,24 @@ a value that is not represented by a typed field, document and add that field as
 part of the service contract, or direct the operator to `custom/`; never expose
 the catalog, descriptor topology, renderer selection, or raw override values as
 cluster configuration.
+
+**Size the HelmRelease upgrade timeout to the workload.** `autoBaseKustomizationTimeout`
+sets every `<service>-base` Kustomization to `timeout: 10m`, and the upstream
+chart default for `HelmRelease.spec.timeout` is usually `5m`. Both are generic
+defaults, and a service that rolls pods across the control plane one node at a
+time can lose a healthy upgrade to them: the base `openstack-ccm` shipped `5m`
+against a `hostNetwork` DaemonSet with `maxUnavailable: 1`, and a 3-node rollout
+missed its own deadline by 25 seconds. Because that Kustomization health-checks
+the HelmRelease with `wait: true`, the failure is reported by the Kustomization
+too, and with rollback remediation disabled it becomes a permanent stall.
+
+So when a service's chart renders a DaemonSet on control-plane nodes -- or
+anything else whose rollout time scales with node count -- patch
+`HelmRelease.spec.timeout` from the service's own
+`BaseKustomizationPatchesRenderer`, derive it from `autoBaseKustomizationTimeout`
+so it stays strictly below the health-check window, and keep the pair pinned by a
+test. See `openstackCCMHelmReleaseTimeout` and
+`docs/reference/services/openstack-ccm.md`.
 
 ### Examples
 

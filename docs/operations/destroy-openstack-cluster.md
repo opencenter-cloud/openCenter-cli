@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-10-30
+last_updated: 2026-11-03
 id: destroy-openstack-cluster
 title: Destroy an OpenStack cluster
 sidebar_label: Destroy an OpenStack cluster
@@ -55,10 +55,11 @@ What happens step by step:
 2. **cleanup-openstack-networking** — deletes Octavia load balancers created by the
    cloud controller manager on the cluster's network before OpenTofu runs. CCM-managed
    load balancers keep Neutron ports attached, which can make router-interface and
-   network deletion hang during teardown. Only load balancers whose name starts with
-   `k8s-<cluster>-` **and** whose VIP sits on the configured cluster network are
-   deleted (cascade, waiting for each deletion to complete). If `network_id` is not
-   configured the step refuses to run rather than guess a delete scope. A failure
+   network deletion hang during teardown. Only load balancers whose name matches the
+   CCM pattern (`kube_service_<cluster>_*` or `k8s-<cluster>-*`) **and** whose VIP sits on
+   the configured cluster network are deleted (cascade, waiting for each deletion to
+   complete). If `network_id` is not configured the step refuses to run rather than
+   guess a delete scope. A failure
    here is **fatal by default** (a leaked load balancer keeps the router interface
    that hangs OpenTofu teardown): pass `--allow-cleanup-failures` to downgrade it
    to a warning and continue.

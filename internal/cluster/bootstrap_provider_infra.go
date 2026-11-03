@@ -402,8 +402,8 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 		// installs the CCM from that overlay, so the re-render has to land before
 		// the gate below observes the taint clear; otherwise the first CCM
 		// deployment comes up with the wrong VIP scope and only converges after
-		// the next Flux sync. Skipped when nothing was promoted or Octavia owns
-		// VIP allocation, so a healthy deploy leaves the GitOps tree untouched.
+		// the next Flux sync. Skipped when the overlay already carries the subnet-id,
+		// so a converged deploy leaves the GitOps tree untouched.
 		steps = append(steps, bootstrapStep{
 			ID:          rerenderCCMValuesStepID,
 			Description: "Re-render the openstack-ccm overlay with the promoted network identity",
@@ -411,7 +411,7 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 				ID:     rerenderCCMValuesStepID,
 				Action: "Re-render and promote services/openstack-ccm so the CCM override-values carries the real subnet-id",
 				Notes: []string{
-					"Plan only; runs solely when a network/subnet was promoted and use_octavia is false.",
+					"Plan only; runs solely when a network/subnet was promoted or the CCM overlay lacks the subnet-id.",
 					"Scoped single-service render: main.tf is not re-rendered, so no OpenTofu diff is introduced.",
 				},
 			},

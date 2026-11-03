@@ -35,6 +35,10 @@ opencenter:
 
 The catalog entry uses namespace stage `openstack-ccm`, override values, base path `applications/base/services/openstack-ccm`, and override dependency `openstack-ccm-namespace`. `SkipSourcesDependency: true` drops the `sources` dependency the other services carry: CCM is bootstrap-priority and must reconcile before the sources aggregate gate is ready, because DNS is unavailable until CCM clears the cloud-provider-uninitialized taint while sources needs DNS to fetch repositories. No explicit service descriptor is present.
 
+### Cluster name & Load Balancer naming
+
+The CCM override values template emits `cluster.name: {{ .ClusterName }}` so the Cloud Controller Manager passes `--cluster-name=<cluster>` rather than defaulting to `kubernetes`. This scopes OpenStack Octavia load balancer names (`kube_service_<cluster>_<namespace>_<service>`) to the cluster, preventing collisions between multiple clusters deployed into the same OpenStack project and tenant network. In addition, `[LoadBalancer] subnet-id` is emitted from the cluster's node subnet so Octavia provisions VIPs onto the cluster's network.
+
 ### Upgrade timing
 
 The CCM runs as a `hostNetwork` DaemonSet pinned to the control-plane nodes, and
@@ -88,7 +92,7 @@ Absent means "track the newest Kubernetes version the API server knows"; pinning
 it would freeze PSA semantics. (`enforce-version: latest` is equivalent to
 omitting it -- both mean "newest known version" -- but it is not CLI-authored,
 and an unpinned version means the effective profile for a namespace can change
-on a cluster upgrade without any manifest changing.) If that label appears on a
+on a Kubernetes version upgrade without any manifest changing.) If that label appears on a
 generated namespace, it came from outside this generator.
 
 ## Credentials (OCTR-750)

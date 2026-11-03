@@ -174,7 +174,27 @@ func TestOwnsLoadBalancer(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "CCM-style name on the cluster network",
+			name: "CCM-style kube_service name on the cluster network",
+			lb:   loadbalancers.LoadBalancer{Name: "kube_service_prod_envoy-gateway-system_gateway-1234", VipNetworkID: network},
+			want: true,
+		},
+		{
+			name: "Legacy kubernetes CCM-style name on this cluster's network",
+			lb:   loadbalancers.LoadBalancer{Name: "kube_service_kubernetes_envoy-gateway-system_gateway-1234", VipNetworkID: network},
+			want: true,
+		},
+		{
+			name: "Legacy kubernetes CCM name on another network is rejected",
+			lb:   loadbalancers.LoadBalancer{Name: "kube_service_kubernetes_envoy-gateway-system_gateway-1234", VipNetworkID: "net-other"},
+			want: false,
+		},
+		{
+			name: "CCM-style name for another cluster is rejected",
+			lb:   loadbalancers.LoadBalancer{Name: "kube_service_staging_envoy-gateway-system_gateway-1234", VipNetworkID: network},
+			want: false,
+		},
+		{
+			name: "k8s-style name on the cluster network",
 			lb:   loadbalancers.LoadBalancer{Name: "k8s-prod-default-nginx-abc123", VipNetworkID: network},
 			want: true,
 		},

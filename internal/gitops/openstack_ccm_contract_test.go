@@ -260,25 +260,36 @@ func renderCCMOverride(t *testing.T, useOctavia bool) string {
 	return out
 }
 
-// networking.subnet_id is the cluster's NODE subnet. The CCM's
-// [LoadBalancer] subnet-id means "subnet to allocate the VIP from", which is
-// only the node subnet when use_octavia=false (the VIP is a Neutron port there).
-// Under Octavia the key must be omitted, or the CCM allocates VIPs from the
-// node subnet.
-func TestOpenstackCCMSubnetIDFollowsOctaviaMode(t *testing.T) {
-	vrrp := renderCCMOverride(t, false)
-	if !strings.Contains(vrrp, "subnet-id: a127da07-5e5a-4342-aad3-f3108dec8028") {
-		t.Errorf("use_octavia=false must emit the node subnet-id for the VRRP VIP port:\n%s", vrrp)
+// networking.subnet_id is the cluster's NODE subnet. In modern CPO (v1.36+),
+// Octavia is the sole load balancer provider for Service objects of type
+// LoadBalancer, and requires [LoadBalancer] subnet-id to know which subnet
+// to allocate the VIP port from. Both use_octavia=false (VRRP API VIP) and
+// use_octavia=true (Octavia API VIP) must emit the cluster's subnet-id.
+func TestOpenstackCCMSubnetIDEmitted(t *testing.T) {
+	for _, useOctavia := range []bool{false, true} {
+		out := renderCCMOverride(t, useOctavia)
+		if !strings.Contains(out, "subnet-id: a127da07-5e5a-4342-aad3-f3108dec8028") {
+			t.Errorf("use_octavia=%v must emit [LoadBalancer] subnet-id for the VIP port:\n%s", useOctavia, out)
+		}
+		if !strings.Contains(out, "floating-network-id: 27f1ceeb-50d5-4c72-a9eb-f90502f32ffb") {
+			t.Errorf("use_octavia=%v must emit floating-network-id:\n%s", useOctavia, out)
+		}
 	}
-	if !strings.Contains(vrrp, "floating-network-id: 27f1ceeb-50d5-4c72-a9eb-f90502f32ffb") {
-		t.Errorf("floating-network-id must always be emitted:\n%s", vrrp)
-	}
+}
 
-	octavia := renderCCMOverride(t, true)
-	if strings.Contains(octavia, "subnet-id") {
-		t.Errorf("use_octavia=true must omit [LoadBalancer] subnet-id (Octavia owns the VIP):\n%s", octavia)
+// Without cluster.name in the CCM override values, every cluster in the same
+// OpenStack project defaults to --cluster-name=kubernetes, causing CCMs
+// across different clusters to collide on identical load balancer names.
+func TestOpenstackCCMClusterNameEmitted(t *testing.T) {
+	cfg := ccmValuesConfig(false)
+	cfg.OpenCenter.Cluster.ClusterName = "doritos"
+
+	out, err := templateRenderer(openstackCCMTemplate)(cfg)
+	if err != nil {
+		t.Fatalf("render CCM override: %v", err)
 	}
-	if !strings.Contains(octavia, "floating-network-id: 27f1ceeb-50d5-4c72-a9eb-f90502f32ffb") {
-		t.Errorf("floating-network-id must survive the octavia branch:\n%s", octavia)
+	expected := "cluster:\n  name: doritos"
+	if !strings.Contains(out, expected) {
+		t.Errorf("expected %q in rendered CCM values, got:\n%s", expected, out)
 	}
 }

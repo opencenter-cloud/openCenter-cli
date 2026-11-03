@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -274,20 +275,41 @@ func openstackEffectiveSubnetID(cfg *v2.Config) string {
 
 // needsCCMNetworkRerender reports whether the CCM overlay has to be re-rendered.
 //
-// Only the VRRP path is affected: with use_octavia=true the CCM omits subnet-id
-// entirely (Octavia owns VIP allocation), so a newly recovered subnet changes
-// nothing the CCM reads. Re-rendering there would dirty a SOPS-encrypted overlay
-// for no behavioural gain, and every unnecessary write to that file is a chance
-// to collide with an operator's own edits.
+// In modern CPO (v1.36+), Octavia is the sole load balancer provider for Services
+// of type LoadBalancer and requires [LoadBalancer] subnet-id to know which subnet
+// to allocate the VIP port from. Both the VRRP and Octavia API VIP paths require
+// the subnet ID.
 func needsCCMNetworkRerender(cfg *v2.Config, bound *networkOutputsBinding) bool {
-	if cfg == nil || bound == nil || !bound.Changed {
+	if cfg == nil {
 		return false
 	}
 	openstack := cfg.OpenCenter.Infrastructure.Cloud.OpenStack
-	if openstack == nil || openstack.UseOctavia {
+	if openstack == nil {
 		return false
 	}
-	return strings.TrimSpace(bound.SubnetID) != ""
+	targetSubnet := openstackEffectiveSubnetID(cfg)
+	if targetSubnet == "" && bound != nil {
+		targetSubnet = strings.TrimSpace(bound.SubnetID)
+	}
+	if targetSubnet == "" {
+		return false
+	}
+	if bound != nil && bound.Changed {
+		return true
+	}
+	// Even if bound.Changed is false (for example because Step 4 bind-network-outputs
+	// already mutated cfg in-memory earlier in the same deploy run), check if the
+	// on-disk CCM override-values is missing the subnet-id.
+	gitDir := strings.TrimSpace(cfg.GitDir())
+	if gitDir == "" {
+		return false
+	}
+	overlayPath := filepath.Join(gitDir, "applications", "overlays", cfg.ClusterName(), "services", "openstack-ccm", "helm-values", "override-values.yaml")
+	content, err := os.ReadFile(overlayPath)
+	if err != nil {
+		return true
+	}
+	return !strings.Contains(string(content), "subnet-id: "+targetSubnet)
 }
 
 // rerenderCCMNetworkValues re-renders only the openstack-ccm service from the

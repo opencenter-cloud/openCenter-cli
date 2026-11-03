@@ -111,16 +111,32 @@ func (s *gophercloudOpenStackNetworkCleanupService) CleanupClusterLoadBalancers(
 }
 
 // ownsLoadBalancer reports whether lb belongs to clusterName on networkID.
-// The CCM names its load balancers "k8s-<cluster>-<namespace>-<service>-<hash>";
-// anchoring on that prefix prevents cluster "prod" from matching a
-// "k8s-staging-prod-..." load balancer, and the exact-network check keeps the
-// scope inside this cluster's network.
+//
+// The OpenStack Cloud Controller Manager names load balancers using:
+// "kube_service_<cluster>_<namespace>_<service>" (e.g. "kube_service_doritos_...").
+// In legacy deployments where cluster.name was unpinned, the CCM defaulted to
+// "kube_service_kubernetes_...". Some installers also use "k8s-<cluster>-...".
+//
+// Checking VipNetworkID == networkID ensures the load balancer resides on this
+// cluster's dedicated network, while the name anchors prevent matching unrelated
+// load balancers on that network.
 func ownsLoadBalancer(lb loadbalancers.LoadBalancer, clusterName, networkID string) bool {
 	if lb.VipNetworkID != networkID {
 		return false
 	}
-	prefix := "k8s-" + clusterName
-	return lb.Name == prefix || strings.HasPrefix(lb.Name, prefix+"-")
+	name := lb.Name
+	// 1. CCM name with cluster.name set: kube_service_<cluster>_*
+	ccmPrefix := "kube_service_" + clusterName + "_"
+	if strings.HasPrefix(name, ccmPrefix) || name == "kube_service_"+clusterName {
+		return true
+	}
+	// 2. Legacy CCM name where cluster.name was default "kubernetes" on this cluster's network
+	if strings.HasPrefix(name, "kube_service_kubernetes_") || name == "kube_service_kubernetes" {
+		return true
+	}
+	// 3. Backward-compatible k8s-<cluster> prefix
+	k8sPrefix := "k8s-" + clusterName
+	return name == k8sPrefix || strings.HasPrefix(name, k8sPrefix+"-")
 }
 
 // waitForLoadBalancerDeletion polls GET until Octavia reports 404 (gone).

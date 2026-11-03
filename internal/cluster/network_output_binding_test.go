@@ -158,8 +158,27 @@ func TestNeedsCCMNetworkRerender(t *testing.T) {
 	openstack := func(useOctavia bool) *v2.Config {
 		cfg := mustNewClusterTestConfig("rerender", "openstack")
 		cfg.OpenCenter.Infrastructure.Cloud.OpenStack.UseOctavia = useOctavia
+		cfg.OpenCenter.GitOps.Repository.LocalDir = ""
 		return &cfg
 	}
+
+	tempWithOverlay := func(t *testing.T, clusterName, content string) string {
+		dir := t.TempDir()
+		overlayDir := filepath.Join(dir, "applications", "overlays", clusterName, "services", "openstack-ccm", "helm-values")
+		if err := os.MkdirAll(overlayDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(overlayDir, "override-values.yaml"), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
+
+	cfgAlreadyRendered := openstack(false)
+	cfgAlreadyRendered.OpenCenter.GitOps.Repository.LocalDir = tempWithOverlay(t, cfgAlreadyRendered.ClusterName(), "cloudConfig:\n  loadBalancer:\n    subnet-id: subnet-1\n")
+
+	cfgNeedsRender := openstack(false)
+	cfgNeedsRender.OpenCenter.GitOps.Repository.LocalDir = tempWithOverlay(t, cfgNeedsRender.ClusterName(), "cloudConfig:\n  loadBalancer:\n    subnet-id: null\n")
 
 	tests := []struct {
 		name  string
@@ -174,16 +193,26 @@ func TestNeedsCCMNetworkRerender(t *testing.T) {
 			want:  true,
 		},
 		{
-			// Octavia owns VIP allocation and the chart omits subnet-id, so a
-			// newly recovered subnet changes nothing the CCM reads.
-			name:  "octavia path skips the re-render",
+			name:  "promoted subnet on the Octavia path re-renders",
 			cfg:   openstack(true),
 			bound: &networkOutputsBinding{SubnetID: "subnet-1", Changed: true},
+			want:  true,
+		},
+		{
+			name:  "nothing promoted and no git dir skips the re-render",
+			cfg:   openstack(false),
+			bound: &networkOutputsBinding{SubnetID: "subnet-1", Changed: false},
 			want:  false,
 		},
 		{
-			name:  "nothing promoted skips the re-render",
-			cfg:   openstack(false),
+			name:  "nothing promoted but overlay lacks subnet-id re-renders",
+			cfg:   cfgNeedsRender,
+			bound: &networkOutputsBinding{SubnetID: "subnet-1", Changed: false},
+			want:  true,
+		},
+		{
+			name:  "nothing promoted and overlay already has subnet-id skips re-render",
+			cfg:   cfgAlreadyRendered,
 			bound: &networkOutputsBinding{SubnetID: "subnet-1", Changed: false},
 			want:  false,
 		},

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-02
+last_updated: 2026-11-03
 id: cluster-deploy-openstack
 title: "cluster deploy — OpenStack Provider"
 sidebar_label: cluster deploy — OpenStack
@@ -42,7 +42,7 @@ The entry point is `cmd/cluster_deploy.go`. Orchestration lives in `internal/clu
 8. **`patch-coredns-toleration`** — adds a toleration for the `node.cloudprovider.kubernetes.io/uninitialized` taint to CoreDNS. Without it CoreDNS cannot schedule on tainted nodes, `source-controller` cannot resolve external endpoints, the `GitRepository` never becomes Ready, and CCM installation is blocked indefinitely.
 9. **Flux bootstrap step** (`openstack-flux-bootstrap`) — added *only* when `gitops.auth.token` is configured with a non-empty provider and a real (non-placeholder) repository URL. Runs after the CNI so FluxCD's source-controller has a working network when it starts reconciling. No credential Secret is created for the shared `openCenter-gitops-base` repository itself — it's public, so its `GitRepository` source is rendered anonymously.
 10. **`reconcile-sops-age-secret`** — puts the cluster's SOPS age key into the cluster as the `sops-age` Secret. It must precede anything that reads a SOPS-encrypted overlay: without the Secret the CCM override fails with `secrets "sops-age" not found`, `openstack-ccm-base` never runs, no CCM is ever installed, and the gate below polls a taint nothing can ever clear. Observed on kit-kat, where deploy blocked here while cert-manager, CSI, headlamp, metrics-server and the postgres stack sat unschedulable behind the same missing key.
-11. **`rerender-ccm-network-values`** — re-renders and promotes only `services/openstack-ccm` so the CCM `override-values.yaml` carries the real `[LoadBalancer]` subnet-id. Runs only when step 4 promoted a subnet and `use_octavia` is false. See [the network-identity section](#the-network-identity-loop).
+11. **`rerender-ccm-network-values`** — re-renders and promotes only `services/openstack-ccm` so the CCM `override-values.yaml` carries the real `[LoadBalancer]` subnet-id. Runs when step 4 promoted a subnet or the CCM overlay lacks the subnet-id. See [the network-identity section](#the-network-identity-loop).
 12. **`wait-for-cloud-controller-manager`** — polls until the CCM clears the uninitialized taint. The CCM is installed by Flux, so its effect can only be observed after bootstrap; this gate is what turns "cluster is up" into "cluster can actually run workloads".
 13. **`reconcile-grafana-admin-secret`** — no-op unless `secrets.grafana.admin_password` is set.
 

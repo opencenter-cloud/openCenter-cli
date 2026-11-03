@@ -306,7 +306,11 @@ const weaveGitOpsTemplate = `adminUser:
   passwordHash: {{ .Secrets.WeaveGitOps.PasswordHash }}
 `
 
-const openstackCCMTemplate = `cloudConfig:
+const openstackCCMTemplate = `{{- if .ClusterName }}
+cluster:
+  name: {{ .ClusterName }}
+{{- end }}
+cloudConfig:
   global:
     {{- if .OpenCenter.Infrastructure.Cloud.OpenStack }}
     auth-url: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.AuthURL }}
@@ -326,16 +330,10 @@ const openstackCCMTemplate = `cloudConfig:
     region: {{ .OpenCenter.Infrastructure.Cloud.Magnum.Region }}
     tls-insecure: {{ .OpenCenter.Infrastructure.Cloud.Magnum.Insecure | default false }}
     {{- end }}
-  {{- if .OpenCenter.Infrastructure.Cloud.OpenStack }}
+  {{- if and .OpenCenter.Infrastructure.Cloud.OpenStack .OpenCenter.Infrastructure.Cloud.OpenStack.Networking }}
   loadBalancer:
     floating-network-id: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Networking.FloatingNetworkID }}
-    {{- /* networking.subnet_id names the cluster's NODE subnet (it also feeds
-    the nova module's port creation). The CCM's [LoadBalancer] subnet-id means
-    the SUBNET TO ALLOCATE THE VIP FROM, so it is only meaningful when
-    use_octavia=false, where the VIP is a Neutron port on the node subnet.
-    Under Octavia the VIP belongs to Octavia and the key must stay absent, or
-    the CCM would allocate VIPs from the node subnet. */}}
-    {{- if not .OpenCenter.Infrastructure.Cloud.OpenStack.UseOctavia }}
+    {{- if .OpenCenter.Infrastructure.Cloud.OpenStack.Networking.SubnetID }}
     subnet-id: {{ .OpenCenter.Infrastructure.Cloud.OpenStack.Networking.SubnetID }}
     {{- end }}
   {{- end }}

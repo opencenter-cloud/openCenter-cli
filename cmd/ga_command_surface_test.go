@@ -65,6 +65,7 @@ func TestGAClusterCommandSurface(t *testing.T) {
 		{"cluster", "doctor"},
 		{"cluster", "generate"},
 		{"cluster", "deploy"},
+		{"cluster", "reconcile"},
 		{"cluster", "status"},
 		{"cluster", "describe"},
 		{"cluster", "list"},
@@ -84,6 +85,7 @@ func TestGAClusterCommandSurface(t *testing.T) {
 	requireCommandPath(t, root, "cluster", "provider", "openstack", "apply")
 	requireCommandPath(t, root, "cluster", "service", "storage", "plan")
 	requireCommandPath(t, root, "cluster", "service", "storage", "apply")
+	requireCommandPath(t, root, "cluster", "service", "reconcile")
 	requireNoCommandPath(t, root, "cluster", "sync", "openstack")
 	statusCmd := requireCommandPath(t, root, "cluster", "status")
 	if statusCmd.Flags().Lookup("sync") == nil {

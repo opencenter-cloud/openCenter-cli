@@ -313,8 +313,8 @@ func TestOpenStackBootstrapOrdersNetworkBindingBeforeCCMGate(t *testing.T) {
 		}
 		return -1
 	}
-	if index(bindNetworkOutputsStepID) < 0 || index(rerenderCCMValuesStepID) < 0 {
-		t.Fatalf("expected network binding and CCM re-render steps, got %v", ids)
+	if index(bindNetworkOutputsStepID) < 0 || index(rerenderCCMValuesStepID) < 0 || index(openStackGitOpsPushStepID) < 0 {
+		t.Fatalf("expected network binding, CCM re-render, and gitops push steps, got %v", ids)
 	}
 	// The binding reads the applied OpenTofu state, so it is meaningless before
 	// the infrastructure actually exists.
@@ -334,12 +334,16 @@ func TestOpenStackBootstrapOrdersNetworkBindingBeforeCCMGate(t *testing.T) {
 		t.Fatalf("%s must run after %s, which supplies the subnet it renders, got %v",
 			rerenderCCMValuesStepID, bindNetworkOutputsStepID, ids)
 	}
-	// The re-render has to reach Flux before the gate starts observing the CCM,
+	// The re-render has to be committed and pushed to GitOps before the gate starts observing the CCM,
 	// and it writes into the GitOps tree so it needs the sops-age Secret in place
 	// for Flux to decrypt what it gets.
-	if index(rerenderCCMValuesStepID) >= index(waitForCCMStepID) {
-		t.Fatalf("%s must run before %s, otherwise the first CCM deployment uses the stale overlay, got %v",
-			rerenderCCMValuesStepID, waitForCCMStepID, ids)
+	if index(rerenderCCMValuesStepID) >= index(openStackGitOpsPushStepID) {
+		t.Fatalf("%s must run before %s, otherwise the pushed overlay lacks the subnet-id, got %v",
+			rerenderCCMValuesStepID, openStackGitOpsPushStepID, ids)
+	}
+	if index(openStackGitOpsPushStepID) >= index(waitForCCMStepID) {
+		t.Fatalf("%s must run before %s, otherwise the first CCM deployment cannot be fetched by Flux, got %v",
+			openStackGitOpsPushStepID, waitForCCMStepID, ids)
 	}
 	if index(sopsAgeSecretStepID) >= index(rerenderCCMValuesStepID) {
 		t.Fatalf("%s must run before %s, otherwise Flux cannot decrypt the re-rendered overlay, got %v",

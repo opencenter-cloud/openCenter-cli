@@ -19,10 +19,14 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/opencenter-cloud/opencenter-cli/internal/cluster"
+	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/registry"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/services"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/core/paths"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -46,6 +50,7 @@ command will fail and provide an example of the correct usage.`,
 	cmd.AddCommand(newClusterServiceStatusCmd())
 	cmd.AddCommand(newClusterServiceOptionsCmd())
 	cmd.AddCommand(newClusterServiceStorageCmd())
+	cmd.AddCommand(newClusterServiceReconcileCmd())
 	return cmd
 }
 
@@ -1194,4 +1199,110 @@ func getAdoptionMode(svc any) string {
 		}
 	}
 	return "managed"
+}
+
+// newClusterServiceReconcileCmd creates the "cluster service reconcile" command.
+func newClusterServiceReconcileCmd() *cobra.Command {
+	var (
+		clusterFlag string
+		message     string
+		remote      string
+		pushOnly    bool
+		skipFlux    bool
+		fluxOnly    bool
+		generate    bool
+		wait        bool
+		timeout     time.Duration
+		kubeconfig  string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "reconcile <service-name>",
+		Short: "Reconcile a specific service in GitOps and Flux",
+		Long: `Reconcile a specific service in the cluster's GitOps repository and Flux.
+Stages service-scoped manifests, validates secrets, commits, pushes, and triggers
+in-cluster Flux reconciliation for the service's Kustomizations and HelmRelease.
+
+Examples:
+  # Reconcile openstack-ccm on active cluster
+  opencenter cluster service reconcile openstack-ccm
+
+  # Re-render service values and reconcile
+  opencenter cluster service reconcile headlamp --generate
+
+  # Reconcile on a specific cluster
+  opencenter cluster service reconcile openstack-ccm --cluster opensnack/doritos`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			serviceName := args[0]
+			clusterName, err := resolveClusterNameFromFlagForCommand(cmd, clusterFlag, true)
+			if err != nil {
+				return err
+			}
+
+			globalOpts := getGlobalOptions(cmd)
+			dryRun := globalOpts.DryRun
+
+			if pushOnly {
+				skipFlux = true
+			}
+			if skipFlux && fluxOnly {
+				return fmt.Errorf("--push-only/--skip-flux and --flux-only cannot be used together")
+			}
+
+			pathResolver := paths.NewPathResolver(config.ResolveClustersDir())
+			reconciler := cluster.NewReconcileService(pathResolver)
+
+			opts := cluster.ReconcileOptions{
+				ClusterName:    clusterName,
+				Services:       []string{serviceName},
+				Message:        message,
+				Remote:         remote,
+				SkipFlux:       skipFlux,
+				PushOnly:       pushOnly,
+				FluxOnly:       fluxOnly,
+				Generate:       generate,
+				Wait:           wait,
+				Timeout:        timeout,
+				DryRun:         dryRun,
+				KubeconfigPath: kubeconfig,
+			}
+
+			result, err := reconciler.Reconcile(cmd.Context(), opts)
+			if err != nil {
+				return err
+			}
+
+			if dryRun && result.Plan != nil {
+				cluster.PrintReconcilePlan(cmd.OutOrStdout(), result.Plan)
+				return nil
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Reconciliation complete for service %s in cluster %s in %v\n", serviceName, clusterName, result.Duration.Round(time.Millisecond))
+			if result.CommitSHA != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "  Commit SHA: %s\n", result.CommitSHA)
+			}
+			if result.Pushed {
+				fmt.Fprintln(cmd.OutOrStdout(), "  GitOps repository pushed to remote")
+			}
+			if result.FluxReconciled {
+				fmt.Fprintln(cmd.OutOrStdout(), "  Flux in-cluster resources reconciled")
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&clusterFlag, "cluster", "c", "", "target cluster name (defaults to active cluster)")
+	cmd.Flags().StringVarP(&message, "message", "m", "", "custom git commit message")
+	cmd.Flags().StringVar(&remote, "remote", "", "git remote to push to (defaults to tracking remote, upstream, or origin)")
+	cmd.Flags().BoolVar(&pushOnly, "push-only", false, "execute GitOps commit & push only; skip Flux in-cluster reconciliation")
+	cmd.Flags().BoolVar(&skipFlux, "skip-flux", false, "skip Flux in-cluster reconciliation")
+	cmd.Flags().BoolVar(&fluxOnly, "flux-only", false, "execute Flux in-cluster reconciliation only; skip Git commit & push")
+	cmd.Flags().BoolVarP(&generate, "generate", "g", false, "re-render and re-encrypt service overlay before reconciling")
+	cmd.Flags().BoolVarP(&wait, "wait", "w", true, "wait for Flux resources to become Ready")
+	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "timeout for Flux reconciliation and rollout")
+	cmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig (defaults to cluster-owned kubeconfig)")
+
+	return cmd
 }

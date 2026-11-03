@@ -279,6 +279,7 @@ func printPostDeployNextSteps(cmd *cobra.Command, name string) {
 	fmt.Fprintln(cmd.OutOrStdout(), "\nNext steps:")
 	fmt.Fprintf(cmd.OutOrStdout(), "  1. Commit changes:  git add -A && git commit -m \"deploy %s\"\n", name)
 	fmt.Fprintln(cmd.OutOrStdout(), "  2. Push to remote:  git push")
+	fmt.Fprintf(cmd.OutOrStdout(), "  Or run:             opencenter cluster reconcile %s\n", name)
 }
 
 // warnUncommittedChanges prints a warning if the GitOps directory has

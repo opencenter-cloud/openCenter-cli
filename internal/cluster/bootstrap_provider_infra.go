@@ -30,7 +30,10 @@ type openstackBootstrapProvider struct {
 	persistConfig networkOutputsPersister
 }
 
-const calicoStateResource = "module.calico.local_file.calico_values"
+const (
+	calicoStateResource        = "module.calico.local_file.calico_values"
+	openStackGitOpsPushStepID  = "openstack-gitops-push"
+)
 
 // newOpenStackBootstrapProvider returns the concrete provider so callers can
 // substitute validateCredentials (tests use placeholder keystone hosts that must
@@ -419,7 +422,7 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 				if opts.DryRun {
 					return nil
 				}
-				bound, err := bindNetworkOutputsWithRunner(ctx, cfg, clusterDir, openTofuPath, p.runner, nil)
+				bound, err := bindNetworkOutputsWithRunner(ctx, cfg, clusterDir, openTofuPath, p.runner, p.persistNetworkBindings)
 				if err != nil {
 					return err
 				}
@@ -429,6 +432,10 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 				return rerenderCCMNetworkValues(ctx, cfg)
 			},
 		})
+		// Push re-rendered GitOps manifests (with promoted network/subnet identity)
+		// to the remote GitOps repository so Flux can pull it. Flux in-cluster reconciliation
+		// is skipped during new cluster deploy (wait-for-cloud-controller-manager is the gate).
+		steps = append(steps, p.buildGitOpsPushStep(cfg, clusterPaths, opts))
 		// The CCM is installed by Flux, so its effect can only be observed
 		// after bootstrap. This gate is what turns "cluster is up" into
 		// "cluster can actually run workloads".
@@ -440,6 +447,51 @@ func (p *openstackBootstrapProvider) BuildSteps(cfg *v2.Config, clusterPaths *pa
 	}
 
 	return steps, nil
+}
+
+func (p *openstackBootstrapProvider) buildGitOpsPushStep(cfg *v2.Config, clusterPaths *paths.ClusterPaths, opts *BootstrapOptions) bootstrapStep {
+	clusterName := cfg.ClusterName()
+	gitDir := ""
+	if clusterPaths != nil {
+		gitDir = clusterPaths.GitOpsDir
+	}
+	if gitDir == "" {
+		gitDir = strings.TrimSpace(cfg.GitDir())
+	}
+	return bootstrapStep{
+		ID:          openStackGitOpsPushStepID,
+		Description: "Stage, commit, and push re-rendered GitOps manifests to remote repository",
+		Plan: BootstrapPlanStep{
+			ID:         openStackGitOpsPushStepID,
+			Action:     "Stage, commit, and push re-rendered GitOps manifests to remote repository",
+			WorkingDir: gitDir,
+			Commands: []BootstrapPlanCommand{
+				commandPlan("git", "status", "--porcelain"),
+				commandPlan("git", "add", "--", "applications/overlays/"+clusterName+"/services/openstack-ccm", ".opencenter/ownership/clusters/"+clusterName+".json"),
+				commandPlan("git", "commit", "-m", fmt.Sprintf("chore(%s): bind network outputs and sync gitops manifests", clusterName)),
+				commandPlan("git", "pull", "--rebase", "<remote>", "<current-branch>"),
+				commandPlan("git", "push", "<remote>", "<current-branch>"),
+			},
+			Notes: []string{
+				"Pushes the re-rendered CCM overlay to the remote GitOps repository so Flux can pull it.",
+				"Flux in-cluster reconciliation is skipped during new cluster deploy.",
+			},
+		},
+		Run: func(ctx context.Context) error {
+			if opts.DryRun {
+				return nil
+			}
+			reconciler := NewReconcileServiceWithRunner(nil, p.runner)
+			_, err := reconciler.ReconcileWithConfig(ctx, ReconcileOptions{
+				ClusterName:  clusterName,
+				Organization: cfg.Organization(),
+				Services:     []string{"openstack-ccm"},
+				SkipFlux:     true,
+				Message:      fmt.Sprintf("chore(%s): bind network outputs and sync gitops manifests", clusterName),
+			}, cfg, clusterPaths)
+			return err
+		},
+	}
 }
 
 func (p *openstackBootstrapProvider) runOpenTofuApply(ctx context.Context, cfg *v2.Config, clusterDir string, applyArgs []string, env map[string]string, openTofuPath string) error {

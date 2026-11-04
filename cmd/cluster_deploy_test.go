@@ -412,6 +412,26 @@ func TestCheckSecretsSyncedPreflight(t *testing.T) {
 	}
 }
 
+func TestCheckSecretsSyncedPreflightOrganizationHint(t *testing.T) {
+	cfgPtr, err := v2.NewV2Default("pringles", "kind")
+	if err != nil {
+		t.Fatalf("v2 default: %v", err)
+	}
+	cfg := *cfgPtr
+	cfg.OpenCenter.Meta.Organization = "opensnack"
+	gitDir := filepath.Join(t.TempDir(), "opensnack")
+	cfg.OpenCenter.GitOps.Repository.LocalDir = gitDir
+
+	err = checkSecretsSynced(&cfg, "pringles")
+	if err == nil {
+		t.Fatalf("expected preflight error for uncreated secrets")
+	}
+	expectedHint := "Run 'opencenter secrets sync opensnack/pringles' before deploying"
+	if !strings.Contains(err.Error(), expectedHint) {
+		t.Fatalf("expected error to contain %q, got:\n%s", expectedHint, err.Error())
+	}
+}
+
 // TestCheckSecretsSyncedPreflightGrafanaDedicatedSecret locks the PR #55
 // exemption: when a Grafana admin password is set, kube-prometheus-stack's
 // credential is rendered as the dedicated grafana-admin-password.yaml (the

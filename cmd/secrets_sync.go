@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
@@ -78,6 +79,7 @@ concurrency. Use --org to filter to a specific organization.`,
 	cmd.Flags().StringSlice("services", []string{}, "Comma-separated list of services to sync (e.g., cert-manager,loki)")
 	cmd.Flags().Bool("dry-run", false, "Preview changes without applying them")
 	cmd.Flags().Bool("force", false, "Overwrite manifests even if no drift detected")
+	cmd.Flags().Bool("skip-validation", false, "Skip configuration validation before manifest refresh")
 	cmd.Flags().Bool("all", false, "Sync secrets for all clusters in organization")
 	cmd.Flags().String("org", "", "Filter to specific organization (used with --all)")
 	cmd.Flags().String("organization", "", "Filter to specific organization (used with --all)")
@@ -96,10 +98,37 @@ func runClusterSyncSecrets(cmd *cobra.Command, args []string) error {
 	services, _ := cmd.Flags().GetStringSlice("services")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	force, _ := cmd.Flags().GetBool("force")
+	skipValidation, _ := cmd.Flags().GetBool("skip-validation")
 	all, _ := cmd.Flags().GetBool("all")
 	organization := getSecretsSyncOrganizationFlag(cmd)
 	concurrency, _ := cmd.Flags().GetInt("concurrency")
 	stopOnError, _ := cmd.Flags().GetBool("stop-on-error")
+
+	var clusterName string
+	if !all {
+		if clusterFlag != "" {
+			clusterName = clusterFlag
+		} else if len(args) > 0 {
+			clusterName = args[0]
+		} else {
+			var resolveErr error
+			clusterName, resolveErr = resolveClusterNameForCommand(cmd, args, true)
+			if resolveErr != nil {
+				return resolveErr
+			}
+		}
+
+		if organization != "" {
+			if strings.Contains(clusterName, "/") {
+				parts := strings.Split(clusterName, "/")
+				if len(parts) == 2 && parts[0] != "" && parts[0] != organization {
+					return fmt.Errorf("cluster organization %q conflicts with --org flag %q", parts[0], organization)
+				}
+			} else {
+				clusterName = organization + "/" + clusterName
+			}
+		}
+	}
 
 	// Initialize secrets manager
 	secretsManager, err := initializeSecretsManager()
@@ -110,26 +139,14 @@ func runClusterSyncSecrets(cmd *cobra.Command, args []string) error {
 	// Handle multi-cluster sync
 	if all {
 		return runMultiClusterSync(ctx, cmd, secretsManager, multiClusterSyncParams{
-			organization: organization,
-			concurrency:  concurrency,
-			stopOnError:  stopOnError,
-			dryRun:       dryRun,
-			services:     services,
-			force:        force,
+			organization:   organization,
+			concurrency:    concurrency,
+			stopOnError:    stopOnError,
+			dryRun:         dryRun,
+			services:       services,
+			force:          force,
+			skipValidation: skipValidation,
 		})
-	}
-
-	// Single cluster sync - resolve cluster name from flag or args
-	var clusterName string
-	if clusterFlag != "" {
-		clusterName = clusterFlag
-	} else if len(args) > 0 {
-		clusterName = args[0]
-	} else {
-		clusterName, err = resolveClusterNameForCommand(cmd, args, true)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Build sync options
@@ -164,6 +181,12 @@ func runClusterSyncSecrets(cmd *cobra.Command, args []string) error {
 		generateCmd.SetContext(cmd.Context())
 		generateCmd.SetOut(cmd.OutOrStdout())
 		generateCmd.SetErr(cmd.ErrOrStderr())
+		if force {
+			_ = generateCmd.Flags().Set("force", "true")
+		}
+		if skipValidation {
+			_ = generateCmd.Flags().Set("skip-validation", "true")
+		}
 		if err := runClusterGenerate(generateCmd, []string{clusterName}); err != nil {
 			return fmt.Errorf("secrets synchronized but failed to refresh generated manifests: %w", err)
 		}
@@ -182,12 +205,13 @@ func getSecretsSyncOrganizationFlag(cmd *cobra.Command) string {
 
 // multiClusterSyncParams holds parameters for multi-cluster sync
 type multiClusterSyncParams struct {
-	organization string
-	concurrency  int
-	stopOnError  bool
-	dryRun       bool
-	services     []string
-	force        bool
+	organization   string
+	concurrency    int
+	stopOnError    bool
+	dryRun         bool
+	services       []string
+	force          bool
+	skipValidation bool
 }
 
 // runMultiClusterSync handles synchronization across multiple clusters
@@ -283,6 +307,34 @@ func runMultiClusterSync(
 	// Wait for all goroutines to complete
 	wg.Wait()
 
+	// Refresh generated manifests for all successfully synced clusters sequentially to
+	// avoid concurrent git index / working tree races across clusters in the same organization.
+	if !params.dryRun && len(results) > 0 {
+		fmt.Fprintln(cmd.OutOrStdout(), "\nRefreshing generated manifests for synchronized clusters...")
+		for _, clusterName := range clusters {
+			if _, ok := results[clusterName]; !ok {
+				continue
+			}
+			generateCmd := newClusterGenerateCmd()
+			generateCmd.SetContext(cmd.Context())
+			generateCmd.SetOut(cmd.OutOrStdout())
+			generateCmd.SetErr(cmd.ErrOrStderr())
+			if params.force {
+				_ = generateCmd.Flags().Set("force", "true")
+			}
+			if params.skipValidation {
+				_ = generateCmd.Flags().Set("skip-validation", "true")
+			}
+			if err := runClusterGenerate(generateCmd, []string{clusterName}); err != nil {
+				failures[clusterName] = fmt.Errorf("secrets synchronized but failed to refresh generated manifests: %w", err)
+				delete(results, clusterName)
+				if params.stopOnError {
+					break
+				}
+			}
+		}
+	}
+
 	// Display summary
 	fmt.Fprintf(cmd.OutOrStdout(), "\nMulti-cluster sync summary:\n")
 	fmt.Fprintf(cmd.OutOrStdout(), "  Total clusters: %d\n", len(clusters))
@@ -344,7 +396,7 @@ func discoverClusters(organization string) ([]string, error) {
 			// Verify config file exists: <cluster>-config.yaml
 			configPath := filepath.Join(orgPath, clusterName, clusterName+"-config.yaml")
 			if _, err := os.Stat(configPath); err == nil {
-				clusters = append(clusters, clusterName)
+				clusters = append(clusters, orgName+"/"+clusterName)
 			}
 		}
 	}

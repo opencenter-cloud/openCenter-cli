@@ -15,6 +15,9 @@ package cmd
 import (
 	"bytes"
 	"os"
+	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -204,5 +207,57 @@ func TestSecretsCommandStructure(t *testing.T) {
 	if len(actualSubcommands) != len(expectedSubcommands) {
 		t.Errorf("secrets command subcommand count mismatch: expected %d, got %d (Requirement 1.1)",
 			len(expectedSubcommands), len(actualSubcommands))
+	}
+}
+
+func TestDiscoverClusters_OrganizationQualified(t *testing.T) {
+	blueprintsDir := t.TempDir()
+	t.Setenv("OPENCENTER_BLUEPRINTS_DIR", blueprintsDir)
+
+	for _, p := range []string{
+		filepath.Join(blueprintsDir, "opensnack", "doritos", "doritos-config.yaml"),
+		filepath.Join(blueprintsDir, "opensnack", "pringles", "pringles-config.yaml"),
+		filepath.Join(blueprintsDir, "otherorg", "nachos", "nachos-config.yaml"),
+	} {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(p, []byte(""), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+	}
+
+	// Filter by org
+	clusters, err := discoverClusters("opensnack")
+	if err != nil {
+		t.Fatalf("discoverClusters: %v", err)
+	}
+	sort.Strings(clusters)
+	expected := []string{"opensnack/doritos", "opensnack/pringles"}
+	if !reflect.DeepEqual(clusters, expected) {
+		t.Fatalf("expected %v, got %v", expected, clusters)
+	}
+
+	// All orgs
+	allClusters, err := discoverClusters("")
+	if err != nil {
+		t.Fatalf("discoverClusters: %v", err)
+	}
+	sort.Strings(allClusters)
+	expectedAll := []string{"opensnack/doritos", "opensnack/pringles", "otherorg/nachos"}
+	if !reflect.DeepEqual(allClusters, expectedAll) {
+		t.Fatalf("expected %v, got %v", expectedAll, allClusters)
+	}
+}
+
+func TestSecretsSync_OrganizationValidation(t *testing.T) {
+	dir := t.TempDir()
+	prepareCommandTestEnv(t, dir)
+
+	cmd := newSecretsSyncCmd()
+	cmd.SetArgs([]string{"opensnack/doritos", "--org", "acme"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "conflicts with --org flag") {
+		t.Fatalf("expected org conflict error, got %v", err)
 	}
 }

@@ -352,12 +352,18 @@ func checkSecretsSynced(cfg *v2.Config, clusterName string) error {
 		return nil
 	}
 	sort.Strings(missing)
+	targetCluster := clusterName
+	if org := strings.TrimSpace(cfg.OpenCenter.Meta.Organization); org != "" && org != "opencenter" {
+		if !strings.Contains(targetCluster, "/") {
+			targetCluster = org + "/" + targetCluster
+		}
+	}
 	return fmt.Errorf(
 		"required secret manifests are not ready for deploy:\n  %s\n\n"+
 			"Run 'opencenter secrets sync %s' before deploying so these secrets are "+
 			"created and applied by Flux; otherwise the consuming services fail with "+
 			"\"secret ... not found\".",
-		strings.Join(missing, "\n  "), clusterName)
+		strings.Join(missing, "\n  "), targetCluster)
 }
 
 // grafanaDedicatedSecretReplacesArtifact reports whether the dedicated

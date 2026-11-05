@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-keys
+id: "opencenter-secrets-keys"
 title: "Opencenter_Secrets_Keys"
-sidebar_label: Opencenter_Secrets_Keys
-description: Documentation for Opencenter_Secrets_Keys.
+sidebar_label: "Opencenter_Secrets_Keys"
+description: "Manage SOPS encryption keys"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets keys
+
+**Purpose:** For operators, developers, documents `opencenter secrets keys`: what it does, its flags, and its examples.
 
 Manage SOPS encryption keys
 

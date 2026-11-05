@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-service-status
+id: "opencenter-cluster-service-status"
 title: "Opencenter_Cluster_Service_Status"
-sidebar_label: Opencenter_Cluster_Service_Status
-description: Documentation for Opencenter_Cluster_Service_Status.
+sidebar_label: "Opencenter_Cluster_Service_Status"
+description: "Display state of all services in the cluster configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster service status
+
+**Purpose:** For operators, developers, documents `opencenter cluster service status`: what it does, its flags, and its examples.
 
 Display state of all services in the cluster configuration
 

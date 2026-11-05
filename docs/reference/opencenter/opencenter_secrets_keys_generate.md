@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-keys-generate
+id: "opencenter-secrets-keys-generate"
 title: "Opencenter_Secrets_Keys_Generate"
-sidebar_label: Opencenter_Secrets_Keys_Generate
-description: Documentation for Opencenter_Secrets_Keys_Generate.
+sidebar_label: "Opencenter_Secrets_Keys_Generate"
+description: "Generate new Age key pair for SOPS encryption"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets keys generate
+
+**Purpose:** For operators, developers, documents `opencenter secrets keys generate`: what it does, its flags, and its examples.
 
 Generate new Age key pair for SOPS encryption
 

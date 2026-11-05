@@ -10,6 +10,8 @@ last_updated: 2026-11-01
 ---
 # Customize services
 
+**Purpose:** For openCenter operators, shows how to inspect and change service enablement and values in an openCenter cluster file.
+
 Service enablement and typed service values live in the cluster file. Use the
 service command to inspect and change that file.
 

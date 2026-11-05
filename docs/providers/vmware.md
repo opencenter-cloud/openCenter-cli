@@ -10,6 +10,8 @@ last_updated: 2026-11-02
 ---
 # VMware provider
 
+**Purpose:** For openCenter operators, documents reference the VMware provider configuration shape and validation requirements.
+
 The VMware provider uses pre-provisioned nodes. Its configuration contains a
 `cloud.vmware` selector block and static `compute.master_nodes` and
 `compute.worker_nodes` entries. VM lifecycle is outside the provider path

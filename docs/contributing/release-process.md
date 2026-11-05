@@ -63,7 +63,7 @@ When cutting any release or bumping the upstream `openCenter-gitops-base` depend
 | **Tests** | `internal/gitops/terraform_calico_source_test.go` | `defaultGitBaseRepoTag`, `kubesprayModuleTag` | Verifies rendered Terraform template module source URLs. |
 | **Tests** | `internal/gitops/kubespray_contract2_source_test.go` | `expected` source URL assertion | Verifies Kubespray source rendering for contract compliance. |
 | **Tests** | `internal/config/v2/kubespray_contract2_backfill_test.go` | Stale pin test fixtures, `TestValidateGenerationWarnsOnContract3Gap` | Verifies backfill and gap detection. |
-| **CLI Version** | `VERSION` | Version string (e.g. `1.0.0`) | Repository-level version file read by release automation. |
+| **CLI Version** | `VERSION` | Version string (e.g. `1.0.0`) | Informational only. The released version comes from the **git tag**: `release.yml` derives it from `github.ref_name` and `.mise.toml` from `GIT_TAG`, both injected via `-ldflags -X main.version`. Nothing reads this file, so it can and does disagree with the tag (`VERSION` says `1.0.0`; the newest tag is `1.0.0-rc07`). Update it for consistency, but the tag is what ships. |
 | **JSON Schemas** | `schema/opencenter-v2.schema.json` | Generated schema files | Run `mise run schema-v2` if any config structs changed. |
 | **CLI Docs** | `docs/reference/opencenter/` | Auto-generated Cobra documentation | Run `mise run docs-gen` to sync CLI flags and command descriptions. |
 | **Workflow Docs**| `docs/concepts/gitops-workflow.md`, `docs/operations/openstack-production-deployment.md` | Base repo tag and contract descriptions in markdown snippets | Guides and examples referencing default tags. |

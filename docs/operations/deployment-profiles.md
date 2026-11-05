@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Service enablement profiles
 
+**Purpose:** For openCenter operators, shows how to inspect and change service selection represented in an openCenter configuration.
+
 There is no discrete profile flag in the CLI. Service selection is represented
 by each service's `enabled` field in the v2 configuration.
 

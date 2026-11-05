@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [dashboard, oidc, headlamp, services]
 ---
+# Headlamp Dashboard
+
+**Purpose:** For platform engineers, operators, documents headlamp service configuration, OIDC dependency rule, and catalog ownership.
 
 > **Evidence:** `internal/config/services/headlamp.go`, `internal/config/v2/defaults.go`, `internal/config/v2/config.go`, `internal/config/services/dependency_validator.go`, `internal/gitops/render_catalog.go`, and `internal/gitops/override_values_renderers.go`.
 

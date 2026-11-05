@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-describe
+id: "opencenter-cluster-describe"
 title: "Opencenter_Cluster_Describe"
-sidebar_label: Opencenter_Cluster_Describe
-description: Documentation for Opencenter_Cluster_Describe.
+sidebar_label: "Opencenter_Cluster_Describe"
+description: "Describe cluster configuration, paths, locks, and state"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster describe
+
+**Purpose:** For operators, developers, documents `opencenter cluster describe`: what it does, its flags, and its examples.
 
 Describe cluster configuration, paths, locks, and state
 

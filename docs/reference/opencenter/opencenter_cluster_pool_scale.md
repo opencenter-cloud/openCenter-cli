@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-cluster-pool-scale"
 title: "Opencenter_Cluster_Pool_Scale"
 sidebar_label: "Opencenter_Cluster_Pool_Scale"
@@ -7,8 +6,11 @@ description: "Scale a worker pool to a specific count"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster pool scale
+
+**Purpose:** For operators, developers, documents `opencenter cluster pool scale`: what it does, its flags, and its examples.
 
 Scale a worker pool to a specific count
 

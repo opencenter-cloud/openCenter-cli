@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from fnmatch import fnmatch
 from pathlib import Path
 import re
 import sys
@@ -41,15 +42,30 @@ class Issue:
         return f"{filename}:{self.line}: {self.message}"
 
 
-def collect_markdown(repo_root: Path) -> list[Path]:
-    """Return Markdown files in the repository, in stable order."""
+def collect_markdown(repo_root: Path, exclude: tuple[str, ...] = ()) -> list[Path]:
+    """Return Markdown files under ``repo_root``, in stable order.
+
+    ``exclude`` holds globs relative to the root; a matching file, or any file
+    beneath a matching directory, is skipped. Dot-directories are always skipped.
+    """
     root = repo_root.resolve()
     return sorted(
         path
         for path in root.rglob("*.md")
         if not any(part.startswith(".") for part in path.relative_to(root).parts)
         and path.is_file()
+        and not _excluded(path, root, exclude)
     )
+
+
+def _excluded(path: Path, root: Path, exclude: tuple[str, ...]) -> bool:
+    """Report whether ``path`` matches one of the root-relative ``exclude`` globs."""
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return False
+    text = relative.as_posix()
+    return any(text == pattern or fnmatch(text, pattern) for pattern in exclude)
 
 
 def _destination(value: str) -> str:
@@ -128,29 +144,46 @@ def validate_file(path: Path, repo_root: Path) -> list[Issue]:
     return issues
 
 
-def check(repo_root: Path, paths: list[str] | None = None) -> int:
-    """Check repository Markdown files and return a process exit status."""
-    root = repo_root.resolve()
-    if paths:
-        files = []
-        for raw_path in paths:
-            candidate = Path(raw_path)
-            if not candidate.is_absolute():
-                candidate = root / candidate
-            candidate = candidate.resolve()
-            if candidate.is_file() and candidate.suffix.lower() == ".md":
-                files.append(candidate)
-    else:
-        files = collect_markdown(root)
 
-    issues = [issue for path in sorted(set(files)) for issue in validate_file(path, root)]
-    if issues:
-        for issue in issues:
-            print(issue.render(root))
-        print(f"FAILED: {len(issues)} invalid local link(s).")
-        return 1
-    print(f"OK: {len(files)} Markdown file(s) passed.")
-    return 0
+def reachability(root: Path, entrypoint: str, exclude: tuple[str, ...]) -> list[Issue]:
+    """Report pages under ``root`` that no link path reaches from ``entrypoint``.
+
+    A documentation tree copied into a site generator renders only what the
+    navigation reaches. A page with no inbound path is invisible there even though
+    every one of its own links resolves, which is why link validity alone is not
+    enough: the 7 release notes under ``docs/release/`` passed the link check while
+    nothing linked to them.
+    """
+    entry = root / entrypoint
+    if not entry.is_file():
+        return [Issue(root, 0, f"entrypoint {entrypoint} does not exist")]
+
+    pages = [
+        path
+        for path in sorted(root.rglob("*.md"))
+        if not _excluded(path, root, exclude)
+    ]
+    page_set = set(pages)
+
+    seen = {entry}
+    queue = [entry]
+    while queue:
+        current = queue.pop(0)
+        for line in current.read_text(encoding="utf-8", errors="replace").splitlines():
+            for raw_destination in _link_destinations(line):
+                target = _local_target(raw_destination)
+                if not target:
+                    continue
+                candidate = (current.parent / Path(target)).resolve()
+                if candidate in page_set and candidate not in seen:
+                    seen.add(candidate)
+                    queue.append(candidate)
+
+    return [
+        Issue(page, 0, "page is not reachable from " + entrypoint + "; a site build would not render it")
+        for page in pages
+        if page not in seen
+    ]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -158,9 +191,64 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--repo-root", default=".", type=Path, help="Repository root (default: current directory)"
     )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        metavar="DIR",
+        help="Treat DIR as the documentation root: links resolving outside it fail, "
+        "which is the portability test for a tree copied out of the repository",
+    )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="GLOB",
+        help="Relative glob of pages to skip (repeatable), e.g. 'CODEMAPS/**'",
+    )
+    parser.add_argument(
+        "--check-reachability",
+        action="store_true",
+        help="Also fail when a page cannot be reached from --entrypoint",
+    )
+    parser.add_argument(
+        "--entrypoint", default="index.md", help="Entry page for --check-reachability (default: index.md)"
+    )
     parser.add_argument("paths", nargs="*", metavar="PATH", help="Markdown files to check")
     args = parser.parse_args(argv)
-    return check(args.repo_root, args.paths or None)
+
+    base = args.repo_root
+    if args.root is not None:
+        root = (base / args.root).resolve()
+        if not root.is_dir():
+            print(f"FAILED: --root {args.root} is not a directory under {base}")
+            return 2
+    else:
+        root = base
+
+    exclude = tuple(args.exclude)
+    files = collect_markdown(root, exclude) if not args.paths else None
+    if args.paths:
+        files = []
+        for raw_path in args.paths:
+            candidate = Path(raw_path)
+            if not candidate.is_absolute():
+                candidate = base / candidate
+            candidate = candidate.resolve()
+            if candidate.is_file() and candidate.suffix.lower() == ".md":
+                files.append(candidate)
+
+    issues = [issue for path in sorted(set(files)) for issue in validate_file(path, root)]
+    if args.check_reachability:
+        issues.extend(reachability(root, args.entrypoint, exclude))
+
+    if issues:
+        for issue in issues:
+            print(issue.render(base))
+        print(f"FAILED: {len(issues)} invalid local link(s).")
+        return 1
+    print(f"OK: {len(files)} Markdown file(s) passed.")
+    return 0
 
 
 if __name__ == "__main__":

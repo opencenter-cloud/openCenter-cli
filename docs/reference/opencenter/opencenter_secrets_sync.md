@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-sync
+id: "opencenter-secrets-sync"
 title: "Opencenter_Secrets_Sync"
-sidebar_label: Opencenter_Secrets_Sync
-description: Documentation for Opencenter_Secrets_Sync.
+sidebar_label: "Opencenter_Secrets_Sync"
+description: "Synchronize secrets from config to encrypted manifests"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets sync
+
+**Purpose:** For operators, developers, documents `opencenter secrets sync`: what it does, its flags, and its examples.
 
 Synchronize secrets from config to encrypted manifests
 
@@ -75,6 +77,7 @@ opencenter secrets sync [cluster] [flags]
   -h, --help               help for sync
       --org string         Filter to specific organization (used with --all)
       --services strings   Comma-separated list of services to sync (e.g., cert-manager,loki)
+      --skip-validation    Skip configuration validation before manifest refresh
       --stop-on-error      Stop processing on first failure (used with --all)
 ```
 

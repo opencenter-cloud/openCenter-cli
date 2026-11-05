@@ -10,6 +10,8 @@ last_updated: 2026-11-02
 ---
 # Local development with Kind
 
+**Purpose:** For openCenter developers, shows how to configure, render, and deploy a local Kind cluster reconciled by Flux from a local Gitea.
+
 This tutorial brings up a local Kind cluster end-to-end: init the config, point
 GitOps at a local Gitea, validate, generate, deploy, and confirm the cluster is
 reconciled by Flux from that Gitea. The CLI handles the awkward parts — TLS

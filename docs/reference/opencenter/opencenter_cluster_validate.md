@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-validate
+id: "opencenter-cluster-validate"
 title: "Opencenter_Cluster_Validate"
-sidebar_label: Opencenter_Cluster_Validate
-description: Documentation for Opencenter_Cluster_Validate.
+sidebar_label: "Opencenter_Cluster_Validate"
+description: "Validate cluster configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster validate
+
+**Purpose:** For operators, developers, documents `opencenter cluster validate`: what it does, its flags, and its examples.
 
 Validate cluster configuration
 

@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [gitops, flux, services]
 ---
+# FluxCD
+
+**Purpose:** For platform engineers, operators, documents FluxCD service configuration and structural catalog ownership.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/registry.go`, `internal/gitops/render_catalog.go`, and `internal/services/descriptors/data/*-fluxcd-aggregate.yaml`.
 

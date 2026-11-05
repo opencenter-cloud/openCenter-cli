@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-settings-view"
 title: "Opencenter_Settings_View"
 sidebar_label: "Opencenter_Settings_View"
@@ -7,8 +6,11 @@ description: "Display the current CLI settings"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter settings view
+
+**Purpose:** For operators, developers, documents `opencenter settings view`: what it does, its flags, and its examples.
 
 Display the current CLI settings
 

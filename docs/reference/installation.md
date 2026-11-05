@@ -10,6 +10,8 @@ last_updated: 2026-11-02
 ---
 # Install the CLI
 
+**Purpose:** For all users, shows how to install the openCenter CLI and the opencenter-local plugin with scripts/install.sh: options, environment variables, checksum provenance, and uninstall.
+
 `scripts/install.sh` installs the `opencenter` CLI binary and the
 `opencenter-local` plugin from a GitHub release of
 `opencenter-cloud/openCenter-cli`.

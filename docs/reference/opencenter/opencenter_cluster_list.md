@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-list
+id: "opencenter-cluster-list"
 title: "Opencenter_Cluster_List"
-sidebar_label: Opencenter_Cluster_List
-description: Documentation for Opencenter_Cluster_List.
+sidebar_label: "Opencenter_Cluster_List"
+description: "List configured clusters"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster list
+
+**Purpose:** For operators, developers, documents `opencenter cluster list`: what it does, its flags, and its examples.
 
 List configured clusters
 

@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [monitoring, metrics, mimir, observability, services]
 ---
+# Grafana Mimir
+
+**Purpose:** For platform engineers, operators, documents Mimir service configuration, storage fields, secrets, and catalog ownership.
 
 > **Evidence:** `internal/config/services/mimir.go`, `internal/config/v2/defaults.go`, `internal/config/v2/config.go`, `internal/config/services/secrets_validator.go`, and `internal/gitops/render_catalog.go`.
 

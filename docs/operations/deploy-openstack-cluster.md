@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Deploy from a cluster file
 
+**Purpose:** For openCenter operators, shows how to validate, generate, and deploy assets from an openCenter cluster file.
+
 The deploy workflow is provider-independent at the CLI boundary. Configure and
 validate first, then generate the GitOps assets before invoking deploy.
 

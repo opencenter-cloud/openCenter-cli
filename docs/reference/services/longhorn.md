@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, storage administrators"
 tags: [storage, longhorn, services]
 ---
+# Longhorn
+
+**Purpose:** For platform engineers, storage administrators, documents longhorn service configuration and built-in catalog rendering.
 
 > **Evidence:** `internal/config/services/longhorn.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

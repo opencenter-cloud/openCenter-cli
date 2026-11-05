@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [prometheus, grafana, alertmanager, observability, services]
 ---
+# kube-prometheus-stack
+
+**Purpose:** For platform engineers, operators, documents Prometheus stack service configuration and observability catalog behavior.
 
 > **Evidence:** `internal/config/services/prometheus_stack.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/prometheus_stack.go`, and `internal/gitops/render_catalog.go`.
 

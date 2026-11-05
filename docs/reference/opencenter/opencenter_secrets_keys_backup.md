@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-keys-backup
+id: "opencenter-secrets-keys-backup"
 title: "Opencenter_Secrets_Keys_Backup"
-sidebar_label: Opencenter_Secrets_Keys_Backup
-description: Documentation for Opencenter_Secrets_Keys_Backup.
+sidebar_label: "Opencenter_Secrets_Keys_Backup"
+description: "Create backup of Age keys and SOPS configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets keys backup
+
+**Purpose:** For operators, developers, documents `opencenter secrets keys backup`: what it does, its flags, and its examples.
 
 Create backup of Age keys and SOPS configuration
 

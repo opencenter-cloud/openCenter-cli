@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-shell-init
+id: "opencenter-shell-init"
 title: "Opencenter_Shell Init"
-sidebar_label: Opencenter_Shell Init
-description: Documentation for Opencenter_Shell Init.
+sidebar_label: "Opencenter_Shell Init"
+description: "Output shell integration script for session-scoped active clusters"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter shell-init
+
+**Purpose:** For operators, developers, documents `opencenter shell-init`: what it does, its flags, and its examples.
 
 Output shell integration script for session-scoped active clusters
 

@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-unlock
+id: "opencenter-cluster-unlock"
 title: "Opencenter_Cluster_Unlock"
-sidebar_label: Opencenter_Cluster_Unlock
-description: Documentation for Opencenter_Cluster_Unlock.
+sidebar_label: "Opencenter_Cluster_Unlock"
+description: "Unlock a cluster to allow modifications"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster unlock
+
+**Purpose:** For operators, developers, documents `opencenter cluster unlock`: what it does, its flags, and its examples.
 
 Unlock a cluster to allow modifications
 

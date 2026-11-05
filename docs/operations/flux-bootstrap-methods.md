@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Flux and GitOps configuration
 
+**Purpose:** For openCenter operators, shows how to configure and generate GitOps assets with the openCenter command path.
+
 The CLI generates GitOps assets from the cluster file. The supported
 CLI path is:
 

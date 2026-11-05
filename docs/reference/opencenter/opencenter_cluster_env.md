@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-10-22
-id: opencenter-cluster-env
+id: "opencenter-cluster-env"
 title: "Opencenter_Cluster_Env"
-sidebar_label: Opencenter_Cluster_Env
-description: Documentation for Opencenter_Cluster_Env.
+sidebar_label: "Opencenter_Cluster_Env"
+description: "Export cluster environment variables"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster env
+
+**Purpose:** For operators, developers, documents `opencenter cluster env`: what it does, its flags, and its examples.
 
 Export cluster environment variables
 

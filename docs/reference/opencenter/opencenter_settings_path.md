@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-settings-path"
 title: "Opencenter_Settings_Path"
 sidebar_label: "Opencenter_Settings_Path"
@@ -7,8 +6,11 @@ description: "Show the path to the settings file"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter settings path
+
+**Purpose:** For operators, developers, documents `opencenter settings path`: what it does, its flags, and its examples.
 
 Show the path to the settings file
 

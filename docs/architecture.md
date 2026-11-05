@@ -2,13 +2,15 @@
 last_updated: 2026-09-26
 id: cli-architecture
 title: "Understand the openCenter CLI Architecture"
-sidebar_label: Architecture
+sidebar_label: CLI Architecture (contributor)
 description: Explains the openCenter CLI layers, entry points, package boundaries, runtime flows, and integration points.
 doc_type: explanation
 audience: "contributors, maintainers, code-oriented agents"
 tags: [architecture, cli, go, gitops, providers]
 ---
-# Architecture
+# CLI Architecture (contributor reference)
+
+**Purpose:** For contributors, maintainers, code-oriented agents, explains the openCenter CLI layers, entry points, package boundaries, runtime flows, and integration points.
 
 ## System overview
 

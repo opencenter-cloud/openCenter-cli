@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [networking, load-balancer, metallb, services]
 ---
+# MetalLB
+
+**Purpose:** For platform engineers, operators, documents MetalLB service configuration and generated pool and L2 advertisement files.
 
 > **Evidence:** `internal/config/services/metallb.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

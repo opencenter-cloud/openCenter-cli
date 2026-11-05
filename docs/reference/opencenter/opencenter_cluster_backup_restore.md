@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-backup-restore
+id: "opencenter-cluster-backup-restore"
 title: "Opencenter_Cluster_Backup_Restore"
-sidebar_label: Opencenter_Cluster_Backup_Restore
-description: Documentation for Opencenter_Cluster_Backup_Restore.
+sidebar_label: "Opencenter_Cluster_Backup_Restore"
+description: "Restore cluster configuration from backup"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster backup restore
+
+**Purpose:** For operators, developers, documents `opencenter cluster backup restore`: what it does, its flags, and its examples.
 
 Restore cluster configuration from backup
 

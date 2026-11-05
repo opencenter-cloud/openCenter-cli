@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [networking, cni, calico, services]
 ---
+# Calico
+
+**Purpose:** For platform engineers, operators, documents calico service configuration, generated default, and descriptor ownership.
 
 > **Evidence:** `internal/config/services/calico.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/calico.go`, and `internal/services/descriptors/data/service-calico.yaml`.
 

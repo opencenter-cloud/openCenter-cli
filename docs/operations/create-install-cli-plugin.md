@@ -10,6 +10,8 @@ last_updated: 2026-11-02
 ---
 # Discover CLI plugins
 
+**Purpose:** For openCenter operators, shows how to discover and inspect external CLI plugins available to openCenter.
+
 The built-in CLI can list external plugins discovered on the host:
 
 ```bash

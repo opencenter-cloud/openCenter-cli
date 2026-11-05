@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-service
+id: "opencenter-cluster-service"
 title: "Opencenter_Cluster_Service"
-sidebar_label: Opencenter_Cluster_Service
-description: Documentation for Opencenter_Cluster_Service.
+sidebar_label: "Opencenter_Cluster_Service"
+description: "Manage cluster services"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster service
+
+**Purpose:** For operators, developers, documents `opencenter cluster service`: what it does, its flags, and its examples.
 
 Manage cluster services
 
@@ -47,5 +49,6 @@ opencenter cluster service [flags]
 * [opencenter cluster service disable](opencenter_cluster_service_disable.md)	 - Disable a service in the cluster configuration
 * [opencenter cluster service enable](opencenter_cluster_service_enable.md)	 - Enable a service in the cluster configuration
 * [opencenter cluster service options](opencenter_cluster_service_options.md)	 - Display available configuration options for a service
+* [opencenter cluster service reconcile](opencenter_cluster_service_reconcile.md)	 - Reconcile a specific service in GitOps and Flux
 * [opencenter cluster service status](opencenter_cluster_service_status.md)	 - Display state of all services in the cluster configuration
 * [opencenter cluster service storage](opencenter_cluster_service_storage.md)	 - Manage one service's OpenStack storage

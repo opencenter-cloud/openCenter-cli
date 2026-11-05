@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-cluster-pool-list"
 title: "Opencenter_Cluster_Pool_List"
 sidebar_label: "Opencenter_Cluster_Pool_List"
@@ -7,8 +6,11 @@ description: "List all worker pools"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster pool list
+
+**Purpose:** For operators, developers, documents `opencenter cluster pool list`: what it does, its flags, and its examples.
 
 List all worker pools
 

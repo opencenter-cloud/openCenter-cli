@@ -6,9 +6,11 @@ description: "Report differences between the deployed cluster and its config"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
-last_updated: 2026-11-01
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster observe
+
+**Purpose:** For operators, developers, documents `opencenter cluster observe`: what it does, its flags, and its examples.
 
 Report differences between the deployed cluster and its config
 

@@ -8,6 +8,9 @@ doc_type: reference
 audience: "operators, platform engineers"
 tags: [loki, logging, observability, services]
 ---
+# Loki
+
+**Purpose:** For operators, platform engineers, documents Loki service configuration, storage validation, secrets, and catalog ownership.
 
 > **Evidence:** `internal/config/services/loki.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/loki.go`, `internal/config/services/secrets_validator.go`, `internal/config/services/provider_registry.go`, and `internal/gitops/render_catalog.go`.
 

@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [registry, harbor, services]
 ---
+# Harbor
+
+**Purpose:** For platform engineers, operators, documents Harbor service configuration, runtime validation, secrets, and descriptor conditions.
 
 > **Evidence:** `internal/config/services/harbor.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/harbor.go`, `internal/config/v2/config.go`, `internal/services/plugins/registry.go`, and `internal/services/descriptors/data/service-harbor.yaml`.
 

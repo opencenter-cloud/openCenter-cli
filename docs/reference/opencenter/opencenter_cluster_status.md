@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-status
+id: "opencenter-cluster-status"
 title: "Opencenter_Cluster_Status"
-sidebar_label: Opencenter_Cluster_Status
-description: Documentation for Opencenter_Cluster_Status.
+sidebar_label: "Opencenter_Cluster_Status"
+description: "Show cluster status information"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster status
+
+**Purpose:** For operators, developers, documents `opencenter cluster status`: what it does, its flags, and its examples.
 
 Show cluster status information
 

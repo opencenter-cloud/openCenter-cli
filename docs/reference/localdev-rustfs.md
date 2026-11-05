@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Local RustFS development service
 
+**Purpose:** For contributors, maintainers, documents the local RustFS development service and its credential and Kind attachment workflow.
+
 `opencenter-local rustfs up` starts the pinned RustFS image with its S3 API on
 `127.0.0.1:9000` and console on `127.0.0.1:9001`. State, object data, and the
 private generated credentials file live below the local state directory.

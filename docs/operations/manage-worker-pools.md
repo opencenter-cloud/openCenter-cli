@@ -10,6 +10,8 @@ last_updated: 2026-10-20
 ---
 # Manage worker pools
 
+**Purpose:** For openCenter operators, shows how to list, update, and scale worker pool definitions in an openCenter configuration.
+
 The `cluster pool` commands update worker-pool definitions in the selected
 configuration. They do not directly change provider infrastructure.
 

@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-10-27
 id: "opencenter-cluster-provider-openstack-plan"
 title: "Opencenter_Cluster_Provider_Openstack_Plan"
 sidebar_label: "Opencenter_Cluster_Provider_Openstack_Plan"
@@ -7,8 +6,11 @@ description: "plan OpenStack provider metadata and selections"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster provider openstack plan
+
+**Purpose:** For operators, developers, documents `opencenter cluster provider openstack plan`: what it does, its flags, and its examples.
 
 plan OpenStack provider metadata and selections
 

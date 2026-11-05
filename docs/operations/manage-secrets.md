@@ -10,6 +10,8 @@ last_updated: 2026-10-27
 ---
 # Manage secrets
 
+**Purpose:** For openCenter operators, shows how to generate keys and manage encrypted secret files with openCenter.
+
 The CLI exposes SOPS/Age key and file operations. Secret values should not be
 placed in documentation or committed unencrypted.
 

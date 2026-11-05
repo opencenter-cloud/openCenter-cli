@@ -13,7 +13,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from audit_doc_frontmatter import audit_file, body_last_changed_date, main
+from audit_doc_frontmatter import audit_file, body_last_changed_date, duplicate_sidebar_labels, main
 
 
 class FrontmatterYamlSafetyTests(unittest.TestCase):
@@ -63,6 +63,86 @@ class FrontmatterYamlSafetyTests(unittest.TestCase):
     def test_unterminated_quote_is_rejected(self) -> None:
         issues = self.audit('"Service Templates')
         self.assertTrue(any("unterminated quoted string" in issue for issue in issues))
+
+
+class SidebarLabelUniquenessTests(unittest.TestCase):
+    """sidebar_label is navigation text, so it must be unique across the tree."""
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.directory.name)
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def page(self, name: str, sidebar_label: str) -> Path:
+        path = self.root / "docs" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "\n".join(
+                (
+                    "---",
+                    "last_updated: 2026-11-05",
+                    f"id: {name.replace('/', '-').replace('.md', '')}",
+                    f'title: "{sidebar_label}"',
+                    f"sidebar_label: {sidebar_label}",
+                    "description: Test fixture.",
+                    "doc_type: reference",
+                    'audience: "operators"',
+                    "tags: [test]",
+                    "---",
+                    "# Fixture",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def labels(self, files: list[Path]) -> list[str]:
+        return [issue.message for issue in duplicate_sidebar_labels(files, self.root)]
+
+    def test_distinct_labels_produce_no_issue(self) -> None:
+        files = [self.page("a.md", "Alpha"), self.page("b.md", "Beta")]
+        self.assertEqual(self.labels(files), [])
+
+    def test_duplicate_label_is_reported_on_every_sharing_page(self) -> None:
+        """One issue per page, so a contributor touching either page sees it.
+
+        This is the collision the two architecture pages had: both labelled
+        "Architecture", indistinguishable in a site sidebar, invisible to any
+        per-file check.
+        """
+        a = self.page("architecture.md", "Architecture")
+        b = self.page("concepts/architecture.md", "Architecture")
+        issues = self.labels([a, b])
+        self.assertEqual(len(issues), 2)
+        for message in issues:
+            self.assertIn("duplicates another page", message)
+
+    def test_comparison_ignores_case_and_surrounding_whitespace(self) -> None:
+        files = [self.page("a.md", "Architecture"), self.page("b.md", "architecture ")]
+        self.assertEqual(len(self.labels(files)), 2)
+
+    def test_pages_without_a_label_are_skipped(self) -> None:
+        labelled = self.page("a.md", "Alpha")
+        unlabelled = self.root / "docs" / "bare.md"
+        unlabelled.parent.mkdir(parents=True, exist_ok=True)
+        unlabelled.write_text("---\nid: bare\n---\n# Bare\n", encoding="utf-8")
+        self.assertEqual(self.labels([labelled, unlabelled]), [])
+
+    def test_three_way_collision_names_the_other_pages(self) -> None:
+        files = [
+            self.page("a.md", "Same"),
+            self.page("b.md", "Same"),
+            self.page("c.md", "Same"),
+        ]
+        issues = self.labels(files)
+        self.assertEqual(len(issues), 3)
+        # Each message must point at the other two pages, not at itself.
+        self.assertIn("b.md", issues[0])
+        self.assertIn("c.md", issues[0])
+        self.assertNotIn("a.md", issues[0])
 
 
 class GitRepo:

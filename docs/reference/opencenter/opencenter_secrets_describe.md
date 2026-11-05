@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-describe
+id: "opencenter-secrets-describe"
 title: "Opencenter_Secrets_Describe"
-sidebar_label: Opencenter_Secrets_Describe
-description: Documentation for Opencenter_Secrets_Describe.
+sidebar_label: "Opencenter_Secrets_Describe"
+description: "Show metadata for a single secret"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets describe
+
+**Purpose:** For operators, developers, documents `opencenter secrets describe`: what it does, its flags, and its examples.
 
 Show metadata for a single secret
 

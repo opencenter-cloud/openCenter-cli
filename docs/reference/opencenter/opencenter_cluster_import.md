@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-import
+id: "opencenter-cluster-import"
 title: "Opencenter_Cluster_Import"
-sidebar_label: Opencenter_Cluster_Import
-description: Documentation for Opencenter_Cluster_Import.
+sidebar_label: "Opencenter_Cluster_Import"
+description: "Import running clusters into openCenter config"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster import
+
+**Purpose:** For operators, developers, documents `opencenter cluster import`: what it does, its flags, and its examples.
 
 Import running clusters into openCenter config
 

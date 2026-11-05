@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-delete
+id: "opencenter-secrets-delete"
 title: "Opencenter_Secrets_Delete"
-sidebar_label: Opencenter_Secrets_Delete
-description: Documentation for Opencenter_Secrets_Delete.
+sidebar_label: "Opencenter_Secrets_Delete"
+description: "Delete a secret"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets delete
+
+**Purpose:** For operators, developers, documents `opencenter secrets delete`: what it does, its flags, and its examples.
 
 Delete a secret
 

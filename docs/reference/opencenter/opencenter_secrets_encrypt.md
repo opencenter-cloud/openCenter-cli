@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-encrypt
+id: "opencenter-secrets-encrypt"
 title: "Opencenter_Secrets_Encrypt"
-sidebar_label: Opencenter_Secrets_Encrypt
-description: Documentation for Opencenter_Secrets_Encrypt.
+sidebar_label: "Opencenter_Secrets_Encrypt"
+description: "Encrypt secrets in YAML files"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets encrypt
+
+**Purpose:** For operators, developers, documents `opencenter secrets encrypt`: what it does, its flags, and its examples.
 
 Encrypt secrets in YAML files
 

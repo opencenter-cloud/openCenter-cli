@@ -58,7 +58,7 @@ The customer-managed overlay unit and its SOPS generation rules have their own s
 - `validateServiceSchedulingCapacity` — checks that enabling certain services is consistent with the cluster's node/compute counts (e.g. a service that needs scheduling capacity isn't enabled against a zero-worker cluster).
 - `validateServiceSecrets` — checks per-service secret requirements when a service is enabled: `kube-prometheus-stack` webhook URL, `cert-manager`, `etcd-backup`, `loki`, `tempo`, `mimir`, and `harbor` secrets each have a dedicated check (`validateKubePrometheusStackWebhookURL`, `validateCertManagerSecrets`, `validateEtcdBackupSecrets`, `validateLokiSecrets`, `validateTempoSecrets`, `validateMimirSecrets`, `validateHarborSecrets`).
 
-Full per-service field requirements are documented in [Platform Services](platform-services.md) and the [services reference](../reference/services/), not duplicated here.
+Full per-service field requirements are documented in [Platform Services](platform-services.md) and the [services reference](services/index.md), not duplicated here.
 
 ## The generic validation engine — a separate, narrower framework
 

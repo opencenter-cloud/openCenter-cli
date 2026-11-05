@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [operators, lifecycle, olm, services]
 ---
+# Operator Lifecycle Manager
+
+**Purpose:** For platform engineers, operators, documents OLM service configuration and explicit descriptor templates.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, `internal/services/descriptors/data/service-olm.yaml`, and `internal/services/plugins/registry.go`.
 

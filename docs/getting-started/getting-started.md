@@ -10,6 +10,8 @@ last_updated: 2026-11-02
 ---
 # Getting Started with openCenter
 
+**Purpose:** For openCenter users, shows how to follow the documented openCenter workflow for initializing, inspecting, validating, generating, and deploying a cluster configuration.
+
 This tutorial follows the repository's supported configuration flow: initialize a
 v2 cluster file, select it, validate it, generate its GitOps tree, and deploy it.
 It does not assume that infrastructure, Kubernetes, or Git remotes are available.

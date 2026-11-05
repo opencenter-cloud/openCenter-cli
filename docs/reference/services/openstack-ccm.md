@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [openstack, services]
 ---
+# OpenStack Cloud Controller Manager
+
+**Purpose:** For platform engineers, operators, documents OpenStack CCM service configuration and catalog ownership.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

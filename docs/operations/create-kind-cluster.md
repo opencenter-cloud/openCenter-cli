@@ -10,6 +10,8 @@ last_updated: 2026-10-14
 ---
 # Create a Kind cluster
 
+**Purpose:** For openCenter operators, shows how to create and deploy a Kind cluster through the openCenter command path.
+
 This is the short command path for a local Kind configuration. It intentionally
 does not claim a fixed node count, service set, host IP, or bootstrap duration;
 those values come from the generated configuration and local runtime.

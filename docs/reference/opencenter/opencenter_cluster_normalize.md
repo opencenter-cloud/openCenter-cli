@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-normalize
+id: "opencenter-cluster-normalize"
 title: "Opencenter_Cluster_Normalize"
-sidebar_label: Opencenter_Cluster_Normalize
-description: Documentation for Opencenter_Cluster_Normalize.
+sidebar_label: "Opencenter_Cluster_Normalize"
+description: "Add missing default fields to a cluster configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster normalize
+
+**Purpose:** For operators, developers, documents `opencenter cluster normalize`: what it does, its flags, and its examples.
 
 Add missing default fields to a cluster configuration
 

@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, contributors"
 tags: [gitops, flux, sources, services]
 ---
+# Sources
+
+**Purpose:** For platform engineers, contributors, documents sources service configuration and descriptor-owned Flux source aggregates.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/registry.go`, `internal/gitops/render_catalog.go`, `internal/services/descriptors/data/services-sources-aggregate.yaml`, and `internal/services/descriptors/data/managed-services-sources-aggregate.yaml`.
 

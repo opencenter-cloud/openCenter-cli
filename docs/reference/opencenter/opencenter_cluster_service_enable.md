@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-11-01
-id: opencenter-cluster-service-enable
+id: "opencenter-cluster-service-enable"
 title: "Opencenter_Cluster_Service_Enable"
-sidebar_label: Opencenter_Cluster_Service_Enable
-description: Documentation for Opencenter_Cluster_Service_Enable.
+sidebar_label: "Opencenter_Cluster_Service_Enable"
+description: "Enable a service in the cluster configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster service enable
+
+**Purpose:** For operators, developers, documents `opencenter cluster service enable`: what it does, its flags, and its examples.
 
 Enable a service in the cluster configuration
 

@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-use
+id: "opencenter-cluster-use"
 title: "Opencenter_Cluster_Use"
-sidebar_label: Opencenter_Cluster_Use
-description: Documentation for Opencenter_Cluster_Use.
+sidebar_label: "Opencenter_Cluster_Use"
+description: "Set the active cluster"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster use
+
+**Purpose:** For operators, developers, documents `opencenter cluster use`: what it does, its flags, and its examples.
 
 Set the active cluster
 

@@ -1,4 +1,4 @@
-<!-- last_updated: 2026-11-02 -->
+<!-- last_updated: 2026-11-05 -->
 
 # openCenter CLI
 
@@ -114,6 +114,7 @@ reported together so they can be installed before retrying the deployment.
 - [Configuration schema](docs/reference/configuration-schema.md) — fields and
   validation surface.
 - [Provider reference](docs/reference/providers.md) — provider boundaries.
+- [cluster deploy — Step Matrix per Provider](docs/contributing/cluster-deploy-steps.md) — the ordered bootstrap steps each provider runs, with the gates that add or drop each step.
 - [Documentation maintenance guide](docs/README.md) — contributor workflow.
 - [Glossary](docs/glossary.md) — repository terminology.
 

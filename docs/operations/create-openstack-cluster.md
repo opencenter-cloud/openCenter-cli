@@ -10,6 +10,8 @@ last_updated: 2026-10-27
 ---
 # Create an OpenStack cluster
 
+**Purpose:** For openCenter operators, shows how to configure and prepare an OpenStack cluster through the openCenter command path.
+
 Use this page when the target provider is OpenStack. Values such as image IDs,
 network IDs, credentials, and Git URLs are environment inputs; the examples use
 placeholders and are not credentials.

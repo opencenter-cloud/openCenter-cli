@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-keys-rotate
+id: "opencenter-secrets-keys-rotate"
 title: "Opencenter_Secrets_Keys_Rotate"
-sidebar_label: Opencenter_Secrets_Keys_Rotate
-description: Documentation for Opencenter_Secrets_Keys_Rotate.
+sidebar_label: "Opencenter_Secrets_Keys_Rotate"
+description: "Rotate SOPS files or cluster encryption keys"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets keys rotate
+
+**Purpose:** For operators, developers, documents `opencenter secrets keys rotate`: what it does, its flags, and its examples.
 
 Rotate SOPS files or cluster encryption keys
 

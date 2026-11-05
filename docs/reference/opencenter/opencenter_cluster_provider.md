@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-10-14
 id: "opencenter-cluster-provider"
 title: "Opencenter_Cluster_Provider"
 sidebar_label: "Opencenter_Cluster_Provider"
@@ -7,8 +6,11 @@ description: "Manage provider configuration"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster provider
+
+**Purpose:** For operators, developers, documents `opencenter cluster provider`: what it does, its flags, and its examples.
 
 Manage provider configuration
 

@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [cert-manager, tls, services]
 ---
+# cert-manager
+
+**Purpose:** For platform engineers, operators, documents cert-manager service configuration, conditional credentials, and descriptor ownership.
 
 > **Evidence:** `internal/config/services/cert_manager.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/validators.go`, `internal/config/services/provider_registry.go`, `internal/config/services/secrets_validator.go`, and `internal/services/descriptors/data/service-cert-manager.yaml`.
 

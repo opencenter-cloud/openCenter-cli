@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-drift
+id: "opencenter-cluster-drift"
 title: "Opencenter_Cluster_Drift"
-sidebar_label: Opencenter_Cluster_Drift
-description: Documentation for Opencenter_Cluster_Drift.
+sidebar_label: "Opencenter_Cluster_Drift"
+description: "Detect and reconcile infrastructure drift"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster drift
+
+**Purpose:** For operators, developers, documents `opencenter cluster drift`: what it does, its flags, and its examples.
 
 Detect and reconcile infrastructure drift
 

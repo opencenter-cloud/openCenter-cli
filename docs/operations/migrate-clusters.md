@@ -10,6 +10,8 @@ last_updated: 2026-10-30
 ---
 # Migrate the legacy layout
 
+**Purpose:** For openCenter operators, shows how to preview and apply the filesystem layout migration for a legacy openCenter configuration.
+
 The supported migration command moves a legacy mixed organization directory
 into separate GitOps, state, and secrets locations. It is a filesystem layout
 migration, not a provider-to-provider cluster migration.

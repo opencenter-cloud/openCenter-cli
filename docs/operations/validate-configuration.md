@@ -10,6 +10,8 @@ last_updated: 2026-10-21
 ---
 # Validate configuration
 
+**Purpose:** For openCenter operators, shows how to validate an openCenter v2 cluster configuration in offline or online mode.
+
 Validation operates on v2 configurations (`schema_version: "2.0"`). It can
 use the active cluster, an explicit identifier, or a file.
 

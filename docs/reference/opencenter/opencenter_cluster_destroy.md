@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-10-30
-id: opencenter-cluster-destroy
+id: "opencenter-cluster-destroy"
 title: "Opencenter_Cluster_Destroy"
-sidebar_label: Opencenter_Cluster_Destroy
-description: Documentation for Opencenter_Cluster_Destroy.
+sidebar_label: "Opencenter_Cluster_Destroy"
+description: "Destroy a cluster"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster destroy
+
+**Purpose:** For operators, developers, documents `opencenter cluster destroy`: what it does, its flags, and its examples.
 
 Destroy a cluster
 

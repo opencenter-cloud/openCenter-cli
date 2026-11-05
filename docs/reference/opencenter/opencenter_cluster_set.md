@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-10-30
-id: opencenter-cluster-set
+id: "opencenter-cluster-set"
 title: "Opencenter_Cluster_Set"
-sidebar_label: Opencenter_Cluster_Set
-description: Documentation for Opencenter_Cluster_Set.
+sidebar_label: "Opencenter_Cluster_Set"
+description: "Set fields in an existing cluster configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster set
+
+**Purpose:** For operators, developers, documents `opencenter cluster set`: what it does, its flags, and its examples.
 
 Set fields in an existing cluster configuration
 

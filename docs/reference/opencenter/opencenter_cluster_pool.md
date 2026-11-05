@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-cluster-pool"
 title: "Opencenter_Cluster_Pool"
 sidebar_label: "Opencenter_Cluster_Pool"
@@ -7,8 +6,11 @@ description: "Manage worker pools"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster pool
+
+**Purpose:** For operators, developers, documents `opencenter cluster pool`: what it does, its flags, and its examples.
 
 Manage worker pools
 

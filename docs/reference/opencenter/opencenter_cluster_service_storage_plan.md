@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-cluster-service-storage-plan"
 title: "Opencenter_Cluster_Service_Storage_Plan"
 sidebar_label: "Opencenter_Cluster_Service_Storage_Plan"
@@ -7,8 +6,11 @@ description: "plan one service's OpenStack storage"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster service storage plan
+
+**Purpose:** For operators, developers, documents `opencenter cluster service storage plan`: what it does, its flags, and its examples.
 
 plan one service's OpenStack storage
 

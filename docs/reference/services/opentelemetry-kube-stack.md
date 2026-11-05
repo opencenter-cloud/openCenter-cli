@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [observability, opentelemetry, services]
 ---
+# OpenTelemetry Kube Stack
+
+**Purpose:** For platform engineers, operators, documents OpenTelemetry service configuration and observability catalog ownership.
 
 > **Evidence:** `internal/config/services/opentelemetry.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

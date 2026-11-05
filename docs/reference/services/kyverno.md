@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [policy, security, services]
 ---
+# Kyverno
+
+**Purpose:** For platform engineers, operators, documents kyverno service configuration and built-in catalog rendering.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-service-disable
+id: "opencenter-cluster-service-disable"
 title: "Opencenter_Cluster_Service_Disable"
-sidebar_label: Opencenter_Cluster_Service_Disable
-description: Documentation for Opencenter_Cluster_Service_Disable.
+sidebar_label: "Opencenter_Cluster_Service_Disable"
+description: "Disable a service in the cluster configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster service disable
+
+**Purpose:** For operators, developers, documents `opencenter cluster service disable`: what it does, its flags, and its examples.
 
 Disable a service in the cluster configuration
 

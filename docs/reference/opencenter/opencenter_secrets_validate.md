@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-validate
+id: "opencenter-secrets-validate"
 title: "Opencenter_Secrets_Validate"
-sidebar_label: Opencenter_Secrets_Validate
-description: Documentation for Opencenter_Secrets_Validate.
+sidebar_label: "Opencenter_Secrets_Validate"
+description: "Validate secrets for configuration drift"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets validate
+
+**Purpose:** For operators, developers, documents `opencenter secrets validate`: what it does, its flags, and its examples.
 
 Validate secrets for configuration drift
 

@@ -11,6 +11,8 @@ last_updated: 2026-10-23
 
 # Hardening defaults changed
 
+**Purpose:** For openCenter operators, documents what changes for existing clusters when k8s_hardening and os_hardening start defaulting to true, and how to opt out.
+
 `opencenter.cluster.kubernetes.security.k8s_hardening` and
 `opencenter.infrastructure.networking.security.os_hardening` now default to
 `true` in generated configurations. Configurations created before this change

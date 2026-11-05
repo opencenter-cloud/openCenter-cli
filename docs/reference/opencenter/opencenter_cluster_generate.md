@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-10-26
-id: opencenter-cluster-generate
+id: "opencenter-cluster-generate"
 title: "Opencenter_Cluster_Generate"
-sidebar_label: Opencenter_Cluster_Generate
-description: Documentation for Opencenter_Cluster_Generate.
+sidebar_label: "Opencenter_Cluster_Generate"
+description: "Generate the GitOps repository and rendered manifests"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster generate
+
+**Purpose:** For operators, developers, documents `opencenter cluster generate`: what it does, its flags, and its examples.
 
 Generate the GitOps repository and rendered manifests
 

@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-doctor
+id: "opencenter-cluster-doctor"
 title: "Opencenter_Cluster_Doctor"
-sidebar_label: Opencenter_Cluster_Doctor
-description: Documentation for Opencenter_Cluster_Doctor.
+sidebar_label: "Opencenter_Cluster_Doctor"
+description: "Audit local executable prerequisites"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster doctor
+
+**Purpose:** For operators, developers, documents `opencenter cluster doctor`: what it does, its flags, and its examples.
 
 Audit local executable prerequisites
 

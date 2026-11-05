@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-backup-delete
+id: "opencenter-cluster-backup-delete"
 title: "Opencenter_Cluster_Backup_Delete"
-sidebar_label: Opencenter_Cluster_Backup_Delete
-description: Documentation for Opencenter_Cluster_Backup_Delete.
+sidebar_label: "Opencenter_Cluster_Backup_Delete"
+description: "Delete a backup"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster backup delete
+
+**Purpose:** For operators, developers, documents `opencenter cluster backup delete`: what it does, its flags, and its examples.
 
 Delete a backup
 

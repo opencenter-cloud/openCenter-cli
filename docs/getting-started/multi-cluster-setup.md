@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Work with multiple clusters
 
+**Purpose:** For openCenter users, shows how to set up and select multiple openCenter cluster configurations within an organization.
+
 Organizations are part of the cluster identifier and filesystem layout. The
 repository workflow proves this form:
 

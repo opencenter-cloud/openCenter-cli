@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, database administrators"
 tags: [database, postgresql, operator, services]
 ---
+# PostgreSQL Operator
+
+**Purpose:** For platform engineers, database administrators, documents PostgreSQL operator service configuration and catalog ownership.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/registry.go`, and `internal/gitops/render_catalog.go`.
 

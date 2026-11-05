@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-completion-zsh
+id: "opencenter-completion-zsh"
 title: "Opencenter_Completion_Zsh"
-sidebar_label: Opencenter_Completion_Zsh
-description: Documentation for Opencenter_Completion_Zsh.
+sidebar_label: "Opencenter_Completion_Zsh"
+description: "Generate the autocompletion script for zsh"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter completion zsh
+
+**Purpose:** For operators, developers, documents `opencenter completion zsh`: what it does, its flags, and its examples.
 
 Generate the autocompletion script for zsh
 

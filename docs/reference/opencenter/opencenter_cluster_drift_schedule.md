@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-drift-schedule
+id: "opencenter-cluster-drift-schedule"
 title: "Opencenter_Cluster_Drift_Schedule"
-sidebar_label: Opencenter_Cluster_Drift_Schedule
-description: Documentation for Opencenter_Cluster_Drift_Schedule.
+sidebar_label: "Opencenter_Cluster_Drift_Schedule"
+description: "Schedule periodic drift detection"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster drift schedule
+
+**Purpose:** For operators, developers, documents `opencenter cluster drift schedule`: what it does, its flags, and its examples.
 
 Schedule periodic drift detection
 

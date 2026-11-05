@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Back up and restore configuration
 
+**Purpose:** For openCenter operators, shows how to create, list, and restore openCenter configuration backup archives.
+
 `cluster backup` manages openCenter configuration-related backup archives. It
 is separate from any Kubernetes or provider-native backup service.
 

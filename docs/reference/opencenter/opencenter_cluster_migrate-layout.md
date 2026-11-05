@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-cluster-migrate-layout"
 title: "Opencenter_Cluster_Migrate Layout"
 sidebar_label: "Opencenter_Cluster_Migrate Layout"
@@ -7,8 +6,11 @@ description: "Migrate legacy cluster files into secure GitOps, state, and secret
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster migrate-layout
+
+**Purpose:** For operators, developers, documents `opencenter cluster migrate-layout`: what it does, its flags, and its examples.
 
 Migrate legacy cluster files into secure GitOps, state, and secrets zones
 

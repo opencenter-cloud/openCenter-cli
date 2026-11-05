@@ -8,7 +8,9 @@ doc_type: explanation
 audience: "architects, developers"
 tags: [architecture, design, components, patterns]
 ---
-# Architecture
+# Architecture: Rationale and Design
+
+**Purpose:** For architects, developers, explains system design, core components, and architectural decisions behind openCenter.
 
 **Role:** Rationale-focused conceptual architecture for architects and operators. It explains why openCenter is designed this way, including trade-offs and design principles; it is not the source-grounded contributor package map.
 

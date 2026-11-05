@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-drift-detect
+id: "opencenter-cluster-drift-detect"
 title: "Opencenter_Cluster_Drift_Detect"
-sidebar_label: Opencenter_Cluster_Drift_Detect
-description: Documentation for Opencenter_Cluster_Drift_Detect.
+sidebar_label: "Opencenter_Cluster_Drift_Detect"
+description: "Detect infrastructure drift for a cluster"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster drift detect
+
+**Purpose:** For operators, developers, documents `opencenter cluster drift detect`: what it does, its flags, and its examples.
 
 Detect infrastructure drift for a cluster
 

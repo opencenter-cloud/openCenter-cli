@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-active
+id: "opencenter-cluster-active"
 title: "Opencenter_Cluster_Active"
-sidebar_label: Opencenter_Cluster_Active
-description: Documentation for Opencenter_Cluster_Active.
+sidebar_label: "Opencenter_Cluster_Active"
+description: "Show the active cluster"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster active
+
+**Purpose:** For operators, developers, documents `opencenter cluster active`: what it does, its flags, and its examples.
 
 Show the active cluster
 

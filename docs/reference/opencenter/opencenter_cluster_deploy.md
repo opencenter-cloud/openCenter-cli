@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-deploy
+id: "opencenter-cluster-deploy"
 title: "Opencenter_Cluster_Deploy"
-sidebar_label: Opencenter_Cluster_Deploy
-description: Documentation for Opencenter_Cluster_Deploy.
+sidebar_label: "Opencenter_Cluster_Deploy"
+description: "Deploy a cluster from its openCenter configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster deploy
+
+**Purpose:** For operators, developers, documents `opencenter cluster deploy`: what it does, its flags, and its examples.
 
 Deploy a cluster from its openCenter configuration
 

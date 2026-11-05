@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Troubleshoot a command or deployment
 
+**Purpose:** For openCenter operators, shows how to use local checks and command output to investigate openCenter commands and deployments.
+
 Start with read-only local checks and the command output. Avoid assuming that
 validation proves provider access or that deploy completion proves service
 reconciliation.

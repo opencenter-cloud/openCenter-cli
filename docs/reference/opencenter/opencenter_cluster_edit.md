@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-edit
+id: "opencenter-cluster-edit"
 title: "Opencenter_Cluster_Edit"
-sidebar_label: Opencenter_Cluster_Edit
-description: Documentation for Opencenter_Cluster_Edit.
+sidebar_label: "Opencenter_Cluster_Edit"
+description: "Edit a cluster configuration in your preferred editor"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster edit
+
+**Purpose:** For operators, developers, documents `opencenter cluster edit`: what it does, its flags, and its examples.
 
 Edit a cluster configuration in your preferred editor
 

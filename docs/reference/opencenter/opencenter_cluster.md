@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-11-01
-id: opencenter-cluster
+id: "opencenter-cluster"
 title: "Opencenter_Cluster"
-sidebar_label: Opencenter_Cluster
-description: Documentation for Opencenter_Cluster.
+sidebar_label: "Opencenter_Cluster"
+description: "Manage cluster configurations"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster
+
+**Purpose:** For operators, developers, documents `opencenter cluster`: what it does, its flags, and its examples.
 
 Manage cluster configurations
 
@@ -104,6 +106,7 @@ opencenter cluster [flags]
 * [opencenter cluster observe](opencenter_cluster_observe.md)	 - Report differences between the deployed cluster and its config
 * [opencenter cluster pool](opencenter_cluster_pool.md)	 - Manage worker pools
 * [opencenter cluster provider](opencenter_cluster_provider.md)	 - Manage provider configuration
+* [opencenter cluster reconcile](opencenter_cluster_reconcile.md)	 - Push GitOps manifests and reconcile Flux resources
 * [opencenter cluster service](opencenter_cluster_service.md)	 - Manage cluster services
 * [opencenter cluster set](opencenter_cluster_set.md)	 - Set fields in an existing cluster configuration
 * [opencenter cluster status](opencenter_cluster_status.md)	 - Show cluster status information

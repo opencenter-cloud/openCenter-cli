@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter
+id: "opencenter"
 title: "Opencenter"
-sidebar_label: Opencenter
-description: Documentation for Opencenter.
+sidebar_label: "Opencenter"
+description: "opencenter CLI manages cluster configurations and GitOps scaffolding"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter
+
+**Purpose:** For operators, developers, documents `opencenter`: what it does, its flags, and its examples.
 
 opencenter CLI manages cluster configurations and GitOps scaffolding
 
@@ -26,7 +28,7 @@ Key Features:
   • Comprehensive validation and doctor checks
   • Organization-based multi-tenancy support
 
-Documentation: https://docs.opencenter.cloud
+Documentation: https://github.com/opencenter-cloud/opencenter-cli/blob/main/docs
 Support: https://github.com/opencenter-cloud/opencenter-cli/issues
 
 ```

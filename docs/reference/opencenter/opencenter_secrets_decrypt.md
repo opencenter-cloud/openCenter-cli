@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-decrypt
+id: "opencenter-secrets-decrypt"
 title: "Opencenter_Secrets_Decrypt"
-sidebar_label: Opencenter_Secrets_Decrypt
-description: Documentation for Opencenter_Secrets_Decrypt.
+sidebar_label: "Opencenter_Secrets_Decrypt"
+description: "Decrypt secrets in YAML files"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets decrypt
+
+**Purpose:** For operators, developers, documents `opencenter secrets decrypt`: what it does, its flags, and its examples.
 
 Decrypt secrets in YAML files
 

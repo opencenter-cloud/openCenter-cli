@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [networking, gateway, services]
 ---
+# Gateway
+
+**Purpose:** For platform engineers, operators, documents gateway service configuration, listener fields, and catalog rendering.
 
 > **Evidence:** `internal/config/services/gateway.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/registry.go`, and `internal/gitops/render_catalog.go`.
 

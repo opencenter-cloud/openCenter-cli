@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-completion-bash
+id: "opencenter-completion-bash"
 title: "Opencenter_Completion_Bash"
-sidebar_label: Opencenter_Completion_Bash
-description: Documentation for Opencenter_Completion_Bash.
+sidebar_label: "Opencenter_Completion_Bash"
+description: "Generate the autocompletion script for bash"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter completion bash
+
+**Purpose:** For operators, developers, documents `opencenter completion bash`: what it does, its flags, and its examples.
 
 Generate the autocompletion script for bash
 

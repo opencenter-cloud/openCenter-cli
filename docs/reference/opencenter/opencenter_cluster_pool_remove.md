@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-cluster-pool-remove"
 title: "Opencenter_Cluster_Pool_Remove"
 sidebar_label: "Opencenter_Cluster_Pool_Remove"
@@ -7,8 +6,11 @@ description: "Remove a worker pool from the cluster configuration"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster pool remove
+
+**Purpose:** For operators, developers, documents `opencenter cluster pool remove`: what it does, its flags, and its examples.
 
 Remove a worker pool from the cluster configuration
 

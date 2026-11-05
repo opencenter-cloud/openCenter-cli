@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Kubernetes version changes
 
+**Purpose:** For openCenter operators, shows how to update and validate the Kubernetes version value in an openCenter configuration.
+
 This checkout does not define a built-in Kubernetes upgrade subcommand.
 Kubernetes version is a configuration value, so the evidenced openCenter portion of a
 version change is:

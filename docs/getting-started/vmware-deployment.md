@@ -10,6 +10,8 @@ last_updated: 2026-09-26
 ---
 # Configure VMware nodes
 
+**Purpose:** For openCenter users, shows how to configure pre-provisioned VMware nodes in an openCenter cluster file.
+
 The VMware provider consumes pre-provisioned node entries. This page documents
 the configuration shape enforced by the provider validator; it does not claim
 to provision or resize VMs.

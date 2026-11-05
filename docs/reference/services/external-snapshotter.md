@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, storage administrators"
 tags: [storage, csi, snapshots, services]
 ---
+# External Snapshotter
+
+**Purpose:** For platform engineers, storage administrators, documents external snapshotter service configuration and built-in catalog ownership.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

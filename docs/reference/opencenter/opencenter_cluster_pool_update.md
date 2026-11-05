@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-10-20
 id: "opencenter-cluster-pool-update"
 title: "Opencenter_Cluster_Pool_Update"
 sidebar_label: "Opencenter_Cluster_Pool_Update"
@@ -7,8 +6,11 @@ description: "Update an existing worker pool"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster pool update
+
+**Purpose:** For operators, developers, documents `opencenter cluster pool update`: what it does, its flags, and its examples.
 
 Update an existing worker pool
 

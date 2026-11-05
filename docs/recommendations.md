@@ -10,6 +10,8 @@ last_updated: 2026-10-24
 ---
 # openCenter Cluster Deployment: Current Architecture, Commit Analysis & Optimization Recommendations
 
+**Purpose:** For openCenter operators, explains analysis of cluster deploy behavior with optimization recommendations for OIDC bootstrapping.
+
 This document reviews the `opencenter cluster deploy` command, analyzes the latest commits regarding OIDC confidential secrets and `gitops-base` tagging, and provides actionable recommendations to accelerate deployment and eliminate OIDC-related bootstrapping failures.
 
 ---

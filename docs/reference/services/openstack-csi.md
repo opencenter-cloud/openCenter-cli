@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, storage administrators"
 tags: [openstack, storage, csi, services]
 ---
+# OpenStack Cinder CSI
+
+**Purpose:** For platform engineers, storage administrators, documents OpenStack CSI service configuration and catalog ownership.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

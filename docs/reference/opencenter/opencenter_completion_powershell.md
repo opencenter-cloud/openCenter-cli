@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-completion-powershell
+id: "opencenter-completion-powershell"
 title: "Opencenter_Completion_Powershell"
-sidebar_label: Opencenter_Completion_Powershell
-description: Documentation for Opencenter_Completion_Powershell.
+sidebar_label: "Opencenter_Completion_Powershell"
+description: "Generate the autocompletion script for powershell"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter completion powershell
+
+**Purpose:** For operators, developers, documents `opencenter completion powershell`: what it does, its flags, and its examples.
 
 Generate the autocompletion script for powershell
 

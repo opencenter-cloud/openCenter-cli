@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [networking, gateway-api, services]
 ---
+# Gateway API
+
+**Purpose:** For platform engineers, operators, documents gateway API service configuration and built-in catalog rendering.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/registry.go`, and `internal/gitops/render_catalog.go`.
 

@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-10-27
 id: "opencenter-cluster-provider-openstack-apply"
 title: "Opencenter_Cluster_Provider_Openstack_Apply"
 sidebar_label: "Opencenter_Cluster_Provider_Openstack_Apply"
@@ -7,8 +6,11 @@ description: "apply OpenStack provider metadata and selections"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster provider openstack apply
+
+**Purpose:** For operators, developers, documents `opencenter cluster provider openstack apply`: what it does, its flags, and its examples.
 
 apply OpenStack provider metadata and selections
 

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-03
+last_updated: 2026-11-05
 id: cluster-deploy-openstack
 title: "cluster deploy — OpenStack Provider"
 sidebar_label: cluster deploy — OpenStack
@@ -117,7 +117,7 @@ Re-running `cluster deploy` reads saved state and skips steps already marked `su
 | `internal/cloud/openstack/preflight.go` | CLI availability + `auth_url` sanity checks. |
 
 ## Related
-
+- [cluster deploy — Step Matrix per Provider](cluster-deploy-steps.md) — the same step sequence as a per-provider matrix (OpenStack, Kind, VMware, Baremetal), with the gates that add or drop each step.
 - [Cluster Init Details](cluster-init-details.md) — how the config bootstrap reads from is created.
 - [Renderer Contract](rendering-contract.md) — how the GitOps repository bootstrap deploys into is generated.
 - `internal/cluster/magnum_bootstrap_provider.go` — contrast with a provider that has no OpenTofu/Kubespray step at all (see [Adding New Infrastructure Providers](adding-providers.md)).

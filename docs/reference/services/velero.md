@@ -8,6 +8,9 @@ doc_type: reference
 audience: "operators, platform engineers"
 tags: [velero, backup, services]
 ---
+# Velero
+
+**Purpose:** For operators, platform engineers, documents Velero service configuration, storage validation, secrets, and catalog ownership.
 
 > **Evidence:** `internal/config/services/velero.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/velero.go`, `internal/config/services/secrets_validator.go`, `internal/config/services/provider_registry.go`, and `internal/gitops/render_catalog.go`.
 

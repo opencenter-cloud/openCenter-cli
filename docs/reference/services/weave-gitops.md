@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [gitops, services]
 ---
+# Weave GitOps
+
+**Purpose:** For platform engineers, operators, documents weave GitOps service configuration, dependency records, and catalog ownership.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, `internal/config/v2/config.go`, `internal/config/services/dependency_validator.go`, `internal/services/plugins/registry.go`, and `internal/gitops/render_catalog.go`.
 

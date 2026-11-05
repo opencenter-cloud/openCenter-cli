@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-status
+id: "opencenter-secrets-status"
 title: "Opencenter_Secrets_Status"
-sidebar_label: Opencenter_Secrets_Status
-description: Documentation for Opencenter_Secrets_Status.
+sidebar_label: "Opencenter_Secrets_Status"
+description: "Show encryption status of YAML files"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets status
+
+**Purpose:** For operators, developers, documents `opencenter secrets status`: what it does, its flags, and its examples.
 
 Show encryption status of YAML files
 

@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets
+id: "opencenter-secrets"
 title: "Opencenter_Secrets"
-sidebar_label: Opencenter_Secrets
-description: Documentation for Opencenter_Secrets.
+sidebar_label: "Opencenter_Secrets"
+description: "Manage secrets across backends"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets
+
+**Purpose:** For operators, developers, documents `opencenter secrets`: what it does, its flags, and its examples.
 
 Manage secrets across backends
 

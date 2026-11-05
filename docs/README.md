@@ -6,7 +6,7 @@ description: Repository map and maintenance guide for openCenter CLI Markdown do
 doc_type: reference
 audience: "contributors, maintainers"
 tags: [documentation, maintenance, diataxis]
-last_updated: 2026-11-02
+last_updated: 2026-11-05
 ---
 
 # Documentation maintenance
@@ -18,8 +18,8 @@ changes. This is a repository guide, not a claim about a published site.
 ## Boundaries
 
 - [`docs/index.md`](index.md) is the canonical reader-facing source index.
-- [`README.md`](../README.md) is the concise project entry point.
-- [`llms.txt`](../llms.txt) is a code-oriented navigation aid; it should not
+- `README.md` at the repository root is the concise project entry point.
+- `llms.txt` at the repository root is a code-oriented navigation aid; it should not
   duplicate the reader-facing index or generated command reference.
 - [`CODEMAPS/INDEX.md`](CODEMAPS/INDEX.md) contains repository-internal code
   maps and is not reader-facing product documentation.
@@ -103,8 +103,7 @@ mise run test-docs-frontmatter
 
 The pull-request docs workflow audits changed Markdown files, checks that no
 page's `last_updated` predates its last body change, runs Vale, and runs
-`mise run test-docs`; see
-[`.github/workflows/docs-p0.yml`](../.github/workflows/docs-p0.yml).
+`mise run test-docs`; see `.github/workflows/docs-p0.yml` at the repository root.
 For generated command pages, use `mise run test-docs` after regeneration. This
 is a repository-only check: it does not publish or deploy a documentation site.
 Its Mermaid coverage is structural and fence-only; it does not render diagrams.
@@ -114,7 +113,7 @@ row in [Mise tasks](reference/mise-tasks.md), and that every command shown in a
 shell code block resolves against the built binary. Run `mise run build` first,
 or the command check skips.
 
-Two hooks in [`.pre-commit-config.yaml`](../.pre-commit-config.yaml) keep
+Two hooks in `.pre-commit-config.yaml` at the repository root keep
 frontmatter honest: `doc-last-updated-refresh` rewrites `last_updated` on every
 staged page, and `doc-frontmatter` audits the result. A content edit leaves the
 old date untouched and invisible in the diff, which is why the refresh is a hook
@@ -130,10 +129,11 @@ repository's unit, race, vet, BDD, property, and vulnerability checks.
 ## Useful entry points
 
 - [Reader-facing documentation index](index.md)
-- [Project README](../README.md)
+- `README.md` at the repository root (outside this documentation tree)
 - [CLI command reference](reference/cli-commands.md)
 - [Configuration schema](reference/configuration-schema.md)
 - [Glossary](glossary.md)
+- [cluster deploy — Step Matrix per Provider](contributing/cluster-deploy-steps.md)
 
 ## Codebase maps
 

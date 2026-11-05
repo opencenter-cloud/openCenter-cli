@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-settings-ide"
 title: "Opencenter_Settings_Ide"
 sidebar_label: "Opencenter_Settings_Ide"
@@ -7,8 +6,11 @@ description: "Generate v2 schema and editor setup for cluster configuration file
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter settings ide
+
+**Purpose:** For operators, developers, documents `opencenter settings ide`: what it does, its flags, and its examples.
 
 Generate v2 schema and editor setup for cluster configuration files
 

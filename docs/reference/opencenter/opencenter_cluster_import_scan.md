@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-import-scan
+id: "opencenter-cluster-import-scan"
 title: "Opencenter_Cluster_Import_Scan"
-sidebar_label: Opencenter_Cluster_Import_Scan
-description: Documentation for Opencenter_Cluster_Import_Scan.
+sidebar_label: "Opencenter_Cluster_Import_Scan"
+description: "Scan a customer GitOps repo and persist a cluster import artifact"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster import scan
+
+**Purpose:** For operators, developers, documents `opencenter cluster import scan`: what it does, its flags, and its examples.
 
 Scan a customer GitOps repo and persist a cluster import artifact
 

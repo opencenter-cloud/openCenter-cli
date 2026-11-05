@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [secrets, security, services]
 ---
+# Sealed Secrets
+
+**Purpose:** For platform engineers, operators, documents sealed Secrets service configuration and built-in catalog stages.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

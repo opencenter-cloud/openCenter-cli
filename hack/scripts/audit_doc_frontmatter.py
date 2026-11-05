@@ -331,6 +331,45 @@ def audit_file(path: Path, *, repo_root: Path | None = None) -> list[Issue]:
     return issues
 
 
+def duplicate_sidebar_labels(files: list[Path], repo_root: Path) -> list[Issue]:
+    """Report every page whose ``sidebar_label`` is shared by another page.
+
+    The comparison ignores case and surrounding whitespace: a site generator
+    renders the label as given, and readers do not treat "Architecture" and
+    "architecture" as two navigation entries.
+    """
+    by_label: dict[str, list[Path]] = {}
+    for path in files:
+        try:
+            frontmatter = parse_frontmatter(path.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        if not frontmatter:
+            continue
+        label = frontmatter.get("sidebar_label", "").strip()
+        if not label:
+            continue
+        by_label.setdefault(label.lower(), []).append(path)
+
+    issues: list[Issue] = []
+    for label, paths in sorted(by_label.items()):
+        if len(paths) < 2:
+            continue
+        ordered = sorted(paths)
+        for path in ordered:
+            others = ", ".join(
+                str(other.relative_to(repo_root)) for other in ordered if other != path
+            )
+            issues.append(
+                Issue(
+                    path,
+                    f'sidebar_label "{label}" duplicates another page ({others}); '
+                    "navigation cannot distinguish them",
+                )
+            )
+    return issues
+
+
 def is_iso_date(value: str) -> bool:
     """Return whether *value* is a real ISO-8601 calendar date."""
     if not _DATE_RE.fullmatch(value):
@@ -647,6 +686,12 @@ def main(argv: list[str]) -> int:
                 repo_root=repo_root if args.check_stale_timestamps else None,
             )
         )
+
+    # sidebar_label is what a site generator prints in its navigation. Two pages
+    # sharing one label -- as docs/architecture.md and docs/concepts/architecture.md
+    # both did, labelled "Architecture" -- are indistinguishable to a reader
+    # choosing between them, and per-file checks cannot see the collision.
+    all_issues.extend(duplicate_sidebar_labels(files, repo_root))
 
     if not all_issues:
         print(f"OK: {len(files)} files passed.")

@@ -11,6 +11,8 @@ tags: [services, platform, reference]
 
 # Platform services
 
+**Purpose:** For operators, platform engineers, documents Repository-backed directory of built-in platform services, generated defaults, and configuration references.
+
 > **Scope:** This index covers the service names in `internal/config/v2/defaults.go`, the built-in plugin registry, and the managed `alert-proxy` entry. Defaults come from `internal/config/v2/defaults.go`; service-specific fields come from registered Go config types. It does not infer versions or upstream behavior.
 
 Standard services are configured under `opencenter.services.<name>`. The descriptor for `alert-proxy` uses `opencenter.managed_services.alert-proxy`. All registered service configs embed the common fields in `internal/config/services/base.go`; see [Platform services architecture](../platform-services.md) for the surrounding configuration maps.

@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-backup-create
+id: "opencenter-cluster-backup-create"
 title: "Opencenter_Cluster_Backup_Create"
-sidebar_label: Opencenter_Cluster_Backup_Create
-description: Documentation for Opencenter_Cluster_Backup_Create.
+sidebar_label: "Opencenter_Cluster_Backup_Create"
+description: "Create a backup of cluster configuration"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster backup create
+
+**Purpose:** For operators, developers, documents `opencenter cluster backup create`: what it does, its flags, and its examples.
 
 Create a backup of cluster configuration
 

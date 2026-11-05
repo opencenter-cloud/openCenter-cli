@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [networking, cni, kube-ovn, services]
 ---
+# Kube-OVN
+
+**Purpose:** For platform engineers, operators, documents Kube-OVN service configuration and registered plugin validation.
 
 > **Evidence:** `internal/config/services/kube_ovn.go`, `internal/services/plugins/kube_ovn.go`, and `internal/services/plugins/registry.go`.
 

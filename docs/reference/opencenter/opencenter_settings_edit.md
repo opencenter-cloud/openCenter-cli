@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-settings-edit"
 title: "Opencenter_Settings_Edit"
 sidebar_label: "Opencenter_Settings_Edit"
@@ -7,8 +6,11 @@ description: "Edit the CLI settings file in your default editor"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter settings edit
+
+**Purpose:** For operators, developers, documents `opencenter settings edit`: what it does, its flags, and its examples.
 
 Edit the CLI settings file in your default editor
 

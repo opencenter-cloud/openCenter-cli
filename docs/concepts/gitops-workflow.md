@@ -525,6 +525,20 @@ FluxCD: Detects drift, scales back to 3
 4. Services: Rolled back
 ```
 
+**Why the manual sequence is rarely used.** Steps 3 and 4 above are what
+`opencenter cluster reconcile` automates, with three additions a hand-run
+`git push` does not give you: the staged set is scoped to the target cluster's
+overlay so a shared repository is not swept up wholesale, the staged content is
+scanned for unencrypted secrets and the commit is refused if any are found, and
+Flux is told to reconcile the affected source, Kustomizations, and HelmRelease
+immediately instead of waiting for its sync interval. The manual sequence remains
+correct when you want CI to observe the push, which is what `--push-only` is for.
+
+The command also closes the loop in the other direction: it derives the affected
+services from `git status`, so the reconciliation targets are computed from what
+actually changed rather than from what you remember editing. See
+[Reconcile GitOps Changes](../operations/reconcile-gitops-changes.md).
+
 ### Blue-Green Deployments
 
 **Pattern:** Deploy new version alongside old, switch traffic.
@@ -708,10 +722,12 @@ flux logs --follow
 
 ## Further Reading
 
-* [Architecture](architecture.md) - System design and components
+* [Architecture: rationale and design](architecture.md) - Why the system is designed this way
+* [CLI architecture (contributor reference)](../architecture.md) - Package boundaries and runtime wiring
 * [Security Model](security-model.md) - Security architecture
 * [Manage Secrets](../operations/manage-secrets.md) - SOPS and secrets management
 * [Troubleshoot Deployment](../operations/troubleshoot-deployment.md) - Fix reconciliation issues
+* [Reconcile GitOps Changes](../operations/reconcile-gitops-changes.md) - Push and drive Flux sync from the CLI
 
 ---
 

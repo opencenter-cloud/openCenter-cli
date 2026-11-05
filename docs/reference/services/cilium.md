@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [networking, cni, cilium, services]
 ---
+# Cilium
+
+**Purpose:** For platform engineers, operators, documents cilium service configuration and registered plugin behavior.
 
 > **Evidence:** `internal/config/services/cilium.go`, `internal/services/plugins/cilium.go`, and `internal/services/plugins/registry.go`.
 

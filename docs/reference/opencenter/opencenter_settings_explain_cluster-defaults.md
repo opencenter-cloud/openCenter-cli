@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-settings-explain-cluster-defaults"
 title: "Opencenter_Settings_Explain_Cluster Defaults"
 sidebar_label: "Opencenter_Settings_Explain_Cluster Defaults"
@@ -7,8 +6,11 @@ description: "Show how cluster_defaults values are applied to new cluster config
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter settings explain cluster-defaults
+
+**Purpose:** For operators, developers, documents `opencenter settings explain cluster-defaults`: what it does, its flags, and its examples.
 
 Show how cluster_defaults values are applied to new cluster configs
 

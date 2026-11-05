@@ -11,6 +11,8 @@ tags: [operations, openstack, destroy, storage]
 
 # Destroy an OpenStack cluster
 
+**Purpose:** For platform engineers, shows how to safely tear down an OpenStack cluster, remove cluster-owned Octavia load balancers, and clean up orphaned CSI Cinder volumes to avoid quota exhaustion.
+
 This guide covers tearing down an OpenStack cluster with `opencenter cluster destroy`,
 with particular attention to Cinder volumes provisioned by the CSI driver that are
 **not** removed by OpenTofu and must be cleaned up separately to avoid quota exhaustion.

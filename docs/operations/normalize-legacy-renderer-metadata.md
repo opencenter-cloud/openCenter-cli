@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Normalize a legacy configuration
 
+**Purpose:** For openCenter operators, shows how to normalize an existing openCenter configuration and review its generated defaults.
+
 Use `cluster normalize` to load an existing configuration with defaults and
 write missing fields back to the file. Existing values are preserved.
 

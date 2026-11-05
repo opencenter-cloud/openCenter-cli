@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [kafka, strimzi, services]
 ---
+# Kafka Cluster
+
+**Purpose:** For platform engineers, operators, documents kafka cluster service configuration and explicit descriptor templates.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, and `internal/services/descriptors/data/service-kafka-cluster.yaml`.
 

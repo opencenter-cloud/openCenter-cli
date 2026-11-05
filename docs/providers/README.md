@@ -10,6 +10,8 @@ last_updated: 2026-11-02
 ---
 # Infrastructure providers
 
+**Purpose:** For openCenter users, documents reference the infrastructure provider types and common lifecycle workflow exposed by openCenter.
+
 `cluster init --type` exposes these provider names:
 
 | Name | Configuration boundary evidenced in this checkout |

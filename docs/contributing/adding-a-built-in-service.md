@@ -10,6 +10,8 @@ tags: [services, configuration, rendering, secrets, gitops]
 ---
 # Adding a built-in service
 
+**Purpose:** For developers, maintainers, shows how to End-to-end contributor workflow for adding a built-in platform service.
+
 This is the short path from a service name to a typed, validated, rendered, and
 documented built-in service. For broader descriptor examples, see [Adding New
 Platform Services](adding-services.md).

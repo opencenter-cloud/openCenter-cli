@@ -10,6 +10,8 @@ last_updated: 2026-10-21
 ---
 # Add a worker pool
 
+**Purpose:** For openCenter operators, shows how to add a worker pool definition to an openCenter cluster configuration.
+
 Worker pools are configuration entries. The pool command writes the v2
 configuration; generation and deployment are separate operations.
 

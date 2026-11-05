@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [keycloak, identity, services]
 ---
+# Keycloak
+
+**Purpose:** For platform engineers, operators, documents keycloak service configuration, runtime validation, dependencies, and descriptor conditions.
 
 > **Evidence:** `internal/config/services/keycloak.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/keycloak.go`, `internal/config/services/dependency_validator.go`, `internal/config/services/deprecations.go`, `internal/services/plugins/registry.go`, and `internal/services/descriptors/data/service-keycloak.yaml`.
 

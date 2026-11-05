@@ -51,8 +51,9 @@ DEFAULT_IGNORES = (
 # auto-generated Cobra command references and skipped — the source of
 # truth is the Cobra command metadata, not the Markdown.
 AUTOGEN_TITLE_PREFIXES = (
-    "Opencenter_",
-    "opencenter ",  # rendered by older generator versions
+    "Opencenter_",      # title-cased underscored path, e.g. Opencenter_Cluster
+    "opencenter ",      # spaced command path: "opencenter cluster reconcile"
+    "opencenter",       # the root command page, titled exactly "opencenter"
 )
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
@@ -112,6 +113,115 @@ _VERB_BY_TYPE = {
     "explanation": "explains",
 }
 
+# Leading words that read naturally after the verb. Function words always
+# qualify; the rest are imperative verbs that open a how-to description
+# ("Manage secrets", "Configure networking"). A word not listed here keeps its
+# capitalisation, because a leading capital in a description is otherwise almost
+# always a product or organisation name rather than a sentence-start artefact.
+_LOWER_CASE_LEADING_WORDS = frozenset(
+    {
+        # function words
+        "a",
+        "all",
+        "an",
+        "and",
+        "as",
+        "at",
+        "by",
+        "every",
+        "for",
+        "from",
+        "how",
+        "in",
+        "into",
+        "of",
+        "on",
+        "or",
+        "the",
+        "to",
+        "using",
+        "what",
+        "with",
+        # imperative verbs that open how-to and tutorial descriptions
+        "add",
+        "audit",
+        "backup",
+        "build",
+        "check",
+        "choose",
+        "compare",
+        "complete",
+        "configure",
+        "create",
+        "define",
+        "defines",
+        "delete",
+        "deploy",
+        "detect",
+        "display",
+        "edit",
+        "enable",
+        "encrypt",
+        "ensure",
+        "explain",
+        "explains",
+        "expose",
+        "find",
+        "fix",
+        "generate",
+        "get",
+        "handle",
+        "import",
+        "include",
+        "includes",
+        "inspect",
+        "install",
+        "integrate",
+        "introduce",
+        "list",
+        "load",
+        "manage",
+        "map",
+        "migrate",
+        "monitor",
+        "normalize",
+        "override",
+        "pin",
+        "preview",
+        "provide",
+        "publish",
+        "push",
+        "read",
+        "reconcile",
+        "refresh",
+        "remove",
+        "render",
+        "report",
+        "restore",
+        "review",
+        "rotate",
+        "run",
+        "schedule",
+        "secure",
+        "select",
+        "set",
+        "setup",
+        "show",
+        "sign",
+        "sync",
+        "synchronize",
+        "track",
+        "trigger",
+        "update",
+        "upgrade",
+        "use",
+        "validate",
+        "verify",
+        "view",
+        "write",
+    }
+)
+
 
 def derive_purpose(meta: dict[str, str]) -> str:
     """Build a ``**Purpose:**`` line from the page frontmatter.
@@ -131,12 +241,14 @@ def derive_purpose(meta: dict[str, str]) -> str:
     if not description:
         return f"**Purpose:** For {audience}, {verb} the topic of this page."
 
-    # Lower-case the leading word of the description if it is a noun
-    # phrase ("How to …", "The …") so the sentence flows.  Keep the
-    # original capitalisation for explicit proper nouns.
+    # Only lower-case a small set of function words so the sentence flows after
+    # the verb ("documents the ...", "shows how to configure ..."). Everything else
+    # keeps its capitalisation: the previous rule lower-cased any title-cased word,
+    # which turned product names into common nouns -- six service pages shipped
+    # "documents loki service configuration" and similar.
     first, _, rest = description.partition(" ")
-    if first.istitle() and not first.isupper():
-        first = first[0].lower() + first[1:]
+    if first.lower() in _LOWER_CASE_LEADING_WORDS:
+        first = first.lower()
     body = first + (" " + rest if rest else "")
 
     # Avoid stutter where the verb redundantly restates the
@@ -180,13 +292,19 @@ def _strip_stutter(verb: str, body: str) -> str:
 # ---------------------------------------------------------------------------
 
 def title_after_frontmatter(body: str) -> str:
-    """Return the page H1 stripped of its leading ``# ``."""
+    """Return the page's first heading, stripped of its leading ``#`` run.
+
+    Any heading level counts. The Cobra generator renders command pages as
+    ``## opencenter cluster reconcile``, not an H1, so matching only ``# `` made
+    the auto-generated guard permanently inert -- it reported "0 auto-generated
+    pages skipped" while every generated page was in fact a candidate.
+    """
     for line in body.splitlines():
         s = line.strip()
         if not s:
             continue
-        if s.startswith("# "):
-            return s[2:].strip()
+        if s.startswith("#"):
+            return s.lstrip("#").strip()
         return ""
     return ""
 
@@ -208,12 +326,16 @@ def has_purpose_line(body: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def insert_purpose(text: str, purpose_line: str, title: str = "") -> str:
-    """Insert the Purpose line on the first blank line after the H1.
+    """Insert the Purpose line on the first blank line after the heading.
 
-    If the page does not have an H1 (some legacy how-to pages omit it),
-    we synthesise one from ``title`` so the inserted Purpose paragraph
-    has a heading to attach to.  If ``title`` is empty, the Purpose
-    paragraph is simply prepended after the frontmatter.
+    A page that already carries a Purpose line is returned unchanged, so curated
+    wording survives a re-run. The check lives here and not only in the caller
+    because the function is reachable directly, and an unguarded insert stacks a
+    second Purpose paragraph on top of the first.
+
+    If the page has no heading (some legacy how-to pages omit one), one is
+    synthesised from ``title`` so the inserted paragraph has something to attach
+    to. If ``title`` is empty, the paragraph is placed after the frontmatter.
     """
     fm = parse_frontmatter(text)
     if fm is None:
@@ -223,13 +345,15 @@ def insert_purpose(text: str, purpose_line: str, title: str = "") -> str:
     head = text[:fm_end]
     body = text[fm_end:]
 
+    if has_purpose_line(body):
+        return text
+
     lines = body.splitlines(keepends=True)
 
-    # If no H1 in the first 25 lines, prepend one (or the Purpose
-    # alone) at the top of the body.
+    # Any heading level anchors the line; the Cobra generator emits an H2.
     h1_index = -1
     for i, line in enumerate(lines[:25]):
-        if line.lstrip().startswith("# "):
+        if line.lstrip().startswith("#"):
             h1_index = i
             break
 

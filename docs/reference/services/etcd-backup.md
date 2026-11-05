@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [etcd, backup, services]
 ---
+# etcd Backup
+
+**Purpose:** For platform engineers, operators, documents etcd-backup configuration and descriptor conditional rendering.
 
 > **Evidence:** `internal/config/services/etcd_backup.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/default_services.go`, and `internal/services/descriptors/data/service-etcd-backup.yaml`.
 

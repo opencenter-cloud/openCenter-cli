@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-backup-list
+id: "opencenter-cluster-backup-list"
 title: "Opencenter_Cluster_Backup_List"
-sidebar_label: Opencenter_Cluster_Backup_List
-description: Documentation for Opencenter_Cluster_Backup_List.
+sidebar_label: "Opencenter_Cluster_Backup_List"
+description: "List backups for a cluster"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster backup list
+
+**Purpose:** For operators, developers, documents `opencenter cluster backup list`: what it does, its flags, and its examples.
 
 List backups for a cluster
 

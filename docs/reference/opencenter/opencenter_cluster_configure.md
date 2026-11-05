@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-configure
+id: "opencenter-cluster-configure"
 title: "Opencenter_Cluster_Configure"
-sidebar_label: Opencenter_Cluster_Configure
-description: Documentation for Opencenter_Cluster_Configure.
+sidebar_label: "Opencenter_Cluster_Configure"
+description: "Guided cluster configuration for supported providers"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster configure
+
+**Purpose:** For operators, developers, documents `opencenter cluster configure`: what it does, its flags, and its examples.
 
 Guided cluster configuration for supported providers
 

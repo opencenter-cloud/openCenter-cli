@@ -1,4 +1,4 @@
-last_updated: 2026-09-25
+last_updated: 2026-11-05
 
 # openCenter CLI repository navigation
 
@@ -21,6 +21,9 @@ reference, or evidence that a hosted documentation site is published.
 - [File locations](docs/reference/file-locations.md) — configuration and state
   paths.
 - [Glossary](docs/glossary.md) — terminology used by the repository docs.
+- [Error codes](docs/reference/error-codes.md) — the `E*` codes registered in
+  `internal/ui/error_formatter.go`, and which of them the CLI actually prints.
+- [Release notes](docs/release/index.md) — release notes index, newest first.
 
 ## Source-oriented maps
 

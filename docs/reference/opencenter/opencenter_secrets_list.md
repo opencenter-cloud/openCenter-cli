@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-list
+id: "opencenter-secrets-list"
 title: "Opencenter_Secrets_List"
-sidebar_label: Opencenter_Secrets_List
-description: Documentation for Opencenter_Secrets_List.
+sidebar_label: "Opencenter_Secrets_List"
+description: "List secrets associated with the current cluster"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets list
+
+**Purpose:** For operators, developers, documents `opencenter secrets list`: what it does, its flags, and its examples.
 
 List secrets associated with the current cluster
 

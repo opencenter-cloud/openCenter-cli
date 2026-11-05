@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-completion-fish
+id: "opencenter-completion-fish"
 title: "Opencenter_Completion_Fish"
-sidebar_label: Opencenter_Completion_Fish
-description: Documentation for Opencenter_Completion_Fish.
+sidebar_label: "Opencenter_Completion_Fish"
+description: "Generate the autocompletion script for fish"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter completion fish
+
+**Purpose:** For operators, developers, documents `opencenter completion fish`: what it does, its flags, and its examples.
 
 Generate the autocompletion script for fish
 

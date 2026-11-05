@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-settings-reset"
 title: "Opencenter_Settings_Reset"
 sidebar_label: "Opencenter_Settings_Reset"
@@ -7,8 +6,11 @@ description: "Reset settings to default values"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter settings reset
+
+**Purpose:** For operators, developers, documents `opencenter settings reset`: what it does, its flags, and its examples.
 
 Reset settings to default values
 

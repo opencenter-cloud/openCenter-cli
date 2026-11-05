@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-keys-check
+id: "opencenter-secrets-keys-check"
 title: "Opencenter_Secrets_Keys_Check"
-sidebar_label: Opencenter_Secrets_Keys_Check
-description: Documentation for Opencenter_Secrets_Keys_Check.
+sidebar_label: "Opencenter_Secrets_Keys_Check"
+description: "Check encryption key expiration status"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets keys check
+
+**Purpose:** For operators, developers, documents `opencenter secrets keys check`: what it does, its flags, and its examples.
 
 Check encryption key expiration status
 

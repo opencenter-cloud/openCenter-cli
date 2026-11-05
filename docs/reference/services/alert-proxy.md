@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [alerting, monitoring, managed-service, services]
 ---
+# Alert Proxy
+
+**Purpose:** For platform engineers, operators, documents managed alert-proxy configuration, secrets model, and descriptor conditions.
 
 > **Evidence:** `internal/config/services/alert_proxy.go`, `internal/config/v2/defaults.go`, `internal/services/plugins/registry.go`, `internal/services/plugins/default_services.go`, `internal/config/v2/config.go`, and `internal/services/descriptors/data/service-alert-proxy.yaml`.
 

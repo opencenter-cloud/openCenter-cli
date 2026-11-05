@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, security engineers"
 tags: [rbac, security, services]
 ---
+# RBAC Manager
+
+**Purpose:** For platform engineers, security engineers, documents RBAC Manager service configuration and built-in catalog rendering.
 
 > **Evidence:** `internal/config/services/default_services.go`, `internal/config/v2/defaults.go`, and `internal/gitops/render_catalog.go`.
 

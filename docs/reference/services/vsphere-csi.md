@@ -8,6 +8,9 @@ doc_type: reference
 audience: "platform engineers, operators"
 tags: [storage, vsphere, csi, services]
 ---
+# vSphere CSI Driver
+
+**Purpose:** For platform engineers, operators, documents vSphere CSI service configuration, storage classes, and catalog rendering.
 
 > **Evidence:** `internal/config/services/vsphere_csi.go`, `internal/config/v2/defaults.go`, `internal/config/v2/config.go`, and `internal/gitops/render_catalog.go`.
 

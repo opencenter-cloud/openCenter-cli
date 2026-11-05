@@ -10,6 +10,8 @@ last_updated: 2026-09-25
 ---
 # Use openCenter in CI
 
+**Purpose:** For platform engineers, shows how to use openCenter validation and generation commands in a CI job.
+
 The repository exposes validation and generation commands suitable for a CI
 job. Keep provider-mutating commands out of a job unless the job intentionally
 has those credentials and targets.

@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-lock
+id: "opencenter-cluster-lock"
 title: "Opencenter_Cluster_Lock"
-sidebar_label: Opencenter_Cluster_Lock
-description: Documentation for Opencenter_Cluster_Lock.
+sidebar_label: "Opencenter_Cluster_Lock"
+description: "Lock a cluster to prevent modifications"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster lock
+
+**Purpose:** For operators, developers, documents `opencenter cluster lock`: what it does, its flags, and its examples.
 
 Lock a cluster to prevent modifications
 

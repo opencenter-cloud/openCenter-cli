@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-plugins-list
+id: "opencenter-plugins-list"
 title: "Opencenter_Plugins_List"
-sidebar_label: Opencenter_Plugins_List
-description: Documentation for Opencenter_Plugins_List.
+sidebar_label: "Opencenter_Plugins_List"
+description: "List discovered external plugins"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter plugins list
+
+**Purpose:** For operators, developers, documents `opencenter plugins list`: what it does, its flags, and its examples.
 
 List discovered external plugins
 

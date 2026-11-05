@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-10-20
 id: "opencenter-cluster-pool-add"
 title: "Opencenter_Cluster_Pool_Add"
 sidebar_label: "Opencenter_Cluster_Pool_Add"
@@ -7,8 +6,11 @@ description: "Add a worker pool to the cluster configuration"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster pool add
+
+**Purpose:** For operators, developers, documents `opencenter cluster pool add`: what it does, its flags, and its examples.
 
 Add a worker pool to the cluster configuration
 

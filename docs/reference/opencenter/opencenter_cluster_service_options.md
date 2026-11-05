@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-service-options
+id: "opencenter-cluster-service-options"
 title: "Opencenter_Cluster_Service_Options"
-sidebar_label: Opencenter_Cluster_Service_Options
-description: Documentation for Opencenter_Cluster_Service_Options.
+sidebar_label: "Opencenter_Cluster_Service_Options"
+description: "Display available configuration options for a service"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster service options
+
+**Purpose:** For operators, developers, documents `opencenter cluster service options`: what it does, its flags, and its examples.
 
 Display available configuration options for a service
 

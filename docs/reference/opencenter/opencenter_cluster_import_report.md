@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-cluster-import-report
+id: "opencenter-cluster-import-report"
 title: "Opencenter_Cluster_Import_Report"
-sidebar_label: Opencenter_Cluster_Import_Report
-description: Documentation for Opencenter_Cluster_Import_Report.
+sidebar_label: "Opencenter_Cluster_Import_Report"
+description: "Render the latest cluster import artifact for a repo"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster import report
+
+**Purpose:** For operators, developers, documents `opencenter cluster import report`: what it does, its flags, and its examples.
 
 Render the latest cluster import artifact for a repo
 

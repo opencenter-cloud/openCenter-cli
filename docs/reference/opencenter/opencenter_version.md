@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-version
+id: "opencenter-version"
 title: "Opencenter_Version"
-sidebar_label: Opencenter_Version
-description: Documentation for Opencenter_Version.
+sidebar_label: "Opencenter_Version"
+description: "Display version and build information"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter version
+
+**Purpose:** For operators, developers, documents `opencenter version`: what it does, its flags, and its examples.
 
 Display version and build information
 

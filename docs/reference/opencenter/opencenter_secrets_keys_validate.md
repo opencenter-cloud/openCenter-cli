@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-keys-validate
+id: "opencenter-secrets-keys-validate"
 title: "Opencenter_Secrets_Keys_Validate"
-sidebar_label: Opencenter_Secrets_Keys_Validate
-description: Documentation for Opencenter_Secrets_Keys_Validate.
+sidebar_label: "Opencenter_Secrets_Keys_Validate"
+description: "Validate Age key configuration and SOPS setup"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets keys validate
+
+**Purpose:** For operators, developers, documents `opencenter secrets keys validate`: what it does, its flags, and its examples.
 
 Validate Age key configuration and SOPS setup
 

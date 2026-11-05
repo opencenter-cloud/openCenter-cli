@@ -1,5 +1,4 @@
 ---
-last_updated: 2026-09-24
 id: "opencenter-secrets-keys-reconcile"
 title: "Opencenter_Secrets_Keys_Reconcile"
 sidebar_label: "Opencenter_Secrets_Keys_Reconcile"
@@ -7,8 +6,11 @@ description: "Reconcile SOPS recipients with the key registry"
 doc_type: reference
 audience: "operators, developers"
 tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets keys reconcile
+
+**Purpose:** For operators, developers, documents `opencenter secrets keys reconcile`: what it does, its flags, and its examples.
 
 Reconcile SOPS recipients with the key registry
 

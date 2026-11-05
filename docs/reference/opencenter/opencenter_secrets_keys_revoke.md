@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-09-24
-id: opencenter-secrets-keys-revoke
+id: "opencenter-secrets-keys-revoke"
 title: "Opencenter_Secrets_Keys_Revoke"
-sidebar_label: Opencenter_Secrets_Keys_Revoke
-description: Documentation for Opencenter_Secrets_Keys_Revoke.
+sidebar_label: "Opencenter_Secrets_Keys_Revoke"
+description: "Revoke encryption keys for users or compromised keys"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter secrets keys revoke
+
+**Purpose:** For operators, developers, documents `opencenter secrets keys revoke`: what it does, its flags, and its examples.
 
 Revoke encryption keys for users or compromised keys
 

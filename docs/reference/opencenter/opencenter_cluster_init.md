@@ -1,14 +1,16 @@
 ---
-last_updated: 2026-10-30
-id: opencenter-cluster-init
+id: "opencenter-cluster-init"
 title: "Opencenter_Cluster_Init"
-sidebar_label: Opencenter_Cluster_Init
-description: Documentation for Opencenter_Cluster_Init.
+sidebar_label: "Opencenter_Cluster_Init"
+description: "Initialize a new cluster configuration (non-interactive)"
 doc_type: reference
-audience: "platform engineers"
-tags: [reference]
+audience: "operators, developers"
+tags: [cli, reference]
+last_updated: "2026-11-05"
 ---
 ## opencenter cluster init
+
+**Purpose:** For operators, developers, documents `opencenter cluster init`: what it does, its flags, and its examples.
 
 Initialize a new cluster configuration (non-interactive)
 

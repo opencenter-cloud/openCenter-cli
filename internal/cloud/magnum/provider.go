@@ -61,13 +61,13 @@ type Config struct {
 	ProjectName       string
 	ProjectDomainName string
 	Insecure          bool
-	ClusterTemplate             string
-	Labels                      map[string]string
-	Keypair                     string
-	MasterFlavorID              string
-	NodeFlavorID                string
-	CreateTimeout               int
-	MasterLBEnabled             *bool
+	ClusterTemplate   string
+	Labels            map[string]string
+	Keypair           string
+	MasterFlavorID    string
+	NodeFlavorID      string
+	CreateTimeout     int
+	MasterLBEnabled   *bool
 }
 
 // Request describes a new Magnum cluster.

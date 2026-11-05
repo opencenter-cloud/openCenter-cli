@@ -231,7 +231,9 @@ func (s *SetupService) Setup(ctx context.Context, opts SetupOptions) (*SetupResu
 		if err := s.configurationMgr.Save(ctx, &persisted); err != nil {
 			return err
 		}
-		s.configurationMgr.InvalidateCluster(ctx, configIdentifier)
+		if err := s.configurationMgr.InvalidateCluster(ctx, configIdentifier); err != nil {
+			return fmt.Errorf("invalidate cached cluster config: %w", err)
+		}
 		return nil
 	}
 

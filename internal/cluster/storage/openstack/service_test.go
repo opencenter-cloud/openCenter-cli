@@ -205,7 +205,7 @@ func TestPlanMimirS3RejectsPathEndpointBeforePreflight(t *testing.T) {
 		Adapter: adapter,
 	})
 	require.Error(t, err)
-	require.ErrorContains(t, err, "Mimir S3 endpoint must not contain a path")
+	require.ErrorContains(t, err, "mimir S3 endpoint must not contain a path")
 	require.Zero(t, adapter.preflightCalls)
 	require.Zero(t, adapter.containers)
 	require.Zero(t, adapter.appCreates)
@@ -252,7 +252,7 @@ func TestPlanMimirS3RejectsCoincidentBuckets(t *testing.T) {
 		Config: cfg, Options: Options{Service: "mimir", Backend: "s3", Cluster: "prod"}, Adapter: adapter,
 	})
 	require.Error(t, err)
-	require.ErrorContains(t, err, "Mimir S3 bucket names must be distinct")
+	require.ErrorContains(t, err, "mimir S3 bucket names must be distinct")
 	require.Empty(t, planned.Result.RemoteActions)
 	require.Zero(t, adapter.preflightCalls)
 }

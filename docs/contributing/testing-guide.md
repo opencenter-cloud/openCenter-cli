@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-02
+last_updated: 2026-11-05
 id: testing-guide
 title: "Testing Guide"
 sidebar_label: Testing Guide
@@ -221,7 +221,7 @@ dlv test ./internal/config -- -test.run TestValidateClusterName
 
 CI coverage is defined entirely by `.github/workflows/*.yml`; see [GitHub Actions Workflows](../reference/github-actions-workflows.md) for the complete, verified breakdown of triggers, jobs, and steps. In short:
 
-* `test.yml` runs on pull requests and pushes to `main`: a `go-test` job that directly runs `go test ./internal/... ./cmd/... -count=1 -race` and `go vet ./...`, plus an independent `property-tests` job using the same package scope and `-run 'TestProperty'`.
+* `test.yml` runs on pull requests and pushes to `main`: a `lint` job that runs the pinned `golangci-lint` (`mise run lint`) against `.golangci.yml`, a `go-test` job that directly runs `go test ./internal/... ./cmd/... -count=1 -race` and `go vet ./...`, plus an independent `property-tests` job using the same package scope and `-run 'TestProperty'`.
 * `pre-commit.yaml` runs the pre-commit hook set for changed files on every pull request.
 * `vulncheck.yml` runs `govulncheck ./...` on pull requests, on a weekly schedule, and on manual dispatch.
 * `docs-p0.yml` runs for pull requests that touch Markdown files; it audits the changed files with `audit_doc_frontmatter.py --strict`, checks every page's `last_updated` against its last body change, runs Vale, and runs `mise run test-docs`.

@@ -729,7 +729,7 @@ func executeSOPSSecretsDecrypt(ctx context.Context, out, errOut io.Writer, keyFi
 		// Replace original file with decrypted version
 		if err := os.Rename(tempFile, file); err != nil {
 			fmt.Fprintf(errOut, "❌ Failed to replace %s with decrypted version: %v\n", file, err)
-			os.Remove(tempFile) // Clean up temp file
+			_ = os.Remove(tempFile) // Clean up temp file
 			continue
 		}
 

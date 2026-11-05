@@ -336,7 +336,7 @@ func (w *GitOpsWorkspace) GetFileCount() int {
 	defer w.mu.RUnlock()
 
 	count := 0
-	filepath.Walk(w.RootDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(w.RootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors
 		}

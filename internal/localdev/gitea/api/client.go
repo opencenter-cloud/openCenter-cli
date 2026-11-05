@@ -127,7 +127,7 @@ func (c *Client) request(ctx context.Context, method, requestPath string, auth A
 	if err != nil {
 		return fmt.Errorf("%s %s: %w", method, requestPath, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	allowed := map[int]bool{}
 	for _, status := range expectedStatus {

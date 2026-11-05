@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/secretartifacts"
 )
@@ -117,11 +116,6 @@ type PromoteResult struct {
 	Renamed, Adopted                                           []string
 	BackupPaths                                                []string
 	Warnings                                                   []string
-}
-
-type scannedOverlay struct {
-	files    map[string][]byte
-	warnings []string
 }
 
 func promoteOverlay(workspaceOverlayDir, targetOverlayDir, clusterName string, opts PromoteOptions) (*PromoteResult, error) {
@@ -663,17 +657,6 @@ func staleOwnershipPaths(known map[string]GeneratedFileInfo, planned map[string]
 	return existingPaths, records
 }
 
-func mergedManifest(cluster, global GeneratedManifest) GeneratedManifest {
-	merged := GeneratedManifest{Version: ownershipManifestVersion, Scope: "cluster", Identity: cluster.Identity, FileRecords: make(map[string]GeneratedFileInfo, len(cluster.FileRecords)+len(global.FileRecords))}
-	for path, record := range cluster.FileRecords {
-		merged.FileRecords[path] = record
-	}
-	for path, record := range global.FileRecords {
-		merged.FileRecords[path] = record
-	}
-	return merged
-}
-
 // syncOwnedSecretTreePaths returns the repository-relative paths the secret
 // artifact ledger claims, whether or not the bytes on disk still match the
 // recorded hash. loadOwnedSecretTreePaths is the verified subset; this is the
@@ -1121,13 +1104,13 @@ func atomicWriteVerified(root, dst string, data []byte, mode os.FileMode) error 
 		return err
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Chmod(mode.Perm()); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Close(); err != nil {
@@ -1190,26 +1173,6 @@ func writeGeneratedManifest(root string, _ GeneratedManifest) error {
 		return fmt.Errorf("refusing to overwrite symlinked generated manifest %s", path)
 	}
 	return fmt.Errorf("legacy generated manifest %s is unsupported", path)
-}
-
-func writeAdoptionBackups(target string, files []backupFile) ([]string, error) {
-	if len(files) == 0 {
-		return nil, nil
-	}
-	repoRoot := filepath.Dir(filepath.Dir(filepath.Dir(target)))
-	backupRoot := filepath.Join(repoRoot, ".opencenter-backup", time.Now().UTC().Format("20060102T150405.000000000Z07:00"))
-	paths := make([]string, 0, len(files))
-	for _, file := range files {
-		path := filepath.Join(backupRoot, filepath.FromSlash(file.path))
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return nil, fmt.Errorf("create backup for %s: %w", file.path, err)
-		}
-		if err := os.WriteFile(path, file.data, file.mode.Perm()); err != nil {
-			return nil, fmt.Errorf("write backup for %s: %w", file.path, err)
-		}
-		paths = append(paths, path)
-	}
-	return paths, nil
 }
 
 func detectSafeRenames(pruned, added []string, planned map[string][]byte, existing map[string][]byte, manifest map[string]GeneratedFileInfo) []string {

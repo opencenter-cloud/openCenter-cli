@@ -273,12 +273,6 @@ func (cl *ConfigLoader) applyDefaults(cfg *Config) error {
 	return cl.hydrator.Hydrate(cfg, provider, region)
 }
 
-// validate performs multi-layered validation.
-// Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7
-func (cl *ConfigLoader) validate(cfg *Config) error {
-	return cl.validator.Validate(cfg)
-}
-
 // freeze marks the configuration as immutable (ready for use).
 func (cl *ConfigLoader) freeze(cfg *Config) {
 	// In Go, we don't have built-in immutability, but we can document

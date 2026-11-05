@@ -116,7 +116,7 @@ func TestDefaultServiceMapEntriesEmbedBaseConfig(t *testing.T) {
 // concreteType returns the dereferenced struct type behind a service config.
 func concreteType(serviceCfg any) reflect.Type {
 	typ := reflect.TypeOf(serviceCfg)
-	for typ != nil && typ.Kind() == reflect.Ptr {
+	for typ != nil && typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 	return typ

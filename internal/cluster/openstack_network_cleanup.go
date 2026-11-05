@@ -78,8 +78,8 @@ func (s *gophercloudOpenStackNetworkCleanupService) CleanupClusterLoadBalancers(
 	// gophercloud v1.14.1 threads ProviderClient.Context into every request,
 	// so a canceled destroy context aborts in-flight HTTP calls instead of
 	// blocking until the 30s transport timeout expires.
-	if s.loadBalancerClient != nil && s.loadBalancerClient.ProviderClient != nil {
-		s.loadBalancerClient.ProviderClient.Context = ctx
+	if lb := s.loadBalancerClient; lb != nil && lb.ProviderClient != nil {
+		lb.Context = ctx
 	}
 
 	page, err := loadbalancers.List(s.loadBalancerClient, loadbalancers.ListOpts{VipNetworkID: networkID}).AllPages()

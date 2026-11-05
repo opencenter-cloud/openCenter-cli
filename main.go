@@ -50,7 +50,7 @@ func main() {
 	if err != nil {
 		// If container setup fails, print error and exit
 		// We can't use the logger here since it's in the container
-		os.Stderr.WriteString("Failed to initialize application: " + err.Error() + "\n")
+		_, _ = os.Stderr.WriteString("Failed to initialize application: " + err.Error() + "\n")
 		os.Exit(1)
 	}
 
@@ -61,7 +61,7 @@ func main() {
 	if err := cmd.ExecuteWithContext(ctx, version); err != nil {
 		// Shutdown container before exiting
 		if shutdownErr := container.Shutdown(); shutdownErr != nil {
-			os.Stderr.WriteString("Failed to shutdown container: " + shutdownErr.Error() + "\n")
+			_, _ = os.Stderr.WriteString("Failed to shutdown container: " + shutdownErr.Error() + "\n")
 		}
 
 		var cnfErr *v2.ConfigNotFoundError
@@ -77,7 +77,7 @@ func main() {
 
 	// Shutdown container on successful exit
 	if err := container.Shutdown(); err != nil {
-		os.Stderr.WriteString("Failed to shutdown container: " + err.Error() + "\n")
+		_, _ = os.Stderr.WriteString("Failed to shutdown container: " + err.Error() + "\n")
 		os.Exit(1)
 	}
 }

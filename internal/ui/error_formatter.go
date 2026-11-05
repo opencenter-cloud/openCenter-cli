@@ -46,6 +46,26 @@ type ErrorInfo struct {
 	Severity    Severity
 }
 
+// DocumentationBaseURL is the canonical location of the reader-facing
+// documentation. The project publishes no hosted documentation site, so this
+// points at the documentation tree as it appears in the repository on GitHub.
+// Terminal output cannot render relative paths as links, which is why the
+// absolute blob URL is used rather than a repository-relative path.
+const DocumentationBaseURL = "https://github.com/opencenter-cloud/opencenter-cli/blob/main/docs"
+
+// SopsEncryptionDocsURL points at the SOPS/Age encryption guidance. The
+// secrets commands return it in their error text so a user hitting an
+// encryption problem is sent somewhere that exists. The anchor is the lower-cased
+// "Encrypt, decrypt, and inspect files" heading in docs/operations/manage-secrets.md.
+const SopsEncryptionDocsURL = DocumentationBaseURL + "/operations/manage-secrets.md#encrypt-decrypt-and-inspect-files"
+
+// ErrorCodeDocsURL returns the documentation anchor for a registered error
+// code. Every code in the registry must have a matching row in
+// docs/reference/error-codes.md; TestErrorCodesAreDocumented enforces that.
+func ErrorCodeDocsURL(code string) string {
+	return DocumentationBaseURL + "/reference/error-codes.md#" + strings.ToLower(code)
+}
+
 // ErrorFormatter formats errors with credential masking
 // Requirements: 3.5, 15.1, 15.2, 15.4, 15.8
 type ErrorFormatter interface {
@@ -362,7 +382,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Add region to your configuration:",
 		FixCommand:  "opencenter cluster set {cluster} opencenter.infrastructure.cloud.openstack.region=RegionOne",
 		Hint:        "List available regions: openstack region list",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E1001",
+		DocsURL:     ErrorCodeDocsURL("E1001"),
 		Severity:    SeverityCritical,
 	}
 
@@ -373,7 +393,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Generate a new SOPS key:",
 		FixCommand:  "opencenter secrets keys generate",
 		Hint:        "Check if the key file exists: ls -la ~/.config/opencenter/clusters/{org}/{cluster}/secrets/age/",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E1002",
+		DocsURL:     ErrorCodeDocsURL("E1002"),
 		Severity:    SeverityCritical,
 	}
 
@@ -384,7 +404,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Use a valid cluster name:",
 		FixCommand:  "opencenter cluster init my-cluster",
 		Hint:        "Valid examples: my-cluster, prod_cluster, cluster123",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E1003",
+		DocsURL:     ErrorCodeDocsURL("E1003"),
 		Severity:    SeverityCritical,
 	}
 
@@ -395,7 +415,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Run validation to see specific errors:",
 		FixCommand:  "opencenter cluster validate {cluster}",
 		Hint:        "Edit the cluster configuration after reviewing validation output.",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E1004",
+		DocsURL:     ErrorCodeDocsURL("E1004"),
 		Severity:    SeverityCritical,
 	}
 
@@ -406,7 +426,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Edit the configuration and add the required field:",
 		FixCommand:  "opencenter cluster edit {cluster}",
 		Hint:        "Run validation again after adding the missing field.",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E1005",
+		DocsURL:     ErrorCodeDocsURL("E1005"),
 		Severity:    SeverityCritical,
 	}
 
@@ -417,7 +437,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Description: "The input contains shell metacharacters that could be used for command injection.",
 		Fix:         "Remove shell metacharacters from the input:",
 		Hint:        "Avoid using characters like: ; | & < > $ ` \\ in names and paths",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E2001",
+		DocsURL:     ErrorCodeDocsURL("E2001"),
 		Severity:    SeverityCritical,
 	}
 
@@ -427,7 +447,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Description: "The template contains dangerous functions that are not allowed.",
 		Fix:         "Remove dangerous template functions:",
 		Hint:        "Allowed functions: upper, lower, trim, replace, split, join, printf, quote",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E2002",
+		DocsURL:     ErrorCodeDocsURL("E2002"),
 		Severity:    SeverityCritical,
 	}
 
@@ -437,7 +457,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Description: "The path contains sequences that could be used for path traversal attacks.",
 		Fix:         "Use a path without .. or absolute paths:",
 		Hint:        "Paths should be relative to the configuration directory",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E2003",
+		DocsURL:     ErrorCodeDocsURL("E2003"),
 		Severity:    SeverityCritical,
 	}
 
@@ -448,7 +468,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Set EDITOR to a safe editor:",
 		FixCommand:  "export EDITOR=vim",
 		Hint:        "Allowed editors: vim, nano, emacs, vi, code, subl",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E2004",
+		DocsURL:     ErrorCodeDocsURL("E2004"),
 		Severity:    SeverityCritical,
 	}
 
@@ -460,7 +480,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Check network connectivity and retry:",
 		FixCommand:  "ping {host}",
 		Hint:        "Verify firewall rules and network configuration",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E3001",
+		DocsURL:     ErrorCodeDocsURL("E3001"),
 		Severity:    SeverityWarning,
 	}
 
@@ -471,7 +491,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Verify the service is running:",
 		FixCommand:  "systemctl status {service}",
 		Hint:        "Check if the service is listening on the expected port",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E3002",
+		DocsURL:     ErrorCodeDocsURL("E3002"),
 		Severity:    SeverityWarning,
 	}
 
@@ -483,7 +503,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Verify the path exists:",
 		FixCommand:  "ls -la {path}",
 		Hint:        "Check for typos in the file path",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E4001",
+		DocsURL:     ErrorCodeDocsURL("E4001"),
 		Severity:    SeverityCritical,
 	}
 
@@ -494,7 +514,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Grant appropriate permissions:",
 		FixCommand:  "chmod +w {path}",
 		Hint:        "Check file ownership: ls -la {path}",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E4002",
+		DocsURL:     ErrorCodeDocsURL("E4002"),
 		Severity:    SeverityCritical,
 	}
 
@@ -505,7 +525,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Free up disk space:",
 		FixCommand:  "df -h",
 		Hint:        "Remove old logs or unused files",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E4003",
+		DocsURL:     ErrorCodeDocsURL("E4003"),
 		Severity:    SeverityCritical,
 	}
 
@@ -517,18 +537,18 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Verify OpenStack credentials and connectivity:",
 		FixCommand:  "openstack server list",
 		Hint:        "Run the local prerequisite audit: opencenter cluster doctor",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E5001",
+		DocsURL:     ErrorCodeDocsURL("E5001"),
 		Severity:    SeverityCritical,
 	}
 
 	f.errorRegistry["E5002"] = ErrorInfo{
 		Code:        "E5002",
-		Title:       "AWS API error",
-		Description: "An error occurred while communicating with the AWS API.",
-		Fix:         "Verify AWS credentials:",
-		FixCommand:  "aws sts get-caller-identity",
-		Hint:        "Check AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E5002",
+		Title:       "Unsupported provider API error",
+		Description: "An error occurred while communicating with a provider API. AWS, GCP, and Azure are not available providers and are rejected at configuration time.",
+		Fix:         "Select a supported provider (OpenStack, VMware, Baremetal, Kind, Magnum):",
+		FixCommand:  "opencenter cluster set {cluster} opencenter.infrastructure.provider=openstack",
+		Hint:        "See docs/reference/providers.md for the provider boundary",
+		DocsURL:     ErrorCodeDocsURL("E5002"),
 		Severity:    SeverityCritical,
 	}
 
@@ -538,7 +558,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Description: "Authentication with the cloud provider failed.",
 		Fix:         "Verify your credentials are correct:",
 		Hint:        "Check credential expiration and permissions",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E5003",
+		DocsURL:     ErrorCodeDocsURL("E5003"),
 		Severity:    SeverityCritical,
 	}
 
@@ -550,7 +570,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Verify cluster is accessible:",
 		FixCommand:  "opencenter cluster describe {cluster}",
 		Hint:        "Check cloud provider connectivity",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E6001",
+		DocsURL:     ErrorCodeDocsURL("E6001"),
 		Severity:    SeverityWarning,
 	}
 
@@ -561,7 +581,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Fix:         "Check disk space and permissions:",
 		FixCommand:  "df -h && ls -la ~/.config/opencenter/backups/",
 		Hint:        "Ensure the backup directory is writable",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E6002",
+		DocsURL:     ErrorCodeDocsURL("E6002"),
 		Severity:    SeverityCritical,
 	}
 
@@ -569,10 +589,10 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Code:        "E6003",
 		Title:       "Lock acquisition failed",
 		Description: "Unable to acquire a lock for the cluster operation.",
-		Fix:         "Wait for the current operation to complete or break the lock:",
-		FixCommand:  "opencenter cluster lock break {cluster}",
+		Fix:         "Wait for the current operation to complete, or unlock the cluster:",
+		FixCommand:  "opencenter cluster unlock {cluster} --reason \"stale lock\"",
 		Hint:        "Check if another operation is in progress",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E6003",
+		DocsURL:     ErrorCodeDocsURL("E6003"),
 		Severity:    SeverityWarning,
 	}
 
@@ -582,7 +602,7 @@ func (f *DefaultErrorFormatter) initializeErrorRegistry() {
 		Description: "The operation failed after exhausting all retry attempts.",
 		Fix:         "Check the underlying error and retry manually:",
 		Hint:        "The service may be experiencing issues",
-		DocsURL:     "https://docs.opencenter.cloud/errors/E6004",
+		DocsURL:     ErrorCodeDocsURL("E6004"),
 		Severity:    SeverityCritical,
 	}
 }

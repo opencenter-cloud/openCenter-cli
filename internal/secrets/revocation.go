@@ -205,7 +205,7 @@ func (r *DefaultKeyRevoker) RevokeByUser(ctx context.Context, opts RevokeOptions
 	// Remove the same computed recipient set that passed the precheck.
 	remainingKeys, err = r.removeKeysFromSOPSConfig(ctx, opts.Cluster, userKeys, keys, remainingKeys)
 	if err != nil {
-		rollbackMgr.Rollback()
+		_ = rollbackMgr.Rollback()
 		return nil, fmt.Errorf("failed to update .sops.yaml: %w", err)
 	}
 
@@ -395,7 +395,7 @@ func (r *DefaultKeyRevoker) RevokeByFingerprint(ctx context.Context, opts Revoke
 	// Remove the same computed recipient set that passed the precheck.
 	remainingKeys, err = r.removeKeysFromSOPSConfig(ctx, opts.Cluster, targets, keys, remainingKeys)
 	if err != nil {
-		rollbackMgr.Rollback()
+		_ = rollbackMgr.Rollback()
 		return nil, fmt.Errorf("failed to update .sops.yaml: %w", err)
 	}
 

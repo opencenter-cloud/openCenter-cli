@@ -5,6 +5,32 @@ repos:
       - id: gitleaks
   - repo: local
     hooks:
+      - id: gofmt
+        name: gofmt (staged Go files)
+        # Stock `gofmt -l` lists unformatted files but always exits 0, and the
+        # mise-pinned Go toolchain (go = "1.27.3" in .mise.toml) has no --fail
+        # flag. This wrapper prints offending paths and exits 1 so the commit is
+        # blocked. gofmt is resolved via the mise shim on PATH, matching the vale
+        # hook convention below.
+        entry: hack/scripts/check_gofmt.sh
+        language: system
+        types: [go]
+        require_serial: true
+      - id: golangci-lint
+        name: golangci-lint (whole module)
+        # Runs the pinned golangci-lint (golangci-lint = "2.14.0" in .mise.toml)
+        # against .golangci.yml, mirroring the `lint` job in
+        # .github/workflows/test.yml so a violation is caught at commit time
+        # rather than at PR time. golangci-lint operates on packages, not
+        # individual files, so pass_filenames is false and the whole module is
+        # linted serially; the uncapped flags disable golangci-lint's default
+        # 50-issues-per-run and 3-per-same-linter limits so a backlog cannot
+        # hide behind the cap. The hook only fires when a .go file is staged.
+        entry: golangci-lint run ./... --max-issues-per-linter 0 --max-same-issues 0
+        language: system
+        types: [go]
+        pass_filenames: false
+        require_serial: true
       - id: staged-documentation-policy
         name: Require maintained docs for public behavior changes
         entry: python3 hack/scripts/check_staged_docs.py

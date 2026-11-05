@@ -113,6 +113,7 @@ func configSecretCatalog() []configSecretEntry {
 			Present: func(cfg *v2.Config) bool {
 				// The named credential maps are the live storage; the legacy flat
 				// fields count only while they still hold a value.
+				//nolint:staticcheck // SA1019: legacy flat fields are read deliberately for migration compatibility.
 				return len(cfg.Secrets.CertManager.AWS) > 0 || len(cfg.Secrets.CertManager.Cloudflare) > 0 ||
 					cfg.Secrets.CertManager.AWSAccessKey != "" || cfg.Secrets.CertManager.AWSSecretAccessKey != "" ||
 					cfg.Secrets.CertManager.CloudflareAPIToken != ""

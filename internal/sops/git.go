@@ -78,7 +78,7 @@ func (g *GitIntegrator) CommitEncryptedFiles(ctx context.Context, cfg *v2.Config
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	if err := os.Chdir(g.repoPath); err != nil {
 		return fmt.Errorf("failed to change to repository directory: %w", err)
@@ -220,7 +220,7 @@ func (g *GitIntegrator) PushChanges(ctx context.Context, remote, branch string) 
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	if err := os.Chdir(g.repoPath); err != nil {
 		return fmt.Errorf("failed to change to repository directory: %w", err)
@@ -296,7 +296,7 @@ func (g *GitIntegrator) GetCurrentBranch(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	if err := os.Chdir(g.repoPath); err != nil {
 		return "", fmt.Errorf("failed to change to repository directory: %w", err)
@@ -325,7 +325,7 @@ func (g *GitIntegrator) GetRemoteURL(ctx context.Context, remote string) (string
 	if err != nil {
 		return "", fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	if err := os.Chdir(g.repoPath); err != nil {
 		return "", fmt.Errorf("failed to change to repository directory: %w", err)
@@ -350,7 +350,7 @@ func (g *GitIntegrator) CheckForChanges(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	if err := os.Chdir(g.repoPath); err != nil {
 		return false, fmt.Errorf("failed to change to repository directory: %w", err)
@@ -402,7 +402,7 @@ Thumbs.db
 		if err != nil {
 			return fmt.Errorf("failed to open .gitignore: %w", err)
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		if _, err := file.WriteString("\n" + gitignoreContent); err != nil {
 			return fmt.Errorf("failed to append to .gitignore: %w", err)
@@ -447,7 +447,7 @@ func (g *GitIntegrator) ConfigureSOPSDiff(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	if err := os.Chdir(g.repoPath); err != nil {
 		return fmt.Errorf("failed to change to repository directory: %w", err)
@@ -472,7 +472,7 @@ func (g *GitIntegrator) ValidateGitConfig(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	if err := os.Chdir(g.repoPath); err != nil {
 		return fmt.Errorf("failed to change to repository directory: %w", err)
@@ -522,7 +522,7 @@ func (g *GitIntegrator) GetLastCommitHash(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	if err := os.Chdir(g.repoPath); err != nil {
 		return "", fmt.Errorf("failed to change to repository directory: %w", err)

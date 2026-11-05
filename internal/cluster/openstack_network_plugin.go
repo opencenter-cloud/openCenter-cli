@@ -97,7 +97,7 @@ func (p *openstackBootstrapProvider) installOpenStackNetworkPlugin(ctx context.C
 	if err != nil {
 		return fmt.Errorf("create temporary CNI install directory: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Helm otherwise uses the user's global cache/config/data directories. On
 	// macOS those directories may be protected by filesystem permissions, and

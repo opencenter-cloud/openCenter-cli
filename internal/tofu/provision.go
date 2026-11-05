@@ -77,7 +77,7 @@ func Provision(cfg v2.Config) error {
 		return fmt.Errorf("failed to create provider.tf: %w", err)
 	}
 	if err := provision.Templates.ExecuteTemplate(pf, templateName, cfg); err != nil {
-		pf.Close()
+		_ = pf.Close()
 		return fmt.Errorf("failed to execute %s template: %w", templateName, err)
 	}
 	if err := pf.Close(); err != nil {

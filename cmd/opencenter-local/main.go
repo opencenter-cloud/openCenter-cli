@@ -233,7 +233,7 @@ func configuredRustFSSettings(cmd *cobra.Command, defaults func() rustfs.Setting
 	if err != nil {
 		return rustfs.Settings{}, fmt.Errorf("open RustFS credentials file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	credentials, err := rustfs.ParseCredentials(file)
 	if err != nil {
 		return rustfs.Settings{}, err

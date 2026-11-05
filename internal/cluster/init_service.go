@@ -389,7 +389,7 @@ func (s *InitService) checkExistingCluster(clusterPaths *paths.ClusterPaths, clu
 
 // loadOrCreateConfig loads configuration from file or creates default
 func (s *InitService) loadOrCreateConfig(opts InitOptions) (*v2.Config, map[string]any, error) {
-	cfg := &v2.Config{}
+	var cfg *v2.Config
 	var configMap map[string]any
 
 	if opts.ConfigFile != "" {

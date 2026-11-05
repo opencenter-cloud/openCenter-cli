@@ -171,7 +171,7 @@ func getHostnameField(cfg *Config, field string) (string, bool) {
 // service block entirely is exactly that case.
 func fieldOf[T any](cfg T, get func(T) string) string {
 	value := reflect.ValueOf(cfg)
-	if !value.IsValid() || (value.Kind() == reflect.Ptr && value.IsNil()) {
+	if !value.IsValid() || (value.Kind() == reflect.Pointer && value.IsNil()) {
 		return ""
 	}
 	return get(cfg)

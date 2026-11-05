@@ -378,10 +378,10 @@ func ValidateMimirS3Endpoint(raw string) error {
 	}
 	parsed, _ := url.Parse(strings.TrimSpace(raw))
 	if parsed.Path != "" && parsed.Path != "/" {
-		return fmt.Errorf("Mimir S3 endpoint must not contain a path; configure the absolute root endpoint and use bucket_lookup_type: path for path-style buckets")
+		return fmt.Errorf("mimir S3 endpoint must not contain a path; configure the absolute root endpoint and use bucket_lookup_type: path for path-style buckets")
 	}
 	if parsed.RawQuery != "" || parsed.Fragment != "" {
-		return fmt.Errorf("Mimir S3 endpoint must not contain a query or fragment")
+		return fmt.Errorf("mimir S3 endpoint must not contain a query or fragment")
 	}
 	return nil
 }

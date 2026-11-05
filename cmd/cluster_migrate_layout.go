@@ -943,7 +943,7 @@ func copyLayoutFile(from, to string, mode os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	dst, err := os.OpenFile(to, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
 	if err != nil {

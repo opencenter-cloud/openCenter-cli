@@ -196,7 +196,7 @@ func containsVRRPIPInStruct(v reflect.Value, vrrpIP, allowedPath string) bool {
 				return true
 			}
 		}
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if !v.IsNil() {
 			return containsVRRPIPInStruct(v.Elem(), vrrpIP, allowedPath)
 		}
@@ -224,7 +224,7 @@ func isEmptyStruct(v interface{}) bool {
 	}
 
 	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return true
 		}

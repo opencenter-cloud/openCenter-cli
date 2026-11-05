@@ -125,7 +125,7 @@ func resolveMimirStorageTemplateData(cfg v2.Config) (mimirStorageTemplateData, e
 		backend = "swift"
 	}
 	if backend == "swift" && strings.ToLower(strings.TrimSpace(cfg.OpenCenter.Infrastructure.Provider)) != "openstack" {
-		return mimirStorageTemplateData{}, fmt.Errorf("Mimir Swift renderer: resolved Swift storage is only supported on OpenStack infrastructure")
+		return mimirStorageTemplateData{}, fmt.Errorf("mimir swift renderer: resolved Swift storage is only supported on OpenStack infrastructure")
 	}
 
 	bucket := ""
@@ -166,7 +166,7 @@ func resolveMimirStorageTemplateData(cfg v2.Config) (mimirStorageTemplateData, e
 			var err error
 			endpoint, err = v2.MimirS3EndpointHost(mimir.S3Endpoint)
 			if err != nil {
-				return mimirStorageTemplateData{}, fmt.Errorf("Mimir S3 renderer: %w", err)
+				return mimirStorageTemplateData{}, fmt.Errorf("mimir s3 renderer: %w", err)
 			}
 		}
 		region = strings.TrimSpace(mimir.S3Region)
@@ -237,24 +237,24 @@ func resolveMimirStorageTemplateData(cfg v2.Config) (mimirStorageTemplateData, e
 	if backend == "swift" {
 		resolvedID, resolvedSecret, err := cfg.ResolveMimirSwiftCredentials()
 		if err != nil {
-			return mimirStorageTemplateData{}, fmt.Errorf("Mimir Swift renderer: %w", err)
+			return mimirStorageTemplateData{}, fmt.Errorf("mimir swift renderer: %w", err)
 		}
 		swiftCredentialID = resolvedID
 		swiftCredentialSecret = resolvedSecret
 	}
 	if backend == "s3" {
 		if strings.TrimSpace(accessKey) == "" || strings.EqualFold(strings.TrimSpace(accessKey), v2.PlaceholderSecret) {
-			return mimirStorageTemplateData{}, fmt.Errorf("Mimir S3 renderer: S3 access key is missing or still a placeholder")
+			return mimirStorageTemplateData{}, fmt.Errorf("mimir s3 renderer: S3 access key is missing or still a placeholder")
 		}
 		if strings.TrimSpace(secretKey) == "" || strings.EqualFold(strings.TrimSpace(secretKey), v2.PlaceholderSecret) {
-			return mimirStorageTemplateData{}, fmt.Errorf("Mimir S3 renderer: S3 secret key is missing or still a placeholder")
+			return mimirStorageTemplateData{}, fmt.Errorf("mimir s3 renderer: S3 secret key is missing or still a placeholder")
 		}
 		credentialHash = credentialRotationHash(accessKey, secretKey)
 	} else {
 		idMissing := strings.TrimSpace(swiftCredentialID) == "" || strings.EqualFold(strings.TrimSpace(swiftCredentialID), v2.PlaceholderSecret)
 		secretMissing := strings.TrimSpace(swiftCredentialSecret) == "" || strings.EqualFold(strings.TrimSpace(swiftCredentialSecret), v2.PlaceholderSecret)
 		if idMissing != secretMissing {
-			return mimirStorageTemplateData{}, fmt.Errorf("Mimir Swift renderer: application credential ID and secret must be configured together")
+			return mimirStorageTemplateData{}, fmt.Errorf("mimir swift renderer: application credential ID and secret must be configured together")
 		}
 		credentialHash = credentialRotationHash(swiftCredentialID, swiftCredentialSecret)
 	}

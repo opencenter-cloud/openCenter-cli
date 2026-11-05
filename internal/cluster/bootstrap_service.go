@@ -300,7 +300,7 @@ func (s *BootstrapService) Bootstrap(ctx context.Context, opts BootstrapOptions)
 		if err != nil {
 			return result, err
 		}
-		defer logFile.Close()
+		defer func() { _ = logFile.Close() }()
 
 		ctx = withBootstrapLogWriter(ctx, logFile)
 		s.progress("Bootstrap started for %s", opts.ClusterName)

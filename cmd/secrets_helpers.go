@@ -59,8 +59,8 @@ func (s *sopsEncryptorAdapter) DecryptFile(ctx context.Context, filePath string)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	_ = tmpFile.Close()
 
 	// Decrypt to temp file
 	if err := encryptor.DecryptFile(ctx, filePath, tmpFile.Name()); err != nil {

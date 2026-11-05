@@ -197,7 +197,7 @@ func setFieldLegacy(config interface{}, path string, value interface{}) error {
 	// This would be the old implementation
 	// For testing purposes, we'll implement a basic version
 	v := reflect.ValueOf(config)
-	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		return &ConfigError{
 			Type:    ErrorTypePath,
 			Path:    path,

@@ -189,7 +189,7 @@ func (bm *backupManager) RestoreBackup(ctx context.Context, backupID string, pas
 		if err := bm.decryptFile(archivePath, decryptedPath, passphrase); err != nil {
 			return fmt.Errorf("failed to decrypt backup: %w", err)
 		}
-		defer os.Remove(decryptedPath)
+		defer func() { _ = os.Remove(decryptedPath) }()
 		archivePath = decryptedPath
 	}
 
@@ -267,7 +267,7 @@ func (bm *backupManager) DeleteBackup(backupID string) error {
 
 	// Also remove checksum file if exists
 	checksumPath := filepath.Join(bm.backupDir, backupID+".sha256")
-	os.Remove(checksumPath) // Ignore error
+	_ = os.Remove(checksumPath) // Ignore error
 
 	return nil
 }
@@ -416,13 +416,12 @@ func (bm *backupManager) createArchive(archivePath string, contents *BackupConte
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	gzWriter := gzip.NewWriter(file)
-	defer gzWriter.Close()
+	defer func() { _ = gzWriter.Close() }()
 
 	tarWriter := tar.NewWriter(gzWriter)
-	defer tarWriter.Close()
 
 	// Add config file
 	if len(contents.ConfigFile) > 0 {
@@ -459,6 +458,20 @@ func (bm *backupManager) createArchive(archivePath string, contents *BackupConte
 		}
 	}
 
+	// Flush the tar and gzip streams and close the file: a failed close here
+	// means the archive is truncated, so the error must reach the caller.
+	if err := tarWriter.Close(); err != nil {
+		return fmt.Errorf("failed to finalize tar archive: %w", err)
+	}
+
+	if err := gzWriter.Close(); err != nil {
+		return fmt.Errorf("failed to finalize gzip stream: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close archive file: %w", err)
+	}
+
 	return nil
 }
 
@@ -488,13 +501,13 @@ func (bm *backupManager) extractArchive(archivePath string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	gzReader, err := gzip.NewReader(file)
 	if err != nil {
 		return err
 	}
-	defer gzReader.Close()
+	defer func() { _ = gzReader.Close() }()
 
 	tarReader := tar.NewReader(gzReader)
 
@@ -552,10 +565,12 @@ func (bm *backupManager) extractArchive(archivePath string) error {
 		}
 
 		if _, err := io.Copy(outFile, tarReader); err != nil {
-			outFile.Close()
+			_ = outFile.Close()
 			return err
 		}
-		outFile.Close()
+		if err := outFile.Close(); err != nil {
+			return fmt.Errorf("failed to close extracted file %s: %w", outputPath, err)
+		}
 	}
 
 	return nil
@@ -567,7 +582,7 @@ func (bm *backupManager) calculateChecksum(filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {

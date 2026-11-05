@@ -52,8 +52,8 @@ func (m *DefaultSecureTempFileManager) CreateSecureTempFile(pattern string) (*Se
 
 	// Set restrictive permissions immediately
 	if err := tempFile.Chmod(0600); err != nil {
-		tempFile.Close()
-		os.Remove(tempFile.Name())
+		_ = tempFile.Close()
+		_ = os.Remove(tempFile.Name())
 		return nil, fmt.Errorf("failed to set secure permissions: %w", err)
 	}
 
@@ -83,7 +83,7 @@ func (m *DefaultSecureTempFileManager) CreateSecureTempDir(pattern string) (stri
 
 	// Set restrictive permissions
 	if err := os.Chmod(tempDir, 0700); err != nil {
-		os.RemoveAll(tempDir)
+		_ = os.RemoveAll(tempDir)
 		return "", fmt.Errorf("failed to set secure permissions: %w", err)
 	}
 
@@ -101,7 +101,7 @@ func (m *DefaultSecureTempFileManager) CleanupTempFile(path string) error {
 	// Close file if it's still open
 	if tempFile, exists := m.tempFiles[path]; exists {
 		if tempFile.File != nil {
-			tempFile.File.Close()
+			_ = tempFile.File.Close()
 		}
 		delete(m.tempFiles, path)
 	}
@@ -140,7 +140,7 @@ func (m *DefaultSecureTempFileManager) CleanupAll() error {
 	// Cleanup all temp files
 	for path, tempFile := range m.tempFiles {
 		if tempFile.File != nil {
-			tempFile.File.Close()
+			_ = tempFile.File.Close()
 		}
 		if err := secureRemoveFile(path); err != nil {
 			errors = append(errors, fmt.Errorf("failed to cleanup %s: %w", path, err))
@@ -186,11 +186,19 @@ func secureRemoveFile(path string) error {
 				if toWrite > 4096 {
 					toWrite = 4096
 				}
-				file.Write(zeros[:toWrite])
+				if _, err := file.Write(zeros[:toWrite]); err != nil {
+					_ = file.Close()
+					return fmt.Errorf("failed to overwrite file content: %w", err)
+				}
 				written += toWrite
 			}
-			file.Sync()
-			file.Close()
+			if err := file.Sync(); err != nil {
+				_ = file.Close()
+				return fmt.Errorf("failed to sync file before removal: %w", err)
+			}
+			if err := file.Close(); err != nil {
+				return fmt.Errorf("failed to close file before removal: %w", err)
+			}
 		}
 	}
 
@@ -239,22 +247,22 @@ func CreateSecureTempFileWithContent(pattern string, content []byte) (*SecureTem
 	}
 
 	if _, err := tempFile.Write(content); err != nil {
-		tempFile.Close()
-		manager.CleanupTempFile(tempFile.Path)
+		_ = tempFile.Close()
+		_ = manager.CleanupTempFile(tempFile.Path)
 		return nil, fmt.Errorf("failed to write content to temp file: %w", err)
 	}
 
 	// Sync to ensure data is written
 	if err := tempFile.File.Sync(); err != nil {
-		tempFile.Close()
-		manager.CleanupTempFile(tempFile.Path)
+		_ = tempFile.Close()
+		_ = manager.CleanupTempFile(tempFile.Path)
 		return nil, fmt.Errorf("failed to sync temp file: %w", err)
 	}
 
 	// Seek back to beginning for reading
 	if _, err := tempFile.File.Seek(0, 0); err != nil {
-		tempFile.Close()
-		manager.CleanupTempFile(tempFile.Path)
+		_ = tempFile.Close()
+		_ = manager.CleanupTempFile(tempFile.Path)
 		return nil, fmt.Errorf("failed to seek temp file: %w", err)
 	}
 

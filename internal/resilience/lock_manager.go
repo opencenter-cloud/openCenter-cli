@@ -250,8 +250,8 @@ func (fb *fileLockBackend) acquire(ctx context.Context, resource string, owner s
 		// Lock has expired, clean it up inline to avoid deadlock
 		existingLock.mu.Lock()
 		if existingLock.file != nil {
-			syscall.Flock(int(existingLock.file.Fd()), syscall.LOCK_UN)
-			existingLock.file.Close()
+			_ = syscall.Flock(int(existingLock.file.Fd()), syscall.LOCK_UN)
+			_ = existingLock.file.Close()
 			existingLock.file = nil
 		}
 		existingLock.mu.Unlock()
@@ -276,7 +276,7 @@ func (fb *fileLockBackend) acquire(ctx context.Context, resource string, owner s
 	// Try to acquire exclusive lock with flock
 	err = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
 	if err != nil {
-		file.Close()
+		_ = file.Close()
 		return nil, fmt.Errorf("failed to acquire file lock: %w", err)
 	}
 
@@ -292,8 +292,8 @@ func (fb *fileLockBackend) acquire(ctx context.Context, resource string, owner s
 	}
 
 	if _, err := file.WriteAt([]byte(metadataStr), 0); err != nil {
-		syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
-		file.Close()
+		_ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+		_ = file.Close()
 		return nil, fmt.Errorf("failed to write lock metadata: %w", err)
 	}
 
@@ -328,8 +328,8 @@ func (fb *fileLockBackend) release(lock Lock) error {
 
 	// Release the flock
 	if fileLock.file != nil {
-		syscall.Flock(int(fileLock.file.Fd()), syscall.LOCK_UN)
-		fileLock.file.Close()
+		_ = syscall.Flock(int(fileLock.file.Fd()), syscall.LOCK_UN)
+		_ = fileLock.file.Close()
 		fileLock.file = nil
 	}
 
@@ -355,8 +355,8 @@ func (fb *fileLockBackend) forceBreak(resource string) error {
 		// Release the lock without calling fb.release to avoid deadlock
 		lock.mu.Lock()
 		if lock.file != nil {
-			syscall.Flock(int(lock.file.Fd()), syscall.LOCK_UN)
-			lock.file.Close()
+			_ = syscall.Flock(int(lock.file.Fd()), syscall.LOCK_UN)
+			_ = lock.file.Close()
 			lock.file = nil
 		}
 		lock.mu.Unlock()

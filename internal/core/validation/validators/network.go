@@ -138,7 +138,7 @@ func (v *NetworkValidator) Validate(ctx context.Context, value interface{}) (*va
 
 	// Validate node subnet CIDR if specified
 	if networkConfig.SubnetNodes != "" {
-		v.validateCIDR(networkConfig.SubnetNodes, "subnet_nodes", result)
+		_ = v.validateCIDR(networkConfig.SubnetNodes, "subnet_nodes", result)
 	}
 
 	// Validate VRRP IP if VRRP is enabled

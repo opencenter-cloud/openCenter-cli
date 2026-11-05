@@ -756,7 +756,7 @@ func createPropertyTestConfig(clusterName string, tmpDir string, certManager Cer
 	cfg.OpenCenter.GitOps.Repository.LocalDir = filepath.Join(tmpDir, "test-repo")
 	cfg.Secrets.SopsAgeKeyFile = filepath.Join(tmpDir, "age-key.txt")
 	cfg.Secrets.CertManager = v2.CertManagerSecrets{
-		//lint:ignore SA1019 legacy flat cert-manager field is intentionally retained for migration compatibility.
+		//nolint:staticcheck // SA1019: legacy flat cert-manager field is intentionally retained and exercised for migration compatibility.
 		AWSAccessKey:       certManager.AWSAccessKey,
 		AWSSecretAccessKey: certManager.AWSSecretAccessKey,
 	}

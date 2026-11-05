@@ -292,11 +292,7 @@ func stageKubesprayInventory(source, destination string) error {
 	if source == destination {
 		return nil
 	}
-	return fmt.Errorf("Kubespray inventory rendered at %s outside the cluster state zone %s; the infrastructure tree predates lifecycle contract 2, re-run 'opencenter cluster generate' with the updated kubespray module ref and apply again", source, destination)
-}
-
-func (l *kubesprayLifecycle) prepareOSHardening() error {
-	return l.prepareOSHardeningContext(context.Background())
+	return fmt.Errorf("kubespray inventory rendered at %s outside the cluster state zone %s; the infrastructure tree predates lifecycle contract 2, re-run 'opencenter cluster generate' with the updated kubespray module ref and apply again", source, destination)
 }
 
 func (l *kubesprayLifecycle) prepareOSHardeningContext(ctx context.Context) error {
@@ -525,13 +521,13 @@ func (l *kubesprayLifecycle) exportKubeconfig(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("read fetched kubeconfig: %w", err)
 	}
-	defer os.Remove(l.kubeconfigTemp)
+	defer func() { _ = os.Remove(l.kubeconfigTemp) }()
 	data, err = normalizeKubeconfigAPIEndpoint(data, l.outputs.APIAddress, l.outputs.APIPort)
 	if err != nil {
 		return fmt.Errorf("normalize fetched kubeconfig: %w", err)
 	}
 	targetTemp := filepath.Join(filepath.Dir(l.kubeconfigPath), "."+filepath.Base(l.kubeconfigPath)+".normalized.tmp")
-	defer os.Remove(targetTemp)
+	defer func() { _ = os.Remove(targetTemp) }()
 	if err := os.WriteFile(targetTemp, data, 0o600); err != nil {
 		return fmt.Errorf("write normalized kubeconfig: %w", err)
 	}

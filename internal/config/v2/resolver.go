@@ -66,7 +66,7 @@ func (r *ReferenceResolver) Resolve(cfg interface{}) error {
 
 	// Start resolving from the root
 	v := reflect.ValueOf(cfg)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 	r.root = v
@@ -83,7 +83,7 @@ func (r *ReferenceResolver) resolveValue(v reflect.Value, path string, depth int
 	}
 
 	// Handle pointers
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
@@ -396,7 +396,7 @@ func (r *ReferenceResolver) lookupPathValue(root reflect.Value, path string) (re
 }
 
 func dereferenceValue(v reflect.Value) reflect.Value {
-	for v.IsValid() && (v.Kind() == reflect.Interface || v.Kind() == reflect.Ptr) {
+	for v.IsValid() && (v.Kind() == reflect.Interface || v.Kind() == reflect.Pointer) {
 		if v.IsNil() {
 			return reflect.Value{}
 		}

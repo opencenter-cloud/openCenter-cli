@@ -17,6 +17,7 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
+	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 	"os"
 	"path/filepath"
 	"strings"
@@ -420,7 +421,7 @@ func TestProperty_SOPSCRUDReturnsActionableGuidance(t *testing.T) {
 	// requiredKeywords must appear in every SOPS error message.
 	requiredKeywords := []string{"encrypt", "decrypt"}
 	// The documentation URL that must be present.
-	requiredURL := "https://docs.opencenter.cloud/secrets/sops-encryption"
+	requiredURL := ui.SopsEncryptionDocsURL
 	// Bare stub message that must NOT appear.
 	forbiddenBare := "not yet implemented"
 

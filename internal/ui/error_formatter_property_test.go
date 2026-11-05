@@ -115,13 +115,10 @@ func TestProperty_ErrorMessageStructure(t *testing.T) {
 				if info.DocsURL == "" {
 					return false
 				}
-				// Should start with https://docs.opencenter.cloud/errors/
-				expectedPrefix := "https://docs.opencenter.cloud/errors/"
-				if !strings.HasPrefix(info.DocsURL, expectedPrefix) {
-					return false
-				}
-				// Should end with the error code
-				if !strings.HasSuffix(info.DocsURL, code) {
+				// Every code links into the error-code reference, anchored to the
+				// lower-cased code, which is how Markdown anchors resolve headings.
+				want := DocumentationBaseURL + "/reference/error-codes.md#" + strings.ToLower(code)
+				if info.DocsURL != want {
 					return false
 				}
 			}

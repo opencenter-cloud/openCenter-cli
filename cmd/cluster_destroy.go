@@ -126,7 +126,9 @@ manual cleanup.`,
 			// Ensure lock is released on success and lock file is removed
 			defer func() {
 				if lockResult.Lock != nil {
-					lockResult.LockManager.Release(lockResult.Lock)
+					if releaseErr := lockResult.LockManager.Release(lockResult.Lock); releaseErr != nil {
+						fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to release cluster lock: %v\n", releaseErr)
+					}
 					// Force break to ensure lock file is removed after successful destroy
 					_ = lockResult.LockManager.ForceBreak(name)
 				}
@@ -181,7 +183,11 @@ manual cleanup.`,
 				return fmt.Errorf("opening destroy log file: %w", err)
 			}
 			if logFile != nil {
-				defer logFile.Close()
+				defer func() {
+					if closeErr := logFile.Close(); closeErr != nil {
+						fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to close destroy log file: %v\n", closeErr)
+					}
+				}()
 				ctx = logging.WithActionLogWriter(ctx, logFile)
 			}
 

@@ -67,7 +67,7 @@ func (e *EnhancedReflectionEngine) SetFieldWithStructuredPath(obj interface{}, s
 	}
 
 	v := reflect.ValueOf(obj)
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		return fmt.Errorf("object must be a pointer to be settable")
 	}
 
@@ -200,7 +200,7 @@ func (e *EnhancedReflectionEngine) traverseField(field reflect.Value, parts []Pa
 	switch field.Kind() {
 	case reflect.Struct:
 		return e.setFieldRecursive(field, parts, nextPartIndex, value)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if field.Type().Elem().Kind() == reflect.Struct {
 			if field.IsNil() {
 				field.Set(reflect.New(field.Type().Elem()))
@@ -373,7 +373,7 @@ func (e *EnhancedReflectionEngine) GetField(obj interface{}, path string) (inter
 	}
 
 	v := reflect.ValueOf(obj)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 
@@ -448,7 +448,7 @@ func (e *EnhancedReflectionEngine) ExpandArray(obj interface{}, path string, ind
 	}
 
 	v := reflect.ValueOf(obj)
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		return fmt.Errorf("object must be a pointer to be settable")
 	}
 	v = v.Elem()

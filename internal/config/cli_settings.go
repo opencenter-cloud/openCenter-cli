@@ -2210,8 +2210,8 @@ func (cv *ConfigValidator) validateDirectoryPath(path string) error {
 	if file, err := os.Create(testFile); err != nil {
 		return fmt.Errorf("directory is not writable: %w", err)
 	} else {
-		file.Close()
-		os.Remove(testFile)
+		_ = file.Close()
+		_ = os.Remove(testFile)
 	}
 
 	return nil
@@ -2233,7 +2233,7 @@ func (cv *ConfigValidator) validateFilePath(path string) error {
 	if err != nil {
 		return fmt.Errorf("cannot write to file %s: %w", expandedPath, err)
 	}
-	file.Close()
+	_ = file.Close()
 
 	return nil
 }
@@ -2253,8 +2253,8 @@ func (cv *ConfigValidator) checkDiskSpace(path string) error {
 	if file, err := os.Create(testFile); err != nil {
 		return fmt.Errorf("insufficient disk space or permissions: %w", err)
 	} else {
-		file.Close()
-		os.Remove(testFile)
+		_ = file.Close()
+		_ = os.Remove(testFile)
 	}
 
 	return nil

@@ -92,7 +92,7 @@ func (h *defaultHydrator) GetAppliedDefaults() map[string]DefaultSource {
 // applyDefaults recursively applies defaults to the configuration struct.
 func (h *defaultHydrator) applyDefaults(cfg interface{}, providerDefaults ProviderDefaults, provider, region, fieldPath string) error {
 	v := reflect.ValueOf(cfg)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
@@ -149,7 +149,7 @@ func (h *defaultHydrator) applyDefaults(cfg interface{}, providerDefaults Provid
 				return err
 			}
 
-		case reflect.Ptr:
+		case reflect.Pointer:
 			// Handle pointer to struct
 			if field.IsNil() {
 				continue

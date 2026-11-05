@@ -355,7 +355,7 @@ func getStringField(obj any, fieldName string) (string, bool) {
 // derefValue dereferences pointers and interfaces to get the underlying value.
 func derefValue(obj any) reflect.Value {
 	val := reflect.ValueOf(obj)
-	for val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface {
+	for val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface {
 		if val.IsNil() {
 			return reflect.Value{}
 		}

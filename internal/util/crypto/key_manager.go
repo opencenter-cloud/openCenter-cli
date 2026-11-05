@@ -127,7 +127,7 @@ func (m *DefaultKeyManager) SaveAgeKey(keyPair *AgeKeyPair, keyName string) erro
 	// Save public key atomically
 	if err := files.WriteFileAtomic(publicKeyPath, []byte(keyPair.PublicKey), 0o644); err != nil {
 		// Clean up private key if public key save fails
-		os.Remove(privateKeyPath)
+		_ = os.Remove(privateKeyPath)
 		return fmt.Errorf("failed to save public key: %w", err)
 	}
 

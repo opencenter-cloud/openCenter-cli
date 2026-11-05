@@ -227,7 +227,7 @@ func (v *FileValidator) validateReadOperation(result *validation.ValidationResul
 		}
 		return
 	}
-	file.Close()
+	_ = file.Close()
 }
 
 // validateWriteOperation validates a file write operation.
@@ -254,7 +254,7 @@ func (v *FileValidator) validateWriteOperation(result *validation.ValidationResu
 			}
 			return
 		}
-		file.Close()
+		_ = file.Close()
 
 		result.AddWarning("write", "file already exists and will be overwritten",
 			"Ensure you want to overwrite the existing file",
@@ -294,8 +294,8 @@ func (v *FileValidator) validateWriteOperation(result *validation.ValidationResu
 			}
 			return
 		}
-		file.Close()
-		os.Remove(tempFile)
+		_ = file.Close()
+		_ = os.Remove(tempFile)
 	} else {
 		result.AddError("write", fmt.Sprintf("cannot access path: %v", err))
 	}
@@ -351,8 +351,8 @@ func (v *FileValidator) validateDeleteOperation(result *validation.ValidationRes
 		}
 		return
 	}
-	file.Close()
-	os.Remove(tempFile)
+	_ = file.Close()
+	_ = os.Remove(tempFile)
 
 	// Warn about important files
 	base := filepath.Base(path)

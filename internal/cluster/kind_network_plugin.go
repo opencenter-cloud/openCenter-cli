@@ -71,7 +71,7 @@ func (p *kindBootstrapProvider) installKindCalico(ctx context.Context, cfg *v2.C
 	if err != nil {
 		return fmt.Errorf("create temporary CNI install directory: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	env, err = withBootstrapHelmDirectories(env, tmpDir)
 	if err != nil {

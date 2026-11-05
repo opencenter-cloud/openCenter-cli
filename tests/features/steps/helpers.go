@@ -1012,7 +1012,7 @@ func (w *world) createBareGitRemote() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(nonBare)
+	defer func() { _ = os.RemoveAll(nonBare) }()
 	cmd := exec.Command("git", "init", "-b", "main")
 	cmd.Dir = nonBare
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -1992,7 +1992,7 @@ func getField(obj interface{}, path string) (interface{}, error) {
 	path = normalizeConfigPathAlias(path)
 
 	v := reflect.ValueOf(obj)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 
@@ -2021,7 +2021,7 @@ func getField(obj interface{}, path string) (interface{}, error) {
 			v = mapValue
 		}
 
-		if v.Kind() == reflect.Ptr {
+		if v.Kind() == reflect.Pointer {
 			v = v.Elem()
 		}
 	}

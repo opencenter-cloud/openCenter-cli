@@ -31,8 +31,8 @@ type openstackBootstrapProvider struct {
 }
 
 const (
-	calicoStateResource        = "module.calico.local_file.calico_values"
-	openStackGitOpsPushStepID  = "openstack-gitops-push"
+	calicoStateResource       = "module.calico.local_file.calico_values"
+	openStackGitOpsPushStepID = "openstack-gitops-push"
 )
 
 // newOpenStackBootstrapProvider returns the concrete provider so callers can
@@ -508,7 +508,7 @@ func (p *openstackBootstrapProvider) runOpenTofuApply(ctx context.Context, cfg *
 		if isOpenTofuNoStateFileResponse(state, err) {
 			state = nil
 		} else {
-			return fmt.Errorf("Calico OpenTofu state safety check failed in %s: tofu state list: %w", clusterDir, err)
+			return fmt.Errorf("calico OpenTofu state safety check failed in %s: tofu state list: %w", clusterDir, err)
 		}
 	}
 	if strings.Contains(string(state), calicoStateResource) {
@@ -633,7 +633,7 @@ func verifyCalicoGitOpsFiles(cfg *v2.Config, before calicoGitOpsSnapshot) error 
 		return nil
 	}
 	sort.Strings(changed)
-	return fmt.Errorf("Calico GitOps files changed during OpenTofu apply; no files were restored: %s", strings.Join(changed, ", "))
+	return fmt.Errorf("calico GitOps files changed during OpenTofu apply; no files were restored: %s", strings.Join(changed, ", "))
 }
 
 func extractOpenStackBootstrapCredentials(cfg *v2.Config) (*credentials.OpenStackCredentials, error) {
@@ -844,13 +844,13 @@ func normalizeOpenStackKubeconfig(clusterDir, targetPath, apiEndpointIP string) 
 		return fmt.Errorf("create temporary kubeconfig: %w", err)
 	}
 	temporaryPath := temporary.Name()
-	defer os.Remove(temporaryPath)
+	defer func() { _ = os.Remove(temporaryPath) }()
 	if err := temporary.Chmod(0o600); err != nil {
-		temporary.Close()
+		_ = temporary.Close()
 		return fmt.Errorf("set temporary kubeconfig permissions: %w", err)
 	}
 	if _, err := temporary.Write(data); err != nil {
-		temporary.Close()
+		_ = temporary.Close()
 		return fmt.Errorf("write temporary kubeconfig: %w", err)
 	}
 	if err := temporary.Close(); err != nil {

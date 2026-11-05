@@ -67,7 +67,7 @@ func marshalSOPSDocument(document *yaml.Node) ([]byte, error) {
 	encoder := yaml.NewEncoder(&buf)
 	encoder.SetIndent(2)
 	if err := encoder.Encode(document); err != nil {
-		encoder.Close()
+		_ = encoder.Close()
 		return nil, err
 	}
 	if err := encoder.Close(); err != nil {
@@ -112,7 +112,7 @@ func reencryptManifestUsingCreationRule(ctx context.Context, encryptor sops.Encr
 		return fmt.Errorf("failed to create temporary manifest: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 	if err := tmpFile.Close(); err != nil {
 		return fmt.Errorf("failed to close temporary manifest: %w", err)
 	}

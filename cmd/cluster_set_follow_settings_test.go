@@ -173,4 +173,3 @@ func TestClusterSetFollowSettingsWithoutAssignmentIsInert(t *testing.T) {
 		t.Fatal("--follow-settings without a base_domain assignment must not tag provenance")
 	}
 }
-

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-10-02
+last_updated: 2026-11-05
 id: github-actions-workflows
 title: "GitHub Actions Workflows"
 sidebar_label: GitHub Actions Workflows
@@ -29,7 +29,7 @@ repository's workflows use self-hosted runners; `deploy-kind.yml` uses the
 | `docs-p0.yml` | Checks changed Markdown files with the strict frontmatter audit and Vale. | Pull requests that change Markdown | [`docs-p0.yml`](https://github.com/opencenter-cloud/openCenter-cli/blob/main/.github/workflows/docs-p0.yml) |
 | `pre-commit.yaml` | Runs the configured pre-commit hooks on pull-request changes. | Pull requests | [`pre-commit.yaml`](https://github.com/opencenter-cloud/openCenter-cli/blob/main/.github/workflows/pre-commit.yaml) |
 | `release.yml` | Builds multi-platform CLI and local-plugin artifacts, signs release outputs, generates an SBOM, and publishes a GitHub release. | Version-tag pushes and manual dispatch | [`release.yml`](https://github.com/opencenter-cloud/openCenter-cli/blob/main/.github/workflows/release.yml) |
-| `test.yml` | Runs the repository Go tests, race-detector suite, property tests, and `go vet`. | Pull requests and pushes to `main` | [`test.yml`](https://github.com/opencenter-cloud/openCenter-cli/blob/main/.github/workflows/test.yml) |
+| `test.yml` | Runs the pinned `golangci-lint` against `.golangci.yml`, the repository Go tests, race-detector suite, property tests, and `go vet`. | Pull requests and pushes to `main` | [`test.yml`](https://github.com/opencenter-cloud/openCenter-cli/blob/main/.github/workflows/test.yml) |
 | `vulncheck.yml` | Runs Go dependency vulnerability analysis. | Pull requests, weekly schedule, and manual dispatch | [`vulncheck.yml`](https://github.com/opencenter-cloud/openCenter-cli/blob/main/.github/workflows/vulncheck.yml) |
 
 ## CI boundaries

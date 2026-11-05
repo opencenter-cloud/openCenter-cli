@@ -352,7 +352,7 @@ func TestNormalizeKubeconfigAPIEndpointPreservesCRLFAndUpdatesHostAndPort(t *tes
 	if !strings.Contains(string(got), "server: https://10.0.0.8:7443\r\n") {
 		t.Fatalf("normalized endpoint = %q", got)
 	}
-	if strings.Contains(string(got), "\n") && strings.Contains(string(got), "\n") && strings.Contains(string(got), "\r\n") {
+	if strings.Contains(string(got), "\n") && strings.Contains(string(got), "\r\n") {
 		for _, line := range strings.Split(string(got), "\n") {
 			if line != "" && !strings.HasSuffix(line, "\r") {
 				t.Fatalf("line ending was not preserved in %q", got)

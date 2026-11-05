@@ -95,7 +95,7 @@ func (dfs *DefaultFileSystem) WriteFileAtomic(path string, data []byte, perm os.
 		// It requires the temp write to succeed but rename to fail, which needs
 		// specific permission scenarios that behave differently on macOS/Linux/Windows.
 		// The risk is low: if cleanup fails, it only leaves a clearly-marked temp file.
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return errors.CreateFileError("atomic_rename", path, err)
 	}
 

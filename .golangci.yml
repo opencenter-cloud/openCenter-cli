@@ -1,0 +1,42 @@
+version: "2"
+
+# Linters: golangci-lint v2 defaults (errcheck, govet, ineffassign, staticcheck,
+# unused). No bespoke rule set is introduced here; this file exists to scope
+# errcheck, whose default "check every returned error" rule is far stricter than
+# idiomatic Go and produced ~1700 findings, the vast majority unactionable. See
+# linters.settings.errcheck and linters.exclusions below.
+linters:
+  default: standard
+  settings:
+    errcheck:
+      # Functions whose returned error is conventionally ignored. These are either
+      # writes to a process's own stdout/stderr (nothing useful to do on failure),
+      # best-effort environment/cleanup calls, or flag binding that only fails on
+      # programmer error at startup.
+      exclude-functions:
+        # Writing to os.Stdout / os.Stderr / cmd.OutOrStdout(): a failed write to
+        # your own terminal is unrecoverable, and the CLI surfaces its result
+        # through the command's own return value.
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - fmt.Fprint
+        # Interactive prompt helpers whose parse error is handled by re-prompting.
+        - fmt.Scanln
+        - fmt.Sscanf
+        # Best-effort process-environment mutation; there is no recovery path and
+        # the value is re-read from the same source on the next call.
+        - os.Setenv
+        - os.Unsetenv
+        # Cobra/pflag wiring: these only fail if a flag name is misspelled at
+        # program-construction time, a programmer bug caught by tests.
+        - (*github.com/spf13/pflag.FlagSet).Set
+        - (*github.com/spf13/cobra.Command).MarkFlagRequired
+  exclusions:
+    rules:
+      # Test code legitimately ignores cleanup errors (t.TempDir removal,
+      # os.Remove of scratch files, Close on throwaway handles). Enforcing checked
+      # cleanup here adds noise without catching real defects. Production code is
+      # unaffected: errcheck still reports unchecked errors in every non-test file.
+      - path: _test\.go
+        linters:
+          - errcheck

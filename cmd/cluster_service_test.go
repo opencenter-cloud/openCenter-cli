@@ -423,9 +423,9 @@ func TestClusterServiceEnableDefaultFlagPinsDNSCredential(t *testing.T) {
 			wantPin:    "prod",
 		},
 		{
-			name:       "default-pins-flat-token-credential",
-			args:       []string{"cert-manager", "--force", "--default", `--param=email=admin@example.com`, `--param=dns_provider=cloudflare`, `--secret=cloudflare_api_token=cf-token`},
-			wantPin:    "cloudflare",
+			name:    "default-pins-flat-token-credential",
+			args:    []string{"cert-manager", "--force", "--default", `--param=email=admin@example.com`, `--param=dns_provider=cloudflare`, `--secret=cloudflare_api_token=cf-token`},
+			wantPin: "cloudflare",
 		},
 		{
 			name:       "default-false-clears-pin",

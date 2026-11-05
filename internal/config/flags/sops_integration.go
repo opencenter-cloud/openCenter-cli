@@ -96,14 +96,14 @@ func (s *SOPSIntegration) EncryptConfigFile(configPath string, config map[string
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %w", err)
 	}
-	defer os.Remove(tempFile.Name())
-	defer tempFile.Close()
+	defer func() { _ = os.Remove(tempFile.Name()) }()
+	defer func() { _ = tempFile.Close() }()
 
 	_, err = tempFile.Write(content)
 	if err != nil {
 		return fmt.Errorf("failed to write content to temporary file: %w", err)
 	}
-	tempFile.Close()
+	_ = tempFile.Close()
 
 	// Encrypt the temporary file and move to target location
 	encryptionConfig := sops.EncryptionConfig{

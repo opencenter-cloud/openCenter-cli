@@ -11,6 +11,26 @@ env:
   HELM_VERSION: v4.3.1
 
 jobs:
+  lint:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up mise
+        uses: jdx/mise-action@v2
+        with:
+          version: 2026.9.18
+          install: true
+          cache: true
+
+      # Runs the pinned golangci-lint (see .mise.toml) against .golangci.yml.
+      # The uncapped flags disable golangci-lint's default 50-issues-per-run and
+      # 3-per-same-linter limits so a real backlog cannot hide behind the cap.
+      - name: Run golangci-lint
+        run: golangci-lint run ./... --max-issues-per-linter 0 --max-same-issues 0
+
   go-test:
     runs-on: self-hosted
     timeout-minutes: 30

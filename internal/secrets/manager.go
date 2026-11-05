@@ -1084,13 +1084,13 @@ func restoreSecretSnapshot(snapshot secretFileSnapshot) error {
 		return err
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 	if err := tmp.Chmod(snapshot.mode); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if _, err := tmp.Write(snapshot.data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Close(); err != nil {
@@ -1479,8 +1479,8 @@ func (m *DefaultSecretsManager) decryptManifest(ctx context.Context, manifestPat
 		return nil, fmt.Errorf("failed to create temporary file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	tmpFile.Close()
-	defer os.Remove(tmpPath) // Clean up temp file
+	_ = tmpFile.Close()
+	defer func() { _ = os.Remove(tmpPath) }() // Clean up temp file
 
 	// Set the Age key file environment variable for SOPS
 	oldEnv := os.Getenv("SOPS_AGE_KEY_FILE")
@@ -1799,7 +1799,7 @@ func (m *DefaultSecretsManager) writeEncryptedManifest(
 		return false, fmt.Errorf("failed to create temporary file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath) // Clean up temp file
+	defer func() { _ = os.Remove(tmpPath) }() // Clean up temp file
 
 	// Marshal manifest to YAML
 	yamlData, err := yaml.Marshal(newManifest)
@@ -1808,10 +1808,12 @@ func (m *DefaultSecretsManager) writeEncryptedManifest(
 	}
 
 	if _, err := tmpFile.Write(yamlData); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return false, fmt.Errorf("failed to write temporary file: %w", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return false, fmt.Errorf("failed to close temporary manifest: %w", err)
+	}
 
 	// Encrypt the manifest using SOPS
 	encryptor := m.sopsManager.GetEncryptor()

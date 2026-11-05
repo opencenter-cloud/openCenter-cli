@@ -412,7 +412,7 @@ func (m *EnhancedKeyManager) IsKeyringAvailable() bool {
 	err := keyring.Set(m.keyringService, testAccount, "test")
 	if err == nil {
 		// Clean up test entry
-		keyring.Delete(m.keyringService, testAccount)
+		_ = keyring.Delete(m.keyringService, testAccount)
 		return true
 	}
 
@@ -457,7 +457,7 @@ func (m *EnhancedKeyManager) storeKeyInFile(cluster string, key *crypto.AgeKeyPa
 	// Save public key atomically
 	if err := files.WriteFileAtomic(publicKeyPath, []byte(key.PublicKey), 0o644); err != nil {
 		// Clean up private key if public key save fails
-		os.Remove(privateKeyPath)
+		_ = os.Remove(privateKeyPath)
 		return fmt.Errorf("failed to save public key: %w", err)
 	}
 

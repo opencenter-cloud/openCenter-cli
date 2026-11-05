@@ -107,7 +107,7 @@ func (c *DIContainer) Resolve(name string) (interface{}, error) {
 func (c *DIContainer) ResolveAs(name string, target interface{}) error {
 	// Validate that target is a pointer
 	targetValue := reflect.ValueOf(target)
-	if targetValue.Kind() != reflect.Ptr {
+	if targetValue.Kind() != reflect.Pointer {
 		return fmt.Errorf("target must be a pointer, got %s", targetValue.Kind())
 	}
 

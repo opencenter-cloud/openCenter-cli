@@ -28,12 +28,6 @@ func kubesprayModuleSourceNeedsContract3Upgrade(source string) bool {
 	return kubesprayModuleSourceNeedsContractUpgrade(source, kubesprayModuleTag)
 }
 
-// kubesprayModuleSourceNeedsContract2Upgrade is preserved for backward compatibility
-// and delegates to kubesprayModuleSourceNeedsContract3Upgrade.
-func kubesprayModuleSourceNeedsContract2Upgrade(source string) bool {
-	return kubesprayModuleSourceNeedsContract3Upgrade(source)
-}
-
 // kubesprayModuleSourceNeedsContractUpgrade reports whether a gitops-base
 // kubespray module source pins a ref other than want. An empty source needs no
 // upgrade: templates and the load pipeline backfill the default. Sources

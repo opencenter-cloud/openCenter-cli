@@ -613,7 +613,11 @@ func (r *PathResolver) validateDirectoryPermissions(dir string) error {
 	if err != nil {
 		return fmt.Errorf("cannot write to directory: %w", err)
 	}
-	file.Close()
+	if err := file.Close(); err != nil {
+		// The write probe already proved the directory is writable; a failed
+		// close only leaves the handle open, so warn like the cleanup below.
+		fmt.Printf("Warning: failed to close test file %s: %v\n", testFile, err)
+	}
 
 	// Clean up test file
 	if err := os.Remove(testFile); err != nil {

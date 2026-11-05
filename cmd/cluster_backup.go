@@ -292,7 +292,9 @@ Displays backup ID, creation time, size, and storage location.`,
 				)
 			}
 
-			w.Flush()
+			if err := w.Flush(); err != nil {
+				return fmt.Errorf("failed to flush backup table: %w", err)
+			}
 
 			return nil
 		},

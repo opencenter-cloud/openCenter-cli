@@ -342,14 +342,6 @@ func scanStagedGeneratedTree(root string) (map[string]generatedTreeFile, map[str
 	return planned, seeds, warnings, nil
 }
 
-func loadGeneratedTreeManifest(root, clusterName string) (GeneratedManifest, bool, string, error) {
-	state, err := loadOwnershipState(root, clusterName, true)
-	if err != nil {
-		return GeneratedManifest{}, false, "", err
-	}
-	return mergedManifest(state.cluster, state.global), state.clusterBoot || state.globalBoot, "", nil
-}
-
 func validateGeneratedTreeMutationPath(root, path string) error {
 	rel, err := safeRelativePath(root, path)
 	if err != nil || rel == "." {

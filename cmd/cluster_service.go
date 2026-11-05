@@ -1134,7 +1134,7 @@ func isEnabled(svc any) bool {
 			return enabled
 		}
 	}
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
 	if val.Kind() == reflect.Struct {
@@ -1154,7 +1154,7 @@ func setEnabled(svc any, enabled bool) error {
 	}
 
 	val := reflect.ValueOf(svc)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	} else {
 		return fmt.Errorf("service config must be a pointer to set fields")
@@ -1174,7 +1174,7 @@ func setEnabled(svc any, enabled bool) error {
 // getAdoptionMode extracts the adoption mode from a service config using reflection.
 func getAdoptionMode(svc any) string {
 	val := reflect.ValueOf(svc)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
 	if val.Kind() == reflect.Struct {

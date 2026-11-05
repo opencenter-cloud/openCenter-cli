@@ -324,7 +324,7 @@ func listVirtualMachines(ctx context.Context, client *govmomi.Client, dc *object
 	if err != nil {
 		return nil, err
 	}
-	defer containerView.Destroy(ctx)
+	defer func() { _ = containerView.Destroy(ctx) }()
 
 	var virtualMachines []mo.VirtualMachine
 	err = containerView.Retrieve(ctx, []string{"VirtualMachine"}, []string{"summary", "network", "datastore"}, &virtualMachines)

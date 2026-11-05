@@ -31,7 +31,7 @@ func GetAdoptionMode(serviceCfg any) AdoptionMode {
 	}
 
 	val := reflect.ValueOf(serviceCfg)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return AdoptionModeManaged
 		}

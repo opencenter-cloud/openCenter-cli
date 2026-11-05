@@ -189,7 +189,7 @@ func baseConfigPointer(service any) *configservices.BaseConfig {
 	}
 
 	value := reflect.ValueOf(service)
-	if value.Kind() == reflect.Ptr {
+	if value.Kind() == reflect.Pointer {
 		if value.IsNil() {
 			return nil
 		}

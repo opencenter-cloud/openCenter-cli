@@ -157,7 +157,7 @@ func structToMap(value interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 
 	v := reflect.ValueOf(value)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 

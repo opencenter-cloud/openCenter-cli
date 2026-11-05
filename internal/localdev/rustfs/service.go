@@ -611,7 +611,7 @@ func (s *Service) readPersistedCredentials() (Credentials, error) {
 	if err != nil {
 		return Credentials{}, fmt.Errorf("open RustFS credentials: %w", err)
 	}
-	defer data.Close()
+	defer func() { _ = data.Close() }()
 	parsed, err := ParseCredentials(data)
 	if err != nil {
 		return Credentials{}, err
@@ -717,7 +717,7 @@ func probeURL(client *http.Client, rawURL string, s3API bool) bool {
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if s3API {
 		return resp.StatusCode >= 200 && resp.StatusCode < 300
 	}
@@ -736,7 +736,7 @@ func probeS3API(client *http.Client, rawURL string, credentials Credentials) boo
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return resp.StatusCode >= 200 && resp.StatusCode < 300
 }
 
@@ -943,7 +943,7 @@ func imageRefMatches(observed, expected string) bool {
 	od := strings.LastIndex(observed, "@sha256:")
 	ed := strings.LastIndex(expected, "@sha256:")
 	if od >= 0 && ed >= 0 {
-		return strings.ToLower(observed[od:]) == strings.ToLower(expected[ed:])
+		return strings.EqualFold(observed[od:], expected[ed:])
 	}
 	return observed == expected
 }
@@ -1139,7 +1139,7 @@ func writePrivateFile(path string, data []byte) error {
 		return err
 	}
 	temporaryName := temporary.Name()
-	defer os.Remove(temporaryName)
+	defer func() { _ = os.Remove(temporaryName) }()
 	if err := temporary.Chmod(0o600); err != nil {
 		_ = temporary.Close()
 		return err

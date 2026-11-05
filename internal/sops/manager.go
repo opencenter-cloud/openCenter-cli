@@ -600,7 +600,7 @@ func (m *DefaultSOPSManager) createSampleEncryptedSecretsForTemplate(ctx context
 		finalFile := filepath.Join(samplesDir, filename)
 		if err := m.encryptFileToOutput(ctx, tempFile, finalFile, encryptConfig); err != nil {
 			// Clean up temp file
-			os.Remove(tempFile)
+			_ = os.Remove(tempFile)
 			return &errors.StructuredError{
 				Type:    errors.SOPSError,
 				Field:   finalFile,
@@ -616,7 +616,7 @@ func (m *DefaultSOPSManager) createSampleEncryptedSecretsForTemplate(ctx context
 		}
 
 		// Remove temporary unencrypted file
-		os.Remove(tempFile)
+		_ = os.Remove(tempFile)
 	}
 
 	return nil

@@ -302,7 +302,7 @@ func TestBackupInfrastructureDirectory_SkipsTofuTrees(t *testing.T) {
 		"venv/lib/python3.14/site-packages/ansible/__init__.py",
 		"kubespray/cluster.yml",
 	} {
-		matches, err := filepath.Glob(filepath.Join(root, rel)+".bak-*")
+		matches, err := filepath.Glob(filepath.Join(root, rel) + ".bak-*")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -312,7 +312,7 @@ func TestBackupInfrastructureDirectory_SkipsTofuTrees(t *testing.T) {
 	}
 
 	for _, rel := range []string{"main.tf", ".terraform.lock.hcl", "inventory/inventory.yaml"} {
-		matches, err := filepath.Glob(filepath.Join(root, rel)+".bak-*")
+		matches, err := filepath.Glob(filepath.Join(root, rel) + ".bak-*")
 		if err != nil {
 			t.Fatal(err)
 		}

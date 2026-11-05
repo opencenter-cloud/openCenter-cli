@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-09-26
+last_updated: 2026-11-05
 id: contributing
 title: "Contributing to openCenter-cli"
 sidebar_label: Contributing to openCenter-cli
@@ -93,7 +93,7 @@ mise run godog
 mise run tidy        # if you added/removed imports
 ```
 
-The repository's `.pre-commit-config.yaml` runs gitleaks (secret scanning) and the staged documentation policy against changed files. The policy requires a staged maintained reader-facing Markdown page whenever a staged public CLI/runtime implementation changes. `mise run install-hooks` installs the hooks from that tracked configuration; `.github/workflows/pre-commit.yaml` runs the same hook set in CI on every pull request. See [Pre-commit hooks](pre-commit-hooks.md) for the path boundaries and exclusions.
+The repository's `.pre-commit-config.yaml` runs gitleaks (secret scanning), the staged documentation policy, and Go `gofmt`/`golangci-lint` gates against changed files. The policy requires a staged maintained reader-facing Markdown page whenever a staged public CLI/runtime implementation changes; the Go hooks block unformatted or lint-violating Go source at commit time. `mise run install-hooks` installs the hooks from that tracked configuration; `.github/workflows/pre-commit.yaml` runs the same hook set in CI on every pull request. See [Pre-commit hooks](pre-commit-hooks.md) for the path boundaries and exclusions.
 
 ## Submit a pull request
 

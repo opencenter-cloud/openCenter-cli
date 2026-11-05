@@ -1097,7 +1097,7 @@ func (r *DefaultKeyRotator) archiveKey(ctx context.Context, cluster string, keyT
 			pubArchivePath := archivePath + ".pub"
 			pubData, err := os.ReadFile(pubKeyPath)
 			if err == nil {
-				os.WriteFile(pubArchivePath, pubData, 0o644)
+				_ = os.WriteFile(pubArchivePath, pubData, 0o644)
 			}
 		}
 	}

@@ -21,7 +21,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/localdev/gitea/api"
 )
 
-	const (
+const (
 	defaultContainerName = "gitea"
 	defaultImage         = "docker.gitea.com/gitea:1.27.2"
 	defaultAdminUser     = "admin"
@@ -502,7 +502,7 @@ func (s *Service) ensureCertDirOwnership() error {
 				ownerUID = st.Uid
 			}
 			if rmErr := os.Remove(path); rmErr != nil {
-				return fmt.Errorf("cert %s is owned by uid %d and is not writable by this process (uid %d). Remove or re-own it, e.g.:\n  sudo chown $(id -u):$(id -g) %s\nthen retry.", path, ownerUID, currentUID(), path)
+				return fmt.Errorf("cert %s is owned by uid %d and is not writable by this process (uid %d). Remove or re-own it, e.g.:\n  sudo chown $(id -u):$(id -g) %s\nthen retry", path, ownerUID, currentUID(), path)
 			}
 		}
 	}
@@ -515,7 +515,7 @@ func fileWritable(path string) bool {
 	if err != nil {
 		return false
 	}
-	f.Close()
+	_ = f.Close()
 	return true
 }
 

@@ -49,13 +49,6 @@ func inventoryStateDir(cfg v2.Config) string {
 	return filepath.Join(config.GetGitOpsDir(), organization, "infrastructure", "clusters", clusterName, "inventory")
 }
 
-// clusterStateRoot resolves the per-cluster state zone root, delegating to
-// internal/config so rendering and the path resolver never diverge on the
-// OPENCENTER_CLUSTER_STATE_DIR / CLI-settings / <clustersDir>/state precedence.
-func clusterStateRoot() string {
-	return config.GetClusterStateDir()
-}
-
 // IsGitOpsInitialized checks if a GitOps directory has already been initialized
 // by looking for marker files that indicate a previous setup.
 //
@@ -176,7 +169,7 @@ func CopyBase(cfg v2.Config, render bool) error {
 	if err != nil {
 		return fmt.Errorf("creating workspace: %w", err)
 	}
-	defer manager.CleanupWorkspace(context.Background(), workspace)
+	defer func() { _ = manager.CleanupWorkspace(context.Background(), workspace) }()
 
 	// Copy to workspace atomically
 	if err := CopyBaseAtomic(cfg, render, workspace); err != nil {
@@ -636,7 +629,7 @@ func PlanClusterAppsPromotionWithOptions(cfg v2.Config, opts PromoteOptions) (*P
 	if err != nil {
 		return nil, fmt.Errorf("creating dry-run workspace: %w", err)
 	}
-	defer manager.CleanupWorkspace(context.Background(), workspace)
+	defer func() { _ = manager.CleanupWorkspace(context.Background(), workspace) }()
 	if err := RenderClusterAppsAtomic(cfg, workspace); err != nil {
 		return nil, fmt.Errorf("rendering cluster apps: %w", err)
 	}
@@ -687,7 +680,7 @@ func renderClusterAppsWithOptions(ctx context.Context, cfg v2.Config, encrypt Ov
 	if err != nil {
 		return nil, fmt.Errorf("creating workspace: %w", err)
 	}
-	defer manager.CleanupWorkspace(ctx, workspace)
+	defer func() { _ = manager.CleanupWorkspace(ctx, workspace) }()
 
 	if err := RenderClusterAppsAtomic(cfg, workspace); err != nil {
 		return nil, err
@@ -748,7 +741,7 @@ func RenderClusterFluxBridge(cfg v2.Config) error {
 	if err != nil {
 		return fmt.Errorf("creating workspace: %w", err)
 	}
-	defer manager.CleanupWorkspace(context.Background(), workspace)
+	defer func() { _ = manager.CleanupWorkspace(context.Background(), workspace) }()
 
 	if err := RenderClusterFluxBridgeAtomic(cfg, workspace); err != nil {
 		return err
@@ -866,7 +859,7 @@ func RenderInfrastructureCluster(cfg v2.Config) error {
 	if err != nil {
 		return fmt.Errorf("creating workspace: %w", err)
 	}
-	defer manager.CleanupWorkspace(context.Background(), workspace)
+	defer func() { _ = manager.CleanupWorkspace(context.Background(), workspace) }()
 
 	// Use atomic version
 	if err := RenderInfrastructureClusterAtomic(cfg, workspace); err != nil {
@@ -917,7 +910,7 @@ func renderSingleServiceWithOptions(ctx context.Context, cfg v2.Config, serviceN
 	if err != nil {
 		return nil, fmt.Errorf("creating workspace: %w", err)
 	}
-	defer manager.CleanupWorkspace(ctx, workspace)
+	defer func() { _ = manager.CleanupWorkspace(ctx, workspace) }()
 
 	prefix := "services"
 	if isManaged {
@@ -992,7 +985,7 @@ func filterSingleServiceArtifacts(serviceName string, actions []clusterAppAction
 // It uses reflection to access the Enabled field since the service config is an interface{}.
 func IsServiceDisabled(serviceCfg any) bool {
 	val := reflect.ValueOf(serviceCfg)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
 	}
 	if val.Kind() == reflect.Struct {

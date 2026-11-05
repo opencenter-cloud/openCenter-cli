@@ -76,7 +76,7 @@ func reconcileSopsAgeSecret(ctx context.Context, sopsKeyPath, kubeconfigPath str
 	if err != nil {
 		return fmt.Errorf("create temporary directory for sops-age Secret: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 	if err := os.Chmod(tempDir, 0o700); err != nil {
 		return fmt.Errorf("secure temporary directory for sops-age Secret: %w", err)
 	}

@@ -24,6 +24,7 @@ import (
 
 	"github.com/opencenter-cloud/opencenter-cli/internal/barbican"
 	"github.com/opencenter-cloud/opencenter-cli/internal/config/v2"
+	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -291,7 +292,7 @@ func describeSOPSSecret(ctx context.Context, cfg *v2.Config, name string, format
 		"  opencenter secrets decrypt    Decrypt YAML files to view secret metadata\n" +
 		"  opencenter secrets encrypt    Re-encrypt YAML files after inspection\n" +
 		"  opencenter secrets status     Show encryption status of secret files\n\n" +
-		"See: https://docs.opencenter.cloud/secrets/sops-encryption")
+		"See: " + ui.SopsEncryptionDocsURL)
 }
 
 func describeFileSecret(out io.Writer, cfg *v2.Config, name string, format string) error {
@@ -383,7 +384,7 @@ func getSOPSSecret(ctx context.Context, cfg *v2.Config, name string, outputFile 
 		"  opencenter secrets decrypt    Decrypt YAML files to view secret values\n" +
 		"  opencenter secrets encrypt    Re-encrypt YAML files after editing\n" +
 		"  opencenter secrets status     Show encryption status of secret files\n\n" +
-		"See: https://docs.opencenter.cloud/secrets/sops-encryption")
+		"See: " + ui.SopsEncryptionDocsURL)
 }
 
 func getFileSecret(ctx context.Context, cfg *v2.Config, name string, outputFile string, show bool) error {
@@ -498,7 +499,7 @@ func setSOPSSecret(ctx context.Context, cfg *v2.Config, name string, payload []b
 		"  opencenter secrets decrypt    Decrypt YAML files for editing\n" +
 		"  opencenter secrets encrypt    Re-encrypt YAML files after changes\n" +
 		"  opencenter secrets status     Show encryption status of secret files\n\n" +
-		"See: https://docs.opencenter.cloud/secrets/sops-encryption")
+		"See: " + ui.SopsEncryptionDocsURL)
 }
 
 func setFileSecret(ctx context.Context, out io.Writer, cfg *v2.Config, name string, payload []byte) error {
@@ -574,7 +575,7 @@ func deleteSOPSSecret(ctx context.Context, cfg *v2.Config, name string) error {
 		"  opencenter secrets decrypt    Decrypt YAML files for editing\n" +
 		"  opencenter secrets encrypt    Re-encrypt YAML files after removing entries\n" +
 		"  opencenter secrets status     Show encryption status of secret files\n\n" +
-		"See: https://docs.opencenter.cloud/secrets/sops-encryption")
+		"See: " + ui.SopsEncryptionDocsURL)
 }
 
 func deleteFileSecret(ctx context.Context, out io.Writer, cfg *v2.Config, name string) error {

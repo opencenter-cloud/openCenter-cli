@@ -61,7 +61,7 @@ func cloneAssignmentValue(value reflect.Value) reflect.Value {
 		result := reflect.New(value.Type()).Elem()
 		result.Set(clone)
 		return result
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if value.IsNil() {
 			return reflect.Zero(value.Type())
 		}
@@ -114,7 +114,7 @@ func commitAssignmentTarget(target, candidate any) error {
 	}
 
 	switch original.Kind() {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if original.IsNil() || updated.IsNil() {
 			return fmt.Errorf("assignment target cannot be a nil pointer")
 		}
@@ -141,7 +141,7 @@ func setField(obj any, path string, value string) error {
 		return fmt.Errorf("cannot set field on nil object")
 	}
 	v := reflect.ValueOf(obj)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return fmt.Errorf("object must be a non-nil pointer to be settable")
 		}
@@ -152,7 +152,7 @@ func setField(obj any, path string, value string) error {
 	if path == "" {
 		return fmt.Errorf("field path cannot be empty")
 	}
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 	return setFieldPath(v, splitFieldPath(path), value, path)
@@ -195,7 +195,7 @@ func setFieldPath(v reflect.Value, parts []string, value, path string) error {
 		return fmt.Errorf("empty field path: %s", path)
 	}
 
-	for v.IsValid() && (v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface) {
+	for v.IsValid() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
 		if v.Kind() == reflect.Interface {
 			if v.IsNil() {
 				return fmt.Errorf("cannot traverse nil interface at '%s'", path)
@@ -275,7 +275,7 @@ func setFieldPath(v reflect.Value, parts []string, value, path string) error {
 			// named cert-manager credential unreachable from `cluster set`, which
 			// is why dns_provider: cloudflare rendered no ClusterIssuer.
 			if elemType := v.Type().Elem(); elemType.Kind() == reflect.Struct ||
-				elemType.Kind() == reflect.Ptr && elemType.Elem().Kind() == reflect.Struct {
+				elemType.Kind() == reflect.Pointer && elemType.Elem().Kind() == reflect.Struct {
 				entry = reflect.New(elemType).Elem()
 			} else {
 				return fmt.Errorf("field not found: '%s' in map while setting '%s'", parts[0], path)
@@ -320,7 +320,7 @@ func findField(v reflect.Value, name string) reflect.Value {
 			continue
 		}
 		embedded := v.Field(i)
-		if embedded.Kind() == reflect.Ptr {
+		if embedded.Kind() == reflect.Pointer {
 			if embedded.Type().Elem().Kind() != reflect.Struct {
 				continue
 			}
@@ -388,7 +388,7 @@ func setReflectValue(field reflect.Value, value string) error {
 }
 
 func reflectValueFromString(typ reflect.Type, value string) (reflect.Value, error) {
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		if strings.TrimSpace(value) == "null" {
 			return reflect.Zero(typ), nil
 		}

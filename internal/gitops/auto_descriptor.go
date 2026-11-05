@@ -168,7 +168,7 @@ func hasExplicitDescriptor(registry *descriptorcfg.Registry, serviceName string,
 // extractBaseConfig extracts the BaseConfig from a service config using reflection.
 func extractBaseConfig(serviceCfg any) *services.BaseConfig {
 	val := reflect.ValueOf(serviceCfg)
-	for val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface {
+	for val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface {
 		if val.IsNil() {
 			return nil
 		}

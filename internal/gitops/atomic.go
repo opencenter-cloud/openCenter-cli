@@ -90,8 +90,8 @@ func (aw *AtomicWriter) WriteFile(relativePath string, data []byte, perm os.File
 	// Ensure temp file is cleaned up on error
 	defer func() {
 		if tempFile != nil {
-			tempFile.Close()
-			os.Remove(tempPath)
+			_ = tempFile.Close()
+			_ = os.Remove(tempPath)
 		}
 	}()
 
@@ -260,7 +260,7 @@ func (t *Transaction) Commit() error {
 	// Ensure checkpoint is cleaned up
 	defer func() {
 		if checkpoint != nil {
-			t.workspace.DeleteCheckpoint(checkpointID)
+			_ = t.workspace.DeleteCheckpoint(checkpointID)
 		}
 	}()
 

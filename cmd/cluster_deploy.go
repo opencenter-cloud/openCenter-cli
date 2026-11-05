@@ -126,7 +126,9 @@ func runClusterDeploy(cmd *cobra.Command, args []string) error {
 		}
 		defer func() {
 			if lockResult.Lock != nil {
-				lockResult.LockManager.Release(lockResult.Lock)
+				if releaseErr := lockResult.LockManager.Release(lockResult.Lock); releaseErr != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to release cluster lock: %v\n", releaseErr)
+				}
 			}
 		}()
 	}
@@ -151,7 +153,7 @@ func runClusterDeploy(cmd *cobra.Command, args []string) error {
 	// A dirty tree causes git pull --rebase to fail during the gitea-rebase step.
 	if !opts.DryRun {
 		gitDir := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.LocalDir)
-		gitURL := strings.TrimSpace(cfg.OpenCenter.GitOps.Repository.URL)
+		var gitURL string
 
 		// Re-home the configured git_url when its hostname is unreachable from this
 		// execution context (e.g. a kind-network IP under Podman). This keeps the
@@ -362,7 +364,7 @@ func checkSecretsSynced(cfg *v2.Config, clusterName string) error {
 		"required secret manifests are not ready for deploy:\n  %s\n\n"+
 			"Run 'opencenter secrets sync %s' before deploying so these secrets are "+
 			"created and applied by Flux; otherwise the consuming services fail with "+
-			"\"secret ... not found\".",
+			"\"secret ... not found\"",
 		strings.Join(missing, "\n  "), targetCluster)
 }
 

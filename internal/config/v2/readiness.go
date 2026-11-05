@@ -540,7 +540,9 @@ func (r *readinessBuilder) validateMagnumProvider(cfg *Config) {
 	}
 	// Accept EITHER application-credential OR username/password auth. Password
 	// auth is required on clouds that enforce Keystone trusts for Magnum.
-	if !(hasAppCredID && hasAppCredSecret) && !(hasUsername && hasPassword) {
+	hasAppCred := hasAppCredID && hasAppCredSecret
+	hasUserPass := hasUsername && hasPassword
+	if !hasAppCred && !hasUserPass {
 		r.addError(CategoryProvider, "opencenter.infrastructure.cloud.magnum.application_credential_id",
 			"Magnum requires either application credential (ID+secret) or username/password.",
 			"Set application_credential_id+secret, or username+password (needed on clouds that enforce Keystone trusts).")

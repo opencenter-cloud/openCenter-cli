@@ -152,13 +152,13 @@ func WriteOwnershipStateAtomic(root string, state OwnershipState) error {
 		return fmt.Errorf("create ownership state temporary file: %w", err)
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 	if _, err := tmp.Write(append(data, '\n')); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("write ownership state temporary file: %w", err)
 	}
 	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("chmod ownership state temporary file: %w", err)
 	}
 	if err := tmp.Close(); err != nil {

@@ -25,6 +25,7 @@ import (
 	"github.com/opencenter-cloud/opencenter-cli/internal/config"
 	"github.com/opencenter-cloud/opencenter-cli/internal/di"
 	"github.com/opencenter-cloud/opencenter-cli/internal/plugins"
+	"github.com/opencenter-cloud/opencenter-cli/internal/ui"
 )
 
 // ContainerKey is the context key for the DI container
@@ -143,7 +144,7 @@ Key Features:
   • Comprehensive validation and doctor checks
   • Organization-based multi-tenancy support
 
-Documentation: https://docs.opencenter.cloud
+Documentation: ` + ui.DocumentationBaseURL + `
 Support: https://github.com/opencenter-cloud/opencenter-cli/issues`,
 		Example: `  # Initialize a new cluster configuration
   opencenter cluster init my-cluster

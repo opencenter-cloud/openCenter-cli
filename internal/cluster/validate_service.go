@@ -212,8 +212,12 @@ func (s *ValidateService) validateV2Config(ctx context.Context, configPath strin
 	}
 
 	if result.ValidationMode == ValidationModeOnline {
-		s.validateConnectivity(ctx, cfg, result)
-		s.validateProviderSpecific(ctx, cfg, result)
+		if err := s.validateConnectivity(ctx, cfg, result); err != nil {
+			return nil, fmt.Errorf("running connectivity validation: %w", err)
+		}
+		if err := s.validateProviderSpecific(ctx, cfg, result); err != nil {
+			return nil, fmt.Errorf("running provider-specific validation: %w", err)
+		}
 	}
 
 	s.populateOperatorReport(ctx, cfg, result)
@@ -375,7 +379,7 @@ func (s *ValidateService) validateConnectivity(ctx context.Context, cfg *v2.Conf
 		})
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 500 {
 		result.addIssue(v2.ValidationIssue{
 			Severity: v2.SeverityError,

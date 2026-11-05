@@ -65,7 +65,7 @@ func (gophercloudAppCredentialProvisioner) CreateApplicationCredential(ctx conte
 		return AppCredential{}, fmt.Errorf("create application credential: %s", maskProfileSecrets(err.Error(), profile))
 	}
 	if strings.TrimSpace(credential.ID) == "" || strings.TrimSpace(credential.Secret) == "" {
-		return AppCredential{}, fmt.Errorf("Keystone returned an incomplete application credential")
+		return AppCredential{}, fmt.Errorf("keystone returned an incomplete application credential")
 	}
 	return AppCredential{ID: credential.ID, Secret: credential.Secret}, nil
 }
@@ -182,17 +182,17 @@ func writeFileAtomic0600(path string, data []byte) error {
 		return err
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Sync(); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Close(); err != nil {
@@ -239,19 +239,6 @@ func yamlMapSet(node *yaml.Node, key string, value *yaml.Node) {
 		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key},
 		value,
 	)
-}
-
-// yamlMapDelete removes key from a mapping node when present.
-func yamlMapDelete(node *yaml.Node, key string) {
-	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
-		node = node.Content[0]
-	}
-	for i := 0; i+1 < len(node.Content); i += 2 {
-		if node.Content[i].Value == key {
-			node.Content = append(node.Content[:i], node.Content[i+2:]...)
-			return
-		}
-	}
 }
 
 // maskProfileSecrets removes the profile's own secrets from an error string so

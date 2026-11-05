@@ -1,15 +1,3 @@
-//go:build tools
-
-// Copyright 2025 Victor Palma <victor.palma@rackspace.com>
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//	http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 package main
@@ -66,7 +54,11 @@ func GenerateDocs(outputDir string, root *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	metadata := commandMetadata(root)
+	generationDate := currentGenerationDate()
+	metadata := commandMetadata(root, generationDate)
+	// Curated frontmatter is preserved verbatim. last_updated is corrected later,
+	// in normalizeGeneratedPages, once the new body exists and can be compared
+	// against the body it replaced.
 	prepender := func(filename string) string {
 		base := filepath.Base(filename)
 		if frontmatter, ok := preserved[base]; ok {
@@ -78,7 +70,7 @@ func GenerateDocs(outputDir string, root *cobra.Command) error {
 	if err := doc.GenMarkdownTreeCustom(root, stage, prepender, identity); err != nil {
 		return fmt.Errorf("generate markdown tree: %w", err)
 	}
-	if err := normalizeGeneratedPages(stage); err != nil {
+	if err := normalizeGeneratedPages(stage, previousBodies(outputDir), generationDate); err != nil {
 		return err
 	}
 
@@ -89,9 +81,11 @@ func GenerateDocs(outputDir string, root *cobra.Command) error {
 	return nil
 }
 
-func commandMetadata(root *cobra.Command) map[string]string {
+// commandMetadata builds the frontmatter block for every visible command, dated
+// generationDate. The date is a parameter rather than a time.Now() call inside so
+// a single generation run cannot straddle midnight and emit two dates.
+func commandMetadata(root *cobra.Command, generationDate string) map[string]string {
 	metadata := make(map[string]string)
-	generationDate := currentGenerationDate()
 	walkVisibleCommands(root, func(command *cobra.Command) {
 		filename := commandFilename(command)
 		id := strings.ToLower(strings.TrimSuffix(filename, filepath.Ext(filename)))
@@ -118,7 +112,8 @@ func walkVisibleCommands(root *cobra.Command, visit func(*cobra.Command)) {
 }
 
 func commandFilename(command *cobra.Command) string {
-	return strings.ReplaceAll(command.CommandPath(), " ", "_") + ".md"
+	name := strings.ReplaceAll(command.CommandPath(), " ", "_")
+	return name + ".md"
 }
 
 func commandDisplayName(commandPath string) string {
@@ -170,6 +165,30 @@ func existingFrontmatter(outputDir string) (map[string]string, error) {
 	return result, nil
 }
 
+// previousBodies returns the body (the text after the frontmatter block) of every
+// page currently in outputDir, keyed by filename. A missing directory yields an
+// empty map, which makes every generated page look new and therefore current-dated.
+func previousBodies(outputDir string) map[string]string {
+	result := make(map[string]string)
+	entries, err := os.ReadDir(outputDir)
+	if err != nil {
+		return result
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".md" {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(outputDir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		if block, ok := extractFrontmatter(data); ok {
+			result[entry.Name()] = normalizeBody(string(data[len(block):]))
+		}
+	}
+	return result
+}
+
 func extractFrontmatter(data []byte) (string, bool) {
 	if !strings.HasPrefix(string(data), "---") {
 		return "", false
@@ -218,7 +237,16 @@ func replaceGeneratedDirectory(stage, outputDir string) error {
 	return nil
 }
 
-func normalizeGeneratedPages(directory string) error {
+// normalizeGeneratedPages trims trailing whitespace, inserts the mandated
+// **Purpose:** line, and re-dates pages whose generated body actually changed.
+//
+// The re-dating fixes a real defect: the frontmatter of a curated page was
+// preserved verbatim on every run, so a page whose command documentation changed
+// kept its original last_updated forever. 144 pages read 2026-09-24 despite later
+// regeneration. Comparing the body rather than rewriting the date unconditionally
+// keeps `mise run test-docs-idempotency` green: a second run over unchanged
+// content produces byte-identical output.
+func normalizeGeneratedPages(directory string, previous map[string]string, generationDate string) error {
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		return fmt.Errorf("read staged documentation: %w", err)
@@ -234,9 +262,86 @@ func normalizeGeneratedPages(directory string) error {
 		}
 		trimmed := bytes.TrimRight(data, "\r\n")
 		trimmed = append(trimmed, '\n')
+		trimmed = ensurePurposeLine(trimmed, entry.Name())
+		trimmed = []byte(redateIfChanged(string(trimmed), previous[entry.Name()], generationDate))
 		if err := os.WriteFile(path, trimmed, 0o644); err != nil {
 			return fmt.Errorf("normalize staged documentation page %s: %w", entry.Name(), err)
 		}
 	}
 	return nil
+}
+
+// ensurePurposeLine inserts the "**Purpose:**" sentence that docs/README.md
+// mandates, immediately after the H1. Generated pages derive it from the command
+// path so the line cannot drift from the command it documents. Pages that already
+// carry one are returned untouched, preserving hand-written wording across
+// regenerations.
+func ensurePurposeLine(data []byte, filename string) []byte {
+	text := string(data)
+	if strings.Contains(text, "**Purpose:**") {
+		return data
+	}
+	// Cobra renders each command page heading as "## <command path>", not an H1,
+	// so the first ATX heading of any level is the anchor.
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "#") {
+			continue
+		}
+		purpose := "**Purpose:** For " + defaultDocsAudience +
+			", documents `" + commandPathFromFilename(filename) + "`: what it does, its flags, and its examples."
+		out := append([]string{}, lines[:i+1]...)
+		out = append(out, "", purpose)
+		out = append(out, lines[i+1:]...)
+		return []byte(strings.Join(out, "\n"))
+	}
+	// No heading at all: leave the page exactly as the generator emitted it.
+	return data
+}
+
+// redateIfChanged rewrites the last_updated key to generationDate when body
+// differs from previousBody, and returns text unchanged otherwise. A page with no
+// previous body is new, so it is stamped. Only the date value is touched; key
+// order and every other frontmatter field are preserved.
+func redateIfChanged(text, previousBody, generationDate string) string {
+	block, ok := extractFrontmatter([]byte(text))
+	if !ok {
+		return text
+	}
+	body := normalizeBody(text[len(block):])
+	if previousBody != "" && previousBody == body {
+		return text
+	}
+	updated := setLastUpdated(block, generationDate)
+	return updated + text[len(block):]
+}
+
+// setLastUpdated replaces the last_updated value inside a frontmatter block. A
+// block without the key is returned unchanged rather than having one appended, so
+// the generator cannot silently invent metadata the audit does not expect.
+func setLastUpdated(block, generationDate string) string {
+	lines := strings.Split(block, "\n")
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "last_updated:") {
+			continue
+		}
+		lines[i] = "last_updated: " + yamlQuote(generationDate)
+		return strings.Join(lines, "\n")
+	}
+	return block
+}
+
+// commandPathFromFilename recovers the CLI command path from a generated page
+// filename. The generator names each page after Cobra's CommandPath with spaces
+// replaced by underscores, which round-trips exactly -- unlike the rendered title,
+// which is title-cased and hyphen-split and cannot be reversed reliably.
+func commandPathFromFilename(filename string) string {
+	stem := strings.TrimSuffix(filename, filepath.Ext(filename))
+	return strings.ReplaceAll(stem, "_", " ")
+}
+
+// normalizeBody collapses trailing whitespace and CRLF so a body comparison
+// reflects content rather than line-ending noise.
+func normalizeBody(body string) string {
+	return strings.TrimRight(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
 }

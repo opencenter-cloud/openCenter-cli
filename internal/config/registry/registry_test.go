@@ -110,7 +110,7 @@ func TestPointerRegistrationDistinguishedFromValue(t *testing.T) {
 	if valueType.Kind() != reflect.Struct {
 		t.Fatalf("value registration should record struct kind, got %v", valueType.Kind())
 	}
-	if pointerType.Kind() != reflect.Ptr {
+	if pointerType.Kind() != reflect.Pointer {
 		t.Fatalf("pointer registration should record ptr kind, got %v", pointerType.Kind())
 	}
 }
@@ -176,10 +176,7 @@ func TestProperty_RegisterGetRoundTrip(t *testing.T) {
 				seen[name] = true
 				unique++
 			}
-			if len(GetRegisteredServices()) != unique {
-				return false
-			}
-			return true
+			return len(GetRegisteredServices()) == unique
 		},
 		gen.SliceOf(gen.AlphaString()),
 	))

@@ -14,8 +14,8 @@
 package cmd
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 )
@@ -147,6 +147,7 @@ func TestClusterInitBaseDomainFlagValidations(t *testing.T) {
 		t.Fatalf("dotted override must be replaced:\n%s", configText)
 	}
 }
+
 // TestClusterInitDryRunReportsBaseDomain pins that the dry-run preview names
 // the base domain it would set.
 func TestClusterInitDryRunReportsBaseDomain(t *testing.T) {

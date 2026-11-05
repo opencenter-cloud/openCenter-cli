@@ -906,7 +906,7 @@ func sendDriftCallbackWithDoer(ctx context.Context, callbackURL string, report *
 	if err != nil {
 		return fmt.Errorf("callback POST failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("callback returned HTTP %d", resp.StatusCode)

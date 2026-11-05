@@ -457,7 +457,7 @@ func (c Config) ResolveMimirSwiftCredentials() (string, string, error) {
 	serviceIDSet := credentialOverrideSet(serviceID)
 	serviceSecretSet := credentialOverrideSet(serviceSecret)
 	if serviceIDSet != serviceSecretSet {
-		return "", "", fmt.Errorf("Mimir Swift service-specific application credential ID and secret must be set together")
+		return "", "", fmt.Errorf("mimir Swift service-specific application credential ID and secret must be set together")
 	}
 	if serviceIDSet {
 		return serviceID, serviceSecret, nil

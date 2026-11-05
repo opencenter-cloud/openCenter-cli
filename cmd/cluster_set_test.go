@@ -454,6 +454,7 @@ func newClusterSetRootForTest() *cobra.Command {
 	root.AddCommand(cluster)
 	return root
 }
+
 // saveOCTR812ClusterConfigForCommandTest writes a kind cluster config that
 // reproduces the OCTR-812 local setup: Mimir and Harbor are enabled, but the
 // storage backend they would resolve to is Swift on a non-OpenStack provider.

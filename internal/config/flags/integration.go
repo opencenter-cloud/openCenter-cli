@@ -681,7 +681,7 @@ func (c *CLIIntegration) setField(obj interface{}, path string, value string) er
 					nextValue = reflect.New(mapValueType).Elem()
 				} else if mapValueType.Kind() == reflect.Map {
 					nextValue = reflect.MakeMap(mapValueType)
-				} else if mapValueType.Kind() == reflect.Ptr {
+				} else if mapValueType.Kind() == reflect.Pointer {
 					// Create a new pointer to the underlying type
 					nextValue = reflect.New(mapValueType.Elem())
 				} else {
@@ -695,7 +695,7 @@ func (c *CLIIntegration) setField(obj interface{}, path string, value string) er
 			}
 
 			// Handle pointers - dereference them
-			if nextValue.Kind() == reflect.Ptr {
+			if nextValue.Kind() == reflect.Pointer {
 				if nextValue.IsNil() {
 					// Create a new instance
 					nextValue.Set(reflect.New(nextValue.Type().Elem()))
@@ -760,7 +760,7 @@ func (c *CLIIntegration) setField(obj interface{}, path string, value string) er
 
 		if field.Kind() == reflect.Struct {
 			v = field
-		} else if field.Kind() == reflect.Ptr && field.Type().Elem().Kind() == reflect.Struct {
+		} else if field.Kind() == reflect.Pointer && field.Type().Elem().Kind() == reflect.Struct {
 			if field.IsNil() {
 				field.Set(reflect.New(field.Type().Elem()))
 			}
@@ -802,7 +802,7 @@ func (c *CLIIntegration) findField(v reflect.Value, name string) reflect.Value {
 		if field.Anonymous {
 			embeddedField := v.Field(i)
 			// Handle pointer to embedded struct
-			if embeddedField.Kind() == reflect.Ptr {
+			if embeddedField.Kind() == reflect.Pointer {
 				if embeddedField.IsNil() {
 					continue
 				}
@@ -962,7 +962,7 @@ func (c *CLIIntegration) navigateToField(obj interface{}, path string) (reflect.
 	v := reflect.ValueOf(obj)
 
 	// Dereference pointer if needed
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return reflect.Value{}, fmt.Errorf("nil pointer")
 		}
@@ -1032,7 +1032,7 @@ func (c *CLIIntegration) navigateToField(obj interface{}, path string) (reflect.
 		// Navigate deeper
 		if field.Kind() == reflect.Struct {
 			v = field
-		} else if field.Kind() == reflect.Ptr {
+		} else if field.Kind() == reflect.Pointer {
 			if field.IsNil() {
 				// Initialize nil pointer
 				field.Set(reflect.New(field.Type().Elem()))
@@ -1080,7 +1080,7 @@ func (c *CLIIntegration) setFieldValueTyped(field reflect.Value, value interface
 		// For interface{} fields, set the value directly
 		field.Set(valueReflect)
 		return nil
-	case reflect.Ptr:
+	case reflect.Pointer:
 		// Handle pointer fields
 		if field.IsNil() {
 			field.Set(reflect.New(field.Type().Elem()))

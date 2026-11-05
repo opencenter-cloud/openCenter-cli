@@ -282,9 +282,9 @@ func (s *Service) refreshSourceSecretCA(ctx context.Context, kubeconfigPath, caP
 	if werr != nil {
 		return werr
 	}
-	defer os.Remove(f.Name())
+	defer func() { _ = os.Remove(f.Name()) }()
 	if _, werr := f.WriteString(manifest); werr != nil {
-		f.Close()
+		_ = f.Close()
 		return werr
 	}
 	if err := f.Close(); err != nil {

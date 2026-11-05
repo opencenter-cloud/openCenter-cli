@@ -34,8 +34,15 @@ func TestGenerateDocsPreservesExistingFrontmatterAndDefaultsNewPages(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(string(rootPage), preserved) {
-		t.Fatalf("existing frontmatter was not preserved verbatim:\n%s", rootPage)
+	// Curated frontmatter survives regeneration, with one deliberate exception:
+	// last_updated is re-stamped when the generated body changed, so the timestamp
+	// keeps meaning "this content was verified on". Everything else must be byte
+	// identical, including key order and quoting.
+	wantFrontmatter := strings.Replace(preserved,
+		"last_updated: \"2025-01-02\"",
+		"last_updated: \""+expectedGenerationDate+"\"", 1)
+	if !strings.HasPrefix(string(rootPage), wantFrontmatter) {
+		t.Fatalf("existing frontmatter was not preserved (apart from the re-dated last_updated):\n%s", rootPage)
 	}
 
 	settingsPage, err := os.ReadFile(filepath.Join(outputDir, "opencenter_settings.md"))
@@ -196,6 +203,86 @@ func TestGeneratedFrontmatterAudit(t *testing.T) {
 		}
 		if tags, ok := fields["tags"].([]interface{}); !ok || len(tags) == 0 {
 			t.Errorf("%s: tags must be a non-empty YAML sequence", filename)
+		}
+	}
+}
+
+// TestGenerateDocsKeepsTimestampWhenBodyUnchanged pins the property that makes
+// regeneration idempotent: a page whose generated body is identical to the one
+// already on disk keeps its existing last_updated. Without it, every
+// `mise run docs-gen` re-dates all command pages and
+// `mise run test-docs-idempotency` fails on the second run.
+func TestGenerateDocsKeepsTimestampWhenBodyUnchanged(t *testing.T) {
+	outputDir := filepath.Join(t.TempDir(), "reference")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate from an empty directory so the body is exactly what the generator
+	// produces, then backdate the page.
+	if err := GenerateDocs(outputDir, cmd.NewBuiltinRootCmd()); err != nil {
+		t.Fatal(err)
+	}
+	page := filepath.Join(outputDir, "opencenter_settings.md")
+	before, err := os.ReadFile(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backdated := strings.Replace(string(before),
+		"last_updated: \""+currentGenerationDate()+"\"",
+		"last_updated: \"2020-01-01\"", 1)
+	if backdated == string(before) {
+		t.Fatal("fixture page carries no current-generation date to backdate")
+	}
+	if err := os.WriteFile(page, []byte(backdated), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := GenerateDocs(outputDir, cmd.NewBuiltinRootCmd()); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != backdated {
+		t.Errorf("unchanged body was re-dated; regeneration is not idempotent\nbefore:\n%s\nafter:\n%s",
+			backdated, after)
+	}
+}
+
+// TestEnsurePurposeLineAnchorsOnCobraHeading covers the heading-level detail that
+// silently disabled the feature once: Cobra renders command pages with "## ", not
+// "# ", so a matcher looking only for an H1 inserts nothing and every generated
+// page ships without the mandated line.
+func TestEnsurePurposeLineAnchorsOnCobraHeading(t *testing.T) {
+	page := []byte("---\nid: x\n---\n## opencenter cluster reconcile\n\nShort description\n")
+	got := string(ensurePurposeLine(page, "opencenter_cluster_reconcile.md"))
+	if !strings.Contains(got, "**Purpose:**") {
+		t.Fatalf("no Purpose line inserted for an H2 page:\n%s", got)
+	}
+	if !strings.Contains(got, "`opencenter cluster reconcile`") {
+		t.Errorf("Purpose line does not name the command derived from the filename:\n%s", got)
+	}
+	if strings.Index(got, "**Purpose:**") < strings.Index(got, "## opencenter") {
+		t.Errorf("Purpose line was inserted before the heading:\n%s", got)
+	}
+	if again := string(ensurePurposeLine([]byte(got), "opencenter_cluster_reconcile.md")); again != got {
+		t.Error("ensurePurposeLine rewrote a page that already had a Purpose line")
+	}
+}
+
+// TestCommandPathFromFilename covers the root command, which must not gain a
+// doubled binary name.
+func TestCommandPathFromFilename(t *testing.T) {
+	cases := map[string]string{
+		"opencenter.md":                         "opencenter",
+		"opencenter_cluster_reconcile.md":       "opencenter cluster reconcile",
+		"opencenter_cluster_drift_reconcile.md": "opencenter cluster drift reconcile",
+	}
+	for filename, want := range cases {
+		if got := commandPathFromFilename(filename); got != want {
+			t.Errorf("commandPathFromFilename(%q) = %q, want %q", filename, got, want)
 		}
 	}
 }

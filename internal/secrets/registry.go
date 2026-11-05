@@ -668,14 +668,14 @@ func (r *DefaultKeyRegistry) acquireRegistryLock(ctx context.Context) (*os.File,
 			return file, nil
 		}
 		if err != syscall.EWOULDBLOCK && err != syscall.EAGAIN {
-			file.Close()
+			_ = file.Close()
 			return nil, fmt.Errorf("failed to lock registry: %w", err)
 		}
 		timer := time.NewTimer(25 * time.Millisecond)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
-			file.Close()
+			_ = file.Close()
 			return nil, ctx.Err()
 		case <-timer.C:
 		}
@@ -759,13 +759,13 @@ func (r *DefaultKeyRegistry) saveRegistry(ctx context.Context, data *registryDat
 		return fmt.Errorf("failed to create temporary registry: %w", err)
 	}
 	tempPath := tempFile.Name()
-	defer os.Remove(tempPath)
+	defer func() { _ = os.Remove(tempPath) }()
 	if err := tempFile.Chmod(0o600); err != nil {
-		tempFile.Close()
+		_ = tempFile.Close()
 		return fmt.Errorf("failed to set temporary registry permissions: %w", err)
 	}
 	if _, err := tempFile.Write(content); err != nil {
-		tempFile.Close()
+		_ = tempFile.Close()
 		return fmt.Errorf("failed to write temporary registry: %w", err)
 	}
 	if err := tempFile.Close(); err != nil {
@@ -792,7 +792,7 @@ func (r *DefaultKeyRegistry) saveRegistry(ctx context.Context, data *registryDat
 
 	// Atomically replace the registry file
 	if err := os.Rename(tempPath, r.registryPath); err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return fmt.Errorf("failed to save registry: %w", err)
 	}
 

@@ -52,8 +52,8 @@ func (w *DefaultAtomicFileWriter) WriteAtomic(filename string, data []byte, perm
 
 		// Ensure cleanup on failure
 		defer func() {
-			tempFile.Close()
-			os.Remove(tempPath)
+			_ = tempFile.Close()
+			_ = os.Remove(tempPath)
 		}()
 
 		// Write data to temporary file

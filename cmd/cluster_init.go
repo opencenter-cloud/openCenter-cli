@@ -538,7 +538,7 @@ func lookupCommandFlag(cmd *cobra.Command, name string) *pflag.Flag {
 func rawCommandArgs(cmd *cobra.Command) []string {
 	if cmd != nil {
 		value := reflect.ValueOf(cmd)
-		if value.IsValid() && value.Kind() == reflect.Ptr {
+		if value.IsValid() && value.Kind() == reflect.Pointer {
 			argsField := value.Elem().FieldByName("args")
 			if argsField.IsValid() && argsField.Kind() == reflect.Slice {
 				args := make([]string, 0, argsField.Len())

@@ -514,7 +514,7 @@ func (OSFileSystem) WriteAtomic(path string, data []byte) error {
 		return err
 	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
+	defer func() { _ = os.Remove(tmpName) }()
 	if err = tmp.Chmod(info.Mode().Perm()); err == nil {
 		_, err = tmp.Write(data)
 	}
@@ -599,7 +599,7 @@ func (OSFileSystem) UpdateRecovery(path string, state recoveryJournal) error {
 		return err
 	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
+	defer func() { _ = os.Remove(tmpName) }()
 	if err = tmp.Chmod(0o600); err == nil {
 		_, err = tmp.Write(data)
 	}
@@ -1198,7 +1198,7 @@ func validateMimirEffectiveBuckets(cfg *services.MimirConfig, blocks string) err
 	for i := 0; i < len(buckets); i++ {
 		for j := i + 1; j < len(buckets); j++ {
 			if buckets[i] == buckets[j] {
-				return fmt.Errorf("Mimir S3 bucket names must be distinct: %s and %s both resolve to %q; set distinct bucket names", labels[i], labels[j], buckets[i])
+				return fmt.Errorf("mimir S3 bucket names must be distinct: %s and %s both resolve to %q; set distinct bucket names", labels[i], labels[j], buckets[i])
 			}
 		}
 	}

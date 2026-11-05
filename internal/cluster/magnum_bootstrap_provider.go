@@ -367,7 +367,7 @@ func persistMagnumIdentityState(path string, state magnumIdentityState) error {
 		return fmt.Errorf("create Magnum identity state: %w", err)
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 	if err := tmp.Chmod(0o600); err != nil {
 		_ = tmp.Close()
 		return fmt.Errorf("secure Magnum identity state: %w", err)

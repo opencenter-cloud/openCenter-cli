@@ -461,7 +461,7 @@ func applyChangeSet(cfg *v2.Config, changeSet orchestration.ChangeSet) error {
 
 func setConfigField(obj any, path string, value string) error {
 	v := reflect.ValueOf(obj)
-	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		return fmt.Errorf("expected pointer to struct, got %T", obj)
 	}
 	current := v.Elem()
@@ -509,7 +509,7 @@ func setConfigField(obj any, path string, value string) error {
 						return nil
 					}
 					switch {
-					case resolvedValue.Kind() == reflect.Ptr && resolvedValue.Type().Elem().Kind() == reflect.Struct:
+					case resolvedValue.Kind() == reflect.Pointer && resolvedValue.Type().Elem().Kind() == reflect.Struct:
 						current = resolvedValue.Elem()
 						continue
 					case resolvedValue.Kind() == reflect.Struct:
@@ -533,9 +533,9 @@ func setConfigField(obj any, path string, value string) error {
 				// the element type cannot host fields is what previously failed the
 				// leaf lookup with "field not found in map".
 				if elemType := current.Type().Elem(); elemType.Kind() == reflect.Struct ||
-					elemType.Kind() == reflect.Ptr && elemType.Elem().Kind() == reflect.Struct {
+					elemType.Kind() == reflect.Pointer && elemType.Elem().Kind() == reflect.Struct {
 					created := reflect.New(elemType).Elem()
-					if created.Kind() == reflect.Ptr {
+					if created.Kind() == reflect.Pointer {
 						created.Set(reflect.New(created.Type().Elem()))
 						current.SetMapIndex(reflect.ValueOf(part), created)
 						current = created.Elem()
@@ -561,7 +561,7 @@ func setConfigField(obj any, path string, value string) error {
 		switch {
 		case field.Kind() == reflect.Struct:
 			current = field
-		case field.Kind() == reflect.Ptr && field.Type().Elem().Kind() == reflect.Struct:
+		case field.Kind() == reflect.Pointer && field.Type().Elem().Kind() == reflect.Struct:
 			if field.IsNil() {
 				field.Set(reflect.New(field.Type().Elem()))
 			}

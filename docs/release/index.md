@@ -21,8 +21,9 @@ installation guide: to install or pin a specific version, use
 ## Current release
 
 The repository's `VERSION` file reads `1.0.0`. The highest published tag is
-`v1.0.0-rc07`, and it is the newest release note in this tree. Treat rc07 as the
-current pre-release of 1.0.0.
+`v1.0.0-rc07`; the newest release note in this tree is
+[v1.0.0-rc08](1.0.0-rc08.md), pending its tag. Treat rc08 as the current
+pre-release of 1.0.0.
 
 ## Release notes
 
@@ -30,6 +31,7 @@ Newest first. Each page lists features, fixes, migrations, and improvements.
 
 | Release | Date | Headline | Upgrade action |
 | --- | --- | --- | --- |
+| [v1.0.0-rc08](1.0.0-rc08.md) | 2026-11-05 | `cluster reconcile` Day-2 convergence workflow, verified `scripts/install.sh` installer, Headlamp branding plugin, CCM LB naming/subnet/upgrade-stall fixes, Go 1.27.3 | Re-deploy; building from source now requires Go 1.27.3, and re-run `cluster generate` so CCM override values pick up cluster name and `subnet-id` |
 | [v1.0.0-rc07](1.0.0-rc07.md) | 2026-11-02 | Lifecycle contract v3, automatic OpenTofu network output binding, OpenStack Magnum managed provider, cert-manager Cloudflare DNS automation | Re-deploy; review the Magnum provider and network-binding sections before upgrading a production cluster |
 | [v1.0.0-rc06](1.0.0-rc06.md) | 2026-11-02 | Transactional ownership-aware GitOps promotion, hardened SOPS Age key lifecycle, explicit provider and per-service storage plan/apply | Re-deploy; storage operations moved from one sync command to explicit plan/apply, so update any scripted calls |
 | [v1.0.0-rc05](1.0.0-rc05.md) | 2026-11-02 | Provider-agnostic configuration validation with hints, `vip_interface` networking field, SOPS Age secret fix during deploy | Re-deploy |

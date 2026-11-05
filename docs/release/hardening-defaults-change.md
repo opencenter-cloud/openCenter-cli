@@ -6,7 +6,7 @@ description: What changes for existing clusters when k8s_hardening and os_harden
 doc_type: reference
 audience: openCenter operators
 tags: [migration, security, kubespray]
-last_updated: 2026-10-23
+last_updated: 2026-11-05
 ---
 
 # Hardening defaults changed

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-02
+last_updated: 2026-11-05
 id: release-process
 title: "Release Process and Codebase Touchpoints Guide"
 sidebar_label: Release Process

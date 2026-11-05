@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-02
+last_updated: 2026-11-05
 id: build-system
 title: "Build System (Mise)"
 sidebar_label: Build System (Mise)
@@ -20,7 +20,7 @@ openCenter-cli uses [mise](https://mise.jdx.dev/) rather than Make: it pins tool
 
 | Tool | Version | Install method |
 | --- | --- | --- |
-| `go` | `1.27.1` | mise-native |
+| `go` | `1.27.3` | mise-native |
 | `golangci-lint` | `2.14.0` | mise-native |
 | `vale` | `3.23.0` | mise-native |
 | `kubectl` | `latest` | mise-native |
@@ -30,7 +30,7 @@ openCenter-cli uses [mise](https://mise.jdx.dev/) rather than Make: it pins tool
 | `golang.org/x/vuln/cmd/govulncheck` | `latest` | `go:` backend |
 | `gitleaks/gitleaks` | `latest` | `aqua:` backend |
 
-Go, golangci-lint, Vale, and SOPS are hard-pinned; `kubectl`, `kind`, `helm`, `pre-commit`, `govulncheck`, and `gitleaks` float on `latest` locally. The mise key for the Go toolchain is `go`, not `golang`. `go.mod` declares `go 1.26.9` with `toolchain go1.27.3`: the language floor the module requires, and the toolchain the Go command selects when it runs outside mise. CI workflows pin some deployment tools independently for reproducibility -- notably `deploy-kind.yml` pins `KIND_VERSION=v0.29.0`, `KUBECTL_VERSION=v1.35.4`, `HELM_VERSION=v3.19.0`, `FLUX_VERSION=v2.6.4`, and `SOPS_VERSION=3.13.3`. See [GitHub Actions Workflows](../reference/github-actions-workflows.md).
+Go, golangci-lint, Vale, and SOPS are hard-pinned; `kubectl`, `kind`, `helm`, `pre-commit`, `govulncheck`, and `gitleaks` float on `latest` locally. The mise key for the Go toolchain is `go`, not `golang`. `go.mod` declares `go 1.27.3` as the language floor the module requires; the `go` command selects that version (or newer) and no separate `toolchain` line is needed. CI workflows pin some deployment tools independently for reproducibility -- notably `deploy-kind.yml` pins `KIND_VERSION=v0.29.0`, `KUBECTL_VERSION=v1.35.4`, `HELM_VERSION=v3.19.0`, `FLUX_VERSION=v2.6.4`, and `SOPS_VERSION=3.13.3`. See [GitHub Actions Workflows](../reference/github-actions-workflows.md).
 
 ## Environment defaults (`[env]`)
 

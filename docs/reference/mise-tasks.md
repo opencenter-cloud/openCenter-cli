@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-02
+last_updated: 2026-11-05
 id: mise-tasks
 title: "Mise Tasks Reference"
 sidebar_label: Mise Tasks
@@ -16,7 +16,7 @@ tags: [mise, build, tasks, reference]
 
 | Tool | Version |
 | --- | --- |
-| `go` | `1.27.1` |
+| `go` | `1.27.3` |
 | `golangci-lint` | `2.14.0` |
 | `vale` | `3.23.0` |
 | `kubectl` | `latest` |
@@ -59,7 +59,7 @@ tags: [mise, build, tasks, reference]
 | `test-build` | `go build ./...` |
 | `test-remediation` | `go test ./internal/sops ./internal/secrets ./internal/secretartifacts ./internal/gitops ./cmd -count=1` |
 | `test-remediation-race` | `go test -race ./internal/secrets -run 'TestSyncSecretsSerializesConcurrentTransactions\|TestReconcileStateWriteFailureRollsBackAllMutationsAndRetry' -count=3` |
-| `test-docs` | `test-docs-scripts`, `go test -tags tools ./cmd/docs -count=1`, `test-docs-idempotency`, `go test ./cmd -run '^TestDocsDoNotUseRemovedGACommands$' -count=1`, `go test ./internal/config/v2schema -run '^TestDocumentationYAMLSnippetsMatchSchema$' -count=1`, `test-docs-frontmatter`, `test-docs-timestamps`, `test-docs-links`, `test-docs-mermaid`; it does not publish or render documentation |
+| `test-docs` | `test-docs-scripts`, `go test -tags tools ./cmd/docs -count=1`, `test-docs-idempotency`, `go test ./cmd -run '^TestDocsDoNotUseRemovedGACommands$' -count=1`, `go test ./internal/config/v2schema -run '^TestDocumentationYAMLSnippetsMatchSchema$' -count=1`, `test-docs-frontmatter`, `test-docs-timestamps`, `test-docs-links`, `test-docs-portability`, `test-docs-mermaid`; it does not publish or render documentation |
 | `test-go-all` | Local `go test ./... -count=1 -timeout 15m` sweep; on failure, a transient failure log is written under `.tmp/` for diagnosis, not kept as a repository artifact. |
 | `test-kustomize` | `go test ./internal/gitops -run '^TestGeneratedDefaultOverlayKustomizeFailureMatrix$' -count=1` |
 | `test-diff` | `git diff --check` |
@@ -72,19 +72,22 @@ tags: [mise, build, tasks, reference]
 | `gitleaks` | `gitleaks detect --source . --redact --no-banner` with the long configuration-file flag pointing at `.gitleaks.toml` |
 | `integration` | Runs `TestClusterSetup` (`./cmd`), then `TestRetry\|TestCircuitBreaker\|TestLockManager\|TestProperty` (`./internal/resilience/...`), then `TestDriftDetector\|TestBackupManager\|TestProperty` (`./internal/operations/...`) |
 | `perf` | `go test -tags perf ./internal/config -run "TestMemoryUsageRegression" -count=1` |
-| `test:all` | `test`, `test-race`, `vet`, `godog`, `property`, `govulncheck`; separate from the local full-package `test-go-all` sweep and repository-only `test-docs` checks |
+| `test:all` | `test`, `test-race`, `vet`, `godog`, `property`, `govulncheck`, `test-docs`; separate from the local full-package `test-go-all` sweep |
 | `verify` | `test`, `test-race`, `test-properties`, `govulncheck` |
 | `test-remediation-all` | `test-build`, `vet`, `test`, `test-remediation`, `test-race`, `test-remediation-race`, `godog`, `test-docs`, `test-kustomize`, `test-docs-idempotency`, `test-docs-frontmatter-remediation`, `test-diff` |
-| `schema` | Legacy schema task definition; use `schema-v2` for the checked-in v2 schema. |
+| `schema` | **Unavailable:** the subcommand its body invokes is not registered, so `--pretty` falls through to `cluster` and fails with `unknown flag: --pretty`. Its output target `schema/cluster.schema.json` is not in the tree either. Use `schema-v2`. |
 | `schema-gen` | **Unavailable:** legacy command flow invokes `./cmd/schema-gen/main.go`, which is not present in the current tree. |
 | `schema-v2` | Writes and runs a throwaway `TestRegenSchema` against `internal/config/v2schema`, writes `schema/opencenter-v2.schema.json`, deletes the test file; this is the task for the checked-in v2 schema |
 | `validate` | `./bin/opencenter cluster validate` |
 | `schema-verify` | **Unavailable as a supported workflow:** legacy end-to-end helper with an obsolete update step; do not use it. |
 | `docs-gen` | `go run cmd/docs/generate.go` |
+| `docs-add-purpose` | `python3 hack/scripts/add_purpose_line.py` -- inserts the mandated `**Purpose:**` line on pages missing one, derived from each page's own frontmatter; skips `docs/CODEMAPS/**` and the generated command pages, which `docs-gen` stamps itself |
+| `docs-add-purpose-dry-run` | `python3 hack/scripts/add_purpose_line.py --dry-run` -- previews the above without writing |
 | `docs-update-timestamps -- <page.md> ...` | `python3 hack/scripts/audit_doc_frontmatter.py --update-last-updated` on the explicitly supplied pages; exits with status 2 and prints usage when no page is given |
 | `test-docs-idempotency` | Runs `docs-gen` twice, diffs the two results, fails if unstable; chained by `test-docs` |
 | `test-docs-scripts` | `python3 -m unittest discover -s hack/scripts -p 'test_*.py'` -- unit tests for every documentation policy/helper script; first step chained by `test-docs` |
 | `test-docs-links` | `python3 hack/scripts/check_doc_links.py` -- checks local Markdown links without network access; chained by `test-docs` |
+| `test-docs-portability` | `python3 hack/scripts/check_doc_links.py --root docs --exclude 'CODEMAPS/**' --check-reachability` -- fails when a page links outside `docs/` (which breaks once the tree is copied into a site generator) or cannot be reached from `docs/index.md`; `docs/CODEMAPS/**` is excluded because those maps link Go source paths on purpose; chained by `test-docs` |
 | `test-docs-mermaid` | `python3 hack/scripts/check_mermaid_fences.py` -- checks Mermaid fence structure without a renderer; chained by `test-docs` |
 | `test-docs-frontmatter` | `python3 hack/scripts/audit_doc_frontmatter.py --strict` across maintained Markdown pages; chained by `test-docs` |
 | `test-docs-frontmatter-remediation` | Same audit, with an `--ignore` list of documented legacy pages |

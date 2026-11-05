@@ -1,7 +1,6 @@
 module github.com/opencenter-cloud/opencenter-cli
 
-go 1.26.9
-toolchain go1.27.3
+go 1.27.3
 require (
 	filippo.io/age v1.3.2
 	github.com/Masterminds/semver/v3 v3.5.0

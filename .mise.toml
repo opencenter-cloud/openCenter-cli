@@ -8,7 +8,7 @@ sops = "3.13.3"
 pre-commit = "latest"
 "go:golang.org/x/vuln/cmd/govulncheck" = "latest"
 "aqua:gitleaks/gitleaks" = "latest"
-go = "1.27.1"
+go = "1.27.3"
 
 [env]
 # Override the default config directory via environment for reproducible tests
@@ -434,6 +434,7 @@ test-docs = [
   "mise run test-docs-task-coverage",
   "mise run test-docs-cli-invocations",
   "mise run test-docs-links",
+  "mise run test-docs-portability",
   "mise run test-docs-mermaid"
 ]
 
@@ -545,7 +546,11 @@ go test -tags perf ./internal/config -run "TestMemoryUsageRegression" -count=1
   "mise run vet",
   "mise run godog",
   "mise run property",
-  "mise run govulncheck"
+  "mise run govulncheck",
+  # Documentation gates belong here: without this line `mise run test:all`
+  # reported success while every docs check went unrun locally, leaving
+  # docs-p0.yml as the only place they ever executed.
+  "mise run test-docs"
 ]
 
 # Run local verification checks that catch CI regressions.
@@ -649,6 +654,15 @@ schema-verify = [
 # Generate CLI documentation
 docs-gen = "go run cmd/docs/generate.go"
 
+# Insert the mandated "**Purpose:**" line on pages missing one, deriving each
+# sentence from that page's own frontmatter so no new claim is invented. Generated
+# Cobra pages are left to `docs-gen`, which emits the line itself. Review the
+# result: the derived sentence is a starting point, not finished prose.
+docs-add-purpose = "python3 hack/scripts/add_purpose_line.py"
+
+# Preview the above without writing anything.
+docs-add-purpose-dry-run = "python3 hack/scripts/add_purpose_line.py --dry-run"
+
 # Update timestamps only for explicitly supplied changed Markdown pages.
 # Usage: mise run docs-update-timestamps -- docs/page.md docs/other-page.md
 docs-update-timestamps = '''
@@ -684,6 +698,14 @@ test-docs-scripts = "python3 -m unittest discover -s hack/scripts -p 'test_*.py'
 
 # Check local Markdown links without accessing the network.
 test-docs-links = "python3 hack/scripts/check_doc_links.py"
+
+# Verify `docs/` is self-contained and navigable as a standalone tree. This is the
+# portability gate: it fails when a page links outside `docs/`, which silently
+# breaks once the tree is copied into a site generator, and when a page cannot be
+# reached from `docs/index.md`, which means a site build would never render it.
+# `docs/CODEMAPS/**` is excluded by decision: those maps link Go source paths on
+# purpose and are contributor-internal, not part of the published set.
+test-docs-portability = "python3 hack/scripts/check_doc_links.py --root docs --exclude 'CODEMAPS/**' --check-reachability"
 
 # Check Mermaid fence structure without requiring a Mermaid renderer.
 test-docs-mermaid = "python3 hack/scripts/check_mermaid_fences.py"

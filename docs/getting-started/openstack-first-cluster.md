@@ -2,22 +2,22 @@
 id: openstack-first-cluster
 title: "Deploy an OpenStack Cluster: Verified Walkthrough"
 sidebar_label: "Deploy an OpenStack Cluster"
-description: "Step-by-step verified guide to bootstrapping, configuring, and deploying an OpenStack Kubernetes cluster with openCenter CLI v1.0.0-rc07."
+description: "Step-by-step verified guide to bootstrapping, configuring, and deploying an OpenStack Kubernetes cluster with openCenter CLI v1.0.0-rc08."
 doc_type: tutorial
 audience: "platform engineers, operators, openCenter users"
-tags: [openstack, deployment, kubernetes, doritos, tutorial, rc07]
+tags: [openstack, deployment, kubernetes, doritos, tutorial, rc08]
 last_updated: 2026-11-02
 ---
 
 # Deploy an OpenStack Cluster: Verified Walkthrough
 
-**Purpose:** This guided tutorial walks through the complete, verified workflow for configuring, provisioning, and deploying a production-ready Kubernetes cluster on OpenStack using the openCenter CLI, based on the verified deployment of the **doritos** cluster in the **opensnack** organization using **openCenter CLI v1.0.0-rc07** and **Lifecycle Contract v3**.
+**Purpose:** This guided tutorial walks through the complete, verified workflow for configuring, provisioning, and deploying a production-ready Kubernetes cluster on OpenStack using the openCenter CLI, based on the verified deployment of the **doritos** cluster in the **opensnack** organization using **openCenter CLI v1.0.0-rc08** and **Lifecycle Contract v3**.
 
 ---
 
 ## Overview and Architecture
 
-openCenter orchestrates Kubernetes clusters across infrastructure providers through declarative configuration, infrastructure-as-code, and GitOps delivery. This walkthrough targets **openCenter CLI v1.0.0-rc07**, which synchronizes upstream `openCenter-gitops-base` to `2026.03-rc05` and advances to **Lifecycle Contract v3** for automated OpenTofu network output binding into the Cloud Controller Manager (CCM).
+openCenter orchestrates Kubernetes clusters across infrastructure providers through declarative configuration, infrastructure-as-code, and GitOps delivery. This walkthrough targets **openCenter CLI v1.0.0-rc08**, which synchronizes upstream `openCenter-gitops-base` to `2026.03-rc05` and advances to **Lifecycle Contract v3** for automated OpenTofu network output binding into the Cloud Controller Manager (CCM).
 
 ```mermaid
 flowchart TD
@@ -65,7 +65,7 @@ The deployment documented here reflects the real-world cluster configuration for
 
 | Parameter | Value in Verified Deployment | Description |
 |---|---|---|
-| **openCenter Version** | `v1.0.0-rc07` | CLI release candidate with Lifecycle Contract v3 |
+| **openCenter Version** | `v1.0.0-rc08` | CLI release candidate with Lifecycle Contract v3 |
 | **Upstream GitOps Base** | `2026.03-rc05` | Pinned OpenTofu and Helm base module tag |
 | **Organization (`ORG`)** | `opensnack` | Multi-tenant namespace within openCenter |
 | **Cluster Name (`CLUSTER`)** | `doritos` | Target cluster identifier |
@@ -82,10 +82,10 @@ The deployment documented here reflects the real-world cluster configuration for
 
 Before beginning, ensure the following requirements are met:
 
-1. **openCenter CLI & Local Plugin (v1.0.0-rc07)**: Installed and available in your `$PATH`. Install via the official curl installer:
+1. **openCenter CLI & Local Plugin (v1.0.0-rc08)**: Installed and available in your `$PATH`. Install via the official curl installer:
    ```bash
-   # Install openCenter CLI and local plugin (pinned to v1.0.0-rc07)
-   curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash -s -- --version v1.0.0-rc07
+   # Install openCenter CLI and local plugin (pinned to v1.0.0-rc08)
+   curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash -s -- --version v1.0.0-rc08
 
    # Or install the latest release automatically:
    # curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash
@@ -540,7 +540,7 @@ For rapid automation or repeatability, here is the consolidated execution script
 set -euo pipefail
 
 # 0. Install openCenter CLI & plugin (if not already installed)
-# curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash -s -- --version v1.0.0-rc07
+# curl -fsSL https://raw.githubusercontent.com/opencenter-cloud/openCenter-cli/main/scripts/install.sh | bash -s -- --version v1.0.0-rc08
 
 # 1. Environment Variables
 export ORG=opensnack
@@ -620,7 +620,7 @@ echo "export KUBECONFIG=\$HOME/.config/opencenter/clusters/secrets/$ORG/$CLUSTER
 
 ## Related Documentation
 
-- [openCenter CLI v1.0.0-rc07 Release Notes](../release/1.0.0-rc07.md)
+- [openCenter CLI v1.0.0-rc08 Release Notes](../release/1.0.0-rc08.md)
 - [Production OpenStack Deployment Runbook](../operations/openstack-production-deployment.md)
 - [cert-manager Service Reference](../reference/services/cert-manager.md)
 - [GitOps Configuration Reference](../reference/gitops-configuration.md)

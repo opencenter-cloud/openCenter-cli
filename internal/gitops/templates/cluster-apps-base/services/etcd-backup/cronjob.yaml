@@ -6,9 +6,13 @@ spec:
   schedule: "0 1 * * *"
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
-  concurrencyPolicy: Allow
+  # A backup that cannot schedule or finish must not stack a new one each day.
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
   jobTemplate:
     spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
       template:
         spec:
           initContainers:
@@ -88,6 +92,9 @@ spec:
                 - mountPath: /data/etcd-backup
                   name: etcd-backup
           hostNetwork: true
+          # Without this a host-network pod uses the node's resolver and cannot reach an in-cluster S3 endpoint
+          # such as http://<service>.<namespace>.svc.cluster.local.
+          dnsPolicy: ClusterFirstWithHostNet
           affinity:
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
